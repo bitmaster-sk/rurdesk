@@ -1,0 +1,178 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.ob-canvas {
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 3rem 2rem 3.5rem;
+    background: var(--ui-color-canvas);
+}
+.ob {
+    width: 100%;
+    max-width: 760px;
+}
+.ob-hero {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+.ob-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: var(--ui-color-primary-strong);
+    background: var(--ui-color-primary-weak);
+    border: 1px solid var(--ui-color-primary-weak-border);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: var(--ui-space-l);
+}
+.ob-title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--ui-color-text);
+    margin: 0 0 var(--ui-space);
+    text-wrap: balance;
+}
+.ob-sub {
+    color: var(--ui-color-text-muted);
+    margin: 0 auto;
+    max-width: 52ch;
+}
+
+.ob-label {
+    display: block;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+    margin-bottom: var(--ui-space-s);
+}
+.ob-req {
+    color: var(--ui-color-primary);
+}
+
+/* Interim native button on --ui-* tokens (no PrimeNG). Replace with ui-button
+   when that migration lands. The name input now uses the global [uiInput]
+   directive (see src/app/ui), so no local .ui-input block here anymore. */
+.ui-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space);
+    height: 42px;
+    padding: 0 18px;
+    font-family: inherit;
+    font-size: var(--font-size);
+    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: var(--ui-radius-md);
+    cursor: pointer;
+}
+.ui-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.ui-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 30%, transparent);
+}
+.ui-btn--block {
+    width: 100%;
+}
+.ui-btn--primary {
+    background: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+}
+.ui-btn--primary:not(:disabled):hover {
+    background: var(--ui-color-primary-hover);
+}
+.ui-btn--secondary {
+    background: var(--ui-color-surface);
+    color: var(--ui-color-text-muted);
+    border-color: var(--ui-color-border);
+}
+.ui-btn--secondary:not(:disabled):hover {
+    background: var(--ui-color-surface-hover);
+}
+
+.ob-paths {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ui-space-l);
+}
+@media (max-width: 640px) {
+    .ob-paths {
+        grid-template-columns: 1fr;
+    }
+}
+
+.ob-path {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-m);
+    padding: var(--ui-space-xl);
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+}
+.ob-path--reco {
+    border-color: var(--ui-color-primary-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 8%, transparent);
+}
+.ob-reco-tag {
+    position: absolute;
+    top: -10px;
+    right: 16px;
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ui-color-primary-contrast);
+    background: var(--ui-color-primary);
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+.ob-picon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--ui-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ob-picon--ai {
+    background: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+}
+.ob-picon--blank {
+    background: var(--ui-color-surface-hover);
+    color: var(--ui-color-muted-fg);
+    border: 1px solid var(--ui-color-border);
+}
+.ob-path-title {
+    font-size: var(--font-size-m);
+    font-weight: 700;
+    color: var(--ui-color-text);
+    margin: 0;
+}
+.ob-path-desc {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+    margin: 0;
+}
+.ob-path-list {
+    margin: 0;
+    padding-left: 1rem;
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-s);
+}
+.ob-path-list li {
+    margin: 3px 0;
+}
+.ob-path .ui-btn {
+    margin-top: auto;
+}

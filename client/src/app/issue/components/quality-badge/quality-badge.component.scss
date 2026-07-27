@@ -1,0 +1,23 @@
+.quality-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    font-size: var(--font-size-s);
+    font-weight: 600;
+    color: #fff;
+
+    &--poor {
+        background-color: #e24c4c;
+    }
+
+    &--acceptable {
+        background-color: #f0a500;
+    }
+
+    &--good {
+        background-color: #2e7d32;
+    }
+}

@@ -1,0 +1,1609 @@
+// Global design-system styles for all ui-* primitives (eager, avoids FOUC).
+// @use must precede @import per Sass rules.
+@use './app/ui/ui.styles';
+
+// Required by @angular/cdk Overlay (used by the ui-confirm popup). Positions the
+// overlay container/pane; without it flexibleConnectedTo positioning breaks.
+@import '@angular/cdk/overlay-prebuilt.css';
+// diff2html CSS lives here so the :root overrides below sit after it in the
+// cascade. If imported from the component instead, the lazy-loaded
+// component stylesheet appends after styles.scss and wins the cascade,
+// silently keeping diff2html's hard-coded grey/white defaults.
+@import 'diff2html/bundles/css/diff2html.min.css';
+
+// flatpickr's base CSS (backs [uiDatepicker]) is loaded via angular.json's
+// `styles` array BEFORE this file, so our override in ui.styles
+// (components/datepicker/datepicker.styles) lands after it and wins the
+// cascade at equal specificity — without a deprecated Sass @import here.
+
+@import '@fontsource/lato/300.css';
+@import '@fontsource/lato/400.css';
+@import '@fontsource/lato/700.css';
+
+// Global border-box baseline. The app was originally built under PrimeNG's
+// structural CSS (removed at the Angular 21 upgrade), which supplied this reset;
+// without it, elements default to content-box and padding/border add to width
+// (→ horizontal overflow, e.g. the 50/50 issue-detail sections). This also
+// matches the baseline Tailwind's Preflight imposes.
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+// ── Tailwind Preflight compatibility ──────────────────────────────────────
+// Preflight (@layer base) resets headings, lists, links and native buttons to
+// unstyled. These unlayered rules win over @layer base and restore the defaults
+// our content relies on. (Colours/font-sizes stay on our --ui-*/token layer.)
+
+// Headings: restore classic UA sizes + weight — used by chrome titles
+// (page-header h2, login/register/onboarding) AND markdown content. Margins
+// stay Preflight-reset; components manage spacing via utilities.
+h1 {
+    font-size: 2em;
+}
+h2 {
+    font-size: 1.5em;
+}
+h3 {
+    font-size: 1.17em;
+}
+h4 {
+    font-size: 1em;
+}
+h5 {
+    font-size: 0.83em;
+}
+h6 {
+    font-size: 0.67em;
+}
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 700;
+}
+
+// Native <button>: v4 Preflight sets cursor:default — restore pointer.
+button:not(:disabled) {
+    cursor: pointer;
+}
+
+// Icons flow inline with text. Preflight sets `svg { display: block }`, which
+// pushes a bare <tabler-icon> onto its own line when it sits inline next to
+// text without a flex parent (e.g. table sort-column headers). Making the host
+// an atomic inline-flex box keeps the icon beside the label everywhere.
+tabler-icon {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+// Markdown-rendered content (every ngx-markdown target carries the `markdown`
+// directive attribute — chat/comment `.text-run` AND the bare issue
+// description preview): restore list markers, link styling and rules that
+// Preflight strips.
+[markdown] {
+    ul {
+        list-style: disc;
+        padding-left: 1.5em;
+        margin: 0.5em 0;
+    }
+    ol {
+        list-style: decimal;
+        padding-left: 1.5em;
+        margin: 0.5em 0;
+    }
+    a {
+        color: var(--ui-color-primary);
+        text-decoration: underline;
+    }
+    hr {
+        border: 0;
+        border-top: 1px solid var(--ui-color-border);
+        margin: 0.75em 0;
+    }
+}
+
+:root {
+    --font-family: Lato, Helvetica, sans-serif;
+
+    --font-size-2xs: 0.5rem;
+    --font-size-xs: 0.6rem;
+    --font-size-s: 0.875rem;
+    --font-size: 1rem;
+    --font-size-m: 1.1rem;
+    --font-size-l: 1.3rem;
+    --font-size-xl: 2rem;
+
+    --ui-space-xs: 0.125rem;
+    --ui-space-s: 0.25rem;
+    --ui-space: 0.5rem;
+    --ui-space-m: 0.75rem;
+    --ui-space-l: 1rem;
+    --ui-space-xl: 1.5rem;
+
+    //####################################################
+    //## PRIMITIVE PALETTE (--ui-<color>-<step>) — own literals, light scheme.
+    //## Foundation for all ui-* components
+    //####################################################
+    --ui-brand-50: #fef5ec;
+    --ui-brand-100: #fcecdf;
+    --ui-brand-200: #f5c89a;
+    --ui-brand-300: #e89a56;
+    --ui-brand-400: #d06e2a;
+    --ui-brand-500: #b85814;
+    --ui-brand-600: #9a480e;
+    --ui-brand-700: #8a3c05;
+    --ui-brand-800: #6b2e04;
+    --ui-brand-900: #4d2103;
+    --ui-brand-950: #2e1301;
+
+    --ui-surface-0: #ffffff;
+    --ui-surface-50: #fdfbf9;
+    --ui-surface-100: #f5f5f5;
+    --ui-surface-200: #ede8e3;
+    --ui-surface-300: #e6dbd1;
+    --ui-surface-400: #c8b8ab;
+    --ui-surface-500: #a89080;
+    --ui-surface-600: #75665c;
+    --ui-surface-700: #4a3b32;
+    --ui-surface-800: #2e2118;
+    --ui-surface-900: #1a1008;
+    --ui-surface-950: #0d0804;
+
+    --ui-amber-50: #fffbeb;
+    --ui-amber-100: #fef3c7;
+    --ui-amber-200: #fde68a;
+    --ui-amber-300: #fcd34d;
+    --ui-amber-400: #fbbf24;
+    --ui-amber-500: #f59e0b;
+    --ui-amber-600: #d97706;
+    --ui-amber-700: #b45309;
+    --ui-amber-800: #92400e;
+    --ui-amber-900: #78350f;
+    --ui-amber-950: #451a03;
+
+    --ui-red-50: #fef2f2;
+    --ui-red-100: #fee2e2;
+    --ui-red-200: #fecaca;
+    --ui-red-300: #fca5a5;
+    --ui-red-400: #f87171;
+    --ui-red-500: #ef4444;
+    --ui-red-600: #dc2626;
+    --ui-red-700: #b91c1c;
+    --ui-red-800: #991b1b;
+    --ui-red-900: #7f1d1d;
+    --ui-red-950: #450a0a;
+
+    --ui-rose-50: #fff1f2;
+    --ui-rose-100: #ffe4e6;
+    --ui-rose-200: #fecdd3;
+    --ui-rose-300: #fda4af;
+    --ui-rose-400: #fb7185;
+    --ui-rose-500: #f43f5e;
+    --ui-rose-600: #e11d48;
+    --ui-rose-700: #be123c;
+    --ui-rose-800: #9f1239;
+    --ui-rose-900: #881337;
+    --ui-rose-950: #4c0519;
+
+    --ui-pink-50: #fdf2f8;
+    --ui-pink-100: #fce7f3;
+    --ui-pink-200: #fbcfe8;
+    --ui-pink-300: #f9a8d4;
+    --ui-pink-400: #f472b6;
+    --ui-pink-500: #ec4899;
+    --ui-pink-600: #db2777;
+    --ui-pink-700: #be185d;
+    --ui-pink-800: #9d174d;
+    --ui-pink-900: #831843;
+    --ui-pink-950: #500724;
+
+    --ui-green-50: #f0fdf4;
+    --ui-green-100: #dcfce7;
+    --ui-green-200: #bbf7d0;
+    --ui-green-300: #86efac;
+    --ui-green-400: #4ade80;
+    --ui-green-500: #22c55e;
+    --ui-green-600: #16a34a;
+    --ui-green-700: #15803d;
+    --ui-green-800: #166534;
+    --ui-green-900: #14532d;
+    --ui-green-950: #052e16;
+
+    --ui-sky-50: #f0f9ff;
+    --ui-sky-100: #e0f2fe;
+    --ui-sky-200: #bae6fd;
+    --ui-sky-300: #7dd3fc;
+    --ui-sky-400: #38bdf8;
+    --ui-sky-500: #0ea5e9;
+    --ui-sky-600: #0284c7;
+    --ui-sky-700: #0369a1;
+    --ui-sky-800: #075985;
+    --ui-sky-900: #0c4a6e;
+    --ui-sky-950: #082f49;
+
+    --ui-blue-50: #eff6ff;
+    --ui-blue-100: #dbeafe;
+    --ui-blue-200: #bfdbfe;
+    --ui-blue-300: #93c5fd;
+    --ui-blue-400: #60a5fa;
+    --ui-blue-500: #3b82f6;
+    --ui-blue-600: #2563eb;
+    --ui-blue-700: #1d4ed8;
+    --ui-blue-800: #1e40af;
+    --ui-blue-900: #1e3a8a;
+    --ui-blue-950: #172554;
+
+    --ui-purple-50: #faf5ff;
+    --ui-purple-100: #f3e8ff;
+    --ui-purple-200: #e9d5ff;
+    --ui-purple-300: #d8b4fe;
+    --ui-purple-400: #c084fc;
+    --ui-purple-500: #a855f7;
+    --ui-purple-600: #9333ea;
+    --ui-purple-700: #7e22ce;
+    --ui-purple-800: #6b21a8;
+    --ui-purple-900: #581c87;
+    --ui-purple-950: #3b0764;
+
+    --ui-teal-50: #f0fdfa;
+    --ui-teal-100: #ccfbf1;
+    --ui-teal-200: #99f6e4;
+    --ui-teal-300: #5eead4;
+    --ui-teal-400: #2dd4bf;
+    --ui-teal-500: #14b8a6;
+    --ui-teal-600: #0d9488;
+    --ui-teal-700: #0f766e;
+    --ui-teal-800: #115e59;
+    --ui-teal-900: #134e4a;
+    --ui-teal-950: #042f2e;
+
+    --ui-orange-50: #fff7ed;
+    --ui-orange-100: #ffedd5;
+    --ui-orange-200: #fed7aa;
+    --ui-orange-300: #fdba74;
+    --ui-orange-400: #fb923c;
+    --ui-orange-500: #f97316;
+    --ui-orange-600: #ea580c;
+    --ui-orange-700: #c2410c;
+    --ui-orange-800: #9a3412;
+    --ui-orange-900: #7c2d12;
+    --ui-orange-950: #431407;
+
+    --ui-yellow-50: #fefce8;
+    --ui-yellow-100: #fef9c3;
+    --ui-yellow-200: #fef08a;
+    --ui-yellow-300: #fde047;
+    --ui-yellow-400: #facc15;
+    --ui-yellow-500: #eab308;
+    --ui-yellow-600: #ca8a04;
+    --ui-yellow-700: #a16207;
+    --ui-yellow-800: #854d0e;
+    --ui-yellow-900: #713f12;
+    --ui-yellow-950: #422006;
+
+    --ui-cyan-50: #ecfeff;
+    --ui-cyan-100: #cffafe;
+    --ui-cyan-200: #a5f3fc;
+    --ui-cyan-300: #67e8f9;
+    --ui-cyan-400: #22d3ee;
+    --ui-cyan-500: #06b6d4;
+    --ui-cyan-600: #0891b2;
+    --ui-cyan-700: #0e7490;
+    --ui-cyan-800: #155e75;
+    --ui-cyan-900: #164e63;
+    --ui-cyan-950: #083344;
+
+    //####################################################
+    //## PRODUCT DESIGN TOKENS (--ui-*)
+    //##
+    //## The product's own token layer. Custom ui-* components consume
+    //## THESE
+    //##
+    //## Naming convention:
+    //##   --ui-<group>-<name>       global token   (group = color|radius|space)
+    //##   --ui-<component>-<prop>    component knob (add only when a real
+    //##                              per-instance override is needed)
+    //##
+    //## Values reference OUR primitive palette (--ui-brand-*/--ui-surface-*),
+    //####################################################
+    --ui-color-border: var(--ui-surface-300);
+
+    --ui-color-mention-bg: var(--ui-brand-100);
+    --ui-color-mention-fg: var(--ui-brand-800);
+
+    --ui-color-unknown: var(--ui-surface-300);
+
+    --ui-color-text: #1a3263;
+    --ui-color-text-muted: var(--ui-surface-600);
+    --ui-color-danger: var(--ui-red-600);
+
+    // Workflow-state accents. One definition for the three places that render a
+    // state's colour — the badge, the badge selector and the calendar chips —
+    // which previously each carried their own copy of these literals.
+    --ui-color-state-start: #6b7280;
+    --ui-color-state-final: var(--ui-orange-700);
+    --ui-color-state-in-progress: var(--ui-sky-700);
+
+    --ui-color-surface-hover: var(--ui-surface-100);
+    --ui-color-surface: var(--ui-surface-0);
+    --ui-color-canvas: var(--ui-surface-50);
+    --ui-color-muted-fg: var(--ui-surface-500);
+
+    --ui-color-primary: var(--ui-brand-500);
+    --ui-color-primary-hover: var(--ui-brand-600);
+    --ui-color-primary-contrast: #ffffff;
+    --ui-color-primary-weak: var(--ui-brand-50);
+    --ui-color-primary-weak-border: var(--ui-brand-100);
+    --ui-color-primary-accent: var(--ui-brand-300);
+    --ui-color-primary-strong: var(--ui-brand-700);
+    --ui-color-primary-strongest: var(--ui-brand-800);
+    --ui-color-primary-active: var(--ui-brand-700);
+
+    // Content / highlight backgrounds (cards, hover rows, selected/highlight).
+    --ui-color-content: var(--ui-surface-0);
+    --ui-color-content-hover: var(--ui-surface-100);
+    --ui-color-highlight: var(--ui-brand-100);
+
+    //####################################################
+    //## RADIUS (TODO maybe change to l, lg, xl, xxl, etc. to match spacing) — OWN LITERAL values (light scheme),
+    //####################################################
+    --ui-radius-sm: 4px;
+    --ui-radius-md: 6px;
+
+    //####################################################
+    //## BUTTON
+    //####################################################
+    --ui-button-radius: 8px;
+    --ui-button-radius-rounded: 2rem;
+    --ui-button-gap: 0.5rem;
+    --ui-button-padding-x: 0.75rem;
+    --ui-button-padding-y: 0.5rem;
+    // Fixed heights so every button of a size is identical regardless of content
+    // (icon vs text-only) — matches the natural text-only height, so text buttons
+    // are unchanged and icon-bearing ones snap to the same box. Consumed by
+    // ui-toggle-button + ui-choice too (they reuse .ui-button).
+    --ui-button-height: 2.125rem;
+    --ui-button-sm-height: 2rem;
+    --ui-button-icon-only-width: 2.5rem;
+    --ui-button-font-weight: 500;
+    --ui-button-sm-font-size: 0.875rem;
+    --ui-button-sm-padding-x: 0.5rem;
+    --ui-button-sm-padding-y: 0.5rem;
+    --ui-button-sm-icon-only-width: 2rem;
+    --ui-button-focus-ring-width: 1px;
+    --ui-button-focus-ring-offset: 2px;
+
+    // Coloured severities → primitive palette scale (filled bg=500/hover=600/
+    // active=700, border=same; outlined fg=500 border=200 hover-bg=50 active=100;
+    // text fg=500 hover-bg=50 active-bg=100; fg=white).
+    $ui-btn-sev: (
+        primary: brand,
+        danger: red,
+        success: green,
+        info: sky,
+        warn: orange
+    );
+
+    @each $s, $c in $ui-btn-sev {
+        --ui-button-#{$s}-bg: var(--ui-#{$c}-500);
+        --ui-button-#{$s}-bg-hover: var(--ui-#{$c}-600);
+        --ui-button-#{$s}-bg-active: var(--ui-#{$c}-700);
+        --ui-button-#{$s}-border: var(--ui-#{$c}-500);
+        --ui-button-#{$s}-border-hover: var(--ui-#{$c}-600);
+        --ui-button-#{$s}-border-active: var(--ui-#{$c}-700);
+        --ui-button-#{$s}-fg: #ffffff;
+        --ui-button-#{$s}-focus: var(--ui-#{$c}-500);
+        --ui-button-outlined-#{$s}-fg: var(--ui-#{$c}-500);
+        --ui-button-outlined-#{$s}-border: var(--ui-#{$c}-200);
+        --ui-button-outlined-#{$s}-bg-hover: var(--ui-#{$c}-50);
+        --ui-button-outlined-#{$s}-bg-active: var(--ui-#{$c}-100);
+        --ui-button-text-#{$s}-fg: var(--ui-#{$c}-500);
+        --ui-button-text-#{$s}-bg-hover: var(--ui-#{$c}-50);
+        --ui-button-text-#{$s}-bg-active: var(--ui-#{$c}-100);
+    }
+
+    // secondary = neutral surface scale (different steps: bg uses 100/200/300).
+    --ui-button-secondary-bg: var(--ui-surface-100);
+    --ui-button-secondary-bg-hover: var(--ui-surface-200);
+    --ui-button-secondary-bg-active: var(--ui-surface-300);
+    --ui-button-secondary-border: var(--ui-surface-100);
+    --ui-button-secondary-border-hover: var(--ui-surface-200);
+    --ui-button-secondary-border-active: var(--ui-surface-300);
+    --ui-button-secondary-fg: var(--ui-surface-600);
+    --ui-button-secondary-focus: var(--ui-surface-600);
+    --ui-button-outlined-secondary-fg: var(--ui-surface-500);
+    --ui-button-outlined-secondary-border: var(--ui-surface-200);
+    --ui-button-outlined-secondary-bg-hover: var(--ui-surface-50);
+    --ui-button-outlined-secondary-bg-active: var(--ui-surface-100);
+    --ui-button-text-secondary-fg: var(--ui-surface-500);
+    --ui-button-text-secondary-bg-hover: var(--ui-surface-50);
+    --ui-button-text-secondary-bg-active: var(--ui-surface-100);
+
+    //####################################################
+    //## INPUT
+    //####################################################
+    --ui-input-bg: var(--ui-surface-0);
+    --ui-input-fg: var(--ui-surface-700);
+    --ui-input-border: var(--ui-surface-300);
+    --ui-input-border-hover: var(--ui-surface-400);
+    --ui-input-border-focus: var(--ui-brand-500);
+    --ui-input-border-invalid: var(--ui-red-400);
+    --ui-input-placeholder: var(--ui-surface-500);
+    --ui-input-disabled-bg: var(--ui-surface-200);
+    --ui-input-disabled-fg: var(--ui-surface-500);
+    --ui-input-radius: 8px;
+    --ui-input-padding-x: 0.75rem;
+    // ─── Control size scale (input + select trigger + datepicker) ──────────
+    // Three tiers with harmonised height / font-size / padding-y on one shared
+    // line-height. min-height is the source of truth for the height (26/32/40),
+    // so an empty select (only the chevron holds height) still matches its input
+    // — the select scales its chevron per tier (14/16/18) to stay under the line-
+    // box. Heights are explicit px to hit the exact spec; the app root is 14px.
+    --ui-input-line-height: 1.2;
+    // default (32px)
+    --ui-input-padding-y: 0.45rem;
+    --ui-input-font-size: 1rem;
+    --ui-input-min-height: 32px;
+    // small (26px) — denser; text sits on a smaller line-box
+    --ui-input-sm-padding-y: 0.3rem;
+    --ui-input-sm-font-size: 0.875rem;
+    --ui-input-sm-min-height: 26px;
+    // large (40px)
+    --ui-input-lg-padding-y: 0.65rem;
+    --ui-input-lg-font-size: 1.125rem;
+    --ui-input-lg-min-height: 40px;
+    // Rich-content selects (state / severity / assignee): the trigger value holds
+    // a tag/avatar taller than plain text, so it needs less vertical padding to
+    // let that content grow while the min-height keeps the control at the 32px
+    // default. Opt-in via `--ui-input-padding-y: var(--ui-input-rich-padding-y)`.
+    --ui-input-rich-padding-y: 0.2rem;
+    --ui-float-focus-color: var(--ui-brand-600);
+    --ui-input-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+
+    //####################################################
+    //## DATEPICKER
+    //####################################################
+    --ui-datepicker-bg: var(--ui-surface-0);
+    --ui-datepicker-fg: var(--ui-surface-700);
+    --ui-datepicker-border: var(--ui-surface-300);
+    --ui-datepicker-radius: 8px;
+    --ui-datepicker-day-hover-bg: var(--ui-surface-100);
+    --ui-datepicker-selected-bg: var(--ui-brand-500);
+    --ui-datepicker-selected-fg: #ffffff;
+    --ui-datepicker-inrange-bg: var(--ui-brand-50);
+    --ui-datepicker-today-border: var(--ui-brand-500);
+    --ui-datepicker-muted-fg: var(--ui-surface-500);
+    --ui-datepicker-disabled-fg: var(--ui-surface-400);
+    --ui-datepicker-footer-border: var(--ui-surface-200);
+
+    //####################################################
+    //## TOAST
+    //####################################################
+    --ui-toast-width: 20rem;
+    --ui-toast-radius: var(--ui-radius-md);
+    --ui-toast-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+    --ui-toast-gap: 0.5rem;
+    --ui-toast-offset: 1rem; // distance from the viewport corner
+    // z-index above .cdk-overlay-container (11000) + gantt (9999) so the toast is
+    // topmost. NOT parity with the old baseZIndex — below CDK's 11000 the toast
+    // would render under ui-popover/tooltip/confirm. If .cdk-overlay-container is
+    // ever raised, move this in lockstep.
+    --ui-toast-z: 12000;
+    --ui-toast-fg: var(--ui-surface-700);
+    --ui-toast-close-fg: var(--ui-surface-500);
+    --ui-toast-success-bg: var(--ui-green-50);
+    --ui-toast-success-accent: var(--ui-green-600);
+    --ui-toast-info-bg: var(--ui-sky-50);
+    --ui-toast-info-accent: var(--ui-sky-600);
+    --ui-toast-error-bg: var(--ui-red-50);
+    --ui-toast-error-accent: var(--ui-red-600);
+
+    //####################################################
+    //## MESSAGE
+    //####################################################
+    --ui-message-radius: var(--ui-radius-md);
+    --ui-message-fg: var(--ui-color-text);
+    --ui-message-info-bg: var(--ui-sky-50);
+    --ui-message-info-accent: var(--ui-sky-600);
+    --ui-message-success-bg: var(--ui-green-50);
+    --ui-message-success-accent: var(--ui-green-600);
+    --ui-message-warn-bg: var(--ui-orange-50);
+    --ui-message-warn-accent: var(--ui-orange-600);
+    --ui-message-danger-bg: var(--ui-red-50);
+    --ui-message-danger-accent: var(--ui-red-600);
+
+    //####################################################
+    //## SELECT
+    //####################################################
+    --ui-select-panel-bg: var(--ui-surface-0);
+    --ui-select-panel-border: var(--ui-surface-200);
+    --ui-select-panel-radius: var(--ui-input-radius);
+    --ui-select-panel-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --ui-select-option-hover-bg: var(--ui-surface-100);
+    --ui-select-option-selected-bg: var(--ui-brand-100);
+    --ui-select-option-selected-fg: var(--ui-brand-700);
+    --ui-select-dropdown-icon: var(--ui-surface-500);
+    --ui-select-clear-icon: var(--ui-surface-500);
+
+    //####################################################
+    //## POPOVER
+    //####################################################
+    --ui-popover-bg: var(--ui-surface-0);
+    --ui-popover-border: var(--ui-surface-200);
+    --ui-popover-radius: var(--ui-input-radius);
+    --ui-popover-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --ui-popover-padding: 0.75rem;
+
+    //####################################################
+    //## MENU
+    //####################################################
+    --ui-menu-bg: var(--ui-surface-0);
+    --ui-menu-border: var(--ui-surface-200);
+    --ui-menu-radius: var(--ui-input-radius);
+    --ui-menu-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --ui-menu-fg: var(--ui-input-fg);
+    --ui-menu-item-hover-bg: var(--ui-surface-100);
+    --ui-menu-item-hover-fg: var(--ui-color-primary);
+    --ui-menu-accent: var(--ui-color-primary);
+    --ui-menu-item-radius: var(--ui-radius-md);
+    --ui-menu-group-fg: var(--ui-color-text-muted);
+    --ui-menu-min-width: 12rem;
+    --ui-menu-max-height: 24rem;
+
+    //####################################################
+    //## TOOLTIP
+    //####################################################
+    --ui-tooltip-bg: var(--ui-surface-900);
+    --ui-tooltip-fg: var(--ui-surface-0);
+    --ui-tooltip-radius: var(--ui-radius-md);
+    --ui-tooltip-font-size: var(--font-size-s);
+
+    //####################################################
+    //## DIALOG
+    //####################################################
+    --ui-dialog-bg: var(--ui-surface-0);
+    --ui-dialog-border: var(--ui-surface-200);
+    --ui-dialog-radius: var(--ui-radius-md);
+    --ui-dialog-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --ui-dialog-fg: var(--ui-surface-700);
+    --ui-dialog-header-fg: var(--ui-surface-800);
+    // Content carries the vertical padding; header/footer drop the edge that
+    // meets the content so gaps never double. Headerless/footerless dialogs
+    // (e.g. split) therefore still get full top/bottom spacing.
+    --ui-dialog-content-padding: 1.25rem;
+    --ui-dialog-header-padding: 1.25rem 1.25rem 0;
+    --ui-dialog-footer-padding: 0 1.25rem 1.25rem;
+    --ui-dialog-footer-gap: 0.5rem;
+    --ui-dialog-backdrop: rgb(0 0 0 / 0.4);
+    --ui-dialog-max-height: 90vh;
+    --ui-dialog-default-width: 28rem;
+    --ui-dialog-close-fg: var(--ui-surface-500);
+    --ui-dialog-close-hover-bg: var(--ui-surface-100);
+
+    //####################################################
+    //## TABLE
+    //####################################################
+    --ui-table-header-bg: var(--ui-surface-50);
+    --ui-table-header-fg: var(--ui-color-text);
+    --ui-table-header-weight: 600;
+    --ui-table-border: var(--ui-color-border);
+    --ui-table-row-hover-bg: var(--ui-color-surface-hover);
+    --ui-table-cell-padding: 0.75rem 1rem;
+    --ui-table-fg: var(--ui-color-text);
+    --ui-table-font-size: var(--font-size-s);
+    --ui-table-sort-active-fg: var(--ui-color-primary);
+
+    //####################################################
+    //## CHECKBOX
+    //####################################################
+    --ui-checkbox-size: 1.25rem;
+    --ui-checkbox-radius: 4px;
+    --ui-checkbox-border: var(--ui-surface-300);
+    --ui-checkbox-border-hover: var(--ui-surface-400);
+    --ui-checkbox-bg: var(--ui-surface-0);
+    --ui-checkbox-checked-bg: var(--ui-brand-500);
+    --ui-checkbox-checked-border: var(--ui-brand-500);
+    --ui-checkbox-check-fg: #ffffff;
+    --ui-checkbox-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+    --ui-checkbox-disabled-bg: var(--ui-surface-200);
+
+    //####################################################
+    //## TOGGLE
+    //####################################################
+    --ui-toggle-width: 2.5rem;
+    --ui-toggle-height: 1.5rem;
+    --ui-toggle-pad: 2px;
+    --ui-toggle-track-off: var(--ui-surface-300);
+    --ui-toggle-track-on: var(--ui-brand-500);
+    --ui-toggle-knob-fg: #ffffff;
+    --ui-toggle-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+    --ui-toggle-disabled-bg: var(--ui-surface-200);
+
+    //####################################################
+    //## TAG
+    //####################################################
+    --ui-tag-radius: var(--ui-radius-md);
+    --ui-tag-padding-y: 0.25rem;
+    --ui-tag-padding-x: 0.5rem;
+    --ui-tag-font-size: 0.875rem;
+    --ui-tag-font-weight: 700;
+
+    // Coloured severities → primitive palette (soft bg=100 / fg=700).
+    $ui-tag-sev: (
+        primary: brand,
+        success: green,
+        info: sky,
+        warn: orange,
+        danger: red
+    );
+
+    @each $s, $c in $ui-tag-sev {
+        --ui-tag-#{$s}-bg: var(--ui-#{$c}-100);
+        --ui-tag-#{$s}-fg: var(--ui-#{$c}-700);
+    }
+
+    // secondary = neutral surface (fg=600 per Aura); contrast = inverted.
+    --ui-tag-secondary-bg: var(--ui-surface-100);
+    --ui-tag-secondary-fg: var(--ui-surface-600);
+    --ui-tag-contrast-bg: var(--ui-surface-950);
+    --ui-tag-contrast-fg: var(--ui-surface-0);
+
+    //####################################################
+    //## BADGE
+    //####################################################
+    --ui-badge-radius: var(--ui-radius-md);
+    --ui-badge-padding-x: 0.5rem;
+    --ui-badge-height: 1.5rem;
+    --ui-badge-font-size: 0.75rem;
+    --ui-badge-font-weight: 700;
+
+    // Solid severities → primitive palette (bg=500 / fg=white).
+    $ui-badge-sev: (
+        success: green,
+        info: sky,
+        warn: orange,
+        danger: red
+    );
+
+    @each $s, $c in $ui-badge-sev {
+        --ui-badge-#{$s}-bg: var(--ui-#{$c}-500);
+        --ui-badge-#{$s}-fg: #ffffff;
+    }
+
+    // primary = brand solid; secondary = neutral surface (fg=600); contrast = inverted.
+    --ui-badge-primary-bg: var(--ui-brand-500);
+    --ui-badge-primary-fg: #ffffff;
+    --ui-badge-secondary-bg: var(--ui-surface-100);
+    --ui-badge-secondary-fg: var(--ui-surface-600);
+    --ui-badge-contrast-bg: var(--ui-surface-950);
+    --ui-badge-contrast-fg: var(--ui-surface-0);
+
+    //####################################################
+    //## DIFF2HTML THEMING
+    //####################################################
+    --d2h-bg-color: var(--ui-surface-0);
+    --d2h-border-color: var(--ui-color-border);
+    --d2h-dim-color: var(--ui-color-text-muted);
+    --d2h-line-border-color: var(--ui-color-border);
+    --d2h-file-header-bg-color: var(--ui-surface-50);
+    --d2h-file-header-border-color: var(--ui-color-border);
+    --d2h-empty-placeholder-bg-color: var(--ui-surface-100);
+    --d2h-empty-placeholder-border-color: var(--ui-color-border);
+    --d2h-selected-color: var(--ui-brand-100);
+    --d2h-ins-bg-color: var(--ui-green-100);
+    --d2h-ins-border-color: var(--ui-green-300);
+    --d2h-ins-highlight-bg-color: var(--ui-green-200);
+    --d2h-ins-label-color: var(--ui-green-700);
+    --d2h-del-bg-color: var(--ui-red-100);
+    --d2h-del-border-color: var(--ui-red-300);
+    --d2h-del-highlight-bg-color: var(--ui-red-200);
+    --d2h-del-label-color: var(--ui-red-700);
+    --d2h-change-del-color: var(--ui-yellow-100);
+    --d2h-change-ins-color: var(--ui-green-100);
+    --d2h-info-bg-color: var(--ui-surface-100);
+    --d2h-info-border-color: var(--ui-color-border);
+    --d2h-change-label-color: var(--ui-yellow-600);
+}
+
+html,
+body {
+    margin: 0px;
+    height: 100vh;
+    font-family: var(--font-family);
+    font-size: 14px;
+    color: var(--ui-color-text);
+}
+body {
+    .text-2xs {
+        font-size: var(--font-size-2xs) !important;
+    }
+
+    .text-xs {
+        font-size: var(--font-size-xs) !important;
+    }
+
+    .text-sm {
+        font-size: var(--font-size-s) !important;
+    }
+
+    .text-base {
+        font-size: var(--font-size) !important;
+    }
+
+    .text-md {
+        font-size: var(--font-size-m) !important;
+    }
+
+    .text-lg {
+        font-size: var(--font-size-l) !important;
+    }
+
+    .border {
+        border: 1px solid var(--ui-surface-300);
+    }
+    .border-bottom {
+        border-bottom: 1px solid var(--ui-surface-300);
+    }
+    .border-top {
+        border-top: 1px solid var(--ui-surface-300);
+    }
+    .border-left {
+        border-left: 1px solid var(--ui-surface-300);
+    }
+    .border-right {
+        border-right: 1px solid var(--ui-surface-300);
+    }
+
+    // Bordered, rounded container. Border colour and radius from --ui-*.
+    .ui-box {
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+    }
+
+    //####################################################
+    //## Colour utilities. Tailwind's palette is disabled (see tailwind.css), so
+    //## these are the only colour classes. Named after the --ui-* tokens they
+    //## read, with the property in the prefix:
+    //## ui-color-* = text colour, ui-bg-* = background, ui-border-* = border.
+    //####################################################
+    .ui-color-text {
+        color: var(--ui-color-text) !important;
+    }
+    .ui-color-text-muted {
+        color: var(--ui-color-text-muted) !important;
+    }
+    .ui-color-primary {
+        color: var(--ui-color-primary) !important;
+    }
+    .ui-color-hover-primary:hover {
+        color: var(--ui-color-primary) !important;
+    }
+    .ui-color-green {
+        color: var(--ui-green-500) !important;
+    }
+    .ui-color-blue {
+        color: var(--ui-blue-500) !important;
+    }
+    .ui-color-orange {
+        color: var(--ui-orange-500) !important;
+    }
+    .ui-color-purple {
+        color: var(--ui-purple-500) !important;
+    }
+    .ui-color-teal {
+        color: var(--ui-teal-500) !important;
+    }
+    .ui-color-yellow {
+        color: var(--ui-yellow-500) !important;
+    }
+
+    .ui-bg-surface-50 {
+        background-color: var(--ui-surface-50) !important;
+    }
+    .ui-bg-surface-100 {
+        background-color: var(--ui-surface-100) !important;
+    }
+    .ui-bg-surface-200 {
+        background-color: var(--ui-surface-200) !important;
+    }
+    .ui-bg-surface-300 {
+        background-color: var(--ui-surface-300) !important;
+    }
+    .ui-bg-surface-400 {
+        background-color: var(--ui-surface-400) !important;
+    }
+    .ui-bg-canvas {
+        background-color: var(--ui-color-canvas) !important;
+    }
+
+    .ui-border-hover-primary:hover {
+        border-color: var(--ui-color-primary) !important;
+    }
+
+    // Form field wrapper: stacked label + control.
+    .ui-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-xs);
+        margin-bottom: var(--ui-space-l);
+    }
+
+    // Checkbox/radio field row: control and label on one line.
+    .ui-field-checkbox {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+    }
+
+    //####################################################
+    //## Page layout
+    //####################################################
+
+    .page-header {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--ui-space) var(--ui-space-l) var(--ui-space) var(--ui-space-l);
+        background-color: var(--ui-surface-0);
+        border-bottom: 1px solid var(--ui-color-border);
+        margin: var(--ui-space-l) 0;
+
+        .page-toolbar {
+            display: flex;
+            flex: 1 1 auto;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--ui-space);
+        }
+    }
+
+    .page-section {
+        margin: var(--ui-space) var(--ui-space-l);
+
+        .page-section-header {
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: var(--ui-space);
+            margin-bottom: var(--ui-space);
+
+            .page-section-icon {
+                font-size: var(--font-size-m);
+                color: var(--ui-brand-500);
+            }
+
+            .page-section-title {
+                font-size: var(--font-size-s);
+                font-weight: bold;
+                color: var(--ui-color-text-muted);
+            }
+        }
+    }
+
+    //####################################################
+    //## Panel — standard surface for grouped content.
+    //## Header (icon + title + optional subtitle + actions)
+    //## lives inside the panel; body renders the content.
+    //## Use .panel-body--flush for tables that should touch
+    //## the panel edges. Sub-blocks (panel-subblock) split
+    //## the body into labelled segments (e.g. Users / Teams).
+    //####################################################
+    .panel {
+        display: flex;
+        flex-direction: column;
+        background: var(--ui-surface-0);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        overflow: hidden;
+    }
+
+    // Drops the outer border, radius, and surface background so the panel
+    // sits flush on the page. The horizontal separator between header and
+    // body comes from .panel-head's bottom border, which stays.
+    .panel.panel-noborder {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .panel-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ui-space-m);
+        padding: var(--ui-space-m) var(--ui-space-l);
+        border-bottom: 1px solid var(--ui-color-border);
+
+        .panel-head-l {
+            display: flex;
+            align-items: center;
+            gap: var(--ui-space-m);
+            min-width: 0;
+        }
+
+        .panel-head-r {
+            display: flex;
+            align-items: center;
+            gap: var(--ui-space);
+            flex-shrink: 0;
+        }
+
+        .panel-icon {
+            color: var(--ui-brand-500);
+            flex-shrink: 0;
+        }
+
+        .panel-title {
+            font-size: var(--font-size-m);
+            font-weight: 700;
+            color: var(--ui-color-text);
+            line-height: 1.2;
+        }
+
+        .panel-sub {
+            font-size: var(--font-size-s);
+            color: var(--ui-color-text-muted);
+            margin-top: 2px;
+        }
+    }
+
+    .panel-body {
+        padding: var(--ui-space-l);
+    }
+
+    .panel-body--flush {
+        padding: 0;
+    }
+
+    .panel-subblock + .panel-subblock {
+        border-top: 1px solid var(--ui-color-border);
+    }
+
+    // Tables that fill a panel (or panel sub-block) shouldn't draw a bottom
+    // border on the last row — the panel/sub-block edge already provides it,
+    // so the doubled line was visible against the panel border.
+    .panel-body--flush .ui-table tbody > tr:last-child > td,
+    .panel-subblock .ui-table tbody > tr:last-child > td {
+        border-bottom: 0;
+    }
+
+    .panel-sub-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ui-space);
+        padding: var(--ui-space) var(--ui-space-l);
+        background: var(--ui-surface-50);
+        border-bottom: 1px solid var(--ui-color-border);
+
+        .panel-sub-head-l {
+            display: flex;
+            align-items: center;
+            gap: var(--ui-space);
+        }
+
+        .panel-sub-title {
+            font-size: var(--font-size-s);
+            font-weight: 700;
+            color: var(--ui-color-text);
+        }
+
+        .panel-sub-count {
+            display: inline-block;
+            font-size: var(--font-size-xs);
+            font-weight: 700;
+            color: var(--ui-color-text-muted);
+            background: var(--ui-surface-100);
+            border-radius: 999px;
+            padding: 1px 7px;
+            line-height: 1.4;
+        }
+    }
+
+    //####################################################
+    //## Card
+    //####################################################
+    .card {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        height: 100%;
+
+        .card-header {
+            flex: 0 0 2rem;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--ui-surface-0);
+            padding: var(--ui-space);
+            font-weight: bold;
+            color: var(--ui-color-text-muted);
+            border-radius: var(--ui-radius-md);
+
+            .card-name {
+                font-size: var(--font-size-l);
+                font-weight: bold;
+                color: var(--ui-color-text-muted);
+            }
+        }
+        .card-body {
+            flex: 1 1 auto;
+            background-color: var(--ui-surface-0);
+            padding: var(--ui-space);
+            color: var(--ui-color-text);
+            border-radius: var(--ui-radius-md);
+        }
+    }
+
+    //####################################################
+    //## Table
+    //####################################################
+    .ui-table td.action-column,
+    .ui-table th.action-column {
+        text-align: right;
+        button {
+            margin-right: var(--ui-space);
+        }
+        button:last-child {
+            margin-right: 0;
+        }
+    }
+
+    //####################################################
+    //## MARKDOWN
+    //####################################################
+    pre[class*='language-'] {
+        border: 1px solid var(--ui-color-border);
+    }
+
+    //####################################################
+    //## GANTT
+    //####################################################
+    .gantt-container {
+        .gantt .bar-wrapper .bar {
+            outline: none;
+        }
+    }
+
+    //####################################################
+    //## ISSUE CARD STYLES (shared: calendar + gantt)
+    //####################################################
+
+    // Avatar
+    .cal-event__avatar {
+        border-radius: 50%;
+        border: 1px solid var(--ui-color-border);
+        overflow: hidden;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--ui-color-text);
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    }
+
+    .cal-event__avatar--unknown {
+        background: var(--ui-color-unknown) !important;
+        border: 1px solid var(--ui-surface-400) !important;
+        color: var(--ui-color-text-muted) !important;
+    }
+
+    // Badge
+    .cal-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 2px 5px;
+        border-radius: 3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+
+        &.cal-state--start {
+            --cal-state-color: var(--ui-color-state-start);
+        }
+
+        &.cal-state--final {
+            --cal-state-color: var(--ui-color-state-final);
+        }
+
+        &.cal-state--in-progress {
+            --cal-state-color: var(--ui-color-state-in-progress);
+        }
+
+        &.cal-state--start,
+        &.cal-state--final,
+        &.cal-state--in-progress {
+            background: color-mix(in srgb, var(--cal-state-color) 15%, transparent);
+            border: 1px solid color-mix(in srgb, var(--cal-state-color) 50%, transparent);
+            color: var(--cal-state-color);
+        }
+
+        &:not(.cal-state--start):not(.cal-state--final):not(.cal-state--in-progress) {
+            background: color-mix(in srgb, var(--c) 15%, transparent);
+            border: 1px solid color-mix(in srgb, var(--c) 50%, transparent);
+            color: var(--c);
+        }
+    }
+
+    // Option B — Comfortable
+    .cal-event-b {
+        background: color-mix(in srgb, var(--sev) 8%, var(--ui-surface-0));
+        border: 1px solid color-mix(in srgb, var(--sev) 35%, var(--ui-color-border));
+        padding: 5px 7px 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        cursor: pointer;
+        box-sizing: border-box;
+
+        &:hover {
+            filter: brightness(0.96);
+        }
+    }
+
+    .cal-event-b__title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--ui-color-text);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 1.35;
+    }
+
+    .cal-event-b__foot {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+    }
+
+    .cal-event-b__badges {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        flex-shrink: 0;
+    }
+
+    .cal-event-b__spacer {
+        flex: 1;
+    }
+
+    .cal-event-b__user {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        overflow: hidden;
+        flex-shrink: 1;
+    }
+
+    .cal-event-b__name {
+        font-size: 9px;
+        font-weight: 700;
+        color: var(--ui-color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+    }
+
+    .cal-event-b__bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: color-mix(in srgb, var(--sev) 15%, var(--ui-surface-200));
+        overflow: hidden;
+    }
+
+    .cal-event-b__bar-fill {
+        height: 100%;
+        background: var(--sev);
+        opacity: 0.75;
+    }
+
+    // Option C — Compact
+    .cal-event-c {
+        background: color-mix(in srgb, var(--sev) 8%, var(--ui-surface-0));
+        border: 1px solid color-mix(in srgb, var(--sev) 35%, var(--ui-color-border));
+        border-radius: 3px;
+        padding: 2px 6px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        cursor: pointer;
+        box-sizing: border-box;
+
+        &:hover {
+            filter: brightness(0.96);
+        }
+    }
+
+    .cal-event-c__title {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--ui-color-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .cal-event-c__badges {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        flex-shrink: 0;
+    }
+
+    .cal-event-c__av {
+        flex-shrink: 0;
+    }
+
+    //####################################################
+    //## FULL CALENDAR
+    //####################################################
+    .issue-calendar {
+        .fc {
+            // Colors via FC CSS variables
+            --fc-border-color: var(--ui-color-border);
+            --fc-page-bg-color: var(--ui-surface-0);
+            --fc-today-bg-color: var(--ui-surface-50);
+            --fc-neutral-bg-color: var(--ui-surface-100);
+            --fc-neutral-text-color: var(--ui-color-text-muted);
+            --fc-button-text-color: var(--ui-color-text);
+            --fc-button-bg-color: transparent;
+            --fc-button-border-color: var(--ui-color-border);
+            --fc-button-hover-bg-color: var(--ui-surface-100);
+            --fc-button-hover-border-color: var(--ui-color-border);
+            --fc-button-active-bg-color: var(--ui-brand-500);
+            --fc-button-active-border-color: var(--ui-brand-500);
+            --fc-event-text-color: var(--ui-color-text);
+
+            // Strip FC's own event padding so our content controls the geometry
+            .fc-daygrid-event {
+                border-radius: 0;
+                margin: 2px 4px;
+
+                &:not(.fc-event-start) {
+                    margin-left: 0;
+                }
+                &:not(.fc-event-end) {
+                    margin-right: 0;
+                }
+            }
+
+            .fc-daygrid-event .fc-event-main {
+                padding: 0;
+            }
+
+            .fc-timegrid-event {
+                overflow: hidden;
+                margin: 2px 4px;
+
+                .fc-event-main {
+                    padding: 0;
+                    height: 100%;
+                    width: 100%;
+                }
+
+                .cal-event-b,
+                .cal-event-c {
+                    height: 100%;
+                    width: 100%;
+                }
+
+                .cal-event-b__title {
+                    white-space: normal;
+                    overflow: visible;
+                    text-overflow: unset;
+                    overflow-wrap: break-word;
+                    word-break: break-word;
+                    -webkit-line-clamp: unset;
+                }
+            }
+
+            // Event cards
+            .fc-event {
+                --fc-event-bg-color: transparent;
+                --fc-event-border-color: transparent;
+                --fc-event-text-color: var(--ui-color-text);
+            }
+
+            // Compact mode: keep daygrid events at 22px
+            &.fc--compact {
+                .fc-daygrid-event {
+                    min-height: 22px;
+                }
+            }
+
+            .fc-toolbar.fc-header-toolbar {
+                margin-bottom: var(--ui-space-s);
+            }
+
+            .fc-toolbar-title {
+                font-size: var(--font-size-m);
+            }
+
+            // Button structural styles not coverable by FC variables
+            .fc-button-primary {
+                text-transform: capitalize;
+                font-family: var(--font-family);
+                font-size: var(--font-size-s);
+                font-weight: 400;
+                padding: 0.3rem 0.65rem;
+                border-radius: var(--ui-radius-md);
+                box-shadow: none;
+                transition: background 0.15s;
+
+                &:not(:disabled).fc-button-active {
+                    color: var(--ui-color-primary-contrast);
+                }
+
+                &:not(:disabled):active {
+                    background: var(--ui-surface-200);
+                }
+
+                &:focus-visible {
+                    box-shadow:
+                        0 0 0 2px var(--ui-surface-0),
+                        0 0 0 4px var(--ui-brand-500);
+                    outline: none;
+                }
+
+                &:focus:not(:focus-visible) {
+                    box-shadow: none;
+                    outline: none;
+                }
+            }
+
+            .fc-button-group .fc-button-primary {
+                border-radius: 0;
+
+                &:first-child {
+                    border-radius: var(--ui-radius-md) 0 0 var(--ui-radius-md);
+                }
+
+                &:last-child {
+                    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+                }
+            }
+        }
+    }
+
+    //####################################################
+    //## FORM
+    //####################################################
+    label {
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    .form {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        .form-footer {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            gap: var(--ui-space);
+
+            button {
+                margin-right: var(--ui-space);
+            }
+            button:last-child {
+                margin-right: 0;
+            }
+        }
+    }
+    .required::after {
+        content: ' *';
+        color: var(--ui-color-danger);
+    }
+
+    //####################################################
+    //## MARKDOWN
+    //####################################################
+    // ngx-markdown renders tables as plain <table> elements. A wide table
+    // (e.g. an agent plan's verification checklist) overflows its container
+    // instead of scrolling. `display: block` + `width: max-content` lets the
+    // table size to its content, `max-width: 100%` caps it at the container,
+    // and `overflow-x: auto` adds a horizontal scrollbar only when needed.
+    [markdown] table {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        overflow-x: auto;
+        border-collapse: collapse;
+        font-size: var(--font-size-s);
+        border: 1px solid var(--ui-surface-200);
+
+        th,
+        td {
+            padding: var(--ui-space-s) var(--ui-space-m);
+            border: 1px solid var(--ui-surface-200);
+            text-align: left;
+        }
+
+        // Non-invasive header: just a bold weight and a faint tint so it reads
+        // as a header without fighting the surrounding card.
+        th {
+            font-weight: 700;
+            color: var(--ui-color-text);
+            background: var(--ui-surface-100);
+        }
+    }
+}
+
+.cdk-overlay-container {
+    z-index: 11000;
+}
+
+// Command palette / help sheet overlay backdrop — a soft dimmed, blurred scrim
+// (mockup: 2026-07-08-command-palette-mockup.html).
+.command-palette-backdrop {
+    background: color-mix(in srgb, var(--ui-surface-900) 42%, transparent);
+    backdrop-filter: blur(2px);
+}
+
+// Visually-hidden but screen-reader-available (e.g. the command palette's
+// aria-live result count). Standard clip-rect technique.
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+// Faint centered placeholder shown over a chart canvas when it has no data.
+// The chart's wrapper must be position: relative (Tailwind's `relative`).
+.chart-empty-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-color-text-muted);
+    opacity: 0.55;
+    font-size: var(--font-size-s);
+    pointer-events: none;
+}
+
+// Faint inline placeholder for empty content blocks (e.g. pinned issues),
+// matching the faintness of .chart-empty-overlay.
+.empty-hint {
+    color: var(--ui-color-text-muted);
+    opacity: 0.55;
+    text-align: center;
+}
+
+/* Kanban drag preview — CDK renders the preview at body level, so it needs
+   global (non-encapsulated) styles. Wraps a real tile render (width set inline
+   from the dragged card) and shows the hovered target sprint above it. */
+.tile-drag-preview {
+    min-width: 12rem;
+    border-radius: var(--ui-radius-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    font-size: 0.8125rem;
+    // Slight tilt while in hand ("picked up a real card"). Uses the individual
+    // `rotate`/`scale` properties so CDK's inline `transform: translate3d(...)`
+    // positioning isn't clobbered.
+    rotate: 2.5deg;
+    scale: 1.02;
+    animation: tile-drag-pickup 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+
+    @media (prefers-reduced-motion: reduce) {
+        rotate: none;
+        scale: none;
+        animation: none;
+    }
+}
+
+@keyframes tile-drag-pickup {
+    from {
+        rotate: 0deg;
+        scale: 1;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+}
+.tile-drag-preview__header {
+    background: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+    font-weight: 700;
+    padding: var(--ui-space-s) var(--ui-space-m);
+    border-radius: var(--ui-radius-md) var(--ui-radius-md) 0 0;
+
+    // Card follows below the header — square off the touching corners
+    + app-issue-kanban-tile .tile-card {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+}
+
+/* A kanban tile mid-flight (live move FLIP) — rendered above its neighbours */
+app-issue-kanban-tile.tile-flying {
+    position: relative;
+    z-index: 20;
+}
+
+/* Freshly dropped kanban tile settles with a small spring squash (both board views) */
+app-issue-kanban-tile.tile-landed {
+    animation: kanban-tile-land 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}
+
+@keyframes kanban-tile-land {
+    0% {
+        transform: scale(0.96);
+    }
+    60% {
+        transform: scale(1.015);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Unified movement pacing: CDK's in-drag reshuffle and drop-return default to
+   250ms — retime them to the product settle motion (420ms, same as the gantt
+   cascade slide and every WAAPI movement in ui/util/motion.ts). */
+.cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder),
+.cdk-drag-animating {
+    transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Count pill next to kanban column / swimlane state headers (wraps ui-odometer) */
+.kanban-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.25rem;
+    padding: 0 var(--ui-space-s);
+    border-radius: 999px;
+    background: var(--ui-surface-200);
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-s);
+    font-weight: 600;
+}

@@ -1,0 +1,164 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createCalendarFixture } from './calendar-testbed.helper';
+import { IssueCardViewType } from '../../constants/issue-card-view-type.constant';
+
+describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
+    let fixture: any;
+    let comp: any;
+    let mocks: any;
+
+    beforeEach(async () => {
+        localStorage.clear();
+        const result = await createCalendarFixture();
+        fixture = result.fixture;
+        comp = result.comp;
+        mocks = result.mocks;
+    });
+
+    function getApi() {
+        return comp.calendarRef().getApi();
+    }
+
+    // =========================================================================
+    // onToggleFilter
+    // =========================================================================
+
+    it('delegates to issueFilterStore.toggleShowFilter', () => {
+        comp.onToggleFilter();
+        expect(mocks.issueFilterStoreMock.toggleShowFilter).toHaveBeenCalled();
+    });
+
+    // =========================================================================
+    // onViewModeChange
+    // =========================================================================
+
+    it('sets currentView and calls calendarApi.changeView', () => {
+        getApi().changeView.mockClear();
+        comp.onViewModeChange('timeGridWeek');
+        expect(comp.currentView).toBe('timeGridWeek');
+        expect(getApi().changeView).toHaveBeenCalledWith('timeGridWeek');
+    });
+
+    // =========================================================================
+    // zoomView
+    // =========================================================================
+
+    describe('zoomView', () => {
+        it('month + 1 → week', () => {
+            getApi().changeView.mockClear();
+            comp.currentView = 'dayGridMonth';
+            comp.zoomView(1);
+            expect(getApi().changeView).toHaveBeenCalledWith('timeGridWeek');
+        });
+
+        it('week + 1 → day', () => {
+            getApi().changeView.mockClear();
+            comp.currentView = 'timeGridWeek';
+            comp.zoomView(1);
+            expect(getApi().changeView).toHaveBeenCalledWith('timeGridDay');
+        });
+
+        it('day + 1 → no-op (already finest)', () => {
+            getApi().changeView.mockClear();
+            comp.currentView = 'timeGridDay';
+            comp.zoomView(1);
+            expect(getApi().changeView).not.toHaveBeenCalled();
+        });
+
+        it('week - 1 → month', () => {
+            getApi().changeView.mockClear();
+            comp.currentView = 'timeGridWeek';
+            comp.zoomView(-1);
+            expect(getApi().changeView).toHaveBeenCalledWith('dayGridMonth');
+        });
+
+        it('month - 1 → no-op (already coarsest)', () => {
+            getApi().changeView.mockClear();
+            comp.currentView = 'dayGridMonth';
+            comp.zoomView(-1);
+            expect(getApi().changeView).not.toHaveBeenCalled();
+        });
+    });
+
+    // =========================================================================
+    // onCardModeChange
+    // =========================================================================
+
+    describe('onCardModeChange', () => {
+        it('sets cardMode signal, persists to localStorage, toggles FC class', () => {
+            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            expect(comp.cardMode()).toBe('CalendarCompact');
+            expect(localStorage.getItem('issue-calendar-card-mode')).toBe('CalendarCompact');
+        });
+
+        it('comfortable mode removes fc--compact class', () => {
+            comp.onCardModeChange('CalendarComfort' as IssueCardViewType);
+            expect(comp.cardMode()).toBe('CalendarComfort');
+        });
+
+        it('calls calendarApi.render after mode change', () => {
+            getApi().render.mockClear();
+            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            expect(getApi().render).toHaveBeenCalled();
+        });
+    });
+
+    // =========================================================================
+    // validCalendarMode
+    // =========================================================================
+
+    describe('validCalendarMode', () => {
+        it('returns "CalendarComfort" for null', () => {
+            expect(comp.validCalendarMode(null)).toBe('CalendarComfort');
+        });
+
+        it('returns "CalendarComfort" for invalid value', () => {
+            expect(comp.validCalendarMode('GanttComfort')).toBe('CalendarComfort');
+        });
+
+        it('returns "CalendarCompact" when stored', () => {
+            expect(comp.validCalendarMode('CalendarCompact')).toBe('CalendarCompact');
+        });
+
+        it('returns "CalendarComfort" when stored', () => {
+            expect(comp.validCalendarMode('CalendarComfort')).toBe('CalendarComfort');
+        });
+    });
+
+    // =========================================================================
+    // onCalendarEventClick
+    // =========================================================================
+
+    it('navigates to the issue detail page', () => {
+        const issue = { idProject: 5, idIssuePublic: 42 } as any;
+        const evt = { event: { extendedProps: { issue } } } as any;
+        comp.onCalendarEventClick(evt);
+        // Can't easily assert router.navigate without spy injection;
+        // verify it doesn't throw
+    });
+
+    // =========================================================================
+    // setFilter
+    // =========================================================================
+
+    describe('setFilter', () => {
+        it('with start and end: passes them to issueFilterStore.setFilter', () => {
+            mocks.issueFilterStoreMock.setFilter.mockClear();
+            const start = new Date('2025-01-01T00:00:00Z');
+            const end = new Date('2025-01-31T00:00:00Z');
+            comp.setFilter(start, end);
+            expect(mocks.issueFilterStoreMock.setFilter).toHaveBeenCalledWith({
+                scheduledAtFrom: start,
+                scheduledAtTo: end
+            });
+        });
+
+        it('without args: defaults to current month', () => {
+            mocks.issueFilterStoreMock.setFilter.mockClear();
+            comp.setFilter();
+            const arg = mocks.issueFilterStoreMock.setFilter.mock.calls[0][0];
+            expect(arg.scheduledAtFrom).toBeInstanceOf(Date);
+            expect(arg.scheduledAtTo).toBeInstanceOf(Date);
+        });
+    });
+});

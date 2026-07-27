@@ -1,0 +1,11 @@
+#!/bin/bash
+# Reject pushes to branches that don't match the agent pattern.
+while read local_ref local_sha remote_ref remote_sha; do
+  branch="${remote_ref#refs/heads/}"
+  if ! [[ "$branch" =~ ^agent/b[0-9]+/i[0-9]+/[0-9]+$ ]]; then
+    echo "ERROR: Branch '$branch' rejected."
+    echo "Agent branches must match: agent/b<botId>/i<issueId>/<timestamp>"
+    exit 1
+  fi
+done
+exit 0

@@ -1,0 +1,64 @@
+# Self-contained stack for end-to-end tests: the production single-image tracker
+# (Go binary serving REST + WebSocket + the Angular SPA on one port) plus its
+# Postgres and Redis. Mirrors a real deployment, unlike the dev compose (which
+# runs the client separately and needs docker/api/.env). Used by the nightly
+# e2e workflow; all values here are throwaway CI credentials.
+services:
+    tracker:
+        build:
+            context: ../..
+            dockerfile: docker/tracker/Dockerfile.prod
+        container_name: e2e_tracker
+        restart: "no"
+        ports:
+            - "1000:1000"
+        environment:
+            DATABASE_HOST: db
+            DATABASE_PORT: "5432"
+            DATABASE_NAME: rurdesk
+            DATABASE_USER: rurdesk
+            DATABASE_PASSWORD: rurdesk
+            CACHE_HOST: cache
+            CACHE_PORT: "6379"
+            CACHE_DB: "0"
+            # AI features run against a (non-existent) local Ollama; e2e flows
+            # that need real AI are out of scope for the smoke suite.
+            AI_PROVIDER: ollama
+            AI_HOST: http://127.0.0.1:11434
+            GIT_INTEGRATION_ENCRYPTION_KEY: e2e-test-key-e2e-test-key-32byte
+        depends_on:
+            db:
+                condition: service_healthy
+            cache:
+                condition: service_healthy
+        networks:
+            e2e_network:
+
+    db:
+        image: postgres:17
+        container_name: e2e_db
+        environment:
+            POSTGRES_USER: rurdesk
+            POSTGRES_PASSWORD: rurdesk
+            POSTGRES_DB: rurdesk
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U rurdesk -d rurdesk"]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+        networks:
+            e2e_network:
+
+    cache:
+        image: redis:8-alpine
+        container_name: e2e_cache
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+        networks:
+            e2e_network:
+
+networks:
+    e2e_network:

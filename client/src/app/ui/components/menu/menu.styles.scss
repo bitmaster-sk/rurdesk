@@ -1,0 +1,103 @@
+// <ui-menu> panel chrome + item layout. ViewEncapsulation.None → plain global
+// selectors, @used by src/app/ui/ui.styles.scss. Reads --ui-menu-* tokens
+// (styles.scss). Base layout is authored here from scratch (the old p-menu
+// layout came from the Aura theme, which disappears with MenuModule).
+.ui-menu {
+    margin: 0;
+    padding: var(--ui-space-s) 0;
+    list-style: none;
+    min-width: var(--ui-menu-min-width);
+    max-height: var(--ui-menu-max-height);
+    overflow-y: auto;
+    background: var(--ui-menu-bg);
+    border: 1px solid var(--ui-menu-border);
+    border-radius: var(--ui-menu-radius);
+    box-shadow: var(--ui-menu-shadow);
+    color: var(--ui-menu-fg);
+}
+
+.ui-menu-group-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ui-menu-group-label {
+    display: block;
+    padding: var(--ui-space-s) var(--ui-space-m);
+    font-size: var(--font-size-s);
+    font-weight: bold;
+    text-transform: uppercase;
+    color: var(--ui-menu-group-fg);
+}
+
+.ui-menu-separator {
+    height: 1px;
+    margin: var(--ui-space-s) 0;
+    background: var(--ui-menu-border);
+}
+
+// Interactive row: reset native <a>/<button> chrome, then style as a menu row
+// with a hover accent bar (mirrors the old p-menu-item look).
+.ui-menu-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    width: calc(100% - 2 * var(--ui-space));
+    margin: 0 var(--ui-space);
+    padding: var(--ui-space) var(--ui-space-m);
+    border: 0;
+    border-radius: var(--ui-menu-item-radius);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
+
+    &::before {
+        content: '';
+        position: absolute;
+        left: calc(-1 * var(--ui-space));
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background-color: transparent;
+        border-top-right-radius: var(--ui-menu-item-radius);
+        border-bottom-right-radius: var(--ui-menu-item-radius);
+        transition: background-color 0.2s;
+    }
+
+    &:hover,
+    &:focus-visible {
+        background-color: var(--ui-menu-item-hover-bg);
+        color: var(--ui-menu-item-hover-fg);
+        outline: none;
+
+        &::before {
+            background-color: var(--ui-menu-accent);
+        }
+
+        .ui-menu-item-icon {
+            color: var(--ui-menu-item-hover-fg);
+        }
+    }
+}
+
+.ui-menu-item-label {
+    flex: 1 1 auto;
+    white-space: nowrap;
+}
+
+.ui-menu-item-badge {
+    margin-left: auto;
+}
+
+// panelClass="user-menu" (top-menu) — wider panel (parity with the old .user-menu).
+.ui-menu.user-menu {
+    min-width: 15rem;
+}

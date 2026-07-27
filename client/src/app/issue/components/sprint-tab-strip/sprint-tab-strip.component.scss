@@ -1,0 +1,156 @@
+:host {
+    display: block;
+    flex: 0 0 auto;
+}
+
+.sprint-tabs {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: var(--ui-space) var(--ui-space);
+    // no panel background — blends with the app surface
+}
+
+.sprint-tabs__pinned {
+    flex: 0 0 auto;
+}
+
+.sprint-tabs__scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    overflow-x: auto;
+    scrollbar-width: none; // arrows drive scrolling; hide the native bar
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+// Outline-button style, matching the app's action buttons (Add task / Filter).
+.sprint-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    flex: 0 0 auto;
+    padding: var(--ui-space-s) var(--ui-space-m);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ui-color-text);
+    background: transparent;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition:
+        background 0.12s ease,
+        color 0.12s ease,
+        border-color 0.12s ease;
+
+    &:hover {
+        background: var(--ui-color-surface-hover);
+    }
+
+    // Active sprint = filled primary, same as the app's active view-mode toggle.
+    &--active {
+        background: var(--ui-color-primary);
+        border-color: var(--ui-color-primary);
+        color: var(--ui-color-primary-contrast);
+
+        &:hover {
+            background: var(--ui-color-primary-hover);
+        }
+    }
+
+    &--dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+        background: var(--ui-green-500);
+        flex: 0 0 auto;
+    }
+
+    // On the active (primary) tab the green dot would clash — show it white.
+    &--active .sprint-tab--dot {
+        background: var(--ui-color-primary-contrast);
+    }
+
+    // Closed sprint = immutable history: muted, dashed, no drop target styling.
+    &--closed {
+        color: var(--ui-color-text-muted);
+        border-style: dashed;
+
+        &.sprint-tab--active {
+            background: var(--ui-color-surface-hover);
+            border-color: var(--ui-color-border);
+            color: var(--ui-color-text);
+        }
+    }
+
+    &__edit {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        opacity: 0.45;
+        cursor: pointer;
+        padding: 0 0 0 var(--ui-space-xs);
+        font-size: 0.75rem;
+        line-height: 1;
+
+        &:hover {
+            opacity: 1;
+            color: var(--ui-blue-500);
+        }
+    }
+
+    &:hover &__edit,
+    &--active &__edit {
+        opacity: 0.8;
+    }
+
+    // Card dragged over a tab: dashed accent target. The inserted CDK placeholder
+    // is hidden (below) so the tab keeps its size.
+    &.cdk-drop-list-receiving,
+    &.cdk-drop-list-dragging {
+        border-style: dashed;
+        border-color: var(--ui-color-primary);
+        background: var(--ui-color-primary-weak);
+        color: var(--ui-color-primary);
+    }
+}
+
+.sprint-tabs__arrow {
+    flex: 0 0 auto;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--ui-color-surface-hover);
+        color: var(--ui-color-text);
+    }
+}
+
+// Invisible and out of flow so the tab keeps its size, but unlike display:none
+// it still has a position inside the tab — CDK's drop animation targets the
+// placeholder's rect, so the released card flies into the tab instead of the
+// viewport's top-left corner (a display:none rect is 0,0).
+:host ::ng-deep .sprint-tab .cdk-drag-placeholder {
+    position: absolute;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}

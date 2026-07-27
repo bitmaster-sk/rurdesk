@@ -1,0 +1,11 @@
+// The input-group + addon chrome is now a GLOBAL primitive (see
+// src/app/ui/components/input/input.styles.scss) — the tracker just uses the
+// `.ui-input-group` / `.ui-input-group-addon` classes with `variant="text"`
+// buttons. Nothing tracker-specific to style here anymore.
+
+.global-issue-link {
+    padding: var(--ui-space);
+    padding-top: 0;
+    text-align: left;
+    font-weight: bold;
+}

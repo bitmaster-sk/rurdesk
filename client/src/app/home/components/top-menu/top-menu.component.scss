@@ -1,0 +1,28 @@
+:host {
+    flex: 0 0 3rem;
+    background-color: var(--ui-color-surface);
+    border-bottom: 1px solid var(--ui-color-border);
+}
+
+// Avatar toggle is a <button> (keyboard-openable menu trigger) — strip native chrome.
+// Left padding matches the icon buttons' --ui-button-padding-x so the gap from the
+// bell glyph to the avatar equals the gap between the message and bell glyphs (which
+// each carry that padding on both sides); avatar has none, so it was short by one padding.
+.avatar-trigger {
+    display: inline-flex;
+    padding: 0 0 0 var(--ui-button-padding-x);
+    border: 0;
+    background: transparent;
+}
+
+.top-menu {
+    .logo {
+        font-size: var(--font-size-l);
+        font-weight: bold;
+        color: var(--ui-color-text);
+        display: flex;
+        align-items: center;
+        padding: 0 var(--ui-space) 0 0;
+        border-right: 1px solid var(--ui-color-border);
+    }
+}

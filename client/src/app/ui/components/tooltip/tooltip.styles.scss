@@ -1,0 +1,13 @@
+// [uiTooltip] bubble. ViewEncapsulation.None → plain global selector, @used by
+// src/app/ui/ui.styles.scss. Reads --ui-tooltip-* tokens (styles.scss).
+.ui-tooltip {
+    max-width: 16rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--ui-tooltip-bg);
+    color: var(--ui-tooltip-fg);
+    border-radius: var(--ui-tooltip-radius);
+    font-size: var(--ui-tooltip-font-size);
+    line-height: 1.3;
+    word-break: break-word;
+    pointer-events: none;
+}

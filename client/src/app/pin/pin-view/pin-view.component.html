@@ -1,0 +1,44 @@
+<div
+    class="pin-card flex flex-col justify-between"
+    [routerLink]="['/project', pin().idProject, 'issue', pin().idIssuePublic]"
+>
+    <!-- Row 1: issue id + severity dot + delete -->
+    <div class="pin-card__header flex items-center justify-between mb-1">
+        <span class="pin-card--id">#{{ pin().idIssuePublic }}</span>
+        <span class="flex items-center gap-2">
+            <span class="pin-card--severity flex items-center gap-1">
+                <span
+                    class="pin-card--severity-dot"
+                    [style.background]="pin().severityColor ?? 'var(--ui-color-unknown)'"
+                ></span>
+                <span class="pin-card--severity-name">
+                    {{ pin().severityName ?? ('NONE' | translate) }}
+                </span>
+            </span>
+            <span class="pin-card--delete" (click)="$event.stopPropagation(); onDeletePin()">
+                <tabler-icon icon="x" [size]="12" />
+            </span>
+        </span>
+    </div>
+
+    <!-- Row 2: title (2-line clamp, fills remaining space) -->
+    <div class="pin-card--title-wrapper">
+        <div class="pin-card--title">{{ pin().title }}</div>
+    </div>
+
+    <!-- Row 3: state badge + assignee avatar -->
+    <div class="flex items-center justify-between">
+        <app-state-badge [state]="pinState()" size="xs"></app-state-badge>
+        @if (pin().assignedToName) {
+            <app-avatar
+                [name]="pin().assignedToName"
+                [bgColor]="pin().assignedToColorAvatarBg"
+                [height]="1.25"
+                [width]="1.25"
+                [radius]="0.625"
+            ></app-avatar>
+        } @else {
+            <span class="pin-card--avatar-unassigned">?</span>
+        }
+    </div>
+</div>

@@ -1,0 +1,56 @@
+<div class="h-full flex flex-col">
+    <!-- Filter -->
+    <div class="issue-filter" [hidden]="!showFilter()">
+        <app-filter></app-filter>
+    </div>
+
+    <!-- Toolbar portal -->
+    <ng-template #toolbar>
+        <ui-toggle-button [ngModel]="showFilter()" (ngModelChange)="onToggleFilter()" size="small">
+            <tabler-icon icon="filter" [size]="14" />
+            {{ 'FILTER.SINGULAR' | translate }}
+        </ui-toggle-button>
+        <ui-choice
+            [options]="viewOptions"
+            [ngModel]="currentView"
+            (ngModelChange)="onViewModeChange($event)"
+            optionLabel="label"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+        ></ui-choice>
+        <ui-choice
+            [options]="cardModeOptions"
+            [ngModel]="cardMode()"
+            (ngModelChange)="onCardModeChange($event)"
+            optionLabel="labelKey"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+        >
+            <ng-template #item let-item>
+                {{ item.labelKey | translate }}
+            </ng-template>
+        </ui-choice>
+    </ng-template>
+
+    <div class="issue-calendar">
+        <div class="h-full">
+            <full-calendar #calendar [options]="defaultCalendarOps"></full-calendar>
+        </div>
+    </div>
+</div>
+
+<app-issue-quick-actions
+    #quickActions
+    (splitRequested)="onSplitRequested($event)"
+></app-issue-quick-actions>
+
+@if (isSplitDialogOpen() && splitIssue()) {
+    <app-split-dialog
+        [idProject]="splitIssue().idProject"
+        [issue]="splitIssue()"
+        (accepted)="onSplitAccepted()"
+        (cancelled)="onSplitCancelled()"
+    ></app-split-dialog>
+}

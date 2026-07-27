@@ -1,0 +1,55 @@
+<div
+    class="mockup-card-wrap"
+    [class.mockup-card--selected]="selected()"
+    [class.mockup-card--rejected]="rejected()"
+>
+    <button type="button" class="mockup-card" (click)="onOpen()">
+        <tabler-icon class="mockup-card__icon" icon="device-imac" [size]="16" />
+        <span class="mockup-card__label">{{ 'MOCKUP.LABEL' | translate }}</span>
+        @if (title()) {
+            <span class="mockup-card__title">— {{ title() }}</span>
+        }
+        @if (selected()) {
+            <span class="mockup-card__badge">✓ {{ 'AGENT.ACTIONS.SELECTED' | translate }}</span>
+        } @else if (rejected()) {
+            <span class="mockup-card__badge mockup-card__badge--muted">
+                {{ 'AGENT.ACTIONS.REJECTED' | translate }}
+            </span>
+        }
+    </button>
+
+    @if (approvable() && !selected() && !rejected()) {
+        <ui-button
+            class="mockup-card__approve"
+            severity="success"
+            size="small"
+            [label]="'AGENT.ACTIONS.USE_SHORT' | translate"
+            [ariaLabel]="'AGENT.ACTIONS.USE_AND_APPROVE' | translate"
+            [uiTooltip]="'AGENT.ACTIONS.USE_AND_APPROVE' | translate"
+            (click)="onUse($event)"
+        >
+            <tabler-icon icon="check" />
+        </ui-button>
+    }
+</div>
+
+<ui-dialog
+    [visible]="isOpen()"
+    (visibleChange)="onVisibleChange($event)"
+    [dismissable]="true"
+    [header]="displayTitle()"
+    width="85vw"
+    height="85vh"
+    [flush]="true"
+>
+    <div class="mockup-frame-wrap">
+        <span class="mockup-badge">{{ 'MOCKUP.SANDBOXED' | translate }}</span>
+        <iframe
+            class="mockup-frame"
+            [srcdoc]="srcdoc()"
+            sandbox="allow-scripts"
+            referrerpolicy="no-referrer"
+            [title]="displayTitle()"
+        ></iframe>
+    </div>
+</ui-dialog>

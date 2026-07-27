@@ -1,0 +1,9 @@
+/* Type-checking config for the Vitest unit layer (bare Vitest, no Angular builder). */
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "./out-tsc/vitest",
+        "types": ["vitest/globals", "node"]
+    },
+    "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+}

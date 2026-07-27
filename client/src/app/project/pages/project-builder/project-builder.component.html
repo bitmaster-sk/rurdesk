@@ -1,0 +1,49 @@
+<div class="project-builder-page">
+    @if (step() === 0) {
+        <div class="flex items-center justify-center h-full">
+            <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />
+        </div>
+    }
+
+    @if (step() === 1) {
+        <app-project-builder-step-input
+            [(description)]="description"
+            [(defaultIdState)]="defaultIdState"
+            [(defaultIdSeverity)]="defaultIdSeverity"
+            [states]="states()"
+            [severities]="severities()"
+            [isGenerating]="isGenerating()"
+            [isGenerateDisabled]="isGenerateDisabled()"
+            [minChars]="minDescriptionChars"
+            [rateLimitCountdown]="rateLimitCountdown()"
+            (generate)="onGenerate()"
+        ></app-project-builder-step-input>
+    }
+
+    @if (step() === 2) {
+        <app-project-builder-step-staging
+            [stagedIssues]="stagedIssues()"
+            [summary]="summary()"
+            [states]="states()"
+            [severities]="severities()"
+            [isAccepting]="isAccepting()"
+            [isRestoreBannerVisible]="isRestoreBannerVisible()"
+            [restoredFrom]="restoredFrom()"
+            [flatCount]="flatStagedIssues().length"
+            (accept)="onAccept()"
+            (back)="onBack()"
+            (regenerate)="onRegenerate()"
+            (issueChange)="onStagingIssueChange($event)"
+            (deleteNode)="onDeleteNode($event)"
+            (dismissBanner)="onDismissBanner()"
+            (discardStaging)="onDiscardStaging()"
+        ></app-project-builder-step-staging>
+    }
+
+    @if (step() === 3) {
+        <app-project-builder-step-success
+            [createdCount]="createdCount()"
+            (goToIssues)="onGoToIssues()"
+        ></app-project-builder-step-success>
+    }
+</div>

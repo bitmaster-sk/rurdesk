@@ -1,0 +1,141 @@
+// ui-input / ui-textarea GLOBAL styles — co-located but @used by
+// src/app/ui/ui.styles.scss (loaded eagerly & globally). These back the
+// `[uiInput]`/`[uiTextarea]` directives, which have no ViewEncapsulation, plus
+// three raw `.ui-input` class borrows (fake input div, 2× colorpicker chrome).
+// Own --ui-input-* tokens only .
+
+.ui-input {
+    box-sizing: border-box;
+    min-height: var(--ui-input-min-height);
+    padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
+    font-family: inherit;
+    font-size: var(--ui-input-font-size);
+    line-height: var(--ui-input-line-height);
+    color: var(--ui-input-fg);
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+    transition: border-color 0.2s;
+}
+
+// ─── Size scale (small / large) — default lives on the base rule above ─────
+.ui-input--sm {
+    min-height: var(--ui-input-sm-min-height);
+    padding-top: var(--ui-input-sm-padding-y);
+    padding-bottom: var(--ui-input-sm-padding-y);
+    font-size: var(--ui-input-sm-font-size);
+}
+
+.ui-input--lg {
+    min-height: var(--ui-input-lg-min-height);
+    padding-top: var(--ui-input-lg-padding-y);
+    padding-bottom: var(--ui-input-lg-padding-y);
+    font-size: var(--ui-input-lg-font-size);
+}
+
+.ui-input::placeholder {
+    color: var(--ui-input-placeholder);
+}
+
+.ui-input:hover:not(:disabled):not(:read-only) {
+    border-color: var(--ui-input-border-hover);
+}
+
+.ui-input:focus-visible {
+    outline: none;
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}
+
+.ui-input:disabled {
+    background: var(--ui-input-disabled-bg);
+    color: var(--ui-input-disabled-fg);
+    cursor: not-allowed;
+}
+
+.ui-input--invalid {
+    border-color: var(--ui-input-border-invalid);
+}
+
+// textarea — inherits all chrome from .ui-input. Height/resize stays the
+// consumer's job (project-builder rows="8", staged-issue .sic-desc-input), but
+// width is capped here: a native <textarea> defaults to a `cols`-based intrinsic
+// width and would otherwise overflow its container on the right. Fill the
+// container by default; max-width guards against any overflow.
+.ui-textarea {
+    // A native <textarea> is inline-block: at width:100% the inline box + its
+    // baseline/whitespace push it past the container's right edge. Block-level
+    // (same fix as ui-select's host) makes width:100% + border-box fit exactly.
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    // The base .ui-input line-height (1.2) is tuned for a single-line control;
+    // a multi-line textarea needs the readable default so wrapped lines breathe.
+    line-height: 1.5;
+}
+
+// invalid message text — the single p-error in the app (project-builder input
+// step) re-points here. red.400 = Aura p-error parity, reuses the invalid token.
+.ui-input-error {
+    color: var(--ui-input-border-invalid);
+}
+
+// ─── Input group + addons ─────────────────────────────────────────────────
+// A joined pill: input(s) + addon cells sharing one continuous outline.
+// Adjacent cells overlap borders by 1px so the seam reads as a single border.
+// Global primitive (used by the tracker widget and the /ui gallery).
+.ui-input-group {
+    display: flex;
+    align-items: stretch;
+
+    // Every child is a positioned stacking context so a focused cell can lift
+    // its focus halo ABOVE its neighbours. Without this the next opaque cell
+    // (its own background + 1px overlap) paints over the halo, clipping it on
+    // the shared edge — visible on whichever side an addon sits.
+    > * {
+        position: relative;
+    }
+
+    // The focused cell wins the stacking order → its border + halo render on
+    // top of the adjacent addon, so the aura is never clipped (either side).
+    > *:focus-within {
+        z-index: 1;
+    }
+
+    > *:not(:first-child) {
+        margin-inline-start: -1px; // border overlap join
+        border-start-start-radius: 0;
+        border-end-start-radius: 0;
+    }
+
+    > *:not(:last-child) {
+        border-start-end-radius: 0;
+        border-end-end-radius: 0;
+    }
+}
+
+.ui-input-group-addon {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    padding: 0 var(--ui-input-padding-x);
+    color: var(--ui-input-placeholder);
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+}
+
+// An addon that hosts a ui-button (e.g. tracker) is chromeless — the button
+// carries no border (variant="text"); the addon cell owns the single border,
+// and the button fills the whole cell. Works globally because ui-button is
+// ViewEncapsulation.None (no scoping attribute to fight).
+.ui-input-group-addon:has(.ui-button) {
+    padding: 0;
+}
+
+.ui-input-group-addon .ui-button {
+    width: 100%;
+    height: 100%;
+}

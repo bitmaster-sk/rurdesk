@@ -1,0 +1,10 @@
+@if (isAwaitingApproval()) {
+    <div class="flex gap-2 mt-2">
+        <ui-button
+            severity="success"
+            size="small"
+            [label]="'AGENT.ACTIONS.APPROVE' | translate"
+            (click)="onApprove()"
+        ></ui-button>
+    </div>
+}

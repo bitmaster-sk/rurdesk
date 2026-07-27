@@ -1,0 +1,169 @@
+<svg
+    #svg
+    class="gantt-arrows"
+    [class.gantt-arrows--settling]="isSettling()"
+    [attr.width]="totalWidth()"
+    [attr.height]="totalHeight()"
+>
+    <!-- Arrow marker definitions -->
+    <defs>
+        <!-- refX 9 (not 10): the tip overhangs the path end by 1px so the 2px line's
+             square cap hides inside the triangle instead of poking past the tip -->
+        <marker
+            id="arrowhead"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="10"
+            markerHeight="10"
+            orient="auto"
+        >
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="var(--ui-surface-400)" />
+        </marker>
+        <marker
+            id="arrowhead-selected"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="10"
+            markerHeight="10"
+            orient="auto"
+        >
+            <path d="M 0 0 L 10 5 L 0 10 Z" fill="var(--ui-color-primary)" />
+        </marker>
+        <marker
+            id="dot"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="10"
+            markerHeight="10"
+        >
+            <circle cx="5" cy="5" r="5" fill="var(--ui-surface-400)" />
+        </marker>
+        <marker
+            id="dot-selected"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerUnits="userSpaceOnUse"
+            markerWidth="10"
+            markerHeight="10"
+        >
+            <circle cx="5" cy="5" r="5" fill="var(--ui-color-primary)" />
+        </marker>
+    </defs>
+
+    @if (drawingArrowPath()) {
+        <path
+            class="gantt-arrow--drawing"
+            [attr.d]="drawingArrowPath()"
+            fill="none"
+            stroke="var(--ui-color-primary)"
+            stroke-width="2"
+            marker-end="url(#arrowhead-selected)"
+            pointer-events="none"
+        />
+    }
+
+    @for (arrow of displayArrows(); track arrow.relationId) {
+        @let isArrowHighlighted =
+            selectedRelationId() === arrow.relationId || idHoveredRelation$() === arrow.relationId;
+        @let relationTypeLabel = arrow.relationTypeTranslationKey | translate;
+        @let relationSubTypeLabel = arrow.relationSubTypeTranslationKey | translate;
+        <g
+            class="gantt-arrow"
+            [class.gantt-arrow--selected]="selectedRelationId() === arrow.relationId"
+            [class.gantt-arrow--critical]="criticalRelationIds().has(arrow.relationId)"
+            [class.gantt-arrow--dimmed]="
+                isCriticalPathEnabled() && !criticalRelationIds().has(arrow.relationId)
+            "
+            (mouseenter)="onArrowMouseEnter(arrow.relationId)"
+            (mouseleave)="onArrowMouseLeave()"
+            (click)="onArrowClick(arrow.relationId)"
+        >
+            <path
+                [attr.d]="arrow.path"
+                [attr.pathLength]="arrow.isDrawIn || arrow.traceDelayMs !== null ? 1 : null"
+                [class.gantt-arrow--path-draw-in]="arrow.isDrawIn"
+                [class.gantt-arrow--path-trace]="arrow.traceDelayMs !== null"
+                [style.animation-delay.ms]="arrow.traceDelayMs"
+                fill="none"
+                stroke="var(--ui-surface-400)"
+                stroke-width="2"
+                [attr.marker-end]="
+                    arrow.isDirectional
+                        ? isArrowHighlighted
+                            ? 'url(#arrowhead-selected)'
+                            : 'url(#arrowhead)'
+                        : isArrowHighlighted
+                          ? 'url(#dot-selected)'
+                          : 'url(#dot)'
+                "
+                [attr.marker-start]="
+                    arrow.isDirectional
+                        ? null
+                        : isArrowHighlighted
+                          ? 'url(#dot-selected)'
+                          : 'url(#dot)'
+                "
+            />
+
+            <!-- Invisible wider path for easier clicking -->
+            <path
+                [attr.d]="arrow.path"
+                fill="none"
+                stroke="transparent"
+                stroke-width="12"
+                [uiTooltip]="relationTypeLabel + ' • ' + relationSubTypeLabel"
+                uiTooltipPosition="top"
+            />
+
+            @if (arrow.lagLabel) {
+                <text
+                    [attr.x]="arrow.lagLabelX"
+                    [attr.y]="arrow.lagLabelY"
+                    text-anchor="middle"
+                    class="gantt-arrow--lag-label"
+                >
+                    {{ arrow.lagLabel }}
+                </text>
+            }
+            @if (selectedRelationId() === arrow.relationId) {
+                <circle
+                    [attr.cx]="arrow.midX"
+                    [attr.cy]="arrow.midY"
+                    r="10"
+                    class="gantt-arrow--delete-btn"
+                    (click)="
+                        deleteRequested.emit({
+                            relationId: arrow.relationId,
+                            idProject: arrow.idProject,
+                            idIssuePublic: arrow.fromIdIssuePublic
+                        });
+                        $event.stopPropagation()
+                    "
+                />
+                <text
+                    [attr.x]="arrow.midX"
+                    [attr.y]="arrow.midY + 4"
+                    text-anchor="middle"
+                    class="gantt-arrow--delete-icon"
+                    (click)="
+                        deleteRequested.emit({
+                            relationId: arrow.relationId,
+                            idProject: arrow.idProject,
+                            idIssuePublic: arrow.fromIdIssuePublic
+                        });
+                        $event.stopPropagation()
+                    "
+                >
+                    ✕
+                </text>
+            }
+        </g>
+    }
+</svg>

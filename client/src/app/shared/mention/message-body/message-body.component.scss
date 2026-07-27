@@ -1,0 +1,18 @@
+:host {
+    display: contents;
+}
+
+// Text segments (plain markdown runs between mention chips) must flow inline
+// with the chips. The <div> itself is set to inline; the markdown parser wraps
+// simple inline text in a <p> — strip that wrapper's block behaviour via
+// ng-deep so it doesn't break the flow. Block-level children (ul, ol, pre,
+// blockquote) inside the <p> naturally break out of the inline context, so
+// lists and code fences still render as blocks.
+.text-run {
+    display: inline;
+
+    ::ng-deep > p:only-child {
+        display: inline;
+        margin: 0;
+    }
+}

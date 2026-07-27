@@ -1,0 +1,16 @@
+/* same principle as the issue table drag handle */
+.drag-col {
+    width: 2rem;
+    padding-inline: var(--ui-space-xs, 4px);
+}
+
+.drag-handle {
+    display: flex;
+    justify-content: center;
+    cursor: grab;
+    color: var(--ui-color-text-muted);
+
+    &:active {
+        cursor: grabbing;
+    }
+}

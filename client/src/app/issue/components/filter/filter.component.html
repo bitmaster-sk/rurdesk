@@ -1,0 +1,97 @@
+<div class="grid grid-cols-12 gap-2 w-full m-0" [formGroup]="form">
+    <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">
+        <div class="ui-field col-span-3">
+            <label for="title-filter">{{ 'TITLE' | translate }}</label>
+            <input id="title-filter" type="text" uiInput class="w-full" formControlName="title" />
+        </div>
+    </div>
+
+    <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">
+        <div class="ui-field col-span-3">
+            <label for="state-filter">{{ 'STATE.SINGULAR' | translate }}</label>
+            <app-state-dropdown
+                inputId="state-filter"
+                [states]="states$ | async"
+                [multi]="true"
+                formControlName="idsState"
+            ></app-state-dropdown>
+            <div class="ui-field-checkbox mt-1 mb-0">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="state-unset-filter"
+                    [formControl]="stateUnsetControl"
+                />
+                <label for="state-unset-filter">
+                    {{ 'ISSUE.DISPLAY.UNSET.STATES' | translate }}
+                </label>
+            </div>
+        </div>
+
+        <div class="ui-field col-span-3">
+            <label for="severity-filter">{{ 'SEVERITY.SINGULAR' | translate }}</label>
+            <app-severity-dropdown
+                inputId="severity-filter"
+                [severities]="severities$ | async"
+                [multi]="true"
+                formControlName="idsSeverity"
+            ></app-severity-dropdown>
+            <div class="ui-field-checkbox mt-1 mb-0">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="severity-unset-filter"
+                    [formControl]="severityUnsetControl"
+                />
+                <label for="severity-unset-filter">
+                    {{ 'ISSUE.DISPLAY.UNSET.SEVERITIES' | translate }}
+                </label>
+            </div>
+        </div>
+
+        <div class="ui-field col-span-3">
+            <label for="assigned-to-filter">{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
+            <app-user-dropdown
+                inputId="assigned-to-filter"
+                [users]="users$ | async"
+                [multi]="true"
+                formControlName="idsAssignedTo"
+            ></app-user-dropdown>
+            <div class="ui-field-checkbox mt-1 mb-0">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="assigned-to-unset-filter"
+                    [formControl]="assignedToUnsetControl"
+                />
+                <label for="assigned-to-unset-filter">
+                    {{ 'ISSUE.DISPLAY.UNSET.ASSIGNED.TO' | translate }}
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">
+        <div class="ui-field col-span-3">
+            <label for="create-at-filter">{{ 'ISSUE.CREATED.AT' | translate }}</label>
+            <input
+                uiDatepicker
+                mode="range"
+                id="create-at-filter"
+                formControlName="createAtRange"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field col-span-3">
+            <label for="update-at-filter">{{ 'ISSUE.LAST.UPDATE.AT' | translate }}</label>
+            <input
+                uiDatepicker
+                mode="range"
+                id="update-at-filter"
+                formControlName="updateAtRange"
+                class="w-full"
+            />
+        </div>
+    </div>
+</div>

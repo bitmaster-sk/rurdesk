@@ -1,0 +1,29 @@
+<!-- No aria-live on the container: LiveAnnouncer (called from UiToastService.show)
+     is the single SR channel; a role on these nodes would double-announce. -->
+<div class="ui-toast-container">
+    @for (t of toast.toasts(); track t.id) {
+        <div
+            class="ui-toast ui-toast--{{ t.severity }}"
+            [class.is-paused]="toast.pausedIds().has(t.id)"
+            [style.--_life.ms]="t.life"
+            animate.enter="ui-toast--entering"
+            animate.leave="ui-toast--leaving"
+            (mouseenter)="toast.pause(t.id)"
+            (mouseleave)="toast.resume(t.id)"
+            (focusin)="toast.pause(t.id)"
+            (focusout)="toast.resume(t.id)"
+        >
+            <tabler-icon class="ui-toast__icon" [icon]="icon(t.severity)" aria-hidden="true" />
+            <div class="ui-toast__detail">{{ t.detail }}</div>
+            <button
+                type="button"
+                class="ui-toast__close"
+                [attr.aria-label]="'UI.TOAST.CLOSE' | translate"
+                (click)="toast.dismiss(t.id)"
+            >
+                <tabler-icon icon="x" aria-hidden="true" />
+            </button>
+            <div class="ui-toast__progress"></div>
+        </div>
+    }
+</div>

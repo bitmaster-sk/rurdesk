@@ -1,0 +1,17 @@
+<div class="ui-confirm-panel flex flex-col gap-4">
+    <div class="ui-confirm-message">{{ text() || ('UI.CONFIRMATION.MESSAGE' | translate) }}</div>
+
+    <div class="flex justify-end gap-2">
+        <ui-button
+            severity="secondary"
+            size="small"
+            [label]="rejectLabel() || ('UI.CONFIRMATION.NO' | translate)"
+            (click)="onReject()"
+        />
+        <ui-button
+            size="small"
+            [label]="acceptLabel() || ('UI.CONFIRMATION.YES' | translate)"
+            (click)="onAccept()"
+        />
+    </div>
+</div>

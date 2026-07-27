@@ -1,0 +1,18 @@
+{
+    "name": "issue-site",
+    "private": true,
+    "license": "AGPL-3.0-or-later",
+    "type": "module",
+    "description": "Presentation page + docs site generator. Markdown source lives in ../docs.",
+    "scripts": {
+        "build": "node tools/build.mjs",
+        "test": "node --test test/*.test.mjs",
+        "capture": "node tools/capture.mjs"
+    },
+    "dependencies": {
+        "marked": "^16.0.0"
+    },
+    "devDependencies": {
+        "playwright": "^1.50.0"
+    }
+}

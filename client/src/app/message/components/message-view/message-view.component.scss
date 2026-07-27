@@ -1,0 +1,131 @@
+.message-view {
+    display: flex;
+    flex-direction: row;
+    gap: var(--ui-space-l);
+    padding: var(--ui-space-s) var(--ui-space-l);
+    border-left: 3px solid transparent;
+    transition: background-color 0.1s;
+
+    &:hover {
+        background-color: var(--ui-color-content-hover);
+
+        .message-actions {
+            opacity: 1;
+        }
+    }
+
+    &.unread {
+        border-left-color: var(--ui-color-primary);
+        background-color: var(--ui-color-highlight);
+    }
+
+    &.continuation {
+        padding-top: var(--ui-space-xs);
+        padding-bottom: var(--ui-space-xs);
+    }
+
+    .message-avatar {
+        flex-shrink: 0;
+        width: 2.25rem;
+        padding-top: var(--ui-space-xs);
+    }
+
+    .message-body {
+        flex: 1 1 auto;
+        min-width: 0;
+
+        .message-meta {
+            display: flex;
+            flex-direction: row;
+            align-items: baseline;
+            gap: var(--ui-space);
+            margin-bottom: var(--ui-space-s);
+
+            .message-author {
+                font-weight: 700;
+                font-size: var(--font-size-s);
+                color: var(--ui-color-text);
+            }
+
+            .message-date {
+                font-size: var(--font-size-s);
+                color: var(--ui-surface-600);
+            }
+        }
+
+        .message-text {
+            color: var(--ui-color-text);
+            line-height: 1.6;
+            word-break: break-word;
+
+            ::ng-deep {
+                p {
+                    margin: 0 0 var(--ui-space-s);
+                }
+                p:last-child {
+                    margin-bottom: 0;
+                }
+
+                code {
+                    font-size: var(--font-size);
+                    background-color: var(--ui-surface-200);
+                    border: 1px solid var(--ui-surface-300);
+                    border-radius: var(--ui-radius-md);
+                    padding: var(--font-size-xs) var(--ui-space-s);
+                    color: var(--ui-color-primary-active);
+                }
+
+                pre {
+                    font-size: var(--font-size);
+                    background-color: var(--ui-color-surface-hover);
+                    border: 1px solid var(--ui-surface-300);
+                    border-left: 3px solid var(--ui-color-primary);
+                    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+                    padding: var(--ui-space-l);
+                    margin: var(--ui-space-s) 0;
+                    overflow-x: auto;
+                    line-height: 1.6;
+
+                    code {
+                        background: none;
+                        border: none;
+                        padding: 0;
+                        color: var(--ui-color-text);
+                        font-size: var(--font-size);
+                    }
+                }
+
+                ul,
+                ol {
+                    margin: var(--ui-space-s) 0 var(--ui-space-s) var(--ui-space-l);
+                    line-height: 1.8;
+                }
+            }
+        }
+
+        .message-edited {
+            font-size: var(--font-size-xs);
+            color: var(--ui-surface-600);
+        }
+
+        .edit-hint {
+            font-size: var(--font-size-xs);
+            color: var(--ui-surface-600);
+            margin-top: var(--ui-space-xs);
+            display: block;
+        }
+    }
+
+    .message-actions {
+        flex-shrink: 0;
+        opacity: 0;
+        transition: opacity 0.1s;
+        align-self: flex-start;
+
+        .edit-btn {
+            padding: var(--ui-space-xs);
+            height: 1.5rem;
+            width: 1.5rem;
+        }
+    }
+}

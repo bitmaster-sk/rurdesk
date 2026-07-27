@@ -1,0 +1,11 @@
+:host {
+    display: contents;
+    // Rich value (state badge) → less vertical padding so the tag can grow while
+    // min-height keeps the trigger at the 32px default. Cascades to the in-tree
+    // trigger only, not the detached overlay panel.
+    --ui-input-padding-y: var(--ui-input-rich-padding-y);
+}
+
+.state-dropdown {
+    width: 100%;
+}

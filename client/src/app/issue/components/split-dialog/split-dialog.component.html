@@ -1,0 +1,38 @@
+<ui-dialog
+    [visible]="true"
+    [header]="headerKey() | translate: headerParams()"
+    [closable]="!isBusy()"
+    [closeOnEscape]="!isBusy()"
+    [dismissable]="false"
+    [width]="step() === 'review' || step() === 'saving' ? '60vw' : '600px'"
+    [panelClass]="
+        step() === 'review' || step() === 'saving'
+            ? 'split-dialog split-dialog--wide'
+            : 'split-dialog'
+    "
+    (hide)="onCancel()"
+>
+    @if (step() === 'input' || step() === 'loading') {
+        <app-split-input-step
+            [isLoading]="step() === 'loading'"
+            [issueTitle]="issue().title"
+            (split)="onSplit($event)"
+            (cancel)="onCancel()"
+        />
+    }
+
+    @if (step() === 'review' || step() === 'saving') {
+        <app-split-review-step
+            [initialChildren]="children()"
+            [isSaving]="step() === 'saving'"
+            [severities]="severities()"
+            [states]="states()"
+            (accept)="onAccept($event)"
+            (cancel)="onCancel()"
+        />
+    }
+
+    @if (step() === 'done') {
+        <app-split-done-step [count]="acceptedCount()" (close)="onCancel()" />
+    }
+</ui-dialog>

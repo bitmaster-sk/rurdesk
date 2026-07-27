@@ -1,0 +1,25 @@
+<div #minimap class="gantt-minimap" (click)="onMinimapClick($event)">
+    <!-- Compressed task bars -->
+    <svg class="gantt-minimap--bars" [attr.width]="minimapWidth()" [attr.height]="40">
+        @for (bar of minimapBars(); track $index) {
+            @if (bar) {
+                <rect
+                    [attr.x]="bar.left"
+                    [attr.y]="bar.top"
+                    [attr.width]="bar.width"
+                    [attr.height]="bar.height"
+                    [attr.fill]="bar.color"
+                    opacity="0.6"
+                />
+            }
+        }
+    </svg>
+
+    <!-- Viewport indicator -->
+    <div
+        class="gantt-minimap--viewport"
+        [style.left.px]="viewportIndicatorLeft()"
+        [style.width.px]="viewportIndicatorWidth()"
+        (mousedown)="onViewportDragStart($event)"
+    ></div>
+</div>

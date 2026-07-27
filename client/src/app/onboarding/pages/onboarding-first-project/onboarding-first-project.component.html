@@ -1,0 +1,71 @@
+<div class="ob-canvas">
+    <div class="ob">
+        <div class="ob-hero">
+            <span class="ob-badge">
+                <tabler-icon icon="sparkles" [size]="14" />
+                {{ 'ONBOARDING.WELCOME' | translate }}
+            </span>
+            <h1 class="ob-title">{{ 'ONBOARDING.TITLE' | translate }}</h1>
+            <p class="ob-sub">{{ 'ONBOARDING.SUBTITLE' | translate }}</p>
+        </div>
+
+        <div class="ui-field">
+            <label for="ob-name" class="ob-label">
+                {{ 'ONBOARDING.NAME_LABEL' | translate }}
+                <span class="ob-req">*</span>
+            </label>
+            <input
+                uiInput
+                id="ob-name"
+                type="text"
+                class="w-full"
+                [formControl]="name"
+                [placeholder]="'ONBOARDING.NAME_PLACEHOLDER' | translate"
+            />
+        </div>
+
+        <div class="ob-paths">
+            <div class="ob-path ob-path--reco">
+                <span class="ob-reco-tag">{{ 'ONBOARDING.RECOMMENDED' | translate }}</span>
+                <span class="ob-picon ob-picon--ai">
+                    <tabler-icon icon="sparkles" [size]="20" />
+                </span>
+                <h2 class="ob-path-title">{{ 'ONBOARDING.AI_TITLE' | translate }}</h2>
+                <p class="ob-path-desc">{{ 'ONBOARDING.AI_DESC' | translate }}</p>
+                <ul class="ob-path-list">
+                    <li>{{ 'ONBOARDING.AI_BULLET_1' | translate }}</li>
+                    <li>{{ 'ONBOARDING.AI_BULLET_2' | translate }}</li>
+                </ul>
+                <button
+                    type="button"
+                    class="ui-btn ui-btn--primary ui-btn--block"
+                    [disabled]="name.invalid || isSubmitting()"
+                    (click)="onCreateWithAI()"
+                >
+                    <tabler-icon icon="sparkles" [size]="16" />
+                    <span>{{ 'ONBOARDING.AI_CTA' | translate }}</span>
+                </button>
+            </div>
+
+            <div class="ob-path">
+                <span class="ob-picon ob-picon--blank">
+                    <tabler-icon icon="device-floppy" [size]="20" />
+                </span>
+                <h2 class="ob-path-title">{{ 'ONBOARDING.BLANK_TITLE' | translate }}</h2>
+                <p class="ob-path-desc">{{ 'ONBOARDING.BLANK_DESC' | translate }}</p>
+                <ul class="ob-path-list">
+                    <li>{{ 'ONBOARDING.BLANK_BULLET_1' | translate }}</li>
+                    <li>{{ 'ONBOARDING.BLANK_BULLET_2' | translate }}</li>
+                </ul>
+                <button
+                    type="button"
+                    class="ui-btn ui-btn--secondary ui-btn--block"
+                    [disabled]="name.invalid || isSubmitting()"
+                    (click)="onCreateBlank()"
+                >
+                    <span>{{ 'ONBOARDING.BLANK_CTA' | translate }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,139 @@
+<!-- Toolbar portal — rendered in the page header via IssueToolbarService -->
+<ng-template #toolbar>
+    <ui-toggle-button
+        [ngModel]="showFilter$ | async"
+        (ngModelChange)="onToggleFilter()"
+        size="small"
+    >
+        <tabler-icon icon="filter" [size]="14" />
+        {{ 'FILTER.SINGULAR' | translate }}
+    </ui-toggle-button>
+    <div class="ui-button-group">
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            (click)="onSortDirectionToggle()"
+        >
+            @if (sortDirection() === 'asc') {
+                <tabler-icon icon="sort-ascending" [size]="14" />
+            } @else {
+                <tabler-icon icon="sort-descending" [size]="14" />
+            }
+        </ui-button>
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            [label]="currentSortLabel()"
+            (click)="sortMenu.toggle($event)"
+        ></ui-button>
+    </div>
+
+    <ui-button
+        severity="secondary"
+        variant="outlined"
+        size="small"
+        [label]="'ISSUE.KANBAN.SPRINTS.ROLL_OVER' | translate"
+        [disabled]="selectedIdSprint() === null || isSelectedSprintClosed()"
+        [title]="'ISSUE.KANBAN.SPRINTS.ROLL_OVER_HINT' | translate"
+        (click)="onRollOver()"
+    ></ui-button>
+
+    <ui-choice
+        [options]="viewModeOptions"
+        [ngModel]="viewMode()"
+        (ngModelChange)="viewMode.set($event)"
+        optionValue="value"
+        [allowEmpty]="false"
+        size="small"
+    ></ui-choice>
+
+    <ui-button
+        severity="secondary"
+        variant="outlined"
+        size="small"
+        (click)="settingsOverlay.toggle($event)"
+    >
+        <tabler-icon icon="adjustments-horizontal" [size]="14" />
+    </ui-button>
+    <ui-popover #settingsOverlay>
+        <div class="settings-panel">
+            <div class="settings-row">
+                <span class="settings-label">
+                    {{ 'ISSUE.KANBAN.SPRINTS.SHOW_CLOSED' | translate }}
+                </span>
+                <input
+                    type="checkbox"
+                    uiToggle
+                    [ngModel]="showClosedSprints()"
+                    (ngModelChange)="onShowClosedSprintsChange($event)"
+                />
+            </div>
+        </div>
+    </ui-popover>
+</ng-template>
+
+@if (showFilter$ | async) {
+    <app-filter></app-filter>
+}
+
+<div class="h-full flex flex-col overflow-hidden">
+    <app-sprint-tab-strip
+        [tabs]="sprintTabs()"
+        [selectedIdSprint]="selectedIdSprint()"
+        (select)="onSprintChange($event)"
+        (createRequested)="onCreateSprint()"
+        (editRequested)="onEditSprint($event)"
+        (taskDropped)="onTabTaskDropped($event)"
+    ></app-sprint-tab-strip>
+
+    <div class="grow overflow-auto ui-box">
+        @if (viewMode() === 'columns') {
+            @if (columns$ | async; as columns) {
+                <app-issue-kanban-columns
+                    [columns]="columns"
+                    [connectedTo]="sprintTabListIds()"
+                    (stateChange)="onStateChange($event)"
+                    (contextMenuRequested)="onContextMenuRequested($event)"
+                    (loadMore)="onColumnLoadMore($event)"
+                ></app-issue-kanban-columns>
+            }
+        } @else {
+            @if (swimlaneData$ | async; as data) {
+                <app-issue-kanban-swimlane
+                    [rows]="data.rows"
+                    [states]="data.states"
+                    [connectedTo]="sprintTabListIds()"
+                    (cardDrop)="onSwimlaneCardDrop($event)"
+                    (contextMenuRequested)="onContextMenuRequested($event)"
+                    (cellLoadMore)="onCellLoadMore($event)"
+                ></app-issue-kanban-swimlane>
+            }
+        }
+    </div>
+</div>
+
+<app-issue-quick-actions
+    #quickActions
+    [showReschedule]="false"
+    (splitRequested)="onSplitRequested($event)"
+></app-issue-quick-actions>
+
+@if (isSplitDialogOpen() && splitIssue()) {
+    <app-split-dialog
+        [idProject]="splitIssue().idProject"
+        [issue]="splitIssue()"
+        (accepted)="onSplitAccepted()"
+        (cancelled)="onSplitCancelled()"
+    ></app-split-dialog>
+}
+
+<ui-menu #sortMenu [model]="sortMenuItems()"></ui-menu>
+
+<app-sprint-dialog
+    [(visible)]="dialogOpen"
+    [sprint]="editingSprint()"
+    (saved)="onSprintSaved($event)"
+    (deleted)="onSprintDeleted()"
+></app-sprint-dialog>

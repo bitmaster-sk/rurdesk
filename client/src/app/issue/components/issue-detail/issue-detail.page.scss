@@ -1,0 +1,15 @@
+:host {
+    position: absolute;
+    inset: 0;
+    background-color: var(--ui-color-canvas);
+}
+
+.info-section {
+    flex: 0 0 50%;
+    background-color: var(--ui-color-canvas);
+}
+
+.comment-section {
+    flex: 0 0 50%;
+    background-color: var(--ui-color-canvas);
+}

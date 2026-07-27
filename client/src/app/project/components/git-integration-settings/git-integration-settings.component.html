@@ -1,0 +1,96 @@
+<ui-dialog
+    [header]="(isEdit ? 'GIT_INTEGRATION.EDIT' : 'GIT_INTEGRATION.ADD') | translate"
+    [visible]="isVisible()"
+    width="480px"
+    (hide)="onCancel()"
+>
+    <form [formGroup]="form" class="flex flex-col gap-2 pt-2">
+        <div class="ui-field">
+            <label for="gi-name" class="required">{{ 'NAME' | translate }}</label>
+            <input id="gi-name" uiInput formControlName="name" class="w-full" />
+        </div>
+
+        <div class="ui-field">
+            <label for="gi-host-type" class="required">
+                {{ 'GIT_INTEGRATION.HOST_TYPE' | translate }}
+            </label>
+            <ui-select
+                inputId="gi-host-type"
+                formControlName="hostType"
+                [options]="hostTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                class="w-full"
+            >
+                <ng-template #selectedItem let-o>
+                    <span class="inline-flex items-center gap-2">
+                        <img class="git-provider-icon" [src]="o.icon" alt="" aria-hidden="true" />
+                        {{ o.label }}
+                    </span>
+                </ng-template>
+                <ng-template #item let-o>
+                    <span class="inline-flex items-center gap-2">
+                        <img class="git-provider-icon" [src]="o.icon" alt="" aria-hidden="true" />
+                        {{ o.label }}
+                    </span>
+                </ng-template>
+            </ui-select>
+        </div>
+
+        <div class="ui-field">
+            <label for="gi-base-url" class="required">
+                {{ 'GIT_INTEGRATION.BASE_URL' | translate }}
+            </label>
+            <input
+                id="gi-base-url"
+                uiInput
+                formControlName="baseUrl"
+                placeholder="https://github.com"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field">
+            <label for="gi-repo-path" class="required">
+                {{ 'GIT_INTEGRATION.REPO_PATH' | translate }}
+            </label>
+            <input
+                id="gi-repo-path"
+                uiInput
+                formControlName="repoPath"
+                placeholder="owner/repo"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field">
+            <label for="gi-token" [class.required]="!isEdit">
+                {{ 'GIT_INTEGRATION.ACCESS_TOKEN' | translate }}
+            </label>
+            @if (isEdit) {
+                <small class="block ui-color-text-muted mb-1">
+                    {{ 'GIT_INTEGRATION.TOKEN_HINT' | translate }}
+                </small>
+            }
+            <input
+                id="gi-token"
+                uiInput
+                formControlName="accessToken"
+                type="password"
+                class="w-full"
+            />
+        </div>
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'CANCEL' | translate"
+            variant="text"
+            severity="secondary"
+            (click)="onCancel()"
+        />
+        <ui-button [label]="'SAVE' | translate" [disabled]="form.invalid" (click)="onSave()">
+            <tabler-icon icon="device-floppy" [size]="14" />
+        </ui-button>
+    </ng-template>
+</ui-dialog>

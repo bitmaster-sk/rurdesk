@@ -1,0 +1,13 @@
+.anchor-reply-item {
+    padding: 4px 0;
+
+    .anchor-reply-author {
+        font-weight: 700;
+        font-size: var(--font-size-s);
+        margin-right: var(--ui-space-s);
+    }
+
+    .anchor-outdated-tag {
+        font-size: var(--font-size-xs);
+    }
+}

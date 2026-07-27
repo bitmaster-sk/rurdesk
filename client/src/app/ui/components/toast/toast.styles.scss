@@ -1,0 +1,155 @@
+// Global styles for ui-toast (aggregated into ../../ui.styles.scss, loaded eagerly
+// via src/styles.scss → no styleUrl, no FOUC). Class selectors are prefixed so
+// they are safe when unscoped (ViewEncapsulation.None on UiToastComponent).
+
+.ui-toast-container {
+    position: fixed;
+    top: var(--ui-toast-offset);
+    right: var(--ui-toast-offset);
+    z-index: var(--ui-toast-z);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-toast-gap);
+    // Let clicks pass through the empty corner; individual toasts re-enable it.
+    pointer-events: none;
+}
+
+.ui-toast {
+    pointer-events: auto;
+    position: relative; // progress bar anchors to this
+    overflow: hidden; // clip the progress bar to the rounded corners
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    width: var(--ui-toast-width);
+    max-width: calc(100vw - 2 * var(--ui-toast-offset));
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--ui-toast-radius);
+    background: var(--_bg);
+    color: var(--ui-toast-fg);
+    box-shadow: var(--ui-toast-shadow);
+    font-size: var(--font-size-s);
+}
+
+.ui-toast--success {
+    --_bg: var(--ui-toast-success-bg);
+    --_accent: var(--ui-toast-success-accent);
+}
+
+.ui-toast--info {
+    --_bg: var(--ui-toast-info-bg);
+    --_accent: var(--ui-toast-info-accent);
+}
+
+.ui-toast--error {
+    --_bg: var(--ui-toast-error-bg);
+    --_accent: var(--ui-toast-error-accent);
+}
+
+.ui-toast__icon {
+    flex: 0 0 auto;
+    color: var(--_accent);
+    display: inline-flex;
+    line-height: 1;
+}
+
+.ui-toast__detail {
+    flex: 1 1 auto;
+    line-height: 1.4;
+    word-break: break-word;
+    // Long translated messages stay bounded rather than growing arbitrarily tall.
+    max-height: 6rem;
+    overflow-y: auto;
+}
+
+.ui-toast__close {
+    flex: 0 0 auto;
+    display: inline-flex;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--ui-toast-close-fg);
+    cursor: pointer;
+    line-height: 1;
+
+    &:hover {
+        color: var(--ui-toast-fg);
+    }
+}
+
+.ui-toast__progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: var(--_accent);
+    transform-origin: left;
+    animation: ui-toast-progress var(--_life, 3000ms) linear forwards;
+}
+
+// Single source of truth: UiToastService.pausedIds → [class.is-paused] pauses
+// BOTH the JS dismiss timer (in the service) and this CSS bar.
+.ui-toast.is-paused .ui-toast__progress {
+    animation-play-state: paused;
+}
+
+@keyframes ui-toast-progress {
+    from {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(0);
+    }
+}
+
+// Native animate.enter / animate.leave (Angular 21) — class applied for the
+// duration of the transition; Angular defers removal until the leave animation
+// ends. No @angular/animations dependency.
+.ui-toast--entering {
+    animation: ui-toast-in 180ms ease-out;
+}
+
+.ui-toast--leaving {
+    animation: ui-toast-out 150ms ease-in forwards;
+}
+
+@keyframes ui-toast-in {
+    from {
+        opacity: 0;
+        transform: translateX(1rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes ui-toast-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(1rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    // 1ms (NOT none): animate.leave waits for animationend to remove the node; a
+    // real event still fires at 1ms, so the toast reliably leaves the DOM.
+    .ui-toast--entering,
+    .ui-toast--leaving {
+        animation-duration: 1ms;
+    }
+
+    // Progress bar is purely cosmetic (JS timer owns dismissal) → safe to drop.
+    .ui-toast__progress {
+        animation: none;
+    }
+}

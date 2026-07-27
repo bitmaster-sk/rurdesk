@@ -1,0 +1,98 @@
+.staged-issue-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    overflow: hidden;
+
+    // Header — mirrors .panel-head: title input + delete only
+    .sic-head {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: var(--ui-space-s) var(--ui-space);
+        background: var(--ui-color-canvas);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    .sic-title {
+        flex: 1 1 auto;
+        min-width: 0;
+        font-weight: 700;
+    }
+
+    .sic-delete {
+        flex: 0 0 auto;
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+        min-width: 1.75rem !important;
+        padding: 0 !important;
+    }
+
+    // Body — description (left, stretches) + meta column (right)
+    .sic-body {
+        display: flex;
+        align-items: stretch;
+        gap: var(--ui-space-l);
+        padding: var(--ui-space-m);
+    }
+
+    .ui-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-xs);
+        margin-bottom: 0;
+    }
+
+    .sic-desc {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .sic-desc-input {
+        flex: 1 1 auto;
+        width: 100%;
+        min-height: 6.5rem;
+        resize: none;
+    }
+
+    .sic-meta {
+        flex: 0 0 14rem;
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-m);
+        padding-left: var(--ui-space-l);
+        border-left: 1px solid var(--ui-surface-200);
+    }
+
+    // Dropdowns fill the meta column
+    .sic-control,
+    .sic-control .severity-dropdown {
+        width: 100%;
+    }
+
+    .sic-estimate {
+        width: 100%;
+    }
+
+    // Quiet fields: borderless + shadowless until hover/focus, so the panel
+    // doesn't drown in input chrome. The ui-input focus ring still applies on
+    // focus (its `:focus` rule outranks the rule below).
+    .sic-title,
+    .sic-desc-input,
+    .sic-estimate {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+        transition:
+            background-color 0.12s,
+            border-color 0.12s,
+            box-shadow 0.12s;
+
+        &:hover:not(:focus) {
+            border-color: var(--ui-color-border);
+            background: var(--ui-color-surface);
+        }
+    }
+}

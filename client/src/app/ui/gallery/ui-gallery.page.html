@@ -1,0 +1,1279 @@
+<div class="ui-gallery">
+    <header class="ui-gallery__head">
+        <h1>UI gallery</h1>
+        <p>
+            Dev-only showcase of the
+            <code>ui-*</code>
+            design-system primitives. Not built in production.
+        </p>
+    </header>
+
+    <section class="ui-gallery__section gsz-demo">
+        <h2>Control size scale</h2>
+        <p class="ui-gallery__note">
+            <code>size="small"</code>
+            / default /
+            <code>size="large"</code>
+            on
+            <code>[uiInput]</code>
+            and
+            <code>ui-select</code>
+            . Height / font-size / line-height / padding are harmonised per tier; the select chevron
+            scales (14 / 16 / 18) so an empty select matches its input at every size.
+        </p>
+
+        <table class="gsz-spec">
+            <thead>
+                <tr>
+                    <th>tier</th>
+                    <th>height</th>
+                    <th>font-size</th>
+                    <th>line-height</th>
+                    <th>padding-y</th>
+                    <th>chevron</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>small</td>
+                    <td>26px</td>
+                    <td>0.875rem</td>
+                    <td>1.2</td>
+                    <td>0.3rem</td>
+                    <td>14</td>
+                </tr>
+                <tr>
+                    <td>default</td>
+                    <td>32px</td>
+                    <td>1rem</td>
+                    <td>1.2</td>
+                    <td>0.45rem</td>
+                    <td>16</td>
+                </tr>
+                <tr>
+                    <td>large</td>
+                    <td>40px</td>
+                    <td>1.125rem</td>
+                    <td>1.2</td>
+                    <td>0.65rem</td>
+                    <td>18</td>
+                </tr>
+            </tbody>
+        </table>
+
+        @for (row of sizeScaleRows; track row.label) {
+        <div class="gsz-row">
+            <span class="gsz-tier">{{ row.label }}</span>
+            <input uiInput type="text" placeholder="Empty" [size]="row.size" style="width: 180px" />
+            <input uiInput type="text" value="With value" [size]="row.size" style="width: 180px" />
+            <ui-select
+                style="width: 180px"
+                [options]="selectOptions"
+                optionLabel="label"
+                optionValue="value"
+                [size]="row.size"
+                placeholder="Empty"
+            />
+            <ui-select
+                style="width: 180px"
+                [options]="selectOptions"
+                optionLabel="label"
+                optionValue="value"
+                [size]="row.size"
+                [(ngModel)]="selectValue"
+            />
+        </div>
+        }
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-tag</h2>
+
+        <h3>Severities</h3>
+        <div class="ui-gallery__row">
+            @for (sev of tagSeverities; track sev) {
+            <div class="ui-gallery__cell">
+                <ui-tag [value]="sev" [severity]="sev" />
+                <code>{{ sev }}</code>
+            </div>
+            }
+        </div>
+
+        <h3>Edge cases</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-tag value="default (no severity)" />
+                <code>severity omitted → secondary</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-tag
+                    severity="info"
+                    value="A very long tag label that keeps going without wrapping"
+                />
+                <code>long label</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-tag severity="info" value="first" />
+                <ui-tag severity="secondary" value="ml-1 spacing" class="ml-1" />
+                <code>external class (ml-1)</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-tag [value]="''" severity="success" />
+                <code>empty value</code>
+            </div>
+        </div>
+
+        <h3>On a dark surface</h3>
+        <div class="ui-gallery__row ui-gallery__row--dark">
+            @for (sev of tagSeverities; track sev) {
+            <ui-tag [value]="sev" [severity]="sev" />
+            }
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-badge</h2>
+
+        <h3>Severities</h3>
+        <div class="ui-gallery__row">
+            @for (sev of badgeSeverities; track sev) {
+            <div class="ui-gallery__cell">
+                <ui-badge [value]="8" [severity]="sev" />
+                <code>{{ sev }}</code>
+            </div>
+            }
+        </div>
+
+        <h3>Edge cases</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-badge [value]="3" />
+                <code>severity omitted → secondary</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-badge [value]="'99+'" severity="danger" />
+                <code>overflow text</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-badge [value]="1" severity="danger" />
+                <code>single digit (min-width)</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-button</h2>
+
+        @for (variant of buttonVariants; track variant) {
+        <h3>{{ variant }} — severities</h3>
+        <div class="ui-gallery__row">
+            @for (sev of buttonSeverities; track sev) {
+            <ui-button [label]="sev" [severity]="sev" [variant]="variant" />
+            }
+        </div>
+        }
+
+        <h3>Sizes</h3>
+        <div class="ui-gallery__row">
+            <ui-button label="default" severity="primary" size="default" />
+            <ui-button label="small" severity="primary" size="small" />
+        </div>
+
+        <h3>States</h3>
+        <div class="ui-gallery__row">
+            <ui-button label="normal" severity="primary" />
+            <ui-button label="loading" severity="primary" [loading]="true" />
+            <ui-button label="disabled" severity="primary" [disabled]="true" />
+            <ui-button
+                label="disabled outlined"
+                severity="danger"
+                variant="outlined"
+                [disabled]="true"
+            />
+        </div>
+
+        <h3>Fluid (full container width)</h3>
+        <div class="ui-gallery__cell ui-gallery__cell--stack" style="max-width: 320px">
+            <ui-button label="Full width" severity="primary" [fluid]="true" />
+            <code>[fluid]="true"</code>
+        </div>
+
+        <h3>With icon</h3>
+        <div class="ui-gallery__row">
+            <ui-button label="Add" severity="primary">
+                <tabler-icon icon="plus" [size]="16" />
+            </ui-button>
+            <ui-button label="Delete" severity="danger" variant="outlined">
+                <tabler-icon icon="trash" [size]="16" />
+            </ui-button>
+            <ui-button label="Download" severity="secondary" variant="text">
+                <tabler-icon icon="download" [size]="16" />
+            </ui-button>
+        </div>
+
+        <h3>Icon-only &amp; rounded</h3>
+        <div class="ui-gallery__row">
+            <ui-button ariaLabel="Add" severity="primary" [isIconOnly]="true">
+                <tabler-icon icon="plus" [size]="16" />
+            </ui-button>
+            <ui-button ariaLabel="Delete" severity="danger" variant="outlined" [isIconOnly]="true">
+                <tabler-icon icon="trash" [size]="16" />
+            </ui-button>
+            <ui-button ariaLabel="Add" severity="primary" [isRounded]="true" [isIconOnly]="true">
+                <tabler-icon icon="plus" [size]="16" />
+            </ui-button>
+            <ui-button ariaLabel="Add" severity="primary" size="small" [isIconOnly]="true">
+                <tabler-icon icon="plus" [size]="14" />
+            </ui-button>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>uiInput</h2>
+
+        <h3>States</h3>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="text" placeholder="Type here…" />
+                <code>default</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="text" value="Filled value" />
+                <code>with value</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="text" placeholder="Disabled" disabled />
+                <code>disabled</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="text" value="Invalid value" [invalid]="true" />
+                <small class="ui-input-error">This field is required.</small>
+                <code>[invalid]="true" + .ui-input-error</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="text" placeholder="Full width" class="w-full" />
+                <code>class="w-full"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiInput type="password" value="secret" />
+                <code>type="password"</code>
+            </div>
+        </div>
+
+        <h3>Addons (input-group)</h3>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <div class="ui-input-group">
+                    <span class="ui-input-group-addon">https://</span>
+                    <input uiInput type="text" placeholder="example.com" />
+                </div>
+                <code>left text addon</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <div class="ui-input-group">
+                    <input uiInput type="text" placeholder="Amount" />
+                    <span class="ui-input-group-addon">.00</span>
+                </div>
+                <code>right text addon</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <div class="ui-input-group">
+                    <span class="ui-input-group-addon">
+                        <tabler-icon icon="search" [size]="16" />
+                    </span>
+                    <input uiInput type="text" placeholder="Search…" />
+                    <span class="ui-input-group-addon"><tabler-icon icon="x" [size]="16" /></span>
+                </div>
+                <code>icon addons both sides</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <div class="ui-input-group">
+                    <input uiInput type="text" placeholder="Add item" />
+                    <div class="ui-input-group-addon">
+                        <ui-button
+                            severity="secondary"
+                            variant="text"
+                            [isIconOnly]="true"
+                            ariaLabel="Add"
+                        >
+                            <tabler-icon icon="plus" [size]="16" />
+                        </ui-button>
+                    </div>
+                </div>
+                <code>ui-button addon (chromeless)</code>
+            </div>
+        </div>
+
+        <h3>Hint</h3>
+        <p class="ui-gallery__note">
+            Focus a field to see the border recolour to
+            <code>brand.500</code>
+            plus the 12% halo (go-forward house style — pInputText had no halo). In a group, focus
+            the input next to an addon — the halo lifts above the addon on the shared edge (both
+            sides).
+        </p>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>uiTextarea</h2>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <textarea uiTextarea rows="4" placeholder="Multi-line text…"></textarea>
+                <code>default (rows=4)</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <textarea uiTextarea rows="4" [invalid]="true">Invalid content</textarea>
+                <small class="ui-input-error">Too short.</small>
+                <code>[invalid]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <textarea uiTextarea rows="4" placeholder="Disabled" disabled></textarea>
+                <code>disabled</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-checkbox</h2>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiCheckbox [(ngModel)]="checkboxOff" />
+                <code>unchecked</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiCheckbox [(ngModel)]="checkboxOn" />
+                <code>checked</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiCheckbox [ngModel]="true" [invalid]="true" />
+                <code>[invalid]="true"</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiCheckbox [ngModel]="false" disabled />
+                <code>disabled</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiCheckbox [ngModel]="true" disabled />
+                <code>disabled + checked</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" uiCheckbox [(ngModel)]="checkboxOff" />
+                    <span>With label</span>
+                </label>
+                <code>label wrap</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-toggle</h2>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiToggle [(ngModel)]="toggleOff" />
+                <code>off</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiToggle [(ngModel)]="toggleOn" />
+                <code>on</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiToggle [ngModel]="false" disabled />
+                <code>disabled off</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <input type="checkbox" uiToggle [ngModel]="true" disabled />
+                <code>disabled on</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" uiToggle [(ngModel)]="toggleOff" />
+                    <span>With label</span>
+                </label>
+                <code>label wrap</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-toggle-button</h2>
+
+        <h3>Pressed severities</h3>
+        <div class="ui-gallery__row">
+            @for (sev of buttonSeverities; track sev) {
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="true" [severity]="sev" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    {{ sev }}
+                </ui-toggle-button>
+                <code>{{ sev }}</code>
+            </div>
+            }
+        </div>
+
+        <h3>States (default severity = primary)</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [(ngModel)]="toggleButtonOff" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    Filter
+                </ui-toggle-button>
+                <code>unpressed (interactive)</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [(ngModel)]="toggleButtonOn" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    Filter
+                </ui-toggle-button>
+                <code>pressed (interactive)</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="false" [disabled]="true" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    Filter
+                </ui-toggle-button>
+                <code>disabled unpressed</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="true" [disabled]="true" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    Filter
+                </ui-toggle-button>
+                <code>disabled pressed</code>
+            </div>
+        </div>
+
+        <h3>Sizes</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="true">
+                    <tabler-icon icon="filter" [size]="16" />
+                    Default
+                </ui-toggle-button>
+                <code>size="default"</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="true" size="small">
+                    <tabler-icon icon="filter" [size]="14" />
+                    Small
+                </ui-toggle-button>
+                <code>size="small"</code>
+            </div>
+        </div>
+
+        <h3>Text only (no icon)</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="false" size="small">Text</ui-toggle-button>
+                <code>unpressed</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-toggle-button [ngModel]="true" size="small">Text</ui-toggle-button>
+                <code>pressed</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-choice</h2>
+
+        <h3>Selected severities</h3>
+        <div class="ui-gallery__grid">
+            @for (sev of buttonSeverities; track sev) {
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [severity]="sev"
+                    size="small"
+                    [allowEmpty]="false"
+                    [ngModel]="'board'"
+                />
+                <code>{{ sev }}</code>
+            </div>
+            }
+        </div>
+
+        <h3>Variants</h3>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [allowEmpty]="false"
+                    [(ngModel)]="choiceValue"
+                />
+                <code>default — value: {{ choiceValue }}</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    size="small"
+                    [allowEmpty]="false"
+                    [(ngModel)]="choiceValue"
+                />
+                <code>size="small"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [allowEmpty]="true"
+                    [(ngModel)]="choiceEmptyValue"
+                />
+                <code>
+                    [allowEmpty]="true" — re-click clears ({{ choiceEmptyValue ?? 'null' }})
+                </code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [disabled]="true"
+                    [(ngModel)]="choiceValue"
+                />
+                <code>[disabled]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-choice
+                    [options]="choiceOptions"
+                    optionValue="value"
+                    [allowEmpty]="false"
+                    [(ngModel)]="choiceIconValue"
+                >
+                    <ng-template #item let-o>
+                        <tabler-icon icon="layout-list" [size]="14" />
+                        {{ o.label }}
+                    </ng-template>
+                </ui-choice>
+                <code>#item template (icon + label)</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-select</h2>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Choose…"
+                    [(ngModel)]="selectValue"
+                />
+                <code>default (optionLabel/Value)</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Choose…"
+                    [showClear]="true"
+                    [(ngModel)]="selectClearValue"
+                />
+                <code>[showClear]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Search…"
+                    [filter]="true"
+                    filterPlaceholder="Type to filter…"
+                    [(ngModel)]="selectFilterValue"
+                />
+                <code>[filter]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Small"
+                    size="small"
+                    [(ngModel)]="selectSmallValue"
+                />
+                <code>size="small"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [disabled]="true"
+                    [(ngModel)]="selectDisabledValue"
+                />
+                <code>[disabled]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-select
+                    [options]="colorOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Priority"
+                    [(ngModel)]="colorValue"
+                >
+                    <ng-template #selectedItem let-o>
+                        <span class="ui-gallery__dot" [style.background]="o.color"></span>
+                        {{ o.label }}
+                    </ng-template>
+                    <ng-template #item let-o>
+                        <span class="ui-gallery__dot" [style.background]="o.color"></span>
+                        {{ o.label }}
+                    </ng-template>
+                </ui-select>
+                <code>#selectedItem / #item template</code>
+            </div>
+        </div>
+
+        <h2>ui-multiselect</h2>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-multiselect
+                    [options]="selectOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Choose many…"
+                    [(ngModel)]="multiValue"
+                />
+                <code>default (comma label + select-all header)</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-multiselect
+                    [options]="colorOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Priorities…"
+                    [(ngModel)]="multiValue"
+                >
+                    <ng-template #item let-o>
+                        <span class="ui-gallery__dot" [style.background]="o.color"></span>
+                        {{ o.label }}
+                    </ng-template>
+                </ui-multiselect>
+                <code>#item template + checkboxes</code>
+            </div>
+        </div>
+
+        <h2>ui-listbox</h2>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-listbox
+                    [options]="listboxOptions"
+                    optionLabel="name"
+                    (onChange)="onListboxPick($event.value)"
+                />
+                <code>inline, action mode — last picked: {{ lastPicked }}</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-listbox
+                    [options]="listboxOptions"
+                    optionLabel="name"
+                    [filter]="true"
+                    filterPlaceholder="Search…"
+                    (onChange)="onListboxPick($event.value)"
+                />
+                <code>[filter]="true"</code>
+            </div>
+        </div>
+
+        <h3>Hint</h3>
+        <p class="ui-gallery__note">
+            The closed trigger reuses the
+            <code>--ui-input-*</code>
+            chrome (looks like an input, halo on focus). Open a select — the panel grows to fit the
+            longest option (min-width = trigger). The multiselect keeps a tri-state select-all
+            header; the listbox is always-open and emits on every click.
+        </p>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>uiDatepicker</h2>
+
+        <h3>Modes</h3>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiDatepicker mode="date" [(ngModel)]="dateValue" />
+                <code>mode="date"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiDatepicker mode="datetime" [(ngModel)]="datetimeValue" />
+                <code>mode="datetime" (12h)</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiDatepicker mode="range" [(ngModel)]="rangeValue" />
+                <code>mode="range"</code>
+            </div>
+        </div>
+
+        <h3>Inline</h3>
+        <div class="ui-gallery__row">
+            <input uiDatepicker mode="inline" [(ngModel)]="inlineValue" />
+        </div>
+
+        <p class="ui-gallery__note">
+            Open a popup to see the Today / Clear footer. Focus is themed via
+            <code>--ui-datepicker-*</code>
+            . Selected value: date
+            <code>{{ dateValue | date: 'medium' }}</code>
+            , range
+            <code>{{ rangeValue?.[0] | date }} – {{ rangeValue?.[1] | date }}</code>
+            .
+        </p>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-toast</h2>
+        <p>
+            Click to enqueue a toast (top-right). Hover/focus pauses auto-dismiss; the bar shows
+            remaining time.
+        </p>
+        <div class="ui-gallery__row">
+            <ui-button label="Show success" severity="success" (click)="showToast('success')" />
+            <ui-button label="Show info" severity="info" (click)="showToast('info')" />
+            <ui-button label="Show error" severity="danger" (click)="showToast('error')" />
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-divider</h2>
+
+        <h3>Horizontal</h3>
+        <div class="ui-gallery__stack">
+            <span>Above</span>
+            <ui-divider />
+            <span>Below</span>
+        </div>
+
+        <h3>Vertical</h3>
+        <div class="ui-gallery__row ui-gallery__row--vdivider">
+            <span>Left</span>
+            <ui-divider layout="vertical" />
+            <span>Right</span>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-loader</h2>
+
+        <h3>Sizes</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell">
+                <ui-loader [size]="16" />
+                <code>size 16</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-loader [size]="24" />
+                <code>size 24</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-loader [size]="40" />
+                <code>size 40 (default)</code>
+            </div>
+            <div class="ui-gallery__cell">
+                <ui-loader [size]="64" />
+                <code>size 64</code>
+            </div>
+        </div>
+
+        <h3>On a dark surface</h3>
+        <div class="ui-gallery__row ui-gallery__row--dark">
+            <ui-loader [size]="40" />
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-message</h2>
+
+        <h3>Severities</h3>
+        <div class="ui-gallery__grid">
+            @for (sev of messageSeverities; track sev) {
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-message [severity]="sev" class="w-full">
+                    This is a {{ sev }} message with a bit of explanatory text.
+                </ui-message>
+                <code>{{ sev }}</code>
+            </div>
+            }
+        </div>
+
+        <h3>Long text (full width)</h3>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-message severity="warn" class="w-full">
+                    A longer warning that wraps across multiple lines to verify the icon stays
+                    top-aligned and the accent stripe spans the full height of the box.
+                </ui-message>
+                <code>severity="warn" class="w-full"</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>uiColor</h2>
+
+        <h3>States</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input type="color" uiColor [(ngModel)]="swatchValue" />
+                <code>picked: {{ swatchValue }}</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input type="color" uiColor [ngModel]="'6b7280'" />
+                <code>stored without # → normalised</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input type="color" uiColor [ngModel]="'notacolor'" />
+                <code>unparseable → fallback #000000</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input type="color" uiColor [ngModel]="'#e57373'" [invalid]="true" />
+                <code>[invalid]="true"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input type="color" uiColor [ngModel]="'#b85814'" disabled />
+                <code>disabled</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-popover</h2>
+
+        <h3>Variants</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="popDefault.toggle($event)"
+                >
+                    Toggle
+                </ui-button>
+                <ui-popover #popDefault>
+                    <div style="max-width: 16rem">
+                        Simple projected content. Click outside or press Escape to dismiss.
+                    </div>
+                </ui-popover>
+                <code>default (toggle, dismissable)</code>
+            </div>
+
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button severity="secondary" variant="outlined" (click)="popRich.toggle($event)">
+                    Rich content
+                </ui-button>
+                <ui-popover #popRich>
+                    <div class="flex flex-col gap-2" style="min-width: 12rem">
+                        <strong>Actions</strong>
+                        <ui-button
+                            severity="primary"
+                            size="small"
+                            (click)="lastPopoverAction = 'Edit'; popRich.hide()"
+                        >
+                            Edit
+                        </ui-button>
+                        <ui-button
+                            severity="danger"
+                            size="small"
+                            (click)="lastPopoverAction = 'Delete'; popRich.hide()"
+                        >
+                            Delete
+                        </ui-button>
+                    </div>
+                </ui-popover>
+                <code>projected buttons → hide() on pick ({{ lastPopoverAction }})</code>
+            </div>
+
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="popPinned.toggle($event)"
+                >
+                    Pinned
+                </ui-button>
+                <ui-popover #popPinned [dismissable]="false">
+                    <div class="flex flex-col gap-2" style="max-width: 14rem">
+                        <span>Not dismissable — outside clicks & Escape are ignored.</span>
+                        <ui-button size="small" (click)="popPinned.hide()">Close</ui-button>
+                    </div>
+                </ui-popover>
+                <code>[dismissable]="false"</code>
+            </div>
+
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="popClass.toggle($event)"
+                >
+                    panelClass
+                </ui-button>
+                <ui-popover #popClass panelClass="gallery-pop">
+                    <div>
+                        Custom padding via
+                        <code>panelClass</code>
+                        .
+                    </div>
+                </ui-popover>
+                <code>panelClass="gallery-pop"</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-menu</h2>
+
+        <h3>Variants</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="flatMenu.toggle($event)"
+                >
+                    Flat + command
+                </ui-button>
+                <ui-menu #flatMenu [model]="menuFlat" />
+                <code>flat, command → ({{ lastMenuAction }})</code>
+            </div>
+
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="groupMenu.toggle($event)"
+                >
+                    Grouped + badge/icon
+                </ui-button>
+                <ui-menu #groupMenu [model]="menuGrouped" />
+                <code>groups + empty group + icon + badge + routerLink</code>
+            </div>
+
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    (click)="tmplMenu.toggle($event)"
+                >
+                    Custom #item
+                </ui-button>
+                <ui-menu #tmplMenu panelClass="user-menu" [model]="menuTemplate">
+                    <ng-template #item let-item>
+                        <tabler-icon [icon]="item.tablerIcon" [size]="16" />
+                        <span class="ui-menu-item-label">{{ item.label }}</span>
+                    </ng-template>
+                </ui-menu>
+                <code>#item inner-only + separator + panelClass</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>[uiTooltip]</h2>
+
+        <h3>Positions</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    uiTooltip="Tooltip above"
+                    uiTooltipPosition="top"
+                >
+                    top
+                </ui-button>
+                <code>uiTooltipPosition="top"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    uiTooltip="Tooltip below"
+                    uiTooltipPosition="bottom"
+                >
+                    bottom
+                </ui-button>
+                <code>uiTooltipPosition="bottom"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    uiTooltip="Tooltip left"
+                    uiTooltipPosition="left"
+                >
+                    left
+                </ui-button>
+                <code>uiTooltipPosition="left"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    uiTooltip="Tooltip right"
+                    uiTooltipPosition="right"
+                >
+                    right
+                </ui-button>
+                <code>uiTooltipPosition="right"</code>
+            </div>
+        </div>
+
+        <h3>Hosts & edge cases</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button severity="primary" [uiTooltip]="'Bound expression'">bound</ui-button>
+                <code>[uiTooltip]="expr"</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <span
+                    uiTooltip="Tooltip on plain text"
+                    style="text-decoration: underline dotted; cursor: help"
+                >
+                    hover me
+                </span>
+                <code>on a &lt;span&gt;</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button severity="secondary" variant="text" uiTooltip="Delete">
+                    <tabler-icon icon="trash" [size]="16" />
+                </ui-button>
+                <code>icon-only button</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button
+                    severity="secondary"
+                    variant="outlined"
+                    uiTooltip="A deliberately long tooltip label that wraps onto multiple lines to show the max-width behaviour"
+                >
+                    long
+                </ui-button>
+                <code>long text (wraps)</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button severity="secondary" variant="outlined" [uiTooltip]="''">
+                    empty
+                </ui-button>
+                <code>empty text → no-op</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
+        <h2>ui-dialog</h2>
+        <p><code>last action: {{ lastDialogAction }}</code></p>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button size="small" (click)="dialogBasicOpen = true">Open basic</ui-button>
+                <code>header + footer, Esc/×</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button size="small" severity="secondary" (click)="dialogNoHeaderOpen = true">
+                    Open no-header
+                </ui-button>
+                <code>[ariaLabel] only</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button size="small" severity="secondary" (click)="dialogLockedOpen = true">
+                    Open locked
+                </ui-button>
+                <code>[closable]=false</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button size="small" severity="secondary" (click)="dialogDismissableOpen = true">
+                    Open dismissable
+                </ui-button>
+                <code>[dismissable]=true (backdrop)</code>
+            </div>
+        </div>
+
+        <ui-dialog [(visible)]="dialogBasicOpen" header="Basic dialog" width="26rem">
+            <p>
+                A centered modal with a header, projected body and a footer. Escape or × closes it.
+            </p>
+            <ng-template #footer>
+                <ui-button severity="secondary" variant="text" (click)="dialogBasicOpen = false">
+                    Cancel
+                </ui-button>
+                <ui-button (click)="lastDialogAction = 'basic saved'; dialogBasicOpen = false">
+                    Save
+                </ui-button>
+            </ng-template>
+        </ui-dialog>
+
+        <ui-dialog [(visible)]="dialogNoHeaderOpen" ariaLabel="Headerless demo" width="24rem">
+            <p>
+                No header — the accessible name comes from
+                <code>[ariaLabel]</code>
+                .
+            </p>
+            <ng-template #footer>
+                <ui-button (click)="dialogNoHeaderOpen = false">Close</ui-button>
+            </ng-template>
+        </ui-dialog>
+
+        <ui-dialog
+            [(visible)]="dialogLockedOpen"
+            header="Locked dialog"
+            width="24rem"
+            [closable]="false"
+        >
+            <p>
+                No × and Escape is inert (
+                <code>[closable]=false</code>
+                ). Only an explicit action closes it.
+            </p>
+            <ng-template #footer>
+                <ui-button (click)="dialogLockedOpen = false">Done</ui-button>
+            </ng-template>
+        </ui-dialog>
+
+        <ui-dialog
+            [(visible)]="dialogDismissableOpen"
+            header="Dismissable dialog"
+            width="24rem"
+            [dismissable]="true"
+        >
+            <p>
+                Click the backdrop to close (
+                <code>[dismissable]=true</code>
+                ).
+            </p>
+        </ui-dialog>
+    </section>
+
+    <section class="gallery-section">
+        <h2>Table</h2>
+
+        <h3>
+            Plain (
+            <code>.ui-table</code>
+            , opt-in
+            <code>.ui-table--hover</code>
+            )
+        </h3>
+        <table class="ui-table ui-table--hover">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of tableRows; track row.id) {
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.role }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                } @empty {
+                <tr><td colspan="3" class="text-center ui-color-text-muted">No data</td></tr>
+                }
+            </tbody>
+        </table>
+
+        <h3>
+            Sortable (
+            <code>uiTableSort</code>
+            +
+            <code>uiSortColumn</code>
+            , server-side)
+        </h3>
+        <p class="ui-color-text-muted">
+            Last emitted sort:
+            <code>{{ lastSort }}</code>
+        </p>
+        <table
+            class="ui-table"
+            uiTableSort
+            sortField="name"
+            [sortOrder]="1"
+            (sortChange)="onGallerySort($event)"
+        >
+            <thead>
+                <tr>
+                    <th scope="col" uiSortColumn="name" #nameSort="uiSortColumn">
+                        Name
+                        <tabler-icon [icon]="nameSort.icon()" [size]="14" />
+                    </th>
+                    <th scope="col" uiSortColumn="count" #countSort="uiSortColumn">
+                        Count
+                        <tabler-icon [icon]="countSort.icon()" [size]="14" />
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of tableRows; track row.id) {
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.count }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+
+        <h3>Scroll + sticky header (canonical pattern)</h3>
+        <!-- .ui-table-scroll must sit in a flex-column with a bounded height. -->
+        <div class="flex flex-col" style="height: 12rem">
+            <div class="ui-table-scroll">
+                <table class="ui-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (row of scrollRows; track row.id) {
+                        <tr>
+                            <td>{{ row.name }}</td>
+                            <td>{{ row.value }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <h3>Row reorder (CDK DragDrop)</h3>
+        <table class="ui-table" cdkDropList (cdkDropListDropped)="onGalleryReorder($event)">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 2rem"></th>
+                    <th scope="col">Stage</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of reorderRows; track row.id) {
+                <tr
+                    cdkDrag
+                    (pointerdown)="onGalleryRowPointerDown($event)"
+                    (pointerup)="onGalleryRowPointerUp($event)"
+                    (cdkDragEnded)="onGalleryDragEnded($event)"
+                >
+                    <td>
+                        <tabler-icon
+                            icon="grip-vertical"
+                            [size]="16"
+                            cdkDragHandle
+                            class="cursor-move"
+                        />
+                    </td>
+                    <td>{{ row.label }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+</div>

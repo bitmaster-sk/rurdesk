@@ -1,0 +1,235 @@
+// ui-select / ui-multiselect / ui-listbox GLOBAL styles — co-located but @used
+// by src/app/ui/ui.styles.scss (loaded eagerly & globally, no FOUC). The closed
+// trigger reuses the --ui-input-* chrome (a collapsed select looks like an
+// input) via .ui-select-trigger; the panel/option use own --ui-select-* tokens.
+
+// Hosts default to inline (ViewEncapsulation.None) — the full-width trigger
+// inside then overflows the collapsed host box and overlaps neighbours. Block.
+ui-select,
+ui-multiselect {
+    display: block;
+}
+
+// ─── Closed trigger (reuses --ui-input-* chrome) ───────────────────────────
+.ui-select-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    // Match the input floor: empty + no placeholder leaves only the 16px chevron,
+    // which is shorter than the input's text line-box. --sm overrides this below.
+    min-height: var(--ui-input-min-height);
+    padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
+    font-family: inherit;
+    font-size: var(--ui-input-font-size);
+    line-height: var(--ui-input-line-height);
+    color: var(--ui-input-fg);
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+// Size scale — each tier owns its floor; the default --ui-input-min-height would
+// otherwise inflate a small trigger. Values share the --ui-input-{sm,lg}-* tokens.
+// The chevron scales per tier in the component (14/16/18) so an empty trigger
+// stays under the line-box and matches its input at every size.
+.ui-select-trigger--sm {
+    min-height: var(--ui-input-sm-min-height);
+    padding-top: var(--ui-input-sm-padding-y);
+    padding-bottom: var(--ui-input-sm-padding-y);
+    font-size: var(--ui-input-sm-font-size);
+}
+
+.ui-select-trigger--lg {
+    min-height: var(--ui-input-lg-min-height);
+    padding-top: var(--ui-input-lg-padding-y);
+    padding-bottom: var(--ui-input-lg-padding-y);
+    font-size: var(--ui-input-lg-font-size);
+}
+
+.ui-select-trigger:hover:not(.ui-select-trigger--disabled) {
+    border-color: var(--ui-input-border-hover);
+}
+
+// :focus (not :focus-visible): the trigger is a <div>, and browsers don't apply
+// :focus-visible to a div on mouse click — so the aura never showed on click.
+// A native <input> shows the halo on click, so use :focus here for parity.
+.ui-select-trigger:focus {
+    outline: none;
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}
+
+.ui-select-trigger--disabled {
+    background: var(--ui-input-disabled-bg);
+    color: var(--ui-input-disabled-fg);
+    cursor: not-allowed;
+}
+
+.ui-select-trigger__value {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ui-select-trigger__placeholder {
+    color: var(--ui-input-placeholder);
+}
+
+.ui-select-trigger__chevron {
+    flex: 0 0 auto;
+    color: var(--ui-select-dropdown-icon);
+    transition: transform 0.2s;
+}
+
+.ui-select-trigger--open .ui-select-trigger__chevron {
+    transform: rotate(180deg);
+}
+
+.ui-select-trigger__clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    color: var(--ui-select-clear-icon);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+// ─── Overlay panel ─────────────────────────────────────────────────────────
+.ui-select-panel {
+    // Fill the CDK pane (its min-width = trigger width) so no transparent pane
+    // edge is left beside a short panel — that edge has pointer-events:auto and
+    // swallows "outside" clicks. Longer option labels still grow pane + panel.
+    flex: 1 1 auto;
+    background: var(--ui-select-panel-bg);
+    border: 1px solid var(--ui-select-panel-border);
+    border-radius: var(--ui-select-panel-radius);
+    box-shadow: var(--ui-select-panel-shadow);
+    overflow: hidden;
+}
+
+.ui-select-panel__filter-wrap {
+    padding: 0.5rem;
+}
+
+.ui-select-panel__filter {
+    width: 100%;
+}
+
+.ui-select-panel__list {
+    margin: 0;
+    padding: 0.25rem;
+    list-style: none;
+    max-height: 16rem;
+    overflow-y: auto;
+    // Small gap so an adjacent selected + hovered row don't visually merge into
+    // one block (their rounded backgrounds stay separated).
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ui-select-panel__option {
+    padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
+    border-radius: var(--ui-input-radius);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ui-select-panel__option--highlighted {
+    background: var(--ui-select-option-hover-bg);
+}
+
+.ui-select-panel__option--selected {
+    color: var(--ui-select-option-selected-fg);
+    background: var(--ui-select-option-selected-bg);
+}
+
+.ui-select-panel__empty {
+    padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
+    color: var(--ui-surface-500);
+    text-align: center;
+}
+
+// ─── Multiselect checkbox (option + toggle-all header) ─────────────────────
+.ui-select-panel__option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ui-select-panel__header {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem var(--ui-input-padding-x);
+    border-bottom: 1px solid var(--ui-select-panel-border);
+}
+
+.ui-select-panel__checkbox {
+    flex: 0 0 auto;
+    display: inline-block;
+    width: 1.15rem;
+    height: 1.15rem;
+    border: 1px solid var(--ui-input-border);
+    border-radius: 4px;
+    background: var(--ui-input-bg);
+    position: relative;
+    cursor: pointer;
+}
+
+.ui-select-panel__checkbox--checked {
+    background: var(--ui-brand-500);
+    border-color: var(--ui-brand-500);
+}
+
+.ui-select-panel__checkbox--checked::after {
+    content: '';
+    position: absolute;
+    left: 0.36rem;
+    top: 0.15rem;
+    width: 0.3rem;
+    height: 0.55rem;
+    border: solid var(--ui-surface-0);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.ui-select-panel__checkbox--indeterminate {
+    background: var(--ui-brand-500);
+    border-color: var(--ui-brand-500);
+}
+
+.ui-select-panel__checkbox--indeterminate::after {
+    content: '';
+    position: absolute;
+    left: 0.25rem;
+    top: 0.48rem;
+    width: 0.55rem;
+    height: 0;
+    border-top: 2px solid var(--ui-surface-0);
+}
+
+// ─── Inline listbox ────────────────────────────────────────────────────────
+.ui-listbox {
+    display: block;
+    outline: none;
+    background: var(--ui-select-panel-bg);
+    border: 1px solid var(--ui-select-panel-border);
+    border-radius: var(--ui-select-panel-radius);
+    overflow: hidden;
+}
+
+.ui-listbox:focus-visible {
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}

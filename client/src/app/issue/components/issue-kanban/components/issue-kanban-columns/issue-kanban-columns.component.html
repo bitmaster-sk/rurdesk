@@ -1,0 +1,58 @@
+<div cdkDropListGroup class="kanban" [style.grid-template-columns]="gridTemplateColumns()">
+    @for (column of columns(); track column.state.idState) {
+        <div class="flex flex-col justify-start">
+            <div
+                class="kanban-header border-bottom p-2 ui-bg-surface-50 font-semibold flex items-center justify-center gap-2"
+            >
+                <span>{{ column.state.name }}</span>
+                <span class="kanban-count"><ui-odometer [value]="column.total" /></span>
+            </div>
+            <div
+                class="kanban-tiles"
+                cdkDropList
+                [cdkDropListData]="column"
+                [cdkDropListConnectedTo]="connectedTo()"
+                (cdkDropListDropped)="onDropped($event)"
+            >
+                @for (tile of column.tiles; track tile.idIssue) {
+                    <app-issue-kanban-tile
+                        [tile]="tile"
+                        cdkDrag
+                        [class.tile-landed]="tile.idIssue === landedTileId()"
+                        (cdkDragStarted)="onTileDragStarted($event)"
+                        (contextMenuRequested)="contextMenuRequested.emit($event)"
+                    >
+                        <div
+                            *cdkDragPreview
+                            class="tile-drag-preview"
+                            [style.width.px]="dragPreviewWidth()"
+                        >
+                            @if (dragSvc.hoveredName(); as name) {
+                                <div class="tile-drag-preview__header">→ {{ name }}</div>
+                            }
+                            <app-issue-kanban-tile [tile]="tile" />
+                        </div>
+                    </app-issue-kanban-tile>
+                }
+                @if (column.cursor) {
+                    <ui-button
+                        type="button"
+                        size="small"
+                        variant="text"
+                        class="self-center"
+                        [loading]="column.loading"
+                        [label]="'LOAD_MORE' | translate"
+                        (click)="loadMore.emit(column)"
+                    >
+                        <tabler-icon icon="plus" [size]="14" />
+                    </ui-button>
+                }
+                @if (column.total > 0) {
+                    <div class="text-sm ui-color-text-muted text-center">
+                        {{ column.tiles.length }}/{{ column.total }}
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>

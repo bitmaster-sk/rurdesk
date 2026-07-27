@@ -1,0 +1,281 @@
+@let usersMapValue = usersMap();
+<div class="issue-info p-2">
+    <div class="grid grid-cols-12 gap-1" [formGroup]="form">
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0">
+            <div class="col-span-10 pr-0 ui-field">
+                @if (isNewIssue()) {
+                    <label for="issue-title" class="required">{{ 'TITLE' | translate }}</label>
+                }
+                <input
+                    #inputTitle
+                    id="issue-title"
+                    (focusout)="onInputTitleFocusout()"
+                    formControlName="title"
+                    type="text"
+                    uiInput
+                    class="w-full font-bold"
+                />
+            </div>
+            @if (!isNewIssue()) {
+                <span class="col-span-2 p-0 text-right" [uiSaveStatus]="saveStatus()">
+                    <ui-button
+                        variant="text"
+                        severity="secondary"
+                        (click)="actionMenu.toggle($event)"
+                    >
+                        <tabler-icon icon="settings" [size]="16" />
+                    </ui-button>
+
+                    <ui-menu #actionMenu [model]="actions"></ui-menu>
+                </span>
+            }
+        </div>
+
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0">
+            <div class="ui-field col-span-4">
+                <label for="issue-state">{{ 'STATE.SINGULAR' | translate }}</label>
+                <app-state-dropdown
+                    [states]="states()"
+                    formControlName="idState"
+                    inputId="issue-state"
+                ></app-state-dropdown>
+            </div>
+
+            <div class="ui-field col-span-4">
+                <label for="issue-severity">{{ 'SEVERITY.SINGULAR' | translate }}</label>
+                <app-severity-dropdown
+                    [severities]="severities()"
+                    [formControl]="idSeverityControl"
+                    inputId="issue-severity"
+                ></app-severity-dropdown>
+            </div>
+
+            <div class="ui-field col-span-4">
+                <label>{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
+                <app-user-dropdown
+                    [users]="users()"
+                    [formControl]="assignedToControl"
+                ></app-user-dropdown>
+            </div>
+        </div>
+
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
+            <div class="ui-field col-span-4 flex flex-col">
+                <label for="issue-estimated">{{ 'ISSUE.TIME.ESTIMATED' | translate }}</label>
+                <input id="issue-estimated" formControlName="estimated" type="text" uiInput />
+            </div>
+
+            <div class="ui-field col-span-4 flex flex-col">
+                <label for="issue-points">{{ 'ISSUE.POINTS' | translate }}</label>
+                <input id="issue-points" formControlName="points" type="number" min="0" uiInput />
+            </div>
+
+            <div class="ui-field col-span-4 flex flex-col">
+                <label for="issue-scheduled-at">{{ 'ISSUE.SCHEDULED.AT' | translate }}</label>
+                <input
+                    uiDatepicker
+                    mode="datetime"
+                    formControlName="scheduledAt"
+                    id="issue-scheduled-at"
+                    class="w-full"
+                />
+            </div>
+        </div>
+
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
+            @if (!isNewIssue()) {
+                <div class="ui-field col-span-4 tracked-field">
+                    <label for="issue-tracked">{{ 'ISSUE.TIME.TRACKED' | translate }}</label>
+                    <div id="issue-tracked" class="tracked-value">
+                        {{ currentIssue()?.tracked ?? 0 | secDuration }}
+                    </div>
+                </div>
+
+                <div class="ui-field col-span-4">
+                    <label for="issue-tracker">{{ 'ISSUE.TIME.TRACKER' | translate }}</label>
+                    <app-tracker
+                        [issue]="currentIssue()"
+                        [project]="project()"
+                        inputId="issue-tracker"
+                        (trackAdded)="onTrackAdded($event)"
+                    ></app-tracker>
+                </div>
+            }
+        </div>
+
+        <div class="issue-description col-span-12">
+            @if (isNewIssue()) {
+                <div class="edit ui-field col-span-12 p-0">
+                    <label class="required">{{ 'DESCRIPTION' | translate }}</label>
+                    <app-message-editor
+                        mode="create"
+                        change="onchange"
+                        formControlName="description"
+                        [disableSendButton]="true"
+                    ></app-message-editor>
+                </div>
+            } @else {
+                @if (showInputDescription()) {
+                    <div class="edit col-span-12 p-0">
+                        <app-message-editor
+                            #inputDescription
+                            mode="edit"
+                            formControlName="description"
+                            [disableSendButton]="true"
+                            change="onblur"
+                            (messageChange)="onInputDescriptionChange()"
+                        ></app-message-editor>
+                    </div>
+                } @else {
+                    <div
+                        class="description-preview col-span-12 p-0"
+                        (click)="onToggleInputDescription()"
+                    >
+                        <div
+                            markdown
+                            [data]="form.get('description')?.value"
+                            ngPreserveWhitespaces
+                        ></div>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (!isNewIssue()) {
+            <div class="manipulation-details col-span-12">
+                <div class="px-0 py-2 col-span-6">
+                    {{ 'ISSUE.CREATED.AT' | translate }}:
+                    {{ currentIssue()?.createAt | date: 'medium' }}
+                    {{ 'ISSUE.BY.USER' | translate }}:
+                    {{ usersMapValue?.get(currentIssue()?.createBy)?.name }}
+                </div>
+                <div class="px-0 py-2 col-span-6 text-right">
+                    {{ 'ISSUE.LAST.UPDATE.AT' | translate }}:
+                    {{ currentIssue()?.updateAt | date: 'medium' }}
+                    {{ 'ISSUE.BY.USER' | translate }}:
+                    {{ usersMapValue?.get(currentIssue()?.updateBy)?.name }}
+                </div>
+            </div>
+        }
+
+        <div class="col-span-12 mt-2">
+            <app-quality-panel
+                #qualityPanel
+                [idProject]="form.get('idProject')?.value"
+                [idIssue]="isNewIssue() ? null : (currentIssue()?.idIssuePublic ?? null)"
+                [title]="form.get('title')?.value ?? ''"
+                [description]="form.get('description')?.value ?? ''"
+                (titleChanged)="form.get('title')?.setValue($event)"
+                (descriptionChanged)="form.get('description')?.setValue($event)"
+            ></app-quality-panel>
+        </div>
+
+        @if (!isNewIssue()) {
+            <div class="col-span-12 mt-2">
+                <app-issue-participants
+                    [idProject]="project()?.idProject ?? 0"
+                    [idIssuePublic]="currentIssue()?.idIssuePublic ?? null"
+                    [idIssue]="currentIssue()?.idIssue ?? null"
+                    [currentUserId]="currentUserId()"
+                    [members]="users() ?? []"
+                ></app-issue-participants>
+            </div>
+        }
+
+        @if (!isNewIssue() && agentRun(); as run) {
+            <div class="col-span-12 mt-2">
+                <app-agent-run-card
+                    [run]="run"
+                    [usersMap]="usersMapValue"
+                    (cancelRun)="cancelAgentRun.emit()"
+                    (continueRun)="continueAgentRun.emit()"
+                    (restartRun)="restartAgentRun.emit()"
+                ></app-agent-run-card>
+            </div>
+        }
+
+        @if (!isNewIssue()) {
+            @let hasLinkedMr = !!currentIssue()?.idGitIntegration;
+            <div class="col-span-12 mt-2">
+                <div class="pr-panel" [class.pr-panel--collapsed]="isPrPanelCollapsed()">
+                    <div class="pr-panel__header" (click)="onTogglePrPanel()">
+                        <span
+                            class="pr-panel__chevron"
+                            [class.pr-panel__chevron--collapsed]="isPrPanelCollapsed()"
+                        >
+                            <tabler-icon icon="chevron-down" [size]="14" />
+                        </span>
+                        <span class="pr-panel__icon">
+                            <tabler-icon icon="git-branch" [size]="14" />
+                        </span>
+                        <span class="pr-panel__title">{{ mrTermKey() | translate }}</span>
+                        @if (hasLinkedMr) {
+                            <app-mr-status-pill [status]="mrStatus()" />
+                        }
+                        <span class="pr-panel__actions">
+                            @if (hasLinkedMr && agentRun()?.prUrl; as prUrl) {
+                                <a
+                                    [href]="prUrl"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="pr-panel__view-link"
+                                    (click)="$event.stopPropagation()"
+                                >
+                                    <tabler-icon icon="git-pull-request" [size]="14" />
+                                    <span>{{ 'AGENT.SIDEBAR.PR_LINK' | translate }}</span>
+                                </a>
+                            }
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                [title]="mrLinkTitleKey() | translate"
+                                (click)="onOpenMrLinkPicker(); $event.stopPropagation()"
+                            >
+                                <tabler-icon icon="link" [size]="14" />
+                            </ui-button>
+                        </span>
+                    </div>
+                    @if (!isPrPanelCollapsed()) {
+                        <div class="pr-panel__body">
+                            @if (hasLinkedMr) {
+                                <app-diff-viewer
+                                    [diff]="mrDiff()"
+                                    [loading]="isMrDiffLoading()"
+                                    [fileLinkBuilder]="mrFileLinkBuilder()"
+                                />
+                            } @else {
+                                <div class="pr-panel__empty">
+                                    {{ 'MR.NOT_LINKED' | translate }}
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (isMrLinkPickerOpen()) {
+            <app-mr-link-picker
+                [idProject]="currentIssue()!.idProject"
+                [idGitIntegration]="currentIssue()?.idGitIntegration"
+                [mrId]="currentIssue()?.mrId"
+                (linked)="onMrLinked($event)"
+                (cancelled)="onMrLinkCancelled()"
+            />
+        }
+
+        @if (isNewIssue()) {
+            <div class="col-span-12 mt-2 flex justify-end">
+                <ui-button
+                    [disabled]="!form.valid"
+                    severity="primary"
+                    [label]="'SAVE' | translate"
+                    (click)="onSave()"
+                >
+                    <tabler-icon icon="device-floppy" [size]="16" />
+                </ui-button>
+            </div>
+        }
+    </div>
+</div>

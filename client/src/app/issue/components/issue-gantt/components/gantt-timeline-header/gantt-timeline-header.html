@@ -1,0 +1,24 @@
+<div class="gantt-header" [style.width.px]="totalWidth()">
+    <!-- Column grid lines rendered first so header rows paint on top -->
+    @for (col of columns(); track col.left) {
+    <div
+        class="gantt-header--grid-line"
+        [class.gantt-header--grid-line--weekend]="col.isWeekend"
+        [class.gantt-header--grid-line--today]="col.isToday"
+        [style.left.px]="col.left"
+    ></div>
+    } @for (row of headerRows(); track $index; let isLast = $last) {
+    <div class="gantt-header--row">
+        @for (cell of row.cells; track cell.left) {
+        <div
+            class="gantt-header--cell"
+            [class.gantt-header--cell--weekend]="isLast && cell.isWeekend"
+            [style.left.px]="cell.left"
+            [style.width.px]="cell.width"
+        >
+            {{ cell.label }}
+        </div>
+        }
+    </div>
+    }
+</div>

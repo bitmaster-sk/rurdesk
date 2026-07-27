@@ -1,0 +1,52 @@
+// ui-toggle GLOBAL styles — co-located but @used by src/app/ui/ui.styles.scss
+// (eager & global, no FOUC). Backs the `[uiToggle]` directive on a native
+// <input type="checkbox">.
+//
+// Single-element switch: the track is background-color, the sliding knob is a
+// radial-gradient shifted via background-position on :checked. This keeps the
+// native <input> (no wrapper markup, no CVA) — replaced elements don't render
+// ::before/::after reliably (Firefox), so the gradient technique is used
+// instead. Known tradeoff: flat knob (no drop shadow). If a richer visual is
+// needed later, promote to an <input> + sibling-span while keeping no-CVA.
+
+.ui-toggle {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: var(--ui-toggle-width);
+    height: var(--ui-toggle-height);
+    margin: 0;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    background-color: var(--ui-toggle-track-off);
+    // knob: white circle, ~84% of the track height, drawn as a square gradient
+    // tile the size of the track height and slid left→right on :checked.
+    background-image: radial-gradient(circle, var(--ui-toggle-knob-fg) 0 42%, transparent 44%);
+    background-repeat: no-repeat;
+    background-size: var(--ui-toggle-height) var(--ui-toggle-height);
+    background-position: var(--ui-toggle-pad) center;
+    transition:
+        background-color 0.15s,
+        background-position 0.15s;
+}
+
+.ui-toggle:checked {
+    background-color: var(--ui-toggle-track-on);
+    background-position: calc(100% - var(--ui-toggle-pad)) center;
+}
+
+.ui-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--ui-toggle-focus-ring);
+}
+
+.ui-toggle:disabled {
+    background-color: var(--ui-toggle-disabled-bg);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.ui-toggle--invalid {
+    outline: 1px solid var(--ui-input-border-invalid);
+}

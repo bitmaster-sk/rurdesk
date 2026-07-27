@@ -1,0 +1,8 @@
+{
+  "number": 42,
+  "state": "open",
+  "merged": false,
+  "head": {
+    "sha": "abc123def456abc123def456abc123def456abc1"
+  }
+}

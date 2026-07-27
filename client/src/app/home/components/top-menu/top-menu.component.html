@@ -1,0 +1,85 @@
+<div class="top-menu flex justify-between items-center px-2 py-1">
+    <div class="flex gap-2 items-center">
+        <div class="logo">
+            <svg
+                width="24"
+                height="24"
+                viewBox="0 0 64 64"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label="rurdesk"
+            >
+                <line
+                    x1="32"
+                    y1="18"
+                    x2="32"
+                    y2="11"
+                    stroke="currentColor"
+                    stroke-width="5"
+                    stroke-linecap="round"
+                />
+                <circle cx="32" cy="8.5" r="4" fill="#b85814" />
+                <rect
+                    x="13"
+                    y="21"
+                    width="38"
+                    height="33"
+                    rx="10"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="5"
+                />
+                <rect x="20" y="35" width="9" height="5" rx="2.5" fill="currentColor" />
+                <circle cx="41" cy="37.5" r="8.5" fill="#b85814" opacity="0.25" />
+                <circle cx="41" cy="37.5" r="4.5" fill="#b85814" />
+            </svg>
+        </div>
+        <ui-select
+            [options]="projects()"
+            optionLabel="name"
+            optionValue="idProject"
+            placeholder="Choose project"
+            [ngModel]="idProjectSelected()"
+            (onChange)="onProjectSelect($event.value)"
+        ></ui-select>
+        <ui-button
+            variant="text"
+            [isRounded]="true"
+            severity="secondary"
+            (click)="onNewProject()"
+            [uiTooltip]="'PROJECT.NEW' | translate"
+            uiTooltipPosition="bottom"
+        >
+            <tabler-icon icon="plus" [size]="16" />
+        </ui-button>
+    </div>
+
+    <div class="flex gap-2 items-center">
+        <app-message-menu></app-message-menu>
+        <app-notification-menu></app-notification-menu>
+
+        @if (user$ | async; as user) {
+            <!-- Renders into an overlay; hidden so it claims no flex gap slot. -->
+            <ui-menu #userMenu class="hidden" panelClass="user-menu" [model]="userMenuItems()">
+                <ng-template #item let-item>
+                    <tabler-icon [icon]="item.tablerIcon" [size]="16" />
+                    <span class="ui-menu-item-label">{{ item.label }}</span>
+                </ng-template>
+            </ui-menu>
+            <button
+                type="button"
+                class="avatar-trigger cursor-pointer"
+                [attr.aria-label]="user.name"
+                (click)="userMenu.toggle($event)"
+            >
+                <app-avatar
+                    class="avatar"
+                    [name]="user.name"
+                    [bgColor]="user.colorAvatarBg"
+                    [height]="1.625"
+                    [width]="1.625"
+                ></app-avatar>
+            </button>
+        }
+    </div>
+</div>

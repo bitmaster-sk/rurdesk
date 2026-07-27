@@ -1,0 +1,44 @@
+.gantt-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--ui-surface-0);
+
+    &--row {
+        position: relative;
+        height: 28px;
+        display: flex;
+        border-bottom: 1px solid var(--ui-surface-300);
+    }
+
+    &--cell {
+        position: absolute;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+        border-right: 1px solid var(--ui-surface-200);
+        box-sizing: border-box;
+        user-select: none;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 4px;
+        background: var(--ui-surface-100);
+
+        &--weekend {
+            background: var(--ui-surface-50);
+            border-left: 1px solid var(--ui-surface-200);
+        }
+    }
+
+    &--grid-line {
+        position: absolute;
+        top: 0;
+        width: 1px;
+        height: 100%;
+        background: var(--ui-surface-200);
+    }
+}

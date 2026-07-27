@@ -1,0 +1,138 @@
+<section class="panel h-full flex flex-col">
+    <header class="panel-head flex justify-between items-center shrink-0">
+        <div class="panel-head-l flex items-center gap-2">
+            <tabler-icon icon="users-group" [size]="16" class="panel-icon" />
+            <div class="panel-title">{{ 'ADMIN.TEAMS' | translate }}</div>
+        </div>
+        <ui-button [label]="'ADMIN.CREATE_TEAM' | translate" (click)="onNewTeam()">
+            <tabler-icon icon="plus" [size]="14" />
+        </ui-button>
+    </header>
+
+    <div class="panel-body panel-body--flush flex flex-1 min-h-0">
+        <!-- team list (drop targets) -->
+        <div class="team-list w-80 shrink-0 overflow-y-auto py-1">
+            @for (team of teams(); track team.idTeam) {
+                <div
+                    class="flex items-center gap-2 p-2 cursor-pointer"
+                    [class.ui-bg-surface-100]="selectedTeam()?.idTeam === team.idTeam"
+                    (dragover)="onDragOver($event)"
+                    (drop)="onDropOnTeam($event, team)"
+                    (click)="onSelectTeam(team)"
+                >
+                    <span
+                        class="rounded-full w-4 h-4 shrink-0"
+                        [style.backgroundColor]="team.color"
+                    ></span>
+                    <span class="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">
+                        {{ team.name }}
+                    </span>
+                    <ui-button
+                        variant="text"
+                        severity="info"
+                        size="small"
+                        (click)="onEditTeam(team); $event.stopPropagation()"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                    </ui-button>
+                    <ui-button
+                        variant="text"
+                        severity="danger"
+                        size="small"
+                        uiConfirm
+                        [confirmText]="'ADMIN.CONFIRM_DELETE_TEAM' | translate"
+                        (confirmed)="onConfirmDeleteTeam(team)"
+                        (click)="$event.stopPropagation()"
+                    >
+                        <tabler-icon icon="trash" [size]="14" />
+                    </ui-button>
+                </div>
+            } @empty {
+                <div class="p-4 text-center ui-color-text-muted">
+                    {{ 'ADMIN.NO_TEAMS' | translate }}
+                </div>
+            }
+        </div>
+
+        <!-- members of the selected team (drop target too) -->
+        <div
+            class="flex-1 min-h-0 flex flex-col"
+            (dragover)="onMembersDragOver($event)"
+            (drop)="onDropOnMembers($event)"
+        >
+            @if (selectedTeam(); as team) {
+                <div class="ui-table-scroll">
+                    <table class="ui-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ 'NAME' | translate }}</th>
+                                <th scope="col">{{ 'ADMIN.EMAIL' | translate }}</th>
+                                <th scope="col" class="text-right! pr-2">
+                                    <ui-button
+                                        size="small"
+                                        [label]="'ADMIN.ADD_MEMBER' | translate"
+                                        (click)="memberSel.toggle($event)"
+                                    >
+                                        <tabler-icon icon="plus" [size]="14" />
+                                    </ui-button>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (mem of members(); track mem.idUser) {
+                                <tr>
+                                    <td>
+                                        <div class="flex items-center gap-2">
+                                            <app-avatar
+                                                [name]="mem.name"
+                                                [bgColor]="mem.colorAvatarBg"
+                                                [width]="1.75"
+                                                [height]="1.75"
+                                                [radius]="0.875"
+                                            />
+                                            <span>{{ mem.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="ui-color-text-muted">{{ mem.email }}</td>
+                                    <td class="text-right pr-2">
+                                        <ui-button
+                                            variant="text"
+                                            severity="danger"
+                                            size="small"
+                                            uiConfirm
+                                            [confirmText]="
+                                                'ADMIN.CONFIRM_REMOVE_MEMBER' | translate
+                                            "
+                                            (confirmed)="onConfirmRemoveMember(mem)"
+                                        >
+                                            <tabler-icon icon="trash" [size]="14" />
+                                        </ui-button>
+                                    </td>
+                                </tr>
+                            } @empty {
+                                <tr>
+                                    <td colspan="3" class="text-center ui-color-text-muted">
+                                        {{ 'NO_DATA' | translate }}
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            } @else {
+                <div class="flex-1 flex items-center justify-center ui-color-text-muted">
+                    {{ 'ADMIN.SELECT_TEAM' | translate }}
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<app-teammate-selector
+    #memberSel
+    [options]="availableUsers()"
+    [emptyMessage]="'ADMIN.NO_USERS_TO_ADD' | translate"
+    (selected)="onAddMember($event)"
+></app-teammate-selector>
+
+<app-team-dialog [(visible)]="showTeamDialog" [team]="editedTeam()" (saved)="onTeamSaved($event)" />

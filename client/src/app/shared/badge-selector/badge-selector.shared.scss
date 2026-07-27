@@ -1,0 +1,28 @@
+// Shared by severity-badge-selector and state-badge-selector: the two components
+// differ only in which domain object they render, so the chip layout lives here
+// once. Both list this file in styleUrls rather than @use-ing it, so each keeps
+// its own view encapsulation.
+.badge-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-s);
+
+    &__btn {
+        background: none;
+        border: 2px solid transparent;
+        border-radius: calc(var(--ui-radius-md) / 2);
+        padding: 1px;
+        cursor: pointer;
+        transition:
+            opacity 0.1s,
+            box-shadow 0.1s;
+
+        &:hover {
+            opacity: 0.75;
+        }
+
+        &--active {
+            box-shadow: 0 0 0 2px var(--sel-color);
+        }
+    }
+}

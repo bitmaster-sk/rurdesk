@@ -1,0 +1,31 @@
+# Compiled binaries
+/gateway
+/cmd/gateway/gateway
+
+# Generic Go build/test artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+
+# Local AI assistant & editor tooling
+.claude/
+.cursor/
+.cursorrules
+.cursorignore
+.aider*
+.continue/
+.codeium/
+.windsurf/
+.windsurfrules
+.roo/
+.cline/
+.gemini/
+.github/copilot-instructions.md
+.superpowers/
+AGENTS.md
+GEMINI.md
+CLAUDE.md

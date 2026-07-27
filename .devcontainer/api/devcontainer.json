@@ -1,0 +1,25 @@
+{
+    "name": "Rurdesk API",
+    "dockerComposeFile": ["../../docker-compose.yml"],
+    "service": "rurdesk.api",
+    "workspaceFolder": "/app",
+    // Keeps the container alive independently of the service's own command.
+    "overrideCommand": true,
+    "postCreateCommand": "go mod tidy",
+    "remoteUser": "root",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "go.useLanguageServer": true,
+                "go.toolsManagement.autoUpdate": true,
+                "go.lintTool": "golangci-lint",
+                "editor.formatOnSave": true
+            },
+            "extensions": [
+                "golang.Go",
+                "ms-azuretools.vscode-docker",
+                "jebbs.plantuml"
+            ]
+        }
+    }
+}

@@ -1,0 +1,68 @@
+<div
+    class="flex flex-col p-2 gap-4 cursor-pointer ui-bg-surface-50 ui-box relative ui-border-hover-primary"
+    [class.notif-card--unread]="!notification().isRead"
+    (click)="onMarkRead()"
+>
+    <div class="flex items-start gap-2">
+        <app-avatar
+            [name]="notification().actorName"
+            [bgColor]="notification().actorAvatarBg"
+            [height]="2"
+            [width]="2"
+            [radius]="1"
+        ></app-avatar>
+
+        <div class="flex flex-col gap-4 min-w-0 flex-1">
+            <div class="ui-color-text">
+                @if (notification().actorName) {
+                    <strong>{{ notification().actorName }}</strong>
+                }
+                @if (actionTextKey()) {
+                    &nbsp;
+                    <span class="ui-color-text-muted">{{ actionTextKey() | translate }}</span>
+                }
+                @if (refAnchorRouterLink(); as link) {
+                    <a
+                        class="pl-1 no-underline hover:underline ui-color-text ui-color-hover-primary"
+                        [routerLink]="link"
+                        (click)="$event.stopPropagation()"
+                    >
+                        {{ refAnchorText() }}
+                    </a>
+                } @else if (refAnchorText(); as text) {
+                    <span class="pl-1">{{ text }}</span>
+                }
+                @if (stateBody(); as body) {
+                    &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
+                    <strong>{{ body.stateName }}</strong>
+                }
+                @if (severityBody(); as body) {
+                    &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
+                    <strong>{{ body.severityName }}</strong>
+                }
+            </div>
+            <div class="flex items-center gap-2">
+                <span [class]="'notif-card-badge flex items-center ' + chip().colorClass">
+                    <tabler-icon [icon]="chip().icon" [size]="12" />
+                    {{ chip().labelKey | translate }}
+                </span>
+                @if (notification().projectName) {
+                    <span class="notif-card-badge notif-card-badge__project flex items-center">
+                        <tabler-icon icon="archive" [size]="12" />
+                        {{ notification().projectName }}
+                    </span>
+                }
+                <span class="text-sm ui-color-text-muted">{{ relativeTime() }}</span>
+            </div>
+        </div>
+
+        <ui-button
+            severity="secondary"
+            variant="text"
+            size="small"
+            (click)="$event.stopPropagation(); onDismiss()"
+        >
+            <tabler-icon icon="x" [size]="14" />
+        </ui-button>
+    </div>
+</div>

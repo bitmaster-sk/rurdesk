@@ -1,0 +1,36 @@
+<div class="login">
+    <app-auth-robot></app-auth-robot>
+
+    <div class="login__greet">
+        <h3>{{ 'LOGIN.WELCOME' | translate }}</h3>
+        <p>{{ 'LOGIN.SUBTITLE' | translate }}</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onLogin()" class="login__form">
+        <div class="login__field">
+            <label for="email">{{ 'EMAIL' | translate }}</label>
+            <input id="email" formControlName="email" type="text" autocomplete="email" />
+        </div>
+
+        <div class="login__field">
+            <label for="password">{{ 'PASSWORD' | translate }}</label>
+            <input
+                id="password"
+                formControlName="password"
+                type="password"
+                autocomplete="current-password"
+            />
+        </div>
+
+        @if (hasFailed()) {
+            <p class="login__error" role="alert">{{ 'LOGIN.FAILED' | translate }}</p>
+        }
+
+        <ui-button
+            type="submit"
+            [label]="'LOGIN' | translate"
+            [fluid]="true"
+            class="login__btn"
+        ></ui-button>
+    </form>
+</div>

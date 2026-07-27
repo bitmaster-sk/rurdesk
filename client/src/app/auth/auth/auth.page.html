@@ -1,0 +1,13 @@
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-form">
+            @if (isLogin$ | async) {
+            <div>
+                <app-login></app-login>
+            </div>
+            } @else {
+            <app-register></app-register>
+            }
+        </div>
+    </div>
+</div>

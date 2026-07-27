@@ -1,0 +1,34 @@
+@if (stats(); as s) {
+    <div class="stats-panel">
+        <h4>{{ 'AGENT.STATS.TITLE' | translate }}</h4>
+        <div class="stats-panel__row flex justify-between">
+            <span>{{ 'AGENT.STATS.TOKENS' | translate }}</span>
+            <span>{{ s.totalTokensUsed | number }}</span>
+        </div>
+        <div class="stats-panel__row flex justify-between">
+            <span>{{ 'AGENT.STATS.DURATION' | translate }}</span>
+            <span>{{ formatDuration(s.totalDurationMs) }}</span>
+        </div>
+        <div class="stats-panel__row flex justify-between">
+            <span>{{ 'AGENT.STATS.TOOL_CALLS' | translate }}</span>
+            <span>{{ s.totalToolCallsCount | number }}</span>
+        </div>
+        @if (s.failedAttempts > 0) {
+            <div class="stats-panel__row flex justify-between">
+                <span>{{ 'AGENT.STATS.FAILED_ATTEMPTS' | translate }}</span>
+                <span>{{ s.failedAttempts }}</span>
+            </div>
+        }
+        @if (stageRows().length > 0) {
+            <h5>{{ 'AGENT.STATS.ATTEMPTS_PER_STAGE' | translate }}</h5>
+            <ul class="stats-panel__attempts">
+                @for (row of stageRows(); track row.stage) {
+                    <li class="flex justify-between">
+                        <span>{{ row.label | translate }}</span>
+                        <span>{{ row.count }}</span>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}

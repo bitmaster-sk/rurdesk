@@ -1,0 +1,168 @@
+<ui-popover #popover panelClass="qap-popover" (onHide)="onPopoverHide()">
+    @if (issue()) {
+        <div class="qap" [class.qap--date-mode]="view() === 'date'">
+            @switch (view()) {
+                @case ('actions') {
+                    <!-- Header -->
+                    <div class="qap--head">
+                        <div class="mr-2">#{{ issue()!.idIssuePublic }}</div>
+                        <div class="">{{ issue()!.title }}</div>
+                    </div>
+
+                    <!-- State -->
+                    @if (showState()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.STATE' | translate }}
+                            </div>
+                            <app-state-badge-selector
+                                [states]="states()"
+                                [ngModel]="issue()!.idState"
+                                (ngModelChange)="onStateChange($event)"
+                            ></app-state-badge-selector>
+                        </div>
+                    }
+
+                    <!-- Severity -->
+                    @if (showSeverity()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.SEVERITY' | translate }}
+                            </div>
+                            <app-severity-badge-selector
+                                [severities]="severities()"
+                                [ngModel]="issue()!.idSeverity"
+                                (ngModelChange)="onSeverityChange($event)"
+                            ></app-severity-badge-selector>
+                        </div>
+                    }
+
+                    <!-- Assignee -->
+                    @if (showAssignee()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.ASSIGNEE' | translate }}
+                            </div>
+                            <app-user-dropdown
+                                [users]="users()"
+                                [filter]="true"
+                                appendTo="body"
+                                [ngModel]="issue()!.assignedTo"
+                                (ngModelChange)="onAssigneeChange($event)"
+                            ></app-user-dropdown>
+                        </div>
+                    }
+
+                    <!-- Reschedule -->
+                    @if (showReschedule()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.RESCHEDULE' | translate }}
+                            </div>
+                            <div class="reschedule-options">
+                                <button
+                                    class="reschedule-btn"
+                                    (click)="onPreviousDay()"
+                                    [disabled]="!issue()!.scheduledAt"
+                                >
+                                    <tabler-icon icon="arrow-left" [size]="14" />
+                                    {{ 'ISSUE.QUICK_ACTIONS.PREVIOUS_DAY' | translate }}
+                                </button>
+                                <button
+                                    class="reschedule-btn"
+                                    (click)="onNextDay()"
+                                    [disabled]="!issue()!.scheduledAt"
+                                >
+                                    <tabler-icon icon="arrow-right" [size]="14" />
+                                    {{ 'ISSUE.QUICK_ACTIONS.NEXT_DAY' | translate }}
+                                </button>
+                                <button class="reschedule-btn" (click)="onToday()">
+                                    <tabler-icon icon="sun" [size]="14" />
+                                    {{ 'ISSUE.QUICK_ACTIONS.TODAY' | translate }}
+                                </button>
+                                <button class="reschedule-btn" (click)="onRemoveDate()">
+                                    <tabler-icon icon="calendar-x" [size]="14" />
+                                    {{ 'ISSUE.QUICK_ACTIONS.REMOVE_DATE' | translate }}
+                                </button>
+                                <button
+                                    class="reschedule-btn reschedule-btn--full"
+                                    (click)="onOpenDateView()"
+                                >
+                                    <tabler-icon icon="calendar" [size]="14" />
+                                    {{ 'ISSUE.QUICK_ACTIONS.PICK_DATE' | translate }}
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- AI -->
+                    <div class="qap--section">
+                        <div class="qap--section-label">
+                            {{ 'ISSUE.QUICK_ACTIONS.AI' | translate }}
+                        </div>
+                        <div class="qap--ai-actions">
+                            <button class="reschedule-btn reschedule-btn--full" (click)="onSplit()">
+                                <tabler-icon icon="git-branch" [size]="14" />
+                                {{ 'SPLIT.SINGULAR' | translate }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Actions footer -->
+                    <div class="qap--actions">
+                        <button
+                            class="qap--action"
+                            (click)="onOpen()"
+                            [title]="'ISSUE.QUICK_ACTIONS.OPEN' | translate"
+                        >
+                            <tabler-icon icon="external-link" [size]="14" />
+                            <span>{{ 'ISSUE.QUICK_ACTIONS.OPEN' | translate }}</span>
+                        </button>
+                        <button
+                            class="qap--action"
+                            (click)="onCopyId()"
+                            [title]="'ISSUE.QUICK_ACTIONS.COPY_ID' | translate"
+                        >
+                            <tabler-icon icon="copy" [size]="14" />
+                            <span>{{ 'ISSUE.QUICK_ACTIONS.COPY_ID' | translate }}</span>
+                        </button>
+                        <button
+                            class="qap--action qap--action--danger"
+                            (click)="onDelete()"
+                            [title]="'ISSUE.QUICK_ACTIONS.DELETE' | translate"
+                        >
+                            <tabler-icon icon="trash" [size]="14" />
+                            <span>{{ 'ISSUE.QUICK_ACTIONS.DELETE' | translate }}</span>
+                        </button>
+                    </div>
+                }
+
+                @case ('date') {
+                    <!-- Calendar step: swaps in place of the actions above.
+                         The input is only the anchor (hidden 0×0); flatpickr renders
+                         the calendar as its sibling. Created here in the live popover
+                         DOM, so flatpickr binds to an attached element. (ready) fires
+                         once the calendar DOM exists so we re-anchor the popover. -->
+                    <input
+                        uiDatepicker
+                        mode="inline"
+                        class="qap-datepicker-inline-host"
+                        tabindex="-1"
+                        [ngModel]="issue()?.scheduledAt"
+                        (ngModelChange)="onPickDate($event)"
+                        (ready)="onCalendarReady()"
+                    />
+                    <div class="qap--date-actions">
+                        <button class="reschedule-btn" (click)="onCloseDateView()">
+                            <tabler-icon icon="arrow-left" [size]="14" />
+                            {{ 'BACK' | translate }}
+                        </button>
+                        <button class="reschedule-btn" (click)="onCloseDateView()">
+                            {{ 'CANCEL' | translate }}
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+    }
+</ui-popover>

@@ -1,0 +1,32 @@
+.gantt-minimap {
+    position: relative;
+    height: 40px;
+    background: var(--ui-color-canvas);
+    border-top: 1px solid var(--ui-color-border);
+    cursor: pointer;
+    overflow: hidden;
+    border-bottom-left-radius: var(--ui-radius-md);
+    border-bottom-right-radius: var(--ui-radius-md);
+
+    &--bars {
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    &--viewport {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background: var(--ui-color-primary);
+        opacity: 0.15;
+        border: 1px solid var(--ui-color-primary);
+        border-radius: 2px;
+        cursor: grab;
+
+        &:active {
+            cursor: grabbing;
+            opacity: 0.25;
+        }
+    }
+}

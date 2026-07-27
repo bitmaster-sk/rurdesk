@@ -1,0 +1,6 @@
+<div class="relative" style="height: 200px">
+    <canvas baseChart type="doughnut" [data]="chartData()" [options]="chartOptions"></canvas>
+    @if (total() === 0) {
+        <div class="chart-empty-overlay">{{ 'NO_DATA_YET' | translate }}</div>
+    }
+</div>

@@ -1,0 +1,37 @@
+<div class="children-list">
+    @for (issue of issues(); track issue.ref) {
+        <app-staged-issue
+            [issue]="issue"
+            [severities]="severities()"
+            [states]="states()"
+            (issueChange)="onIssueChange($event)"
+            (delete)="onRemoveChild(issue.ref)"
+        ></app-staged-issue>
+    }
+</div>
+
+<div class="add-child">
+    <ui-button
+        [label]="'SPLIT.ADD_CHILD' | translate"
+        severity="secondary"
+        variant="text"
+        (click)="onAddChild()"
+    >
+        <tabler-icon icon="plus" [size]="16" />
+    </ui-button>
+</div>
+
+<div class="dialog-footer">
+    <ui-button
+        [label]="'SPLIT.CANCEL' | translate"
+        severity="secondary"
+        [disabled]="isSaving()"
+        (click)="onCancel()"
+    />
+    <ui-button
+        [label]="'SPLIT.ACCEPT_BUTTON' | translate: { count: issues().length }"
+        [disabled]="issues().length === 0"
+        [loading]="isSaving()"
+        (click)="onAccept()"
+    />
+</div>

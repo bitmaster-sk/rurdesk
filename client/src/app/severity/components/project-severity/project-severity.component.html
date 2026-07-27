@@ -1,0 +1,70 @@
+<div class="flex flex-col">
+    <div class="col-span-12 p-0">
+        <table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 2rem"></th>
+                    <th scope="col">{{ 'TITLE' | translate }}</th>
+                    <th scope="col">{{ 'SEVERITY.COLOR' | translate }}</th>
+                    <th scope="col" class="action-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (severity of severities(); track severity.idSeverity) {
+                    <tr
+                        cdkDrag
+                        (pointerdown)="onRowPointerDown($event)"
+                        (pointerup)="onRowPointerUp($event)"
+                        (cdkDragEnded)="onDragEnded($event)"
+                    >
+                        <td>
+                            <tabler-icon
+                                icon="grip-vertical"
+                                [size]="16"
+                                cdkDragHandle
+                                class="drag-handle"
+                            />
+                        </td>
+                        <td>{{ severity.title }}</td>
+                        <td>
+                            <app-severity-circle [color]="severity.color" [size]="1" />
+                        </td>
+                        <td class="action-column">
+                            <ui-button
+                                variant="text"
+                                severity="info"
+                                size="small"
+                                (click)="onEditSeverity(severity)"
+                            >
+                                <tabler-icon icon="pencil" [size]="16" />
+                            </ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="danger"
+                                size="small"
+                                uiConfirm
+                                [confirmText]="'SEVERITY.CONFIRM.DELETE' | translate"
+                                (confirmed)="onConfirmDeleteSeverity(severity)"
+                            >
+                                <tabler-icon icon="trash" [size]="16" />
+                            </ui-button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-span-12 w-full p-2 border-top" [formGroup]="form">
+        <div class="ui-field w-1/4 p-0">
+            <label for="project-severity">
+                {{ 'SEVERITY.DEFAULT.FOR.NEW.ISSUE' | translate }}:
+            </label>
+            <app-severity-dropdown
+                [severities]="severities()"
+                [formControl]="idSeverityDefaultControl"
+                [uiSaveStatus]="defaultSaveStatus()"
+                inputId="project-severity"
+            ></app-severity-dropdown>
+        </div>
+    </div>
+</div>

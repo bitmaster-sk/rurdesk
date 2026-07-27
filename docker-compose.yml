@@ -1,0 +1,148 @@
+services:
+    rurdesk.proxy:
+        build:
+            context: .
+            dockerfile: docker/proxy/Dockerfile
+        container_name: rurdesk_proxy
+        ports:
+            - "80:80"
+        depends_on:
+            - rurdesk.api
+            - rurdesk.client
+        networks:
+            rurdesk_network:
+
+    rurdesk.db:
+        image: postgres:17
+        container_name: rurdesk_db
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: rurdesk
+            POSTGRES_PASSWORD: rurdesk
+            POSTGRES_DB: rurdesk
+        ports:
+            - "5432:5432"
+        volumes:
+            - rurdesk_data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U rurdesk -d rurdesk"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+        networks:
+            rurdesk_network:
+                aliases:
+                    - rurdesk-db
+
+    rurdesk.cache:
+        image: redis:8-alpine
+        container_name: rurdesk_cache
+        restart: unless-stopped
+        ports:
+            - "6379:6379"
+        command: ["sh", "-c", "redis-server"]
+        volumes:
+            - cache_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 5s
+            timeout: 3s
+            retries: 5
+        networks:
+            rurdesk_network:
+                aliases:
+                    - rurdesk-cache
+
+    rurdesk.api:
+        build:
+            context: .
+            dockerfile: docker/api/Dockerfile.dev
+        container_name: rurdesk_api
+        working_dir: /app
+        volumes:
+            - ./api:/app
+        depends_on:
+            rurdesk.db:
+                condition: service_healthy
+            rurdesk.cache:
+                condition: service_healthy
+        env_file:
+            - ./docker/api/.env
+        command: sh -c "./script/build.sh && ./script/migrate-up.sh && ./api"
+        networks:
+            rurdesk_network:
+                aliases:
+                    - rurdesk-api
+
+    rurdesk.client:
+        build:
+            context: .
+            dockerfile: docker/client/Dockerfile.dev
+        container_name: rurdesk_client
+        working_dir: /app
+        volumes:
+            - ./client:/app
+            # Native binaries are platform-specific; don't share them with the host.
+            - /app/node_modules
+        depends_on:
+            - rurdesk.api
+        command: sh -c "npm install && npm run start"
+        networks:
+            rurdesk_network:
+                aliases:
+                    - rurdesk-client
+
+    gateway-goose-qwen-local:
+        image: rurdesk-gateway-goose:latest
+        container_name: gateway_goose_qwen_local
+        env_file:
+            - ./docker/gateway-goose-qwen-local/.env
+        volumes:
+            - gateway-goose-qwen-local-workspace:/worktrees
+            - gateway-goose-qwen-local-state:/var/lib/gateway
+        depends_on:
+            - rurdesk.api
+            - rurdesk.proxy
+        networks:
+            rurdesk_network:
+
+    gateway-goose-qwen-cloud:
+        image: rurdesk-gateway-goose:latest
+        container_name: gateway_goose_qwen_cloud
+        env_file:
+            - ./docker/gateway-goose-qwen-cloud/.env
+        volumes:
+            - gateway-goose-qwen-cloud-workspace:/worktrees
+            - gateway-goose-qwen-cloud-state:/var/lib/gateway
+        depends_on:
+            - rurdesk.api
+            - rurdesk.proxy
+        networks:
+            rurdesk_network:
+
+    gateway-goose-kimi-cloud:
+        image: rurdesk-gateway-goose:latest
+        container_name: gateway_goose_kimi_cloud
+        env_file:
+            - ./docker/gateway-goose-kimi-cloud/.env
+        volumes:
+            - gateway-goose-kimi-cloud-workspace:/worktrees
+            - gateway-goose-kimi-cloud-state:/var/lib/gateway
+        depends_on:
+            - rurdesk.api
+            - rurdesk.proxy
+        networks:
+            rurdesk_network:
+
+volumes:
+    rurdesk_data:
+    cache_data:
+    gateway-goose-qwen-local-workspace:
+    gateway-goose-qwen-local-state:
+    gateway-goose-qwen-cloud-workspace:
+    gateway-goose-qwen-cloud-state:
+    gateway-goose-kimi-cloud-workspace:
+    gateway-goose-kimi-cloud-state:
+
+networks:
+    rurdesk_network:

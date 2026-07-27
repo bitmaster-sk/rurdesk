@@ -1,0 +1,47 @@
+<div class="tree-node-row">
+    <!-- Connector strip -->
+    <div class="connector-strip" [style.width]="stripWidth()">
+        <!-- Ancestor guide lines: one per ancestor level -->
+        @for (hasMore of ancestorHasMoreSiblings(); track $index) {
+            @if (hasMore) {
+                <div class="guide-v" [style.left.px]="$index * 20 + 9"></div>
+            }
+        }
+
+        <!-- Current node vertical arm -->
+        <div
+            class="connector-v"
+            [class.connector-v--half]="isLastChild()"
+            [style.left.px]="(depth() - 1) * 20 + 9"
+        ></div>
+
+        <!-- Current node horizontal arm -->
+        <div class="connector-h" [style.left.px]="(depth() - 1) * 20 + 9"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card-wrapper">
+        <app-staged-issue
+            [issue]="node().data"
+            [states]="states()"
+            [severities]="severities()"
+            (issueChange)="onCardIssueChange($event)"
+            (delete)="onCardDelete()"
+        ></app-staged-issue>
+    </div>
+</div>
+
+<!-- Children (recursive) -->
+@if (node().children?.length) {
+    @for (child of node().children; track child.data?.ref; let i = $index) {
+        <app-staged-issue-tree-node
+            [node]="child"
+            [states]="states()"
+            [severities]="severities()"
+            [isLastChild]="i === node().children!.length - 1"
+            [ancestorHasMoreSiblings]="childAncestorHasMoreSiblings()"
+            (issueChange)="issueChange.emit($event)"
+            (deleteNode)="deleteNode.emit($event)"
+        ></app-staged-issue-tree-node>
+    }
+}

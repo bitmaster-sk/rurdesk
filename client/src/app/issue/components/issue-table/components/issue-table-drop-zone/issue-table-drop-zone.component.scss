@@ -1,0 +1,30 @@
+.group-label {
+    font-size: 0.625rem;
+    font-weight: bold;
+    color: var(--ui-color-text-muted);
+    text-transform: uppercase;
+    min-width: 4.5rem;
+}
+
+.drop-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border: 1px solid var(--ui-color-border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--ui-color-text);
+    cursor: pointer;
+    transition:
+        background-color 0.15s,
+        color 0.15s,
+        border-color 0.15s;
+
+    &:hover,
+    &.drop-pill--active {
+        background-color: var(--ui-color-primary);
+        border-color: var(--ui-color-primary);
+        color: white;
+    }
+}

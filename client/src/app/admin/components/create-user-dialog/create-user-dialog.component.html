@@ -1,0 +1,76 @@
+<ui-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    [header]="'ADMIN.CREATE_USER' | translate"
+    width="32rem"
+>
+    <form [formGroup]="form" class="flex flex-col gap-2" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-1">
+            <label for="cu-name">{{ 'NAME' | translate }}</label>
+            <input uiInput id="cu-name" formControlName="name" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label for="cu-color">{{ 'USER.AVATAR_COLOR' | translate }}</label>
+            <div class="flex items-center gap-2">
+                <input uiColor id="cu-color" formControlName="colorAvatarBg" />
+                <ui-button
+                    size="small"
+                    severity="secondary"
+                    [title]="'USER.SHUFFLE_COLOR' | translate"
+                    (click)="onShuffleColor()"
+                >
+                    <tabler-icon icon="refresh" [size]="14" />
+                </ui-button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input type="checkbox" uiToggle id="cu-isbot" formControlName="isBot" />
+            <label for="cu-isbot">{{ 'ADMIN.IS_BOT' | translate }}</label>
+        </div>
+
+        @if (!form.controls.isBot.value) {
+            <div class="flex flex-col gap-1">
+                <label for="cu-email">{{ 'ADMIN.EMAIL' | translate }}</label>
+                <input uiInput id="cu-email" type="email" formControlName="email" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="cu-password">{{ 'ADMIN.PASSWORD' | translate }}</label>
+                <input uiInput id="cu-password" type="password" formControlName="password" />
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" uiToggle id="cu-isadmin" formControlName="isAdmin" />
+                <label for="cu-isadmin">{{ 'ADMIN.IS_ADMIN' | translate }}</label>
+            </div>
+        } @else {
+            <div class="flex flex-col gap-1">
+                <label for="cu-gateway-url">{{ 'API_KEY.GATEWAY_URL' | translate }}</label>
+                <input
+                    uiInput
+                    id="cu-gateway-url"
+                    formControlName="gatewayUrl"
+                    [placeholder]="'API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
+                />
+                <small class="ui-color-text-muted">
+                    {{ 'API_KEY.GATEWAY_URL_HINT' | translate }}
+                </small>
+            </div>
+        }
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'ADMIN.CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="onCancel()"
+        />
+        <ui-button
+            [label]="'ADMIN.CREATE' | translate"
+            [loading]="isSaving()"
+            [disabled]="form.invalid"
+            (click)="onSubmit()"
+        />
+    </ng-template>
+</ui-dialog>

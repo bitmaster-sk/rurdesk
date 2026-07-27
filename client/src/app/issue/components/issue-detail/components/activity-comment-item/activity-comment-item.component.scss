@@ -1,0 +1,204 @@
+.activity-item {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 14px;
+}
+
+.activity-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+
+    .connector {
+        width: 2px;
+        background: var(--ui-surface-200);
+        flex: 1;
+        margin-top: var(--ui-space-s);
+        min-height: unset;
+    }
+}
+
+.comment-card {
+    flex: 1;
+    // Without `min-width: 0` a flex child takes its intrinsic width, so a wide
+    // `<app-diff-viewer>` inside grows the card past the column and pushes the
+    // diff-viewer's own `overflow-x: auto` out of reach. Locking the flex
+    // basis lets the card stay at column width and the diff scrolls inside.
+    min-width: 0;
+    padding: 8px 10px;
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-surface-200);
+    border-radius: var(--ui-radius-md);
+    position: relative;
+
+    &.unread {
+        border-left: 3px solid var(--ui-color-primary);
+    }
+
+    // Each productive stage gets a tinted left border + matching kind-badge color.
+    // Colors lean on PrimeNG tokens so dark/light themes follow automatically.
+    &.kind-brainstorming-question {
+        border-left: 3px solid var(--ui-blue-500);
+        .kind-badge {
+            background: var(--ui-blue-100);
+            color: var(--ui-blue-800);
+        }
+    }
+    &.kind-brainstorming-complete {
+        border-left: 3px solid var(--ui-cyan-500);
+        .kind-badge {
+            background: var(--ui-cyan-100);
+            color: var(--ui-cyan-800);
+        }
+    }
+    &.kind-design {
+        border-left: 3px solid var(--ui-purple-500);
+        .kind-badge {
+            background: var(--ui-purple-100);
+            color: var(--ui-purple-800);
+        }
+    }
+    &.kind-implementation-plan {
+        border-left: 3px solid var(--ui-orange-500);
+        .kind-badge {
+            background: var(--ui-orange-100);
+            color: var(--ui-orange-800);
+        }
+    }
+    &.kind-pull-request-pushed {
+        border-left: 3px solid var(--ui-teal-500);
+        .kind-badge {
+            background: var(--ui-teal-100);
+            color: var(--ui-teal-800);
+        }
+    }
+    &.kind-implementation-done {
+        border-left: 3px solid var(--ui-green-500);
+        .kind-badge {
+            background: var(--ui-green-100);
+            color: var(--ui-green-800);
+        }
+    }
+
+    .kind-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: var(--ui-radius-sm);
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: var(--ui-space-s);
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--ui-space-s);
+
+        .author {
+            font-weight: 700;
+            font-size: var(--font-size-s);
+            color: var(--ui-color-text);
+        }
+
+        .comment-header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--ui-space-s);
+
+            .timestamp {
+                font-size: 0.75rem;
+                color: var(--ui-color-text-muted);
+            }
+
+            .comment-actions {
+                opacity: 0;
+                transition: opacity 0.1s;
+
+                .edit-btn {
+                    padding: var(--ui-space-xs);
+                    height: 1.5rem;
+                    width: 1.5rem;
+                }
+            }
+        }
+    }
+
+    &:hover .comment-actions {
+        opacity: 1;
+    }
+
+    .line-mode {
+        font-family: monospace;
+        font-size: var(--font-size-s);
+
+        .msg-line {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            padding: 1px 0;
+
+            &:hover .anchor-add-btn {
+                opacity: 1;
+            }
+
+            .gutter {
+                min-width: 2rem;
+                text-align: right;
+                color: var(--ui-color-text-muted);
+                user-select: none;
+                flex-shrink: 0;
+            }
+
+            .anchor-add-btn {
+                opacity: 0;
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 0 2px;
+                color: var(--ui-color-primary);
+                display: flex;
+                align-items: center;
+                flex-shrink: 0;
+                transition: opacity 0.1s;
+            }
+
+            .line-text {
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+
+        .anchor-replies {
+            margin-left: 2.5rem;
+            border-left: 2px solid var(--ui-color-primary);
+            padding-left: 8px;
+            margin-bottom: 4px;
+
+            &.outdated {
+                border-left-color: var(--ui-color-text-muted);
+                opacity: 0.7;
+            }
+        }
+    }
+
+    .message-edited {
+        font-size: var(--font-size-xs);
+        color: var(--ui-color-text-muted);
+        margin-top: var(--ui-space-xs);
+        display: block;
+    }
+
+    .edit-hint {
+        font-size: var(--font-size-xs);
+        color: var(--ui-color-text-muted);
+        margin-top: var(--ui-space-xs);
+        display: block;
+    }
+}

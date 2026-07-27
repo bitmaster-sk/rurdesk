@@ -1,0 +1,42 @@
+<div class="flex justify-center p-4">
+    <form
+        [formGroup]="form"
+        (ngSubmit)="onSave()"
+        class="panel shrink-0 w-full"
+        style="max-width: 480px"
+    >
+        <header class="panel-head" [uiSaveStatus]="saveStatus()">
+            <div class="panel-head-l">
+                <tabler-icon icon="settings" [size]="16" class="panel-icon" />
+                <div class="panel-title">{{ 'ADMIN.SETTINGS' | translate }}</div>
+            </div>
+        </header>
+        <div class="panel-body flex flex-col gap-4">
+            <div class="flex flex-col gap-1">
+                <label for="tablePageSize">{{ 'SETTINGS.TABLE_PAGE_SIZE' | translate }}</label>
+                <input id="tablePageSize" uiInput type="number" formControlName="tablePageSize" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="kanbanPageSize">{{ 'SETTINGS.KANBAN_PAGE_SIZE' | translate }}</label>
+                <input id="kanbanPageSize" uiInput type="number" formControlName="kanbanPageSize" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="ganttBacklogPageSize">
+                    {{ 'SETTINGS.GANTT_BACKLOG_PAGE_SIZE' | translate }}
+                </label>
+                <input
+                    id="ganttBacklogPageSize"
+                    uiInput
+                    type="number"
+                    formControlName="ganttBacklogPageSize"
+                />
+            </div>
+        </div>
+        @if (versionLabel()) {
+            <footer class="panel-body flex items-center justify-between pt-0">
+                <span class="ui-color-text-muted">{{ 'ADMIN.VERSION' | translate }}</span>
+                <span class="ui-color-text-muted font-mono">{{ versionLabel() }}</span>
+            </footer>
+        }
+    </form>
+</div>

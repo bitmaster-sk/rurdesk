@@ -1,0 +1,142 @@
+@if (project$ | async; as project) {
+<div class="h-full flex flex-col">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'HOME.OVERVIEW' | translate }}</h2>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col gap-4 p-4">
+            <!-- AI Tools -->
+            <section class="panel panel-noborder">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="bolt" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'PROJECT.AI_TOOLS' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    <a
+                        [routerLink]="['../project-builder']"
+                        class="ui-button ui-button--primary ui-button--outlined ui-button--small"
+                    >
+                        <tabler-icon icon="bolt" [size]="14" class="mr-2" />
+                        {{ 'PROJECT_BUILDER.TITLE' | translate }}
+                    </a>
+                </div>
+            </section>
+
+            <!-- Pinned issues -->
+            <section class="panel panel-noborder">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="pin" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'ISSUE.PINNED' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    @if (pins$ | async; as pins) { @if (pins.length === 0) {
+                    <div class="empty-hint py-4">{{ 'NO_DATA_YET' | translate }}</div>
+                    } @else {
+                    <div class="pins-grid">
+                        @for (pin of pins; track pin.idPin) {
+                        <app-pin-view [pin]="pin" (deletePin)="onDeletePin($event)"></app-pin-view>
+                        }
+                    </div>
+                    } }
+                </div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="panel panel-noborder">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="chart-bar" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'STATISTICS' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-12 md:col-span-6">
+                            <section class="panel">
+                                <header class="panel-head">
+                                    <div class="panel-head-l">
+                                        <div class="panel-title text-sm">
+                                            {{ 'STATS.ISSUES.BY.STATE' | translate }}
+                                        </div>
+                                    </div>
+                                </header>
+                                <div class="panel-body">
+                                    @if (issuesByState$ | async; as entries) {
+                                    <app-project-stats-chart
+                                        [label]="'STATS.ISSUES.BY.STATE' | translate"
+                                        [entries]="entries"
+                                    ></app-project-stats-chart>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-span-12 md:col-span-6">
+                            <section class="panel">
+                                <header class="panel-head">
+                                    <div class="panel-head-l">
+                                        <div class="panel-title text-sm">
+                                            {{ 'STATS.ISSUES.BY.SEVERITY' | translate }}
+                                        </div>
+                                    </div>
+                                </header>
+                                <div class="panel-body">
+                                    @if (issuesBySeverity$ | async; as data) {
+                                    <app-project-stats-chart
+                                        [label]="'STATS.ISSUES.BY.SEVERITY' | translate"
+                                        [entries]="data.entries"
+                                        [colors]="data.colors"
+                                    ></app-project-stats-chart>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-span-12 md:col-span-4">
+                            <section class="panel h-full">
+                                <header class="panel-head">
+                                    <div class="panel-head-l">
+                                        <div class="panel-title text-sm">
+                                            {{ 'STATS.ESTIMATED_VS_TRACKED' | translate }}
+                                        </div>
+                                    </div>
+                                </header>
+                                <div class="panel-body flex-1 flex flex-col">
+                                    @if (estimatedVsTracked$ | async; as entries) {
+                                    <app-stats-bar-chart
+                                        class="flex-1"
+                                        [entries]="entries"
+                                        valueFormat="hours"
+                                    ></app-stats-bar-chart>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+                        <div class="col-span-12 md:col-span-8">
+                            <section class="panel h-full">
+                                <header class="panel-head">
+                                    <div class="panel-head-l">
+                                        <div class="panel-title text-sm">
+                                            {{ 'STATS.WORKLOAD_BY_ASSIGNEE' | translate }}
+                                        </div>
+                                    </div>
+                                </header>
+                                <div class="panel-body">
+                                    @if (workloadByAssignee$ | async; as entries) {
+                                    <app-workload-bar-list
+                                        [entries]="entries"
+                                    ></app-workload-bar-list>
+                                    }
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+}

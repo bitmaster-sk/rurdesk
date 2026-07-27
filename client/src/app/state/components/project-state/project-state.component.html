@@ -1,0 +1,76 @@
+<div class="flex flex-col">
+    <div class="col-span-12 p-0">
+        <table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 2rem"></th>
+                    <th scope="col">{{ 'TITLE' | translate }}</th>
+                    <th scope="col">{{ 'STATE.START' | translate }}</th>
+                    <th scope="col">{{ 'STATE.END' | translate }}</th>
+                    <th scope="col" class="action-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (state of states(); track state.idState) {
+                    <tr
+                        cdkDrag
+                        (pointerdown)="onRowPointerDown($event)"
+                        (pointerup)="onRowPointerUp($event)"
+                        (cdkDragEnded)="onDragEnded($event)"
+                    >
+                        <td>
+                            <tabler-icon
+                                icon="grip-vertical"
+                                [size]="16"
+                                cdkDragHandle
+                                class="drag-handle"
+                            />
+                        </td>
+                        <td>{{ state.name }}</td>
+                        <td>
+                            @if (checkboxIcon(state.start); as icon) {
+                                <tabler-icon [icon]="icon" [size]="16" />
+                            }
+                        </td>
+                        <td>
+                            @if (checkboxIcon(state.final); as icon) {
+                                <tabler-icon [icon]="icon" [size]="16" />
+                            }
+                        </td>
+                        <td class="action-column">
+                            <ui-button
+                                variant="text"
+                                severity="info"
+                                size="small"
+                                (click)="onEditState(state)"
+                            >
+                                <tabler-icon icon="pencil" [size]="16" />
+                            </ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="danger"
+                                size="small"
+                                uiConfirm
+                                [confirmText]="'STATE.CONFIRM.DELETE' | translate"
+                                (confirmed)="onConfirmDeleteState(state)"
+                            >
+                                <tabler-icon icon="trash" [size]="16" />
+                            </ui-button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-span-12 w-full p-2 border-top" [formGroup]="form">
+        <div class="ui-field w-1/4 p-0">
+            <label for="project-state">{{ 'STATE.DEFAULT.FOR.NEW.ISSUE' | translate }}:</label>
+            <app-state-dropdown
+                [states]="states()"
+                formControlName="idStateDefault"
+                [saveStatus]="defaultSaveStatus()"
+                inputId="project-state"
+            ></app-state-dropdown>
+        </div>
+    </div>
+</div>

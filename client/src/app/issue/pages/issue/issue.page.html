@@ -1,0 +1,26 @@
+@if (project$ | async; as project) {
+<div class="h-full flex flex-col">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'ISSUE.TITLE' | translate }}</h2>
+        <div class="page-toolbar">
+            @if (aclStore.canCreateIssue()) {
+            <ui-button
+                type="button"
+                [routerLink]="['/project', project?.idProject, 'issue', 0]"
+                severity="secondary"
+                variant="outlined"
+                size="small"
+                [label]="'ISSUE.ADD' | translate"
+            >
+                <tabler-icon icon="plus" [size]="14" />
+            </ui-button>
+            }
+            <ng-container [ngTemplateOutlet]="toolbarTemplate()"></ng-container>
+        </div>
+    </div>
+
+    <div class="page-section grow shrink min-h-0 overflow-hidden">
+        <router-outlet></router-outlet>
+    </div>
+</div>
+}

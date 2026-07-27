@@ -1,0 +1,79 @@
+# Single production image ("tracker"): the Go binary serves REST, WebSocket,
+# the mounted MCP handler AND the Angular SPA on one port (no nginx, no separate
+# client/proxy containers). Build context is the repo root.
+
+################################################################
+# Stage 1 — build the Angular production bundle
+################################################################
+FROM node:24.13-bookworm-slim AS client-build
+
+WORKDIR /client
+
+# Install deps against the lockfile first for layer caching.
+COPY client/package*.json ./
+RUN npm ci
+
+COPY client .
+RUN npx ng build --configuration production --output-path=dist/production
+
+################################################################
+# Stage 2 — build the Go binary (+ goose for migrations)
+################################################################
+FROM golang:1.25-alpine AS api-build
+
+# Release identity, stamped into the binary by script/build.sh. Empty in a
+# plain `docker build`, which leaves the buildinfo dev defaults in place.
+ARG VERSION
+ARG COMMIT
+ENV VERSION=${VERSION} \
+    COMMIT=${COMMIT}
+
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
+
+WORKDIR /app
+
+COPY api/go.mod api/go.sum ./
+RUN go mod download
+
+COPY api ./
+RUN ./script/build.sh
+
+################################################################
+# Stage 3 — minimal runtime, non-root
+################################################################
+FROM alpine:3.23.2
+
+# wget (busybox) is used by the container HEALTHCHECK.
+RUN addgroup -S app && adduser -S -G app app
+
+WORKDIR /app
+
+COPY --from=api-build /app/api /app/api
+# admin maintenance CLI (e.g. `docker exec -it <container> admin rotate-git-key`)
+COPY --from=api-build /app/admin /usr/local/bin/admin
+COPY --from=api-build /app/migrations /app/migrations
+COPY --from=api-build /app/script /app/script
+COPY --from=api-build /go/bin/goose /usr/local/bin/goose
+# The Angular `application` builder emits the browser bundle under browser/
+# (alongside 3rdpartylicenses.txt / prerendered-routes.json). STATIC_DIR points
+# at that subdirectory so index.html sits at its root.
+COPY --from=client-build /client/dist/production/browser /app/public
+
+# Production serves the SPA from the Go binary on the single application port.
+ENV SERVE_STATIC=true \
+    STATIC_DIR=/app/public \
+    APPLICATION_HOST=0.0.0.0 \
+    APPLICATION_PORT=1000
+
+RUN chown -R app:app /app
+USER app
+
+EXPOSE 1000
+
+# Liveness only, with a generous start period: the entrypoint runs Goose
+# migrations before the server starts listening, so readiness/DB checks must not
+# kill the container mid-migration.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=90s --retries=5 \
+    CMD wget -qO- http://127.0.0.1:1000/healthz >/dev/null 2>&1 || exit 1
+
+CMD ["./script/entrypoint.sh"]

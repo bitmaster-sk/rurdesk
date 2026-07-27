@@ -1,0 +1,47 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+ROADMAP.md
+
+# Internal working notes — public docs live in site/
+docs/development/
+
+# Environment / secrets — never commit
+.env
+.env.*
+!.env.example
+script/deploy-site.env
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Editors / IDEs
+.idea/
+*.swp
+*.swo
+*~
+.history/
+
+# Local AI assistant & editor tooling
+.claude/
+.cursor/
+.cursorrules
+.cursorignore
+.aider*
+.continue/
+.codeium/
+.windsurf/
+.windsurfrules
+.roo/
+.cline/
+.gemini/
+.github/copilot-instructions.md
+.superpowers/
+AGENTS.md
+GEMINI.md
+CLAUDE.md
+
+# Logs
+*.log

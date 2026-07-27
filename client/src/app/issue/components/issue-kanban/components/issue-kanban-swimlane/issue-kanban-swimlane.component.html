@@ -1,0 +1,84 @@
+<div cdkDropListGroup class="swimlane-grid" [style.grid-template-columns]="gridTemplateColumns()">
+    <!-- Header row -->
+    <div class="swimlane-header-row">
+        <div class="swimlane-user-cell swimlane-user-cell--header"></div>
+        @for (state of states(); track state.idState) {
+            <div class="swimlane-state-header">
+                <span>{{ state.name }}</span>
+                <span class="kanban-count">
+                    <ui-odometer [value]="stateTotal(state.idState)" />
+                </span>
+            </div>
+        }
+    </div>
+
+    <!-- User rows -->
+    @for (row of sortedRows(); track row.user?.idUser ?? 'unassigned') {
+        <div class="swimlane-row">
+            <div class="swimlane-user-cell">
+                @if (row.user) {
+                    <app-avatar
+                        [name]="row.user.name"
+                        [bgColor]="row.user.colorAvatarBg"
+                        [height]="1.75"
+                        [width]="1.75"
+                        [radius]="1"
+                    ></app-avatar>
+                    <span>{{ row.user.name }}</span>
+                } @else {
+                    <div class="swimlane-user-cell--avatar-unassigned">?</div>
+                    <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
+                }
+            </div>
+
+            @for (cell of row.cells; track cell.state.idState) {
+                <div
+                    class="swimlane-cell"
+                    cdkDropList
+                    [cdkDropListData]="cell"
+                    [cdkDropListConnectedTo]="connectedTo()"
+                    (cdkDropListDropped)="onDropped($event)"
+                >
+                    @for (tile of cell.tiles; track tile.idIssue) {
+                        <app-issue-kanban-tile
+                            [tile]="tile"
+                            cdkDrag
+                            [class.tile-landed]="tile.idIssue === landedTileId()"
+                            (cdkDragStarted)="onTileDragStarted($event)"
+                            (contextMenuRequested)="contextMenuRequested.emit($event)"
+                        >
+                            <div
+                                *cdkDragPreview
+                                class="tile-drag-preview"
+                                [style.width.px]="dragPreviewWidth()"
+                            >
+                                @if (dragSvc.hoveredName(); as name) {
+                                    <div class="tile-drag-preview__header">→ {{ name }}</div>
+                                }
+                                <app-issue-kanban-tile [tile]="tile" />
+                            </div>
+                        </app-issue-kanban-tile>
+                    }
+                    @if (cell.cursor) {
+                        <ui-button
+                            type="button"
+                            size="small"
+                            variant="text"
+                            class="self-center"
+                            [loading]="cell.loading"
+                            [label]="'LOAD_MORE' | translate"
+                            (click)="cellLoadMore.emit(cell)"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    }
+                    @if (cell.total > 0) {
+                        <div class="text-sm ui-color-text-muted text-center">
+                            {{ cell.tiles.length }}/{{ cell.total }}
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>

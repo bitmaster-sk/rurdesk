@@ -1,0 +1,162 @@
+::ng-deep .qap-popover.ui-popover {
+    padding: 0;
+}
+
+.qap {
+    width: 22rem;
+
+    // Calendar step: just pad the calendar. Width stays the base 22rem (wider
+    // than flatpickr's ~308px calendar) — do NOT use fit-content or centre the
+    // calendar; either breaks flatpickr's internal absolute arrow positioning
+    // (the next-month arrow ends up mispositioned).
+    &--date-mode {
+        padding: var(--ui-space-s);
+    }
+
+    &--head {
+        padding: 10px var(--ui-space-m) var(--ui-space);
+        border-bottom: 1px solid var(--ui-surface-300);
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: var(--ui-space);
+        background: var(--ui-surface-50);
+        font-size: var(--font-size-s);
+        font-weight: 600;
+    }
+
+    &--section {
+        padding: var(--ui-space) var(--ui-space-m);
+        border-bottom: 1px solid var(--ui-surface-300);
+    }
+
+    &--section-label {
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--ui-surface-600);
+        margin-bottom: var(--ui-space-s);
+    }
+
+    &--actions {
+        display: flex;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-s);
+        background: var(--ui-surface-50);
+        border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md);
+    }
+}
+
+// Reschedule buttons
+.reschedule-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ui-space-s);
+}
+
+.reschedule-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: var(--ui-space-s) var(--ui-space);
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--ui-color-border);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--font-family);
+    color: var(--ui-color-text-muted);
+    background: var(--ui-color-surface);
+    transition:
+        background 0.1s,
+        color 0.1s,
+        border-color 0.1s;
+    white-space: nowrap;
+
+    i {
+        width: 11px;
+        text-align: center;
+        flex-shrink: 0;
+        margin-right: var(--ui-space-s);
+    }
+
+    &:hover:not(:disabled) {
+        background: var(
+            --ui-color-primary-weak,
+            color-mix(in srgb, var(--ui-color-primary) 10%, white)
+        );
+        border-color: var(--ui-color-primary);
+        color: var(--ui-color-primary);
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: default;
+    }
+
+    &--full {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+}
+
+// The calendar sits inside the already-bordered popover — drop its own border
+// (and elevation) so there's no double frame.
+::ng-deep .qap--date-mode .flatpickr-calendar {
+    border: 0;
+    box-shadow: none;
+}
+
+// [uiDatepicker] inline: flatpickr renders the calendar as a sibling after this
+// input; the input is only the anchor, so hide it (NOT display:none — that
+// breaks flatpickr's wiring; zero-size + absolute removes it from layout).
+::ng-deep .qap-popover .qap-datepicker-inline-host {
+    position: absolute;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+// Footer: Back (left) + Cancel (right), with room around them.
+.qap--date-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--ui-space-s);
+    margin: var(--ui-space-s) var(--ui-space-xs) var(--ui-space-xs);
+}
+
+// Action footer buttons
+.qap--action {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px var(--ui-space-s);
+    border-radius: var(--ui-radius-md);
+    border: none;
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-family: var(--font-family);
+    transition: all 0.12s;
+
+    i {
+        font-size: var(--font-size-s);
+    }
+
+    &:hover {
+        background: var(--ui-surface-200);
+        color: var(--ui-color-text);
+    }
+
+    &--danger:hover {
+        background: color-mix(in srgb, var(--ui-red-500) 12%, transparent);
+        color: var(--ui-red-500);
+    }
+}

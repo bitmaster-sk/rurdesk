@@ -1,0 +1,18 @@
+@for (seg of segments(); track $index) {
+    @if (seg.type === 'diff') {
+        <app-diff-viewer [rawPatch]="seg.content" />
+    } @else if (seg.type === 'mockup') {
+        <app-mockup-card
+            [html]="seg.content"
+            [title]="seg.title"
+            [approvable]="approvable()"
+            [selected]="selectedMockupRef() === seg.ref"
+            [rejected]="selectedMockupRef() !== null && selectedMockupRef() !== seg.ref"
+            (useAndApprove)="useMockup.emit(seg.ref)"
+        />
+    } @else if (seg.type === 'mention') {
+        <app-mention-chip [idUser]="seg.idUser" [name]="seg.name" [candidates]="candidates()" />
+    } @else {
+        <div class="text-run" markdown [data]="seg.content | emoji" ngPreserveWhitespaces></div>
+    }
+}

@@ -1,0 +1,32 @@
+<ui-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    [header]="(team() ? 'ADMIN.EDIT_TEAM' : 'ADMIN.CREATE_TEAM') | translate"
+    width="28rem"
+>
+    <form [formGroup]="form" class="flex flex-col gap-2" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-1">
+            <label for="td-name">{{ 'NAME' | translate }}</label>
+            <input uiInput id="td-name" formControlName="name" />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label for="td-color">{{ 'SEVERITY.COLOR' | translate }}</label>
+            <input id="td-color" type="color" uiColor formControlName="color" />
+        </div>
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'ADMIN.CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="onCancel()"
+        />
+        <ui-button
+            [label]="'SAVE' | translate"
+            [loading]="isSaving()"
+            [disabled]="form.invalid"
+            (click)="onSubmit()"
+        />
+    </ng-template>
+</ui-dialog>

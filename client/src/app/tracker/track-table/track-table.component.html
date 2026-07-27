@@ -1,0 +1,59 @@
+<app-track-form [track]="track$ | async"></app-track-form>
+<table class="ui-table ui-table--hover">
+    <thead>
+        <tr>
+            <th scope="col">{{ 'USER.SINGULAR' | translate }}</th>
+            <th scope="col">{{ 'ISSUE.TIME.TRACKED' | translate }}</th>
+            <th scope="col">{{ 'TIME.START' | translate }}</th>
+            <th scope="col">{{ 'TIME.END' | translate }}</th>
+            <th scope="col"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (track of (tracks$ | async) ?? []; track track.idTrack) {
+            <tr>
+                <td>
+                    @if (users.get(track.idUser); as user) {
+                        <span class="flex items-center">
+                            <app-avatar
+                                [height]="1"
+                                [width]="1"
+                                [name]="user.name"
+                                [bgColor]="user.colorAvatarBg"
+                                class="mr-1"
+                            ></app-avatar>
+                            <span>{{ user?.name }}</span>
+                        </span>
+                    }
+                </td>
+                <td>{{ track.tracked | secDuration }}</td>
+                <td>{{ track.startAt | date: 'medium' }}</td>
+                <td>{{ track.endAt | date: 'medium' }}</td>
+                <td class="action-column">
+                    <ui-button
+                        type="button"
+                        severity="info"
+                        size="small"
+                        [isIconOnly]="true"
+                        [ariaLabel]="'TRACK.EDIT' | translate"
+                        (click)="onEditTrack(track)"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                    </ui-button>
+                    <ui-button
+                        type="button"
+                        severity="danger"
+                        size="small"
+                        [isIconOnly]="true"
+                        [ariaLabel]="'TRACK.DELETE' | translate"
+                        uiConfirm
+                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                        (confirmed)="onConfirmDeleteTrack(track)"
+                    >
+                        <tabler-icon icon="trash" [size]="14" />
+                    </ui-button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

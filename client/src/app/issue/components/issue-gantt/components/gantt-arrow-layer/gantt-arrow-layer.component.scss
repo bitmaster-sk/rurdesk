@@ -1,0 +1,106 @@
+:host {
+    display: contents;
+}
+
+.gantt-arrows {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 3;
+    transition: opacity 0.2s ease-out;
+
+    // While bars glide to their post-drop positions, arrows (already re-routed
+    // to the final geometry) dim instead of visibly disagreeing with the bars
+    &--settling {
+        opacity: 0.25;
+    }
+}
+
+.gantt-arrow {
+    pointer-events: auto;
+    cursor: pointer;
+
+    &:hover path:first-child {
+        stroke: var(--ui-color-primary);
+        stroke-width: 3;
+    }
+
+    &--selected path:first-child {
+        stroke: var(--ui-color-primary) !important;
+        stroke-width: 3;
+    }
+
+    &--critical path:first-child {
+        stroke: var(--ui-color-primary);
+        stroke-width: 3;
+    }
+
+    &--dimmed {
+        opacity: 0.3;
+    }
+
+    // Smooth settle from the draw-in primary color back to the resting gray
+    path:first-child {
+        transition: stroke 0.25s ease-out;
+    }
+
+    // Critical-path trace: when the overlay turns on, each chain segment draws
+    // itself in sequence (per-arrow animation-delay set inline). fill-mode both
+    // keeps segments hidden until their turn.
+    &--path-trace {
+        stroke-dasharray: 1;
+        animation: gantt-arrow-draw 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+            stroke-dasharray: none;
+        }
+    }
+
+    // Freshly created relation: the line draws itself from source to target in
+    // the primary color, then settles. pathLength="1" normalizes dash math to 0..1.
+    &--path-draw-in {
+        stroke: var(--ui-color-primary);
+        stroke-width: 3;
+        stroke-dasharray: 1;
+        animation: gantt-arrow-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+
+        @media (prefers-reduced-motion: reduce) {
+            animation: none;
+            stroke-dasharray: none;
+        }
+    }
+
+    &--lag-label {
+        font-size: 10px;
+        fill: var(--ui-color-text-muted);
+        pointer-events: none;
+    }
+
+    &--delete-btn {
+        fill: var(--ui-red-500);
+        cursor: pointer;
+        opacity: 0.9;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+
+    &--delete-icon {
+        fill: white;
+        font-size: 10px;
+        pointer-events: auto;
+        cursor: pointer;
+    }
+}
+
+@keyframes gantt-arrow-draw {
+    from {
+        stroke-dashoffset: 1;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}

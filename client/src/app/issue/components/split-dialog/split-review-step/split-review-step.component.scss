@@ -1,0 +1,25 @@
+h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    font-size: var(--font-size-m);
+}
+
+.children-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    max-height: calc(90vh - 240px);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.add-child {
+    margin-bottom: 1rem;
+}
+
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}

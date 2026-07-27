@@ -1,0 +1,55 @@
+<div class="nf">
+    <!-- The login robot, tipped onto its side with the antenna angled down. -->
+    <svg
+        class="nf__robot"
+        viewBox="0 0 64 64"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        role="img"
+        [attr.aria-label]="'NOT_FOUND.TITLE' | translate"
+    >
+        <g transform="rotate(90 32 37.5)">
+            <g transform="rotate(62 32 18)">
+                <line
+                    x1="32"
+                    y1="18"
+                    x2="32"
+                    y2="11"
+                    stroke="#3f3f46"
+                    stroke-width="4"
+                    stroke-linecap="round"
+                />
+                <circle cx="32" cy="8.5" r="4" fill="#b85814" />
+            </g>
+            <rect
+                x="13"
+                y="21"
+                width="38"
+                height="33"
+                rx="10"
+                fill="none"
+                stroke="#3f3f46"
+                stroke-width="4"
+            />
+            <!-- dead X eyes, keeping the login mark's two-colour scheme -->
+            <g stroke-width="3.2" stroke-linecap="round">
+                <g stroke="#3f3f46">
+                    <line x1="20" y1="33" x2="29" y2="42" />
+                    <line x1="29" y1="33" x2="20" y2="42" />
+                </g>
+                <g stroke="#b85814">
+                    <line x1="36.5" y1="33" x2="45.5" y2="42" />
+                    <line x1="45.5" y1="33" x2="36.5" y2="42" />
+                </g>
+            </g>
+        </g>
+    </svg>
+
+    <div class="nf__text">
+        <p class="nf__eyebrow">{{ 'NOT_FOUND.CODE' | translate }}</p>
+        <h1 class="nf__title">{{ 'NOT_FOUND.TITLE' | translate }}</h1>
+        <p class="nf__sub">{{ 'NOT_FOUND.SUBTITLE' | translate }}</p>
+    </div>
+
+    <ui-button [label]="'NOT_FOUND.HOME' | translate" (click)="onHome()"></ui-button>
+</div>

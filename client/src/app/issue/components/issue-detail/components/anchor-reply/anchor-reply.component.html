@@ -1,0 +1,11 @@
+<div class="anchor-reply-item">
+    <span class="anchor-reply-author">{{ reply().creator.name }}</span>
+    @if (reply().anchor?.isOutdated) {
+        <ui-tag
+            severity="secondary"
+            [value]="'MESSAGE.ANCHOR.OUTDATED' | translate"
+            class="anchor-outdated-tag"
+        ></ui-tag>
+    }
+    <app-message-body [body]="reply().message" [candidates]="candidates()" />
+</div>

@@ -1,0 +1,188 @@
+<div class="gantt-host">
+    <!-- Toolbar portal -->
+    <ng-template #toolbar>
+        <ui-toggle-button
+            [ngModel]="showFilter$ | async"
+            (ngModelChange)="onToggleFilter()"
+            size="small"
+        >
+            <tabler-icon icon="filter" [size]="14" />
+            {{ 'FILTER.SINGULAR' | translate }}
+        </ui-toggle-button>
+
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            [label]="'ISSUE.GANTT.TODAY' | translate"
+            (click)="onScrollToToday()"
+        ></ui-button>
+
+        <ui-choice
+            [options]="zoomOptions"
+            [ngModel]="timelineService.zoomLevel()"
+            (ngModelChange)="onZoomChange($event)"
+            optionLabel="labelKey"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+        >
+            <ng-template #item let-item>
+                {{ item.labelKey | translate }}
+            </ng-template>
+        </ui-choice>
+
+        <ui-choice
+            [options]="cardModeOptions"
+            [ngModel]="cardMode()"
+            (ngModelChange)="onCardModeChange($event)"
+            optionLabel="labelKey"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+        >
+            <ng-template #item let-item>
+                {{ item.labelKey | translate }}
+            </ng-template>
+        </ui-choice>
+
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            (click)="settingsOverlay.toggle($event)"
+        >
+            <tabler-icon icon="adjustments-horizontal" [size]="14" />
+        </ui-button>
+        <ui-popover #settingsOverlay>
+            <div class="settings-panel">
+                <div class="settings-row">
+                    <span class="settings-label">{{ 'ISSUE.GANTT.TOGGLE_WBS' | translate }}</span>
+                    <input
+                        type="checkbox"
+                        uiToggle
+                        [ngModel]="!isWbsCollapsed()"
+                        (ngModelChange)="onToggleWbs()"
+                    />
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">
+                        {{ 'ISSUE.GANTT.TOGGLE_MINIMAP' | translate }}
+                    </span>
+                    <input
+                        type="checkbox"
+                        uiToggle
+                        [ngModel]="isMinimapVisible()"
+                        (ngModelChange)="onToggleMinimap()"
+                    />
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">
+                        {{ 'ISSUE.GANTT.CRITICAL_PATH' | translate }}
+                    </span>
+                    <input
+                        type="checkbox"
+                        uiToggle
+                        [ngModel]="isCriticalPathEnabled()"
+                        (ngModelChange)="onToggleCriticalPath()"
+                    />
+                </div>
+            </div>
+        </ui-popover>
+    </ng-template>
+
+    <!-- Filter panel -->
+    @if (showFilter$ | async) {
+        <app-filter></app-filter>
+    }
+
+    <!-- Main gantt area -->
+    <div class="gantt-host--content">
+        <!-- WBS Panel (scheduled tasks only, scroll-synced) -->
+        <app-gantt-wbs-panel
+            #wbsPanel
+            [scheduledTasks]="scheduledTasks()"
+            [backlogTasks]="backlogTasks()"
+            [backlogHasMore]="backlogHasMore()"
+            [backlogLoading]="backlogLoading()"
+            [isCollapsed]="isWbsCollapsed()"
+            [hoveredTaskId]="hoveredTaskId()"
+            [selectedTaskId]="selectedTaskId()"
+            (scrolled)="onWbsScrolled($event)"
+            (taskClicked)="onWbsTaskClicked($event)"
+            (taskHovered)="onTaskHovered($event)"
+            (backlogDragStarted)="onBacklogDragStarted($event)"
+            (loadMoreBacklog)="onLoadMoreBacklog()"
+            (reordered)="onScheduledReorder($event)"
+        />
+
+        <!-- Timeline -->
+        <div class="gantt-host--timeline">
+            <app-gantt-timeline-body
+                #timelineBody
+                [tasks]="scheduledTasks()"
+                [columns]="columns()"
+                [headerRows]="headerRows()"
+                [cardMode]="cardMode()"
+                [criticalTaskIds]="criticalPath().taskIds"
+                [criticalRelationIds]="criticalPath().relationIds"
+                [criticalRelationOrder]="criticalPath().relationOrder"
+                [isCriticalTracing]="isCriticalTracing()"
+                [isCriticalPathEnabled]="isCriticalPathEnabled()"
+                [ghostBars]="ghostBars()"
+                [relations]="relations()"
+                [selectedRelationId]="selectedRelationId()"
+                [selectedTaskIndex]="selectedTaskIndex()"
+                [drawingLine]="drawingLine()"
+                [relationDropTarget]="dragService.activeDropTarget()"
+                [drawInRelation]="drawInRelation()"
+                [cascadeSlide]="cascadeSlide()"
+                (scrolled)="onTimelineScrolled($event)"
+                (taskHovered)="onTaskHovered($event)"
+                (barDragStarted)="onBarDragStarted($event)"
+                (barResizeEnded)="onBarResizeEnded($event)"
+                (barContextMenu)="onBarContextMenu($event)"
+                (connectionDragStarted)="onConnectionHandleDragStarted($event)"
+                (arrowClicked)="selectedRelationId.set($event)"
+                (arrowDeleteRequested)="onDeleteRelation($event)"
+            />
+        </div>
+    </div>
+
+    <!-- Minimap (Phase 4) -->
+    @if (isMinimapVisible()) {
+        <app-gantt-minimap
+            [tasks]="scheduledTasks()"
+            [viewportScrollLeft]="viewportScrollLeft()"
+            [viewportWidth]="viewportWidth()"
+            (navigated)="timelineBodyRef()?.scrollToPixel($event)"
+        />
+    }
+</div>
+
+<!-- Backlog drag ghost: follows cursor while scheduling from backlog -->
+@if (backlogDragGhost(); as ghost) {
+    <div
+        class="backlog-drag-ghost"
+        [style.left.px]="ghost.x + 14"
+        [style.top.px]="ghost.y - 14"
+        [style.--ghost-sev-color]="ghost.severityColor ?? 'var(--ui-surface-300)'"
+    >
+        <span class="backlog-drag-ghost--severity"></span>
+        <span class="backlog-drag-ghost--title">{{ ghost.title }}</span>
+    </div>
+}
+
+<app-issue-quick-actions
+    #quickActions
+    (splitRequested)="onSplitRequested($event)"
+></app-issue-quick-actions>
+
+@if (isSplitDialogOpen() && splitIssue()) {
+    <app-split-dialog
+        [idProject]="splitIssue().idProject"
+        [issue]="splitIssue()"
+        (accepted)="onSplitAccepted()"
+        (cancelled)="onSplitCancelled()"
+    ></app-split-dialog>
+}

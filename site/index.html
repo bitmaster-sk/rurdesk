@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>RuRdesk — AI-native work management</title>
+        <meta
+            name="description"
+            content="Self-hosted work management where agents pick up tickets, do the work, and open pull requests — humans review and approve."
+        />
+        <link rel="canonical" href="{{BASE_URL}}/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Rurdesk" />
+        <meta
+            property="og:title"
+            content="Rurdesk — AI-native work management"
+        />
+        <meta
+            property="og:description"
+            content="Self-hosted work management where agents pick up tickets, do the work, and open pull requests — humans review and approve."
+        />
+        <meta property="og:url" content="{{BASE_URL}}/" />
+        <meta property="og:image" content="{{BASE_URL}}/assets/img/hero.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "SoftwareApplication",
+                "name": "Rurdesk",
+                "url": "{{BASE_URL}}/",
+                "applicationCategory": "BusinessApplication",
+                "operatingSystem": "Self-hosted (Docker)",
+                "description": "Self-hosted, AI-native work management. Agents pick up tickets, do the work, and open pull requests — humans review and approve.",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "EUR"
+                }
+            }
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;0,900;1,400&family=Spline+Sans+Mono:wght@400;500;600&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="assets/css/site.css" />
+        <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+        <link rel="alternate icon" href="assets/img/favicon.ico" sizes="any" />
+    </head>
+    <body>
+        <header class="topbar">
+            <a class="topbar__brand" href="index.html">
+                <svg
+                    class="brand-mark"
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-label="rurdesk"
+                >
+                    <line
+                        x1="32"
+                        y1="18"
+                        x2="32"
+                        y2="11"
+                        stroke="currentColor"
+                        stroke-width="5"
+                        stroke-linecap="round"
+                    />
+                    <circle cx="32" cy="8.5" r="4" fill="#b85814" />
+                    <rect
+                        x="13"
+                        y="21"
+                        width="38"
+                        height="33"
+                        rx="10"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="5"
+                    />
+                    <rect
+                        x="20"
+                        y="35"
+                        width="9"
+                        height="5"
+                        rx="2.5"
+                        fill="currentColor"
+                    />
+                    <circle
+                        cx="41"
+                        cy="37.5"
+                        r="8.5"
+                        fill="#b85814"
+                        opacity="0.25"
+                    />
+                    <circle cx="41" cy="37.5" r="4.5" fill="#b85814" />
+                </svg>
+                <span class="brand-name">rurdesk</span>
+            </a>
+            {{NAV}}
+            <button
+                class="topbar__menu"
+                aria-label="Toggle navigation"
+                onclick="document.body.classList.toggle('nav-open')"
+            >
+                ☰
+            </button>
+        </header>
+
+        <!-- ============================ HERO ============================ -->
+        <section class="hero">
+            <div class="hero__inner">
+                <span class="eyebrow"
+                    >Self-hosted · open source · AI-first</span
+                >
+                <h1>AI as a <em>co-worker</em>, not a plugin.</h1>
+                <p class="hero__lede">
+                    A work management platform built for AI-first teams. Agents
+                    pick up tickets, do the work, and open pull requests —
+                    humans review and approve. Every AI feature ships from day
+                    one.
+                </p>
+                <div class="hero__cta">
+                    <a class="btn btn--primary" href="docs/installation.html"
+                        >Get started in 5 minutes</a
+                    >
+                    <a class="btn btn--ghost" href="docs/index.html"
+                        >Read the docs</a
+                    >
+                </div>
+                <div class="hero__meta">
+                    <span>Docker Compose</span>
+                    <span>Go · Angular · PostgreSQL</span>
+                    <span
+                        >Runs fully local via Ollama — or your own API key</span
+                    >
+                </div>
+
+                <div class="pipeline" aria-label="Agent run stages">
+                    <span class="pipeline__chip">brainstorm</span>
+                    <span class="pipeline__arrow">→</span>
+                    <span class="pipeline__chip">design</span>
+                    <span class="pipeline__arrow">→</span>
+                    <span class="pipeline__chip">plan</span>
+                    <span class="pipeline__arrow">→</span>
+                    <span class="pipeline__chip">implement</span>
+                    <span class="pipeline__arrow">→</span>
+                    <span class="pipeline__chip pipeline__chip--gate"
+                        >✓ human approval</span
+                    >
+                    <span class="pipeline__arrow">→</span>
+                    <span class="pipeline__chip pipeline__chip--pr"
+                        >pull request</span
+                    >
+                </div>
+
+                <div class="hero__media reveal">
+                    <div class="frame">
+                        <div class="frame__bar">
+                            <span class="frame__dot"></span
+                            ><span class="frame__dot"></span
+                            ><span class="frame__dot"></span>
+                            <span class="frame__url"
+                                >localhost / project / devtoolbox</span
+                            >
+                        </div>
+                        <img
+                            data-media
+                            src="assets/img/hero.png"
+                            alt="Issue board with a live agent run in progress"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================= AGENT WORKFLOW ======================= -->
+        <section class="section section--dark" id="agents">
+            <div class="section__inner">
+                <span class="eyebrow">The headline act</span>
+                <h2>Hand a ticket to an agent. Get back a pull request.</h2>
+                <p class="section__lede">
+                    Assign an issue to a bot backed by a Goose gateway. The
+                    agent moves through staged phases with a human approval gate
+                    between each one. Nothing merges without you.
+                </p>
+
+                <div class="feature-row">
+                    <div class="feature-row__copy">
+                        <ul>
+                            <li>
+                                Each run works in an
+                                <strong>isolated git worktree</strong>, pushes a
+                                branch, opens a <strong>PR/MR</strong>
+                            </li>
+                            <li>
+                                <strong>Approval gates</strong> between stages —
+                                you stay in control
+                            </li>
+                            <li>
+                                <strong>Crash recovery</strong>, heartbeats, and
+                                per-run stats: tokens, duration, tool calls
+                            </li>
+                            <li>
+                                Run
+                                <strong>multiple agents in parallel</strong> on
+                                independent tickets
+                            </li>
+                            <li>
+                                Run <strong>fully local via Ollama</strong> — no
+                                cloud, no keys — or bring your own (Anthropic,
+                                Gemini, Ollama Cloud)
+                            </li>
+                        </ul>
+                        <dl class="statline">
+                            <div>
+                                <dt>Stages</dt>
+                                <dd>4 + gates</dd>
+                            </div>
+                            <div>
+                                <dt>Providers</dt>
+                                <dd>local + cloud</dd>
+                            </div>
+                            <div>
+                                <dt>Output</dt>
+                                <dd>1 PR / run</dd>
+                            </div>
+                        </dl>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span>
+                                <span class="frame__url"
+                                    >agent run — devtoolbox /
+                                    json-formatter</span
+                                >
+                            </div>
+                            <video
+                                data-media
+                                src="assets/img/agent-workflow.webm"
+                                data-label="Assigning an issue to a bot, stages progressing, PR link appearing"
+                            ></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================= AI FEATURES ======================== -->
+        <section class="section" id="features">
+            <div class="section__inner">
+                <span class="eyebrow">AI in the backlog</span>
+                <h2>Every ticket gets smarter before it gets built.</h2>
+
+                <div class="feature-row reveal" style="margin-top: 2.5rem">
+                    <div class="feature-row__copy">
+                        <h3 style="font-family: var(--font-display)">
+                            Project Kickstarter
+                        </h3>
+                        <p>
+                            Describe a project in a few sentences. The AI
+                            generates a staged backlog — titles, descriptions,
+                            hierarchy, and schedule relations — shown in a
+                            staging view. One click accepts the whole plan.
+                        </p>
+                        <ul>
+                            <li>Sentence → structured backlog in one step</li>
+                            <li>Review everything before anything is saved</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__url"
+                                    >project kickstart</span
+                                >
+                            </div>
+                            <video
+                                data-media
+                                src="assets/img/kickstart.webm"
+                                data-label="Typing a project description, generated backlog tree, one-click accept"
+                            ></video>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="feature-row feature-row--flip reveal"
+                    style="margin-top: 3.5rem"
+                >
+                    <div class="feature-row__copy">
+                        <h3 style="font-family: var(--font-display)">
+                            Quality Check
+                        </h3>
+                        <p>
+                            An inline quality score on every issue you create or
+                            edit, with concrete improvement suggestions —
+                            missing context, vague acceptance criteria. The AI
+                            suggests, you decide.
+                        </p>
+                        <ul>
+                            <li>
+                                Catch weak tickets before they reach the backlog
+                            </li>
+                            <li>Visible to every user from day one</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__url">issue quality</span>
+                            </div>
+                            <img
+                                data-media
+                                src="assets/img/quality-low.png"
+                                alt="Quality badge scoring a vague ticket low, with concrete suggestions"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="feature-row reveal" style="margin-top: 3.5rem">
+                    <div class="feature-row__copy">
+                        <h3 style="font-family: var(--font-display)">
+                            Issue Split
+                        </h3>
+                        <p>
+                            Click split on a big ticket, optionally steer how it
+                            should be broken down, and the AI proposes the right
+                            child tasks. Review and accept — nothing is created
+                            without your sign-off.
+                        </p>
+                        <h3
+                            style="
+                                font-family: var(--font-display);
+                                margin-top: 1.6rem;
+                            "
+                        >
+                            MCP server
+                        </h3>
+                        <p>
+                            The whole backlog is drivable from any MCP-capable
+                            tool — Claude Code, Cursor — via
+                            <code>create_issue</code>, <code>list_issues</code>,
+                            <code>add_relation</code>, and friends.
+                        </p>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__url">issue split</span>
+                            </div>
+                            <img
+                                data-media
+                                src="assets/img/split-dialog-after-generate.png"
+                                alt="Split dialog with generated child tasks awaiting acceptance"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ====================== COMMAND PALETTE ======================= -->
+        <section class="section" id="command-palette">
+            <div class="section__inner">
+                <span class="eyebrow">Keyboard-first</span>
+                <h2>Drive the whole tracker from <kbd>⌘K</kbd>.</h2>
+                <div class="feature-row reveal" style="margin-top: 2.5rem">
+                    <div class="feature-row__copy">
+                        <p>
+                            One command palette for navigation, issue actions, and
+                            search — no reaching for the mouse. Fuzzy-match, act,
+                            and move on.
+                        </p>
+                        <ul>
+                            <li>
+                                <code>&gt;</code> commands ·
+                                <code>@</code> people ·
+                                <code>#</code> tasks ·
+                                <code>/</code> navigation
+                            </li>
+                            <li>Actions respect your project role</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__url">command palette</span>
+                            </div>
+                            <video
+                                data-media
+                                src="assets/img/command-palette.webm"
+                                data-label="Opening the palette, jumping to a task, setting severity and assignee — all from the keyboard"
+                            ></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =========================== VIEWS ============================ -->
+        <section class="section section--alt" id="views">
+            <div class="section__inner">
+                <span class="eyebrow">Plan your work</span>
+                <h2>Four views over the same data.</h2>
+                <p class="section__lede">
+                    Table, Gantt, kanban, calendar — pick the one that fits the
+                    moment.
+                </p>
+
+                <div class="views-grid reveal">
+                    <figure>
+                        <div class="frame">
+                            <img
+                                data-media
+                                src="assets/img/view-gantt.png"
+                                alt="Gantt timeline with dependency arrows and critical path"
+                            />
+                        </div>
+                        <figcaption>
+                            gantt — arrows · cascade · critical path
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="frame">
+                            <img
+                                data-media
+                                src="assets/img/view-table.png"
+                                alt="Filterable task table"
+                            />
+                        </div>
+                        <figcaption>table — filter · bulk edit</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="frame">
+                            <img
+                                data-media
+                                src="assets/img/view-kanban.png"
+                                alt="Kanban board"
+                            />
+                        </div>
+                        <figcaption>kanban — drag by state</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="frame">
+                            <img
+                                data-media
+                                src="assets/img/view-calendar.png"
+                                alt="Calendar view"
+                            />
+                        </div>
+                        <figcaption>calendar — schedule</figcaption>
+                    </figure>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================== RELATIONS / TRACKER / RT ================== -->
+        <section class="section">
+            <div class="section__inner">
+                <span class="eyebrow">The backbone</span>
+                <h2>Relations, time, and real-time.</h2>
+
+                <div class="feature-row reveal" style="margin-top: 2rem">
+                    <div class="feature-row__copy">
+                        <ul>
+                            <li>
+                                <strong>Relations</strong> — hierarchy,
+                                schedule, duplicate, relates-to; drag-and-drop
+                                creation with DB-level validation
+                            </li>
+                            <li>
+                                <strong>Tracker</strong> — log time against
+                                issues
+                            </li>
+                            <li>
+                                <strong>Real-time</strong> — live messaging and
+                                WebSocket notifications across every connected
+                                client
+                            </li>
+                        </ul>
+                    </div>
+                    <div>
+                        <div class="frame">
+                            <div class="frame__bar">
+                                <span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__dot"></span
+                                ><span class="frame__url"
+                                    >gantt — dependencies</span
+                                >
+                            </div>
+                            <video
+                                data-media
+                                src="assets/img/relation-drag.webm"
+                                data-label="Dragging to create a dependency, Gantt arrows updating"
+                            ></video>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================== SELF-HOSTED ========================= -->
+        <section class="section section--alt" id="self-hosted">
+            <div class="section__inner">
+                <span class="eyebrow">Your infrastructure</span>
+                <h2>Self-hosted. Your data never leaves.</h2>
+                <p class="section__lede">
+                    One Docker Compose stack on your own machines. No cloud
+                    service, no SaaS, no third party holding your backlog —
+                    tickets, code, and credentials stay where you put them.
+                </p>
+
+                <div class="card-grid reveal">
+                    <div class="card">
+                        <span class="card__icon">⛁</span>
+                        <h3>Self-hosted</h3>
+                        <p>
+                            One <code>docker compose up</code> from published
+                            images. Everything runs on your hardware.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="card__icon">⚿</span>
+                        <h3>Secure by default</h3>
+                        <p>
+                            Git tokens encrypted at rest, one-time secrets,
+                            bot-scoped API keys, admin-gated user creation.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="card__icon">⊘</span>
+                        <h3>No data for SaaS</h3>
+                        <p>
+                            Nothing is sent to any cloud or analytics provider.
+                            Even AI can run fully local via Ollama.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <span class="card__icon">⚙</span>
+                        <h3>Local or your own key</h3>
+                        <p>
+                            Agents run fully local via Ollama, or against your
+                            own Anthropic, Gemini, or Ollama Cloud key — your
+                            choice.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- =========================== CTA ============================== -->
+        <section class="cta-band">
+            <h2>Opinionated enough to start in 5 minutes.</h2>
+            <p>Flexible enough to run your entire operation.</p>
+            <div class="hero__cta" style="justify-content: center">
+                <a class="btn btn--primary" href="docs/installation.html"
+                    >Install with Docker Compose</a
+                >
+                <a class="btn btn--ghost" href="docs/agents.html"
+                    >Set up your first agent</a
+                >
+            </div>
+        </section>
+
+        <footer class="footer">
+            <span>Rurdesk — AI-native work management.</span>
+            <span>
+                <a href="docs/index.html">Docs</a> ·
+                <a href="docs/installation.html">Install</a>
+            </span>
+        </footer>
+
+        <script defer src="assets/js/lightbox.js"></script>
+        <script>
+            // scroll reveal
+            const io = new IntersectionObserver(
+                (entries) => {
+                    for (const e of entries) {
+                        if (e.isIntersecting) {
+                            e.target.classList.add("in");
+                            io.unobserve(e.target);
+                        }
+                    }
+                },
+                { threshold: 0.12 },
+            );
+            document
+                .querySelectorAll(".reveal")
+                .forEach((el) => io.observe(el));
+        </script>
+    </body>
+</html>

@@ -1,0 +1,82 @@
+@if (!multi()) {
+    <ui-select
+        [inputId]="inputId()"
+        class="severity-dropdown"
+        [options]="options()"
+        [ngModel]="value()"
+        (ngModelChange)="onValueChange($event)"
+        [showClear]="true"
+        [uiSaveStatus]="saveStatus()"
+        optionLabel="title"
+        optionValue="idSeverity"
+    >
+        <ng-template #selectedItem let-severity>
+            <div class="dropdown-item selected">
+                <div class="text">
+                    <tabler-icon
+                        icon="circle-filled"
+                        [size]="18"
+                        class="mr-1"
+                        [style.color]="severity.color"
+                    />
+                    {{ severity.title }}
+                </div>
+            </div>
+        </ng-template>
+
+        <ng-template #item let-severity>
+            <div class="dropdown-item">
+                <div class="text">
+                    <tabler-icon
+                        icon="circle-filled"
+                        [size]="18"
+                        class="mr-1"
+                        [style.color]="severity.color"
+                    />
+                    {{ severity.title }}
+                </div>
+            </div>
+        </ng-template>
+    </ui-select>
+} @else {
+    <ui-multiselect
+        [inputId]="inputId()"
+        [options]="options()"
+        class="severity-dropdown"
+        optionLabel="title"
+        [uiSaveStatus]="saveStatus()"
+        [ngModel]="multiValue()"
+        (ngModelChange)="onMultiValueChange($event)"
+    >
+        <ng-template #selectedItems let-values>
+            <div class="flex items-center gap-1">
+                @for (severity of values; track severity.idSeverity) {
+                    <tabler-icon
+                        icon="circle-filled"
+                        [size]="18"
+                        class="mr-1"
+                        [style.color]="severity.color"
+                    />
+                    {{ severity.title }}
+                    @if (!$last) {
+                        ,
+                    }
+                }
+            </div>
+        </ng-template>
+
+        <ng-template #item let-severity>
+            <div class="dropdown-item">
+                <div class="text">
+                    <tabler-icon
+                        icon="circle-filled"
+                        [size]="18"
+                        class="mr-1"
+                        [style.color]="severity.color"
+                    />
+                    {{ severity.title }}
+                </div>
+            </div>
+        </ng-template>
+    </ui-multiselect>
+}

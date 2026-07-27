@@ -1,0 +1,10 @@
+:host {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.severity-circle {
+    display: block;
+    border-radius: 50%;
+}

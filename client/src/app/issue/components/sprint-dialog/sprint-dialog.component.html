@@ -1,0 +1,65 @@
+<ui-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    [header]="(isEdit() ? 'ISSUE.KANBAN.SPRINTS.EDIT' : 'ISSUE.KANBAN.SPRINTS.NEW') | translate"
+    width="30rem"
+>
+    <form [formGroup]="form" class="flex flex-col gap-3" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-1">
+            <label for="sp-name">{{ 'NAME' | translate }}</label>
+            <input
+                uiInput
+                id="sp-name"
+                formControlName="name"
+                [placeholder]="'ISSUE.KANBAN.SPRINTS.NAME_PLACEHOLDER' | translate"
+            />
+        </div>
+
+        <div class="flex gap-2">
+            <div class="flex flex-col gap-1 grow">
+                <label for="sp-start">{{ 'ISSUE.KANBAN.SPRINTS.START' | translate }}</label>
+                <input
+                    uiDatepicker
+                    mode="date"
+                    id="sp-start"
+                    formControlName="startAt"
+                    class="w-full"
+                />
+            </div>
+            <div class="flex flex-col gap-1 grow">
+                <label for="sp-end">{{ 'ISSUE.KANBAN.SPRINTS.END' | translate }}</label>
+                <input
+                    uiDatepicker
+                    mode="date"
+                    id="sp-end"
+                    formControlName="endAt"
+                    class="w-full"
+                />
+            </div>
+        </div>
+    </form>
+
+    <ng-template #footer>
+        @if (isEdit()) {
+            <ui-button
+                [label]="'ISSUE.KANBAN.SPRINTS.DELETE' | translate"
+                severity="danger"
+                variant="text"
+                (click)="onDelete()"
+            />
+        }
+        <ui-button
+            [label]="'ISSUE.KANBAN.SPRINTS.CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="onCancel()"
+        />
+        <ui-button
+            [label]="
+                (isEdit() ? 'ISSUE.KANBAN.SPRINTS.SAVE' : 'ISSUE.KANBAN.SPRINTS.CREATE') | translate
+            "
+            [disabled]="form.invalid"
+            (click)="onSubmit()"
+        />
+    </ng-template>
+</ui-dialog>

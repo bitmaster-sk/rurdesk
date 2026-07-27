@@ -1,0 +1,3 @@
+<ui-dialog [(visible)]="visible" [header]="config.header" panelClass="window" (hide)="onClose()">
+    <ng-container *ngComponentOutlet="contentType; injector: injector"></ng-container>
+</ui-dialog>

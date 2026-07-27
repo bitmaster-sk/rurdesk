@@ -1,0 +1,49 @@
+.tree-node-row {
+    display: flex;
+    align-items: flex-start;
+}
+
+.connector-strip {
+    position: relative;
+    flex-shrink: 0;
+    align-self: stretch;
+    min-height: 40px;
+}
+
+// Ancestor vertical guide — full height
+.guide-v {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: var(--ui-color-border);
+}
+
+// Current node vertical arm
+.connector-v {
+    position: absolute;
+    top: 0;
+    bottom: 0; // T-shape: full height (├)
+    width: 1px;
+    background-color: var(--ui-color-border);
+
+    &--half {
+        bottom: auto;
+        height: 20px; // L-shape: top to midpoint (└)
+    }
+}
+
+// Current node horizontal arm — from vertical line to right edge
+.connector-h {
+    position: absolute;
+    top: 20px;
+    right: 0;
+    height: 1px;
+    background-color: var(--ui-color-border);
+}
+
+.card-wrapper {
+    flex: 1;
+    min-width: 0;
+    padding-bottom: 0.5rem;
+}

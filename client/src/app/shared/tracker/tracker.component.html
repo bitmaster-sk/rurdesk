@@ -1,0 +1,72 @@
+@if (showTracker() && liveTracker(); as tracker) {
+    @if (global()) {
+        <div class="global-issue-link">
+            @if (trackerIssue(); as issue) {
+                <a [routerLink]="['/project', issue.idProject, 'issue', issue.idIssuePublic]">
+                    {{ issue.title }}
+                </a>
+            }
+        </div>
+    }
+    <div class="ui-input-group">
+        <div class="ui-input tracker-display">{{ tracker.duration | duration }}</div>
+        <div class="ui-input-group-addon">
+            <ui-button
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="text"
+                [isIconOnly]="true"
+                [ariaLabel]="'TRACK.SUBMIT' | translate"
+                (click)="onSubmitTracker(tracker)"
+            >
+                <tabler-icon icon="check" [size]="14" />
+            </ui-button>
+        </div>
+        <div class="ui-input-group-addon">
+            <ui-button
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="text"
+                [isIconOnly]="true"
+                [ariaLabel]="'TRACK.STOP' | translate"
+                (click)="onStopTracker(tracker)"
+            >
+                <tabler-icon icon="x" [size]="14" />
+            </ui-button>
+        </div>
+    </div>
+} @else if (!global()) {
+    <div class="ui-input-group">
+        <input type="text" uiInput [formControl]="trackedControl" class="w-full" [id]="inputId()" />
+        <div class="ui-input-group-addon">
+            <ui-button
+                [disabled]="!trackedControl.valid"
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="text"
+                [isIconOnly]="true"
+                [ariaLabel]="'TRACK.SAVE' | translate"
+                (click)="onSaveTrack()"
+            >
+                <tabler-icon icon="check" [size]="14" />
+            </ui-button>
+        </div>
+        <div class="ui-input-group-addon">
+            <ui-button
+                [disabled]="!!isTracking()"
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="text"
+                [isIconOnly]="true"
+                [ariaLabel]="'TRACK.START' | translate"
+                (click)="onStartTracker()"
+            >
+                <tabler-icon icon="clock" [size]="14" />
+            </ui-button>
+        </div>
+    </div>
+}

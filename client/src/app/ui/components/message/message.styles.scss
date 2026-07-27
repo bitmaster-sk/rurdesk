@@ -1,0 +1,49 @@
+// Global styles for ui-message. Selector is `ui-message` (not :host) — compiled
+// globally. Colours via --ui-message-* tokens; severity through the modifiers.
+
+ui-message {
+    // per-instance palette (set by severity modifiers below); info default.
+    --_bg: var(--ui-message-info-bg);
+    --_accent: var(--ui-message-info-accent);
+
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--ui-message-radius);
+    background: var(--_bg);
+    color: var(--ui-message-fg);
+    font-size: var(--font-size-s);
+    line-height: 1.4;
+}
+
+ui-message.ui-message--info {
+    --_bg: var(--ui-message-info-bg);
+    --_accent: var(--ui-message-info-accent);
+}
+
+ui-message.ui-message--success {
+    --_bg: var(--ui-message-success-bg);
+    --_accent: var(--ui-message-success-accent);
+}
+
+ui-message.ui-message--warn {
+    --_bg: var(--ui-message-warn-bg);
+    --_accent: var(--ui-message-warn-accent);
+}
+
+ui-message.ui-message--danger {
+    --_bg: var(--ui-message-danger-bg);
+    --_accent: var(--ui-message-danger-accent);
+}
+
+.ui-message__icon {
+    color: var(--_accent);
+    flex-shrink: 0;
+    margin-top: 0.05rem;
+}
+
+.ui-message__body {
+    flex: 1;
+    min-width: 0;
+}

@@ -1,0 +1,11 @@
+@if (status(); as s) {
+    <div class="flex items-center gap-2 flex-wrap">
+        <ui-tag [severity]="stateSeverity()" [value]="stateLabel() | translate" />
+        @if (s.approved) {
+            <ui-tag severity="success" [value]="'MR.APPROVED' | translate" />
+        }
+        @if (s.ciStatus !== 'unknown') {
+            <ui-tag [severity]="ciSeverity()" [value]="ciLabel() | translate" />
+        }
+    </div>
+}

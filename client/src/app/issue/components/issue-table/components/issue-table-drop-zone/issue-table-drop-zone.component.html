@@ -1,0 +1,53 @@
+<div class="flex flex-col gap-1 p-2">
+    <div class="flex items-center gap-1 flex-wrap">
+        <span class="group-label">{{ 'RELATION.BASIC' | translate }}</span>
+        @for (zone of rowBasic; track zone.relationType) {
+            <div
+                class="drop-pill"
+                [class.drop-pill--active]="
+                    hoveredPillKey() === pillKey(zone.relationType, zone.subType)
+                "
+                (dragover)="$event.preventDefault(); $event.stopPropagation()"
+                (dragenter)="onPillDragEnter(zone.relationType, zone.subType)"
+                (dragleave)="onPillDragLeave(zone.relationType, zone.subType)"
+                (drop)="onDrop($event, zone.relationType, zone.subType)"
+            >
+                {{ zone.labelKey | translate }}
+            </div>
+        }
+    </div>
+    <div class="flex items-center gap-1 flex-wrap">
+        <span class="group-label">{{ 'RELATION.HIERARCHY' | translate }}</span>
+        @for (zone of rowHierarchy; track zone.subType) {
+            <div
+                class="drop-pill"
+                [class.drop-pill--active]="
+                    hoveredPillKey() === pillKey(zone.relationType, zone.subType)
+                "
+                (dragover)="$event.preventDefault(); $event.stopPropagation()"
+                (dragenter)="onPillDragEnter(zone.relationType, zone.subType)"
+                (dragleave)="onPillDragLeave(zone.relationType, zone.subType)"
+                (drop)="onDrop($event, zone.relationType, zone.subType)"
+            >
+                {{ zone.labelKey | translate }}
+            </div>
+        }
+    </div>
+    <div class="flex items-center gap-1 flex-wrap">
+        <span class="group-label">{{ 'RELATION.SCHEDULE' | translate }}</span>
+        @for (zone of rowSchedule; track zone.subType) {
+            <div
+                class="drop-pill"
+                [class.drop-pill--active]="
+                    hoveredPillKey() === pillKey(zone.relationType, zone.subType)
+                "
+                (dragover)="$event.preventDefault(); $event.stopPropagation()"
+                (dragenter)="onPillDragEnter(zone.relationType, zone.subType)"
+                (dragleave)="onPillDragLeave(zone.relationType, zone.subType)"
+                (drop)="onDrop($event, zone.relationType, zone.subType)"
+            >
+                {{ zone.labelKey | translate }}
+            </div>
+        }
+    </div>
+</div>

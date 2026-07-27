@@ -1,0 +1,81 @@
+<div class="staged-issue-card">
+    <!-- Header: title + delete -->
+    <div class="sic-head">
+        <input
+            uiInput
+            [id]="'title-' + editIssue().ref"
+            class="sic-title"
+            [ngModel]="editIssue().title"
+            (ngModelChange)="onTitleChange($event)"
+            [placeholder]="'PROJECT_BUILDER.ISSUE_CARD.TITLE_PLACEHOLDER' | translate"
+        />
+        <ui-button
+            variant="text"
+            severity="danger"
+            size="small"
+            [isIconOnly]="true"
+            class="sic-delete"
+            [ariaLabel]="'PROJECT_BUILDER.ISSUE_CARD.DELETE_ARIA' | translate"
+            (click)="onDeleteClick()"
+        >
+            <tabler-icon icon="x" [size]="14" />
+        </ui-button>
+    </div>
+
+    <!-- Body: description (left, full height) + severity / state / estimate (right) -->
+    <div class="sic-body">
+        <div class="ui-field sic-desc">
+            <label [for]="'desc-' + editIssue().ref">
+                {{ 'PROJECT_BUILDER.ISSUE_CARD.DESCRIPTION_PLACEHOLDER' | translate }}
+            </label>
+            <textarea
+                uiTextarea
+                [id]="'desc-' + editIssue().ref"
+                class="sic-desc-input"
+                [ngModel]="editIssue().description"
+                (ngModelChange)="onDescriptionChange($event)"
+                [placeholder]="'PROJECT_BUILDER.ISSUE_CARD.DESCRIPTION_PLACEHOLDER' | translate"
+            ></textarea>
+        </div>
+
+        <div class="sic-meta">
+            <div class="ui-field">
+                <label [for]="'severity-' + editIssue().ref">
+                    {{ 'SEVERITY.SINGULAR' | translate }}
+                </label>
+                <app-severity-dropdown
+                    class="sic-control"
+                    [severities]="severities()"
+                    [inputId]="'severity-' + editIssue().ref"
+                    [ngModel]="editIssue().idSeverity"
+                    (ngModelChange)="onSeverityChange($event)"
+                ></app-severity-dropdown>
+            </div>
+
+            <div class="ui-field">
+                <label [for]="'state-' + editIssue().ref">{{ 'STATE.SINGULAR' | translate }}</label>
+                <app-state-dropdown
+                    class="sic-control"
+                    [inputId]="'state-' + editIssue().ref"
+                    [states]="states()"
+                    [ngModel]="editIssue().idState"
+                    (ngModelChange)="onStateChange($event)"
+                ></app-state-dropdown>
+            </div>
+
+            <div class="ui-field">
+                <label [for]="'estimate-' + editIssue().ref">
+                    {{ 'ISSUE.TIME.ESTIMATED' | translate }}
+                </label>
+                <input
+                    uiInput
+                    [id]="'estimate-' + editIssue().ref"
+                    class="sic-estimate"
+                    [ngModel]="estimateText()"
+                    (ngModelChange)="onEstimateChange($event)"
+                    [placeholder]="'PROJECT_BUILDER.ISSUE_CARD.ESTIMATE_PLACEHOLDER' | translate"
+                />
+            </div>
+        </div>
+    </div>
+</div>

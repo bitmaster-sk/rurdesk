@@ -1,0 +1,131 @@
+<div class="participants-panel" [class.participants-panel--collapsed]="isCollapsed()">
+    <div class="participants-panel__header" (click)="onToggleCollapse()">
+        <span
+            class="participants-panel__chevron"
+            [class.participants-panel__chevron--collapsed]="isCollapsed()"
+        >
+            <tabler-icon icon="chevron-down" [size]="14" />
+        </span>
+        <span class="participants-panel__icon">
+            <tabler-icon icon="users" [size]="14" />
+        </span>
+        <span class="participants-panel__title">{{ 'ISSUE.PARTICIPANTS.TITLE' | translate }}</span>
+        @if (participantCount() > 0) {
+            <span class="participants-panel__avatars">
+                @for (participant of headerAvatars(); track participant.idUser) {
+                    <span
+                        class="participants-panel__avatar"
+                        [uiTooltip]="participant.name"
+                        uiTooltipPosition="top"
+                    >
+                        <app-avatar
+                            [name]="participant.name"
+                            [bgColor]="participant.colorAvatarBg"
+                            [height]="1.4"
+                            [width]="1.4"
+                            [radius]="0.7"
+                        ></app-avatar>
+                    </span>
+                }
+                @if (overflowCount() > 0) {
+                    <span class="participants-panel__avatar participants-panel__avatar--more">
+                        +{{ overflowCount() }}
+                    </span>
+                }
+            </span>
+        }
+        <span class="participants-panel__actions" (click)="$event.stopPropagation()">
+            <ui-button
+                variant="text"
+                severity="secondary"
+                size="small"
+                [title]="'ISSUE.PARTICIPANTS.ADD' | translate"
+                (click)="addPopover.toggle($event)"
+            >
+                <tabler-icon icon="plus" [size]="14" />
+            </ui-button>
+        </span>
+    </div>
+
+    <ui-popover #addPopover (onHide)="memberSearch.set('')">
+        <div class="participants-popover">
+            <div class="participants-popover__search">
+                <input
+                    uiInput
+                    type="text"
+                    [placeholder]="'ISSUE.PARTICIPANTS.SEARCH' | translate"
+                    [value]="memberSearch()"
+                    (input)="memberSearch.set($any($event.target).value)"
+                    class="w-full"
+                    size="small"
+                />
+            </div>
+            <div class="participants-popover__list">
+                @for (member of availableMembers(); track member.idUser) {
+                    <div
+                        class="participants-popover__item"
+                        (click)="onAddParticipant(member, addPopover)"
+                    >
+                        <app-avatar
+                            [name]="member.name"
+                            [bgColor]="member.colorAvatarBg"
+                            [height]="1.5"
+                            [width]="1.5"
+                            [radius]="0.75"
+                        ></app-avatar>
+                        <span class="participants-popover__name">{{ member.name }}</span>
+                    </div>
+                } @empty {
+                    <div class="participants-popover__empty">
+                        <span class="ui-color-text-muted text-sm">
+                            {{ 'ISSUE.PARTICIPANTS.NO_MEMBERS' | translate }}
+                        </span>
+                    </div>
+                }
+            </div>
+        </div>
+    </ui-popover>
+
+    @if (!isCollapsed()) {
+        <div class="participants-panel__body">
+            @for (participant of participants(); track participant.idUser) {
+                <div class="participant-row">
+                    <app-avatar
+                        [name]="participant.name"
+                        [bgColor]="participant.colorAvatarBg"
+                        [height]="1.75"
+                        [width]="1.75"
+                        [radius]="0.875"
+                    ></app-avatar>
+                    <span class="participant-row__name">{{ participant.name }}</span>
+                    <span [class]="getRoleBadgeClass(participant)">
+                        {{ getRoleLabelKey(participant) | translate }}
+                    </span>
+                    @if (participant.idUser === currentUserId()) {
+                        <button
+                            type="button"
+                            class="participant-row__notify-btn"
+                            [title]="
+                                (participant.hasNotificationsEnabled
+                                    ? 'ISSUE.PARTICIPANTS.NOTIFICATIONS_ON'
+                                    : 'ISSUE.PARTICIPANTS.NOTIFICATIONS_OFF'
+                                ) | translate
+                            "
+                            (click)="onToggleNotification(participant)"
+                        >
+                            @if (participant.hasNotificationsEnabled) {
+                                <tabler-icon icon="bell" [size]="14" />
+                            } @else {
+                                <tabler-icon icon="bell-off" [size]="14" />
+                            }
+                        </button>
+                    }
+                </div>
+            } @empty {
+                <div class="participants-panel__empty">
+                    {{ 'ISSUE.PARTICIPANTS.EMPTY' | translate }}
+                </div>
+            }
+        </div>
+    }
+</div>

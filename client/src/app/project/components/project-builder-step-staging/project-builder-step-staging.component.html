@@ -1,0 +1,79 @@
+<div class="staging-layout">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'PROJECT_BUILDER.REVIEW_TITLE' | translate }}</h2>
+        <div class="page-toolbar">
+            <ui-button
+                variant="text"
+                [label]="'PROJECT_BUILDER.BACK' | translate"
+                (click)="onBack()"
+            >
+                <tabler-icon icon="arrow-left" [size]="16" />
+            </ui-button>
+            <ui-button
+                variant="outlined"
+                severity="secondary"
+                [label]="'PROJECT_BUILDER.REGENERATE' | translate"
+                uiConfirm
+                [confirmText]="'PROJECT_BUILDER.REGENERATE_CONFIRM' | translate"
+                (confirmed)="onRegenerate()"
+            >
+                <tabler-icon icon="refresh" [size]="16" />
+            </ui-button>
+            <ui-button
+                [label]="'PROJECT_BUILDER.ACCEPT_ALL' | translate"
+                [loading]="isAccepting()"
+                (click)="onAccept()"
+            >
+                <tabler-icon icon="check" [size]="16" />
+            </ui-button>
+        </div>
+    </div>
+
+    @if (isRestoreBannerVisible()) {
+        <div class="py-2 px-6 ui-bg-surface-200 ui-box mb-2 flex items-center justify-between">
+            <span class="text-sm">
+                <tabler-icon icon="history" [size]="16" class="mr-2" />
+                {{ 'PROJECT_BUILDER.RESTORE_BANNER' | translate: { date: restoredFrom() } }}
+            </span>
+            <div class="flex gap-2">
+                <ui-button
+                    variant="text"
+                    size="small"
+                    severity="secondary"
+                    [label]="'PROJECT_BUILDER.DISCARD' | translate"
+                    (click)="onDiscardStaging()"
+                ></ui-button>
+                <ui-button
+                    variant="text"
+                    size="small"
+                    [isIconOnly]="true"
+                    [ariaLabel]="'UI.TOAST.CLOSE' | translate"
+                    (click)="onDismissBanner()"
+                >
+                    <tabler-icon icon="x" [size]="14" />
+                </ui-button>
+            </div>
+        </div>
+    }
+
+    @if (summary()) {
+        <div class="py-2 px-6 summary-bar">
+            <tabler-icon icon="info-circle" [size]="16" class="mr-2" />
+            <span>{{ summary() }}</span>
+        </div>
+    }
+
+    <div class="py-2 px-6 staging-tree-scroll">
+        <app-staged-issue-tree
+            [roots]="stagedIssues()"
+            [states]="states()"
+            [severities]="severities()"
+            (issueChange)="onIssueChange($event)"
+            (deleteNode)="deleteNode.emit($event)"
+        ></app-staged-issue-tree>
+    </div>
+
+    <div class="py-2 px-6 staging-footer">
+        {{ 'PROJECT_BUILDER.STAGED_COUNT' | translate: { count: flatCount() } }}
+    </div>
+</div>

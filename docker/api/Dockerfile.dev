@@ -1,0 +1,6 @@
+FROM golang:1.25-alpine
+
+# build-base provides gcc, which cgo (and therefore `go test -race`) requires.
+RUN apk add --no-cache build-base
+
+RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0

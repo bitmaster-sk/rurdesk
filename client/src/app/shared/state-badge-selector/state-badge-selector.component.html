@@ -1,0 +1,13 @@
+<div class="badge-selector">
+    @for (state of states; track state.idState) {
+        <button
+            type="button"
+            class="badge-selector__btn"
+            [class.badge-selector__btn--active]="value === state.idState"
+            [style.--sel-color]="stateColor(state)"
+            (click)="select(state)"
+        >
+            <app-state-badge [state]="state" size="xs"></app-state-badge>
+        </button>
+    }
+</div>

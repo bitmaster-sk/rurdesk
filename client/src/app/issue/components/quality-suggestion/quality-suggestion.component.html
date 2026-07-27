@@ -1,0 +1,50 @@
+@if (!dismissed()) {
+    <div class="quality-suggestion">
+        <div class="quality-suggestion__body">
+            <span class="mr-2">•</span>
+            <span class="quality-suggestion__explanation">{{ suggestion().explanation }}</span>
+        </div>
+
+        @if (hasNewValue()) {
+            <div class="quality-suggestion__preview">
+                <button
+                    type="button"
+                    class="quality-suggestion__preview-toggle"
+                    (click)="onTogglePreview()"
+                >
+                    <tabler-icon
+                        [icon]="previewExpanded() ? 'chevron-down' : 'chevron-right'"
+                        [size]="14"
+                    />
+                    <span>{{ actionLabel() | translate }}</span>
+                </button>
+                @if (previewExpanded()) {
+                    <pre class="quality-suggestion__preview-content">{{
+                        suggestion().newValue
+                    }}</pre>
+                }
+            </div>
+        }
+
+        <div class="flex flex-row gap-2 justify-end">
+            @if (hasNewValue()) {
+                <ui-button
+                    type="button"
+                    size="small"
+                    severity="success"
+                    variant="outlined"
+                    [label]="'QUALITY.ACCEPT' | translate"
+                    (click)="onAccept()"
+                ></ui-button>
+            }
+            <ui-button
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="outlined"
+                [label]="'QUALITY.DISMISS' | translate"
+                (click)="onDismiss()"
+            ></ui-button>
+        </div>
+    </div>
+}

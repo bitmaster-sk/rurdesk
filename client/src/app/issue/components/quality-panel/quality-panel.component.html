@@ -1,0 +1,142 @@
+<div class="quality-panel" [class.quality-panel--collapsed]="collapsed()">
+    <!-- Header bar -->
+    <div class="quality-panel__header" (click)="onToggle()">
+        <span class="quality-panel__chevron">
+            <tabler-icon icon="chevron-down" [size]="14" />
+        </span>
+        <span class="quality-panel__icon"><tabler-icon icon="gauge" [size]="14" /></span>
+        <span class="quality-panel__title">{{ 'QUALITY.TITLE' | translate }}</span>
+
+        <span class="quality-panel__status">
+            @if (report()) {
+                <app-quality-badge [score]="report()!.score"></app-quality-badge>
+                {{ report()!.score }}/100
+                <span class="quality-panel__band quality-panel__band--{{ band() }}">
+                    {{ bandLabel() | translate }}
+                </span>
+            } @else {
+                {{ 'QUALITY.NOT_CHECKED' | translate }}
+            }
+        </span>
+
+        <span class="quality-panel__actions">
+            <ui-button
+                type="button"
+                size="small"
+                severity="secondary"
+                variant="outlined"
+                [loading]="isChecking()"
+                [label]="report() ? ('QUALITY.RECHECK' | translate) : ('QUALITY.CHECK' | translate)"
+                (click)="onCheck(); $event.stopPropagation()"
+            ></ui-button>
+        </span>
+    </div>
+
+    @if (!collapsed()) {
+        @if (errorMessage()) {
+            <div class="quality-panel__error">{{ errorMessage()! | translate }}</div>
+        }
+
+        @if (!report() && !errorMessage()) {
+            <div class="quality-panel__empty">{{ 'QUALITY.EMPTY_HINT' | translate }}</div>
+        }
+
+        @if (report()) {
+            <div class="quality-panel__body">
+                <!-- Dimensions -->
+                <div class="quality-panel__dimensions">
+                    @for (
+                        dim of [
+                            {
+                                key: 'clarity',
+                                label: 'QUALITY.DIMENSION.CLARITY',
+                                value: report()!.dimensions.clarity
+                            },
+                            {
+                                key: 'completeness',
+                                label: 'QUALITY.DIMENSION.COMPLETENESS',
+                                value: report()!.dimensions.completeness
+                            },
+                            {
+                                key: 'actionability',
+                                label: 'QUALITY.DIMENSION.ACTIONABILITY',
+                                value: report()!.dimensions.actionability
+                            },
+                            {
+                                key: 'scope',
+                                label: 'QUALITY.DIMENSION.SCOPE',
+                                value: report()!.dimensions.scope
+                            },
+                            {
+                                key: 'metadata',
+                                label: 'QUALITY.DIMENSION.METADATA',
+                                value: report()!.dimensions.metadata
+                            }
+                        ];
+                        track dim.key
+                    ) {
+                        <div class="quality-panel__dim">
+                            <span class="quality-panel__dim-label">
+                                {{ dim.label | translate }}
+                            </span>
+                            <div class="quality-panel__dim-bar">
+                                <div
+                                    class="quality-panel__dim-fill"
+                                    [style.width.%]="dim.value"
+                                ></div>
+                            </div>
+                            <span class="quality-panel__dim-value">{{ dim.value }}</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Problems -->
+                @if (report()!.problems.length > 0) {
+                    <div class="quality-panel__section">
+                        <div class="quality-panel__section-title">
+                            {{ 'QUALITY.PROBLEMS' | translate }}
+                        </div>
+                        <ul class="quality-panel__problems">
+                            @for (problem of report()!.problems; track problem) {
+                                <li>{{ problem }}</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <!-- Suggestions -->
+                <div class="quality-panel__section">
+                    <div class="quality-panel__section-title">
+                        {{ 'QUALITY.SUGGESTIONS' | translate }}
+                    </div>
+                    @if (report()!.suggestions.length > 0) {
+                        <div class="quality-panel__suggestions-list">
+                            @for (suggestion of report()!.suggestions; track $index) {
+                                <app-quality-suggestion
+                                    [suggestion]="suggestion"
+                                    [index]="$index + 1"
+                                    [dismissed]="isSuggestionDismissed($index)"
+                                    (accepted)="onAcceptSuggestion($event, $index)"
+                                    (dismiss)="onDismissSuggestion($index)"
+                                ></app-quality-suggestion>
+                            }
+                        </div>
+                    } @else {
+                        <div class="quality-panel__no-suggestions">
+                            {{ 'QUALITY.NO_SUGGESTIONS' | translate }}
+                        </div>
+                    }
+                </div>
+
+                @if (report()!.fromCache) {
+                    <div class="quality-panel__footer">
+                        {{
+                            'QUALITY.CACHED_AT'
+                                | translate: { time: report()!.checkedAt | date: 'medium' }
+                        }}
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>

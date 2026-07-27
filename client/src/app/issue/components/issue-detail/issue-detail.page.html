@@ -1,0 +1,36 @@
+<div class="h-full w-full flex flex-row">
+    @if (project(); as project) { @if (issue$ | async; as issue) {
+
+    <div class="info-section pt-2 pb-2 pl-2 pr-1 min-h-0 overflow-hidden flex flex-col">
+        <app-issue-info
+            [issue]="issue"
+            [project]="project"
+            [agentRun]="agentRunStore.run()"
+            (splitRequested)="onSplitRequested($event)"
+            (trackAdded)="onTrackAdded($event)"
+            (cancelAgentRun)="agentRunStore.cancel()"
+            (continueAgentRun)="agentRunStore.continue()"
+            (restartAgentRun)="agentRunStore.restart()"
+        ></app-issue-info>
+    </div>
+
+    @if (issue.idIssue) {
+    <div class="comment-section pt-2 pb-2 pl-1 pr-2 min-h-0 overflow-hidden flex flex-col">
+        <app-issue-activity-feed
+            [idIssue]="issue.idIssue"
+            [idProject]="project.idProject"
+            [pendingTrack]="pendingTrack()"
+            [agentRun]="agentRunStore.run()"
+            (approveAgentRun)="agentRunStore.approve()"
+            (approveAgentRunMockup)="agentRunStore.approve($event)"
+        ></app-issue-activity-feed>
+    </div>
+    } @if (isSplitDialogOpen() && splitIssue()) {
+    <app-split-dialog
+        [idProject]="project.idProject"
+        [issue]="splitIssue()"
+        (accepted)="onSplitAccepted($event)"
+        (cancelled)="onSplitCancelled()"
+    ></app-split-dialog>
+    } } }
+</div>

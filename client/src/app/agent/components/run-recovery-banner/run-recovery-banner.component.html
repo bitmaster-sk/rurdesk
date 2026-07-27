@@ -1,0 +1,27 @@
+<div class="recovery-banner">
+    <p class="recovery-banner__prompt">{{ 'AGENT.RECOVERY.PROMPT' | translate }}</p>
+    @if (errorDetail(); as detail) {
+        <p class="recovery-banner__error">{{ detail }}</p>
+    } @else if (errorKey(); as key) {
+        <p class="recovery-banner__error">{{ key | translate }}</p>
+    }
+    <div class="recovery-banner__actions flex gap-2 mt-2">
+        <ui-button
+            severity="info"
+            size="small"
+            [label]="'AGENT.ACTIONS.CONTINUE' | translate"
+            (click)="onContinue()"
+        >
+            <tabler-icon icon="player-play" [size]="14" />
+        </ui-button>
+        <ui-button
+            severity="secondary"
+            size="small"
+            variant="outlined"
+            [label]="'AGENT.ACTIONS.RESTART' | translate"
+            (click)="onRestart()"
+        >
+            <tabler-icon icon="refresh" [size]="14" />
+        </ui-button>
+    </div>
+</div>

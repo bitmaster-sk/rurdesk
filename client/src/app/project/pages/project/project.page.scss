@@ -1,0 +1,10 @@
+.page-title {
+    justify-content: space-between;
+}
+
+.pins-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+    gap: var(--ui-space);
+    width: 100%;
+}

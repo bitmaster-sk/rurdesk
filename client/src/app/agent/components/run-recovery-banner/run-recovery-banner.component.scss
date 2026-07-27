@@ -1,0 +1,29 @@
+.recovery-banner {
+    background: var(--ui-red-50);
+    border: 1px solid var(--ui-red-200);
+    border-radius: var(--ui-radius-md);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+
+    p {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    // First line: the call-to-action — bold red.
+    &__prompt {
+        color: var(--ui-red-700);
+        font-weight: 600;
+    }
+
+    // Second line: the raw provider/agent error — red, not bold.
+    &__error {
+        margin-top: 0.25rem;
+        margin-bottom: 0.5rem;
+        color: var(--ui-red-700);
+        font-weight: 400;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+}

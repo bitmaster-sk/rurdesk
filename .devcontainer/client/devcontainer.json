@@ -1,0 +1,20 @@
+{
+    "name": "Rurdesk Client",
+    "dockerComposeFile": ["../../docker-compose.yml"],
+    "service": "rurdesk.client",
+    "workspaceFolder": "/app",
+    // Keeps the container alive independently of the service's own command.
+    "overrideCommand": true,
+    "postCreateCommand": "npm install",
+    "remoteUser": "root",
+    "customizations": {
+        "vscode": {
+            "settings": {},
+            "extensions": [
+                "angular.ng-template",
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode"
+            ]
+        }
+    }
+}

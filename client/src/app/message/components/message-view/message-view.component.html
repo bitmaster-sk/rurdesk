@@ -1,0 +1,65 @@
+<div
+    class="message-view"
+    [class.unread]="!message().isRead"
+    [class.continuation]="isContinuation()"
+>
+    <div class="message-avatar">
+        @if (!isContinuation()) {
+            <app-avatar
+                [name]="message().creator.name"
+                [bgColor]="message().creator.colorAvatarBg"
+                [height]="2.25"
+                [width]="2.25"
+                [radius]="1.125"
+            ></app-avatar>
+        }
+    </div>
+    <div class="message-body">
+        @if (!isContinuation()) {
+            <div class="message-meta">
+                <span class="message-author">{{ message().creator.name }}</span>
+                <span class="message-date">{{ message().createdAt | date: 'shortTime' }}</span>
+            </div>
+        }
+        @if (isEditing()) {
+            <div class="edit-wrapper" (keydown.escape)="onEditCancel()">
+                <app-message-editor
+                    mode="edit"
+                    change="onaction"
+                    [message]="message().message"
+                    [mentionCandidates]="mentionCandidates()"
+                    sendIcon="device-floppy"
+                    sendLabel="{{ 'SAVE' | translate }}"
+                    [disableCancelButton]="false"
+                    (messageChange)="editSave.emit($event)"
+                    (cancel)="onEditCancel()"
+                ></app-message-editor>
+            </div>
+        } @else {
+            <app-message-body
+                [body]="message().message"
+                [candidates]="candidates()"
+                class="message-text"
+            />
+            @if (message().updatedAt) {
+                <span class="message-edited">
+                    {{
+                        'MESSAGE.EDITED' | translate: { time: message().updatedAt | date: 'short' }
+                    }}
+                </span>
+            }
+        }
+    </div>
+    @if (isOwnMessage() && !isEditing()) {
+        <div class="message-actions">
+            <ui-button
+                variant="text"
+                severity="secondary"
+                class="edit-btn"
+                (click)="editRequest.emit()"
+            >
+                <tabler-icon icon="pencil" [size]="14" />
+            </ui-button>
+        </div>
+    }
+</div>

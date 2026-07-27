@@ -1,0 +1,18 @@
+FROM node:24.13-bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g @angular/cli@21.1.3
+
+# Chromium for the component-test layer (`npm run test:ct`, Vitest browser mode).
+# Baked into the image so a rebuild doesn't leave `test:ct` with no browser to
+# run in. This version MUST equal `playwright` in client/package.json, which is
+# pinned exactly for that reason: on a mismatch Playwright wants a browser
+# revision the image doesn't carry, and `test:ct` then exits 0 having run zero
+# tests — a silent pass, not a visible failure.
+RUN npx --yes playwright@1.60.0 install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*

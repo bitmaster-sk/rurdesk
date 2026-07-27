@@ -1,0 +1,12 @@
+{
+  "diff_refs": {
+    "head_sha": "deadbeef1234"
+  },
+  "changes": [
+    {
+      "old_path": "src/main.go",
+      "new_path": "src/main.go",
+      "diff": "--- a/src/main.go\n+++ b/src/main.go\n@@ -1,3 +1,4 @@\n+// change\n package main"
+    }
+  ]
+}

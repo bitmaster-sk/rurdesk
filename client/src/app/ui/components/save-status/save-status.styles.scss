@@ -1,0 +1,63 @@
+// Global styles for the ui-save-status chip (aggregated into ../../ui.styles.scss).
+// Rendered in a body-level CDK overlay by [uiSaveStatus]; floats over the field.
+
+.ui-save-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    line-height: 1;
+    white-space: nowrap;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: var(--ui-surface-0);
+    border: 1px solid var(--ui-color-border);
+    color: var(--ui-color-text-muted);
+    box-shadow: var(--ui-dialog-shadow);
+    pointer-events: none;
+    animation: ui-save-chip-in 0.25s ease;
+}
+
+.ui-save-chip--saved {
+    color: var(--ui-green-600);
+}
+
+.ui-save-chip--error {
+    color: var(--ui-red-600);
+}
+
+.ui-save-chip__spinner {
+    display: inline-block;
+    width: 11px;
+    height: 11px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: ui-save-chip-spin 0.6s linear infinite;
+}
+
+@keyframes ui-save-chip-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes ui-save-chip-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ui-save-chip {
+        animation: none;
+    }
+    .ui-save-chip__spinner {
+        animation-duration: 1.5s;
+    }
+}

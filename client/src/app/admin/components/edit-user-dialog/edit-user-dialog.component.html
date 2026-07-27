@@ -1,0 +1,71 @@
+<ui-dialog
+    [visible]="visible()"
+    (visibleChange)="visible.set($event)"
+    [header]="'ADMIN.EDIT_USER' | translate"
+    width="32rem"
+>
+    <form [formGroup]="form" class="flex flex-col gap-2" (ngSubmit)="onSubmit()">
+        <div class="flex flex-col gap-1">
+            <label for="eu-name">{{ 'NAME' | translate }}</label>
+            <input uiInput id="eu-name" formControlName="name" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+            <label for="eu-color">{{ 'USER.AVATAR_COLOR' | translate }}</label>
+            <div class="flex items-center gap-2">
+                <input uiColor id="eu-color" formControlName="colorAvatarBg" />
+                <ui-button
+                    size="small"
+                    severity="secondary"
+                    [title]="'USER.SHUFFLE_COLOR' | translate"
+                    (click)="onShuffleColor()"
+                >
+                    <tabler-icon icon="refresh" [size]="14" />
+                </ui-button>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input type="checkbox" uiToggle id="eu-isbot" formControlName="isBot" />
+            <label for="eu-isbot">{{ 'ADMIN.IS_BOT' | translate }}</label>
+        </div>
+
+        @if (!isBot()) {
+            <div class="flex flex-col gap-1">
+                <label for="eu-email">{{ 'ADMIN.EMAIL' | translate }}</label>
+                <input uiInput id="eu-email" type="email" formControlName="email" />
+            </div>
+            <div class="flex items-center gap-2">
+                <input type="checkbox" uiToggle id="eu-isadmin" formControlName="isAdmin" />
+                <label for="eu-isadmin">{{ 'ADMIN.IS_ADMIN' | translate }}</label>
+            </div>
+        } @else if (gateway()) {
+            <div class="flex flex-col gap-1">
+                <label for="eu-gateway-url">{{ 'API_KEY.GATEWAY_URL' | translate }}</label>
+                <input
+                    uiInput
+                    id="eu-gateway-url"
+                    formControlName="gatewayUrl"
+                    [placeholder]="'API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
+                />
+            </div>
+        } @else {
+            <small class="ui-color-text-muted">{{ 'API_KEY.GATEWAY_NONE' | translate }}</small>
+        }
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'ADMIN.CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="onCancel()"
+        />
+        <ui-button
+            [label]="'ADMIN.SAVE' | translate"
+            [loading]="isSaving()"
+            [disabled]="form.invalid"
+            (click)="onSubmit()"
+        />
+    </ng-template>
+</ui-dialog>

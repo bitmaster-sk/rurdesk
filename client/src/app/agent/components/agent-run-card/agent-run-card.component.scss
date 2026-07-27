@@ -1,0 +1,292 @@
+:host {
+    display: block;
+}
+
+.agent-run-card {
+    background: var(--ui-color-canvas);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    overflow: hidden;
+}
+
+.card-summary {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: var(--ui-space) var(--ui-space-m);
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+
+    .chevron {
+        color: var(--ui-color-text-muted);
+        transition: transform 0.15s ease;
+        flex-shrink: 0;
+    }
+
+    .avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--ui-color-primary-weak-border);
+        color: var(--ui-color-primary-strong);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .meta-inline {
+        font-size: var(--font-size-xs);
+        color: var(--ui-color-text-muted);
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .meta-sep {
+        color: var(--ui-color-text-muted);
+    }
+
+    .summary-actions {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        flex-shrink: 0;
+    }
+
+    .awaiting-input-hint {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 8px;
+        font-size: var(--font-size-xs);
+        background: var(--ui-yellow-100, #fef9c3);
+        color: var(--ui-yellow-800, #854d0e);
+        border-radius: var(--ui-radius-sm);
+        white-space: nowrap;
+    }
+}
+
+.agent-run-card.is-open .chevron {
+    transform: rotate(90deg);
+}
+
+.agent-run-card.is-open .card-summary {
+    border-bottom: 1px solid var(--ui-color-border);
+}
+
+@keyframes agent-avatar-pulse {
+    0%,
+    100% {
+        background: var(--ui-color-primary-weak-border);
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-color-primary) 0%, transparent);
+    }
+    50% {
+        background: color-mix(
+            in srgb,
+            var(--ui-color-primary) 25%,
+            var(--ui-color-primary-weak-border)
+        );
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--ui-color-primary) 18%, transparent);
+    }
+}
+
+.agent-run-card.is-active .avatar {
+    animation: agent-avatar-pulse 2.4s ease-in-out infinite;
+}
+
+.agent-run-card.is-working .avatar {
+    animation-duration: 1.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agent-run-card.is-active .avatar {
+        animation: none;
+    }
+}
+
+.card-body {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-m);
+    background: var(--ui-color-surface);
+}
+
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.meta-cell .meta-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ui-color-text-muted);
+    margin-bottom: 2px;
+}
+
+.meta-cell .meta-value {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+}
+
+.section .section-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ui-color-text-muted);
+    margin-bottom: 6px;
+}
+
+.pr-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ui-color-primary);
+    text-decoration: none;
+    font-size: var(--font-size-s);
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.text-sm {
+    font-size: var(--font-size-s);
+}
+
+.error-banner {
+    background: var(--ui-red-50);
+    color: var(--ui-red-700);
+    border-left: 3px solid var(--ui-red-500);
+    padding: 6px 10px;
+    border-radius: var(--ui-radius-sm);
+    font-size: var(--font-size-s);
+}
+
+.timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.timeline-item {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    font-size: var(--font-size-xs);
+
+    // Connector line between glyphs.
+    &:not(:last-child) .timeline-glyph::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 18px;
+        bottom: -12px;
+        width: 2px;
+        transform: translateX(-50%);
+        background: var(--ui-surface-200);
+    }
+
+    .timeline-glyph {
+        position: relative;
+        flex-shrink: 0;
+        display: inline-flex;
+        width: 16px;
+        height: 16px;
+        align-items: center;
+        justify-content: center;
+        color: var(--ui-color-text-muted);
+    }
+
+    .timeline-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+    }
+
+    .timeline-row {
+        display: flex;
+        align-items: baseline;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .stage-name {
+        font-weight: 600;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text);
+    }
+
+    .timeline-at {
+        margin-left: auto;
+        white-space: nowrap;
+    }
+
+    .timeline-sub,
+    .timeline-approval {
+        font-size: var(--font-size-xs);
+    }
+
+    .stage-status {
+        color: var(--ui-color-text);
+    }
+
+    // Status accents on the glyph.
+    &--done .timeline-glyph {
+        color: var(--ui-color-primary);
+    }
+    &--active .timeline-glyph {
+        color: var(--ui-color-primary);
+    }
+    // Spin only the icon, not the glyph box — the connector line lives on
+    // .timeline-glyph::after and must stay vertical.
+    &--active .timeline-glyph tabler-icon {
+        display: inline-flex;
+        transform-origin: center;
+        animation: timeline-spin 1.2s linear infinite;
+    }
+    &--awaiting_approval .timeline-glyph {
+        color: var(--ui-yellow-600);
+    }
+    &--failed .timeline-glyph {
+        color: var(--ui-red-500);
+    }
+    &--pending .timeline-glyph,
+    &--skipped .timeline-glyph {
+        color: var(--ui-color-text-muted);
+        opacity: 0.6;
+    }
+    &--skipped .stage-name {
+        text-decoration: line-through;
+        color: var(--ui-color-text-muted);
+        font-weight: 500;
+    }
+}
+
+@keyframes timeline-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .timeline-item--active .timeline-glyph tabler-icon {
+        animation: none;
+    }
+}

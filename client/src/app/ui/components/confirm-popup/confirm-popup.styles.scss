@@ -1,0 +1,20 @@
+// Global styles for ui-confirm-popup (aggregated into ../../ui.styles.scss and
+// loaded eagerly via src/styles.scss). Class selectors are prefixed so they are
+// safe when unscoped.
+
+.ui-confirm-panel {
+    box-sizing: border-box;
+    min-width: 14rem;
+    max-width: min(20rem, calc(100vw - 1rem));
+    padding: 1rem;
+    background: var(--ui-popover-bg);
+    color: var(--ui-color-text);
+    border: 1px solid var(--ui-popover-border);
+    border-radius: var(--ui-popover-radius);
+    box-shadow: var(--ui-popover-shadow);
+}
+
+.ui-confirm-message {
+    line-height: 1.4;
+    word-break: break-word;
+}

@@ -1,0 +1,145 @@
+<div class="notif-shell flex overflow-hidden">
+    <!-- SIDEBAR -->
+    <div class="w-3/12 flex flex-col overflow-hidden shrink-0 border-right ui-bg-surface-50">
+        <!-- SIDEBAR HEADER -->
+        <div class="flex flex-col gap-1 border-bottom p-2 pb-1">
+            <span class="flex items-center font-semibold gap-2 color-text">
+                <tabler-icon icon="bell" [size]="16" />
+                {{ 'NOTIFICATION.TITLE' | translate }}
+            </span>
+            <span class="text-sm ui-color-text-muted">
+                {{ 'NOTIFICATION.UNREAD' | translate: { count: totalUnread() } }}
+            </span>
+        </div>
+
+        <!-- SIDEBAR MENU -->
+        <div class="flex-1 overflow-y-auto p-1">
+            <div class="notification-section-label">
+                {{ 'NOTIFICATION.SECTION.OVERVIEW' | translate }}
+            </div>
+
+            <button
+                class="notification-group-btn"
+                [class.active]="activeFilter().type === 'all'"
+                (click)="onSetFilter({ type: 'all' })"
+            >
+                <tabler-icon icon="list" [size]="14" svgClass="shrink-0 ui-color-blue" />
+                <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ 'NOTIFICATION.FILTER.ALL' | translate }}
+                </span>
+                @if (totalUnread() > 0) {
+                    <ui-badge severity="danger" [value]="totalUnread()" class="ml-auto shrink-0" />
+                }
+            </button>
+
+            <button
+                class="notification-group-btn"
+                [class.active]="activeFilter().type === 'mentions'"
+                (click)="onSetFilter({ type: 'mentions' })"
+            >
+                <tabler-icon icon="at" [size]="14" svgClass="shrink-0 ui-color-purple" />
+                <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ 'NOTIFICATION.FILTER.MENTIONS' | translate }}
+                </span>
+                @if (mentionCount() > 0) {
+                    <ui-badge severity="danger" [value]="mentionCount()" class="ml-auto shrink-0" />
+                }
+            </button>
+
+            <ui-divider class="m-2 w-auto"></ui-divider>
+            <div class="notification-section-label">
+                {{ 'NOTIFICATION.SECTION.PROJECTS' | translate }}
+            </div>
+
+            @for (group of sidebarGroups(); track group.idProject) {
+                @if (group.idProject === null) {
+                    <button
+                        class="notification-group-btn"
+                        [class.active]="activeFilter().type === 'general'"
+                        (click)="onSetFilter({ type: 'general' })"
+                    >
+                        <tabler-icon icon="world" [size]="14" svgClass="shrink-0 ui-color-teal" />
+                        <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {{ 'NOTIFICATION.FILTER.GENERAL' | translate }}
+                        </span>
+                        @if (group.unreadCount > 0) {
+                            <ui-badge
+                                severity="danger"
+                                [value]="group.unreadCount"
+                                class="ml-auto shrink-0"
+                            />
+                        }
+                    </button>
+                } @else {
+                    <button
+                        class="notification-group-btn"
+                        [class.active]="
+                            activeFilter().type === 'project' &&
+                            activeFilterProjectId() === group.idProject
+                        "
+                        (click)="onSetFilter({ type: 'project', idProject: group.idProject! })"
+                    >
+                        <span
+                            class="w-4 h-4 rounded-full shrink-0"
+                            [style.background]="group.projectColor"
+                        ></span>
+                        <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+                            {{ group.projectName }}
+                        </span>
+                        @if (group.unreadCount > 0) {
+                            <ui-badge
+                                severity="danger"
+                                [value]="group.unreadCount"
+                                class="ml-auto shrink-0"
+                            />
+                        }
+                    </button>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- NOTIFICATION PANEL -->
+    <div class="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div class="flex items-center justify-between shrink-0 p-2 border-bottom">
+            <span class="font-semibold color-text">
+                {{ filterTitle() | translate }}
+            </span>
+            <ui-button
+                variant="text"
+                class="notification-mark-all-read-btn"
+                [title]="'NOTIFICATION.ACTION.MARK_ALL_READ' | translate"
+                (click)="onMarkAllAsRead()"
+            >
+                <tabler-icon icon="square-check" [size]="16" />
+            </ui-button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto flex flex-col p-2 gap-2">
+            @for (n of filteredNotifications(); track n.idNotification) {
+                <app-notification-card
+                    [notification]="n"
+                    (dismiss)="onDismiss(n)"
+                    (read)="onMarkAsRead(n)"
+                />
+            } @empty {
+                <div
+                    class="notif-empty flex items-center justify-center h-full text-center ui-color-text-muted p-4"
+                >
+                    {{ 'NOTIFICATION.EMPTY' | translate }}
+                </div>
+            }
+        </div>
+
+        <div class="shrink-0 border-top p-1 text-right">
+            <ui-button
+                variant="text"
+                size="small"
+                [label]="'NOTIFICATION.ACTION.MARK_ALL_READ' | translate"
+                (click)="onMarkAllAsRead()"
+            >
+                <tabler-icon icon="square-check" [size]="14" />
+            </ui-button>
+        </div>
+    </div>
+</div>

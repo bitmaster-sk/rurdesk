@@ -1,0 +1,200 @@
+<div class="editor-wrapper" (focusout)="onComponentFocusout($event)">
+    <div class="editor-mention-container">
+        <div
+            #editor
+            class="editor-input editor__content"
+            contenteditable="true"
+            role="textbox"
+            aria-multiline="true"
+            (input)="onInput()"
+            (keydown)="onKeydown($event)"
+        ></div>
+        @if (mentionQuery() && filteredCandidates().length) {
+            <div class="mention-picker" role="listbox">
+                @for (u of filteredCandidates(); track u.idUser; let i = $index) {
+                    <div
+                        class="mention-picker__item"
+                        [class.mention-picker__item--active]="i === activeIndex()"
+                        role="option"
+                        [attr.aria-selected]="i === activeIndex()"
+                        (mousedown)="selectMention(u); $event.preventDefault()"
+                    >
+                        <app-avatar
+                            [name]="u.name"
+                            [bgColor]="u.colorAvatarBg"
+                            [width]="2"
+                            [height]="2"
+                            [radius]="1"
+                        ></app-avatar>
+                        <span class="mention-picker__name">{{ u.name }}</span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    <div class="editor-toolbar">
+        <div class="flex items-center">
+            <div class="ui-button-group">
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onBold()"
+                    [uiTooltip]="'MESSAGE_EDITOR.BOLD' | translate"
+                >
+                    <tabler-icon icon="bold" [size]="14" />
+                </ui-button>
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onItalic()"
+                    [uiTooltip]="'MESSAGE_EDITOR.ITALIC' | translate"
+                >
+                    <tabler-icon icon="italic" [size]="14" />
+                </ui-button>
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onStrikethrough()"
+                    [uiTooltip]="'MESSAGE_EDITOR.STRIKETHROUGH' | translate"
+                >
+                    <tabler-icon icon="strikethrough" [size]="14" />
+                </ui-button>
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onUnorderedList()"
+                    [uiTooltip]="'MESSAGE_EDITOR.BULLET_LIST' | translate"
+                >
+                    <tabler-icon icon="list" [size]="14" />
+                </ui-button>
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onOrderedList()"
+                    [uiTooltip]="'MESSAGE_EDITOR.ORDERED_LIST' | translate"
+                >
+                    <tabler-icon icon="list-numbers" [size]="14" />
+                </ui-button>
+                <div class="code-block-selector" (clickOutside)="showCodeBlockSelector.set(false)">
+                    <ui-button
+                        variant="text"
+                        severity="primary"
+                        size="small"
+                        [uiTooltip]="'MESSAGE_EDITOR.CODE_BLOCK' | translate"
+                        (click)="showCodeBlockSelector.set(!showCodeBlockSelector())"
+                    >
+                        <tabler-icon icon="code" [size]="14" />
+                    </ui-button>
+                    @if (showCodeBlockSelector()) {
+                        <div class="code-block-options">
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="JS"
+                                (click)="onCodeBlock(CodeBlockLanguage.JS)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="TS"
+                                (click)="onCodeBlock(CodeBlockLanguage.TS)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="CSS"
+                                (click)="onCodeBlock(CodeBlockLanguage.CSS)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="SQL"
+                                (click)="onCodeBlock(CodeBlockLanguage.SQL)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="Java"
+                                (click)="onCodeBlock(CodeBlockLanguage.JAVA)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="PHP"
+                                (click)="onCodeBlock(CodeBlockLanguage.PHP)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="Python"
+                                (click)="onCodeBlock(CodeBlockLanguage.PYTHON)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="C"
+                                (click)="onCodeBlock(CodeBlockLanguage.C)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="C++"
+                                (click)="onCodeBlock(CodeBlockLanguage.CPP)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="C#"
+                                (click)="onCodeBlock(CodeBlockLanguage.CSHARP)"
+                            ></ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="secondary"
+                                size="small"
+                                label="JSON"
+                                (click)="onCodeBlock(CodeBlockLanguage.JSON)"
+                            ></ui-button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="text-right">
+            @if (!disableSendButton()) {
+                <ui-button variant="text" severity="primary" size="small" (click)="onSend()">
+                    <tabler-icon [icon]="sendIcon()" [size]="14" />
+                    @if (sendLabel()) {
+                        <span class="ml-1">{{ sendLabel() }}</span>
+                    }
+                </ui-button>
+            }
+            @if (!disableCancelButton()) {
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    label="{{ 'CANCEL' | translate }}"
+                    (click)="cancel.emit()"
+                >
+                    <tabler-icon icon="x" [size]="14" />
+                </ui-button>
+            }
+        </div>
+    </div>
+</div>

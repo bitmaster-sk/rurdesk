@@ -1,0 +1,9 @@
+@for (digit of digits(); track digits().length - $index) {
+    <span class="ui-odometer--digit" aria-hidden="true">
+        <span class="ui-odometer--strip" [style.transform]="'translateY(-' + digit * 10 + '%)'">
+            @for (n of numbers; track n) {
+                <span class="ui-odometer--num">{{ n }}</span>
+            }
+        </span>
+    </span>
+}

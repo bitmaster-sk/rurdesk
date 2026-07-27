@@ -1,0 +1,114 @@
+<div class="home-layout flex flex-col h-full w-full">
+    <app-top-menu class="shrink-0"></app-top-menu>
+    <div class="home-body flex flex-row w-full grow shrink min-h-0 overflow-hidden">
+        <!-- LEFT MENU -->
+        <div class="home-left-menu grow-0 shrink-0 flex flex-col justify-between">
+            <div class="top">
+                <ul class="navigation">
+                    <li class="menu-section-title">
+                        {{ 'PROJECT.SINGULAR' | translate }}
+                    </li>
+                    <li class="menu-item">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            [routerLink]="['/project', project()?.idProject, 'view']"
+                            [routerLinkActiveOptions]="{ exact: true }"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="device-desktop" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.OVERVIEW' | translate }}</span>
+                        </a>
+                    </li>
+                    @if (aclStore.canUpdateProject()) {
+                        <li class="menu-item mb-0">
+                            <div class="menu-item-border"></div>
+                            <a
+                                class="link"
+                                [routerLink]="['/project', project()?.idProject, 'settings']"
+                                routerLinkActive="active"
+                            >
+                                <tabler-icon icon="settings" [size]="16" class="icon" />
+                                <span class="text">{{ 'PROJECT.SETTINGS' | translate }}</span>
+                            </a>
+                        </li>
+                    }
+                    <li class="menu-section-title">{{ 'HOME.TASKS' | translate }}</li>
+                    <li class="menu-item">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            [routerLink]="[
+                                '/project',
+                                project()?.idProject,
+                                'issue',
+                                'view',
+                                'table'
+                            ]"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="table" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.TABLE' | translate }}</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            [routerLink]="[
+                                '/project',
+                                project()?.idProject,
+                                'issue',
+                                'view',
+                                'kanban'
+                            ]"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="layout-columns" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.BOARD' | translate }}</span>
+                        </a>
+                    </li>
+                    <li class="menu-item">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            [routerLink]="[
+                                '/project',
+                                project()?.idProject,
+                                'issue',
+                                'view',
+                                'calendar'
+                            ]"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="calendar" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.CALENDAR' | translate }}</span>
+                        </a>
+                    </li>
+                    <li class="menu-item mb-0">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            [routerLink]="[
+                                '/project',
+                                project()?.idProject,
+                                'issue',
+                                'view',
+                                'gantt'
+                            ]"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="chart-column" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.GANTT' | translate }}</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="home-content grow shrink min-h-0 min-w-0 overflow-hidden">
+            <router-outlet></router-outlet>
+        </div>
+    </div>
+</div>

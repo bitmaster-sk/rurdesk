@@ -1,0 +1,114 @@
+@if (!isCollapsed()) {
+<div class="wbs-panel" [style.width.px]="panelWidth()">
+    <!-- Header spacer with tabs -->
+    <div class="wbs-panel--header-spacer">
+        <button
+            class="wbs-panel--tab"
+            [class.wbs-panel--tab--active]="activeTab() === 'scheduled'"
+            (click)="activeTab.set('scheduled')"
+        >
+            {{ 'ISSUE.GANTT.SCHEDULED' | translate }}
+        </button>
+        <button
+            class="wbs-panel--tab"
+            [class.wbs-panel--tab--active]="activeTab() === 'backlog'"
+            (click)="activeTab.set('backlog')"
+        >
+            {{ 'ISSUE.GANTT.BACKLOG' | translate }} @if (backlogTasks().length > 0) {
+            <span class="wbs-panel--tab-count">{{ backlogTasks().length }}</span>
+            }
+        </button>
+    </div>
+
+    @if (activeTab() === 'scheduled') { @if (scheduledTasks().length === 0) {
+    <div class="wbs-panel--empty">{{ 'ISSUE.GANTT.NO_ISSUES' | translate }}</div>
+    } @else {
+    <div
+        #scrollContainer
+        class="wbs-panel--scroll"
+        (scroll)="onScroll()"
+        cdkDropList
+        (cdkDropListDropped)="onScheduledDrop($event)"
+    >
+        @for (task of scheduledTasks(); track task.idIssuePublic) {
+        <div
+            class="wbs-row"
+            cdkDrag
+            (cdkDragStarted)="onRowDragStarted()"
+            (cdkDragEnded)="onRowDragEnded()"
+            [class.wbs-row--hovered]="hoveredTaskId() === task.idIssuePublic"
+            [class.wbs-row--selected]="selectedTaskId() === task.idIssuePublic"
+            [style.height.px]="rowHeight()"
+            (click)="onTaskClick(task.idIssuePublic, false)"
+            (mouseenter)="onTaskMouseEnter(task.idIssuePublic)"
+            (mouseleave)="onTaskMouseLeave()"
+        >
+            <span class="wbs-row--severity" [style.--row-sev-color]="task.severity?.color"></span>
+            <span class="wbs-row--title">{{ task.title }}</span>
+            <div class="wbs-row--meta">
+                <app-state-badge [state]="task.state" size="xs" />
+                @if (task.assignedToUser) {
+                <app-avatar
+                    [name]="task.assignedToUser.name"
+                    [bgColor]="task.assignedToUser.colorAvatarBg"
+                    [width]="1.5"
+                    [height]="1.5"
+                />
+                } @else {
+                <div class="wbs-row--unknown-avatar">?</div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+    } } @if (activeTab() === 'backlog') { @if (backlogTasks().length === 0) {
+    <div class="wbs-panel--empty">{{ 'ISSUE.GANTT.NO_BACKLOG' | translate }}</div>
+    } @else {
+    <div class="wbs-panel--scroll">
+        @for (task of backlogTasks(); track task.idIssuePublic) {
+        <div
+            class="wbs-row wbs-row--backlog"
+            [class.wbs-row--hovered]="hoveredTaskId() === task.idIssuePublic"
+            [class.wbs-row--selected]="selectedTaskId() === task.idIssuePublic"
+            [style.height.px]="rowHeight()"
+            (mouseenter)="onTaskMouseEnter(task.idIssuePublic)"
+            (mouseleave)="onTaskMouseLeave()"
+            (mousedown)="onBacklogDragStart(task.idIssuePublic, $event)"
+        >
+            <span class="wbs-row--severity" [style.--row-sev-color]="task.severity?.color"></span>
+            <span class="wbs-row--title">{{ task.title }}</span>
+            <div class="wbs-row--meta">
+                <app-state-badge [state]="task.state" size="xs" />
+                @if (task.assignedToUser) {
+                <app-avatar
+                    [name]="task.assignedToUser.name"
+                    [bgColor]="task.assignedToUser.colorAvatarBg"
+                    [width]="1.5"
+                    [height]="1.5"
+                />
+                } @else {
+                <div class="wbs-row--unknown-avatar">?</div>
+                }
+            </div>
+        </div>
+        } @if (backlogHasMore()) {
+        <div class="flex justify-center py-2">
+            <ui-button
+                type="button"
+                size="small"
+                variant="text"
+                [loading]="backlogLoading()"
+                [label]="'LOAD_MORE' | translate"
+                (click)="loadMoreBacklog.emit()"
+            >
+                <tabler-icon icon="plus" [size]="14" />
+            </ui-button>
+        </div>
+        }
+    </div>
+    } }
+
+    <!-- Resize handle -->
+    <div class="wbs-panel--resize-handle" (mousedown)="onResizeStart($event)"></div>
+</div>
+}

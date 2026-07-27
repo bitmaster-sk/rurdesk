@@ -1,0 +1,43 @@
+<ui-dialog [header]="titleKey() | translate" [visible]="true" width="420px" (hide)="onCancel()">
+    <form [formGroup]="form" class="flex flex-col gap-2 pt-2">
+        <div class="ui-field">
+            <label for="mr-integration" class="required">
+                {{ 'GIT_INTEGRATION.SINGULAR' | translate }}
+            </label>
+            <ui-select
+                inputId="mr-integration"
+                formControlName="idGitIntegration"
+                [options]="integrationOptions"
+                optionLabel="label"
+                optionValue="value"
+                [placeholder]="'GIT_INTEGRATION.SELECT' | translate"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field">
+            <label for="mr-id" class="required">{{ 'MR.ID' | translate }}</label>
+            <input id="mr-id" uiInput formControlName="mrId" placeholder="42" class="w-full" />
+        </div>
+    </form>
+
+    <ng-template #footer>
+        @if (idGitIntegration()) {
+            <ui-button
+                [label]="'MR.UNLINK' | translate"
+                variant="text"
+                severity="danger"
+                (click)="onUnlink()"
+            />
+        }
+        <ui-button
+            [label]="'CANCEL' | translate"
+            variant="text"
+            severity="secondary"
+            (click)="onCancel()"
+        />
+        <ui-button [label]="'SAVE' | translate" [disabled]="form.invalid" (click)="onSave()">
+            <tabler-icon icon="device-floppy" [size]="14" />
+        </ui-button>
+    </ng-template>
+</ui-dialog>

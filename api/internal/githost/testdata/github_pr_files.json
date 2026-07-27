@@ -1,0 +1,12 @@
+[
+  {
+    "filename": "src/main.go",
+    "previous_filename": "src/main.go",
+    "patch": "--- a/src/main.go\n+++ b/src/main.go\n@@ -10,3 +10,5 @@\n func main() {\n+\tfmt.Println(\"hello\")\n }"
+  },
+  {
+    "filename": "src/new_file.go",
+    "previous_filename": "",
+    "patch": "--- /dev/null\n+++ b/src/new_file.go\n@@ -0,0 +1,3 @@\n+package main\n+\n+// NewFile is new"
+  }
+]

@@ -1,0 +1,8 @@
+<ui-button variant="text" severity="secondary" class="relative" (click)="onChatClick($event)">
+    <tabler-icon icon="message" [size]="16" />
+    @if (messageCount() > 0) {
+        <span class="chat-badge">{{ messageCountDisplay() }}</span>
+    }
+</ui-button>
+
+<ui-menu #chatMenu [model]="chats()"></ui-menu>

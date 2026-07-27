@@ -1,0 +1,80 @@
+:host {
+    display: contents;
+}
+
+.gantt-body {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: auto;
+    position: relative;
+
+    &--canvas {
+        position: relative;
+    }
+
+    &--grid-line {
+        position: absolute;
+        top: 0;
+        width: 1px;
+        background: var(--ui-surface-200);
+        pointer-events: none;
+
+        &--weekend {
+            background: var(--ui-surface-50);
+            border-left: 1px solid var(--ui-surface-200);
+        }
+    }
+
+    &--today {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        background: var(--ui-color-primary);
+        z-index: 2;
+        pointer-events: none;
+
+        // "You are here" pulse after the smooth scroll-to-today lands
+        &--pulse {
+            animation: gantt-today-pulse 0.9s ease-out 0.35s;
+
+            @media (prefers-reduced-motion: reduce) {
+                animation: none;
+            }
+        }
+    }
+
+    &--ghost {
+        position: absolute;
+        background: var(--ui-color-primary);
+        opacity: 0.2;
+        border: 1px dashed var(--ui-color-primary);
+        border-radius: 4px;
+        pointer-events: none;
+        z-index: 4;
+    }
+
+    &--ghost-label {
+        position: absolute;
+        transform: translate(-50%, calc(-100% - 6px));
+        background: var(--ui-surface-700);
+        color: var(--ui-color-surface);
+        padding: 2px 8px;
+        border-radius: var(--ui-radius-md, 4px);
+        font-size: var(--font-size-s, 0.75rem);
+        white-space: nowrap;
+        pointer-events: none;
+        z-index: 5;
+    }
+}
+
+// content-visibility: auto applied via :host in gantt-task-bar.component.scss (see Task 2.6)
+
+@keyframes gantt-today-pulse {
+    0% {
+        box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-color-primary) 45%, transparent);
+    }
+    100% {
+        box-shadow: 0 0 0 12px color-mix(in srgb, var(--ui-color-primary) 0%, transparent);
+    }
+}

@@ -1,0 +1,119 @@
+// Global styles for the `.ui-table` plain-<table> family (aggregated into
+// ../../ui.styles.scss, loaded eagerly & globally — so plain <table> markup in
+// feature modules picks it up, exactly like `.ui-input`).
+//
+// `border-collapse: separate; border-spacing: 0` (not collapse) so that sticky
+// `<th>` in the scroll variant keep their bottom border — collapsed borders are
+// dropped by the sticky element and the header line disappears on scroll. This
+// is the structural fix; it renders identically to a collapsed table at
+// spacing:0, and is robust under forced-colors.
+
+.ui-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: var(--ui-table-font-size);
+    color: var(--ui-table-fg);
+
+    // border-box so a snapshotted width (offsetWidth, a border-box measure — set
+    // on cells during CDK row-reorder) doesn't double-count padding and shove the
+    // columns right. Applies to both th and td.
+    th,
+    td {
+        box-sizing: border-box;
+    }
+
+    thead th {
+        text-align: left;
+        padding: var(--ui-table-cell-padding);
+        font-weight: var(--ui-table-header-weight);
+        color: var(--ui-table-header-fg);
+        background: var(--ui-table-header-bg);
+        border-bottom: 1px solid var(--ui-table-border);
+    }
+
+    tbody td {
+        padding: var(--ui-table-cell-padding);
+        border-bottom: 1px solid var(--ui-table-border);
+    }
+}
+
+// Row hover — OPT-IN only (parity: p-table hovers only under [rowHover]).
+.ui-table--hover tbody tr:hover td {
+    background: var(--ui-table-row-hover-bg);
+}
+
+// Sortable header (via [uiSortColumn]).
+.ui-table th.ui-sort-column {
+    cursor: pointer;
+    user-select: none;
+
+    tabler-icon {
+        vertical-align: middle;
+        margin-left: 0.25rem;
+        color: var(--ui-table-header-fg);
+        opacity: 0.55;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ui-table-sort-active-fg);
+        outline-offset: -2px;
+    }
+}
+
+.ui-table th.ui-sort-column--active {
+    color: var(--ui-table-sort-active-fg);
+
+    tabler-icon {
+        color: var(--ui-table-sort-active-fg);
+        opacity: 1;
+    }
+}
+
+// Scroll variant: single wrapper class. The consumer wraps <table.ui-table> in
+// <div.ui-table-scroll> and puts the parent in a flex-column with min-height:0
+// (see /ui gallery canonical pattern). Sticky header stays visible on scroll.
+.ui-table-scroll {
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+
+    .ui-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--ui-table-header-bg);
+    }
+}
+
+// Reorder handle: grab affordance, switching to grabbing while a drag is active
+// (CDK marks the drop list with .cdk-drop-list-dragging).
+.ui-table [cdkDragHandle] {
+    cursor: grab;
+}
+
+.ui-table.cdk-drop-list-dragging [cdkDragHandle] {
+    cursor: grabbing;
+}
+
+// CDK row-reorder: keep the dragged <tr> looking like a table row while it
+// floats detached from the <table> (cells otherwise collapse). Widths are
+// snapshotted onto the cells at cdkDragStarted by the consumer.
+.ui-table tr.cdk-drag-preview {
+    display: table;
+    box-shadow: var(--ui-dialog-shadow);
+    background: var(--ui-surface-0);
+}
+
+.ui-table tr.cdk-drag-placeholder {
+    opacity: 0.35;
+}
+
+.ui-table tr.cdk-drag-preview td {
+    padding: var(--ui-table-cell-padding);
+    border-bottom: 1px solid var(--ui-table-border);
+}
+
+.cdk-drop-list-dragging .ui-table tr.cdk-drag:not(.cdk-drag-placeholder) {
+    transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}

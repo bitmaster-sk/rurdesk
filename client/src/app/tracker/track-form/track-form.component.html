@@ -1,0 +1,45 @@
+<form [formGroup]="form" class="flex items-end grid grid-cols-12 gap-4 m-0">
+    <input formControlName="idTrack" type="hidden" />
+    <input formControlName="idIssue" type="hidden" />
+    <input formControlName="idUser" type="hidden" />
+
+    <div class="ui-field grid grid-cols-12 gap-4 m-0 col-span-2">
+        <label for="tracked">{{ 'TRACK.TIME' | translate }}</label>
+        <input uiInput formControlName="tracked" id="tracked" type="text" class="w-full" />
+    </div>
+
+    <div class="ui-field grid grid-cols-12 gap-4 m-0 col-span-2">
+        <label for="endAt">{{ 'TIME.END' | translate }}</label>
+        <input
+            uiDatepicker
+            mode="datetime"
+            formControlName="endAt"
+            id="endAt"
+            class="w-full"
+            [invalid]="!!(form.get('endAt')?.invalid && form.get('endAt')?.touched)"
+        />
+    </div>
+
+    <div class="col-span-2 flex">
+        <ui-button
+            type="button"
+            severity="success"
+            class="mr-2"
+            [label]="'SAVE' | translate"
+            (click)="onSaveTrack()"
+            [disabled]="!form.dirty || !form.valid"
+        >
+            <tabler-icon icon="pencil" [size]="14" />
+        </ui-button>
+
+        <ui-button
+            type="button"
+            severity="warn"
+            [label]="'RESET' | translate"
+            (click)="onResetTrack()"
+            [disabled]="!form.dirty"
+        >
+            <tabler-icon icon="rotate-clockwise" [size]="14" />
+        </ui-button>
+    </div>
+</form>

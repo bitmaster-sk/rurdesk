@@ -1,0 +1,10 @@
+// <ui-popover> panel chrome. ViewEncapsulation.None → plain global selector,
+// @used by src/app/ui/ui.styles.scss. Reads --ui-popover-* tokens (styles.scss).
+.ui-popover {
+    background: var(--ui-popover-bg);
+    border: 1px solid var(--ui-popover-border);
+    border-radius: var(--ui-popover-radius);
+    box-shadow: var(--ui-popover-shadow);
+    padding: var(--ui-popover-padding);
+    color: var(--ui-input-fg);
+}

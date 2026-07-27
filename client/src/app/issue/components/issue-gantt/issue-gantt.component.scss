@@ -1,0 +1,89 @@
+:host {
+    display: block;
+    height: 100%;
+    position: relative;
+}
+
+.settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-s, 8px);
+    min-width: 14rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-m, 16px);
+}
+
+.settings-label {
+    font-size: var(--font-size-s, 0.875rem);
+}
+
+.backlog-drag-ghost {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s, 6px);
+    padding: 4px var(--ui-space-s, 6px);
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-color-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0.8;
+    max-width: 220px;
+
+    &--severity {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--ghost-sev-color);
+    }
+
+    &--title {
+        font-size: var(--font-size-s, 0.875rem);
+        color: var(--ui-color-text);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+.gantt-host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    border: 1px solid var(--ui-surface-300);
+    border-radius: var(--ui-radius-md);
+
+    &--content {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        overflow: hidden;
+        position: relative;
+        gap: 0;
+        height: 100%;
+        border-bottom-left-radius: var(--ui-radius-md);
+        border-bottom-right-radius: var(--ui-radius-md);
+    }
+
+    &--timeline {
+        flex: 1 1 auto;
+        min-width: 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+        border-top-left-radius: var(--ui-radius-md);
+        border-top-right-radius: var(--ui-radius-md);
+    }
+}

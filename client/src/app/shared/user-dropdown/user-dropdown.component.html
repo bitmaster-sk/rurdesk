@@ -1,0 +1,67 @@
+@if (!multi) {
+    <ui-select
+        class="user-dropdown"
+        [options]="users"
+        [(ngModel)]="selected"
+        optionLabel="name"
+        optionValue="idUser"
+        [showClear]="true"
+        [filter]="filter"
+        [uiSaveStatus]="saveStatus"
+        [filterPlaceholder]="'UI.SEARCH' | translate"
+    >
+        <ng-template #selectedItem let-user>
+            <div class="dropdown-item selected flex flex-row items-center">
+                <div class="avatar">
+                    <app-avatar
+                        [name]="user.name"
+                        [bgColor]="user.colorAvatarBg"
+                        [height]="1.5"
+                        [width]="1.5"
+                        [radius]="0.75"
+                    ></app-avatar>
+                </div>
+                <div class="ml-2">{{ user.name }}</div>
+            </div>
+        </ng-template>
+
+        <ng-template #item let-member>
+            <div class="dropdown-item flex flex-row items-center">
+                <div class="avatar">
+                    <app-avatar
+                        [name]="member.name"
+                        [bgColor]="member.colorAvatarBg"
+                        [height]="1.5"
+                        [width]="1.5"
+                        [radius]="0.75"
+                    ></app-avatar>
+                </div>
+                <div class="ml-2">{{ member.name }}</div>
+            </div>
+        </ng-template>
+    </ui-select>
+} @else {
+    <ui-multiselect
+        [options]="users"
+        class="user-dropdown"
+        optionLabel="name"
+        optionValue="idUser"
+        [uiSaveStatus]="saveStatus"
+        [(ngModel)]="selected"
+    >
+        <ng-template #item let-member>
+            <div class="dropdown-item flex flex-row items-center">
+                <div class="avatar">
+                    <app-avatar
+                        [name]="member.name"
+                        [bgColor]="member.colorAvatarBg"
+                        [height]="1.5"
+                        [width]="1.5"
+                        [radius]="0.75"
+                    ></app-avatar>
+                </div>
+                <div class="ml-2">{{ member.name }}</div>
+            </div>
+        </ng-template>
+    </ui-multiselect>
+}

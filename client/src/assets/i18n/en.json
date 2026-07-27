@@ -1,0 +1,817 @@
+{
+    "ONBOARDING": {
+        "WELCOME": "Welcome",
+        "TITLE": "Let's create your first project",
+        "SUBTITLE": "Give it a name, then start from a blank board or let AI draft the backlog for you.",
+        "NAME_LABEL": "Project name",
+        "NAME_PLACEHOLDER": "e.g. Website relaunch",
+        "RECOMMENDED": "Recommended",
+        "AI_TITLE": "Create with AI",
+        "AI_DESC": "Describe the project in a sentence — AI drafts a staged backlog you review and accept.",
+        "AI_BULLET_1": "Titles, hierarchy & schedule",
+        "AI_BULLET_2": "You review before anything is saved",
+        "AI_CTA": "Create & generate backlog",
+        "BLANK_TITLE": "Blank project",
+        "BLANK_DESC": "Start with an empty board and add tasks yourself, your way.",
+        "BLANK_BULLET_1": "Nothing pre-filled",
+        "BLANK_BULLET_2": "Best if you already know the plan",
+        "BLANK_CTA": "Create blank project",
+        "CREATE_FAILED": "Couldn't create the project. Please try again."
+    },
+    "UI": {
+        "LOADING": "Loading",
+        "SAVE_STATUS": {
+            "SAVING": "Saving",
+            "SAVED": "Saved",
+            "FAILED": "Not saved"
+        },
+        "CONFIRMATION": {
+            "MESSAGE": "Are you sure?",
+            "YES": "Yes",
+            "NO": "No"
+        },
+        "DATEPICKER": {
+            "TODAY": "Today",
+            "CLEAR": "Clear"
+        },
+        "TOAST": {
+            "CLOSE": "Close"
+        },
+        "SEARCH": "Search…"
+    },
+    "AGENT": {
+        "PHASE": {
+            "QUEUED": "Queued",
+            "IN_PROGRESS": "In progress",
+            "AWAITING_INPUT": "Awaiting input",
+            "AWAITING_APPROVAL": "Awaiting approval",
+            "PR_OPEN": "Waiting for merge",
+            "DONE": "Done",
+            "FAILED": "Failed",
+            "CANCELLED": "Cancelled"
+        },
+        "STAGE": {
+            "PICKUP": "Pickup",
+            "BRAINSTORMING": "Brainstorming",
+            "DESIGN": "Design",
+            "IMPLEMENTATION_PLAN": "Implementation plan",
+            "IMPLEMENTATION": "Implementation"
+        },
+        "SIDEBAR": {
+            "TITLE": "Agent Run",
+            "QUEUE_POSITION": "Queue position: #{{position}}",
+            "STARTED": "Started",
+            "ELAPSED": "{{time}} elapsed",
+            "CANCEL_RUN": "Cancel run",
+            "VIEW_HISTORY": "View history",
+            "PR_LINK": "View PR",
+            "PULL_REQUEST": "Pull request",
+            "TIMELINE": "Timeline"
+        },
+        "ACTIONS": {
+            "APPROVE": "Approve",
+            "USE_AND_APPROVE": "Use & approve design",
+            "USE_SHORT": "Use",
+            "SELECTED": "Selected",
+            "REJECTED": "Not chosen",
+            "CONTINUE": "Continue",
+            "RESTART": "Restart"
+        },
+        "RESTART_HAS_PR": "This run already has a pull request. Use Continue instead — restarting would open a duplicate.",
+        "RESTART_FAILED": "Could not restart the run. Please try again.",
+        "RECOVERY": {
+            "PROMPT": "Agent run failed. Pick Continue to redo the current stage, or Restart to begin a fresh run."
+        },
+        "ERROR": {
+            "PROVIDER_CREDIT_EXHAUSTED": "The model provider is out of credit or quota. Top up the provider account, then press Continue to resume.",
+            "PROVIDER_RATE_LIMITED": "The model provider rate-limited the request. Wait a moment (or upgrade for higher limits), then press Continue to resume.",
+            "PROVIDER_ERROR": "The model provider returned an error. Check the details below, then press Continue or Restart.",
+            "AGENT_ERROR": "The agent failed during this stage. Press Continue to retry or Restart to begin again.",
+            "AGENT_REPORTED_ERROR": "The agent reported an error it could not recover from. Press Continue to retry or Restart.",
+            "STAGE_NOT_SUBMITTED": "The agent finished without submitting its result for this stage. Press Continue to retry.",
+            "WORKTREE_ERROR": "The workspace could not be prepared. Press Restart to begin a fresh run.",
+            "CRASH_RECOVERY": "The agent process crashed mid-stage. Press Continue to retry.",
+            "HEARTBEAT_STALE": "The agent stopped reporting progress and was timed out. Press Continue to retry.",
+            "GATEWAY_RESTART": "The gateway restarted and dropped this run. Press Continue to retry."
+        },
+        "STATS": {
+            "TITLE": "Run statistics",
+            "TOKENS": "Tokens",
+            "DURATION": "Duration",
+            "TOOL_CALLS": "Tool calls",
+            "FAILED_ATTEMPTS": "Failed attempts",
+            "ATTEMPTS_PER_STAGE": "Attempts per stage"
+        },
+        "KIND": {
+            "BRAINSTORMING_QUESTION": "Question from agent",
+            "BRAINSTORMING_COMPLETE": "Brainstorming complete",
+            "DESIGN": "Design",
+            "IMPLEMENTATION_PLAN": "Implementation plan",
+            "PULL_REQUEST_PUSHED": "PR push",
+            "IMPLEMENTATION_DONE": "Implementation done"
+        },
+        "BANNER": {
+            "FAILED_TITLE": "Agent run failed",
+            "CONTINUE_HINT": "Click Continue to redo the current stage"
+        },
+        "CARD": {
+            "AWAITING_INPUT_HINT": "Bot is waiting for your reply — answer in the thread below."
+        },
+        "TIMELINE": {
+            "STATUS": {
+                "PENDING": "Pending",
+                "ACTIVE": "In progress…",
+                "DONE": "Done",
+                "AWAITING_APPROVAL": "Waiting for your review",
+                "FAILED": "Failed",
+                "SKIPPED": "Skipped"
+            },
+            "NOTE": {
+                "NO_CLARIFICATIONS": "no clarifications needed",
+                "SUBMITTED": "submitted for review",
+                "PR_OPENED": "pull request opened"
+            },
+            "APPROVED_BY_YOU": "approved by you",
+            "ATTEMPT": "attempt {{n}}"
+        },
+        "CLARIFICATION": {
+            "BADGE": "Question from bot"
+        },
+        "PHASE_STATE_MAP": {
+            "TITLE": "Agent Phase → State Mapping",
+            "DESCRIPTION": "Optionally map agent phases to task states. When a bot run transitions to a phase, the task state will be automatically updated. Leave unmapped to skip.",
+            "PHASE": "Agent Phase",
+            "STATE": "Task State",
+            "NO_MAPPING": "No mapping",
+            "LOAD_ERROR": "Failed to load phase-state mappings.",
+            "SAVE_ERROR": "Failed to save phase-state mappings."
+        }
+    },
+    "QUALITY": {
+        "TITLE": "Task quality",
+        "SCORE": "Quality Score",
+        "SINGULAR": "Quality",
+        "CHECK": "Check Quality",
+        "RECHECK": "Re-check",
+        "CHECKING": "Checking...",
+        "NOT_CHECKED": "Not yet checked",
+        "EMPTY_HINT": "This task hasn't been quality-checked yet. Running the check evaluates clarity, completeness, actionability, scope, and metadata, and surfaces concrete problems and suggestions you can act on.",
+        "POOR": "Poor",
+        "ACCEPTABLE": "Acceptable",
+        "GOOD": "Good",
+        "PROBLEMS": "Problems",
+        "SUGGESTIONS": "Suggestions",
+        "NO_SUGGESTIONS": "No suggestions",
+        "ACCEPT": "Accept",
+        "DISMISS": "Dismiss",
+        "UNAVAILABLE": "Quality check unavailable",
+        "RATE_LIMITED": "Please wait a moment before checking again",
+        "CACHED_AT": "Last checked {{time}}",
+        "ACTION": {
+            "REPLACE_TITLE": "Replaces title",
+            "REPLACE_DESCRIPTION": "Replaces description",
+            "ADD_SECTION": "Appends to description"
+        },
+        "DIMENSION": {
+            "CLARITY": "Clarity",
+            "COMPLETENESS": "Completeness",
+            "ACTIONABILITY": "Actionability",
+            "SCOPE": "Scope",
+            "METADATA": "Metadata"
+        }
+    },
+    "SHARED": {
+        "CLOSE": "Close"
+    },
+    "LOGIN": "Login",
+    "LOGIN.WELCOME": "Welcome back",
+    "LOGIN.SUBTITLE": "Sign in to continue",
+    "LOGIN.FAILED": "Incorrect email or password",
+    "LOGOUT": "Log out",
+    "REGISTER": "Register",
+    "REGISTER.WELCOME": "Welcome to Rurdesk",
+    "REGISTER.SUBTITLE": "Create the first admin account",
+    "REGISTER.FAILED": "Registration failed, please try again",
+    "REGISTER.CLOSED": "Registration is closed — ask your admin for an account",
+    "REGISTER.INVALID": "Please fill in all fields correctly",
+    "REGISTER.PASSWORD.MISMATCH": "Passwords do not match",
+    "EMAIL": "Email",
+    "PASSWORD": "Password",
+    "PASSWORD.CONFIRMATION": "Password confirmation",
+    "NAME": "Name",
+    "ACTIONS": "Actions",
+    "NEW": "New",
+    "DIRECT.CHATS": "Direct messages",
+    "TITLE": "Title",
+    "DESCRIPTION": "Description",
+    "SAVE": "Save",
+    "LOAD_MORE": "Load more",
+    "SETTINGS.TABLE_PAGE_SIZE": "Table page size",
+    "SETTINGS.KANBAN_PAGE_SIZE": "Kanban page size",
+    "SETTINGS.GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
+    "CANCEL": "Cancel",
+    "BACK": "Back",
+    "RESET": "Reset",
+    "SEARCH": "Search",
+    "NO_DATA": "No data",
+    "NO_DATA_YET": "No data yet",
+    "UPDATED.AT": "Updated at",
+    "CREATED.AT": "Created at",
+    "AI": {
+        "SINGULAR": "AI"
+    },
+    "FILTER": {
+        "SINGULAR": "Filter"
+    },
+    "STATE": {
+        "SINGULAR": "State",
+        "PLURAL": "States",
+        "START": "Start state",
+        "END": "End state",
+        "NEW": "New state",
+        "EDIT": "Edit state",
+        "CONFIRM.DELETE": "Do you really want to delete this state?",
+        "DEFAULT.FOR.NEW.ISSUE": "Default state for new tasks"
+    },
+    "SEVERITY": {
+        "SINGULAR": "Severity",
+        "PLURAL": "Severities",
+        "NEW": "New severity",
+        "EDIT": "Edit severity",
+        "COLOR": "Color",
+        "CONFIRM.DELETE": "Do you really want to delete this severity?",
+        "DEFAULT.FOR.NEW.ISSUE": "Default severity for new tasks"
+    },
+    "PROJECT": {
+        "SINGULAR": "Project",
+        "PLURAL": "Projects",
+        "CHATS": "Project chats",
+        "NEW": "New project",
+        "SETTINGS": "Project settings",
+        "GENERAL": "General",
+        "SAVE_ERROR": "Failed to save project settings.",
+        "MEMBERS": "Members",
+        "MEMBERS.USERS": "Users",
+        "MEMBERS.TEAMS": "Teams",
+        "MEMBERS.ADD_USER": "Add user",
+        "MEMBERS.ADD_TEAM": "Add team",
+        "MEMBERS.ROLE": "Role",
+        "MEMBERS.SOURCE": "Source",
+        "MEMBERS.LAST_OWNER_WARNING": "This project has only one owner. Promote another member before removing or demoting this owner.",
+        "MEMBERS.TEAM_NOTE": "Team members inherit the team's role unless they have a direct assignment.",
+        "AI_TOOLS": "AI Tools",
+        "MEMBERS.OVERRIDE_ADD": "+ override"
+    },
+    "TEAM": {
+        "PLURAL": "Teams",
+        "SINGULAR": "Team",
+        "CHATS": "Team chats",
+        "MEMBERS": "Team members",
+        "NO.TEAMMATES.TO.ADD": "No users to add",
+        "NO_TEAMMATES_TO_ADD": "No teammates to add"
+    },
+    "USER": {
+        "SINGULAR": "User",
+        "MANAGEMENT": "User management",
+        "SETTINGS": "User settings",
+        "MY_PAGE": "My page",
+        "PROFILE": "Profile",
+        "CHANGE_PASSWORD": "Change password",
+        "CURRENT_PASSWORD": "Current password",
+        "NEW_PASSWORD": "New password",
+        "PASSWORD_CHANGED": "Password changed",
+        "PASSWORD_CHANGE_FAILED": "Password change failed",
+        "PROFILE_SAVE_FAILED": "Failed to save profile",
+        "EMAIL_READONLY": "Used to sign in — contact an administrator to change it",
+        "AVATAR_COLOR": "Avatar color",
+        "SHUFFLE_COLOR": "Random color",
+        "AVATAR": "Avatar"
+    },
+    "HOME": {
+        "OVERVIEW": "Overview",
+        "TASKS": "Tasks",
+        "TABLE": "Table",
+        "BOARD": "Board",
+        "CALENDAR": "Calendar",
+        "GANTT": "Gantt"
+    },
+    "ISSUE": {
+        "POINTS": "Points",
+        "KANBAN": {
+            "SPRINTS": {
+                "BACKLOG": "Backlog",
+                "SPRINT": "Sprint",
+                "ALL_CYCLES": "All cycles",
+                "CURRENT_SUFFIX": "(current)",
+                "CURRENT": "Current cycle (by date)",
+                "ROLL_OVER": "Roll over",
+                "ROLL_OVER_HINT": "Move all unfinished tasks of this sprint to the next one and close this sprint",
+                "CARRYOVER": "Carried over {{count}}×",
+                "NEW": "New sprint",
+                "EDIT": "Edit sprint",
+                "NAME_PLACEHOLDER": "Leave empty to auto-name (Sprint N)",
+                "START": "Start",
+                "END": "End",
+                "SAVE": "Save",
+                "CREATE": "Create",
+                "CANCEL": "Cancel",
+                "DELETE": "Delete",
+                "NEW_SPRINT": "＋ New sprint",
+                "CLOSED": "Closed sprint",
+                "SHOW_CLOSED": "Show closed sprints",
+                "CLOSE": "Close sprint",
+                "CLOSE_CONFIRM": "Close this sprint? Unfinished work rolls over to the next cycle.",
+                "CLOSED_TOAST": "Sprint closed",
+                "CLOSE_CONFLICT": "Sprint is already closed",
+                "ASSIGN_FAILED": "Could not move the issue to that sprint"
+            },
+            "LAYOUT.COLUMNS": "Columns",
+            "LAYOUT.SWIMLANE": "Swimlane"
+        },
+        "CARD_MODE": {
+            "COMFORTABLE": "Comfortable",
+            "COMPACT": "Compact"
+        },
+        "QUICK_ACTIONS": {
+            "STATE": "State",
+            "SEVERITY": "Severity",
+            "ASSIGNEE": "Assignee",
+            "RESCHEDULE": "Reschedule",
+            "PREVIOUS_DAY": "Previous day",
+            "NEXT_DAY": "Next day",
+            "TODAY": "Today",
+            "REMOVE_DATE": "Remove date",
+            "PICK_DATE": "Pick a date…",
+            "OPEN": "Open",
+            "COPY_ID": "Copy ID",
+            "DELETE": "Delete",
+            "AI": "AI"
+        },
+        "ADD": "Add task",
+        "MOVE_FAILED": "Failed to move the card. The board has been refreshed.",
+        "UPDATE_FAILED": "Failed to save the change. The task has been restored.",
+        "CREATED.AT": "Created at",
+        "LAST.UPDATE.AT": "Last update at",
+        "SCHEDULED.AT": "Scheduled at",
+        "BY.USER": "by user",
+        "ASSIGNED.TO": "Assigned to",
+        "TIME.TRACKER": "Time tracker",
+        "TIME.TRACKED": "Tracked time",
+        "TIME.ESTIMATED": "Estimated time",
+        "DISPLAY.UNSET.SEVERITIES": "Display tasks with unset severities",
+        "DISPLAY.UNSET.STATES": "Display tasks with unset states",
+        "DISPLAY.UNSET.ASSIGNED.TO": "Display tasks with unassigned user",
+        "PINNED": "Pinned tasks",
+        "COMMENTS": "Comments",
+        "PIN": {
+            "SINGULAR": "Pin",
+            "TO.PROJECT.PAGE": "To project page",
+            "TO.MY.PAGE": "To my page"
+        },
+        "GANTT": {
+            "TODAY": "Today",
+            "ZOOM": {
+                "HOUR": "Hour",
+                "QUARTER_DAY": "Quarter Day",
+                "DAY": "Day",
+                "WEEK": "Week",
+                "MONTH": "Month"
+            },
+            "QUARTER": {
+                "MORNING": "Morning",
+                "AFTERNOON": "Afternoon",
+                "EVENING": "Evening",
+                "NIGHT": "Night"
+            },
+            "TOGGLE_WBS": "Toggle task list",
+            "TOGGLE_MINIMAP": "Toggle minimap",
+            "CRITICAL_PATH": "Critical path",
+            "NO_ISSUES": "No tasks to display",
+            "NO_BACKLOG": "No backlog items",
+            "SCHEDULED": "Scheduled",
+            "BACKLOG": "Backlog"
+        },
+        "PARTICIPANTS": {
+            "TITLE": "Participants",
+            "ADD": "Add participant",
+            "NOTIFICATIONS_ON": "Notifications on",
+            "NOTIFICATIONS_OFF": "Notifications off",
+            "SEARCH": "Search member…",
+            "NO_MEMBERS": "No members to add",
+            "EMPTY": "No participants yet",
+            "ROLE": {
+                "CREATOR": "Author",
+                "ASSIGNEE": "Assignee",
+                "BOT": "Bot",
+                "COMMENT": "Commented",
+                "MENTION": "Mentioned",
+                "MANUAL": "Added"
+            }
+        },
+        "TITLE": "Tasks",
+        "CALENDAR": {
+            "DAY": "Day",
+            "WEEK": "Week",
+            "MONTH": "Month"
+        },
+        "COPY_SUFFIX": "{{title}} (copy)"
+    },
+    "CONFIRM": "Confirm",
+    "RELATION": {
+        "MODE": "Relation mode",
+        "ASK_LAG": "Ask for lag on schedule",
+        "SCHEDULE": "Scheduling",
+        "HIERARCHY": "Hierarchy",
+        "DUPLICATES": "duplicates",
+        "RELATES_TO": "relates to",
+        "FINISH_TO_START": "finish → start",
+        "START_TO_START": "start → start",
+        "FINISH_TO_FINISH": "finish → finish",
+        "START_TO_FINISH": "start → finish",
+        "BASIC": "Basic",
+        "PARENT": "parent",
+        "CHILD": "child",
+        "SCHEDULES": "schedules",
+        "SCHEDULED_BY": "scheduled by",
+        "STARTS_WITH": "starts with",
+        "FINISHES_WITH": "finishes with",
+        "TRIGGERS_END_OF": "triggers end of",
+        "END_TRIGGERED_BY": "end triggered by",
+        "ADD_LAG": "Add lag (optional)",
+        "LAG_MINUTES": "Lag minutes",
+        "TABLE_SETTINGS": "Table settings"
+    },
+    "SPLIT": {
+        "SINGULAR": "Split",
+        "TITLE": "Split task",
+        "HINT_LABEL": "How should this be split? (optional)",
+        "HINT_PLACEHOLDER": "e.g. separate frontend and backend",
+        "SPLIT_BUTTON": "Split with AI",
+        "REVIEW_TITLE": "Review child tasks ({{count}})",
+        "ADD_CHILD": "Add child",
+        "ACCEPT_BUTTON": "Accept ({{count}})",
+        "CANCEL": "Cancel",
+        "LOADING": "Generating child tasks…",
+        "SAVING": "Creating tasks…",
+        "DONE": "{{count}} tasks created",
+        "ERROR_AI": "Could not generate tasks. Please try again.",
+        "ERROR_RATE_LIMIT": "Please wait a moment before splitting again.",
+        "ERROR_EMPTY": "Add at least one child task.",
+        "CHILD_TITLE_PLACEHOLDER": "Task title"
+    },
+    "PROJECT_BUILDER": {
+        "TITLE": "AI Project Builder",
+        "DESCRIPTION_HINT": "Describe your project and the AI will generate a structured backlog for you to review.",
+        "DESCRIPTION_LABEL": "Project Description",
+        "DESCRIPTION_PLACEHOLDER": "Describe what you want to build: goals, features, technical requirements…",
+        "CHAR_COUNT": "{{current}} characters",
+        "MIN_CHARS_HINT": "Enter at least {{min}} characters to generate ({{remaining}} more needed).",
+        "DEFAULT_STATE": "Default State",
+        "DEFAULT_SEVERITY": "Default Severity",
+        "GENERATE": "Generate Backlog",
+        "GENERATING": "Generating…",
+        "WAIT_RATE_LIMIT": "Please wait {{seconds}}s",
+        "REVIEW_TITLE": "Review Generated Backlog",
+        "REGENERATE": "Regenerate",
+        "ACCEPT_ALL": "Accept All",
+        "BACK": "Back",
+        "STAGED_COUNT": "{{count}} task(s) staged",
+        "RESTORE_BANNER": "Restoring previous session from {{date}}",
+        "DISCARD": "Discard",
+        "SUCCESS_TITLE": "Backlog Created!",
+        "SUCCESS_MESSAGE": "{{count}} task(s) have been added to your project.",
+        "VIEW_ISSUES": "View Tasks",
+        "ISSUE_CARD": {
+            "TITLE_PLACEHOLDER": "Title",
+            "DESCRIPTION_PLACEHOLDER": "Description",
+            "ESTIMATE_PLACEHOLDER": "1h 10m",
+            "DELETE_ARIA": "Delete task"
+        },
+        "AI_PROMPT": {
+            "SAVE_GENERATE": "Save & Generate"
+        },
+        "ERROR": {
+            "GENERATE_FAILED": "Generation failed, please try again.",
+            "SAVE_FAILED": "Save failed, your staging data is preserved.",
+            "STAGING_INVALID": "Staging data is invalid, please regenerate."
+        },
+        "REGENERATE_CONFIRM": "This will discard your staged edits. Continue?"
+    },
+    "KANBAN": {
+        "UNASSIGNED": "Unassigned"
+    },
+    "NONE": "None",
+    "STATISTICS": "Statistics",
+    "STATS": {
+        "ISSUES.BY.SEVERITY": "Tasks by severity",
+        "ISSUES.BY.STATE": "Tasks by state",
+        "ESTIMATED": "Estimated",
+        "TRACKED": "Tracked",
+        "ESTIMATED_VS_TRACKED": "Estimated vs Tracked",
+        "WORKLOAD_BY_ASSIGNEE": "Workload by Assignee",
+        "UNASSIGNED": "Unassigned",
+        "OPEN_SUFFIX": "open"
+    },
+    "TRACK": {
+        "RECORDS": "Track records",
+        "CONFIRM.DELETE": "Do you really want to delete this track record?",
+        "TIME": "Tracked time",
+        "LAST.7.DAYS": "Tracked last 7 days",
+        "SUBMIT": "Submit tracked time",
+        "STOP": "Stop tracking",
+        "START": "Start tracking",
+        "SAVE": "Save tracked time",
+        "EDIT": "Edit track record",
+        "DELETE": "Delete track record"
+    },
+    "TIME": {
+        "START": "Start time",
+        "END": "End time",
+        "HOURS": "Hours"
+    },
+    "NOT_FOUND": {
+        "CODE": "Error 404",
+        "TITLE": "Page not found",
+        "SUBTITLE": "This page doesn't exist, or it's been moved.",
+        "HOME": "Take me home"
+    },
+    "error": {
+        "forbidden": "You don't have permission to perform this action.",
+        "unauthorized": "You are not authorized. Please log in.",
+        "not_found": "The requested resource was not found.",
+        "relation_cycle": "This relation would create a cycle.",
+        "bad_request": "Invalid request. Please check your input.",
+        "internal": "An unexpected error occurred. Please try again.",
+        "ai_unavailable": "AI service is temporarily unavailable. Please try again later.",
+        "ai_not_configured": "AI is not configured. Set AI_MODEL to a model for your provider.",
+        "ai_invalid_response": "Generation failed. Please try again.",
+        "rate_limited": "Too many requests. Please wait before trying again.",
+        "last_owner": "Cannot remove the last project owner.",
+        "invalid_role": "Invalid role. Must be viewer, member, or owner.",
+        "last_admin": "Cannot remove the last instance admin.",
+        "bot_admin": "Bots cannot be admins.",
+        "user_has_agent_activity": "This user has agent history and cannot be deleted.",
+        "user_has_authored_content": "This user created or edited issues and cannot be deleted.",
+        "not_a_bot": "API keys can only be managed for bots.",
+        "registration_closed": "Registration is closed. Ask an admin to create your account."
+    },
+    "NOTIFICATION": {
+        "TITLE": "Notifications",
+        "UNREAD": "{{count}} unread",
+        "EMPTY": "No notifications",
+        "SECTION": {
+            "OVERVIEW": "Overview",
+            "PROJECTS": "Projects"
+        },
+        "FILTER": {
+            "ALL": "All",
+            "MENTIONS": "Mentions",
+            "INVITATIONS": "Invitations",
+            "GENERAL": "General"
+        },
+        "ACTION": {
+            "MARK_ALL_READ": "Mark all read"
+        },
+        "TEXT": {
+            "STATE_CHANGED": "changed state of",
+            "SEVERITY_ESCALATED": "escalated severity of",
+            "SEVERITY_DEESCALATED": "de-escalated severity of",
+            "ASSIGNED": "assigned you to",
+            "TO": "to"
+        },
+        "TYPE": {
+            "COMMENT": "Comment",
+            "MENTION": "Mention",
+            "ASSIGNED": "Assigned",
+            "STATE_CHANGED": "State",
+            "SEVERITY_ESCALATED": "Severity",
+            "SEVERITY_DEESCALATED": "Severity",
+            "TEAM_JOINED": "Team",
+            "QUALITY_SCORED": "Quality"
+        }
+    },
+    "API_KEY": {
+        "TITLE": "Bot credentials",
+        "KEYS_SECTION": "Gateway → Tracker token",
+        "NAME": "Token name",
+        "CREATE": "Create token",
+        "REVOKE": "Revoke",
+        "DELETE": "Delete",
+        "REGENERATE": "Regenerate token",
+        "REVOKE_CONFIRM": "Revoke this token? This cannot be undone.",
+        "CLOSE": "Close",
+        "COPY_KEY": "Copy",
+        "KEY_SHOWN_ONCE": "This token will only be shown once. Copy it now and set it as GATEWAY_TO_TRACKER_TOKEN in the gateway environment.",
+        "CREATED_AT": "Created",
+        "LAST_USED": "Last used",
+        "EXPIRES_AT": "Expires",
+        "NEVER": "Never",
+        "NO_KEYS": "No tokens yet",
+        "CREATE_FAILED": "Creating the token failed",
+        "REGENERATE_FAILED": "Regenerating the token failed",
+        "REVOKE_FAILED": "Revoking the token failed",
+        "GATEWAY_SECTION": "Tracker → Gateway token",
+        "GATEWAY_URL": "Gateway URL",
+        "GATEWAY_URL_PLACEHOLDER": "https://gateway.internal:8080",
+        "GATEWAY_URL_HINT": "Where the tracker sends stage webhooks. The Tracker → Gateway token is created with the bot.",
+        "GATEWAY_CREATE": "Register gateway",
+        "GATEWAY_REGENERATE": "Regenerate token",
+        "GATEWAY_DELETE": "Delete",
+        "GATEWAY_DELETE_CONFIRM": "Delete this gateway? The tracker will stop dispatching runs to this bot.",
+        "GATEWAY_TOKEN_SHOWN_ONCE": "Copy this token now — it won't be shown again. Set it as TRACKER_TO_GATEWAY_TOKEN in the gateway environment.",
+        "GATEWAY_NONE": "No gateway registered yet.",
+        "GATEWAY_CREATE_FAILED": "Registering the gateway failed",
+        "GATEWAY_REGENERATE_FAILED": "Regenerating the gateway token failed",
+        "GATEWAY_DELETE_FAILED": "Deleting the gateway failed"
+    },
+    "ADMIN": {
+        "SETTINGS": "Application settings",
+        "VERSION": "Version",
+        "USERS": "Users",
+        "CREATE_USER": "Create user",
+        "EDIT_USER": "Edit user",
+        "EMAIL": "Email",
+        "PASSWORD": "Password",
+        "TYPE": "Type",
+        "BOT": "Bot",
+        "ADMIN": "Admin",
+        "USER": "User",
+        "IS_BOT": "Is bot",
+        "IS_ADMIN": "Is admin",
+        "PROMOTE": "Make admin",
+        "DEMOTE": "Remove admin",
+        "DELETE": "Delete",
+        "CONFIRM_DELETE": "Delete this user? This cannot be undone.",
+        "NO_USERS": "No users yet",
+        "ACTION_FAILED": "The action failed. Please try again.",
+        "CREATE": "Create",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "CLOSE": "Close",
+        "COPY_KEY": "Copy",
+        "API_KEY": "Gateway → Tracker token",
+        "KEY_SHOWN_ONCE": "This token will only be shown once. Copy it now and set it as GATEWAY_TO_TRACKER_TOKEN in the gateway environment.",
+        "TEAMS": "Teams",
+        "CREATE_TEAM": "Create team",
+        "EDIT_TEAM": "Edit team",
+        "ADD_MEMBER": "Add member",
+        "NO_TEAMS": "No teams yet",
+        "SELECT_TEAM": "Select a team to manage its members",
+        "NO_USERS_TO_ADD": "No users to add",
+        "CONFIRM_DELETE_TEAM": "Delete this team? Members lose access granted through it.",
+        "CONFIRM_REMOVE_MEMBER": "Remove this member from the team?"
+    },
+    "GIT_INTEGRATION": {
+        "SINGULAR": "Git Integration",
+        "PLURAL": "Git Integrations",
+        "NEW": "New integration",
+        "ADD": "Add integration",
+        "EDIT": "Edit integration",
+        "HOST_TYPE": "Host type",
+        "BASE_URL": "Base URL",
+        "REPO_PATH": "Repository path",
+        "ACCESS_TOKEN": "Access token",
+        "TOKEN_HINT": "Leave blank to keep the existing token",
+        "SELECT": "Select integration",
+        "MR": "Merge request",
+        "PR_MR": {
+            "BY_HOST": {
+                "GITHUB": "Pull request",
+                "GITLAB": "Merge request",
+                "GITEA": "Pull request",
+                "GENERIC": "Change request"
+            },
+            "LINK_TITLE_BY_HOST": {
+                "GITHUB": "Link pull request",
+                "GITLAB": "Link merge request",
+                "GITEA": "Link pull request",
+                "GENERIC": "Link change request"
+            }
+        }
+    },
+    "MR": {
+        "STATE": {
+            "OPEN": "Open",
+            "MERGED": "Merged",
+            "CLOSED": "Closed"
+        },
+        "CI": {
+            "SUCCESS": "CI passed",
+            "FAILED": "CI failed",
+            "PENDING": "CI pending",
+            "UNKNOWN": "CI unknown"
+        },
+        "APPROVED": "Approved",
+        "ID": "Number",
+        "LINK": {
+            "TITLE": "Link change request"
+        },
+        "UNLINK": "Unlink",
+        "NOT_LINKED": "No change request linked yet."
+    },
+    "MESSAGE": {
+        "ANCHOR": {
+            "OUTDATED": "↑ refers to an earlier version",
+            "LINES": "lines {{start}}–{{end}}",
+            "REPLIES_ONE": "{{count}} reply",
+            "REPLIES_OTHER": "{{count}} replies",
+            "COMMENT_ON_LINES": "Comment on this line",
+            "REPLYING_TO": "Replying to lines {{start}}–{{end}} of {{author}}'s message"
+        },
+        "EDITED": "edited {{time}}"
+    },
+    "COMMAND": {
+        "PALETTE_LABEL": "Command palette",
+        "INPUT_LABEL": "Command palette query",
+        "PLACEHOLDER": "Type a command or search…  ( > commands  @ people  # tasks  / navigation )",
+        "NO_RESULTS": "No results",
+        "RESULT_COUNT": "{{count}} results",
+        "MODE": {
+            "ALL": "All",
+            "COMMANDS": "Commands",
+            "PEOPLE": "People",
+            "ISSUES": "Tasks",
+            "NAVIGATION": "Navigation"
+        },
+        "GROUP": {
+            "NAV": "Navigate",
+            "PROJECTS": "Projects",
+            "COMMANDS": "Commands",
+            "STATE": "Set state",
+            "ASSIGN": "Assign",
+            "SEVERITY": "Set severity",
+            "ISSUES": "Tasks",
+            "CREATE": "Create",
+            "PEOPLE": "People"
+        },
+        "NAV": {
+            "OVERVIEW": "Overview",
+            "ISSUES": "Tasks",
+            "TABLE": "Table",
+            "BOARD": "Board",
+            "CALENDAR": "Calendar",
+            "GANTT": "Gantt",
+            "SETTINGS": "Settings",
+            "SWITCH_PROJECT": "Switch project"
+        },
+        "ACTION": {
+            "CREATE_ISSUE": "Create task",
+            "SHORTCUTS": "Keyboard shortcuts",
+            "SIGN_OUT": "Sign out",
+            "CREATE_WITH_TITLE": "Create task “{{title}}”",
+            "CREATE_HINT": "Creates a new task in this project"
+        },
+        "ISSUE": {
+            "SET_STATE": "Set state → {{name}}",
+            "SET_SEVERITY": "Set severity → {{name}}",
+            "ASSIGN_TO": "Assign to {{name}}",
+            "ASSIGN_ME": "Assign to me",
+            "CLONE": "Clone this task"
+        },
+        "HELP": {
+            "TITLE": "Keyboard shortcuts",
+            "SECTION": {
+                "GLOBAL": "Global",
+                "PALETTE": "In the palette",
+                "LIST": "Task list",
+                "TIMELINE": "Gantt & Calendar"
+            },
+            "OPEN_PALETTE": "Open command palette",
+            "OPEN_NAV": "Jump to navigation",
+            "OPEN_HELP": "Show this help",
+            "CLOSE": "Close / clear query",
+            "MOVE": "Move selection",
+            "RUN": "Run selected",
+            "RUN_KEEP_OPEN": "Run, keep palette open",
+            "COMPLETE": "Complete into input",
+            "LIST_MOVE": "Move highlight",
+            "TIMELINE_TODAY": "Jump to today",
+            "TIMELINE_ZOOM": "Zoom in / out",
+            "TIMELINE_PAN": "Pan / previous–next period"
+        }
+    },
+    "DATE": {
+        "TODAY": "Today",
+        "YESTERDAY": "Yesterday"
+    },
+    "SPRINT": {
+        "SCROLL_LEFT": "Scroll sprints left",
+        "SCROLL_RIGHT": "Scroll sprints right"
+    },
+    "MESSAGE_EDITOR": {
+        "BOLD": "Bold",
+        "ITALIC": "Italic",
+        "STRIKETHROUGH": "Strikethrough",
+        "BULLET_LIST": "Bullet list",
+        "ORDERED_LIST": "Ordered list",
+        "CODE_BLOCK": "Code block"
+    },
+    "MOCKUP": {
+        "LABEL": "UI Mockup",
+        "SANDBOXED": "AI mockup — sandboxed"
+    },
+    "DIFF": {
+        "LOADING": "Loading diff…",
+        "OPEN_ON_HOST": "Open on host"
+    }
+}

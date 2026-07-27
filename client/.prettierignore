@@ -1,0 +1,9 @@
+dist/
+coverage/
+.angular/
+playwright-report/
+test-results/
+package-lock.json
+
+# Vendored Prism themes — keep them byte-identical to upstream.
+src/assets/css/prism/

@@ -1,0 +1,26 @@
+:host {
+    display: contents;
+    // Rich value (avatar + name) → less vertical padding so the avatar can grow
+    // while min-height keeps the trigger at the 32px default. Cascades to the
+    // in-tree trigger only, not the detached overlay panel.
+    --ui-input-padding-y: var(--ui-input-rich-padding-y);
+}
+
+.user-dropdown {
+    width: 100%;
+}
+
+// Projected #item/#selectedItem content keeps this component's encapsulation
+// attribute even inside ui-select/ui-multiselect overlays, so plain rules match.
+.dropdown-item {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    // (removed `&.selected { margin: -0.25rem }` — it compensated PrimeNG's
+    // p-select-label padding, which ui-select-trigger doesn't add. With the
+    // trigger value box's overflow:hidden it was clipping the avatar.)
+    .avatar {
+        margin-right: var(--ui-space);
+    }
+}

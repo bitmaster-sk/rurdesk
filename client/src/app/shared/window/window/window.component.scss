@@ -1,0 +1,28 @@
+// WindowComponent hosts its content inside a body-level CDK overlay (<ui-dialog>
+// with panelClass "window"). Selectors are global (encapsulation None) and target
+// the ui-dialog content area instead of the previous PrimeNG content wrapper.
+.ui-dialog.window .ui-dialog__content {
+    // Sides/bottom match the dialog token so header and content align; top stays
+    // 0 because the header already supplies the top gap.
+    padding: 0 var(--ui-dialog-content-padding) var(--ui-dialog-content-padding);
+
+    .loading-mask {
+        opacity: 0.5;
+        z-index: 2;
+        position: absolute;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        align-items: center;
+        left: 0;
+        justify-content: center;
+        display: flex;
+        background: #ddd;
+    }
+
+    .footer {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-end;
+    }
+}

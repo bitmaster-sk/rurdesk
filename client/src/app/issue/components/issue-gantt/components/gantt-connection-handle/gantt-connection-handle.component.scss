@@ -1,0 +1,81 @@
+.connection-handle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ui-color-primary);
+    top: 50%;
+    cursor: crosshair;
+    // Always interactive so hover is detected even when cursor moves off the bar onto the handle
+    pointer-events: auto;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    &--left {
+        left: -4px;
+        transform: translate(-50%, -50%); // center 4px outside left edge
+    }
+
+    &--right {
+        right: -4px;
+        transform: translate(50%, -50%); // center 4px outside right edge
+    }
+
+    &--offset {
+        &.connection-handle--left {
+            left: -8px; // center 8px outside left edge
+        }
+
+        &.connection-handle--right {
+            right: -8px; // center 8px outside right edge
+        }
+    }
+
+    // Invisible enlarged hit area — the 8px dot alone is too small to grab or drop
+    // on. Expands only AWAY from the bar: the interior edge stays flush so the
+    // resize handle (inside the bar's right edge) keeps its own mousedown.
+    &::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        bottom: -8px;
+    }
+
+    &--left::before {
+        left: -8px;
+        right: 0;
+    }
+
+    &--right::before {
+        right: -8px;
+        left: 0;
+    }
+
+    &:hover {
+        opacity: 1;
+    }
+
+    // "Release here to connect" state while drawing a relation over this handle/bar
+    &--drop-active {
+        opacity: 1;
+        background: var(--ui-color-primary);
+        border: 2px solid var(--ui-color-primary-contrast);
+        box-sizing: content-box;
+        transform-origin: center;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--ui-color-primary) 35%, transparent);
+
+        &.connection-handle--left {
+            transform: translate(-50%, -50%) scale(1.4);
+        }
+
+        &.connection-handle--right {
+            transform: translate(50%, -50%) scale(1.4);
+        }
+    }
+}
+
+// Show handles while bar is hovered; the always-on pointer-events keeps them visible
+// as the cursor moves from the bar edge onto the handle itself
+:host-context(.gantt-bar:hover) .connection-handle {
+    opacity: 1;
+}

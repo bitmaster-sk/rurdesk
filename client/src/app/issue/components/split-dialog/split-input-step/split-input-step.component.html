@@ -1,0 +1,23 @@
+<div class="ui-field">
+    <label>{{ 'SPLIT.HINT_LABEL' | translate }}</label>
+    <input
+        uiInput
+        [formControl]="hintControl"
+        [placeholder]="'SPLIT.HINT_PLACEHOLDER' | translate"
+        class="w-full"
+    />
+</div>
+
+<div class="dialog-footer">
+    <ui-button
+        [label]="'SPLIT.CANCEL' | translate"
+        severity="secondary"
+        [disabled]="isLoading()"
+        (click)="onCancel()"
+    />
+    <ui-button
+        [label]="'SPLIT.SPLIT_BUTTON' | translate"
+        [loading]="isLoading()"
+        (click)="onSplit()"
+    />
+</div>

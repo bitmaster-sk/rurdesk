@@ -1,0 +1,151 @@
+// flatpickr theme override for [uiDatepicker]. Imported from src/styles.scss
+// IMMEDIATELY AFTER 'flatpickr/dist/flatpickr.css' (NOT @use'd from ui.styles,
+// which would land before it and lose the cascade). Repaints flatpickr's
+// hardcoded colours onto --ui-datepicker-* tokens. Light-only for now; dark
+// mode later = [data-theme] overrides of the tokens.
+//
+// Selectors mirror flatpickr's own specificity (e.g. .flatpickr-day.selected =
+// two classes) so equal-specificity + later-in-cascade wins.
+
+.flatpickr-calendar {
+    // flatpickr sets no font-family (it inherits from body = Lato); make it
+    // explicit so it holds regardless of where the calendar renders (inline
+    // mode, appendTo, etc.). Inner elements use font-family:inherit.
+    font-family: var(--font-family);
+    background: var(--ui-datepicker-bg);
+    border: 1px solid var(--ui-datepicker-border);
+    border-radius: var(--ui-datepicker-radius);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 10%);
+    color: var(--ui-datepicker-fg);
+}
+
+// flatpickr has no option to disable the connector arrow (drawn via these
+// pseudo-elements on .arrowTop/.arrowBottom); we don't use it → hide it.
+.flatpickr-calendar::before,
+.flatpickr-calendar::after {
+    display: none;
+}
+
+.flatpickr-months,
+.flatpickr-weekdays,
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    background: transparent;
+}
+
+// The prev/next arrows are position:absolute; flatpickr's own .flatpickr-months
+// is static, so they anchor to the (absolute) .flatpickr-calendar instead of the
+// header and get mispositioned (next-month lands on the left / off-box). Give the
+// header its own positioning context so left:0 / right:0 resolve against it.
+.flatpickr-months {
+    position: relative;
+}
+
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month input.cur-year,
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    color: var(--ui-datepicker-fg);
+    fill: var(--ui-datepicker-fg);
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    color: var(--ui-datepicker-muted-fg);
+    fill: var(--ui-datepicker-muted-fg);
+
+    &:hover svg {
+        fill: var(--ui-datepicker-selected-bg);
+    }
+}
+
+span.flatpickr-weekday {
+    color: var(--ui-datepicker-muted-fg);
+    font-weight: 600;
+}
+
+.flatpickr-day {
+    color: var(--ui-datepicker-fg);
+    border-radius: 6px;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover {
+    background: var(--ui-datepicker-day-hover-bg);
+    border-color: var(--ui-datepicker-day-hover-bg);
+}
+
+.flatpickr-day.today {
+    border-color: var(--ui-datepicker-today-border);
+}
+
+.flatpickr-day.today:hover {
+    background: var(--ui-datepicker-day-hover-bg);
+    color: var(--ui-datepicker-fg);
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+    background: var(--ui-datepicker-selected-bg);
+    border-color: var(--ui-datepicker-selected-bg);
+    color: var(--ui-datepicker-selected-fg);
+}
+
+.flatpickr-day.inRange {
+    background: var(--ui-datepicker-inrange-bg);
+    border-color: var(--ui-datepicker-inrange-bg);
+    // flatpickr draws the range join with a hard box-shadow in its own colour —
+    // recolour it to the range fill so the strip reads as one continuous band.
+    box-shadow:
+        -5px 0 0 var(--ui-datepicker-inrange-bg),
+        5px 0 0 var(--ui-datepicker-inrange-bg);
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+    color: var(--ui-datepicker-disabled-fg);
+}
+
+// Time picker (datetime mode / 12h AM-PM)
+.flatpickr-time,
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+    color: var(--ui-datepicker-fg);
+}
+
+.flatpickr-time input:hover,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:focus {
+    background: var(--ui-datepicker-day-hover-bg);
+}
+
+// Today / Clear footer (built by the directive, appended to calendarContainer)
+.ui-datepicker-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    padding: 0.4rem 0.5rem;
+    border-top: 1px solid var(--ui-datepicker-footer-border);
+}
+
+.ui-datepicker-footer__btn {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.25rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--ui-datepicker-selected-bg);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--ui-datepicker-inrange-bg);
+    }
+}

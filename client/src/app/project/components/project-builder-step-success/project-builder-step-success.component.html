@@ -1,0 +1,15 @@
+<div class="step-success-layout">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'PROJECT_BUILDER.SUCCESS_TITLE' | translate }}</h2>
+    </div>
+
+    <div class="py-2 px-6 flex flex-col items-center justify-center" style="min-height: 200px">
+        <tabler-icon icon="circle-check" [size]="48" class="ui-color-green" />
+        <p class="ui-color-text-muted my-4">
+            {{ 'PROJECT_BUILDER.SUCCESS_MESSAGE' | translate: { count: createdCount() } }}
+        </p>
+        <ui-button [label]="'PROJECT_BUILDER.VIEW_ISSUES' | translate" (click)="onGoToIssues()">
+            <tabler-icon icon="list" [size]="16" />
+        </ui-button>
+    </div>
+</div>

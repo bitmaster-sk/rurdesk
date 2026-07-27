@@ -1,0 +1,6 @@
+<div class="tracked-time-chart-container" [style.height.px]="heightPx()">
+    <canvas baseChart type="bar" [data]="chartData()" [options]="chartOptions()"></canvas>
+    @if (isEmpty()) {
+        <div class="chart-empty-overlay">{{ 'NO_DATA_YET' | translate }}</div>
+    }
+</div>

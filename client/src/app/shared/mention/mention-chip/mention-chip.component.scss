@@ -1,0 +1,11 @@
+.mention-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.35em;
+    border-radius: var(--ui-radius-sm);
+    background-color: var(--ui-color-mention-bg);
+    color: var(--ui-color-mention-fg);
+    font-weight: 500;
+    font-size: 0.875em;
+    white-space: nowrap;
+}

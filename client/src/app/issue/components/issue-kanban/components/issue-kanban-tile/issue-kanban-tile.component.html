@@ -1,0 +1,55 @@
+<div class="tile-card flex flex-col justify-between" (contextmenu)="onContextMenu($event)">
+    <!-- Row 1: issue id + severity dot + name -->
+    <div class="tile-card--header flex items-center justify-between mb-1">
+        <div class="flex flex-row gap-2">
+            <span class="tile-card--id">#{{ tile().idIssuePublic }}</span>
+            <span class="tile-card--severity flex items-center gap-1">
+                <app-severity-circle [color]="tile().severity?.color"></app-severity-circle>
+                <span class="tile-card--severity-name">
+                    {{ tile().severity?.title ?? ('NONE' | translate) }}
+                </span>
+            </span>
+        </div>
+        <div class="flex items-center gap-1">
+            @if (tile().carryoverCount) {
+                <span
+                    class="tile-card--carryover"
+                    [title]="
+                        'ISSUE.KANBAN.SPRINTS.CARRYOVER'
+                            | translate: { count: tile().carryoverCount }
+                    "
+                >
+                    <tabler-icon icon="repeat" [size]="12" />
+                    {{ tile().carryoverCount }}
+                </span>
+            }
+            @if (tile().points != null) {
+                <span class="tile-card--points" data-testid="tile-points">{{ tile().points }}</span>
+            }
+        </div>
+    </div>
+
+    <!-- Row 2: title -->
+    <a
+        class="tile-card--title"
+        [routerLink]="['/project', tile().idProject, 'issue', tile().idIssuePublic]"
+    >
+        {{ tile().title }}
+    </a>
+
+    <!-- Row 3: state badge + assignee avatar -->
+    <div class="flex items-center justify-between">
+        <app-state-badge [state]="tile().state" size="s"></app-state-badge>
+        @if (tile().assignedToUser) {
+            <app-avatar
+                [name]="tile().assignedToUser.name"
+                [bgColor]="tile().assignedToUser.colorAvatarBg"
+                [height]="1.75"
+                [width]="1.75"
+                [radius]="1"
+            ></app-avatar>
+        } @else {
+            <span class="tile-card--avatar-unassigned">?</span>
+        }
+    </div>
+</div>

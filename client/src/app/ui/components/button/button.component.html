@@ -1,0 +1,28 @@
+<button
+    class="ui-button"
+    [class.ui-button--primary]="severity() === 'primary'"
+    [class.ui-button--secondary]="severity() === 'secondary'"
+    [class.ui-button--danger]="severity() === 'danger'"
+    [class.ui-button--success]="severity() === 'success'"
+    [class.ui-button--info]="severity() === 'info'"
+    [class.ui-button--warn]="severity() === 'warn'"
+    [class.ui-button--outlined]="variant() === 'outlined'"
+    [class.ui-button--text]="variant() === 'text'"
+    [class.ui-button--small]="size() === 'small'"
+    [class.ui-button--icon-only]="isIconOnly()"
+    [class.ui-button--rounded]="isRounded()"
+    [class.ui-button--loading]="loading()"
+    [type]="type()"
+    [attr.aria-label]="ariaLabel() || null"
+    [disabled]="disabled() || loading()"
+>
+    @if (loading()) {
+        <span class="ui-button__spinner" aria-hidden="true"></span>
+    } @else {
+        <ng-content select="tabler-icon" />
+    }
+    @if (label()) {
+        <span class="ui-button__label">{{ label() }}</span>
+    }
+    <ng-content />
+</button>

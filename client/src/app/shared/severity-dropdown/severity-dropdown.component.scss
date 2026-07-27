@@ -1,0 +1,18 @@
+:host {
+    display: contents;
+    // Rich value (colour dot + title) → less vertical padding so the content can
+    // grow while min-height keeps the trigger at the 32px default. Cascades to the
+    // in-tree trigger but NOT the overlay panel (detached on <body>).
+    --ui-input-padding-y: var(--ui-input-rich-padding-y);
+}
+
+.severity-dropdown {
+    width: 100%;
+}
+
+// Projected #item/#selectedItem content keeps this component's encapsulation
+// attribute even inside ui-select's overlay, so a plain rule matches.
+.dropdown-item .text {
+    display: flex;
+    align-items: center;
+}

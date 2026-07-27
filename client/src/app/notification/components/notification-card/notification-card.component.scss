@@ -1,0 +1,52 @@
+.notif-card--unread {
+    border-color: var(--ui-color-primary-accent);
+    background: color-mix(in srgb, var(--ui-color-primary) 4%, var(--ui-color-canvas));
+}
+
+.notif-card-badge {
+    gap: var(--ui-space-s);
+    font-size: var(--font-size-s);
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 12px;
+
+    &__comment {
+        background: var(--ui-color-primary-weak);
+        color: var(--ui-color-primary);
+    }
+
+    &__mention {
+        background: color-mix(in srgb, var(--ui-amber-500) 15%, transparent);
+        color: var(--ui-amber-600);
+    }
+
+    &__assigned {
+        background: color-mix(in srgb, var(--ui-purple-500) 15%, transparent);
+        color: var(--ui-purple-600);
+    }
+
+    &__state {
+        background: color-mix(in srgb, var(--ui-green-500) 15%, transparent);
+        color: var(--ui-green-600);
+    }
+
+    &__severity {
+        background: color-mix(in srgb, var(--ui-pink-500) 15%, transparent);
+        color: var(--ui-pink-600);
+    }
+
+    &__team {
+        background: color-mix(in srgb, var(--ui-purple-500) 15%, transparent);
+        color: var(--ui-purple-600);
+    }
+
+    &__quality {
+        background: color-mix(in srgb, var(--ui-amber-500) 15%, transparent);
+        color: var(--ui-amber-600);
+    }
+
+    &__project {
+        background: var(--ui-color-primary-weak);
+        color: var(--ui-color-primary);
+    }
+}

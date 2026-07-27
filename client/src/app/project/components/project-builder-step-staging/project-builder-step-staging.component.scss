@@ -1,0 +1,36 @@
+// Fill the available height from the flex-column page so the inner tree area
+// (overflow-y: auto) gets a bounded height and actually scrolls. Without this
+// the host collapses to content height and the page can't scroll.
+:host {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.staging-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+
+    .summary-bar {
+        color: var(--ui-color-text-muted);
+        padding: var(--ui-space) var(--ui-space-l);
+        margin-bottom: var(--ui-space-s);
+    }
+
+    .staging-tree-scroll {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .staging-footer {
+        flex: 0 0 auto;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+        padding: var(--ui-space-s) 0;
+    }
+}

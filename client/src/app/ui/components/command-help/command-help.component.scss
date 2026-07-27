@@ -1,0 +1,114 @@
+// Matches the command-palette styling (mockup-derived), mapped onto --ui-* tokens.
+:host {
+    --cmd-panel: var(--ui-surface-0);
+    --cmd-line: var(--ui-surface-200);
+    --cmd-line-strong: var(--ui-surface-300);
+    --cmd-ink: var(--ui-color-text);
+    --cmd-ink-2: var(--ui-surface-700);
+    --cmd-ink-4: var(--ui-surface-500);
+    --cmd-kbd-bg: var(--ui-surface-100);
+    --cmd-kbd-line: var(--ui-surface-300);
+    --cmd-shadow: 0 24px 60px -12px rgba(46, 33, 24, 0.32), 0 8px 20px -8px rgba(46, 33, 24, 0.22);
+    --cmd-mono:
+        ui-monospace, 'SF Mono', 'SFMono-Regular', 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+
+    display: block;
+}
+
+.help {
+    width: min(560px, calc(100vw - 2rem));
+    background: var(--cmd-panel);
+    border: 1px solid var(--cmd-line-strong);
+    border-radius: 14px;
+    box-shadow: var(--cmd-shadow);
+    overflow: auto;
+    max-height: 85vh;
+    animation: help-pop 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes help-pop {
+    from {
+        opacity: 0;
+        transform: scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.help__title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--cmd-ink);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--cmd-line);
+}
+
+.help__grid {
+    padding: 8px 20px 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 34px;
+}
+
+@media (max-width: 560px) {
+    .help__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.help__section {
+    display: contents;
+}
+
+.help__heading {
+    grid-column: 1 / -1;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: var(--cmd-ink-4);
+    font-weight: 600;
+    padding: 16px 0 6px;
+}
+
+.help__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--cmd-line) 55%, transparent);
+    font-size: 13px;
+    color: var(--cmd-ink-2);
+}
+
+.help__keys {
+    display: flex;
+    gap: 4px;
+    flex: none;
+}
+
+kbd {
+    font-family: var(--cmd-mono);
+    font-size: 11px;
+    line-height: 1;
+    background: var(--cmd-kbd-bg);
+    border: 1px solid var(--cmd-kbd-line);
+    border-bottom-width: 2px;
+    color: var(--cmd-ink-2);
+    padding: 3px 6px;
+    border-radius: 6px;
+    min-width: 10px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 560;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .help {
+        animation: none;
+    }
+}

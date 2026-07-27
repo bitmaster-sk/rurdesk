@@ -1,0 +1,174 @@
+// ui-button GLOBAL styles — co-located with the component but @imported by
+// src/styles.scss (NOT used as the component's styleUrl). Reason: the component
+// uses ViewEncapsulation.None, whose styles inject lazily on first instantiation
+// (in a lazy chunk) → buttons flashed unstyled. And the anchor-as-button one-off
+// (`<a class="ui-button">`) is not a component instance, so it needs these
+// classes to exist globally regardless. Hence: global + eager via styles.scss.
+//
+// Uses `ui-button` (not `:host`) because it is compiled globally, not scoped.
+
+ui-button {
+    display: inline-flex;
+}
+
+// `[fluid]` = full-width button: block host + inner button fills it.
+ui-button.ui-button--fluid {
+    display: block;
+}
+
+ui-button.ui-button--fluid > .ui-button {
+    width: 100%;
+}
+
+.ui-button {
+    // NO severity defaults here on purpose: a severity modifier (below) ALWAYS
+    // provides the palette. Neutral var() fallbacks mean a not-yet-classed
+    // button (e.g. one frame before the modifier class lands on first paint of
+    // a lazy route) is invisible/plain — NOT flashing primary.
+    // No `transition` either: colour changes from class application are an
+    // instant snap, never a visible 150ms morph (primary→secondary) on load.
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    height: var(--ui-button-height);
+    gap: var(--ui-button-gap);
+    padding: var(--ui-button-padding-y) var(--ui-button-padding-x);
+    border: 1px solid var(--_border, transparent);
+    border-radius: var(--ui-button-radius);
+    font: inherit;
+    font-weight: var(--ui-button-font-weight);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: none; // for the anchor-as-button one-off
+    background: var(--_bg, transparent);
+    color: var(--_fg, currentColor);
+}
+
+.ui-button:not(:disabled):not(.ui-button--loading):hover {
+    background: var(--_bg-hover);
+    border-color: var(--_border-hover);
+}
+
+.ui-button:not(:disabled):not(.ui-button--loading):active {
+    background: var(--_bg-active);
+    border-color: var(--_border-active);
+}
+
+.ui-button:focus-visible {
+    outline: var(--ui-button-focus-ring-width) solid var(--_focus);
+    outline-offset: var(--ui-button-focus-ring-offset);
+}
+
+.ui-button:disabled,
+.ui-button--loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.ui-button--small {
+    height: var(--ui-button-sm-height);
+    font-size: var(--ui-button-sm-font-size);
+    padding: var(--ui-button-sm-padding-y) var(--ui-button-sm-padding-x);
+}
+
+.ui-button--icon-only {
+    width: var(--ui-button-icon-only-width);
+    height: var(--ui-button-icon-only-width);
+    padding: 0;
+}
+.ui-button--icon-only.ui-button--small {
+    width: var(--ui-button-sm-icon-only-width);
+    height: var(--ui-button-sm-icon-only-width);
+    padding: 0;
+}
+
+.ui-button--rounded {
+    border-radius: var(--ui-button-radius-rounded);
+}
+
+@each $s in primary, secondary, danger, success, info, warn {
+    .ui-button--#{$s} {
+        --_bg: var(--ui-button-#{$s}-bg);
+        --_bg-hover: var(--ui-button-#{$s}-bg-hover);
+        --_bg-active: var(--ui-button-#{$s}-bg-active);
+        --_fg: var(--ui-button-#{$s}-fg);
+        --_border: var(--ui-button-#{$s}-border);
+        --_border-hover: var(--ui-button-#{$s}-border-hover);
+        --_border-active: var(--ui-button-#{$s}-border-active);
+        --_focus: var(--ui-button-#{$s}-focus);
+    }
+
+    .ui-button--outlined.ui-button--#{$s} {
+        --_bg: transparent;
+        --_bg-hover: var(--ui-button-outlined-#{$s}-bg-hover);
+        --_bg-active: var(--ui-button-outlined-#{$s}-bg-active);
+        --_fg: var(--ui-button-outlined-#{$s}-fg);
+        --_border: var(--ui-button-outlined-#{$s}-border);
+        --_border-hover: var(--ui-button-outlined-#{$s}-border);
+        --_border-active: var(--ui-button-outlined-#{$s}-border);
+    }
+
+    .ui-button--text.ui-button--#{$s} {
+        --_bg: transparent;
+        --_bg-hover: var(--ui-button-text-#{$s}-bg-hover);
+        --_bg-active: var(--ui-button-text-#{$s}-bg-active);
+        --_fg: var(--ui-button-text-#{$s}-fg);
+        --_border: transparent;
+        --_border-hover: transparent;
+        --_border-active: transparent;
+    }
+}
+
+.ui-button-group {
+    display: inline-flex;
+    align-items: center;
+}
+
+// Join adjacent buttons (PrimeNG parity): only the group's outer corners stay
+// rounded, inner corners are squared, and adjacent 1px borders overlap so the
+// seam reads as a single border (not doubled). Works for <ui-button> children
+// (border/radius live on the inner .ui-button) and raw .ui-button one-offs.
+.ui-button-group > ui-button:not(:first-child),
+.ui-button-group > .ui-button:not(:first-child) {
+    margin-inline-start: -1px;
+}
+
+.ui-button-group > ui-button:not(:first-child) > .ui-button,
+.ui-button-group > .ui-button:not(:first-child) {
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+}
+
+.ui-button-group > ui-button:not(:last-child) > .ui-button,
+.ui-button-group > .ui-button:not(:last-child) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+// Hovered/focused cell on top so its border + focus ring aren't clipped by the
+// overlapping neighbour.
+.ui-button-group > ui-button:hover,
+.ui-button-group > ui-button:focus-within,
+.ui-button-group > .ui-button:hover,
+.ui-button-group > .ui-button:focus-visible {
+    position: relative;
+    z-index: 1;
+}
+
+.ui-button__spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: ui-button-spin 0.6s linear infinite;
+}
+
+@keyframes ui-button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

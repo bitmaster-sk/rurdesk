@@ -1,0 +1,94 @@
+<div class="sprint-tabs">
+    @if (backlogTab(); as backlog) {
+        <button
+            type="button"
+            class="sprint-tab sprint-tabs__pinned"
+            [class.sprint-tab--active]="backlog.idSprint === selectedIdSprint()"
+            [id]="backlog.listId"
+            cdkDropList
+            [cdkDropListData]="backlog"
+            (cdkDropListDropped)="onDrop($event, backlog.idSprint)"
+            (cdkDropListEntered)="dragSvc.hoveredName.set(backlog.label)"
+            (cdkDropListExited)="dragSvc.hoveredName.set(null)"
+            (click)="select.emit(backlog.idSprint)"
+        >
+            {{ backlog.label }}
+        </button>
+    }
+
+    @if (canScrollLeft()) {
+        <button
+            type="button"
+            class="sprint-tabs__arrow"
+            (click)="scrollBy(-1)"
+            [attr.aria-label]="'SPRINT.SCROLL_LEFT' | translate"
+        >
+            ‹
+        </button>
+    }
+
+    <div #scroller class="sprint-tabs__scroll" (scroll)="onScroll()">
+        @for (tab of cycleTabs(); track tab.listId) {
+            <div
+                role="button"
+                tabindex="0"
+                class="sprint-tab"
+                [class.sprint-tab--active]="tab.idSprint === selectedIdSprint()"
+                [class.sprint-tab--current]="tab.isCurrent"
+                [class.sprint-tab--closed]="tab.isClosed"
+                [id]="tab.listId"
+                [title]="
+                    tab.isClosed
+                        ? ('ISSUE.KANBAN.SPRINTS.CLOSED' | translate)
+                        : tab.isCurrent
+                          ? ('ISSUE.KANBAN.SPRINTS.CURRENT' | translate)
+                          : ''
+                "
+                cdkDropList
+                [cdkDropListData]="tab"
+                [cdkDropListDisabled]="tab.isClosed"
+                (cdkDropListDropped)="onDrop($event, tab.idSprint)"
+                (cdkDropListEntered)="dragSvc.hoveredName.set(tab.label)"
+                (cdkDropListExited)="dragSvc.hoveredName.set(null)"
+                (click)="select.emit(tab.idSprint)"
+            >
+                @if (tab.isCurrent) {
+                    <span class="sprint-tab--dot" aria-hidden="true"></span>
+                }
+                <span class="sprint-tab--label">{{ tab.label }}</span>
+                @if (!tab.isClosed) {
+                    <button
+                        type="button"
+                        class="sprint-tab__edit"
+                        [title]="'ISSUE.KANBAN.SPRINTS.EDIT' | translate"
+                        (click)="$event.stopPropagation(); editRequested.emit(tab.idSprint!)"
+                    >
+                        ✎
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    @if (canScrollRight()) {
+        <button
+            type="button"
+            class="sprint-tabs__arrow"
+            (click)="scrollBy(1)"
+            [attr.aria-label]="'SPRINT.SCROLL_RIGHT' | translate"
+        >
+            ›
+        </button>
+    }
+
+    <ui-button
+        class="sprint-tabs__pinned"
+        severity="secondary"
+        variant="outlined"
+        size="small"
+        [label]="'ISSUE.KANBAN.SPRINTS.SPRINT' | translate"
+        (click)="createRequested.emit()"
+    >
+        <tabler-icon icon="plus" [size]="14" />
+    </ui-button>
+</div>

@@ -1,0 +1,182 @@
+@if (run(); as run) {
+    <div
+        class="agent-run-card"
+        [class.is-open]="isOpen()"
+        [class.is-active]="isActive()"
+        [class.is-working]="isWorking()"
+    >
+        <button type="button" class="card-summary" (click)="onToggle()">
+            <tabler-icon icon="chevron-right" [size]="14" class="chevron" />
+            <span class="avatar"><tabler-icon icon="robot" [size]="14" /></span>
+            <span class="title">{{ 'AGENT.SIDEBAR.TITLE' | translate }} #{{ run.idRun }}</span>
+            <ui-tag
+                [value]="phaseLabelForRun | translate"
+                [severity]="phaseSeverityForRun"
+            ></ui-tag>
+            @if (run.startedAt) {
+                <span class="meta-inline">
+                    {{ run.startedAt | date: 'shortTime' }}
+                </span>
+            }
+            <span class="summary-actions">
+                @if (run.phase === AgentPhase.Failed || run.phase === AgentPhase.Cancelled) {
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        [label]="'AGENT.ACTIONS.CONTINUE' | translate"
+                        (click)="onContinueClick($event)"
+                    ></ui-button>
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        [label]="'AGENT.ACTIONS.RESTART' | translate"
+                        (click)="onRestartClick($event)"
+                    ></ui-button>
+                } @else if (isAwaitingInput()) {
+                    <span class="awaiting-input-hint">
+                        {{ 'AGENT.CARD.AWAITING_INPUT_HINT' | translate }}
+                    </span>
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        [label]="'AGENT.SIDEBAR.CANCEL_RUN' | translate"
+                        (click)="onCancelClick($event)"
+                    ></ui-button>
+                } @else if (run.phase !== AgentPhase.Done && run.phase !== AgentPhase.PrOpen) {
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        [label]="'AGENT.SIDEBAR.CANCEL_RUN' | translate"
+                        (click)="onCancelClick($event)"
+                    ></ui-button>
+                }
+            </span>
+        </button>
+
+        @if (isOpen()) {
+            <div class="card-body">
+                @if (run.phase === AgentPhase.Failed) {
+                    <app-run-recovery-banner
+                        [idRun]="run.idRun"
+                        [errorKey]="failedStageError()?.key ?? null"
+                        [errorDetail]="failedStageError()?.detail ?? null"
+                        (continued)="continueRun.emit()"
+                        (restarted)="restartRun.emit()"
+                    ></app-run-recovery-banner>
+                }
+
+                <div class="meta-grid">
+                    <div class="meta-cell">
+                        <div class="meta-label">{{ 'AGENT.SIDEBAR.STARTED' | translate }}</div>
+                        <div class="meta-value">
+                            @if (run.startedAt) {
+                                {{ run.startedAt | date: 'short' }}
+                            } @else {
+                                —
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                @if (run.phase === AgentPhase.Queued && run.queuePosition !== null) {
+                    <div class="section">
+                        <div class="section-title">{{ 'AGENT.SIDEBAR.TITLE' | translate }}</div>
+                        <div class="text-sm">
+                            {{
+                                'AGENT.SIDEBAR.QUEUE_POSITION'
+                                    | translate: { position: run.queuePosition }
+                            }}
+                        </div>
+                    </div>
+                }
+
+                @if (run.errorMessage) {
+                    <div class="section">
+                        <div class="error-banner">{{ run.errorMessage }}</div>
+                    </div>
+                }
+
+                @if (run.prUrl) {
+                    <div class="section">
+                        <div class="section-title">{{ prMrTermKey() | translate }}</div>
+                        <a [href]="run.prUrl" target="_blank" rel="noopener" class="pr-link">
+                            <tabler-icon icon="git-pull-request" [size]="14" />
+                            <span>{{ run.prUrl }}</span>
+                            @if (run.prHostType) {
+                                <span class="ui-color-text-muted">({{ run.prHostType }})</span>
+                            }
+                        </a>
+                    </div>
+                }
+
+                @if (timeline().length > 0) {
+                    <div class="section">
+                        <div class="section-title">{{ 'AGENT.SIDEBAR.TIMELINE' | translate }}</div>
+                        <ul class="timeline">
+                            @for (row of timeline(); track row.label) {
+                                <li class="timeline-item" [class]="'timeline-item--' + row.status">
+                                    <span class="timeline-glyph">
+                                        <tabler-icon [icon]="row.glyph" [size]="14" />
+                                    </span>
+                                    <div class="timeline-body">
+                                        <div class="timeline-row">
+                                            <span class="stage-name">
+                                                {{ row.label | translate }}
+                                            </span>
+                                            @if (row.attemptNo) {
+                                                <span class="ui-color-text-muted">
+                                                    ·
+                                                    {{
+                                                        'AGENT.TIMELINE.ATTEMPT'
+                                                            | translate: { n: row.attemptNo }
+                                                    }}
+                                                </span>
+                                            }
+                                            @if (row.at) {
+                                                <span class="ui-color-text-muted timeline-at">
+                                                    {{ row.at | date: 'MMM d, h:mm a' }}
+                                                </span>
+                                            }
+                                        </div>
+                                        <div class="timeline-sub">
+                                            <span class="stage-status">
+                                                {{ row.statusKey | translate }}
+                                            </span>
+                                            @if (row.noteKey) {
+                                                <span class="ui-color-text-muted">
+                                                    · {{ row.noteKey | translate }}
+                                                </span>
+                                            }
+                                            @if (row.botName) {
+                                                <span class="ui-color-text-muted">
+                                                    · {{ row.botName }}
+                                                </span>
+                                            }
+                                        </div>
+                                        @if (row.approvedAt) {
+                                            <div class="timeline-approval ui-color-text-muted">
+                                                └
+                                                {{ 'AGENT.TIMELINE.APPROVED_BY_YOU' | translate }} ·
+                                                {{ row.approvedAt | date: 'MMM d, h:mm a' }}
+                                            </div>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <app-run-stats-panel [idRun]="run.idRun"></app-run-stats-panel>
+            </div>
+        }
+    </div>
+}

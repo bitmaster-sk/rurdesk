@@ -1,0 +1,18 @@
+// Settings popover (adjust button) — same look as the table/gantt settings panel.
+.settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-s, 8px);
+    min-width: 14rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-m, 16px);
+}
+
+.settings-label {
+    font-size: var(--font-size-s, 0.875rem);
+}

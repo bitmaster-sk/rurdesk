@@ -1,0 +1,11 @@
+/* Load-bearing despite looking like Karma scaffolding: @analogjs/vite-plugin-angular
+   picks it up by convention to compile specs. Removing it fails every browser
+   test with "Failed to load ./<component>.html". */
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "outDir": "./out-tsc/spec",
+        "types": ["vitest/globals", "node"]
+    },
+    "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+}

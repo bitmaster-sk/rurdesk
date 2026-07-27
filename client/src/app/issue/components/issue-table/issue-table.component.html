@@ -1,0 +1,368 @@
+<div class="h-full flex flex-col">
+    <!-- Filter (existing) -->
+    <div class="issue-filter" [hidden]="!showFilter()">
+        <app-filter></app-filter>
+    </div>
+
+    <!-- Toolbar portal — rendered in the page header via IssueToolbarService -->
+    <ng-template #toolbar>
+        <ui-toggle-button [ngModel]="showFilter()" (ngModelChange)="onToggleFilter()" size="small">
+            <tabler-icon icon="filter" [size]="14" />
+            {{ 'FILTER.SINGULAR' | translate }}
+        </ui-toggle-button>
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            size="small"
+            (click)="settingsOverlay.toggle($event)"
+        >
+            <tabler-icon icon="adjustments-horizontal" [size]="14" />
+        </ui-button>
+        <ui-popover #settingsOverlay>
+            <div class="settings-panel">
+                <div class="settings-row">
+                    <span class="settings-label">{{ 'RELATION.MODE' | translate }}</span>
+                    <input
+                        type="checkbox"
+                        uiToggle
+                        [ngModel]="isRelationMode()"
+                        (ngModelChange)="onRelationModeChange($event)"
+                    />
+                </div>
+                <div class="settings-row">
+                    <span class="settings-label">{{ 'RELATION.ASK_LAG' | translate }}</span>
+                    <input
+                        type="checkbox"
+                        uiToggle
+                        [ngModel]="isAskLag()"
+                        (ngModelChange)="onAskLagChange($event)"
+                    />
+                </div>
+            </div>
+        </ui-popover>
+    </ng-template>
+
+    <!-- Table -->
+    <div class="flex-auto min-h-0 flex flex-col ui-box overflow-hidden">
+        <div class="ui-table-scroll">
+            <table
+                class="ui-table"
+                uiTableSort
+                sortField="idIssue"
+                [sortOrder]="-1"
+                (sortChange)="onLazyLoad($event)"
+            >
+                <thead>
+                    <tr>
+                        @if (isRelationMode()) {
+                            <th scope="col" class="drag-col"></th>
+                        }
+                        <th
+                            scope="col"
+                            class="id-col"
+                            uiSortColumn="idIssue"
+                            #idSort="uiSortColumn"
+                        >
+                            Id
+                            <tabler-icon [icon]="idSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="title" #titleSort="uiSortColumn">
+                            {{ 'TITLE' | translate }}
+                            <tabler-icon [icon]="titleSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="severity" #sevSort="uiSortColumn">
+                            {{ 'SEVERITY.SINGULAR' | translate }}
+                            <tabler-icon [icon]="sevSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="state" #stateSort="uiSortColumn">
+                            {{ 'STATE.SINGULAR' | translate }}
+                            <tabler-icon [icon]="stateSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="assignedToName" #assignedSort="uiSortColumn">
+                            {{ 'ISSUE.ASSIGNED.TO' | translate }}
+                            <tabler-icon [icon]="assignedSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="updateAt" #updateSort="uiSortColumn">
+                            {{ 'UPDATED.AT' | translate }}
+                            <tabler-icon [icon]="updateSort.icon()" [size]="14" />
+                        </th>
+                        <th
+                            scope="col"
+                            class="text-center"
+                            uiSortColumn="qualityScore"
+                            #qualitySort="uiSortColumn"
+                        >
+                            {{ 'QUALITY.SINGULAR' | translate }}
+                            <tabler-icon [icon]="qualitySort.icon()" [size]="14" />
+                        </th>
+                        @if (isRelationMode()) {
+                            <th scope="col" class="action-column"></th>
+                        }
+                    </tr>
+                </thead>
+
+                <tbody uiFlipList>
+                    @for (row of rows(); track row.issue.idIssuePublic; let i = $index) {
+                        <tr
+                            #rowRef
+                            [attr.data-flip-id]="row.issue.idIssuePublic"
+                            [tabindex]="highlightedIndex() === i ? 0 : -1"
+                            [class.row--active]="highlightedIndex() === i"
+                            [class.row--pulsed]="pulsedIds().has(row.issue.idIssuePublic)"
+                            (keydown.enter)="onOpenHighlighted(row.issue)"
+                            (contextmenu)="onContextMenu($event, row.issue)"
+                            (dragenter)="onDragEnter($event, row.issue)"
+                            (dragleave)="onDragLeave($event)"
+                            (dragover)="$event.preventDefault()"
+                            (dragend)="onDragEnd()"
+                            [class.relation-drag-source]="
+                                draggingFromIssue()?.idIssuePublic === row.issue.idIssuePublic
+                            "
+                        >
+                            @if (isRelationMode()) {
+                                <td class="drag-col">
+                                    <span
+                                        class="drag-handle"
+                                        draggable="true"
+                                        (dragstart)="onDragStart($event, row.issue)"
+                                    >
+                                        <tabler-icon icon="grip-vertical" [size]="16" />
+                                    </span>
+                                </td>
+                            }
+                            <td class="id-col ui-color-text-muted">
+                                #{{ row.issue.idIssuePublic }}
+                            </td>
+                            <td>
+                                <span class="title-cell">
+                                    <a
+                                        [routerLink]="[
+                                            '/project',
+                                            row.issue.idProject,
+                                            'issue',
+                                            row.issue.idIssuePublic
+                                        ]"
+                                    >
+                                        {{ row.issue.title }}
+                                    </a>
+                                    @if (isRelationMode() && (row.issue.relationCount ?? 0) > 0) {
+                                        <span
+                                            class="relation-badge"
+                                            (click)="onToggleRelations(row.issue.idIssuePublic)"
+                                        >
+                                            <tabler-icon icon="link" [size]="12" />
+                                            {{ row.issue.relationCount }}
+                                        </span>
+                                    }
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-1">
+                                    <app-severity-circle
+                                        [color]="row.severity?.color"
+                                    ></app-severity-circle>
+                                    <span>{{ row.severity?.title ?? ('NONE' | translate) }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <app-state-badge [state]="row.state" size="s"></app-state-badge>
+                            </td>
+                            <td>
+                                <span class="flex items-center gap-1">
+                                    @if (row.assigned) {
+                                        <app-avatar
+                                            [height]="1.75"
+                                            [width]="1.75"
+                                            [name]="row.assigned.name"
+                                            [bgColor]="row.assigned.colorAvatarBg"
+                                        ></app-avatar>
+                                        <span>{{ row.assigned?.name }}</span>
+                                    } @else {
+                                        <span class="unknown-avatar">?</span>
+                                        <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
+                                    }
+                                </span>
+                            </td>
+                            <td>
+                                {{ row.issue.updateAt | date: 'mediumDate' }}&nbsp;{{
+                                    row.issue.updateAt | date: 'shortTime'
+                                }}
+                            </td>
+                            <td class="text-center">
+                                <app-quality-badge
+                                    [score]="row.issue.qualityScore"
+                                ></app-quality-badge>
+                            </td>
+                            @if (isRelationMode()) {
+                                <td class="action-column"></td>
+                            }
+                        </tr>
+
+                        @if (isDragging() && idIssueDragOver() === row.issue.idIssuePublic) {
+                            <tr
+                                class="drop-zone-row"
+                                (dragenter)="clearDragLeaveTimer()"
+                                (dragleave)="onDragLeave($event)"
+                                (dragover)="$event.preventDefault()"
+                            >
+                                <td [attr.colspan]="colCount()">
+                                    <app-issue-table-drop-zone
+                                        [targetIssue]="row.issue"
+                                        (relationDrop)="onDropZone($event)"
+                                        (zoneEnter)="clearDragLeaveTimer()"
+                                    ></app-issue-table-drop-zone>
+                                </td>
+                            </tr>
+                        }
+
+                        @if (!isDragging() && idsExtendedIssue().has(row.issue.idIssuePublic)) {
+                            @for (
+                                rel of row.relations;
+                                track rel.idIssueRelation;
+                                let isLast = $last
+                            ) {
+                                <tr class="relation-row" [class.relation-row--last]="isLast">
+                                    @if (isRelationMode()) {
+                                        <td class="drag-col tree-line"></td>
+                                    }
+                                    <td class="id-col ui-color-text-muted">
+                                        #{{ rel.ref.idIssuePublic }}
+                                    </td>
+                                    <td>
+                                        <span class="relation-label-text">
+                                            {{ rel.labelKey | translate }}
+                                        </span>
+                                        <a
+                                            [routerLink]="[
+                                                '/project',
+                                                idProject,
+                                                'issue',
+                                                rel.ref.idIssuePublic
+                                            ]"
+                                        >
+                                            {{ rel.ref.title }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-1">
+                                            @if (rel.severity) {
+                                                <app-severity-circle
+                                                    [color]="rel.severity.color"
+                                                ></app-severity-circle>
+                                                <span>{{ rel.severity.title }}</span>
+                                            } @else {
+                                                <app-severity-circle></app-severity-circle>
+                                                <span>{{ 'NONE' | translate }}</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <app-state-badge
+                                            [state]="rel.state"
+                                            size="s"
+                                        ></app-state-badge>
+                                    </td>
+                                    <td>
+                                        <span class="flex items-center gap-1">
+                                            @if (rel.assigned) {
+                                                <app-avatar
+                                                    [height]="1.75"
+                                                    [width]="1.75"
+                                                    [name]="rel.assigned.name"
+                                                    [bgColor]="rel.assigned.colorAvatarBg"
+                                                ></app-avatar>
+                                                <span>{{ rel.assigned.name }}</span>
+                                            } @else {
+                                                <span class="unknown-avatar">?</span>
+                                                <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
+                                            }
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {{ rel.ref.updateAt | date: 'mediumDate' }}&nbsp;{{
+                                            rel.ref.updateAt | date: 'shortTime'
+                                        }}
+                                    </td>
+                                    <td class="text-center">
+                                        <app-quality-badge
+                                            [score]="rel.ref.qualityScore"
+                                        ></app-quality-badge>
+                                    </td>
+                                    <td class="action-column">
+                                        <ui-button
+                                            variant="text"
+                                            severity="danger"
+                                            size="small"
+                                            (click)="onDeleteRelation(row.issue, rel)"
+                                        >
+                                            <tabler-icon icon="x" [size]="14" />
+                                        </ui-button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="flex flex-col items-center gap-1 py-2">
+            @if (canLoadMore()) {
+                <ui-button
+                    type="button"
+                    size="small"
+                    variant="text"
+                    [loading]="isLoading()"
+                    [label]="'LOAD_MORE' | translate"
+                    (click)="onLoadMore()"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </ui-button>
+            }
+            <span class="text-sm ui-color-text-muted">{{ rows().length }} / {{ total() }}</span>
+        </div>
+    </div>
+
+    <!-- Quick actions context menu -->
+    <app-issue-quick-actions
+        #quickActions
+        (splitRequested)="onSplitRequested($event)"
+    ></app-issue-quick-actions>
+
+    <!-- Split dialog -->
+    @if (isSplitDialogOpen() && splitIssue()) {
+        <app-split-dialog
+            [idProject]="splitIssue().idProject"
+            [issue]="splitIssue()"
+            (accepted)="onSplitAccepted($event)"
+            (cancelled)="onSplitCancelled()"
+        ></app-split-dialog>
+    }
+
+    <!-- Lag dialog -->
+    <ui-dialog
+        [visible]="showLagDialog()"
+        (visibleChange)="showLagDialog.set($event)"
+        [header]="'RELATION.ADD_LAG' | translate"
+        width="22rem"
+        [closable]="false"
+    >
+        <div class="flex flex-col gap-2 pt-2">
+            <label>{{ 'RELATION.LAG_MINUTES' | translate }}</label>
+            <input
+                uiInput
+                type="number"
+                [ngModel]="lagMinutes()"
+                (ngModelChange)="lagMinutes.set($event)"
+                min="0"
+            />
+        </div>
+        <ng-template #footer>
+            <ui-button
+                [label]="'CANCEL' | translate"
+                severity="secondary"
+                (click)="onCancelLag()"
+            ></ui-button>
+            <ui-button [label]="'CONFIRM' | translate" (click)="onConfirmLag()"></ui-button>
+        </ng-template>
+    </ui-dialog>
+</div>

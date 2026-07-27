@@ -1,0 +1,52 @@
+upstream rurdesk_api {
+    server rurdesk_api:1000;
+}
+
+upstream rurdesk_client {
+    server rurdesk_client:1000;
+}
+
+server {
+    listen 80;
+
+    # Route /mcp requests to the API (MCP is now mounted on the same port as
+    # REST, not a separate :8081 listener). SSE — no buffering.
+    location /mcp {
+        proxy_pass http://rurdesk_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header Authorization $http_authorization;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 24h;
+        chunked_transfer_encoding on;
+    }
+
+    # Route /api requests to rurdesk_api
+    location /api/ {
+        proxy_pass http://rurdesk_api;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # AI endpoints (kickstarter/quality/split) can run for minutes on slow
+        # cloud or large local models. nginx defaults to 60s, which would cut the
+        # request off well before the API's own AI_TIMEOUT_SECONDS (default 300s).
+        # Keep this comfortably above AI_TIMEOUT_SECONDS.
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+
+    # All other requests go to rurdesk_client
+    location / {
+        proxy_pass http://rurdesk_client;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+    }
+}

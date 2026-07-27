@@ -1,0 +1,188 @@
+.settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-s, 8px);
+    min-width: 14rem;
+}
+
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space-m, 16px);
+}
+
+.settings-label {
+    font-size: var(--font-size-s, 0.875rem);
+}
+
+.drag-col {
+    width: 2rem;
+    padding-inline: var(--ui-space-xs, 4px);
+}
+
+// Thin id column — shrinks to its content (no fixed width) so it never eats
+// space the way the date column does.
+.id-col {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--ui-color-text-muted);
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.title-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+}
+
+.relation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-xs);
+    padding: var(--ui-space-xs) var(--ui-space);
+    border-radius: 999px;
+    font-size: var(--font-size-s);
+    background-color: var(--ui-color-primary-weak-border);
+    color: var(--ui-color-primary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s;
+
+    &:hover {
+        background-color: var(--ui-brand-200);
+    }
+}
+
+.relation-drag-source {
+    opacity: 0.4;
+}
+
+.drop-zone-row td {
+    padding: 0;
+    background-color: var(--ui-color-surface-hover, #f8fafc);
+}
+
+.relation-row td {
+    padding-block: var(--ui-space-xs, 4px);
+    background-color: var(--ui-color-canvas, #f9fafb);
+    border-top: none;
+}
+
+// Tree connector lines on the drag-col of relation rows.
+// ├─ for non-last items (vertical line runs full height + horizontal stub).
+// └─ for the last item (vertical line runs to mid-point only).
+.relation-row .tree-line {
+    position: relative;
+
+    // Vertical segment
+    &::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        border-left: 1px solid var(--ui-color-border);
+    }
+
+    // Horizontal stub at the mid-point
+    &::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 50%;
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+}
+
+// Last relation row: clip the vertical line at the mid-point (└ shape)
+.relation-row--last .tree-line::before {
+    bottom: 50%;
+}
+
+.relation-label-text {
+    font-size: var(--font-size-xs, 0.75rem);
+    color: var(--ui-color-text-muted);
+    margin-right: var(--ui-space-xs, 4px);
+}
+
+.action-column {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    text-align: right;
+    padding-inline: var(--ui-space-xs, 4px);
+}
+
+.unknown-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 1rem;
+    background: var(--ui-surface-100);
+    border: 1px solid var(--ui-surface-300);
+    color: var(--ui-surface-600);
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+// Keyboard row highlight (list j/k/↑↓ navigation via the command palette's HotkeyService).
+tr.row--active {
+    background: color-mix(in srgb, var(--ui-color-primary) 12%, transparent);
+    box-shadow: inset 3px 0 0 0 var(--ui-color-primary);
+    outline: none;
+}
+
+// One-shot "this just changed" pulse — the shared primary ring (same signal as
+// kanban tiles / gantt bars / calendar events, see ui/util/motion.ts).
+//
+// A full-width row sits flush against the table's outer border, and the scroll
+// viewport clips there, so an OUTSET ring only shows where it overhangs into
+// free space: top and bottom (never clipped). Its left/right edges are clipped
+// flush and would be invisible — so we pair it with an INSET ring that draws the
+// border just inside the left/right edges, keeping the frame visible all the way
+// round without a viewport gutter (a gutter would push the sticky header off the
+// edge — a visible inset we explicitly avoid).
+//
+// z-index lifts the pulsing row ABOVE the sticky header (which is z-index 1):
+// the first row sits flush under the header, so without this the ring's and
+// glow's upward overhang would hide beneath the opaque header. The trade — a
+// pulsing row scrolled up under the header briefly paints over it — is rare
+// (the default sort, updateAt desc, floats an edited row to the top where it's
+// in view) and short-lived (0.7s), which is why the row wins over the header
+// here rather than the other way round.
+tr.row--pulsed {
+    position: relative;
+    z-index: 2;
+    animation: row-pulse 0.7s ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
+}
+
+@keyframes row-pulse {
+    from {
+        box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 55%, transparent),
+            inset 0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 55%, transparent),
+            0 0 12px 2px color-mix(in srgb, var(--ui-color-primary) 30%, transparent);
+    }
+    to {
+        box-shadow:
+            0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 0%, transparent),
+            inset 0 0 0 3px color-mix(in srgb, var(--ui-color-primary) 0%, transparent),
+            0 0 12px 2px color-mix(in srgb, var(--ui-color-primary) 0%, transparent);
+    }
+}

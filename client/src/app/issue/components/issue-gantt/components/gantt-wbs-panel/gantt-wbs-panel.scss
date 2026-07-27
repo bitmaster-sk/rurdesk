@@ -1,0 +1,171 @@
+.wbs-panel {
+    position: relative;
+    height: 100%;
+    border-right: 1px solid var(--ui-color-border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-height: 0;
+
+    &--header-spacer {
+        height: 56px;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--ui-color-border);
+        display: flex;
+        align-items: flex-end;
+        padding: 0 var(--ui-space-s);
+        gap: var(--ui-space-xs);
+    }
+
+    &--tab {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-xs);
+        padding: var(--ui-space-s) var(--ui-space);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        cursor: pointer;
+        white-space: nowrap;
+        transition:
+            color 0.15s,
+            border-color 0.15s;
+        margin-bottom: -1px;
+
+        &:hover {
+            color: var(--ui-color-text);
+        }
+
+        &--active {
+            color: var(--ui-color-primary);
+            border-bottom-color: var(--ui-color-primary);
+        }
+    }
+
+    &--tab-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1rem;
+        height: 1rem;
+        border-radius: 999px;
+        background: var(--ui-surface-200);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-xs);
+        font-weight: 600;
+        padding: 0 var(--ui-space-xs);
+    }
+
+    &--scroll {
+        flex: 1;
+        min-height: 0;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    &--empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        padding: var(--ui-space-l);
+        text-align: center;
+    }
+
+    &--resize-handle {
+        position: absolute;
+        top: 0;
+        right: -3px;
+        bottom: 0;
+        width: 6px;
+        cursor: ew-resize;
+        z-index: 20;
+
+        &:hover {
+            background: var(--ui-color-primary);
+            opacity: 0.3;
+        }
+    }
+}
+
+.wbs-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: 0 var(--ui-space);
+    cursor: pointer;
+    border-bottom: 1px solid var(--ui-color-surface-hover);
+    box-sizing: border-box;
+
+    &:hover,
+    &--hovered {
+        background: var(--ui-color-highlight);
+    }
+
+    &--backlog {
+        opacity: 0.7;
+    }
+
+    &--selected {
+        background: var(--ui-color-highlight);
+        box-shadow: inset 2px 0 0 var(--ui-color-primary);
+    }
+
+    &--severity {
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--row-sev-color, var(--ui-surface-300));
+    }
+
+    &--title {
+        flex: 1;
+        font-size: var(--font-size-s);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--ui-color-text);
+    }
+
+    &--meta {
+        display: flex;
+        gap: var(--ui-space);
+        flex-shrink: 0;
+        align-items: center;
+    }
+
+    &--badge {
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 1px 3px;
+        border-radius: 2px;
+        white-space: nowrap;
+
+        &--severity {
+            background: color-mix(in srgb, var(--sev) 12%, transparent);
+            color: var(--sev);
+        }
+    }
+
+    &--unknown-avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        background: var(--ui-color-surface-hover);
+        border: 1px solid var(--ui-surface-300);
+        color: var(--ui-color-text-muted);
+        font-weight: 600;
+        font-size: var(--font-size-xs);
+        flex-shrink: 0;
+    }
+}

@@ -1,0 +1,57 @@
+.notif-shell {
+    width: 50vw;
+    height: 70vh;
+}
+
+//####################################################
+//## LEFT PANEL
+//####################################################
+.notification-group-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    gap: var(--ui-space);
+    padding: var(--ui-space);
+    border-radius: var(--ui-radius-sm);
+    background: transparent;
+    text-align: left;
+    font-weight: 500;
+    color: var(--ui-color-text);
+    transition: background 0.12s;
+    cursor: pointer;
+    border: none;
+
+    &:hover {
+        background: var(--ui-surface-100);
+    }
+
+    &.active {
+        background: var(--ui-brand-50);
+        color: var(--ui-brand-500);
+    }
+}
+
+.notification-section-label {
+    font-size: var(--font-size-s);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ui-color-text-muted);
+    padding: var(--ui-space);
+}
+
+//####################################################
+//## RIGHT PANEL
+//####################################################
+
+.notification-mark-all-read-btn {
+    width: 1.6rem;
+    height: 1.6rem;
+}
+
+.notif-empty {
+    color: var(--ui-color-text-muted);
+    font-size: 13px;
+    padding: 32px;
+}

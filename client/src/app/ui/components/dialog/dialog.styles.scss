@@ -1,0 +1,74 @@
+// <ui-dialog> modal chrome. ViewEncapsulation.None → plain global selectors,
+// @used by src/app/ui/ui.styles.scss. Reads --ui-dialog-* tokens (styles.scss).
+// ZERO PrimeNG dependency: no PrimeNG tokens (not even transitively) or classes.
+
+.ui-dialog__backdrop {
+    background: var(--ui-dialog-backdrop);
+}
+
+.ui-dialog {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: var(--ui-dialog-default-width);
+    max-width: calc(100vw - 2rem);
+    max-height: var(--ui-dialog-max-height);
+    background: var(--ui-dialog-bg);
+    color: var(--ui-dialog-fg);
+    border: 1px solid var(--ui-dialog-border);
+    border-radius: var(--ui-dialog-radius);
+    box-shadow: var(--ui-dialog-shadow);
+    overflow: hidden;
+}
+
+.ui-dialog__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: var(--ui-dialog-header-padding);
+}
+
+.ui-dialog__title {
+    font-weight: 600;
+    color: var(--ui-dialog-header-fg);
+}
+
+.ui-dialog__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0.25rem;
+    // Cancel the button's own padding so the × optically aligns to the same
+    // side gridline as the content body (larger hit target, no extra inset).
+    margin-inline-end: -0.25rem;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--ui-dialog-close-fg);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--ui-dialog-close-hover-bg);
+    }
+}
+
+.ui-dialog__content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--ui-dialog-content-padding);
+}
+
+.ui-dialog__content--flush {
+    padding: 0;
+    height: 100%;
+}
+
+.ui-dialog__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--ui-dialog-footer-gap);
+    padding: var(--ui-dialog-footer-padding);
+}

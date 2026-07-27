@@ -1,0 +1,109 @@
+<div class="feed-container">
+    <div class="feed-header">
+        <span class="feed-title">Activity</span>
+        <span class="chip" [class.active]="activeFilters().size === 0" (click)="setFilter('all')">
+            All
+        </span>
+        <span
+            class="chip"
+            [class.active]="activeFilters().has('comment')"
+            (click)="setFilter('comment')"
+        >
+            <tabler-icon icon="message" [size]="14" />
+            Comments
+        </span>
+        <span class="chip" [class.active]="activeFilters().has('time')" (click)="setFilter('time')">
+            <tabler-icon icon="clock" [size]="14" />
+            Time
+        </span>
+    </div>
+
+    <div class="feed-scroll" #scrollContainer>
+        @for (group of displayGroups(); track group.item) {
+            @if (group.showSeparator) {
+                <div class="date-separator">
+                    <div class="separator-line"></div>
+                    <span class="separator-label">{{ group.dateLabel }}</span>
+                    <div class="separator-line"></div>
+                </div>
+            }
+            @if (group.item.type === 'comment') {
+                @if (!group.item.data.anchor) {
+                    <app-activity-comment-item
+                        [message]="group.item.data"
+                        [isOwnMessage]="group.item.data.creator.idUser === currentUserId"
+                        [isEditing]="idMessageEdit() === group.item.data.idMessage"
+                        [anchoredChildren]="childrenByParent().get(group.item.data.idMessage) ?? []"
+                        [agentRun]="agentRun()"
+                        [isLatestPlanForStage]="group.item.data.idMessage === idLatestPlanMessage()"
+                        [candidates]="usersMap()"
+                        [mentionCandidates]="mentionCandidates()"
+                        (editRequest)="onEditRequest(group.item.data)"
+                        (editSave)="onEditSave(group.item.data, $event)"
+                        (editCancel)="onEditCancel()"
+                        (addAnchor)="onAddAnchor(group.item.data, $event)"
+                        (approve)="approveAgentRun.emit()"
+                        (approveMockup)="approveAgentRunMockup.emit($event)"
+                    ></app-activity-comment-item>
+                    @if (anchorTarget()?.idParentMessage === group.item.data.idMessage) {
+                        <div class="anchor-editor">
+                            <div class="anchor-editor-header">
+                                <span>
+                                    {{
+                                        'MESSAGE.ANCHOR.REPLYING_TO'
+                                            | translate
+                                                : {
+                                                      start: anchorTarget()!.lineStart,
+                                                      end: anchorTarget()!.lineEnd,
+                                                      author: group.item.data.creator.name
+                                                  }
+                                    }}
+                                </span>
+                                <button
+                                    type="button"
+                                    class="anchor-cancel-btn"
+                                    [attr.aria-label]="'CANCEL' | translate"
+                                    (click)="onCancelAnchor()"
+                                >
+                                    <tabler-icon icon="x" [size]="14" />
+                                </button>
+                            </div>
+                            <app-message-editor
+                                [mentionCandidates]="mentionCandidates()"
+                                (messageChange)="onMessage($event)"
+                            ></app-message-editor>
+                        </div>
+                    }
+                } @else if (group.item.data.anchor?.isOutdated) {
+                    <div class="anchor-outdated-row">
+                        ↳
+                        {{
+                            'MESSAGE.ANCHOR.LINES'
+                                | translate
+                                    : {
+                                          start: group.item.data.anchor.anchorLineStart,
+                                          end: group.item.data.anchor.anchorLineEnd
+                                      }
+                        }}
+                        — {{ group.item.data.creator.name }}
+                    </div>
+                }
+            } @else if (group.item.type === 'time') {
+                <app-activity-time-item
+                    [track]="group.item.data"
+                    [user]="getUserForTrack(group.item.data)"
+                ></app-activity-time-item>
+            }
+        }
+        @if (displayGroups().length === 0) {
+            <div class="feed-empty">No activity yet.</div>
+        }
+    </div>
+
+    <div class="feed-editor">
+        <app-message-editor
+            [mentionCandidates]="mentionCandidates()"
+            (messageChange)="onMessage($event)"
+        ></app-message-editor>
+    </div>
+</div>

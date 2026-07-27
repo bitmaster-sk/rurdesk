@@ -1,0 +1,19 @@
+// Global styles for ui-divider (aggregated into ../../ui.styles.scss and loaded
+// eagerly via src/styles.scss). Uses `ui-divider` (not :host) as it is compiled
+// globally, not scoped. Consumes the --ui-color-border token.
+
+ui-divider {
+    box-sizing: border-box;
+    border: 0 solid var(--ui-color-border);
+}
+
+ui-divider.ui-divider--horizontal {
+    display: block;
+    border-top-width: 1px;
+}
+
+ui-divider.ui-divider--vertical {
+    display: inline-block;
+    align-self: stretch;
+    border-left-width: 1px;
+}

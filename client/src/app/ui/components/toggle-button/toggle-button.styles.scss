@@ -1,0 +1,11 @@
+// ui-toggle-button GLOBAL styles — co-located but @used by ui/ui.styles.scss.
+// The visual is fully carried by the reused .ui-button classes; this only makes
+// the host lay out like a button (inline-flex) and the inner button fill it.
+
+ui-toggle-button {
+    display: inline-flex;
+}
+
+ui-toggle-button .ui-button {
+    width: 100%;
+}

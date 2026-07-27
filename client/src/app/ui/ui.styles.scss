@@ -1,0 +1,34 @@
+// Aggregated global styles for all ui-* design-system primitives.
+//
+// @used by src/styles.scss so these load eagerly & globally — the same approach
+// PrimeNG uses (components are ViewEncapsulation.None + styles injected globally
+// by its style engine). None of the ui-* components carry a `styleUrl`; their
+// styles live in the co-located `*.styles.scss` files @used below. This avoids
+// the FOUC that lazy per-instance style injection caused, and lets class-based
+// one-offs (e.g. anchor-as-button `<a class="ui-button">`) reuse the styles.
+
+@use 'components/button/button.styles';
+@use 'components/input/input.styles';
+// flatpickr override — flatpickr.css is loaded earlier via angular.json `styles`,
+// so this (compiled into styles.scss, which loads after) wins the cascade.
+@use 'components/datepicker/datepicker.styles';
+@use 'components/divider/divider.styles';
+@use 'components/loader/loader.styles';
+@use 'components/message/message.styles';
+@use 'components/odometer/odometer.styles';
+@use 'components/tag/tag.styles';
+@use 'components/toast/toast.styles';
+@use 'components/badge/badge.styles';
+@use 'components/confirm-popup/confirm-popup.styles';
+@use 'components/select/select.styles';
+@use 'components/popover/popover.styles';
+@use 'components/menu/menu.styles';
+@use 'components/tooltip/tooltip.styles';
+@use 'components/dialog/dialog.styles';
+@use 'components/checkbox/checkbox.styles';
+@use 'components/color/color.styles';
+@use 'components/toggle/toggle.styles';
+@use 'components/toggle-button/toggle-button.styles';
+@use 'components/choice/choice.styles';
+@use 'components/table/table.styles';
+@use 'components/save-status/save-status.styles';

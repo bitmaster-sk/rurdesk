@@ -1,0 +1,95 @@
+.cred-card {
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    padding: 1rem;
+
+    &:not(:first-child) {
+        margin-top: 1rem;
+    }
+}
+
+.cred-card__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.cred-card__title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.cred-card__actions {
+    display: flex;
+    gap: 0.25rem;
+    flex: 0 0 auto;
+}
+
+// "Shown once" warning — amber, clearly distinct from the metadata.
+.cred-notice {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    background: var(--ui-yellow-50);
+    border: 1px solid var(--ui-yellow-200);
+    color: var(--ui-yellow-700);
+    border-radius: var(--ui-radius-md);
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    margin-bottom: 0.6rem;
+
+    .ti {
+        flex: 0 0 auto;
+        margin-top: 1px;
+    }
+
+    .env {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-weight: 700;
+    }
+}
+
+.cred-code {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.cred-code code {
+    flex: 1;
+    min-width: 0;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+    background: var(--ui-surface-100);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    padding: 0.5rem 0.6rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cred-meta {
+    margin-top: 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.82rem;
+    color: var(--ui-color-text-muted);
+    word-break: break-all;
+
+    b {
+        color: var(--ui-color-text);
+        font-weight: 600;
+    }
+}
+
+.cred-empty {
+    margin: 0 0 0.6rem;
+    color: var(--ui-color-text-muted);
+    font-size: 0.875rem;
+}

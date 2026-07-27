@@ -1,0 +1,40 @@
+<div class="form w-full" [formGroup]="form">
+    <div class="form-body">
+        <div class="ui-field">
+            <label for="project-title" class="required">{{ 'TITLE' | translate }}</label>
+            <input
+                formControlName="name"
+                type="text"
+                uiInput
+                [uiSaveStatus]="saveStatus"
+                class="w-full"
+                id="project-title"
+            />
+        </div>
+    </div>
+    @if (!saveOnBlur) {
+        <div class="form-footer">
+            <ui-button
+                [disabled]="!form.valid"
+                severity="primary"
+                [label]="'SAVE' | translate"
+                (click)="onSave()"
+            >
+                <tabler-icon icon="device-floppy" [size]="16" />
+            </ui-button>
+            @if (!project?.idProject) {
+                <ui-button
+                    [disabled]="!form.valid"
+                    severity="primary"
+                    [label]="'PROJECT_BUILDER.AI_PROMPT.SAVE_GENERATE' | translate"
+                    (click)="onSaveGenerate()"
+                >
+                    <tabler-icon icon="sparkles" [size]="16" />
+                </ui-button>
+            }
+            <ui-button severity="secondary" [label]="'CANCEL' | translate" (click)="onCancel()">
+                <tabler-icon icon="cancel" [size]="16" />
+            </ui-button>
+        </div>
+    }
+</div>

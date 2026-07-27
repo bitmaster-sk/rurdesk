@@ -1,0 +1,37 @@
+/*
+ * Tailwind v4 entry (loaded via angular.json `styles`, before styles.scss).
+ * Tailwind owns layout and spacing only. Colours, font sizes and borders stay
+ * on our own layer (--ui-* / .ui-color-* / .text-* / .border) — the resets in
+ * @theme below enforce that boundary.
+ */
+@import 'tailwindcss';
+
+@theme {
+    /* An explicit, closed spacing scale. `--spacing: initial` disables the
+       dynamic multiplier, so an undefined step (p-9, p-2.5, …) generates no
+       class at all and fails visibly, instead of resolving to a value nobody
+       chose. */
+    --spacing: initial;
+    --spacing-0: 0;
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 1rem;
+    --spacing-4: 1.5rem;
+    --spacing-5: 2rem;
+    --spacing-6: 3rem;
+    --spacing-7: 4rem;
+    --spacing-8: 5rem;
+
+    /* No Tailwind colour palette — colours live on --ui-* / .ui-color-* / .ui-bg-*.
+       Prevents accidental bg-red-500 etc. and keeps the config free of our palette. */
+    --color-*: initial;
+
+    /* No Tailwind font sizes — text sizing stays on our .text-* (bound to
+       --font-size-* tokens). Prevents text-xl/2xl with mismatched line-heights. */
+    --text-*: initial;
+
+    --breakpoint-sm: 576px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 992px;
+    --breakpoint-xl: 1200px;
+}

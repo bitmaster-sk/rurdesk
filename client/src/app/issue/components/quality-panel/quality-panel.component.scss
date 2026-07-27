@@ -1,0 +1,174 @@
+.quality-panel {
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    overflow: hidden;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: var(--ui-space) var(--ui-space-m);
+        background: var(--ui-color-canvas);
+        cursor: pointer;
+        user-select: none;
+    }
+
+    &__chevron {
+        display: inline-flex;
+        color: var(--ui-color-text-muted);
+        transition: transform 0.15s ease;
+    }
+
+    // Matches the agent run card's `.avatar` so all three panel headers
+    // (Quality / Agent run / PR) share the same circular icon treatment.
+    &__icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--ui-color-primary-weak-border);
+        color: var(--ui-color-primary-strong);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    &--collapsed &__chevron {
+        transform: rotate(-90deg);
+    }
+
+    &__title {
+        font-weight: 500;
+    }
+
+    &__icon {
+        padding: 0 5px;
+    }
+
+    &__status {
+        // `flex: 1` makes the status text take all remaining space between
+        // title and actions, anchoring the Check Quality button to the right
+        // edge of the header.
+        flex: 1;
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+    }
+
+    &__band {
+        font-weight: 600;
+
+        &--poor {
+            color: #e24c4c;
+        }
+        &--acceptable {
+            color: #f0a500;
+        }
+        &--good {
+            color: #2e7d32;
+        }
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        margin-left: auto;
+    }
+
+    &__toggle {
+        color: var(--ui-color-text-muted);
+    }
+
+    &__error {
+        padding: var(--ui-space) var(--ui-space-m);
+        color: #e24c4c;
+        background: #fff5f5;
+    }
+
+    &__empty {
+        padding: var(--ui-space-m);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        line-height: 1.5;
+    }
+
+    &__body {
+        padding: var(--ui-space-m);
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-m);
+    }
+
+    &__dimensions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    &__dim {
+        display: grid;
+        grid-template-columns: 8rem 1fr 2rem;
+        align-items: center;
+        gap: var(--ui-space);
+    }
+
+    &__dim-label {
+        color: var(--ui-color-text-muted);
+    }
+
+    &__dim-bar {
+        height: 6px;
+        background: var(--ui-surface-200);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+
+    &__dim-fill {
+        height: 100%;
+        background: var(--ui-color-primary);
+        border-radius: 3px;
+        transition: width 0.3s ease;
+    }
+
+    &__dim-value {
+        text-align: right;
+        font-weight: 600;
+    }
+
+    &__section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space);
+    }
+
+    &__section-title {
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--ui-color-text-muted);
+        letter-spacing: 0.05em;
+    }
+
+    &__problems {
+        margin: 0;
+        padding-left: 1.2rem;
+
+        li + li {
+            margin-top: 0.25rem;
+        }
+    }
+
+    &__suggestions-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-m);
+    }
+
+    &__footer {
+        color: var(--ui-color-text-muted);
+        text-align: right;
+        font-size: var(--font-size-xs);
+    }
+}

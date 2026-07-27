@@ -1,0 +1,98 @@
+<div
+    class="palette"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'COMMAND.PALETTE_LABEL' | translate"
+>
+    <div class="palette__in">
+        <span class="palette__mode">
+            <tabler-icon icon="command" class="palette__mode-ic"></tabler-icon>
+            {{ labelKeys[mode()] | translate }}
+        </span>
+        <input
+            #input
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-label]="'COMMAND.INPUT_LABEL' | translate"
+            [attr.placeholder]="'COMMAND.PLACEHOLDER' | translate"
+            [value]="query()"
+            (input)="onInput($any($event.target).value)"
+            (keydown)="onKeydown($event)"
+        />
+        <span class="palette__esc">esc</span>
+    </div>
+
+    <!-- SR-only live region announces the result count on each query (design §Accessibility). -->
+    <span class="sr-only" aria-live="polite">
+        {{ 'COMMAND.RESULT_COUNT' | translate: { count: flat().length } }}
+    </span>
+
+    <div class="palette__body" role="listbox">
+        @for (group of groups(); track group.heading) {
+            <div class="palette__heading">{{ group.heading }}</div>
+            @for (item of group.items; track item.id) {
+                <div
+                    class="palette__item"
+                    [class.sel]="isSelected(item)"
+                    [attr.data-item]="item.id"
+                    role="option"
+                    [attr.aria-selected]="isSelected(item)"
+                    (click)="onItemClick(item)"
+                >
+                    <span class="palette__ico"><tabler-icon [icon]="item.icon"></tabler-icon></span>
+                    <span class="palette__text">
+                        <span class="palette__title">
+                            @for (seg of item.highlight; track $index) {
+                                @if (seg.hit) {
+                                    <mark>{{ seg.text }}</mark>
+                                } @else {
+                                    <span>{{ seg.text }}</span>
+                                }
+                            }
+                        </span>
+                        @if (item.subtitle) {
+                            <span class="palette__sub">{{ item.subtitle }}</span>
+                        }
+                    </span>
+                </div>
+            }
+        }
+        @if (flat().length === 0) {
+            <div class="palette__empty">{{ 'COMMAND.NO_RESULTS' | translate }}</div>
+        } @else if (groups().length === 0 && createItem()) {
+            <div
+                class="palette__item sel"
+                [attr.data-item]="createItem()!.id"
+                role="option"
+                (click)="onItemClick(createItem()!)"
+            >
+                <span class="palette__ico"><tabler-icon icon="plus"></tabler-icon></span>
+                <span class="palette__text">
+                    <span class="palette__title">{{ createItem()!.title }}</span>
+                </span>
+            </div>
+        }
+    </div>
+
+    <div class="palette__foot">
+        <span class="palette__fk">
+            <kbd>↑</kbd>
+            <kbd>↓</kbd>
+            {{ 'COMMAND.HELP.MOVE' | translate }}
+        </span>
+        <span class="palette__fk">
+            <kbd>↵</kbd>
+            {{ 'COMMAND.HELP.RUN' | translate }}
+        </span>
+        <span class="palette__fk">
+            <kbd>⌘</kbd>
+            <kbd>↵</kbd>
+            {{ 'COMMAND.HELP.RUN_KEEP_OPEN' | translate }}
+        </span>
+        <span class="palette__fk">
+            <kbd>⇥</kbd>
+            {{ 'COMMAND.HELP.COMPLETE' | translate }}
+        </span>
+    </div>
+</div>

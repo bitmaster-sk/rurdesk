@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 960 560"
+   font-family="'Spline Sans Mono','SFMono-Regular',Menlo,monospace"
+   version="1.1"
+   id="svg40"
+   sodipodi:docname="architecture.svg"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview40"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.73020833"
+     inkscape:cx="480"
+     inkscape:cy="280.05706"
+     inkscape:window-width="1392"
+     inkscape:window-height="1212"
+     inkscape:window-x="345"
+     inkscape:window-y="284"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg40" />
+  <style
+     id="style1">
+    .box { fill:#ffffff; stroke:#1a3263; stroke-width:1.5; }
+    .box-ext { fill:#ffffff; stroke:#8c9ab8; stroke-width:1.5; stroke-dasharray:6 4; }
+    .box-accent { fill:#fef5ec; stroke:#b85814; stroke-width:1.5; }
+    .box-ghost { fill:#fdf1e4; stroke:#d99a6c; stroke-width:1.5; }
+    .box-dark { fill:#1a3263; stroke:#1a3263; }
+    .title { font-size:15px; font-weight:600; fill:#1a3263; }
+    .title-light { font-size:15px; font-weight:600; fill:#ffffff; }
+    .sub { font-size:11px; fill:#75665c; }
+    .sub-light { font-size:11px; fill:#b7c2dc; }
+    .label { font-size:10.5px; fill:#9a480e; font-weight:600; }
+    .flow { stroke:#1a3263; stroke-width:1.5; fill:none; marker-end:url(#arrow); }
+    .flow-accent { stroke:#b85814; stroke-width:1.5; fill:none; marker-end:url(#arrow-accent); stroke-dasharray:5 4; }
+    .lane { font-size:10px; fill:#c8b8ab; letter-spacing:0.18em; }
+    .lane-ext { font-size:10px; fill:#a9b3c7; letter-spacing:0.18em; }
+    .count { font-size:12px; font-weight:600; fill:#b85814; }
+  </style>
+  <defs
+     id="defs2">
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="9"
+       refY="5"
+       markerWidth="7"
+       markerHeight="7"
+       orient="auto-start-reverse">
+      <path
+         d="M0 0L10 5L0 10z"
+         fill="#1a3263"
+         id="path1" />
+    </marker>
+    <marker
+       id="arrow-accent"
+       viewBox="0 0 10 10"
+       refX="9"
+       refY="5"
+       markerWidth="7"
+       markerHeight="7"
+       orient="auto-start-reverse">
+      <path
+         d="M0 0L10 5L0 10z"
+         fill="#b85814"
+         id="path2" />
+    </marker>
+  </defs>
+  <rect
+     width="960"
+     height="560"
+     fill="#fdfbf9"
+     rx="16"
+     id="rect2" />
+  <!-- compose stack boundary: tracker + gateways only -->
+  <rect
+     x="32"
+     y="176"
+     width="666"
+     height="240"
+     fill="none"
+     stroke="#e6dbd1"
+     stroke-width="1.5"
+     stroke-dasharray="8 6"
+     rx="14"
+     id="rect3" />
+  <text
+     x="48"
+     y="200"
+     class="lane"
+     id="text3">DOCKER COMPOSE STACK</text>
+  <!-- browser -->
+  <rect
+     x="48"
+     y="24"
+     width="236"
+     height="54"
+     class="box"
+     rx="10"
+     id="rect4" />
+  <text
+     x="68"
+     y="48"
+     class="title"
+     id="text4">Browser</text>
+  <text
+     x="68"
+     y="66"
+     class="sub"
+     id="text5">Angular SPA · WebSocket</text>
+  <!-- external TLS proxy -->
+  <rect
+     x="48"
+     y="98"
+     width="236"
+     height="72"
+     class="box-ext"
+     rx="10"
+     id="rect5" />
+  <text
+     x="68"
+     y="122"
+     class="title"
+     id="text6">TLS proxy</text>
+  <text
+     x="68"
+     y="142"
+     class="sub"
+     id="text7">external LB or ingress</text>
+  <text
+     x="68"
+     y="160"
+     class="sub"
+     id="text8">must preserve Host header</text>
+  <!-- rurdesk (single production image) -->
+  <rect
+     x="48"
+     y="216"
+     width="236"
+     height="116"
+     class="box-dark"
+     rx="10"
+     id="rect8" />
+  <text
+     x="68"
+     y="242"
+     class="title-light"
+     id="text9">rurdesk</text>
+  <text
+     x="68"
+     y="262"
+     class="sub-light"
+     id="text10">REST · WebSocket · MCP · SPA</text>
+  <text
+     x="68"
+     y="280"
+     class="sub-light"
+     id="text11">single image — one port :1000</text>
+  <text
+     x="68"
+     y="298"
+     class="sub-light"
+     id="text12">quality · kickstart · split</text>
+  <text
+     x="68"
+     y="316"
+     class="sub-light"
+     id="text13">agent scheduling · recovery</text>
+  <!-- in-API AI provider -->
+  <rect
+     x="430"
+     y="24"
+     width="250"
+     height="80"
+     class="box-accent"
+     rx="10"
+     id="rect13" />
+  <text
+     x="450"
+     y="50"
+     class="title"
+     id="text14">AI provider</text>
+  <text
+     x="450"
+     y="70"
+     class="sub"
+     id="text15">Anthropic · OpenAI · Gemini</text>
+  <text
+     x="450"
+     y="88"
+     class="sub"
+     id="text16">or local Ollama — no key</text>
+  <!-- agent gateways: stacked cards = one or many -->
+  <rect
+     x="446"
+     y="230"
+     width="234"
+     height="150"
+     class="box-ghost"
+     rx="10"
+     id="rect16" />
+  <rect
+     x="438"
+     y="223"
+     width="234"
+     height="150"
+     class="box-ghost"
+     rx="10"
+     id="rect17" />
+  <rect
+     x="430"
+     y="216"
+     width="234"
+     height="150"
+     class="box-accent"
+     rx="10"
+     id="rect18" />
+  <text
+     x="450"
+     y="242"
+     class="title"
+     id="text18">Agent gateway</text>
+  <text
+     x="450"
+     y="262"
+     class="sub"
+     id="text19">Goose agent</text>
+  <text
+     x="450"
+     y="280"
+     class="sub"
+     id="text20">per-run git worktrees</text>
+  <text
+     x="450"
+     y="298"
+     class="sub"
+     id="text21">local Ollama or provider key</text>
+  <text
+     x="450"
+     y="316"
+     class="sub"
+     id="text22">optional — one container each</text>
+  <text
+     x="450"
+     y="334"
+     class="sub"
+     id="text23">not published to the host</text>
+  <text
+     x="450"
+     y="356"
+     class="count"
+     id="text24">×N — add a gateway per agent</text>
+  <!-- external datastores -->
+  <rect
+     x="32"
+     y="440"
+     width="666"
+     height="96"
+     fill="none"
+     stroke="#e2e6ee"
+     stroke-width="1.5"
+     stroke-dasharray="8 6"
+     rx="14"
+     id="rect24" />
+  <text
+     x="48"
+     y="462"
+     class="lane-ext"
+     id="text25">MANAGED / OUTSIDE DOCKER</text>
+  <rect
+     x="48"
+     y="472"
+     width="290"
+     height="48"
+     class="box-ext"
+     rx="10"
+     id="rect25" />
+  <text
+     x="68"
+     y="492"
+     class="title"
+     id="text26">PostgreSQL</text>
+  <text
+     x="68"
+     y="510"
+     class="sub"
+     id="text27">tasks· users · runs</text>
+  <rect
+     x="366"
+     y="472"
+     width="290"
+     height="48"
+     class="box-ext"
+     rx="10"
+     id="rect27" />
+  <text
+     x="386"
+     y="492"
+     class="title"
+     id="text28">Redis</text>
+  <text
+     x="386"
+     y="510"
+     class="sub"
+     id="text29">sessions · cache · fan-out</text>
+  <!-- git host -->
+  <rect
+     x="730"
+     y="216"
+     width="200"
+     height="86"
+     class="box"
+     rx="10"
+     id="rect29" />
+  <text
+     x="750"
+     y="242"
+     class="title"
+     id="text30">Git host</text>
+  <text
+     x="750"
+     y="262"
+     class="sub"
+     id="text31">GitHub · GitLab · Gitea</text>
+  <text
+     x="750"
+     y="280"
+     class="sub"
+     id="text32">branches · pull requests</text>
+  <!-- flows: browser → tls → rurdesk -->
+  <path
+     class="flow"
+     d="M166 78 L166 98"
+     id="path32" />
+  <path
+     class="flow"
+     d="M166 170 L166 216"
+     id="path33" />
+  <!-- rurdesk → external datastores -->
+  <path
+     class="flow"
+     d="M120 332 L120 472"
+     id="path34" />
+  <path
+     class="flow"
+     d="M240 332 L240 390 L420 390 L420 472"
+     id="path35" />
+  <!-- rurdesk → in-API AI -->
+  <path
+     class="flow-accent"
+     d="M284 240 C344 240 384 118 428 80"
+     id="path36" />
+  <text
+     x="294"
+     y="136"
+     class="label"
+     id="text36">in-API AI</text>
+  <!-- rurdesk ↔ gateways -->
+  <path
+     class="flow-accent"
+     d="M284 250 L430 250"
+     id="path37" />
+  <text
+     x="315"
+     y="240"
+     class="label"
+     id="text37">stage_execute</text>
+  <path
+     class="flow-accent"
+     d="M430 296 L284 296"
+     id="path38" />
+  <text
+     x="309"
+     y="312"
+     class="label"
+     id="text38">MCP · callbacks</text>
+  <!-- gateway → git host -->
+  <path
+     class="flow"
+     d="M664 250 L730 250"
+     id="path39" />
+  <text
+     x="648"
+     y="205"
+     class="label"
+     id="text39">push branch · open PR</text>
+  <!-- git host → rurdesk -->
+  <path
+     class="flow"
+     d="M830 302 L830 426 L350 426 L350 322 L286 322"
+     id="path40" />
+  <text
+     x="560"
+     y="418"
+     class="label"
+     id="text40">PR diffs · status</text>
+</svg>

@@ -1,0 +1,48 @@
+@if (!multi) {
+    <ui-select
+        [inputId]="inputId"
+        class="state-dropdown"
+        [options]="states"
+        [ngModel]="value"
+        (ngModelChange)="onValueChange($event)"
+        [showClear]="true"
+        [placeholder]="placeholder"
+        [uiSaveStatus]="saveStatus"
+        optionLabel="name"
+        optionValue="idState"
+    >
+        <ng-template #selectedItem let-state>
+            <app-state-badge [state]="state" size="s"></app-state-badge>
+        </ng-template>
+
+        <ng-template #item let-state>
+            <app-state-badge [state]="state" size="s"></app-state-badge>
+        </ng-template>
+    </ui-select>
+} @else {
+    <ui-multiselect
+        [inputId]="inputId"
+        [options]="states"
+        class="state-dropdown"
+        optionLabel="name"
+        [placeholder]="placeholder"
+        [uiSaveStatus]="saveStatus"
+        [ngModel]="multiValue"
+        (ngModelChange)="onMultiValueChange($event)"
+    >
+        <ng-template #selectedItems let-values>
+            <div class="flex items-center gap-1">
+                @for (state of values; track state.idState) {
+                    <app-state-badge [state]="state" size="s"></app-state-badge>
+                    @if (!$last) {
+                        ,
+                    }
+                }
+            </div>
+        </ng-template>
+
+        <ng-template #item let-state>
+            <app-state-badge [state]="state" size="s"></app-state-badge>
+        </ng-template>
+    </ui-multiselect>
+}

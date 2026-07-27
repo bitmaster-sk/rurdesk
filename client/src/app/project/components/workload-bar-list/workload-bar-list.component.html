@@ -1,0 +1,47 @@
+@if (isEmpty()) {
+    <div class="text-sm ui-color-text-muted text-center p-6">
+        {{ 'NO_DATA_YET' | translate }}
+    </div>
+} @else {
+    <div class="flex flex-col gap-4 py-2">
+        @for (row of rows(); track row.name) {
+            <div class="flex items-center gap-2">
+                @if (row.isUnassigned) {
+                    <span class="unknown-avatar">?</span>
+                } @else {
+                    <app-avatar
+                        [name]="row.name"
+                        [bgColor]="row.bgColor"
+                        [height]="2.2"
+                        [width]="2.2"
+                        [radius]="1.1"
+                    ></app-avatar>
+                }
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-center gap-2 mb-1">
+                        <span
+                            class="text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                            [class.ui-color-text-muted]="row.isUnassigned"
+                            [class.font-italic]="row.isUnassigned"
+                        >
+                            {{ row.name }}
+                        </span>
+                        <span class="text-sm whitespace-nowrap">
+                            <span class="font-medium">{{ row.count }}</span>
+                            <span class="ui-color-text-muted text-xs ml-1">
+                                {{ 'STATS.OPEN_SUFFIX' | translate }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="workload-track">
+                        <div
+                            class="workload-fill"
+                            [style.width.%]="row.percent"
+                            [style.background]="row.bgColor || 'var(--ui-brand-500)'"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

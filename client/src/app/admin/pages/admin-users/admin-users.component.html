@@ -1,0 +1,144 @@
+<div class="h-full flex flex-col gap-4 p-4">
+    <section class="panel flex-1 min-h-0 flex flex-col">
+        <header class="panel-head flex justify-between items-center shrink-0">
+            <div class="panel-head-l flex items-center gap-2">
+                <tabler-icon icon="users" [size]="16" class="panel-icon" />
+                <div class="panel-title">{{ 'ADMIN.USERS' | translate }}</div>
+            </div>
+            <ui-button [label]="'ADMIN.CREATE_USER' | translate" (click)="onOpenCreate()">
+                <tabler-icon icon="plus" [size]="14" />
+            </ui-button>
+        </header>
+
+        <div class="panel-body panel-body--flush flex-1 min-h-0 flex flex-col">
+            <div class="ui-table-scroll">
+                <table class="ui-table w-full">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="drag-col"></th>
+                            <th scope="col">{{ 'NAME' | translate }}</th>
+                            <th scope="col">{{ 'ADMIN.EMAIL' | translate }}</th>
+                            <th scope="col">{{ 'ADMIN.TYPE' | translate }}</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (user of users(); track user.idUser) {
+                            <tr>
+                                <td class="drag-col">
+                                    <span
+                                        class="drag-handle"
+                                        draggable="true"
+                                        (dragstart)="onUserDragStart($event, user)"
+                                        (dragend)="onUserDragEnd()"
+                                    >
+                                        <tabler-icon icon="grip-vertical" [size]="16" />
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <app-avatar
+                                            [name]="user.name"
+                                            [bgColor]="user.colorAvatarBg"
+                                            [width]="1.75"
+                                            [height]="1.75"
+                                            [radius]="0.875"
+                                        />
+                                        <span>{{ user.name }}</span>
+                                    </div>
+                                </td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    @if (user.isBot) {
+                                        <ui-tag [value]="'ADMIN.BOT' | translate" severity="info" />
+                                    }
+                                    @if (user.isAdmin) {
+                                        <ui-tag
+                                            [value]="'ADMIN.ADMIN' | translate"
+                                            severity="success"
+                                        />
+                                    }
+                                    @if (!user.isBot && !user.isAdmin) {
+                                        <ui-tag
+                                            [value]="'ADMIN.USER' | translate"
+                                            severity="secondary"
+                                        />
+                                    }
+                                </td>
+                                <td class="flex gap-1 justify-end pr-2">
+                                    @if (!user.isBot) {
+                                        <ui-button
+                                            variant="text"
+                                            severity="secondary"
+                                            size="small"
+                                            [uiTooltip]="
+                                                (user.isAdmin ? 'ADMIN.DEMOTE' : 'ADMIN.PROMOTE')
+                                                    | translate
+                                            "
+                                            uiTooltipPosition="top"
+                                            (click)="onToggleAdmin(user)"
+                                        >
+                                            <tabler-icon
+                                                [icon]="user.isAdmin ? 'user-down' : 'user-up'"
+                                                [size]="14"
+                                            />
+                                        </ui-button>
+                                    }
+                                    @if (user.isBot) {
+                                        <ui-button
+                                            variant="text"
+                                            severity="secondary"
+                                            size="small"
+                                            [uiTooltip]="'API_KEY.TITLE' | translate"
+                                            uiTooltipPosition="top"
+                                            (click)="onOpenKeys(user)"
+                                        >
+                                            <tabler-icon icon="key" [size]="14" />
+                                        </ui-button>
+                                    }
+                                    <ui-button
+                                        variant="text"
+                                        severity="info"
+                                        size="small"
+                                        [uiTooltip]="'ADMIN.EDIT_USER' | translate"
+                                        uiTooltipPosition="top"
+                                        (click)="onOpenEdit(user)"
+                                    >
+                                        <tabler-icon icon="pencil" [size]="14" />
+                                    </ui-button>
+                                    <ui-button
+                                        variant="text"
+                                        severity="danger"
+                                        size="small"
+                                        uiConfirm
+                                        [confirmText]="'ADMIN.CONFIRM_DELETE' | translate"
+                                        (confirmed)="onConfirmDelete(user)"
+                                    >
+                                        <tabler-icon icon="trash" [size]="14" />
+                                    </ui-button>
+                                </td>
+                            </tr>
+                        } @empty {
+                            <tr>
+                                <td colspan="5" class="text-center ui-color-text-muted">
+                                    {{ 'ADMIN.NO_USERS' | translate }}
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <app-admin-teams class="flex-1 min-h-0 block" [users]="users()" [draggedUser]="draggedUser()" />
+</div>
+
+<app-create-user-dialog [(visible)]="showCreate" (created)="onUserCreated($event)" />
+<app-edit-user-dialog [user]="editUser()" [(visible)]="showEdit" (updated)="onUserUpdated()" />
+<app-bot-keys-dialog
+    [bot]="keysBot()"
+    [presetRevealedKey]="keysPresetKey()"
+    [presetRevealedGatewayToken]="keysPresetGatewayToken()"
+    [(visible)]="showKeys"
+/>

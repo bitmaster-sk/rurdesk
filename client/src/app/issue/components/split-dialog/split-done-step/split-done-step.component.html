@@ -1,0 +1,8 @@
+<div class="done-message">
+    <tabler-icon icon="circle-check" [size]="16" />
+    <p>{{ 'SPLIT.DONE' | translate: { count: count() } }}</p>
+</div>
+
+<div class="dialog-footer">
+    <ui-button [label]="'SHARED.CLOSE' | translate" (click)="onClose()" />
+</div>

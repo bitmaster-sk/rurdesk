@@ -1,0 +1,192 @@
+name: CI
+
+# Gates every push and pull request on formatting and the full test suite:
+# Go backend (gofmt, go vet, race-enabled tests against an isolated
+# Postgres+Redis) and the Angular client (Prettier, Vitest unit + Vitest
+# browser component tests).
+on:
+    push:
+        branches: ["**"]
+    pull_request:
+
+jobs:
+    backend:
+        name: Backend (go test -race)
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:17
+                env:
+                    POSTGRES_USER: rurdesk
+                    POSTGRES_PASSWORD: rurdesk
+                    POSTGRES_DB: rurdesk_test
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd "pg_isready -U rurdesk -d rurdesk_test"
+                    --health-interval 5s --health-timeout 5s --health-retries 10
+            redis:
+                image: redis:8-alpine
+                ports:
+                    - 6379:6379
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s --health-timeout 3s --health-retries 10
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: api/go.mod
+                  cache-dependency-path: api/go.sum
+
+            - name: Install goose
+              run: go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
+
+            - name: Apply migrations to the test database
+              working-directory: api
+              run: |
+                  goose -dir ./migrations postgres \
+                    "host=localhost port=5432 user=rurdesk password=rurdesk dbname=rurdesk_test sslmode=disable" up
+
+            - name: gofmt
+              working-directory: api
+              run: |
+                  unformatted=$(gofmt -l .)
+                  if [ -n "$unformatted" ]; then
+                    echo "gofmt would rewrite:"; echo "$unformatted"
+                    exit 1
+                  fi
+
+            - name: go vet
+              working-directory: api
+              run: go vet ./...
+
+            # -race requires cgo; the ubuntu runner ships gcc. TEST_DATABASE_* are
+            # mandatory — the suite's TestMain refuses to run without them (and the
+            # name must contain "test"), so it can never touch a real database.
+            - name: go test -race (with coverage)
+              working-directory: api
+              env:
+                  CGO_ENABLED: "1"
+                  GIN_MODE: release
+                  TEST_DATABASE_HOST: localhost
+                  TEST_DATABASE_PORT: "5432"
+                  TEST_DATABASE_NAME: rurdesk_test
+                  TEST_DATABASE_USER: rurdesk
+                  TEST_DATABASE_PASSWORD: rurdesk
+                  TEST_CACHE_HOST: localhost
+                  TEST_CACHE_PORT: "6379"
+                  TEST_CACHE_DB: "1"
+              run: go test ./... -race -count=1 -coverprofile=coverage.out -coverpkg=./...
+
+            - name: Backend coverage summary
+              if: ${{ !cancelled() }}
+              working-directory: api
+              run: |
+                  {
+                    echo "### Backend coverage"
+                    echo '```'
+                    go tool cover -func=coverage.out | tail -1
+                    echo '```'
+                  } >> "$GITHUB_STEP_SUMMARY"
+                  go tool cover -html=coverage.out -o coverage.html
+
+            - name: Upload backend coverage
+              if: ${{ !cancelled() }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: backend-coverage
+                  path: api/coverage.html
+                  retention-days: 14
+
+    # Separate module with its own go.mod; the backend job does not cover it.
+    gateway:
+        name: Gateway (go test -race)
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: gateway/go.mod
+                  cache-dependency-path: gateway/go.sum
+
+            - name: gofmt
+              working-directory: gateway
+              run: |
+                  unformatted=$(gofmt -l .)
+                  if [ -n "$unformatted" ]; then
+                    echo "gofmt would rewrite:"; echo "$unformatted"
+                    exit 1
+                  fi
+
+            - name: go vet
+              working-directory: gateway
+              run: go vet ./...
+
+            - name: go test -race
+              working-directory: gateway
+              env:
+                  CGO_ENABLED: "1"
+              run: go test ./... -race -count=1
+
+    frontend:
+        name: Frontend (Vitest unit + component)
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+                  cache: npm
+                  cache-dependency-path: client/package-lock.json
+
+            - name: Install dependencies
+              working-directory: client
+              run: npm ci
+
+            - name: Prettier
+              working-directory: client
+              run: npm run format:check
+
+            - name: Unit tests (node) with coverage
+              working-directory: client
+              run: >-
+                  npm run test:unit --
+                  --coverage
+                  --coverage.reporter=text-summary
+                  --coverage.reporter=json-summary
+                  --coverage.reporter=html
+
+            - name: Frontend unit coverage summary
+              if: ${{ !cancelled() }}
+              working-directory: client
+              run: |
+                  {
+                    echo "### Frontend unit coverage"
+                    echo '```'
+                    jq -r '.total | "Statements: \(.statements.pct)%   Lines: \(.lines.pct)%   Functions: \(.functions.pct)%   Branches: \(.branches.pct)%"' coverage/coverage-summary.json
+                    echo '```'
+                  } >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Upload frontend coverage
+              if: ${{ !cancelled() }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: frontend-coverage
+                  path: client/coverage
+                  retention-days: 14
+
+            - name: Install Chromium for component tests
+              working-directory: client
+              run: npx playwright install --with-deps chromium
+
+            - name: Component tests (browser)
+              working-directory: client
+              run: npm run test:ct

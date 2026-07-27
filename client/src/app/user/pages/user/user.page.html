@@ -1,0 +1,71 @@
+<div class="h-full flex flex-col">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'USER.MY_PAGE' | translate }}</h2>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col gap-4 p-4">
+            <!-- Pinned issues -->
+            <section class="panel panel-noborder">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="pin" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'ISSUE.PINNED' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    @if (pins$ | async; as pins) { @if (pins.length === 0) {
+                    <div class="empty-hint py-4">{{ 'NO_DATA_YET' | translate }}</div>
+                    } @else {
+                    <div class="pins-grid">
+                        @for (pin of pins; track pin.idPin) {
+                        <app-pin-view [pin]="pin" (deletePin)="onDeletePin($event)"></app-pin-view>
+                        }
+                    </div>
+                    } }
+                </div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="panel panel-noborder">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="chart-bar" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'STATISTICS' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            variant="text"
+                            size="small"
+                            severity="secondary"
+                            (click)="previousWeek()"
+                        >
+                            <tabler-icon icon="chevron-left" [size]="14" />
+                        </ui-button>
+                        <span class="text-sm ui-color-text-muted">
+                            {{ 'TRACK.LAST.7.DAYS' | translate }}
+                        </span>
+                        <ui-button
+                            variant="text"
+                            size="small"
+                            severity="secondary"
+                            (click)="nextWeek()"
+                        >
+                            <tabler-icon icon="chevron-right" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    @if (tracks$ | async; as tracks) {
+                    <app-tracked-time-chart
+                        [tracks]="tracks"
+                        [days]="7"
+                        [from]="weekRange().from"
+                        [yAxisLabel]="'TIME.HOURS' | translate"
+                    ></app-tracked-time-chart>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+</div>

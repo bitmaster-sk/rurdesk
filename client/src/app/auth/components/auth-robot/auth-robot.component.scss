@@ -1,0 +1,32 @@
+:host {
+    display: flex;
+    justify-content: center;
+}
+
+:host svg {
+    width: 120px;
+    height: 120px;
+}
+
+/* Jemné hojdanie anténky. Pivot = spodok anténky (napojenie na hlavu). */
+.robot__antenna {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: robot-antenna-sway 2.6s ease-in-out infinite;
+}
+
+@keyframes robot-antenna-sway {
+    0%,
+    100% {
+        transform: rotate(-10deg);
+    }
+    50% {
+        transform: rotate(10deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .robot__antenna {
+        animation: none;
+    }
+}

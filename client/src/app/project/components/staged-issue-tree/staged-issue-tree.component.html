@@ -1,0 +1,11 @@
+@for (root of roots(); track root.data?.ref; let i = $index) {
+    <app-staged-issue-tree-node
+        [node]="root"
+        [states]="states()"
+        [severities]="severities()"
+        [isLastChild]="i === roots().length - 1"
+        [ancestorHasMoreSiblings]="[]"
+        (issueChange)="issueChange.emit($event)"
+        (deleteNode)="deleteNode.emit($event)"
+    ></app-staged-issue-tree-node>
+}

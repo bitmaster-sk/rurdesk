@@ -1,0 +1,30 @@
+// ui-odometer — rolling digit counter (see odometer.component.ts)
+
+.ui-odometer {
+    display: inline-flex;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+
+    &--digit {
+        display: inline-block;
+        height: 1em;
+        overflow: hidden;
+    }
+
+    &--strip {
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+        will-change: transform;
+
+        @media (prefers-reduced-motion: reduce) {
+            transition: none;
+        }
+    }
+
+    &--num {
+        height: 1em;
+        line-height: 1;
+        text-align: center;
+    }
+}

@@ -1,0 +1,21 @@
+// Global styles for ui-loader (aggregated into ../../ui.styles.scss and loaded
+// eagerly via src/styles.scss). Uses `ui-loader` (not :host) as it is compiled
+// globally, not scoped.
+
+ui-loader {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-color-primary, currentColor);
+}
+
+.ui-loader__icon {
+    display: inline-flex;
+    animation: ui-loader-spin 0.8s linear infinite;
+}
+
+@keyframes ui-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

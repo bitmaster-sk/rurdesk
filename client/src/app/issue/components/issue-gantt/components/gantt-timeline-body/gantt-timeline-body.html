@@ -1,0 +1,102 @@
+<div
+    #scrollContainer
+    class="gantt-body"
+    (scroll)="onScroll()"
+    (mousedown)="onMiddleMouseDown($event)"
+>
+    <app-gantt-timeline-header
+        [headerRows]="headerRows()"
+        [columns]="columns()"
+        [totalWidth]="totalWidth()"
+    />
+    <div
+        class="gantt-body--canvas"
+        [style.width.px]="totalWidth()"
+        [style.height.px]="totalHeight()"
+        (dblclick)="onDoubleClick($event)"
+    >
+        <!-- Grid lines -->
+        @for (col of columns(); track col.left) {
+        <div
+            class="gantt-body--grid-line"
+            [class.gantt-body--grid-line--weekend]="col.isWeekend"
+            [style.left.px]="col.left"
+            [style.width.px]="col.isWeekend ? col.width : null"
+            [style.height.px]="totalHeight()"
+        ></div>
+        }
+
+        <!-- Today marker -->
+        <div
+            class="gantt-body--today"
+            [class.gantt-body--today--pulse]="isTodayPulsing()"
+            [style.left.px]="todayLeft()"
+            [style.height.px]="totalHeight()"
+        ></div>
+
+        <!-- Ghost bars (move drag preview, canvas-relative so position is correct) -->
+        @for (bar of ghostBars(); track bar.taskId) {
+        <div
+            class="gantt-body--ghost"
+            [style.left.px]="bar.left"
+            [style.top.px]="bar.top"
+            [style.width.px]="bar.width"
+            [style.height.px]="timelineService.rowHeight() - 4"
+        ></div>
+        @if (bar.tooltipText) {
+        <span
+            class="gantt-body--ghost-label"
+            [style.left.px]="bar.left + bar.width / 2"
+            [style.top.px]="bar.top"
+        >
+            {{ bar.tooltipText }}
+        </span>
+        } }
+
+        <!-- Task bars -->
+        @for (task of tasks(); track task.idIssuePublic; let i = $index) {
+        <app-gantt-task-bar
+            [task]="task"
+            [cardMode]="cardMode()"
+            [rowIndex]="i"
+            [isOnCriticalPath]="criticalTaskIds().has(task.idIssuePublic)"
+            [isDimmed]="isCriticalPathEnabled() && !criticalTaskIds().has(task.idIssuePublic)"
+            [relationDropSide]="
+                relationDropTarget()?.taskId === task.idIssuePublic
+                    ? relationDropTarget()!.side
+                    : null
+            "
+            [isSelected]="selectedTaskIndex() === i"
+            [cascadeSlideDelayMs]="cascadeSlide().get(task.idIssuePublic) ?? null"
+            (hovered)="taskHovered.emit($event)"
+            (dragStarted)="barDragStarted.emit($event)"
+            (resizeEnded)="barResizeEnded.emit($event)"
+            (contextMenu)="barContextMenu.emit($event)"
+            (connectionDragStarted)="connectionDragStarted.emit($event)"
+        />
+        }
+
+        <!-- Dependency arrows -->
+        <app-gantt-arrow-layer
+            [tasks]="tasks()"
+            [relations]="relations()"
+            [totalWidth]="totalWidth()"
+            [totalHeight]="totalHeight()"
+            [scrollLeft]="scrollLeft()"
+            [scrollTop]="scrollTop()"
+            [viewportWidth]="viewportWidth()"
+            [viewportHeight]="viewportHeight()"
+            [selectedRelationId]="selectedRelationId()"
+            [criticalRelationIds]="criticalRelationIds()"
+            [criticalRelationOrder]="criticalRelationOrder()"
+            [isCriticalTracing]="isCriticalTracing()"
+            [isCriticalPathEnabled]="isCriticalPathEnabled()"
+            [drawingLine]="drawingLine()"
+            [dropTarget]="relationDropTarget()"
+            [drawInRelation]="drawInRelation()"
+            [isSettling]="cascadeSlide().size > 0"
+            (arrowClicked)="arrowClicked.emit($event)"
+            (deleteRequested)="arrowDeleteRequested.emit($event)"
+        />
+    </div>
+</div>

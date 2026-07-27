@@ -1,0 +1,49 @@
+// Global styles for ui-badge (aggregated into ../../ui.styles.scss, loaded
+// eagerly). Selector is `ui-badge` (not :host) because it is compiled globally.
+
+ui-badge {
+    --_bg: var(--ui-badge-secondary-bg);
+    --_fg: var(--ui-badge-secondary-fg);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--ui-badge-height);
+    padding: 0 var(--ui-badge-padding-x);
+    border-radius: var(--ui-badge-radius);
+    font-size: var(--ui-badge-font-size);
+    font-weight: var(--ui-badge-font-weight);
+    line-height: 1;
+    background: var(--_bg);
+    color: var(--_fg);
+}
+
+ui-badge.ui-badge--primary {
+    --_bg: var(--ui-badge-primary-bg);
+    --_fg: var(--ui-badge-primary-fg);
+}
+
+ui-badge.ui-badge--success {
+    --_bg: var(--ui-badge-success-bg);
+    --_fg: var(--ui-badge-success-fg);
+}
+
+ui-badge.ui-badge--info {
+    --_bg: var(--ui-badge-info-bg);
+    --_fg: var(--ui-badge-info-fg);
+}
+
+ui-badge.ui-badge--warn {
+    --_bg: var(--ui-badge-warn-bg);
+    --_fg: var(--ui-badge-warn-fg);
+}
+
+ui-badge.ui-badge--danger {
+    --_bg: var(--ui-badge-danger-bg);
+    --_fg: var(--ui-badge-danger-fg);
+}
+
+ui-badge.ui-badge--contrast {
+    --_bg: var(--ui-badge-contrast-bg);
+    --_fg: var(--ui-badge-contrast-fg);
+}

@@ -1,0 +1,10 @@
+<div
+    class="connection-handle"
+    [class.connection-handle--left]="side() === HandleSide.Left"
+    [class.connection-handle--right]="side() === HandleSide.Right"
+    [class.connection-handle--offset]="isOffset()"
+    [class.connection-handle--drop-active]="isDropActive()"
+    [attr.data-task-id]="taskId()"
+    [attr.data-side]="side()"
+    (mousedown)="onMouseDown($event)"
+></div>

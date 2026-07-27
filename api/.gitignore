@@ -1,0 +1,35 @@
+# Compiled binaries (build.sh output + `go build` in each cmd/ dir)
+/api
+/admin
+/cmd/api/api
+/cmd/admin/admin
+/cmd/migrate/migrate
+/cmd/stub-gateway/stub-gateway
+
+# Generic Go build/test artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+
+# Local AI assistant & editor tooling
+.claude/
+.cursor/
+.cursorrules
+.cursorignore
+.aider*
+.continue/
+.codeium/
+.windsurf/
+.windsurfrules
+.roo/
+.cline/
+.gemini/
+.github/copilot-instructions.md
+.superpowers/
+AGENTS.md
+GEMINI.md
+CLAUDE.md

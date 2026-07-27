@@ -1,0 +1,31 @@
+<div class="form w-full" [formGroup]="form">
+    <div class="form-body">
+        <div class="ui-field">
+            <label class="required" for="state-name">{{ 'TITLE' | translate }}</label>
+            <input id="state-name" uiInput formControlName="name" type="text" class="w-full" />
+        </div>
+
+        <div class="ui-field-checkbox">
+            <input id="state-start" type="checkbox" uiCheckbox [formControl]="startControl" />
+            <label for="state-start">{{ 'STATE.START' | translate }}</label>
+        </div>
+
+        <div class="ui-field-checkbox">
+            <input id="state-final" type="checkbox" uiCheckbox [formControl]="finalControl" />
+            <label for="state-final">{{ 'STATE.END' | translate }}</label>
+        </div>
+    </div>
+    <div class="form-footer">
+        <ui-button
+            [disabled]="!form.valid"
+            severity="primary"
+            [label]="'SAVE' | translate"
+            (click)="onSave()"
+        >
+            <tabler-icon icon="device-floppy" [size]="16" />
+        </ui-button>
+        <ui-button severity="secondary" [label]="'CANCEL' | translate" (click)="onCancel()">
+            <tabler-icon icon="cancel" [size]="16" />
+        </ui-button>
+    </div>
+</div>

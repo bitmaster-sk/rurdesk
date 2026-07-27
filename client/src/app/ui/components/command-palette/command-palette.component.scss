@@ -1,0 +1,236 @@
+// Ported from the design mockup (2026-07-08-command-palette-mockup.html), with the mockup's
+// private tokens mapped onto the app's --ui-* scale (same surface hex values).
+:host {
+    // local aliases → app tokens
+    --cmd-panel: var(--ui-surface-0);
+    --cmd-panel-2: var(--ui-surface-50);
+    --cmd-line: var(--ui-surface-200);
+    --cmd-line-strong: var(--ui-surface-300);
+    --cmd-ink: var(--ui-color-text);
+    --cmd-ink-2: var(--ui-surface-700);
+    --cmd-ink-3: var(--ui-surface-600);
+    --cmd-ink-4: var(--ui-surface-500);
+    --cmd-accent: var(--ui-color-primary);
+    --cmd-sel: color-mix(in srgb, var(--ui-color-primary) 14%, transparent);
+    --cmd-sel-line: color-mix(in srgb, var(--ui-color-primary) 40%, transparent);
+    --cmd-kbd-bg: var(--ui-surface-100);
+    --cmd-kbd-line: var(--ui-surface-300);
+    --cmd-shadow: 0 24px 60px -12px rgba(46, 33, 24, 0.32), 0 8px 20px -8px rgba(46, 33, 24, 0.22);
+    --cmd-mono:
+        ui-monospace, 'SF Mono', 'SFMono-Regular', 'JetBrains Mono', 'Menlo', 'Consolas', monospace;
+
+    display: block;
+}
+
+.palette {
+    width: min(640px, calc(100vw - 40px));
+    background: var(--cmd-panel);
+    border: 1px solid var(--cmd-line-strong);
+    border-radius: 14px;
+    box-shadow: var(--cmd-shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: min(428px, 80vh);
+    animation: cmd-pop 0.18s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@keyframes cmd-pop {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+.palette__in {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--cmd-line);
+}
+
+.palette__mode {
+    font-family: var(--cmd-mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 7px;
+    white-space: nowrap;
+    background: var(--cmd-sel);
+    color: var(--cmd-accent);
+    border: 1px solid var(--cmd-sel-line);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.palette__mode-ic {
+    width: 13px;
+    height: 13px;
+}
+
+.palette__in input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 16px;
+    color: var(--cmd-ink);
+    padding: 2px 0;
+}
+
+.palette__in input::placeholder {
+    color: var(--cmd-ink-4);
+}
+
+.palette__esc {
+    font-family: var(--cmd-mono);
+    font-size: 11px;
+    color: var(--cmd-ink-4);
+    border: 1px solid var(--cmd-line);
+    border-radius: 6px;
+    padding: 3px 7px;
+}
+
+.palette__body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 6px;
+}
+
+.palette__heading {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    font-weight: 600;
+    color: var(--cmd-ink-4);
+    padding: 10px 10px 5px;
+}
+
+.palette__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 10px;
+    border-radius: 9px;
+    cursor: pointer;
+    scroll-margin: 8px;
+}
+
+.palette__item:hover {
+    background: color-mix(in srgb, var(--cmd-sel) 55%, transparent);
+}
+
+.palette__item.sel {
+    background: var(--cmd-sel);
+    box-shadow: inset 0 0 0 1px var(--cmd-sel-line);
+}
+
+.palette__ico {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    background: var(--cmd-panel-2);
+    border: 1px solid var(--cmd-line);
+    color: var(--cmd-ink-2);
+
+    tabler-icon {
+        width: 16px;
+        height: 16px;
+        display: block;
+    }
+}
+
+.palette__item.sel .palette__ico {
+    border-color: var(--cmd-sel-line);
+    color: var(--cmd-accent);
+}
+
+.palette__text {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.palette__title {
+    font-size: 13.5px;
+    color: var(--cmd-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    mark {
+        background: transparent;
+        color: var(--cmd-accent);
+        font-weight: 640;
+    }
+}
+
+.palette__sub {
+    font-size: 11.5px;
+    color: var(--cmd-ink-4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
+}
+
+.palette__empty {
+    padding: 34px 16px;
+    text-align: center;
+    color: var(--cmd-ink-4);
+    font-size: 13px;
+}
+
+.palette__foot {
+    border-top: 1px solid var(--cmd-line);
+    padding: 8px 13px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 11.5px;
+    color: var(--cmd-ink-4);
+    background: var(--cmd-panel-2);
+}
+
+.palette__fk {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+kbd {
+    font-family: var(--cmd-mono);
+    font-size: 11px;
+    line-height: 1;
+    background: var(--cmd-kbd-bg);
+    border: 1px solid var(--cmd-kbd-line);
+    border-bottom-width: 2px;
+    color: var(--cmd-ink-2);
+    padding: 3px 6px;
+    border-radius: 6px;
+    min-width: 10px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 560;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .palette {
+        animation: none;
+    }
+}

@@ -1,0 +1,91 @@
+ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+:host {
+    display: block;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.home-layout {
+    overflow: hidden;
+
+    .home-body {
+        .home-left-menu {
+            flex: 0 0 12rem;
+            background-color: var(--ui-color-canvas);
+            border-right: 1px solid var(--ui-color-border);
+            overflow: hidden;
+
+            .navigation {
+                .menu-section-title {
+                    color: var(--ui-color-text-muted);
+                    text-transform: uppercase;
+                    font-weight: bold;
+                    padding: var(--ui-space-l) var(--ui-space) var(--ui-space-l) var(--ui-space);
+                }
+
+                .menu-item {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                    text-decoration: none;
+                    width: 100%;
+                    margin-bottom: var(--ui-space);
+
+                    &:has(.link.active) .menu-item-border,
+                    &:has(.link:hover) .menu-item-border {
+                        background-color: var(--ui-color-primary);
+                    }
+
+                    .menu-item-border {
+                        width: 4px;
+                        min-height: 100%;
+                        height: auto;
+                        border-top-right-radius: var(--ui-radius-md);
+                        border-bottom-right-radius: var(--ui-radius-md);
+                        background-color: transparent;
+                    }
+
+                    .link {
+                        display: flex;
+                        flex-direction: row;
+                        align-items: center;
+                        text-decoration: none;
+                        color: var(--ui-color-text-muted);
+                        padding: var(--ui-space);
+                        width: 100%;
+                        border: 1px solid transparent;
+                        border-radius: var(--ui-radius-md);
+                        margin: 0 var(--ui-space);
+
+                        .icon {
+                            margin-right: var(--ui-space);
+                            font-size: var(--font-size-m);
+                        }
+                    }
+
+                    .link:hover {
+                        color: var(--ui-color-primary);
+                        background-color: var(--ui-color-content-hover);
+                        border: 1px solid transparent;
+                    }
+
+                    .link.active {
+                        color: var(--ui-color-primary);
+                        font-weight: bold;
+                        background-color: var(--ui-color-primary-weak-border);
+                        border: 1px solid var(--ui-color-border);
+                    }
+                }
+            }
+        }
+
+        .home-content {
+            position: relative;
+        }
+    }
+}

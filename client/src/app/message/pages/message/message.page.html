@@ -1,0 +1,65 @@
+<div class="h-full flex flex-row">
+    <div class="recipients">
+        @for (group of conversationGroups(); track group.name) {
+        <div class="ui-color-text-muted uppercase font-bold p-2">{{ group.name }}</div>
+        @for (c of group.conversations; track c.unreadKey) {
+        <div class="recipient-item">
+            <div class="recipient-item_border"></div>
+            <a
+                class="link"
+                [routerLink]="c.url"
+                routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: true }"
+            >
+                <tabler-icon [icon]="group.icon" [size]="14" class="shrink-0" />
+                <span class="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                    {{ c.name }}
+                </span>
+                @if (getUnreadCount$(c.unreadKey) | async; as cnt) {
+                <ui-badge [value]="formatCount(cnt)" severity="danger"></ui-badge>
+                }
+            </a>
+        </div>
+        } }
+    </div>
+
+    <div class="flex-auto flex flex-col min-w-0 overflow-hidden p-2">
+        @if (currentConversationName()) {
+        <div class="channel-header">
+            <tabler-icon icon="messages" [size]="16" class="channel-header-icon" />
+            <span class="channel-header-name">{{ currentConversationName() }}</span>
+        </div>
+        }
+
+        <div class="flex-auto overflow-y-auto py-2" #msgList>
+            @for (message of messages(); track message.idMessage; let i = $index) { @if
+            (isNewDay(i)) {
+            <div class="date-divider">
+                <span>{{ message.createdAt | date:'mediumDate' }}</span>
+            </div>
+            }
+            <app-message-view
+                #msgListItems
+                [message]="message"
+                [isContinuation]="isContinuationMsg(i)"
+                [isOwnMessage]="message.creator.idUser === currentUserId"
+                [isEditing]="idMessageEdit() === message.idMessage"
+                [candidates]="mentionCandidates()"
+                [mentionCandidates]="mentionCandidates()"
+                (editRequest)="onEditRequest(message)"
+                (editSave)="onEditSave(message, $event)"
+                (editCancel)="onEditCancel()"
+            ></app-message-view>
+            }
+        </div>
+
+        <div class="message-editor">
+            <app-message-editor
+                mode="create"
+                change="onaction"
+                [mentionCandidates]="mentionCandidates()"
+                (messageChange)="onMessage($event)"
+            ></app-message-editor>
+        </div>
+    </div>
+</div>

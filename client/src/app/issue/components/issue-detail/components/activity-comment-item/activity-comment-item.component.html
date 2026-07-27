@@ -1,0 +1,109 @@
+<div class="activity-item">
+    <div class="activity-marker">
+        <app-avatar
+            [name]="message().creator.name"
+            [bgColor]="message().creator.colorAvatarBg"
+            [height]="1.875"
+            [width]="1.875"
+            [radius]="0.9375"
+        ></app-avatar>
+        <div class="connector"></div>
+    </div>
+    <div
+        class="comment-card"
+        [class.unread]="!message().isRead"
+        [class.kind-brainstorming-question]="
+            message().messageKind === MessageKind.BrainstormingQuestion
+        "
+        [class.kind-brainstorming-complete]="
+            message().messageKind === MessageKind.BrainstormingComplete
+        "
+        [class.kind-design]="message().messageKind === MessageKind.Design"
+        [class.kind-implementation-plan]="message().messageKind === MessageKind.ImplementationPlan"
+        [class.kind-pull-request-pushed]="message().messageKind === MessageKind.PullRequestPushed"
+        [class.kind-implementation-done]="message().messageKind === MessageKind.ImplementationDone"
+    >
+        @if (kindHeaderTitle(); as titleKey) {
+            <div class="kind-badge">
+                <tabler-icon [icon]="kindHeaderIcon()" [size]="14" />
+                <span>{{ titleKey | translate }}</span>
+            </div>
+        }
+        <div class="comment-header">
+            <span class="author">{{ message().creator.name }}</span>
+            <div class="comment-header-right">
+                <span class="timestamp">{{ message().createdAt | date: 'medium' }}</span>
+                @if (isOwnMessage() && !isEditing()) {
+                    <div class="comment-actions">
+                        <ui-button
+                            variant="text"
+                            severity="secondary"
+                            class="edit-btn"
+                            (click)="editRequest.emit()"
+                        >
+                            <tabler-icon icon="pencil" [size]="14" />
+                        </ui-button>
+                    </div>
+                }
+            </div>
+        </div>
+        @if (isEditing()) {
+            <div class="edit-wrapper" (keydown.escape)="onEditCancel()">
+                <app-message-editor
+                    mode="edit"
+                    change="onaction"
+                    [message]="message().message"
+                    [mentionCandidates]="mentionCandidates()"
+                    (messageChange)="editSave.emit($event)"
+                    (cancel)="onEditCancel()"
+                ></app-message-editor>
+            </div>
+        } @else {
+            @if (showLineMode()) {
+                <div class="line-mode">
+                    @for (line of lines(); track $index) {
+                        <div class="msg-line">
+                            <span class="gutter">{{ $index + 1 }}</span>
+                            <button
+                                type="button"
+                                class="anchor-add-btn"
+                                [attr.aria-label]="'MESSAGE.ANCHOR.COMMENT_ON_LINES' | translate"
+                                (click)="onAddAnchor($index + 1)"
+                            >
+                                <tabler-icon icon="plus" [size]="12" />
+                            </button>
+                            <span class="line-text">
+                                <app-message-body [body]="line" [candidates]="candidates()" />
+                            </span>
+                        </div>
+                        @if (childrenByLine().get($index + 1); as replies) {
+                            <div class="anchor-replies" [class.outdated]="isOutdated(replies)">
+                                @for (reply of replies; track reply.idMessage) {
+                                    <app-anchor-reply
+                                        [reply]="reply"
+                                        [candidates]="candidates()"
+                                    ></app-anchor-reply>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            } @else {
+                <app-message-body
+                    [body]="message().message"
+                    [messageKind]="message().messageKind"
+                    [candidates]="candidates()"
+                    [approvable]="mockupApprovable()"
+                    [selectedMockupRef]="selectedMockupRef()"
+                    (useMockup)="approveMockup.emit($event)"
+                />
+            }
+            @if (message().updatedAt) {
+                <span class="message-edited">edited {{ message().updatedAt | date: 'short' }}</span>
+            }
+            @if (showApproveActions()) {
+                <app-plan-actions [run]="agentRun()" (approve)="approve.emit()"></app-plan-actions>
+            }
+        }
+    </div>
+</div>

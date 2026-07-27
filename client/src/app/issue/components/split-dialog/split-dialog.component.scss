@@ -1,0 +1,55 @@
+// SplitDialogComponent is ViewEncapsulation.None; its content is projected into
+// a body-level CDK overlay by <ui-dialog>. These rules are therefore GLOBAL,
+// scoped under the `.split-dialog` panelClass so they only touch this dialog
+// (and reach the projected step components, which emulated :host could not).
+
+// Review/staging step: at least 60vw regardless of the inline width.
+.ui-dialog.split-dialog--wide {
+    min-width: 60vw;
+    max-width: 95vw;
+}
+
+.ui-dialog.split-dialog {
+    .ui-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+
+        label {
+            font-weight: 500;
+        }
+    }
+
+    .dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    h3 {
+        margin-top: 0;
+        margin-bottom: 1rem;
+        font-size: var(--font-size-l);
+        word-break: break-word;
+    }
+
+    .done-message {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        padding: 2rem 0;
+
+        .pi-check-circle {
+            font-size: var(--font-size-xl);
+            color: var(--green-500);
+        }
+
+        p {
+            font-size: var(--font-size-l);
+            margin: 0;
+        }
+    }
+}

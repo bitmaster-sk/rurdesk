@@ -1,0 +1,229 @@
+@if (members(); as members) {
+    <div class="flex flex-col">
+        <!-- Users sub-block -->
+        <div class="panel-subblock">
+            <div class="panel-sub-head">
+                <div class="panel-sub-head-l">
+                    <span class="panel-sub-title">{{ 'PROJECT.MEMBERS.USERS' | translate }}</span>
+                    <span class="panel-sub-count">{{ members.users.length }}</span>
+                </div>
+            </div>
+
+            @if (hasOneOwner) {
+                <div class="p-2">
+                    <ui-message severity="warn" class="w-full">
+                        {{ 'PROJECT.MEMBERS.LAST_OWNER_WARNING' | translate }}
+                    </ui-message>
+                </div>
+            }
+
+            <table class="ui-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'NAME' | translate }}</th>
+                        <th scope="col">{{ 'PROJECT.MEMBERS.SOURCE' | translate }}</th>
+                        <th scope="col">{{ 'PROJECT.MEMBERS.ROLE' | translate }}</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (user of sortedUsers(); track user.idUser) {
+                        <tr>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <app-avatar
+                                        [name]="user.name"
+                                        [bgColor]="user.colorAvatarBg"
+                                        [width]="1.75"
+                                        [height]="1.75"
+                                        [radius]="0.875"
+                                    />
+                                    <span>{{ user.name }}</span>
+                                    @if (isLastOwner(user)) {
+                                        <tabler-icon
+                                            icon="lock"
+                                            [size]="14"
+                                            class="ui-color-yellow"
+                                        />
+                                    }
+                                </div>
+                            </td>
+                            <td>
+                                @if (user.isDirect) {
+                                    <ui-tag severity="info" value="direct" />
+                                    @if (user.idsTeams?.length > 0) {
+                                        <ui-tag severity="secondary" value="team" class="ml-1" />
+                                    }
+                                } @else {
+                                    <ui-tag severity="secondary" [value]="'team'" />
+                                }
+                            </td>
+                            <td>
+                                <ui-tag
+                                    [severity]="getRoleSeverity(user.role)"
+                                    [value]="user.role"
+                                />
+                            </td>
+                            <td>
+                                <div class="flex items-center justify-end gap-2">
+                                    @if (user.isDirect && aclStore.canUpdateMembers()) {
+                                        <ui-select
+                                            [options]="roles"
+                                            [ngModel]="user.role"
+                                            [disabled]="isLastOwner(user)"
+                                            [uiSaveStatus]="userRoleSaveStatus(user.idUser)"
+                                            (ngModelChange)="onUpdateUserRole(user, $event)"
+                                        />
+                                        <ui-button
+                                            variant="text"
+                                            severity="danger"
+                                            size="small"
+                                            [disabled]="isLastOwner(user)"
+                                            (click)="onRemoveUser(user)"
+                                        >
+                                            <tabler-icon icon="trash" [size]="14" />
+                                        </ui-button>
+                                    } @else if (!user.isDirect && aclStore.canCreateMembers()) {
+                                        <ui-button
+                                            variant="text"
+                                            severity="secondary"
+                                            size="small"
+                                            [label]="'PROJECT.MEMBERS.OVERRIDE_ADD' | translate"
+                                            (click)="onOverrideUser(user)"
+                                        />
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="4" class="text-center ui-color-text-muted">
+                                {{ 'NO_DATA' | translate }}
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Teams sub-block -->
+        <div class="panel-subblock">
+            <div class="panel-sub-head">
+                <div class="panel-sub-head-l">
+                    <span class="panel-sub-title">{{ 'PROJECT.MEMBERS.TEAMS' | translate }}</span>
+                    <span class="panel-sub-count">{{ members.teams.length }}</span>
+                </div>
+            </div>
+
+            <table class="ui-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'TEAM.SINGULAR' | translate }}</th>
+                        <th scope="col">{{ 'TEAM.MEMBERS' | translate }}</th>
+                        <th scope="col">{{ 'PROJECT.MEMBERS.ROLE' | translate }}</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (team of sortedTeams(); track team.idTeam) {
+                        <tr>
+                            <td>{{ team.name }}</td>
+                            <td class="ui-color-text-muted">{{ team.memberCount }}</td>
+                            <td>
+                                <ui-tag
+                                    [severity]="getRoleSeverity(team.role)"
+                                    [value]="team.role"
+                                />
+                            </td>
+                            <td>
+                                <div class="flex items-center justify-end gap-2">
+                                    @if (aclStore.canUpdateMembers()) {
+                                        <ui-select
+                                            [options]="roles"
+                                            [ngModel]="team.role"
+                                            [uiSaveStatus]="teamRoleSaveStatus(team.idTeam)"
+                                            (ngModelChange)="onUpdateTeamRole(team, $event)"
+                                        />
+                                        <ui-button
+                                            variant="text"
+                                            severity="danger"
+                                            size="small"
+                                            (click)="onRemoveTeam(team)"
+                                        >
+                                            <tabler-icon icon="trash" [size]="14" />
+                                        </ui-button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    } @empty {
+                        <tr>
+                            <td colspan="4" class="text-center ui-color-text-muted">
+                                {{ 'NO_DATA' | translate }}
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <div class="px-4 py-2 ui-color-text-muted text-sm">
+                {{ 'PROJECT.MEMBERS.TEAM_NOTE' | translate }}
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Add user popover -->
+<ui-popover #addUserPop>
+    <div class="flex flex-col gap-2 p-2">
+        <ui-select
+            [options]="roles"
+            [ngModel]="pendingUserRole()"
+            (ngModelChange)="pendingUserRole.set($event)"
+            [placeholder]="'PROJECT.MEMBERS.ROLE' | translate"
+            class="w-full"
+        />
+        <ui-listbox
+            [options]="availableUsers()"
+            optionLabel="name"
+            [filter]="true"
+            [emptyMessage]="'TEAM.NO.TEAMMATES.TO.ADD' | translate"
+            [emptyFilterMessage]="'NO_DATA' | translate"
+            (onChange)="onAddUser($event.value)"
+        >
+            <ng-template #item let-user>
+                <div class="flex items-center gap-2">
+                    <app-avatar
+                        [name]="user.name"
+                        [bgColor]="user.colorAvatarBg"
+                        [width]="1.75"
+                        [height]="1.75"
+                        [radius]="0.875"
+                    />
+                    <span>{{ user.name }}</span>
+                </div>
+            </ng-template>
+        </ui-listbox>
+    </div>
+</ui-popover>
+
+<!-- Add team popover -->
+<ui-popover #addTeamPop>
+    <div class="flex flex-col gap-2 p-2">
+        <ui-select
+            [options]="roles"
+            [ngModel]="pendingTeamRole()"
+            (ngModelChange)="pendingTeamRole.set($event)"
+            [placeholder]="'PROJECT.MEMBERS.ROLE' | translate"
+            class="w-full"
+        />
+        <ui-listbox
+            [options]="availableTeams()"
+            optionLabel="name"
+            [emptyMessage]="'NO_DATA' | translate"
+            (onChange)="onAddTeam($event.value)"
+        >
+            <ng-template #item let-team>{{ team.name }}</ng-template>
+        </ui-listbox>
+    </div>
+</ui-popover>

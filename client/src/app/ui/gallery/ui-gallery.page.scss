@@ -1,0 +1,149 @@
+.ui-gallery {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    color: var(--ui-color-text);
+
+    &__head {
+        margin-bottom: 2rem;
+
+        h1 {
+            margin: 0 0 0.25rem;
+        }
+
+        p {
+            margin: 0;
+            color: var(--ui-color-text-muted);
+        }
+    }
+
+    &__section {
+        padding: 1.5rem;
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-surface);
+
+        &:not(:first-child) {
+            margin-top: 1.5rem;
+        }
+
+        h2 {
+            margin: 0 0 1rem;
+        }
+
+        h3 {
+            margin: 1.5rem 0 0.75rem;
+            color: var(--ui-color-text-muted);
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+    }
+
+    &__row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1.5rem;
+
+        &--dark {
+            padding: 1rem;
+            border-radius: var(--ui-radius-md);
+            background: var(--ui-surface-900);
+            gap: 0.75rem;
+        }
+    }
+
+    &__cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+
+        code {
+            font-size: 0.75rem;
+            color: var(--ui-color-text-muted);
+        }
+
+        &--stack {
+            gap: 0.35rem;
+        }
+    }
+
+    // responsive grid for form-field showcases
+    &__grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+    }
+
+    // vertical stack (e.g. horizontal divider between blocks)
+    &__stack {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-width: 320px;
+    }
+
+    &__note {
+        margin: 0.75rem 0 0;
+        color: var(--ui-color-text-muted);
+        font-size: 0.875rem;
+    }
+
+    &__dot {
+        display: inline-block;
+        width: 0.7rem;
+        height: 0.7rem;
+        margin-right: 0.4rem;
+        border-radius: 50%;
+        vertical-align: middle;
+    }
+
+    &__row--vdivider {
+        height: 2.5rem;
+    }
+}
+
+// Demo for ui-popover [panelClass]. The popover surface renders in a body-level
+// CDK overlay (outside this component's view), so target it globally.
+::ng-deep .gallery-pop.ui-popover {
+    padding: 1.5rem;
+}
+
+// ─── Control size-scale demo (layout only) ─────────────────────────────────
+// The sizes come from the real `size` inputs on [uiInput] / ui-select; this is
+// just the row/spec-table layout for the showcase.
+.gsz-demo {
+    .gsz-spec {
+        border-collapse: collapse;
+        margin: 0.75rem 0 1.25rem;
+        font-size: 0.875rem;
+
+        th,
+        td {
+            padding: 0.25rem 0.9rem 0.25rem 0;
+            text-align: left;
+            color: var(--ui-color-text-muted);
+        }
+
+        th {
+            font-weight: 600;
+        }
+    }
+
+    .gsz-row {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 0.9rem;
+    }
+
+    .gsz-tier {
+        width: 8rem;
+        flex: 0 0 auto;
+        font-size: 0.875rem;
+        color: var(--ui-color-text-muted);
+    }
+}

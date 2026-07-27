@@ -1,0 +1,32 @@
+// ui-choice GLOBAL styles — co-located but @used by src/app/ui/ui.styles.scss.
+// The chrome is fully carried by the reused .ui-button classes (unselected =
+// outlined secondary, selected = primary) so a choice reads as a row of joined
+// ui-buttons — visually identical to ui-toggle-button, just grouped. This file
+// ONLY does the segment join (overlap borders, square inner corners) and stacking.
+
+.ui-choice {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+// Overlap adjacent borders by 1px so the seam reads as one continuous border,
+// and square the inner corners so only the outer ends stay rounded.
+.ui-choice .ui-button:not(:first-child) {
+    margin-inline-start: -1px;
+    border-start-start-radius: 0;
+    border-end-start-radius: 0;
+}
+.ui-choice .ui-button:not(:last-child) {
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+// The selected (primary) segment and any hovered/focused segment lift above
+// their neighbours so their border/halo isn't clipped on the shared edge.
+.ui-choice .ui-button--primary {
+    z-index: 1;
+}
+.ui-choice .ui-button:hover,
+.ui-choice .ui-button:focus-visible {
+    z-index: 2;
+}

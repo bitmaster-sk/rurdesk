@@ -1,0 +1,92 @@
+<div class="step-input-layout">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'PROJECT_BUILDER.TITLE' | translate }}</h2>
+        <div class="page-toolbar">
+            @if (rateLimitCountdown() > 0) {
+                <ui-button
+                    [label]="
+                        'PROJECT_BUILDER.WAIT_RATE_LIMIT'
+                            | translate: { seconds: rateLimitCountdown() }
+                    "
+                    [disabled]="true"
+                >
+                    <tabler-icon icon="bolt" [size]="16" />
+                </ui-button>
+            } @else if (isGenerating()) {
+                <ui-button
+                    [label]="'PROJECT_BUILDER.GENERATING' | translate"
+                    [loading]="true"
+                    [disabled]="true"
+                ></ui-button>
+            } @else {
+                <ui-button
+                    [label]="'PROJECT_BUILDER.GENERATE' | translate"
+                    [disabled]="isGenerateDisabled()"
+                    (click)="onGenerate()"
+                >
+                    <tabler-icon icon="bolt" [size]="16" />
+                </ui-button>
+            }
+        </div>
+    </div>
+
+    <div class="py-2 px-6">
+        <p class="ui-color-text-muted mt-0 mb-6">
+            {{ 'PROJECT_BUILDER.DESCRIPTION_HINT' | translate }}
+        </p>
+
+        <div class="ui-field mb-4">
+            <label class="block mb-1 font-medium">
+                {{ 'PROJECT_BUILDER.DESCRIPTION_LABEL' | translate }}
+            </label>
+            <textarea
+                uiTextarea
+                class="w-full"
+                rows="8"
+                [invalid]="isTooShort()"
+                [ngModel]="description()"
+                (ngModelChange)="onDescriptionChange($event)"
+                [placeholder]="'PROJECT_BUILDER.DESCRIPTION_PLACEHOLDER' | translate"
+            ></textarea>
+            @if (isTooShort()) {
+                <small class="ui-input-error block">
+                    {{
+                        'PROJECT_BUILDER.MIN_CHARS_HINT'
+                            | translate: { remaining: remainingChars(), min: minChars() }
+                    }}
+                </small>
+            } @else {
+                <small class="ui-color-text-muted">
+                    {{
+                        'PROJECT_BUILDER.CHAR_COUNT' | translate: { current: description().length }
+                    }}
+                </small>
+            }
+        </div>
+
+        <div class="flex gap-4">
+            <div class="ui-field flex-1">
+                <label class="block mb-1 font-medium">
+                    {{ 'PROJECT_BUILDER.DEFAULT_STATE' | translate }}
+                </label>
+                <app-state-dropdown
+                    [states]="states()"
+                    [ngModel]="defaultIdState()"
+                    (ngModelChange)="defaultIdState.set($event)"
+                    class="w-full"
+                ></app-state-dropdown>
+            </div>
+            <div class="ui-field flex-1">
+                <label class="block mb-1 font-medium">
+                    {{ 'PROJECT_BUILDER.DEFAULT_SEVERITY' | translate }}
+                </label>
+                <app-severity-dropdown
+                    [severities]="severities()"
+                    [ngModel]="defaultIdSeverity()"
+                    (ngModelChange)="defaultIdSeverity.set($event)"
+                    inputId="staged-issue-severity"
+                ></app-severity-dropdown>
+            </div>
+        </div>
+    </div>
+</div>

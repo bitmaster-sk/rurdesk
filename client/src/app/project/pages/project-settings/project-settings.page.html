@@ -1,0 +1,143 @@
+@if (project(); as project) {
+<div class="h-full flex flex-col">
+    <div class="page-header">
+        <h2 class="m-0">{{ 'PROJECT.SETTINGS' | translate }}</h2>
+    </div>
+
+    <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col gap-4 p-4">
+            <!-- General -->
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="settings" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'PROJECT.GENERAL' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    <app-project-form
+                        [project]="project"
+                        [saveOnBlur]="true"
+                        [saveStatus]="generalSaveStatus()"
+                        (save)="onProjectSave($event)"
+                    ></app-project-form>
+                </div>
+            </section>
+
+            @if (aclStore.canManageState()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="flag" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'STATE.PLURAL' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'STATE.NEW' | translate"
+                            (click)="projectState.onNewState()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-project-state #projectState [project]="project"></app-project-state>
+                </div>
+            </section>
+            } @if (aclStore.canManageSeverity()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="alert-triangle" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'SEVERITY.PLURAL' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'SEVERITY.NEW' | translate"
+                            (click)="projectSeverity.onNewSeverity()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-project-severity
+                        #projectSeverity
+                        [project]="project"
+                    ></app-project-severity>
+                </div>
+            </section>
+            } @if (aclStore.canReadMembers()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="users" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'PROJECT.MEMBERS' | translate }}</div>
+                    </div>
+                    @if (aclStore.canCreateMembers()) {
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'PROJECT.MEMBERS.ADD_USER' | translate"
+                            (click)="projectMembers.onAddUserToggle($event)"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                        <ui-button
+                            size="small"
+                            [label]="'PROJECT.MEMBERS.ADD_TEAM' | translate"
+                            (click)="projectMembers.onAddTeamToggle($event)"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                    }
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-project-members #projectMembers [project]="project" />
+                </div>
+            </section>
+            } @if (aclStore.canReadGitIntegration()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="git-branch" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'GIT_INTEGRATION.PLURAL' | translate }}</div>
+                    </div>
+                    @if (aclStore.canManageGitIntegration()) {
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'GIT_INTEGRATION.NEW' | translate"
+                            (click)="gitIntegrations.onAdd()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                    }
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-git-integration-list #gitIntegrations [project]="project" />
+                </div>
+            </section>
+            } @if (aclStore.canManageState()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="robot" [size]="16" class="panel-icon" />
+                        <div class="panel-title">
+                            {{ 'AGENT.PHASE_STATE_MAP.TITLE' | translate }}
+                        </div>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-agent-phase-state-map [project]="project" />
+                </div>
+            </section>
+            }
+        </div>
+    </div>
+</div>
+}

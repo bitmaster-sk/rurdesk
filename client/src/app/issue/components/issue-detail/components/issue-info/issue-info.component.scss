@@ -1,0 +1,134 @@
+:host {
+    display: contents;
+}
+
+.issue-info {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    background-color: var(--ui-color-surface);
+    border: 1px solid var(--ui-surface-200);
+    border-radius: var(--ui-radius-md);
+
+    .issue-description {
+        padding: var(--ui-space);
+
+        .description-preview {
+            min-height: 20rem;
+            border: 1px solid var(--ui-input-border);
+            border-radius: var(--ui-radius-md);
+            padding: var(--ui-space) !important;
+            cursor: pointer;
+            transition: border-color 0.2s;
+
+            &:hover {
+                border-color: var(--ui-input-border-hover);
+            }
+        }
+
+        .edit ::ng-deep.editor-input-wrapper {
+            min-height: 20rem;
+        }
+    }
+
+    .manipulation-details {
+        font-size: var(--font-size-xs);
+        color: var(--ui-color-text-muted);
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    // Mirrors `.quality-panel` so both integration cards (Quality / PR) look
+    // like siblings — same border/radius, same header surface, same
+    // chevron-rotates-on-collapse behavior.
+    .pr-panel {
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        overflow: hidden;
+
+        &__header {
+            display: flex;
+            align-items: center;
+            gap: var(--ui-space);
+            padding: var(--ui-space) var(--ui-space-m);
+            background: var(--ui-color-canvas);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        &__chevron {
+            display: inline-flex;
+            color: var(--ui-color-text-muted);
+            transition: transform 0.15s ease;
+
+            &--collapsed {
+                transform: rotate(-90deg);
+            }
+        }
+
+        // Matches the agent run card's `.avatar` so all three panel headers
+        // (Quality / Agent run / PR) share the same circular icon treatment.
+        &__icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 999px;
+            background: var(--ui-color-primary-weak-border);
+            color: var(--ui-color-primary-strong);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        &__title {
+            font-weight: 500;
+        }
+
+        &__actions {
+            // Mirrors `.quality-panel__actions` — pushes the link-picker (cog)
+            // button to the right edge so it doesn't crowd the status pill.
+            display: inline-flex;
+            align-items: center;
+            gap: var(--ui-space-s);
+            margin-left: auto;
+        }
+
+        // Inline "View PR" link from the agent run. Sized with the same line-height
+        // as the surrounding header text so it doesn't grow the header taller than
+        // the Quality / sibling headers.
+        &__view-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: var(--ui-color-primary);
+            text-decoration: none;
+            font-size: var(--font-size-s);
+            line-height: 1.2;
+        }
+
+        &__body {
+            padding: var(--ui-space-m);
+        }
+
+        // Body content when no PR/MR is linked. Mirrors `.quality-panel__empty`
+        // so the unlinked-state hint reads as a sibling-empty-state rather than
+        // a different panel.
+        &__empty {
+            color: var(--ui-color-text-muted);
+            font-size: var(--font-size-s);
+            line-height: 1.5;
+        }
+    }
+
+    .tracked-field {
+        display: flex;
+        flex-direction: column;
+        .tracked-value {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+        }
+    }
+}

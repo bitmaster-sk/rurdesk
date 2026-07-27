@@ -1,0 +1,27 @@
+<div class="activity-item">
+    <div class="activity-marker">
+        <div class="time-icon"><tabler-icon icon="clock" [size]="16" /></div>
+        <div class="connector"></div>
+    </div>
+    <div class="time-card">
+        <div class="time-header">
+            <span class="label">Time logged</span>
+            <span class="timestamp">{{ track().endAt | date: 'medium' }}</span>
+        </div>
+        <div class="time-body">
+            @if (user(); as u) {
+                <app-avatar
+                    [name]="u.name"
+                    [bgColor]="u.colorAvatarBg"
+                    [height]="1.25"
+                    [width]="1.25"
+                    [radius]="0.625"
+                ></app-avatar>
+                <span class="username">{{ u.name }}</span>
+            } @else {
+                <span class="username">Unknown</span>
+            }
+            <span class="duration-badge">{{ formatDuration(track().tracked) }}</span>
+        </div>
+    </div>
+</div>

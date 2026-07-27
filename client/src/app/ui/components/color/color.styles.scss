@@ -1,0 +1,55 @@
+// Global styles for the `[uiColor]` directive (aggregated into ../../ui.styles.scss
+// and loaded eagerly via src/styles.scss). Styles the native
+// `<input type="color">` swatch to match the `.ui-input` chrome. Reuses the
+// `--ui-input-*` tokens so borders/radius stay in sync with text inputs.
+
+input.ui-color {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    padding: 3px;
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+    background: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+input.ui-color:hover:not(:disabled) {
+    border-color: var(--ui-input-border-hover);
+}
+
+// `:focus` (not `:focus-visible`) — the swatch is a click-target that opens the
+// OS picker, so the halo must show on mouse click too, matching the old picker.
+input.ui-color:focus {
+    outline: none;
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}
+
+input.ui-color:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+input.ui-color--invalid {
+    border-color: var(--ui-input-border-invalid);
+}
+
+// Strip the browser's default swatch chrome so only our rounded fill shows.
+input.ui-color::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input.ui-color::-webkit-color-swatch {
+    border: none;
+    border-radius: calc(var(--ui-input-radius) - 3px);
+}
+
+input.ui-color::-moz-color-swatch {
+    border: none;
+    border-radius: calc(var(--ui-input-radius) - 3px);
+}

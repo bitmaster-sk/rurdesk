@@ -1,0 +1,27 @@
+# Build context lives at the repo root (the tracker image needs both client/
+# and api/). Keep the context lean: exclude everything not consumed by a build
+# stage so multi-arch (QEMU) builds stay fast and layers cache well.
+
+.git
+**/.DS_Store
+
+# Node / Angular workspace artifacts — npm ci recreates node_modules in-image.
+**/node_modules
+client/.angular
+client/dist
+client/playwright-report
+client/test-results
+client/e2e
+
+# Prebuilt Go binary committed in the tree — rebuilt in the build stage.
+api/api
+
+# Docs and presentation site — not part of any image build.
+docs
+site
+
+# Gateways build from their own ./gateway context, not the root.
+gateway
+
+# Local env files must never leak into an image layer.
+**/.env

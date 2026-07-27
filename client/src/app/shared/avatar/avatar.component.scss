@@ -1,0 +1,19 @@
+:host {
+    display: contents;
+}
+
+.initials-avatar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: var(--color-text-dark);
+    // Host is display: contents, so this is the flex item — never let a
+    // fixed-size avatar squash; tight containers clip it via overflow instead
+    flex-shrink: 0;
+}
+
+img {
+    display: block;
+    flex-shrink: 0;
+}

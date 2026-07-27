@@ -1,0 +1,53 @@
+<div class="register">
+    <app-auth-robot></app-auth-robot>
+
+    <div class="register__greet">
+        <h3>{{ 'REGISTER.WELCOME' | translate }}</h3>
+        <p>{{ 'REGISTER.SUBTITLE' | translate }}</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onRegister()" class="register__form">
+        <div class="register__field">
+            <label for="name">{{ 'NAME' | translate }}</label>
+            <input id="name" formControlName="name" type="text" autocomplete="name" />
+        </div>
+
+        <div class="register__field">
+            <label for="email">{{ 'EMAIL' | translate }}</label>
+            <input id="email" formControlName="email" type="text" autocomplete="email" />
+        </div>
+
+        <ng-container formGroupName="credentials">
+            <div class="register__field">
+                <label for="password">{{ 'PASSWORD' | translate }}</label>
+                <input
+                    id="password"
+                    formControlName="password"
+                    type="password"
+                    autocomplete="new-password"
+                />
+            </div>
+
+            <div class="register__field">
+                <label for="password2">{{ 'PASSWORD.CONFIRMATION' | translate }}</label>
+                <input
+                    id="password2"
+                    formControlName="password2"
+                    type="password"
+                    autocomplete="new-password"
+                />
+            </div>
+        </ng-container>
+
+        @if (errorKey(); as key) {
+            <p class="register__error" role="alert">{{ key | translate }}</p>
+        }
+
+        <ui-button
+            type="submit"
+            [label]="'REGISTER' | translate"
+            [fluid]="true"
+            class="register__btn"
+        ></ui-button>
+    </form>
+</div>

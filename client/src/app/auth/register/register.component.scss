@@ -1,0 +1,68 @@
+.register {
+    width: 320px;
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-xl);
+    text-align: center;
+}
+
+.register__greet h3 {
+    margin: 0 0 var(--ui-space-s);
+    font-size: var(--font-size-l);
+}
+
+.register__greet p {
+    margin: 0;
+    color: var(--ui-color-text-muted, #75665c);
+    font-size: var(--font-size-s);
+}
+
+.register__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-xl);
+}
+
+.register__field {
+    text-align: left;
+}
+
+.register__field label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ui-color-text-muted, #75665c);
+    margin-bottom: var(--ui-space-s);
+}
+
+.register__field input {
+    width: 100%;
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    color: var(--ui-color-text);
+    background: transparent;
+    border: none;
+    border-bottom: 1.5px solid var(--ui-color-border);
+    padding: var(--ui-space) var(--ui-space-xs);
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+.register__field input:focus {
+    border-bottom-color: var(--ui-color-primary);
+}
+
+.register__error {
+    margin: 0;
+    color: var(--ui-color-danger);
+    font-size: var(--font-size-s);
+    text-align: center;
+}
+
+.register__btn {
+    margin-top: var(--ui-space-s);
+}

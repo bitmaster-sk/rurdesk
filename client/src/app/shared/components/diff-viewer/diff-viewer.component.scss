@@ -1,0 +1,169 @@
+.diff-viewer {
+    font-size: 12px;
+    overflow-x: auto;
+}
+
+// diff2html positions `.d2h-code-linenumber` (the line-number TD) with
+// `position: absolute` but never establishes a positioning context on the
+// row, so the line numbers anchor to whatever ancestor in the host page
+// happens to be positioned — in the issue panel that's far below the
+// diff, which makes the numbers visually clump up at the bottom.
+// Forcing the TR itself to be a positioning context anchors each line
+// number to its own row, where it belongs.
+.diff-viewer tr {
+    position: relative;
+}
+
+// diff2html's `.d2h-file-name` doesn't set `min-width: 0`, so once it shares
+// the flex row with our extras span it can refuse to shrink and overflow
+// the fixed-height header. Forcing min-width:0 lets text-overflow ellipsis
+// actually kick in.
+.diff-viewer .d2h-file-name {
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.diff-viewer__header--clickable {
+    cursor: pointer;
+    user-select: none;
+}
+
+.diff-viewer__chevron {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 0.375rem;
+    color: var(--ui-color-text-muted);
+    transition: transform 0.15s ease;
+
+    svg {
+        display: block;
+    }
+}
+
+.diff-viewer__header--collapsed .diff-viewer__chevron {
+    transform: rotate(-90deg);
+}
+
+// When the body is hidden, diff2html's header bottom-border sits right on
+// top of `.d2h-file-wrapper`'s own bottom border — two lines stacked. Drop
+// the header border in the collapsed state to leave just the wrapper one.
+.d2h-file-header.diff-viewer__header--clickable.diff-viewer__header--collapsed {
+    border-bottom: 0;
+}
+
+.diff-viewer__file-extras {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    padding-left: 0.5rem;
+    flex-shrink: 0;
+    font-size: 11px;
+    line-height: 1;
+}
+
+.diff-viewer__stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-family: var(--font-family-mono, monospace);
+}
+
+.diff-viewer__added {
+    color: var(--ui-green-600);
+    font-weight: 600;
+}
+
+.diff-viewer__removed {
+    color: var(--ui-red-600);
+    font-weight: 600;
+}
+
+.diff-viewer__file-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-color-text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+
+    &:hover {
+        color: var(--ui-color-primary);
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+.diff-viewer__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    color: var(--ui-color-text-muted);
+    font-size: 0.875rem;
+}
+
+.diff-viewer__spinner {
+    display: inline-flex;
+    animation: diff-viewer-spin 1s linear infinite;
+}
+
+@keyframes diff-viewer-spin {
+    from {
+        transform: rotate(0);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Per-message-kind diff2html theming. The kind class lives on the parent
+// .comment-card; diff-viewer has encapsulation:None so these selectors are
+// global and tint the d2h header + wrapper border to match the comment card
+// stripe color. d2h hunk lines and add/remove colors are intentionally left
+// untouched — they're conventional and should stay green/red across kinds.
+.kind-brainstorming-question .d2h-file-wrapper {
+    border-color: var(--ui-blue-300);
+    .d2h-file-header {
+        background: var(--ui-blue-50);
+        border-bottom-color: var(--ui-blue-300);
+    }
+}
+.kind-brainstorming-complete .d2h-file-wrapper {
+    border-color: var(--ui-cyan-300);
+    .d2h-file-header {
+        background: var(--ui-cyan-50);
+        border-bottom-color: var(--ui-cyan-300);
+    }
+}
+.kind-design .d2h-file-wrapper {
+    border-color: var(--ui-purple-300);
+    .d2h-file-header {
+        background: var(--ui-purple-50);
+        border-bottom-color: var(--ui-purple-300);
+    }
+}
+.kind-implementation-plan .d2h-file-wrapper {
+    border-color: var(--ui-orange-300);
+    .d2h-file-header {
+        background: var(--ui-orange-50);
+        border-bottom-color: var(--ui-orange-300);
+    }
+}
+.kind-pull-request-pushed .d2h-file-wrapper {
+    border-color: var(--ui-teal-300);
+    .d2h-file-header {
+        background: var(--ui-teal-50);
+        border-bottom-color: var(--ui-teal-300);
+    }
+}
+.kind-implementation-done .d2h-file-wrapper {
+    border-color: var(--ui-green-300);
+    .d2h-file-header {
+        background: var(--ui-green-50);
+        border-bottom-color: var(--ui-green-300);
+    }
+}

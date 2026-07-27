@@ -1,0 +1,12 @@
+<ui-button variant="text" severity="secondary" class="relative" (click)="onBellClick($event)">
+    <tabler-icon icon="bell" [size]="16" />
+    @if (unreadCount() > 0) {
+        <span class="notif-badge absolute flex items-center justify-center font-bold">
+            {{ unreadCount() > 99 ? '99+' : unreadCount() }}
+        </span>
+    }
+</ui-button>
+
+<ui-popover #overlay panelClass="notif-overlay-panel">
+    <app-notification-center />
+</ui-popover>

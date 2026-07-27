@@ -1,0 +1,18 @@
+.notif-badge {
+    top: var(--ui-space-xs);
+    right: var(--ui-space-xs);
+    background: var(--ui-red-500);
+    color: var(--ui-brand-50);
+    border-radius: 50%;
+    min-width: 1rem;
+    height: 1rem;
+    font-size: var(--font-size-xs);
+    padding: 0 3px;
+    pointer-events: none;
+}
+
+::ng-deep .notif-overlay-panel.ui-popover {
+    padding: 0;
+    overflow: hidden;
+    border-radius: 10px;
+}

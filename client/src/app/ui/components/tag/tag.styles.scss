@@ -1,0 +1,49 @@
+// Global styles for ui-tag (aggregated into ../../ui.styles.scss, loaded
+// eagerly). Selector is `ui-tag` (not :host) because it is compiled globally.
+
+ui-tag {
+    // per-instance palette (set by severity modifiers below); secondary default.
+    --_bg: var(--ui-tag-secondary-bg);
+    --_fg: var(--ui-tag-secondary-fg);
+
+    display: inline-flex;
+    align-items: center;
+    padding: var(--ui-tag-padding-y) var(--ui-tag-padding-x);
+    border-radius: var(--ui-tag-radius);
+    font-size: var(--ui-tag-font-size);
+    font-weight: var(--ui-tag-font-weight);
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--_bg);
+    color: var(--_fg);
+}
+
+ui-tag.ui-tag--primary {
+    --_bg: var(--ui-tag-primary-bg);
+    --_fg: var(--ui-tag-primary-fg);
+}
+
+ui-tag.ui-tag--success {
+    --_bg: var(--ui-tag-success-bg);
+    --_fg: var(--ui-tag-success-fg);
+}
+
+ui-tag.ui-tag--info {
+    --_bg: var(--ui-tag-info-bg);
+    --_fg: var(--ui-tag-info-fg);
+}
+
+ui-tag.ui-tag--warn {
+    --_bg: var(--ui-tag-warn-bg);
+    --_fg: var(--ui-tag-warn-fg);
+}
+
+ui-tag.ui-tag--danger {
+    --_bg: var(--ui-tag-danger-bg);
+    --_fg: var(--ui-tag-danger-fg);
+}
+
+ui-tag.ui-tag--contrast {
+    --_bg: var(--ui-tag-contrast-bg);
+    --_fg: var(--ui-tag-contrast-fg);
+}

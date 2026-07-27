@@ -1,0 +1,107 @@
+:host {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.mockup-card-wrap {
+    display: inline-flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+
+    &.mockup-card--rejected {
+        opacity: 0.5;
+        filter: grayscale(0.5);
+    }
+
+    &.mockup-card--selected .mockup-card {
+        border-color: var(--ui-green-600);
+        box-shadow: 0 0 0 1px var(--ui-green-600);
+    }
+}
+
+.mockup-card__badge {
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: var(--ui-radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ui-green-700);
+    background: var(--ui-green-100);
+
+    &--muted {
+        color: var(--ui-color-text-muted);
+        background: var(--ui-surface-100);
+    }
+}
+
+.mockup-card__approve {
+    flex: none;
+}
+
+.mockup-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-content);
+    color: var(--ui-color-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
+
+    &:hover {
+        background: var(--ui-color-content-hover);
+        border-color: var(--ui-color-primary);
+    }
+
+    &__icon {
+        flex: none;
+        display: inline-flex;
+        color: var(--ui-color-text-muted);
+    }
+
+    &__label {
+        font-weight: 600;
+    }
+
+    &__title {
+        color: var(--ui-color-text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.mockup-frame-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mockup-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    padding: 0.15rem 0.5rem;
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+    font-size: 0.7rem;
+    pointer-events: none;
+}
+
+.mockup-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #fff;
+}

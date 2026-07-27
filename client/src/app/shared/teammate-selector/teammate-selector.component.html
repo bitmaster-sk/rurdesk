@@ -1,0 +1,23 @@
+<ui-popover #pop>
+    <ui-listbox
+        [options]="options()"
+        [filter]="true"
+        optionLabel="name"
+        [emptyMessage]="emptyMessage() || ('TEAM.NO_TEAMMATES_TO_ADD' | translate)"
+        [emptyFilterMessage]="'NO_DATA' | translate"
+        (onChange)="onSelect($event.value)"
+    >
+        <ng-template #item let-user>
+            <div class="flex items-center gap-2">
+                <app-avatar
+                    [name]="user.name"
+                    [bgColor]="user.colorAvatarBg"
+                    [width]="1.75"
+                    [height]="1.75"
+                    [radius]="0.875"
+                ></app-avatar>
+                <span>{{ user.name }}</span>
+            </div>
+        </ng-template>
+    </ui-listbox>
+</ui-popover>

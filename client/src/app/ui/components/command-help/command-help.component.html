@@ -1,0 +1,28 @@
+<div
+    class="help"
+    data-help
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="'COMMAND.HELP.TITLE' | translate"
+>
+    <div class="help__title">{{ 'COMMAND.HELP.TITLE' | translate }}</div>
+    <div class="help__grid">
+        @for (section of sections; track section.headingKey) {
+            <div class="help__section">
+                <div class="help__heading ui-color-text-muted">
+                    {{ section.headingKey | translate }}
+                </div>
+                @for (row of section.rows; track row.labelKey) {
+                    <div class="help__row">
+                        <span class="help__label">{{ row.labelKey | translate }}</span>
+                        <span class="help__keys">
+                            @for (k of row.keys; track $index) {
+                                <kbd>{{ k }}</kbd>
+                            }
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
