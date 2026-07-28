@@ -14,6 +14,20 @@
 Self-hosted task tracker with an Angular client, a Go API, and an optional
 LLM-agent gateway that can pick up work items and turn them into branches/PRs.
 
+# Container images
+
+Prebuilt multi-arch (amd64/arm64) images are published to GHCR on every
+release:
+
+| Image | What | Pull |
+| --- | --- | --- |
+| [`rurdesk`](https://github.com/bitmaster-sk/rurdesk/pkgs/container/rurdesk%2Frurdesk) | API + WebSocket + MCP + Angular SPA in a single container | `docker pull ghcr.io/bitmaster-sk/rurdesk/rurdesk:latest` |
+| [`gateway-goose`](https://github.com/bitmaster-sk/rurdesk/pkgs/container/rurdesk%2Fgateway-goose) | Optional agent gateway (goose) | `docker pull ghcr.io/bitmaster-sk/rurdesk/gateway-goose:latest` |
+
+Pin a version tag (e.g. `:1.0.0`) instead of `latest` for deliberate upgrades.
+The [installation guide](https://rurdesk.com/docs/installation.html) has the
+full Docker Compose stack.
+
 # Developers
 
 ## Components
