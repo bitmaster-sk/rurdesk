@@ -37,16 +37,21 @@ func NewErr(code, message, translateKey string) *Error {
 }
 
 var (
-	ErrBadRequest        = newErr("BAD_REQUEST", "bad request", "error.bad_request", http.StatusBadRequest)
-	ErrUnauthorized      = newErr("UNAUTHORIZED", "unauthorized", "error.unauthorized", http.StatusUnauthorized)
-	ErrForbidden         = newErr("FORBIDDEN", "forbidden", "error.forbidden", http.StatusForbidden)
-	ErrNotFound          = newErr("NOT_FOUND", "not found", "error.not_found", http.StatusNotFound)
-	ErrInternal          = newErr("INTERNAL_ERROR", "internal server error", "error.internal", http.StatusInternalServerError)
-	ErrCycle             = newErr("CYCLE", "relation would create a cycle", "error.relation_cycle", http.StatusUnprocessableEntity)
-	ErrAiUnavailable     = newErr("AI_UNAVAILABLE", "AI service unavailable", "error.ai_unavailable", http.StatusServiceUnavailable)
-	ErrAiNotConfigured   = newErr("AI_NOT_CONFIGURED", "no AI model configured", "error.ai_not_configured", http.StatusServiceUnavailable)
-	ErrAiInvalidResponse = newErr("AI_INVALID_RESPONSE", "AI returned an invalid response", "error.ai_invalid_response", http.StatusUnprocessableEntity)
-	ErrRateLimited       = newErr("RATE_LIMITED", "too many requests", "error.rate_limited", http.StatusTooManyRequests)
+	ErrBadRequest                     = newErr("BAD_REQUEST", "bad request", "error.bad_request", http.StatusBadRequest)
+	ErrUnauthorized                   = newErr("UNAUTHORIZED", "unauthorized", "error.unauthorized", http.StatusUnauthorized)
+	ErrForbidden                      = newErr("FORBIDDEN", "forbidden", "error.forbidden", http.StatusForbidden)
+	ErrNotFound                       = newErr("NOT_FOUND", "not found", "error.not_found", http.StatusNotFound)
+	ErrInternal                       = newErr("INTERNAL_ERROR", "internal server error", "error.internal", http.StatusInternalServerError)
+	ErrConflict                       = newErr("CONFLICT", "conflict", "error.conflict", http.StatusConflict)
+	ErrStateInUse                     = newErr("STATE_IN_USE", "state is still in use (issues, project default or agent phases); pass migrateTo=<id> or migrateTo=null", "error.state_in_use", http.StatusConflict)
+	ErrSeverityInUse                  = newErr("SEVERITY_IN_USE", "severity is still in use (issues or project default); pass migrateTo=<id> or migrateTo=null", "error.severity_in_use", http.StatusConflict)
+	ErrCycle                          = newErr("CYCLE", "relation would create a cycle", "error.relation_cycle", http.StatusUnprocessableEntity)
+	ErrAiUnavailable                  = newErr("AI_UNAVAILABLE", "AI service unavailable", "error.ai_unavailable", http.StatusServiceUnavailable)
+	ErrAiNotConfigured                = newErr("AI_NOT_CONFIGURED", "no AI model configured", "error.ai_not_configured", http.StatusServiceUnavailable)
+	ErrAiInvalidResponse              = newErr("AI_INVALID_RESPONSE", "AI returned an invalid response", "error.ai_invalid_response", http.StatusUnprocessableEntity)
+	ErrRateLimited                    = newErr("RATE_LIMITED", "too many requests", "error.rate_limited", http.StatusTooManyRequests)
+	ErrInvalidStateMigrationTarget    = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different state of the same project", "error.invalid_state_migration_target", http.StatusUnprocessableEntity)
+	ErrInvalidSeverityMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different severity of the same project", "error.invalid_severity_migration_target", http.StatusUnprocessableEntity)
 )
 
 // As reports whether err is (or wraps) an *Error, storing it in target. It
@@ -68,6 +73,8 @@ func FromStatus(status int) *Error {
 		return ErrForbidden
 	case http.StatusNotFound:
 		return ErrNotFound
+	case http.StatusConflict:
+		return ErrConflict
 	case http.StatusTooManyRequests:
 		return ErrRateLimited
 	case http.StatusServiceUnavailable:
