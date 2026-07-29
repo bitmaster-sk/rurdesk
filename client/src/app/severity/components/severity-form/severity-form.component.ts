@@ -1,5 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { randomSeverityColor } from '../../constants/severity-colors';
 import { IssueSeverity } from '../../model/issue-severity.model';
 
 @Component({
@@ -27,7 +28,11 @@ export class SeverityFormComponent implements OnInit {
                 Validators.required,
                 Validators.maxLength(20)
             ]),
-            color: this.fb.control(this.severity?.color, [Validators.required]),
+            // A new severity starts on a palette colour: an empty <input type="color">
+            // renders black and blocks the required validator.
+            color: this.fb.control(this.severity?.color ?? randomSeverityColor(), [
+                Validators.required
+            ]),
             orderRank: this.fb.control(this.severity?.orderRank)
         });
     }
