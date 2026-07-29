@@ -129,6 +129,22 @@ A full project timeline:
 
 ![Gantt timeline with dependency arrows](../../site/assets/img/view-gantt.png)
 
+### States & severities
+
+Project settings let you add, rename, and delete the states and severities
+tasks move through. Deleting one that's still in use doesn't silently orphan
+data:
+
+- If the state or severity is **unused** — no tasks reference it, it isn't
+  the project default, and (for states) no agent phase points at it — it's
+  removed immediately after a plain confirmation.
+- If it's **in use**, a dialog shows how many tasks are affected (plus
+  whether it's the project default or mapped to an agent phase) and asks you
+  to either **migrate** everything to another state/severity or explicitly
+  **unassign** it. Nothing is deleted until you choose.
+- If it's the **last** state or severity in the project, there's nothing to
+  migrate to, so the dialog only offers unassign.
+
 ## Relations & scheduling
 
 Link tasks to express how work connects:

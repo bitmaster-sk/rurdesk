@@ -1,6 +1,7 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    computed,
     inject,
     input,
     OnDestroy,
@@ -14,6 +15,7 @@ import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { StateApi } from '../../api/state.api.service';
+import { StateUsage } from '../../model/state-usage.model';
 import cloneDeep from 'lodash-es/cloneDeep';
 import { Subscription } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
@@ -109,10 +111,77 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
             });
     }
 
-    protected onConfirmDeleteState(state: IssueState): void {
-        this.stateApi.delete$(this.project().idProject, state.idState).subscribe(() => {
-            this.removeState(state);
-            this.stateStore.load();
+    protected readonly isDeleteDialogVisible = signal(false);
+    protected readonly isDeleting = signal(false);
+    protected readonly deleteTarget = signal<IssueState | null>(null);
+    protected readonly deleteUsage = signal<StateUsage | null>(null);
+
+    protected readonly deleteOptions = computed<IssueState[]>(() => {
+        const target = this.deleteTarget();
+        return this.states().filter(s => s.idState !== target?.idState);
+    });
+
+    protected readonly hasDeleteUsage = computed(() => {
+        const usage = this.deleteUsage();
+        return !!usage && (usage.issues > 0 || usage.isProjectDefault || usage.agentPhases > 0);
+    });
+
+    protected readonly deleteUsageItems = computed(() => {
+        const usage = this.deleteUsage();
+        if (!usage) {
+            return [];
+        }
+        const parts: string[] = [];
+        if (usage.issues === 1) {
+            parts.push(this.i18n.instant('STATE.DELETE_USAGE.ONE'));
+        } else if (usage.issues > 1) {
+            parts.push(this.i18n.instant('STATE.DELETE_USAGE.MANY', { count: usage.issues }));
+        }
+        if (usage.isProjectDefault) {
+            parts.push(this.i18n.instant('STATE.DELETE_USAGE.DEFAULT'));
+        }
+        if (usage.agentPhases === 1) {
+            parts.push(this.i18n.instant('STATE.DELETE_USAGE.PHASES_ONE'));
+        } else if (usage.agentPhases > 1) {
+            parts.push(
+                this.i18n.instant('STATE.DELETE_USAGE.PHASES_MANY', { count: usage.agentPhases })
+            );
+        }
+        return parts;
+    });
+
+    protected onDeleteState(state: IssueState): void {
+        this.deleteTarget.set(state);
+        this.deleteUsage.set(null);
+        this.stateApi.usage$(this.project().idProject, state.idState).subscribe(usage => {
+            this.deleteUsage.set(usage);
+            this.isDeleteDialogVisible.set(true);
+        });
+    }
+
+    protected onConfirmDelete(choice: { migrateTo: number | null }): void {
+        const target = this.deleteTarget();
+        if (!target) {
+            return;
+        }
+        const intent = this.hasDeleteUsage() ? choice : undefined;
+        this.isDeleting.set(true);
+        this.stateApi.delete$(this.project().idProject, target.idState, intent).subscribe({
+            next: () => {
+                this.isDeleting.set(false);
+                this.isDeleteDialogVisible.set(false);
+                this.removeState(target);
+                this.stateStore.load();
+                // refresh the local default so a later save doesn't PATCH the stale id back
+                if (this.project().idStateDefault === target.idState) {
+                    this.project().idStateDefault = choice.migrateTo;
+                    this.form.patchValue(
+                        { idStateDefault: choice.migrateTo },
+                        { emitEvent: false }
+                    );
+                }
+            },
+            error: () => this.isDeleting.set(false) // dialog stays open, toast comes from ErrorInterceptor
         });
     }
 

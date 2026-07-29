@@ -30,6 +30,9 @@ export class SeverityDropdownComponent implements ControlValueAccessor {
 
     public readonly inputId = input<string>();
 
+    /** Placeholder shown when nothing is selected (mirrors app-state-dropdown). */
+    public readonly placeholder = input<string>();
+
     /** Drives the floating auto-save chip on the trigger (forwarded to ui-select). */
     public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
 

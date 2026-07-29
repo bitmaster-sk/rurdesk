@@ -1,0 +1,79 @@
+<ui-dialog
+    [(visible)]="visible"
+    [header]="'SHARED.DELETE_MIGRATION.TITLE' | translate: { entity: entityLabel() }"
+    width="28rem"
+>
+    <div class="flex flex-col gap-3">
+        @if (!hasUsage()) {
+            <!-- zero-usage fast path: plain confirm, no picker/radios -->
+            <span>{{ 'SHARED.DELETE_MIGRATION.EMPTY_CONFIRM' | translate }}</span>
+        } @else {
+            @if (usageItems().length === 1) {
+                <ui-message severity="warn">{{ usageItems()[0] }}</ui-message>
+            } @else if (usageItems().length > 1) {
+                <ui-message severity="warn">
+                    <ul class="list-disc ml-4 flex flex-col gap-1">
+                        @for (item of usageItems(); track item) {
+                            <li>{{ item }}</li>
+                        }
+                    </ul>
+                </ui-message>
+            }
+            @if (hasTargets()) {
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="delete-mode"
+                        value="migrate"
+                        [checked]="mode() === 'migrate'"
+                        (change)="mode.set('migrate')"
+                    />
+                    <span>{{ 'SHARED.DELETE_MIGRATION.MIGRATE' | translate }}</span>
+                </label>
+                @if (mode() === 'migrate') {
+                    @if (stateOptions().length > 0) {
+                        <app-state-dropdown
+                            [states]="stateOptions()"
+                            [placeholder]="'SHARED.DELETE_MIGRATION.PICK_TARGET' | translate"
+                            [ngModel]="selectedId()"
+                            (ngModelChange)="selectedId.set($event)"
+                        ></app-state-dropdown>
+                    } @else {
+                        <app-severity-dropdown
+                            [severities]="severityOptions()"
+                            [placeholder]="'SHARED.DELETE_MIGRATION.PICK_TARGET' | translate"
+                            [ngModel]="selectedId()"
+                            (ngModelChange)="selectedId.set($event)"
+                        ></app-severity-dropdown>
+                    }
+                }
+            }
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                    type="radio"
+                    name="delete-mode"
+                    value="unassign"
+                    [checked]="mode() === 'unassign'"
+                    (change)="mode.set('unassign')"
+                />
+                <span>{{ 'SHARED.DELETE_MIGRATION.UNASSIGN' | translate }}</span>
+            </label>
+        }
+    </div>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="onCancel()"
+        />
+        <ui-button
+            [label]="'SHARED.DELETE_MIGRATION.CONFIRM' | translate"
+            severity="danger"
+            [disabled]="isConfirmDisabled()"
+            [loading]="isLoading()"
+            (click)="onConfirm()"
+        />
+    </ng-template>
+</ui-dialog>

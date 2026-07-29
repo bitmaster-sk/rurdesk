@@ -42,9 +42,7 @@
                                 variant="text"
                                 severity="danger"
                                 size="small"
-                                uiConfirm
-                                [confirmText]="'SEVERITY.CONFIRM.DELETE' | translate"
-                                (confirmed)="onConfirmDeleteSeverity(severity)"
+                                (click)="onDeleteSeverity(severity)"
                             >
                                 <tabler-icon icon="trash" [size]="16" />
                             </ui-button>
@@ -68,3 +66,12 @@
         </div>
     </div>
 </div>
+<app-delete-migration-dialog
+    [(visible)]="isDeleteDialogVisible"
+    [entityLabel]="'SEVERITY.SINGULAR' | translate"
+    [usageItems]="deleteUsageItems()"
+    [severityOptions]="deleteOptions()"
+    [hasUsage]="hasDeleteUsage()"
+    [isLoading]="isDeleting()"
+    (confirmed)="onConfirmDelete($event)"
+/>

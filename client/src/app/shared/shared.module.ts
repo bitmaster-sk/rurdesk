@@ -21,6 +21,7 @@ import { MockupCardComponent } from './components/mockup-card/mockup-card.compon
 import { MentionChipComponent } from './mention/mention-chip/mention-chip.component';
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
+import { DeleteMigrationDialogComponent } from './components/delete-migration-dialog/delete-migration-dialog.component';
 import { MarkdownModule } from 'ngx-markdown';
 import { UiModule } from '../ui/ui.module';
 import {
@@ -52,7 +53,8 @@ import {
         MockupCardComponent,
         MentionChipComponent,
         MessageBodyComponent,
-        DiffViewerComponent
+        DiffViewerComponent,
+        DeleteMigrationDialogComponent
     ],
     imports: [
         CoreModule,
@@ -86,7 +88,8 @@ import {
         MockupCardComponent,
         MentionChipComponent,
         MessageBodyComponent,
-        DiffViewerComponent
+        DiffViewerComponent,
+        DeleteMigrationDialogComponent
     ]
 })
 export class SharedModule {}

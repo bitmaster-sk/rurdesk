@@ -6,6 +6,7 @@
         [ngModel]="value()"
         (ngModelChange)="onValueChange($event)"
         [showClear]="true"
+        [placeholder]="placeholder()"
         [uiSaveStatus]="saveStatus()"
         optionLabel="title"
         optionValue="idSeverity"

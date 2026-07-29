@@ -181,7 +181,15 @@
         }
     },
     "SHARED": {
-        "CLOSE": "Close"
+        "CLOSE": "Close",
+        "DELETE_MIGRATION": {
+            "TITLE": "Delete {{entity}}",
+            "EMPTY_CONFIRM": "Nothing uses this value. Delete it?",
+            "MIGRATE": "Move existing items to another option",
+            "PICK_TARGET": "Select target",
+            "UNASSIGN": "Leave existing items unassigned",
+            "CONFIRM": "Delete"
+        }
     },
     "LOGIN": "Login",
     "LOGIN.WELCOME": "Welcome back",
@@ -230,8 +238,12 @@
         "END": "End state",
         "NEW": "New state",
         "EDIT": "Edit state",
-        "CONFIRM.DELETE": "Do you really want to delete this state?",
-        "DEFAULT.FOR.NEW.ISSUE": "Default state for new tasks"
+        "DEFAULT.FOR.NEW.ISSUE": "Default state for new tasks",
+        "DELETE_USAGE.ONE": "1 task still uses this state.",
+        "DELETE_USAGE.MANY": "{{count}} tasks still use this state.",
+        "DELETE_USAGE.DEFAULT": "It is the project's default state.",
+        "DELETE_USAGE.PHASES_ONE": "1 agent workflow phase is mapped to this state.",
+        "DELETE_USAGE.PHASES_MANY": "{{count}} agent workflow phases are mapped to this state."
     },
     "SEVERITY": {
         "SINGULAR": "Severity",
@@ -239,8 +251,10 @@
         "NEW": "New severity",
         "EDIT": "Edit severity",
         "COLOR": "Color",
-        "CONFIRM.DELETE": "Do you really want to delete this severity?",
-        "DEFAULT.FOR.NEW.ISSUE": "Default severity for new tasks"
+        "DEFAULT.FOR.NEW.ISSUE": "Default severity for new tasks",
+        "DELETE_USAGE.ONE": "1 task still uses this severity.",
+        "DELETE_USAGE.MANY": "{{count}} tasks still use this severity.",
+        "DELETE_USAGE.DEFAULT": "It is the project's default severity."
     },
     "PROJECT": {
         "SINGULAR": "Project",
@@ -553,7 +567,12 @@
         "user_has_agent_activity": "This user has agent history and cannot be deleted.",
         "user_has_authored_content": "This user created or edited issues and cannot be deleted.",
         "not_a_bot": "API keys can only be managed for bots.",
-        "registration_closed": "Registration is closed. Ask an admin to create your account."
+        "registration_closed": "Registration is closed. Ask an admin to create your account.",
+        "conflict": "Conflict",
+        "state_in_use": "This state is still in use — choose where to move its references",
+        "severity_in_use": "This severity is still in use — choose where to move its references",
+        "invalid_state_migration_target": "The target must be a different state of the same project",
+        "invalid_severity_migration_target": "The target must be a different severity of the same project"
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
