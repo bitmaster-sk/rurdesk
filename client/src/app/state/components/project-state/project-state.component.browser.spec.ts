@@ -32,7 +32,9 @@ describe('ProjectStateComponent reorder (browser)', () => {
             load$: vi.fn().mockReturnValue(of([state(1, 1), state(2, 2), state(3, 3)])),
             update$: vi.fn().mockReturnValue(of(null)),
             delete$: vi.fn().mockReturnValue(of(null)),
-            usage$: vi.fn().mockReturnValue(of({ issues: 0, isProjectDefault: false, agentPhases: 0 }))
+            usage$: vi
+                .fn()
+                .mockReturnValue(of({ issues: 0, isProjectDefault: false, agentPhases: 0 }))
         };
 
         TestBed.configureTestingModule({

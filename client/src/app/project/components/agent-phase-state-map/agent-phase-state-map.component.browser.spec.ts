@@ -134,9 +134,7 @@ describe('AgentPhaseStateMapComponent', () => {
     it('re-reads the mappings when a mapped state disappears from the states list', () => {
         const states$ = new BehaviorSubject(mockStates);
         stateStore.statesByProject$.mockReturnValue(states$);
-        phaseStateMapApi.load$.mockReturnValue(
-            of([{ idProject: 10, phase: 'done', idState: 3 }])
-        );
+        phaseStateMapApi.load$.mockReturnValue(of([{ idProject: 10, phase: 'done', idState: 3 }]));
 
         fixture = TestBed.createComponent(AgentPhaseStateMapComponent);
         component = fixture.componentInstance;
@@ -147,9 +145,7 @@ describe('AgentPhaseStateMapComponent', () => {
         expect(component.getMappingControl(doneIndex).value).toBe(3);
 
         // state 3 deleted with migrateTo=2 → server repointed the mapping
-        phaseStateMapApi.load$.mockReturnValue(
-            of([{ idProject: 10, phase: 'done', idState: 2 }])
-        );
+        phaseStateMapApi.load$.mockReturnValue(of([{ idProject: 10, phase: 'done', idState: 2 }]));
         states$.next(mockStates.filter(state => state.idState !== 3));
         fixture.detectChanges();
 
