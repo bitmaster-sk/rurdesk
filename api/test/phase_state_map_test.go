@@ -288,9 +288,11 @@ func (s *PhaseStateMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Require().Equal(http.StatusOK, putRes.StatusCode)
 
-	// Delete the state — ON DELETE SET NULL in agent_phase_state_map
+	// Delete the state — ON DELETE SET NULL in agent_phase_state_map. The state
+	// is only referenced by the phase map (no issues), so under the new
+	// migrateTo contract the delete must explicitly say "unassign".
 	deleteRes := Request(s.T(), s.App, "DELETE",
-		fmt.Sprintf("/api/private/state/%d/project/%d", tempStateID, s.IdProject),
+		fmt.Sprintf("/api/private/state/%d/project/%d?migrateTo=null", tempStateID, s.IdProject),
 		"", s.OwnerToken)
 	s.Require().Equal(http.StatusOK, deleteRes.StatusCode)
 

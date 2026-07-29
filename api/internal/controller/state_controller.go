@@ -2,28 +2,33 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StateController struct {
 	projectRepo *repository.ProjectRepository
 	stateRepo   *repository.StateRepository
+	stateSvc    *service.StateService
 	acl         *service.AclService
 	pool        *pgxpool.Pool
 }
 
-func NewStateController(sr *repository.StateRepository, acl *service.AclService, pr *repository.ProjectRepository, pool *pgxpool.Pool) *StateController {
+func NewStateController(sr *repository.StateRepository, svc *service.StateService, acl *service.AclService, pr *repository.ProjectRepository, pool *pgxpool.Pool) *StateController {
 	return &StateController{
 		projectRepo: pr,
 		stateRepo:   sr,
+		stateSvc:    svc,
 		acl:         acl,
 		pool:        pool,
 	}
@@ -174,6 +179,36 @@ func (sc *StateController) EditState(c *gin.Context) {
 	c.JSON(http.StatusOK, state)
 }
 
+// GetStateUsage reports what still points at the state, for the delete dialog.
+func (sc *StateController) GetStateUsage(c *gin.Context) {
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	idState, err := strconv.ParseInt(c.Param("idState"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	if !sc.acl.CanDeleteState(ctx, user.IdUser, idProject) {
+		_ = c.Error(errForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+	usage, err := sc.stateRepo.LoadStateUsage(ctx, idProject, idState)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, usage)
+}
+
 func (sc *StateController) DeleteState(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
@@ -187,39 +222,48 @@ func (sc *StateController) DeleteState(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
-
-	err = extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
-		if !sc.acl.CanDeleteState(ctx, user.IdUser, idProject) {
-			return errForbidden
-		}
-		state, err := sc.stateRepo.LoadState(ctx, idProject, idState)
-		if err != nil {
-			return err
-		}
-		if err := sc.stateRepo.DeleteProjectState(ctx, state); err != nil {
-			return err
-		}
-		if !state.Protected {
-			// Deleting the row fires the issues.issue FK (ON DELETE SET NULL).
-			return sc.stateRepo.DeleteState(ctx, idState)
-		}
-		// Protected default: the shared row stays, only the project mapping is
-		// removed — so the FK never fires. Unassign this project's issues to
-		// avoid orphaning them.
-		return sc.stateRepo.ReassignIssuesState(ctx, idProject, idState, nil)
-	})
-	if err == errForbidden {
-		_ = c.Error(err)
+	// was inside RunInTx; read-only Redis-cached check, so fail fast instead
+	if !sc.acl.CanDeleteState(ctx, user.IdUser, idProject) {
+		_ = c.Error(errForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err != nil {
+
+	// single intent param: migrateTo=<id> repoints, the literal migrateTo=null
+	// unassigns, absent → 409 when in use, anything else (incl. empty) → 400
+	var migrateTo *int64
+	unassign := false
+	if raw, hasIntent := c.GetQuery("migrateTo"); hasIntent {
+		if raw == "null" {
+			unassign = true
+		} else {
+			id, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				_ = c.Error(errs.ErrBadRequest)
+				c.Status(http.StatusBadRequest)
+				return
+			}
+			migrateTo = &id
+		}
+	}
+
+	err = sc.stateSvc.DeleteWithMigration(ctx, idProject, idState, migrateTo, unassign)
+	var appErr *errs.Error
+	switch {
+	case err == nil:
+		c.Status(http.StatusOK)
+	case errors.Is(err, pgx.ErrNoRows):
+		// state not mapped to this project → 404, not 500
+		_ = c.Error(errs.ErrNotFound)
+		c.Status(http.StatusNotFound)
+	case errs.As(err, &appErr):
+		// errs sentinels carry their own status (409 in-use, 422 bad target)
+		_ = c.Error(appErr)
+		c.Status(appErr.HttpStatus())
+	default:
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
-		return
 	}
-	c.Status(http.StatusOK)
 }
