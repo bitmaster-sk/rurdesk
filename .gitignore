@@ -6,6 +6,7 @@ ROADMAP.md
 
 # Internal working notes — public docs live in site/
 docs/development/
+PROMOTE.md
 
 # Environment / secrets — never commit
 .env
