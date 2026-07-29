@@ -9,12 +9,76 @@
   <a href="https://rurdesk.com">Website</a>
   &nbsp;·&nbsp;
   <a href="https://rurdesk.com/docs">Documentation</a>
+  &nbsp;·&nbsp;
+  <a href="https://rurdesk.com/docs/installation.html">Installation</a>
 </p>
 
-Self-hosted task tracker with an Angular client, a Go API, and an optional
-LLM-agent gateway that can pick up work items and turn them into branches/PRs.
+<p align="center">
+  <a href="https://github.com/bitmaster-sk/rurdesk/releases"><img src="https://img.shields.io/github/v/release/bitmaster-sk/rurdesk" alt="Latest release"></a>
+  <a href="https://github.com/bitmaster-sk/rurdesk/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/bitmaster-sk/rurdesk/ci.yml?branch=main&label=CI" alt="CI status"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License: AGPL-3.0"></a>
+  <a href="https://github.com/sponsors/bitmaster-sk"><img src="https://img.shields.io/badge/sponsor-%E2%9D%A4-b85814" alt="Sponsor"></a>
+</p>
 
-# Container images
+Rurdesk is a self-hosted task tracker where AI agents work as team members:
+assign an issue to an agent and it comes back as a branch and a pull request,
+with progress reported into the tracker as it happens. Everything runs on your
+own infrastructure — the whole app (Go API, WebSocket, MCP server, Angular UI)
+ships as a single container, with Postgres and Redis next to it. The agent
+part is optional; without it you get a fast, ordinary issue tracker.
+
+| | |
+| --- | --- |
+| ![Kanban view](site/assets/img/view-kanban.png) | ![Gantt view](site/assets/img/view-gantt.png) |
+| ![Issue detail with activity feed and time tracking](site/assets/img/issue-detail.png) | ![Pull request panel with diffs on an issue](site/assets/img/mr-diff.png) |
+
+The quality check reviews an issue before anyone (human or agent) picks it up,
+and an agent posts its design and implementation plan back into the tracker as
+it works:
+
+| | | |
+| --- | --- | --- |
+| ![Quality check flagging a vague issue](site/assets/img/quality-low.png) | ![Agent design stage posted to the issue](site/assets/img/stage-design.png) | ![Agent implementation plan with diffs](site/assets/img/stage-plan.png) |
+
+▶ [Watch the agent workflow demo](https://rurdesk.com/#agents) — an issue is
+assigned to an agent, worked on, and comes back as a pull request.
+
+# Features
+
+- **Four views** of the same issues: table, kanban, calendar, and gantt.
+- **Sprints, relations & scheduling** — hierarchy, dependencies, duplicates,
+  sprint rollover.
+- **Time tracking** built into issues.
+- **Real-time collaboration** — messages, mentions, and notifications over
+  WebSocket; no refresh needed.
+- **Git integration** — link branches and merge requests to issues and read
+  their diffs in the tracker.
+- **AI assists** (bring your own API key): quality check for issue
+  descriptions, project kickstarter, and splitting oversized tasks.
+- **Agent gateway** (optional) — agents pick up assigned issues, work in
+  isolated git worktrees, and open pull requests.
+- **MCP server** built in — connect Claude Code or any MCP client to the
+  tracker directly.
+- **Command palette** and keyboard shortcuts throughout.
+
+The [documentation](https://rurdesk.com/docs) covers each of these in detail.
+
+# Installation
+
+The stack is three services — `rurdesk`, Postgres, and Redis — brought up by
+one Docker Compose file; the agent gateway is a fourth, optional one. No
+source checkout or build step is needed:
+
+```bash
+docker pull ghcr.io/bitmaster-sk/rurdesk/rurdesk:latest
+```
+
+Follow the [installation guide](https://rurdesk.com/docs/installation.html)
+for the complete compose file and the
+[configuration reference](https://rurdesk.com/docs/configuration.html)
+for the environment variables.
+
+## Container images
 
 Prebuilt multi-arch (amd64/arm64) images are published to GHCR on every
 release:
@@ -25,8 +89,6 @@ release:
 | [`gateway-goose`](https://github.com/bitmaster-sk/rurdesk/pkgs/container/rurdesk%2Fgateway-goose) | Optional agent gateway (goose) | `docker pull ghcr.io/bitmaster-sk/rurdesk/gateway-goose:latest` |
 
 Pin a version tag (e.g. `:1.0.0`) instead of `latest` for deliberate upgrades.
-The [installation guide](https://rurdesk.com/docs/installation.html) has the
-full Docker Compose stack.
 
 # Developers
 
@@ -109,7 +171,7 @@ so a running instance can report its own release at
 `GET /api/private/admin/version` and in the admin settings panel. A local build
 leaves the defaults `dev` / `unknown`.
 
-## License
+# License
 
 Rurdesk is licensed under the **GNU Affero General Public License v3.0** (see
 [`LICENSE`](LICENSE)). In short: you may use, modify, and self-host it freely,
