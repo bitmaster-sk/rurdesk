@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: 'Lato';
+    font-weight: 400;
+    src: url('../site/assets/fonts/lato-normal-400-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lato';
+    font-weight: 700;
+    src: url('../site/assets/fonts/lato-normal-700-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Lato';
+    font-weight: 900;
+    src: url('../site/assets/fonts/lato-normal-900-latin.woff2') format('woff2');
+  }
+  @font-face {
+    font-family: 'Spline Sans Mono';
+    font-weight: 500;
+    src: url('../site/assets/fonts/spline-sans-mono-normal-500-latin.woff2') format('woff2');
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { width: 1280px; height: 640px; overflow: hidden; }
+
+  body {
+    position: relative;
+    font-family: 'Lato', sans-serif;
+    background: #fef5ec;
+    color: #18181b;
+  }
+
+  /* subtle dot grid, brand-toned */
+  .grid {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, rgba(184, 88, 20, 0.16) 1.2px, transparent 1.2px);
+    background-size: 26px 26px;
+    mask-image: linear-gradient(105deg, black 0%, transparent 62%);
+    -webkit-mask-image: linear-gradient(105deg, black 0%, transparent 62%);
+  }
+
+  /* warm glow behind the screenshot */
+  .glow {
+    position: absolute;
+    right: -140px; top: -160px;
+    width: 760px; height: 760px;
+    background: radial-gradient(circle, rgba(232, 154, 86, 0.35) 0%, transparent 65%);
+  }
+
+  .rule {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 10px;
+    background: #b85814;
+  }
+
+  .copy {
+    position: absolute;
+    left: 76px; top: 118px;
+    width: 560px;
+    z-index: 2;
+  }
+
+  .logo { display: flex; align-items: center; gap: 22px; }
+  .wordmark {
+    font-size: 84px; font-weight: 900; letter-spacing: -3px; line-height: 1;
+  }
+
+  .tagline {
+    margin-top: 40px;
+    font-size: 37px; font-weight: 700;
+    line-height: 1.28;
+    letter-spacing: -0.5px;
+    color: #18181b;
+  }
+  .tagline em {
+    font-style: normal;
+    color: #b85814;
+  }
+
+  .sub {
+    margin-top: 26px;
+    font-size: 22px;
+    line-height: 1.45;
+    color: #52525b;
+    max-width: 470px;
+  }
+
+  .chips { margin-top: 34px; display: flex; gap: 12px; }
+  .chip {
+    font-family: 'Spline Sans Mono', monospace;
+    font-weight: 500;
+    font-size: 17px;
+    padding: 8px 16px;
+    border: 1.5px solid rgba(24, 24, 27, 0.55);
+    border-radius: 999px;
+    color: #18181b;
+    background: rgba(255, 255, 255, 0.55);
+  }
+  .chip.accent {
+    border-color: #b85814;
+    color: #8a3c05;
+    background: #fcecdf;
+  }
+
+  /* browser-framed screenshot bleeding off the right edge */
+  .shot {
+    position: absolute;
+    left: 556px; top: 128px;
+    width: 900px;
+    z-index: 3;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow:
+      0 40px 90px rgba(77, 33, 3, 0.28),
+      0 12px 30px rgba(77, 33, 3, 0.18);
+    outline: 1.5px solid rgba(24, 24, 27, 0.14);
+    overflow: hidden;
+  }
+  .shot .bar {
+    height: 40px;
+    background: #f4ede4;
+    border-bottom: 1px solid rgba(24, 24, 27, 0.10);
+    display: flex; align-items: center; gap: 9px;
+    padding: 0 18px;
+  }
+  .shot .bar i {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: rgba(24, 24, 27, 0.18);
+  }
+  .shot .bar i:first-child { background: #d06e2a; }
+  .shot .clip {
+    width: 900px;
+    height: 350px;
+    overflow: hidden;
+    position: relative;
+  }
+  /* zoomed crop of the original 3200x2000 shot, centered on the bars */
+  .shot img {
+    display: block;
+    width: 1600px;
+    margin-left: -168px;
+    margin-top: -105px;
+  }
+</style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+
+  <div class="copy">
+    <div class="logo">
+      <!-- robot mark from the login page -->
+      <svg width="104" height="104" viewBox="8 4 50 54" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="32" y1="18" x2="32" y2="11" stroke="#18181b" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="32" cy="8.5" r="4" fill="#b85814"/>
+        <rect x="13" y="21" width="38" height="33" rx="10" fill="none" stroke="#18181b" stroke-width="5"/>
+        <rect x="20" y="35" width="9" height="5" rx="2.5" fill="#18181b"/>
+        <circle cx="41" cy="37.5" r="8.5" fill="#b85814" opacity="0.25"/>
+        <circle cx="41" cy="37.5" r="4.5" fill="#b85814"/>
+      </svg>
+      <div class="wordmark">rurdesk</div>
+    </div>
+
+    <div class="tagline">Self-hosted task tracker<br>where <em>AI agents</em> open<br>the pull requests.</div>
+
+    <div class="chips">
+      <span class="chip accent">docker pull</span>
+      <span class="chip">MCP built-in</span>
+      <span class="chip">AGPL-3.0</span>
+    </div>
+  </div>
+
+  <div class="shot">
+    <div class="bar"><i></i><i></i><i></i></div>
+    <div class="clip"><img src="../site/assets/img/view-gantt.png" alt=""></div>
+  </div>
+
+  <div class="rule"></div>
+</body>
+</html>
