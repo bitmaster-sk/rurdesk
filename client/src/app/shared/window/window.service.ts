@@ -54,9 +54,15 @@ export class WindowService {
         return component;
     }
 
-    /** zruší okno */
+    /**
+     * Destroys the window. Deferred: `ui-dialog` emits `hide` from inside its effect, so
+     * destroying the view tree synchronously (closing via ×) would run during change
+     * detection and corrupt Angular's internal state ("view[EFFECTS] is not iterable").
+     */
     private destroyWindow(window: ComponentRef<WindowComponent>): void {
-        this.appRef.detachView(window.hostView);
-        window.destroy();
+        queueMicrotask(() => {
+            this.appRef.detachView(window.hostView);
+            window.destroy();
+        });
     }
 }
