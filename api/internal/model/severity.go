@@ -9,6 +9,14 @@ type Severity struct {
 	OrderRank  int    `json:"orderRank" db:"order_rank"`
 }
 
+// SeverityUsage mirrors StateUsage for severities (no agent-phase mapping).
+type SeverityUsage struct {
+	Issues           int  `json:"issues"`
+	IsProjectDefault bool `json:"isProjectDefault"`
+	// Guard input only — see StateUsage.Mappings.
+	Mappings int `json:"-"`
+}
+
 type CreateSeverityReq struct {
 	IdProject int64  `json:"idProject"`
 	Title     string `json:"title" binding:"required,max=20"`

@@ -72,6 +72,35 @@ func (r *SeverityRepository) LoadSeverity(ctx context.Context, idProject int64, 
 	return severity, nil
 }
 
+// LoadSeverityUsage mirrors LoadStateUsage for severities.
+func (r *SeverityRepository) LoadSeverityUsage(ctx context.Context, idProject, idSeverity int64) (*model.SeverityUsage, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	u := &model.SeverityUsage{}
+	err := db.QueryRow(ctx, `
+		SELECT
+			(SELECT count(*) FROM issues.issue WHERE id_project = $1 AND id_severity = $2),
+			EXISTS (SELECT 1 FROM projects.project WHERE id_project = $1 AND id_severity_default = $2),
+			(SELECT count(*) FROM projects.project_issue_severity WHERE id_severity = $2)
+	`, idProject, idSeverity).Scan(&u.Issues, &u.IsProjectDefault, &u.Mappings)
+	if err != nil {
+		return nil, fmt.Errorf("querying severity usage: %w", err)
+	}
+	return u, nil
+}
+
+// RepointProjectDefaultSeverity mirrors RepointProjectDefaultState.
+func (r *SeverityRepository) RepointProjectDefaultSeverity(ctx context.Context, idProject, oldIdSeverity int64, newIdSeverity *int64) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE projects.project SET id_severity_default = $3
+		WHERE id_project = $1 AND id_severity_default = $2
+	`, idProject, oldIdSeverity, newIdSeverity)
+	if err != nil {
+		return fmt.Errorf("repointing project default severity: %w", err)
+	}
+	return nil
+}
+
 func (r *SeverityRepository) InsertDefaultSeverities(ctx context.Context, idProject int64) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
