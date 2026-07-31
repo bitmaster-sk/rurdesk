@@ -1,0 +1,198 @@
+# Configuration for `licensed` (https://github.com/licensee/licensed), the
+# dependency-licence tool GitHub uses on its own repositories.
+#
+#   script/licenses.sh   refresh the cache and write the notice files
+#
+# Neither the cache nor the notices are committed; CI builds them fresh, and
+# `licensed status` is what gates a pull request.
+#
+# One "app" per artefact we actually distribute. The Go apps point at main
+# packages rather than at the module root on purpose: `licensed` enumerates
+# what `go list -deps` links into that binary, so a module that appears in
+# go.mod but is never linked is correctly left out of the notices.
+#
+# `allowed` lists licences whose only obligation is that the notice ships with
+# the distribution. Everything else has to be named per-dependency under
+# `reviewed`, so accepting an extra obligation — or accepting a licence the
+# detector could not identify — is always a deliberate, recorded act rather
+# than a silent side effect of `npm install`.
+
+allowed:
+  - mit
+  - apache-2.0
+  - bsd-2-clause
+  - bsd-3-clause
+  - isc
+  - 0bsd
+  - unlicense
+  - cc0-1.0
+  - blueoak-1.0.0
+  - zlib
+
+# Dependencies checked by hand and accepted. Two reasons land a dependency
+# here, and they are kept apart on purpose:
+#
+#   (a) the licence carries an obligation beyond attribution — see the top of
+#       THIRD_PARTY_NOTICES.txt for what each one requires of us;
+#   (b) the licence is permissive, but `licensee` reports "other" because the
+#       package ships more than one legal file (a patent grant, a README
+#       repeating the terms), so no single SPDX id matches with confidence.
+#
+# Category (b) is not a finding. It is the detector being conservative, and
+# each entry below was opened and read before it was added.
+reviewed:
+  go:
+    # -- (a) MPL-2.0 -------------------------------------------------------
+    # File-level copyleft. Our own code is unaffected, but the unmodified
+    # source of these packages must stay available to anyone we distribute a
+    # binary to — holders of a commercial licence included.
+    - github.com/hashicorp/golang-lru/v2
+    - github.com/hashicorp/golang-lru/v2/expirable
+    - github.com/hashicorp/golang-lru/v2/internal
+    - github.com/hashicorp/golang-lru/v2/simplelru
+
+    # -- (b) BSD-3-Clause + the Go project's additional patent grant --------
+    # Every Google-published Go repository ships LICENSE (BSD-3-Clause) next
+    # to PATENTS. The patent file grants us rights, it does not impose
+    # obligations, but two legal files means `licensee` will not commit to an
+    # SPDX id. Both texts are reproduced in the notices.
+    - golang.org/x/crypto/bcrypt
+    - golang.org/x/crypto/blowfish
+    - golang.org/x/crypto/hkdf
+    - golang.org/x/crypto/sha3
+    - golang.org/x/net/bpf
+    - golang.org/x/net/html
+    - golang.org/x/net/html/atom
+    - golang.org/x/net/http2
+    - golang.org/x/net/http2/h2c
+    - golang.org/x/net/internal/httpcommon
+    - golang.org/x/net/internal/httpsfv
+    - golang.org/x/net/internal/iana
+    - golang.org/x/net/internal/socket
+    - golang.org/x/net/internal/timeseries
+    - golang.org/x/net/ipv4
+    - golang.org/x/net/ipv6
+    - golang.org/x/net/trace
+    - golang.org/x/sync/semaphore
+    - golang.org/x/sys/unix
+    - golang.org/x/term
+    - golang.org/x/text/cases
+    - golang.org/x/text/encoding
+    - golang.org/x/text/encoding/internal
+    - golang.org/x/text/encoding/internal/identifier
+    - golang.org/x/text/encoding/unicode
+    - golang.org/x/text/internal
+    - golang.org/x/text/internal/language
+    - golang.org/x/text/internal/language/compact
+    - golang.org/x/text/internal/tag
+    - golang.org/x/text/internal/utf8internal
+    - golang.org/x/text/language
+    - golang.org/x/text/runes
+    - golang.org/x/text/secure/precis
+    - golang.org/x/text/width
+    - google.golang.org/protobuf/encoding/protojson
+    - google.golang.org/protobuf/encoding/prototext
+    - google.golang.org/protobuf/encoding/protowire
+    - google.golang.org/protobuf/internal/descfmt
+    - google.golang.org/protobuf/internal/descopts
+    - google.golang.org/protobuf/internal/detrand
+    - google.golang.org/protobuf/internal/editiondefaults
+    - google.golang.org/protobuf/internal/encoding/defval
+    - google.golang.org/protobuf/internal/encoding/json
+    - google.golang.org/protobuf/internal/encoding/messageset
+    - google.golang.org/protobuf/internal/encoding/tag
+    - google.golang.org/protobuf/internal/encoding/text
+    - google.golang.org/protobuf/internal/errors
+    - google.golang.org/protobuf/internal/filedesc
+    - google.golang.org/protobuf/internal/filetype
+    - google.golang.org/protobuf/internal/flags
+    - google.golang.org/protobuf/internal/genid
+    - google.golang.org/protobuf/internal/impl
+    - google.golang.org/protobuf/internal/order
+    - google.golang.org/protobuf/internal/pragma
+    - google.golang.org/protobuf/internal/protolazy
+    - google.golang.org/protobuf/internal/set
+    - google.golang.org/protobuf/internal/strs
+    - google.golang.org/protobuf/internal/version
+    - google.golang.org/protobuf/proto
+    - google.golang.org/protobuf/protoadapt
+    - google.golang.org/protobuf/reflect/protoreflect
+    - google.golang.org/protobuf/reflect/protoregistry
+    - google.golang.org/protobuf/runtime/protoiface
+    - google.golang.org/protobuf/runtime/protoimpl
+    - google.golang.org/protobuf/types/known/anypb
+    - google.golang.org/protobuf/types/known/durationpb
+    - google.golang.org/protobuf/types/known/timestamppb
+
+    # -- (b) BSD-3-Clause, terms repeated in the README ---------------------
+    - github.com/google/go-cmp/cmp
+    - github.com/google/go-cmp/cmp/internal/diff
+    - github.com/google/go-cmp/cmp/internal/flags
+    - github.com/google/go-cmp/cmp/internal/function
+    - github.com/google/go-cmp/cmp/internal/value
+
+    # -- (b) Apache-2.0, terms repeated in the README -----------------------
+    - github.com/googleapis/enterprise-certificate-proxy/client
+    - github.com/googleapis/enterprise-certificate-proxy/client/util
+
+  npm:
+    # -- (a) OFL-1.1 -------------------------------------------------------
+    # Embedding the font in the product is permitted, commercially too. The
+    # font must not be sold on its own and this notice must travel with it.
+    - "@fontsource/lato"
+
+    # -- (a) emoji-toolkit: MIT code, proprietary artwork -------------------
+    # NOT plain MIT, whatever its package.json claims. JoyPixels licenses the
+    # emoji *artwork* under its own restrictive terms and only the JS/JSON/CSS
+    # under MIT. We ship `lib/js/joypixels.min.js` only (client/angular.json),
+    # and `EmojiPipe` calls `shortnameToUnicode` — ":smile:" becomes a unicode
+    # codepoint drawn by the reader's own system font. No JoyPixels artwork is
+    # bundled, referenced or served, so only the MIT half applies.
+    # Re-check this if we ever switch the pipe to image-based emoji.
+    - emoji-toolkit
+
+    # -- (a) dual-licensed, we take the permissive option -------------------
+    - dompurify # (MPL-2.0 OR Apache-2.0) -> Apache-2.0
+    - abbrev # (ISC OR MIT) -> MIT
+
+    # -- (b) permissive, "other" only because of extra legal files ----------
+    - cytoscape # MIT (a second copy of the terms sits in license-update.mjs)
+    - d3-geo # ISC (d3 house licence, Mike Bostock)
+    - d3-scale-chromatic # ISC (d3 house licence, Mike Bostock)
+    - rw # BSD-3-Clause (Mike Bostock)
+    - dagre-d3-es # MIT, carrying the upstream dagre/dagre-d3 copyrights
+    - diff # BSD-3-Clause, terms repeated in the README
+    - highlight.js # BSD-3-Clause, terms repeated in the README
+    - diff2html # MIT, terms repeated in the README
+    # Two versions coexist in the tree (ngx-markdown pins its own); entries
+    # match on package name, so one line covers both.
+    - marked # MIT, terms repeated in the README
+    - lodash-es # MIT, with the OpenJS Foundation attribution preamble
+
+apps:
+  # The server binary: REST, WebSocket, MCP and the static SPA.
+  - name: api
+    source_path: ./api/cmd/api
+    sources:
+      go: true
+
+  # Maintenance CLI, shipped in the same image at /usr/local/bin/admin.
+  - name: admin
+    source_path: ./api/cmd/admin
+    sources:
+      go: true
+
+  # Separate module and separate image, distributed on its own.
+  - name: gateway
+    source_path: ./gateway/cmd/gateway
+    sources:
+      go: true
+
+  # The Angular bundle. Production dependencies only — devDependencies are
+  # build tooling and are never distributed.
+  - name: client
+    source_path: ./client
+    sources:
+      npm: true
+    npm:
+      production_only: true
