@@ -182,3 +182,8 @@ A **commercial license** is available for anyone who wants to use Rurdesk
 without the AGPL's obligations (for example, embedding it in a closed-source
 product or offering it as a hosted service without publishing changes). Contact
 the maintainer to arrange one.
+
+Rurdesk bundles third-party components under their own licenses; every released
+image ships a `THIRD_PARTY_NOTICES.txt` reproducing them in full. It is
+generated at release time from [`.licensed.yml`](.licensed.yml) and is not kept
+in the repository.

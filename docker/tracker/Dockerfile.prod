@@ -59,6 +59,16 @@ COPY --from=api-build /go/bin/goose /usr/local/bin/goose
 # at that subdirectory so index.html sits at its root.
 COPY --from=client-build /client/dist/production/browser /app/public
 
+# Copy the notice file with error handling. [t] is a workaround for Dockerfile syntax to make the COPY optional.
+COPY THIRD_PARTY_NOTICES.tx[t] /tmp/notices/
+RUN test -f /tmp/notices/THIRD_PARTY_NOTICES.txt || { \
+        echo "ERROR: THIRD_PARTY_NOTICES.txt is missing — run script/licenses.sh before building this image" >&2; \
+        exit 1; \
+    } \
+ && mv /tmp/notices/THIRD_PARTY_NOTICES.txt /app/ \
+ && rmdir /tmp/notices
+COPY LICENSE /app/
+
 # Production serves the SPA from the Go binary on the single application port.
 ENV SERVE_STATIC=true \
     STATIC_DIR=/app/public \
