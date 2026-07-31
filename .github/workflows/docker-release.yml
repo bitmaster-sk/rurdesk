@@ -99,6 +99,7 @@ jobs:
                   build-args: |
                       VERSION=${{ steps.meta-tracker.outputs.version }}
                       COMMIT=${{ github.sha }}
+                      REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-tracker.outputs.tags }}
                   labels: ${{ steps.meta-tracker.outputs.labels }}
 
@@ -109,6 +110,7 @@ jobs:
                   file: ./gateway/claude-code/Dockerfile
                   platforms: linux/amd64,linux/arm64
                   push: true
+                  build-args: REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-gateway-claude.outputs.tags }}
                   labels: ${{ steps.meta-gateway-claude.outputs.labels }}
 
@@ -119,5 +121,6 @@ jobs:
                   file: ./gateway/goose/Dockerfile
                   platforms: linux/amd64,linux/arm64
                   push: true
+                  build-args: REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-gateway-goose.outputs.tags }}
                   labels: ${{ steps.meta-gateway-goose.outputs.labels }}
