@@ -58,8 +58,22 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
         // settings page. Rebuilding the form on every states emission — as a
         // combineLatest does — discards a pick the user has not saved yet and
         // re-registers a valueChanges subscription per row on every edit.
+        this.loadMappings();
+
         this.subscription.add(
-            this.phaseStateMapApi.load$(idProject).subscribe({
+            this.stateStore.statesByProject$(idProject).subscribe(states => {
+                this.states.set(states);
+                if (this.hasStaleMapping(states)) {
+                    this.loadMappings();
+                }
+            })
+        );
+    }
+
+    private loadMappings(): void {
+        this.isLoading.set(true);
+        this.subscription.add(
+            this.phaseStateMapApi.load$(this.project().idProject!).subscribe({
                 next: mappings => this.buildForm(mappings),
                 error: () => {
                     this.isLoading.set(false);
@@ -67,9 +81,15 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
                 }
             })
         );
+    }
 
-        this.subscription.add(
-            this.stateStore.statesByProject$(idProject).subscribe(states => this.states.set(states))
+    private hasStaleMapping(states: IssueState[]): boolean {
+        if (!this.mappingsFormArray) {
+            return false;
+        }
+        const idsState = new Set(states.map(state => state.idState));
+        return this.mappingsFormArray.controls.some(
+            control => control.value !== null && !idsState.has(control.value)
         );
     }
 

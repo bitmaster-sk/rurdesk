@@ -10,6 +10,15 @@ type State struct {
 	OrderRank int    `json:"orderRank" db:"order_rank"`
 }
 
+// StateUsage reports everything that still points at a state within one project.
+type StateUsage struct {
+	Issues           int  `json:"issues"`
+	IsProjectDefault bool `json:"isProjectDefault"`
+	AgentPhases      int  `json:"agentPhases"`
+	// mapping count across ALL projects; guard input only, never serialized
+	Mappings int `json:"-"`
+}
+
 type CreateStateReq struct {
 	IdProject int64  `json:"idProject"`
 	Name      string `json:"name" binding:"required,max=20"`

@@ -50,9 +50,7 @@
                                 variant="text"
                                 severity="danger"
                                 size="small"
-                                uiConfirm
-                                [confirmText]="'STATE.CONFIRM.DELETE' | translate"
-                                (confirmed)="onConfirmDeleteState(state)"
+                                (click)="onDeleteState(state)"
                             >
                                 <tabler-icon icon="trash" [size]="16" />
                             </ui-button>
@@ -74,3 +72,12 @@
         </div>
     </div>
 </div>
+<app-delete-migration-dialog
+    [(visible)]="isDeleteDialogVisible"
+    [entityLabel]="'STATE.SINGULAR' | translate"
+    [usageItems]="deleteUsageItems()"
+    [stateOptions]="deleteOptions()"
+    [hasUsage]="hasDeleteUsage()"
+    [isLoading]="isDeleting()"
+    (confirmed)="onConfirmDelete($event)"
+/>

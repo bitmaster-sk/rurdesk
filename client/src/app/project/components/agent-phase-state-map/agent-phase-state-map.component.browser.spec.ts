@@ -128,6 +128,46 @@ describe('AgentPhaseStateMapComponent', () => {
         expect(component.states().length).toBe(4);
     });
 
+    // Deleting a mapped state in the sibling panel repoints the mapping server-side
+    // (migrate) or clears it (unassign); the form held the removed id and rendered an
+    // empty row until a page reload.
+    it('re-reads the mappings when a mapped state disappears from the states list', () => {
+        const states$ = new BehaviorSubject(mockStates);
+        stateStore.statesByProject$.mockReturnValue(states$);
+        phaseStateMapApi.load$.mockReturnValue(of([{ idProject: 10, phase: 'done', idState: 3 }]));
+
+        fixture = TestBed.createComponent(AgentPhaseStateMapComponent);
+        component = fixture.componentInstance;
+        fixture.componentRef.setInput('project', { idProject: 10, name: 'Test', color: '#000' });
+        fixture.detectChanges();
+
+        const doneIndex = AGENT_PHASES.indexOf('done' as any);
+        expect(component.getMappingControl(doneIndex).value).toBe(3);
+
+        // state 3 deleted with migrateTo=2 → server repointed the mapping
+        phaseStateMapApi.load$.mockReturnValue(of([{ idProject: 10, phase: 'done', idState: 2 }]));
+        states$.next(mockStates.filter(state => state.idState !== 3));
+        fixture.detectChanges();
+
+        expect(component.getMappingControl(doneIndex).value).toBe(2);
+    });
+
+    it('does not re-read the mappings when the states list stays valid', () => {
+        const states$ = new BehaviorSubject(mockStates);
+        stateStore.statesByProject$.mockReturnValue(states$);
+
+        fixture = TestBed.createComponent(AgentPhaseStateMapComponent);
+        component = fixture.componentInstance;
+        fixture.componentRef.setInput('project', { idProject: 10, name: 'Test', color: '#000' });
+        fixture.detectChanges();
+        const loadCalls = phaseStateMapApi.load$.mock.calls.length;
+
+        states$.next([...mockStates, { ...mockStates[0], idState: 4, name: 'Blocked' }]);
+        fixture.detectChanges();
+
+        expect(phaseStateMapApi.load$.mock.calls.length).toBe(loadCalls);
+    });
+
     // Rows auto-save on change (pick = commit); each change sends the full
     // non-null mapping set. No bulk save button / success toast anymore — a
     // per-row status chip reflects Saving/Saved/Error.

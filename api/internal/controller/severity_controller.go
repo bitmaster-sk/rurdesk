@@ -2,28 +2,33 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type SeverityController struct {
 	projectRepo  *repository.ProjectRepository
 	severityRepo *repository.SeverityRepository
+	severitySvc  *service.SeverityService
 	acl          *service.AclService
 	pool         *pgxpool.Pool
 }
 
-func NewSeverityController(sr *repository.SeverityRepository, acl *service.AclService, pr *repository.ProjectRepository, pool *pgxpool.Pool) *SeverityController {
+func NewSeverityController(sr *repository.SeverityRepository, svc *service.SeverityService, acl *service.AclService, pr *repository.ProjectRepository, pool *pgxpool.Pool) *SeverityController {
 	return &SeverityController{
 		projectRepo:  pr,
 		severityRepo: sr,
+		severitySvc:  svc,
 		acl:          acl,
 		pool:         pool,
 	}
@@ -172,6 +177,36 @@ func (sc *SeverityController) EditSeverity(c *gin.Context) {
 	c.JSON(http.StatusOK, severity)
 }
 
+// GetSeverityUsage reports what still points at the severity, for the delete dialog.
+func (sc *SeverityController) GetSeverityUsage(c *gin.Context) {
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	idSeverity, err := strconv.ParseInt(c.Param("idSeverity"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	if !sc.acl.CanDeleteSeverity(ctx, user.IdUser, idProject) {
+		_ = c.Error(errForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+	usage, err := sc.severityRepo.LoadSeverityUsage(ctx, idProject, idSeverity)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, usage)
+}
+
 func (sc *SeverityController) DeleteSeverity(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
@@ -185,39 +220,43 @@ func (sc *SeverityController) DeleteSeverity(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
-
-	err = extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
-		if !sc.acl.CanDeleteSeverity(ctx, user.IdUser, idProject) {
-			return errForbidden
-		}
-		severity, err := sc.severityRepo.LoadSeverity(ctx, idProject, idSeverity)
-		if err != nil {
-			return err
-		}
-		if err := sc.severityRepo.DeleteProjectSeverity(ctx, severity); err != nil {
-			return err
-		}
-		if !severity.Protected {
-			// Deleting the row fires the issues.issue FK (ON DELETE SET NULL).
-			return sc.severityRepo.DeleteSeverity(ctx, idSeverity)
-		}
-		// Protected default: the shared row stays, only the project mapping is
-		// removed — so the FK never fires. Unassign this project's issues to
-		// avoid orphaning them.
-		return sc.severityRepo.ReassignIssuesSeverity(ctx, idProject, idSeverity, nil)
-	})
-	if err == errForbidden {
-		_ = c.Error(err)
+	if !sc.acl.CanDeleteSeverity(ctx, user.IdUser, idProject) {
+		_ = c.Error(errForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err != nil {
+
+	var migrateTo *int64
+	unassign := false
+	if raw, hasIntent := c.GetQuery("migrateTo"); hasIntent {
+		if raw == "null" {
+			unassign = true
+		} else {
+			id, err := strconv.ParseInt(raw, 10, 64)
+			if err != nil {
+				_ = c.Error(errs.ErrBadRequest)
+				c.Status(http.StatusBadRequest)
+				return
+			}
+			migrateTo = &id
+		}
+	}
+
+	err = sc.severitySvc.DeleteWithMigration(ctx, idProject, idSeverity, migrateTo, unassign)
+	var appErr *errs.Error
+	switch {
+	case err == nil:
+		c.Status(http.StatusOK)
+	case errors.Is(err, pgx.ErrNoRows):
+		_ = c.Error(errs.ErrNotFound)
+		c.Status(http.StatusNotFound)
+	case errs.As(err, &appErr):
+		_ = c.Error(appErr)
+		c.Status(appErr.HttpStatus())
+	default:
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
-		return
 	}
-	c.Status(http.StatusOK)
 }

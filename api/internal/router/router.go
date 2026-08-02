@@ -183,11 +183,13 @@ func New(
 	pri.POST("/state", stateCtrl.CreateState)
 	pri.PATCH("/state/:idState", stateCtrl.EditState)
 	pri.DELETE("/state/:idState/project/:idProject", stateCtrl.DeleteState)
+	pri.GET("/state/:idState/project/:idProject/usage", stateCtrl.GetStateUsage)
 
 	pri.GET("/severity", sevCtrl.GetSeverities)
 	pri.POST("/severity", sevCtrl.CreateSeverity)
 	pri.PATCH("/severity/:idSeverity", sevCtrl.EditSeverity)
 	pri.DELETE("/severity/:idSeverity/project/:idProject", sevCtrl.DeleteSeverity)
+	pri.GET("/severity/:idSeverity/project/:idProject/usage", sevCtrl.GetSeverityUsage)
 
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)

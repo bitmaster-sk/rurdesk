@@ -151,7 +151,7 @@ func TestDeleteProtectedState_UnassignsIssues(t *testing.T) {
 
 	idIssuePublic := createIssueInState(t, app, token, idProject, target.IdState)
 
-	res := Request(t, app, "DELETE", "/api/private/state/"+itoa(target.IdState)+"/project/"+itoa(idProject), "", token)
+	res := Request(t, app, "DELETE", "/api/private/state/"+itoa(target.IdState)+"/project/"+itoa(idProject)+"?migrateTo=null", "", token)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 
 	issue := loadIssue(t, app, token, idProject, idIssuePublic)

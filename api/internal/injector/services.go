@@ -207,6 +207,22 @@ func GetSprintService() *service.SprintService {
 	return instance.(*service.SprintService)
 }
 
+func GetStateService() *service.StateService {
+	instance, _ := di.GetWithNew("state-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewStateService(pool, GetStateRepository()), nil
+	})
+	return instance.(*service.StateService)
+}
+
+func GetSeverityService() *service.SeverityService {
+	instance, _ := di.GetWithNew("severity-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewSeverityService(pool, GetSeverityRepository()), nil
+	})
+	return instance.(*service.SeverityService)
+}
+
 func GetSprintController() *controller.SprintController {
 	instance, _ := di.GetWithNew("sprint-controller", func() (any, error) {
 		return controller.NewSprintController(GetSprintRepository(), GetStateRepository(), GetSprintService(), GetAclService()), nil
@@ -514,7 +530,7 @@ func GetIssueController() *controller.IssueController {
 func GetSeverityController() *controller.SeverityController {
 	instance, _ := di.GetWithNew("severity-controller", func() (any, error) {
 		pool := mustDb()
-		return controller.NewSeverityController(GetSeverityRepository(), GetAclService(), GetProjectRepository(), pool), nil
+		return controller.NewSeverityController(GetSeverityRepository(), GetSeverityService(), GetAclService(), GetProjectRepository(), pool), nil
 	})
 	return instance.(*controller.SeverityController)
 }
@@ -522,7 +538,7 @@ func GetSeverityController() *controller.SeverityController {
 func GetStateController() *controller.StateController {
 	instance, _ := di.GetWithNew("state-controller", func() (any, error) {
 		pool := mustDb()
-		return controller.NewStateController(GetStateRepository(), GetAclService(), GetProjectRepository(), pool), nil
+		return controller.NewStateController(GetStateRepository(), GetStateService(), GetAclService(), GetProjectRepository(), pool), nil
 	})
 	return instance.(*controller.StateController)
 }
