@@ -173,6 +173,8 @@ leaves the defaults `dev` / `unknown`.
 
 # License
 
+Copyright © 2024–2026 BitMaster s.r.o.
+
 Rurdesk is licensed under the **GNU Affero General Public License v3.0** (see
 [`LICENSE`](LICENSE)). In short: you may use, modify, and self-host it freely,
 but if you run a modified version as a network service, you must make your
@@ -180,8 +182,9 @@ modified source available to its users.
 
 A **commercial license** is available for anyone who wants to use Rurdesk
 without the AGPL's obligations (for example, embedding it in a closed-source
-product or offering it as a hosted service without publishing changes). Contact
-the maintainer to arrange one.
+product or offering it as a hosted service without publishing changes).
+Commercial licensing is handled by BitMaster s.r.o. — write to
+<info@bitmaster.sk> to arrange one.
 
 Rurdesk bundles third-party components under their own licenses; every released
 image ships a `THIRD_PARTY_NOTICES.txt` reproducing them in full. It is
