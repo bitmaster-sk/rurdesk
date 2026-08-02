@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
+	"github.com/bitmaster-sk/rurdesk/api/internal/urlutil"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -56,18 +56,9 @@ func (ic *IssueRelationController) GetRelationsBulk(c *gin.Context) {
 		return
 	}
 
-	var idsIssue []int64
-	if raw := c.Query("idsIssue"); raw != "" {
-		for _, part := range strings.Split(raw, ",") {
-			id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
-			if err != nil {
-				_ = c.Error(err)
-				c.Status(http.StatusBadRequest)
-				return
-			}
-			idsIssue = append(idsIssue, id)
-		}
-	}
+	// Shared helper: one array-param code path in the API. Was a local comma-only
+	// split returning 400 on a bad element; now skips it, like the issue filters.
+	idsIssue := urlutil.ParseInt64Array(c, "idsIssue")
 
 	views, err := ic.relationRepo.LoadRelations(ctx, &model.LoadRelationsFilter{
 		IdsProject: []int64{idProject},
