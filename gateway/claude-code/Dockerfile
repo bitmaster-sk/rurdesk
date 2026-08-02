@@ -15,6 +15,20 @@ RUN npm install -g @anthropic-ai/claude-code@2.1.161
 
 COPY --from=gateway-builder /gateway /usr/local/bin/gateway
 COPY common/git-hooks/pre-push /etc/git-hooks/pre-push
+
+# Copy the notice file with error handling. [t] is a workaround for Dockerfile syntax to make the COPY optional.
+ARG REQUIRE_NOTICES=0
+COPY THIRD_PARTY_NOTICES.tx[t] /tmp/notices/
+RUN if [ -f /tmp/notices/THIRD_PARTY_NOTICES.txt ]; then \
+        mkdir -p /usr/local/share/rurdesk && mv /tmp/notices/THIRD_PARTY_NOTICES.txt /usr/local/share/rurdesk/; \
+    elif [ "$REQUIRE_NOTICES" = "1" ]; then \
+        echo "ERROR: THIRD_PARTY_NOTICES.txt is missing — run script/licenses.sh before building this image" >&2; \
+        exit 1; \
+    else \
+        mkdir -p /usr/local/share/rurdesk && \
+        echo "Built without third-party notices. Not fit for distribution." > /usr/local/share/rurdesk/THIRD_PARTY_NOTICES.txt; \
+    fi \
+ && rm -rf /tmp/notices
 RUN chmod +x /etc/git-hooks/pre-push
 
 # GIT_PAGER=cat: implement-stage agent runs `git log` / `git diff` — without

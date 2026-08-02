@@ -22,6 +22,29 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: api/go.mod
+                  cache-dependency-path: api/go.sum
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "24"
+                  cache: npm
+                  cache-dependency-path: client/package-lock.json
+
+            - uses: ruby/setup-ruby@v1
+              with:
+                  ruby-version: "3.4"
+
+            - name: Generate third-party notices
+              run: |
+                  gem install licensed --no-document
+                  (cd api && go mod download)
+                  (cd gateway && go mod download)
+                  (cd client && npm ci)
+                  ./script/licenses.sh
+
             - name: Set up QEMU
               uses: docker/setup-qemu-action@v3
 
@@ -76,6 +99,7 @@ jobs:
                   build-args: |
                       VERSION=${{ steps.meta-tracker.outputs.version }}
                       COMMIT=${{ github.sha }}
+                      REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-tracker.outputs.tags }}
                   labels: ${{ steps.meta-tracker.outputs.labels }}
 
@@ -86,6 +110,7 @@ jobs:
                   file: ./gateway/claude-code/Dockerfile
                   platforms: linux/amd64,linux/arm64
                   push: true
+                  build-args: REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-gateway-claude.outputs.tags }}
                   labels: ${{ steps.meta-gateway-claude.outputs.labels }}
 
@@ -96,5 +121,6 @@ jobs:
                   file: ./gateway/goose/Dockerfile
                   platforms: linux/amd64,linux/arm64
                   push: true
+                  build-args: REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-gateway-goose.outputs.tags }}
                   labels: ${{ steps.meta-gateway-goose.outputs.labels }}
