@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 )
 
 // issueCursor is the opaque keyset cursor: sort key + id of the last returned row.
@@ -13,6 +15,40 @@ type issueCursor struct {
 	Dir string `json:"d"`
 	Val any    `json:"v"` // last row's sort value; nil when that value was SQL NULL
 	Id  int64  `json:"i"`
+	// The first page's "now" (RFC3339); later pages resolve *Within windows
+	// against it, so the result set does not shift mid-traversal.
+	WithinRef string `json:"n,omitempty"`
+}
+
+// resolveWithinWindows returns a copy of f with rolling windows converted to
+// *From bounds, plus the instant used — the cursor's when paging, now() otherwise.
+func resolveWithinWindows(f *model.LoadIssuesFilter, cur *issueCursor) (*model.LoadIssuesFilter, time.Time) {
+	ref := time.Now().UTC()
+	if cur != nil && cur.WithinRef != "" {
+		if parsed, err := time.Parse(time.RFC3339Nano, cur.WithinRef); err == nil {
+			ref = parsed
+		}
+	}
+	if f.CreateAtWithin == 0 && f.UpdateAtWithin == 0 {
+		return f, ref
+	}
+	// Only the lower bound is replaced — a co-supplied *AtTo still caps the top.
+	resolved := *f
+	if resolved.CreateAtWithin > 0 {
+		resolved.CreateAtFrom = ref.Add(-resolved.CreateAtWithin)
+	}
+	if resolved.UpdateAtWithin > 0 {
+		resolved.UpdateAtFrom = ref.Add(-resolved.UpdateAtWithin)
+	}
+	return &resolved, ref
+}
+
+// withinRef is what to stamp into an outgoing cursor — empty unless a window applies.
+func withinRef(f *model.LoadIssuesFilter, ref time.Time) string {
+	if f.CreateAtWithin == 0 && f.UpdateAtWithin == 0 {
+		return ""
+	}
+	return ref.Format(time.RFC3339Nano)
 }
 
 func encodeCursor(cur issueCursor) (string, error) {

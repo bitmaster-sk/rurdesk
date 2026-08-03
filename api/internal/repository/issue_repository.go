@@ -48,6 +48,9 @@ func NewIssueRepository(pool *pgxpool.Pool) *IssueRepository {
 func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFilter) ([]*model.Issue, error) {
 	db := extctx.GetDb(ctx, r.pool)
 
+	// No cursor here, so a window resolves against now — right for a live view.
+	f, _ = resolveWithinWindows(f, nil)
+
 	var (
 		sb   strings.Builder
 		args []any
@@ -232,6 +235,18 @@ type issueRow struct {
 // CountIssues returns the exact number of issues matching the filter (same WHERE as the list).
 func (r *IssueRepository) CountIssues(ctx context.Context, f *model.LoadIssuesFilter) (int, error) {
 	db := extctx.GetDb(ctx, r.pool)
+
+	// Same pinned instant as the page query, so Total matches the traversal.
+	var cur *issueCursor
+	if f.Cursor != nil && *f.Cursor != "" {
+		decoded, err := decodeCursor(*f.Cursor)
+		if err != nil {
+			return 0, err
+		}
+		cur = decoded
+	}
+	f, _ = resolveWithinWindows(f, cur)
+
 	var sb strings.Builder
 	args := []any{}
 	idx := 1
@@ -269,6 +284,17 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 	}
 	resolvedKey, sc := sortColumnFor(sortKey)
 
+	// Decoded before the WHERE is built — it carries the window's pinned instant.
+	var cur *issueCursor
+	if f.Cursor != nil && *f.Cursor != "" {
+		decoded, err := decodeCursor(*f.Cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+		cur = decoded
+	}
+	f, ref := resolveWithinWindows(f, cur)
+
 	var sb strings.Builder
 	args := []any{}
 	idx := 1
@@ -290,11 +316,7 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 	idx++
 	r.appendIssueFilters(&sb, &args, &idx, f)
 
-	if f.Cursor != nil && *f.Cursor != "" {
-		cur, err := decodeCursor(*f.Cursor)
-		if err != nil {
-			return nil, nil, err
-		}
+	if cur != nil {
 		pred, cArgs, nIdx, err := buildKeysetPredicate(cur, idx)
 		if err != nil {
 			return nil, nil, err
@@ -323,7 +345,10 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 	var next *string
 	if len(collected) > limit {
 		last := collected[limit-1]
-		c := issueCursor{Col: resolvedKey, Dir: dir, Val: normalizeSortVal(last.SortVal), Id: last.IdIssue}
+		c := issueCursor{
+			Col: resolvedKey, Dir: dir, Val: normalizeSortVal(last.SortVal), Id: last.IdIssue,
+			WithinRef: withinRef(f, ref),
+		}
 		enc, err := encodeCursor(c)
 		if err != nil {
 			return nil, nil, err
@@ -393,6 +418,10 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 	partition := strings.Join(cols, ", ")
 	outerOrder := strings.ReplaceAll(partition, "iss.", "")
 
+	// No incoming cursor, but the per-group cursors emitted below are fed to the flat
+	// paged query, so they must carry the same instant or the window unpins there.
+	f, ref := resolveWithinWindows(f, nil)
+
 	// Resolve the requested sort (default updateAt DESC) for the ROW_NUMBER window, which
 	// picks and orders the top-N per group. sc.expr comes from the allow-list and dir is a
 	// literal ASC/DESC, so neither is user-controlled SQL.
@@ -461,7 +490,10 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 			// feeds it straight to the flat paged query, which filters with it.
 			// Mismatched, the next page filters on one column while ordering by
 			// another: rows past the boundary vanish and shown rows repeat.
-			c := issueCursor{Col: resolvedKey, Dir: cursorDir, Val: normalizeSortVal(row.SortVal), Id: iss.IdIssue}
+			c := issueCursor{
+				Col: resolvedKey, Dir: cursorDir, Val: normalizeSortVal(row.SortVal), Id: iss.IdIssue,
+				WithinRef: withinRef(f, ref),
+			}
 			if enc, err := encodeCursor(c); err == nil {
 				g.NextCursor = &enc
 			}

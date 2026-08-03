@@ -101,7 +101,12 @@ func (ic *IssueController) GetIssues(c *gin.Context) {
 		return
 	}
 
-	filter := buildIssueFilter(c, idProject)
+	filter, err := buildIssueFilter(c, idProject)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
 
 	if groupBy := c.Query("groupBy"); groupBy != "" {
 		ic.getIssuesGrouped(c, filter, groupBy)
@@ -722,8 +727,9 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	c.JSON(http.StatusOK, results)
 }
 
-// buildIssueFilter constructs a LoadIssuesFilter from gin query params.
-func buildIssueFilter(c *gin.Context, idProject int64) *model.LoadIssuesFilter {
+// buildIssueFilter constructs a LoadIssuesFilter from query params. Errors only on
+// a malformed *Within — a silently dropped window would widen the result set.
+func buildIssueFilter(c *gin.Context, idProject int64) (*model.LoadIssuesFilter, error) {
 	f := &model.LoadIssuesFilter{IdProject: idProject}
 	f.Title = c.Query("title")
 	f.IdsSeverity = urlutil.ParseInt64Array(c, "idsSeverity")
@@ -783,7 +789,27 @@ func buildIssueFilter(c *gin.Context, idProject int64) *model.LoadIssuesFilter {
 	f.CreateAtTo = parseTime("createAtTo")
 	f.UpdateAtFrom = parseTime("updateAtFrom")
 	f.UpdateAtTo = parseTime("updateAtTo")
-	return f
+
+	var err error
+	if f.CreateAtWithin, err = parseWithinParam(c, "createAtWithin"); err != nil {
+		return nil, err
+	}
+	if f.UpdateAtWithin, err = parseWithinParam(c, "updateAtWithin"); err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func parseWithinParam(c *gin.Context, key string) (time.Duration, error) {
+	raw := c.Query(key)
+	if raw == "" {
+		return 0, nil
+	}
+	within, err := urlutil.ParsePositiveDuration(raw)
+	if err != nil {
+		return 0, errInvalidWithin
+	}
+	return within, nil
 }
 
 func (ic *IssueController) sendIssueNotifications(
