@@ -732,6 +732,32 @@
     </section>
 
     <section class="ui-gallery__section">
+        <h2>ui-date-range-select</h2>
+        <p>
+            One control for "when": a rolling preset or a fixed range. The value carries either a
+            <code>preset</code>
+            token or a
+            <code>from</code>
+            /
+            <code>to</code>
+            pair — never both, so a single form control covers the whole concept. Presets are
+            supplied by the consumer, so this component knows nothing about durations or i18n.
+        </p>
+        <div class="ui-gallery__row">
+            <ui-date-range-select
+                [presets]="dateRangePresets"
+                [(ngModel)]="dateRangeValue"
+                placeholder="Any time"
+            />
+        </div>
+        <p class="ui-gallery__note">
+            Selected:
+            <code>{{ dateRangeValue | json }}</code>
+            .
+        </p>
+    </section>
+
+    <section class="ui-gallery__section">
         <h2>ui-toast</h2>
         <p>
             Click to enqueue a toast (top-right). Hover/focus pauses auto-dismiss; the bar shows
