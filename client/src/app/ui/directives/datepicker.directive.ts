@@ -26,9 +26,10 @@ import {
 type FlatpickrInstance = import('flatpickr/dist/types/instance').Instance;
 type FlatpickrOptions = import('flatpickr/dist/types/options').Options;
 
-type UiDatepickerMode = 'date' | 'datetime' | 'range' | 'inline';
+/** What the field picks. How it is presented is the separate `inline` input. */
+type UiDatepickerMode = 'date' | 'datetime' | 'range';
 
-/** Value the CVA exchanges with the form: single Date (date/datetime/inline) or [from,to] (range). */
+/** Value the CVA exchanges with the form: single Date (date/datetime) or [from,to] (range). */
 type UiDatepickerValue = Date | Date[] | null;
 
 /**
@@ -60,8 +61,10 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
     private readonly translate = inject(TranslateService);
     private readonly destroyRef = inject(DestroyRef);
 
-    /** `date` (default) · `datetime` (12h) · `range` ([from,to]) · `inline` (in-flow calendar). */
+    /** `date` (default) · `datetime` (12h) · `range` ([from,to]). */
     public readonly mode = input<UiDatepickerMode>('date');
+    /** Calendar in-flow instead of a popup. Combines with any mode. */
+    public readonly inline = input(false, { transform: booleanAttribute });
     /** Invalid styling, mirrors `[uiInput]`. */
     public readonly invalid = input(false, { transform: booleanAttribute });
 
@@ -146,7 +149,7 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
             enableTime: isDatetime, // range never combines with time (unsupported upstream)
             time_24hr: false, // locale/12h
             mode: isRange ? 'range' : 'single',
-            inline: mode === 'inline',
+            inline: this.inline(),
             formatDate: (date: Date) => uiFormatDate(date, pattern),
             parseDate: (str: string) => uiParseDate(str, pattern),
             onChange: (selectedDates: Date[]) => this.zone.run(() => this.emit(selectedDates)),
