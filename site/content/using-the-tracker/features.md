@@ -68,6 +68,15 @@ case sensitivity, or word boundaries.
 
 The same tasks can be viewed five ways — switch views from the project toolbar:
 
+#### Filters
+
+The filter bar is the same in every view — table, Kanban, Calendar, and Gantt —
+so a filter you set carries over when you switch views.
+
+**Created** and **Last update** filter by date: pick a rolling window (*Last 7 /
+30 / 90 days*) or a **Custom range** of two fixed dates. A rolling window keeps
+rolling — set to *Last 30 days*, it still means the last 30 days next month.
+
 #### Quick actions (right-click)
 
 Right-clicking a task opens the same **quick-actions menu** in every view — table,
@@ -222,6 +231,11 @@ two steps:
 The API exposes its operations as **MCP tools** (`create_issue`, `list_issues`,
 `update_issue`, `add_relation`, …), so MCP-capable clients (Claude Code, Cursor)
 can drive the backlog natively.
+
+`list_issues` accepts `updated_within` and `created_within` as rolling windows —
+`"2h"`, `"30d"`, `"1d8h6m"` (units: `d` = 24h, `h`, `m`, `s`). Prefer them over
+computing dates: the server resolves the window, so an agent never has to know
+today's date. A value that cannot be parsed is rejected with **422**.
 
 - Full endpoint: `http://<host>/mcp/sse`
 - Restricted planning subset: `http://<host>/mcp/plan/sse`

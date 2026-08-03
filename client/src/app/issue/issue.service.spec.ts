@@ -120,3 +120,48 @@ describe('IssueService.toIssue', () => {
         expect(out.scheduledAt).toBeInstanceOf(Date);
     });
 });
+
+describe('IssueService date params', () => {
+    const call = (filter: Partial<IssuesFilter>) => {
+        const { service, get } = build(page([]));
+        service.loadIssues({ ...baseFilter, ...filter } as IssuesFilter).subscribe();
+        const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
+        return options.params;
+    };
+
+    it('sends a rolling window verbatim — the API owns the grammar', () => {
+        const params = call({ updateAtWithin: '1d8h6m' });
+        expect(params.get('updateAtWithin')).toBe('1d8h6m');
+    });
+
+    it('sends absolute bounds when no window is set', () => {
+        const params = call({
+            createAtFrom: new Date('2026-01-01T00:00:00Z'),
+            createAtTo: new Date('2026-01-31T00:00:00Z')
+        });
+        expect(params.get('createAtFrom')).toBe('2026-01-01T00:00:00.000Z');
+        expect(params.get('createAtTo')).toBe('2026-01-31T00:00:00.000Z');
+        expect(params.has('createAtWithin')).toBe(false);
+    });
+
+    it('drops the absolute bounds when a window is set for the same field', () => {
+        const params = call({
+            createAtWithin: '30d',
+            createAtFrom: new Date('2026-01-01T00:00:00Z'),
+            createAtTo: new Date('2026-01-31T00:00:00Z')
+        });
+        expect(params.get('createAtWithin')).toBe('30d');
+        expect(params.has('createAtFrom')).toBe(false);
+        expect(params.has('createAtTo')).toBe(false);
+    });
+
+    it('keeps the two fields independent', () => {
+        const params = call({
+            createAtWithin: '7d',
+            updateAtFrom: new Date('2026-02-02T00:00:00Z')
+        });
+        expect(params.get('createAtWithin')).toBe('7d');
+        expect(params.get('updateAtFrom')).toBe('2026-02-02T00:00:00.000Z');
+        expect(params.has('updateAtWithin')).toBe(false);
+    });
+});

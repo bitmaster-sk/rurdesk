@@ -12,6 +12,8 @@ export interface IssuesFilterParams {
     createAtTo?: Date;
     updateAtFrom?: Date;
     updateAtTo?: Date;
+    createAtWithin?: string;
+    updateAtWithin?: string;
     scheduledAtFrom?: Date;
     scheduledAtTo?: Date;
     scheduledAtUnset?: boolean;
