@@ -1,6 +1,7 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { NgModule } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import {
     IconAlertCircle,
@@ -52,6 +53,7 @@ import { UiFlipListDirective } from './directives/flip-list.directive';
 import { UiListboxComponent } from './components/select/listbox.component';
 import { UiMultiSelectComponent } from './components/select/multiselect.component';
 import { UiOptionPanelComponent } from './components/select/option-panel.component';
+import { UiDateRangeSelectComponent } from './components/date-range-select/date-range-select.component';
 import { UiSelectComponent } from './components/select/select.component';
 import { UiTagComponent } from './components/tag/tag.component';
 import { UiToggleButtonComponent } from './components/toggle-button/toggle-button.component';
@@ -81,6 +83,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiOdometerComponent,
         UiOptionPanelComponent,
         UiSelectComponent,
+        UiDateRangeSelectComponent,
         UiMultiSelectComponent,
         UiListboxComponent,
         UiChoiceComponent,
@@ -103,7 +106,14 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiDatepickerDirective,
         UiTooltipDirective
     ],
-    imports: [CoreModule, OverlayModule, A11yModule, RouterModule, TablerIconComponent],
+    imports: [
+        ReactiveFormsModule,
+        CoreModule,
+        OverlayModule,
+        A11yModule,
+        RouterModule,
+        TablerIconComponent
+    ],
     exports: [
         UiCommandPaletteComponent,
         UiCommandHelpComponent,
@@ -116,6 +126,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiBadgeComponent,
         UiOdometerComponent,
         UiSelectComponent,
+        UiDateRangeSelectComponent,
         UiMultiSelectComponent,
         UiListboxComponent,
         UiChoiceComponent,
