@@ -9,6 +9,12 @@ export function isEditableTarget(el: EventTarget | null): boolean {
     );
 }
 
+/** An open CDK overlay (dropdown, menu, dialog) owns the keyboard */
+export function isInOverlay(el: EventTarget | null): boolean {
+    const node = el as HTMLElement | null;
+    return !!node?.closest?.('.cdk-overlay-container');
+}
+
 export function resolveHotkey(
     event: KeyboardEvent,
     ctx: { paletteOpen: boolean; helpOpen: boolean }
@@ -19,7 +25,9 @@ export function resolveHotkey(
     }
     if (ctx.helpOpen) return { type: 'none' }; // help sheet owns the screen
     if (ctx.paletteOpen) return { type: 'none' };
-    if (isEditableTarget(event.target) || event.isComposing) return { type: 'none' };
+    if (isEditableTarget(event.target) || isInOverlay(event.target) || event.isComposing) {
+        return { type: 'none' };
+    }
     switch (event.key) {
         case '/':
             return { type: 'open', mode: 'navigation' };
