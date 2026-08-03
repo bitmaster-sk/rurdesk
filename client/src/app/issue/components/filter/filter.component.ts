@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    OnInit,
+    inject,
+    signal
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { Observable } from 'rxjs';
@@ -10,6 +17,12 @@ import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
+import { TranslateService } from '@ngx-translate/core';
+import {
+    UiDateRangePreset,
+    UiDateRangeValue
+} from 'src/app/ui/components/date-range-select/date-range-select.component';
+import { IssuesFilterParams } from './issue-filter.entity';
 import { IssueFilterStore } from './issue-filter.store';
 
 @Component({
@@ -26,6 +39,7 @@ export class FilterComponent implements OnInit {
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly projectStore = inject(ProjectStore);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly i18n = inject(TranslateService);
 
     public readonly severities$: Observable<IssueSeverity[]> = this.projectStore.project$.pipe(
         switchMap(project => this.severityStore.severitiesByProject$(project.idProject))
@@ -49,10 +63,21 @@ export class FilterComponent implements OnInit {
         severityUnset: this.fb.control(null),
         idsAssignedTo: this.fb.control(null),
         assignedToUnset: this.fb.control(null),
-        createAtRange: this.fb.control(null),
-        updateAtRange: this.fb.control(null),
+        createAt: this.fb.control(null),
+        updateAt: this.fb.control(null),
         title: this.fb.control(null)
     });
+
+    /** Values ARE the API's duration grammar; 'Custom range' comes from the control. */
+    private readonly datePresets: UiDateRangePreset[] = [
+        { label: this.i18n.instant('FILTER.DATE.LAST_7_DAYS'), value: '7d' },
+        { label: this.i18n.instant('FILTER.DATE.LAST_30_DAYS'), value: '30d' },
+        { label: this.i18n.instant('FILTER.DATE.LAST_90_DAYS'), value: '90d' }
+    ];
+
+    // Reassigned from an async subscription under OnPush, so signals.
+    protected readonly createAtPresets = signal<UiDateRangePreset[]>([...this.datePresets]);
+    protected readonly updateAtPresets = signal<UiDateRangePreset[]>([...this.datePresets]);
 
     public get stateUnsetControl(): FormControl {
         return this.form.get('stateUnset') as FormControl;
@@ -69,8 +94,8 @@ export class FilterComponent implements OnInit {
     public ngOnInit(): void {
         this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
             const values = this.form.value;
-            const [createAtFrom = null, createAtTo = null] = values.createAtRange ?? [];
-            const [updateAtFrom = null, updateAtTo = null] = values.updateAtRange ?? [];
+            const createAt = this.dateFilterFor(values.createAt);
+            const updateAt = this.dateFilterFor(values.updateAt);
             this.issueFilterStore.setFilter({
                 idProject: values.idProject,
                 title: values.title,
@@ -80,14 +105,18 @@ export class FilterComponent implements OnInit {
                 stateUnset: values.stateUnset,
                 idsAssignedTo: values.idsAssignedTo,
                 assignedToUnset: values.assignedToUnset,
-                createAtFrom,
-                createAtTo,
-                updateAtFrom,
-                updateAtTo
+                createAtFrom: createAt.from,
+                createAtTo: createAt.to,
+                createAtWithin: createAt.within,
+                updateAtFrom: updateAt.from,
+                updateAtTo: updateAt.to,
+                updateAtWithin: updateAt.within
             });
         });
 
         this.initialFilter$.pipe(first()).subscribe(filter => {
+            this.createAtPresets.set(this.withPreset(this.datePresets, filter.createAtWithin));
+            this.updateAtPresets.set(this.withPreset(this.datePresets, filter.updateAtWithin));
             this.form.patchValue(
                 {
                     idProject: filter.idProject,
@@ -98,17 +127,48 @@ export class FilterComponent implements OnInit {
                     stateUnset: filter.stateUnset,
                     idsAssignedTo: filter.idsAssignedTo,
                     assignedToUnset: filter.assignedToUnset,
-                    createAtRange:
-                        filter.createAtFrom || filter.createAtTo
-                            ? [filter.createAtFrom, filter.createAtTo]
-                            : null,
-                    updateAtRange:
-                        filter.updateAtFrom || filter.updateAtTo
-                            ? [filter.updateAtFrom, filter.updateAtTo]
-                            : null
+                    createAt: this.dateValueFor(filter, 'createAt'),
+                    updateAt: this.dateValueFor(filter, 'updateAt')
                 },
                 { emitEvent: false }
             );
         });
+    }
+
+    /** Control value → filter params. */
+    private dateFilterFor(value: UiDateRangeValue | null): {
+        from: Date | null;
+        to: Date | null;
+        within: string | null;
+    } {
+        if (!value) {
+            return { from: null, to: null, within: null };
+        }
+        if (value.preset) {
+            return { from: null, to: null, within: value.preset };
+        }
+        return { from: value.from ?? null, to: value.to ?? null, within: null };
+    }
+
+    /** Filter params → control value. A window wins over absolute bounds. */
+    private dateValueFor(
+        filter: IssuesFilterParams,
+        field: 'createAt' | 'updateAt'
+    ): UiDateRangeValue | null {
+        const within = field === 'createAt' ? filter.createAtWithin : filter.updateAtWithin;
+        if (within) {
+            return { preset: within };
+        }
+        const from = field === 'createAt' ? filter.createAtFrom : filter.updateAtFrom;
+        const to = field === 'createAt' ? filter.createAtTo : filter.updateAtTo;
+        return from || to ? { from, to } : null;
+    }
+
+    /** Adds a row for a value no preset lists (e.g. '1d8h6m' from a saved view or agent). */
+    private withPreset(presets: UiDateRangePreset[], value?: string): UiDateRangePreset[] {
+        if (!value || presets.some(preset => preset.value === value)) {
+            return [...presets];
+        }
+        return [...presets, { label: value, value }];
     }
 }

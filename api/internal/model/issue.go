@@ -113,6 +113,8 @@ type LoadIssuesFilter struct {
 	CreateAtTo         time.Time
 	UpdateAtFrom       time.Time
 	UpdateAtTo         time.Time
+	CreateAtWithin     time.Duration
+	UpdateAtWithin     time.Duration
 	ScheduledAtFrom    time.Time
 	ScheduledAtTo      time.Time
 	ScheduledAtUnset   bool    // when true, filter to scheduled_at IS NULL

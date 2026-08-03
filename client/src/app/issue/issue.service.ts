@@ -32,17 +32,26 @@ export class IssueService {
         if (filter.idsIssuePublic?.length > 0) {
             params = params.set('idsIssuePublic', filter.idsIssuePublic.join(','));
         }
-        if (filter.createAtFrom) {
-            params = params.set('createAtFrom', filter.createAtFrom.toISOString());
+        // A window wins over the absolute pair — sending both would make the URL lie.
+        if (filter.createAtWithin) {
+            params = params.set('createAtWithin', filter.createAtWithin);
+        } else {
+            if (filter.createAtFrom) {
+                params = params.set('createAtFrom', filter.createAtFrom.toISOString());
+            }
+            if (filter.createAtTo) {
+                params = params.set('createAtTo', filter.createAtTo.toISOString());
+            }
         }
-        if (filter.createAtTo) {
-            params = params.set('createAtTo', filter.createAtTo.toISOString());
-        }
-        if (filter.updateAtFrom) {
-            params = params.set('updateAtFrom', filter.updateAtFrom.toISOString());
-        }
-        if (filter.updateAtTo) {
-            params = params.set('updateAtTo', filter.updateAtTo.toISOString());
+        if (filter.updateAtWithin) {
+            params = params.set('updateAtWithin', filter.updateAtWithin);
+        } else {
+            if (filter.updateAtFrom) {
+                params = params.set('updateAtFrom', filter.updateAtFrom.toISOString());
+            }
+            if (filter.updateAtTo) {
+                params = params.set('updateAtTo', filter.updateAtTo.toISOString());
+            }
         }
         if (filter.scheduledAtFrom) {
             params = params.set('scheduledAtFrom', filter.scheduledAtFrom.toISOString());

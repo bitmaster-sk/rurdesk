@@ -4,6 +4,26 @@
             <label for="title-filter">{{ 'TITLE' | translate }}</label>
             <input id="title-filter" type="text" uiInput class="w-full" formControlName="title" />
         </div>
+
+        <div class="ui-field col-span-3">
+            <label for="create-at-filter">{{ 'ISSUE.CREATED.AT' | translate }}</label>
+            <ui-date-range-select
+                inputId="create-at-filter"
+                formControlName="createAt"
+                [presets]="createAtPresets()"
+                [placeholder]="'FILTER.DATE.ANY' | translate"
+            />
+        </div>
+
+        <div class="ui-field col-span-3">
+            <label for="update-at-filter">{{ 'ISSUE.LAST.UPDATE.AT' | translate }}</label>
+            <ui-date-range-select
+                inputId="update-at-filter"
+                formControlName="updateAt"
+                [presets]="updateAtPresets()"
+                [placeholder]="'FILTER.DATE.ANY' | translate"
+            />
+        </div>
     </div>
 
     <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">
@@ -68,30 +88,6 @@
                     {{ 'ISSUE.DISPLAY.UNSET.ASSIGNED.TO' | translate }}
                 </label>
             </div>
-        </div>
-    </div>
-
-    <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">
-        <div class="ui-field col-span-3">
-            <label for="create-at-filter">{{ 'ISSUE.CREATED.AT' | translate }}</label>
-            <input
-                uiDatepicker
-                mode="range"
-                id="create-at-filter"
-                formControlName="createAtRange"
-                class="w-full"
-            />
-        </div>
-
-        <div class="ui-field col-span-3">
-            <label for="update-at-filter">{{ 'ISSUE.LAST.UPDATE.AT' | translate }}</label>
-            <input
-                uiDatepicker
-                mode="range"
-                id="update-at-filter"
-                formControlName="updateAtRange"
-                class="w-full"
-            />
         </div>
     </div>
 </div>

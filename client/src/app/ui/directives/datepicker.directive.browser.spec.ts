@@ -12,7 +12,7 @@ import { UiModule } from '../ui.module';
     `
 })
 class HostComponent {
-    public mode: 'date' | 'datetime' | 'range' | 'inline' = 'date';
+    public mode: 'date' | 'datetime' | 'range' = 'date';
     public readonly control = new FormControl<Date | Date[] | null>(null);
 }
 

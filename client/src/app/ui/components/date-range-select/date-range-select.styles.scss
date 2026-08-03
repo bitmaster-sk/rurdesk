@@ -1,0 +1,63 @@
+ui-date-range-select {
+    display: block;
+}
+
+.ui-date-range-panel .ui-popover {
+    padding: var(--ui-space-s);
+}
+
+.ui-date-range-select__presets {
+    margin: 0;
+    padding: 0;
+    min-width: 11rem;
+}
+
+.ui-date-range-select__preset {
+    display: block;
+    width: 100%;
+    padding: var(--ui-space) var(--ui-space-m);
+    border: 0;
+    border-radius: var(--ui-menu-item-radius);
+    background: transparent;
+    color: var(--ui-menu-fg);
+    font: inherit;
+    text-align: left;
+    white-space: nowrap;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
+
+    &:hover {
+        background-color: var(--ui-menu-item-hover-bg);
+        color: var(--ui-menu-item-hover-fg);
+    }
+
+    &:focus-visible {
+        outline: 1px solid var(--ui-color-primary);
+        outline-offset: -1px;
+    }
+}
+
+.ui-date-range-select__preset--active {
+    background-color: var(--ui-color-highlight);
+    color: var(--ui-color-primary-strong);
+    font-weight: bold;
+}
+
+.ui-date-range-select__calendar {
+    margin-top: var(--ui-space-s);
+    padding-top: var(--ui-space-s);
+    border-top: 1px solid var(--ui-menu-border);
+}
+
+// The input is only flatpickr's anchor. NOT display:none — that breaks its wiring
+// (see issue-quick-actions.component.scss); zero-size drops it from layout instead.
+.ui-date-range-select__calendar-host {
+    position: absolute;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}

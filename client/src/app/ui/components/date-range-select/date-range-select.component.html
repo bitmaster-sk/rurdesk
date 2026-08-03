@@ -1,0 +1,86 @@
+<div
+    #trigger
+    class="ui-select-trigger ui-date-range-select__trigger"
+    role="combobox"
+    aria-haspopup="dialog"
+    [id]="inputId()"
+    [class.ui-select-trigger--sm]="size() === 'small'"
+    [class.ui-select-trigger--disabled]="isDisabled()"
+    [class.ui-select-trigger--open]="isOpen()"
+    [attr.tabindex]="isDisabled() ? -1 : 0"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="isOpen() ? panelId : null"
+    [attr.aria-disabled]="isDisabled()"
+    (click)="onTriggerClick($event)"
+    (keydown)="onTriggerKeydown($event)"
+    (blur)="onTouched()"
+>
+    <span class="ui-select-trigger__value">
+        @if (triggerLabel(); as label) {
+            {{ label }}
+        } @else {
+            <span class="ui-select-trigger__placeholder">{{ placeholder() }}</span>
+        }
+    </span>
+    @if (value() && showClear()) {
+        <button
+            type="button"
+            class="ui-select-trigger__clear"
+            [attr.aria-label]="'UI.CLEAR' | translate"
+            (click)="onClear($event)"
+        >
+            <tabler-icon icon="x" [size]="14" />
+        </button>
+    }
+    <tabler-icon class="ui-select-trigger__chevron" icon="calendar" [size]="16" />
+</div>
+
+<ui-popover #panel panelClass="ui-date-range-panel" (onHide)="onPanelHide()">
+    <!-- Escape lands here before CDK's document-level dispatcher. -->
+    <div
+        role="dialog"
+        [id]="panelId"
+        [attr.aria-label]="placeholder() || customLabel"
+        (keydown.escape)="restoreFocusOnHide = true"
+        (keydown)="onPanelKeydown($event)"
+    >
+        <div class="ui-date-range-select__presets">
+            @for (preset of presets(); track preset.value) {
+                <button
+                    #presetBtn
+                    type="button"
+                    class="ui-date-range-select__preset"
+                    [class.ui-date-range-select__preset--active]="value()?.preset === preset.value"
+                    [attr.aria-pressed]="value()?.preset === preset.value"
+                    (click)="onPickPreset(preset)"
+                >
+                    {{ preset.label }}
+                </button>
+            }
+            <button
+                #presetBtn
+                type="button"
+                class="ui-date-range-select__preset"
+                [class.ui-date-range-select__preset--active]="isCustom()"
+                [attr.aria-pressed]="isCustom()"
+                (click)="onPickCustom()"
+            >
+                {{ customLabel }}
+            </button>
+        </div>
+
+        @if (isCustom()) {
+            <div class="ui-date-range-select__calendar">
+                <input
+                    uiDatepicker
+                    mode="range"
+                    inline
+                    tabindex="-1"
+                    class="ui-date-range-select__calendar-host"
+                    [formControl]="rangeControl"
+                    (ready)="panel.reposition()"
+                />
+            </div>
+        }
+    </div>
+</ui-popover>

@@ -37,7 +37,10 @@
         "TOAST": {
             "CLOSE": "Close"
         },
-        "SEARCH": "Search…"
+        "SEARCH": "Search…",
+        "DATE_RANGE": {
+            "CUSTOM": "Custom range"
+        }
     },
     "AGENT": {
         "PHASE": {
@@ -229,7 +232,13 @@
         "SINGULAR": "AI"
     },
     "FILTER": {
-        "SINGULAR": "Filter"
+        "SINGULAR": "Filter",
+        "DATE": {
+            "ANY": "Any time",
+            "LAST_7_DAYS": "Last 7 days",
+            "LAST_30_DAYS": "Last 30 days",
+            "LAST_90_DAYS": "Last 90 days"
+        }
     },
     "STATE": {
         "SINGULAR": "State",
@@ -562,6 +571,7 @@
         "rate_limited": "Too many requests. Please wait before trying again.",
         "last_owner": "Cannot remove the last project owner.",
         "invalid_role": "Invalid role. Must be viewer, member, or owner.",
+        "invalid_within": "Invalid time window. Use a positive duration like \"30d\", \"2h\" or \"1d8h6m\".",
         "last_admin": "Cannot remove the last instance admin.",
         "bot_admin": "Bots cannot be admins.",
         "user_has_agent_activity": "This user has agent history and cannot be deleted.",

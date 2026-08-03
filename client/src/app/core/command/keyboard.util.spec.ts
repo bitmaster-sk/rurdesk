@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isEditableTarget, resolveHotkey } from './keyboard.util';
+import { isEditableTarget, isInOverlay, resolveHotkey } from './keyboard.util';
 
 const key = (init: Partial<KeyboardEvent> & { key: string }): KeyboardEvent =>
     ({
@@ -22,6 +22,17 @@ describe('isEditableTarget', () => {
             isEditableTarget({ tagName: 'DIV', isContentEditable: false } as unknown as EventTarget)
         ).toBe(false);
         expect(isEditableTarget(null)).toBe(false);
+    });
+});
+
+describe('isInOverlay', () => {
+    it('true only when an ancestor is the CDK overlay container', () => {
+        const inside = {
+            closest: (sel: string) => (sel === '.cdk-overlay-container' ? {} : null)
+        } as unknown as EventTarget;
+        expect(isInOverlay(inside)).toBe(true);
+        expect(isInOverlay({ closest: () => null } as unknown as EventTarget)).toBe(false);
+        expect(isInOverlay(null)).toBe(false);
     });
 });
 
@@ -52,6 +63,20 @@ describe('resolveHotkey', () => {
             )
         ).toEqual({ type: 'none' });
         expect(resolveHotkey(key({ key: '/', isComposing: true }), ctx(false))).toEqual({
+            type: 'none'
+        });
+    });
+    // Regression: arrows inside an open dropdown moved both its highlight and the
+    // task row behind it.
+    it('never fires bare keys from inside a CDK overlay', () => {
+        const inOverlay = {
+            tagName: 'BUTTON',
+            closest: (sel: string) => (sel === '.cdk-overlay-container' ? {} : null)
+        } as unknown as EventTarget;
+        expect(resolveHotkey(key({ key: 'ArrowDown', target: inOverlay }), ctx(false))).toEqual({
+            type: 'none'
+        });
+        expect(resolveHotkey(key({ key: '/', target: inOverlay }), ctx(false))).toEqual({
             type: 'none'
         });
     });

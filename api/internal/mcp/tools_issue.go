@@ -20,6 +20,8 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithArray("severity_ids", mcpgo.Description("Filter by severity IDs"), mcpgo.WithNumberItems()),
 			mcpgo.WithArray("assigned_to_ids", mcpgo.Description("Filter by assigned user IDs"), mcpgo.WithNumberItems()),
 			mcpgo.WithBoolean("exclude_final_states", mcpgo.Description("Exclude issues in final/terminal states")),
+			mcpgo.WithString("updated_within", mcpgo.Description(`Only issues updated within this rolling window, e.g. "2h", "30d", "1d8h6m". Units: d (24h), h, m, s. Not calendar-aligned. Prefer this over computing dates yourself.`)),
+			mcpgo.WithString("created_within", mcpgo.Description(`Only issues created within this rolling window, same format as updated_within`)),
 			mcpgo.WithNumber("limit", mcpgo.Description("Max results (default 50, max 200)")),
 			mcpgo.WithNumber("offset", mcpgo.Description("Skip N results")),
 			mcpgo.WithReadOnlyHintAnnotation(true),
@@ -139,6 +141,12 @@ func handleListIssues(ctx context.Context, req mcpgo.CallToolRequest, dispatcher
 	}
 	if req.GetBool("exclude_final_states", false) {
 		query.Set("excludeFinalStates", "true")
+	}
+	if within := req.GetString("updated_within", ""); within != "" {
+		query.Set("updateAtWithin", within)
+	}
+	if within := req.GetString("created_within", ""); within != "" {
+		query.Set("createAtWithin", within)
 	}
 	limit := req.GetInt("limit", 50)
 	if limit > 200 {

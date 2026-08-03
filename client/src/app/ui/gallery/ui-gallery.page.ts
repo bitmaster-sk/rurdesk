@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { UiDateRangeValue } from '../components/date-range-select/date-range-select.component';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
 import { UiTableSortEvent } from '../components/table/table-sort.directive';
 import { UiToastSeverity, UiToastService } from '../service/ui-toast.service';
@@ -158,6 +159,14 @@ export class UiGalleryPage {
     protected datetimeValue: Date | null = new Date(2026, 6, 3, 14, 30);
     protected rangeValue: Date[] | null = null;
     protected inlineValue: Date | null = new Date(2026, 6, 3);
+
+    // date-range-select demo data
+    protected readonly dateRangePresets = [
+        { label: 'Last 7 days', value: '7d' },
+        { label: 'Last 30 days', value: '30d' },
+        { label: 'Last 90 days', value: '90d' }
+    ];
+    protected dateRangeValue: UiDateRangeValue | null = null;
 
     // dialog demo state
     protected dialogBasicOpen = false;
