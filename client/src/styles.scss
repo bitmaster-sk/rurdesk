@@ -5,6 +5,10 @@
 // Required by @angular/cdk Overlay (used by the ui-confirm popup). Positions the
 // overlay container/pane; without it flexibleConnectedTo positioning breaks.
 @import '@angular/cdk/overlay-prebuilt.css';
+// Required by CDK LiveAnnouncer (ui-toast announces through it): without this,
+// .cdk-visually-hidden has no rules, so the announcement renders as visible text at the
+// end of <body> and grows the page after every toast.
+@import '@angular/cdk/a11y-prebuilt.css';
 // diff2html CSS lives here so the :root overrides below sit after it in the
 // cascade. If imported from the component instead, the lazy-loaded
 // component stylesheet appends after styles.scss and wins the cascade,
