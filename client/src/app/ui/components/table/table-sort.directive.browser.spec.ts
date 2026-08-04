@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { UiModule } from '../../ui.module';
@@ -9,8 +9,8 @@ import { UiTableSortEvent } from './table-sort.directive';
     template: `
         <table
             uiTableSort
-            [sortField]="initField"
-            [sortOrder]="initOrder"
+            [sortField]="initField()"
+            [sortOrder]="initOrder()"
             (sortChange)="last = $event; emits = emits + 1"
         >
             <thead>
@@ -28,8 +28,8 @@ import { UiTableSortEvent } from './table-sort.directive';
     `
 })
 class HostComponent {
-    public initField: string | null = 'name';
-    public initOrder: 1 | -1 = 1;
+    public readonly initField = signal<string | null>('name');
+    public readonly initOrder = signal<1 | -1>(1);
     public last: UiTableSortEvent | null = null;
     public emits = 0;
 }
@@ -92,7 +92,7 @@ describe('UiTableSort / UiSortColumn (browser)', () => {
     });
 
     it('shows no sorted column and does not emit when there is no seed', () => {
-        const f = setup(h => (h.initField = null));
+        const f = setup(h => h.initField.set(null));
         const [name, count] = headers(f);
         expect(f.componentInstance.emits).toBe(0);
         expect(name.getAttribute('aria-sort')).toBe('none');
@@ -102,5 +102,35 @@ describe('UiTableSort / UiSortColumn (browser)', () => {
     it('exposes tabindex for keyboard focus on sortable headers', () => {
         const f = setup();
         expect(headers(f).every(h => h.getAttribute('tabindex') === '0')).toBe(true);
+    });
+
+    // The consumer may own the sort elsewhere (a filter store, an applied saved view).
+    // Before this, the first click captured the state for good and the header kept
+    // pointing at a column nobody was sorting by.
+    it('follows a new sortField after the user has already clicked', () => {
+        const f = setup();
+        headers(f)[1].click();
+        f.detectChanges();
+        expect(f.componentInstance.last).toEqual({ sortField: 'count', sortOrder: 1 });
+
+        f.componentInstance.initField.set('name');
+        f.componentInstance.initOrder.set(-1);
+        f.detectChanges();
+
+        const [name, count] = headers(f);
+        expect(name.getAttribute('aria-sort')).toBe('descending');
+        expect(count.getAttribute('aria-sort')).toBe('none');
+    });
+
+    it('a new sortField does not emit — only interaction does', () => {
+        const f = setup();
+        headers(f)[0].click();
+        f.detectChanges();
+        const emitsAfterClick = f.componentInstance.emits;
+
+        f.componentInstance.initField.set('count');
+        f.detectChanges();
+
+        expect(f.componentInstance.emits).toBe(emitsAfterClick);
     });
 });
