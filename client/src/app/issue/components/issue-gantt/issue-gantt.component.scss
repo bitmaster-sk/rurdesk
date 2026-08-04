@@ -59,9 +59,9 @@
     flex-direction: column;
     height: 100%;
     position: relative;
-    border: 1px solid var(--ui-surface-300);
-    border-radius: var(--ui-radius-md);
 
+    // The frame belongs to the chart, not to the host: the host also holds the filter
+    // panel, and on every other view the filter sits outside the framed area.
     &--content {
         flex: 1 1 auto;
         min-height: 0;
@@ -70,8 +70,8 @@
         position: relative;
         gap: 0;
         height: 100%;
-        border-bottom-left-radius: var(--ui-radius-md);
-        border-bottom-right-radius: var(--ui-radius-md);
+        border: 1px solid var(--ui-surface-300);
+        border-radius: var(--ui-radius-md);
     }
 
     &--timeline {
