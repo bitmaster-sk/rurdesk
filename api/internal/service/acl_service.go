@@ -158,6 +158,35 @@ func (acl *AclService) InvalidateUserTeamProjectCaches(ctx context.Context, idUs
 	}
 }
 
+// --- Project visibility ---
+
+// LoadVisibleProjects returns the projects a user may see: their own, or all of them for
+// an instance admin, who resolveProjectRole already treats as an owner everywhere. Lives
+// here so both answers come from one place — the membership query alone returned nothing
+// for a non-member admin the ACL was letting in.
+func (acl *AclService) LoadVisibleProjects(ctx context.Context, idUser int64) ([]*model.Project, error) {
+	isAdmin, err := acl.userRepo.IsAdminUser(ctx, idUser)
+	if err != nil {
+		return nil, fmt.Errorf("resolving admin flag: %w", err)
+	}
+	if isAdmin {
+		return acl.projectRepo.LoadAllProjects(ctx)
+	}
+	return acl.projectRepo.LoadProjects(ctx, idUser)
+}
+
+func (acl *AclService) LoadVisibleProjectIds(ctx context.Context, idUser int64) ([]int64, error) {
+	projects, err := acl.LoadVisibleProjects(ctx, idUser)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(projects))
+	for i, project := range projects {
+		ids[i] = project.IdProject
+	}
+	return ids, nil
+}
+
 // --- Project-scoped Can* methods (viewer+) ---
 
 func (acl *AclService) CanReadProject(ctx context.Context, idUser, idProject int64) bool {

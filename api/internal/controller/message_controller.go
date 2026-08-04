@@ -172,7 +172,7 @@ func (mc *MessageController) GetUnreadMessages(c *gin.Context) {
 		idsTeam = append(idsTeam, t.IdTeam)
 	}
 
-	projects, err := mc.projectRepo.LoadProjects(ctx, user.IdUser)
+	projects, err := mc.acl.LoadVisibleProjects(ctx, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
