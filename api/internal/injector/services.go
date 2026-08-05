@@ -199,6 +199,14 @@ func GetSprintRepository() *repository.SprintRepository {
 	return instance.(*repository.SprintRepository)
 }
 
+func GetSavedViewRepository() *repository.SavedViewRepository {
+	instance, _ := di.GetWithNew("saved-view-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewSavedViewRepository(pool), nil
+	})
+	return instance.(*repository.SavedViewRepository)
+}
+
 func GetSprintService() *service.SprintService {
 	instance, _ := di.GetWithNew("sprint-service", func() (any, error) {
 		pool := mustDb()
@@ -228,6 +236,13 @@ func GetSprintController() *controller.SprintController {
 		return controller.NewSprintController(GetSprintRepository(), GetStateRepository(), GetSprintService(), GetAclService()), nil
 	})
 	return instance.(*controller.SprintController)
+}
+
+func GetSavedViewController() *controller.SavedViewController {
+	instance, _ := di.GetWithNew("saved-view-controller", func() (any, error) {
+		return controller.NewSavedViewController(GetSavedViewRepository(), GetAclService()), nil
+	})
+	return instance.(*controller.SavedViewController)
 }
 
 func GetAclRepository() *repository.AclRepository {
@@ -844,6 +859,7 @@ func GetRouter() (*router.Router, error) {
 			GetSeverityController(),
 			GetStateController(),
 			GetSprintController(),
+			GetSavedViewController(),
 			GetTrackerController(),
 			GetPinController(),
 			GetIssueRelationController(),

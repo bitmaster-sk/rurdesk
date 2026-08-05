@@ -31,4 +31,9 @@ var (
 	errGatewayExists           = errs.NewErr("GATEWAY_EXISTS", "bot already has a gateway", "error.gateway_exists")
 
 	errInvalidWithin = errs.NewErr("INVALID_WITHIN", `createAtWithin/updateAtWithin must be a positive duration, e.g. "30d", "2h" or "1d8h6m"`, "error.invalid_within")
+
+	errSavedViewConfigTooLarge = errs.NewErr("SAVED_VIEW_CONFIG_TOO_LARGE", "saved view config exceeds 8KB", "error.saved_view_config_too_large")
+	errSavedViewConfigInvalid  = errs.NewErr("SAVED_VIEW_CONFIG_INVALID", "saved view config is not a JSON object", "error.saved_view_config_invalid")
+	errSavedViewBadSort        = errs.NewErr("SAVED_VIEW_BAD_SORT", "saved view config has an unknown orderColumn", "error.saved_view_bad_sort")
+	errSavedViewLimit          = errs.NewErr("SAVED_VIEW_LIMIT", "too many saved views in this project", "error.saved_view_limit")
 )

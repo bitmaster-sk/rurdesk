@@ -72,6 +72,21 @@ func TestKeysetPredicate_NullCursorValue(t *testing.T) {
 	}
 }
 
+// Saved-view validation gates on this, so an unknown key must not pass as
+// sortable just because sortColumnFor would silently fall back to updateAt.
+func TestIsSortColumn(t *testing.T) {
+	for _, key := range []string{"updateAt", "createAt", "severity", "assignedToName"} {
+		if !IsSortColumn(key) {
+			t.Fatalf("IsSortColumn(%q) = false, want true", key)
+		}
+	}
+	for _, key := range []string{"", "dropTables", "UpdateAt", "update_at"} {
+		if IsSortColumn(key) {
+			t.Fatalf("IsSortColumn(%q) = true, want false", key)
+		}
+	}
+}
+
 func TestKeysetPredicate_Asc(t *testing.T) {
 	cur := &issueCursor{Col: "title", Dir: "asc", Val: "abc", Id: 3}
 	pred, _, _, _ := buildKeysetPredicate(cur, 1)
