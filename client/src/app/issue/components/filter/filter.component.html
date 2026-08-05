@@ -31,7 +31,7 @@
             <label for="state-filter">{{ 'STATE.SINGULAR' | translate }}</label>
             <app-state-dropdown
                 inputId="state-filter"
-                [states]="states$ | async"
+                [states]="(states$ | async) ?? []"
                 [multi]="true"
                 formControlName="idsState"
             ></app-state-dropdown>
@@ -52,7 +52,7 @@
             <label for="severity-filter">{{ 'SEVERITY.SINGULAR' | translate }}</label>
             <app-severity-dropdown
                 inputId="severity-filter"
-                [severities]="severities$ | async"
+                [severities]="(severities$ | async) ?? []"
                 [multi]="true"
                 formControlName="idsSeverity"
             ></app-severity-dropdown>
@@ -73,7 +73,7 @@
             <label for="assigned-to-filter">{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
             <app-user-dropdown
                 inputId="assigned-to-filter"
-                [users]="users$ | async"
+                [users]="(users$ | async) ?? []"
                 [multi]="true"
                 formControlName="idsAssignedTo"
             ></app-user-dropdown>

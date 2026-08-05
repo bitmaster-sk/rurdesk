@@ -136,7 +136,9 @@ type OptionRecord = Record<string, unknown>;
     `
 })
 export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
-    public readonly options = input.required<readonly T[]>();
+    public readonly options = input.required<readonly T[], readonly T[] | null | undefined>({
+        transform: value => value ?? []
+    });
     public readonly optionLabel = input<string>();
     public readonly optionValue = input<string>();
     public readonly placeholder = input<string>();
