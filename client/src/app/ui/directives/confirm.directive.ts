@@ -38,6 +38,9 @@ export class UiConfirmDirective implements OnDestroy {
     /** Emitted when the user accepts. */
     public readonly confirmed = output<void>();
 
+    /** Emitted whenever the popup closes — accepted, rejected, dismissed or Escape. */
+    public readonly closed = output<void>();
+
     private readonly overlay = inject(Overlay);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
@@ -131,8 +134,12 @@ export class UiConfirmDirective implements OnDestroy {
     }
 
     private close(): void {
+        const wasOpen = !!this.overlayRef;
         this.subscriptions.unsubscribe();
         this.overlayRef?.dispose();
         this.overlayRef = null;
+        if (wasOpen) {
+            this.closed.emit();
+        }
     }
 }
