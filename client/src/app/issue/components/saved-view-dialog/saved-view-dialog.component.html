@@ -1,0 +1,45 @@
+<ui-dialog
+    [header]="(view() ? 'ISSUE.VIEWS.RENAME' : 'ISSUE.VIEWS.SAVE_CURRENT') | translate"
+    [visible]="true"
+    width="420px"
+    (hide)="cancelled.emit()"
+>
+    <form [formGroup]="form" class="flex flex-col gap-3 pt-2">
+        <div class="ui-field">
+            <label for="sv-name" class="required">{{ 'ISSUE.VIEWS.NAME' | translate }}</label>
+            <input
+                id="sv-name"
+                uiInput
+                formControlName="name"
+                maxlength="60"
+                class="w-full"
+                [placeholder]="'ISSUE.VIEWS.NAME' | translate"
+            />
+        </div>
+
+        <label class="flex items-center gap-2">
+            <input type="checkbox" uiToggle formControlName="isShared" />
+            <span>
+                {{
+                    (form.value.isShared ? 'ISSUE.VIEWS.SHARED' : 'ISSUE.VIEWS.PRIVATE') | translate
+                }}
+            </span>
+        </label>
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            [label]="'ISSUE.VIEWS.CANCEL' | translate"
+            variant="text"
+            severity="secondary"
+            (click)="cancelled.emit()"
+        />
+        <ui-button
+            [label]="'ISSUE.VIEWS.SAVE' | translate"
+            [disabled]="form.invalid"
+            (click)="onSave()"
+        >
+            <tabler-icon icon="device-floppy" [size]="14" />
+        </ui-button>
+    </ng-template>
+</ui-dialog>

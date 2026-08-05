@@ -46,6 +46,15 @@ describe('IssueFilterStore', () => {
         expect(latest(store.actualFilter$)).toMatchObject({ idProject: 1 });
     });
 
+    it('getFilter returns the live filter, or null before one is set', () => {
+        expect(store.getFilter()).toBeNull();
+        store.setInitialFilter({ idProject: 1 } as IssuesFilter);
+        store.setFilter({ title: 'login' } as IssuesFilterParams);
+        expect(store.getFilter()).toMatchObject({ idProject: 1, title: 'login' });
+        store.clear();
+        expect(store.getFilter()).toBeNull();
+    });
+
     it('toggleShowFilter flips the visibility flag', () => {
         expect(latest(store.showFilter$)).toBe(false);
         store.toggleShowFilter();

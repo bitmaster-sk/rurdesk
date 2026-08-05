@@ -25,6 +25,8 @@ import { Project } from 'src/app/project/model/project.model';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
+import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { IssueRelationRow } from './entity/issue-table-row.entity';
@@ -53,6 +55,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly projectStore = inject(ProjectStore);
     private readonly stateStore = inject(StateStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
+    private readonly savedViewStore = inject(SavedViewStore);
     private readonly issueToolbarService = inject(IssueToolbarService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly router = inject(Router);
@@ -82,6 +85,9 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // Default: newest issue first, by id (stable — editing a field never re-orders
     // the row, unlike updateAt which bumped the edited row to the top).
+    protected readonly sortField = signal<string>('idIssue');
+    protected readonly sortOrder = signal<1 | -1>(-1);
+
     public readonly defaultSortColumn = 'idIssue';
 
     public readonly defaultSortOrder = -1;
@@ -156,7 +162,14 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     public ngOnInit(): void {
-        this.setDefaultFilter();
+        this.setInitialFilter();
+        this.onSavedViewResetSignal();
+        this.issueFilterStore.actualFilter$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(filter => {
+                this.sortField.set(filter!.orderColumn);
+                this.sortOrder.set(filter!.orderDirection === 'asc' ? 1 : -1);
+            });
         this.projectStore.project$.pipe(first()).subscribe(p => {
             this.idProject = p.idProject;
         });
@@ -406,9 +419,13 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.isSplitDialogOpen.set(false);
     }
 
-    // --- Private ---
+    private onSavedViewResetSignal(): void {
+        this.savedViewStore.filterResetSignal$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.setInitialFilter());
+    }
 
-    private setDefaultFilter(): void {
+    private setInitialFilter(): void {
         this.projectStore.project$
             .pipe(
                 first(),
@@ -420,6 +437,15 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
                 )
             )
             .subscribe(([project, states]: [Project, IssueState[]]) => {
+                // A staged view REPLACES the defaults: a field it omits is unfiltered.
+                const pending = this.savedViewStore.consumePending(project.idProject);
+                if (pending) {
+                    this.issueFilterStore.setInitialFilter({
+                        ...SavedViewConfigConverter.toFilter(pending.config),
+                        idProject: project.idProject
+                    });
+                    return;
+                }
                 this.issueFilterStore.setInitialFilter({
                     idProject: project.idProject,
                     stateUnset: true,

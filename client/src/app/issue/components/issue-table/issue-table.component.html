@@ -48,8 +48,8 @@
             <table
                 class="ui-table"
                 uiTableSort
-                sortField="idIssue"
-                [sortOrder]="-1"
+                [sortField]="sortField()"
+                [sortOrder]="sortOrder()"
                 (sortChange)="onLazyLoad($event)"
             >
                 <thead>

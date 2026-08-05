@@ -18,6 +18,7 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Issue } from '../../model/issue.model';
 import { UiModule } from 'src/app/ui/ui.module';
+import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 
 import { signal } from '@angular/core';
 
@@ -165,6 +166,8 @@ export function configureTableTestBed(): TableMocks {
                 useValue: { show: vi.fn(), relation$: EMPTY, issue$: EMPTY }
             },
             { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+            // The real root-scoped SavedViewStore is used, so its api needs a stub.
+            { provide: SavedViewApi, useValue: { loadByProject$: () => of([]) } },
             provideRouter([]),
             provideNoopAnimations()
         ]

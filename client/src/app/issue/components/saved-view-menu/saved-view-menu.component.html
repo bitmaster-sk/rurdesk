@@ -1,0 +1,189 @@
+@let active = activeView();
+
+<span class="ui-button-group">
+    <button
+        #trigger
+        type="button"
+        class="ui-button ui-button--small"
+        [class.ui-button--primary]="!!active"
+        [class.ui-button--outlined]="!active"
+        [class.ui-button--secondary]="!active"
+        aria-haspopup="dialog"
+        [attr.aria-expanded]="isOpen()"
+        [attr.aria-controls]="panelId"
+        (click)="onTriggerClick($event)"
+    >
+        <tabler-icon icon="bookmark" [size]="14" />
+        <span class="view-name">{{ active?.name ?? ('ISSUE.VIEWS.TITLE' | translate) }}</span>
+        @if (active && hasUnsavedChanges()) {
+            <span class="sv-changed" [attr.title]="'ISSUE.VIEWS.CHANGED' | translate">
+                <span class="sr-only">{{ 'ISSUE.VIEWS.CHANGED' | translate }}</span>
+            </span>
+        }
+        <tabler-icon icon="chevron-down" [size]="14" />
+    </button>
+    @if (active) {
+        <button
+            type="button"
+            class="ui-button ui-button--small ui-button--primary ui-button--icon-only"
+            [attr.aria-label]="'ISSUE.VIEWS.CLEAR' | translate"
+            (click)="onClearActive()"
+        >
+            <tabler-icon icon="x" [size]="14" />
+        </button>
+    }
+</span>
+
+<ui-popover #panel panelClass="sv-panel" (onHide)="onPanelHide()">
+    <div
+        #panelContent
+        [id]="panelId"
+        role="dialog"
+        [attr.aria-label]="'ISSUE.VIEWS.TITLE' | translate"
+    >
+        <div class="sv-search">
+            <tabler-icon class="sv-search-icon" icon="search" [size]="16" />
+            <input
+                #search
+                type="text"
+                [attr.aria-label]="'ISSUE.VIEWS.SEARCH_LABEL' | translate"
+                [placeholder]="'ISSUE.VIEWS.SEARCH_PLACEHOLDER' | translate"
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event)"
+                (keydown.enter)="onSearchEnter($event)"
+            />
+        </div>
+
+        @if (!hasViews()) {
+            <div class="sv-empty">{{ 'ISSUE.VIEWS.EMPTY' | translate }}</div>
+        } @else if (!hasMatches()) {
+            <div class="sv-empty">
+                {{ 'ISSUE.VIEWS.NO_MATCH' | translate: { query: query() } }}
+            </div>
+        } @else {
+            <div class="sv-list">
+                @if (sharedViews().length) {
+                    <span class="sv-group">{{ 'ISSUE.VIEWS.SHARED_GROUP' | translate }}</span>
+                    @for (view of sharedViews(); track view.idSavedView) {
+                        <ng-container
+                            [ngTemplateOutlet]="row"
+                            [ngTemplateOutletContext]="{ view: view }"
+                        />
+                    }
+                }
+                @if (privateViews().length) {
+                    <span class="sv-group">{{ 'ISSUE.VIEWS.PRIVATE_GROUP' | translate }}</span>
+                    @for (view of privateViews(); track view.idSavedView) {
+                        <ng-container
+                            [ngTemplateOutlet]="row"
+                            [ngTemplateOutletContext]="{ view: view }"
+                        />
+                    }
+                }
+            </div>
+        }
+
+        <div class="sv-sep"></div>
+
+        <div class="sv-footer">
+            <!-- Creating is member+; a viewer would only get a 403 after filling the form. -->
+            @if (aclStore.canCreateIssue()) {
+                <div class="sv-item">
+                    <button type="button" class="sv-apply" (click)="onSaveCurrent()">
+                        <tabler-icon class="sv-icon" icon="bookmark-plus" [size]="16" />
+                        <span class="sv-name">{{ 'ISSUE.VIEWS.SAVE_CURRENT' | translate }}</span>
+                    </button>
+                </div>
+            }
+            <div class="sv-item">
+                <button
+                    type="button"
+                    class="sv-apply"
+                    [disabled]="!canManageActive()"
+                    (click)="onUpdateActive()"
+                >
+                    <tabler-icon class="sv-icon" icon="device-floppy" [size]="16" />
+                    <span class="sv-name">
+                        @if (active) {
+                            {{ 'ISSUE.VIEWS.UPDATE_ACTIVE' | translate: { name: active.name } }}
+                        } @else {
+                            {{ 'ISSUE.VIEWS.UPDATE_ACTIVE_EMPTY' | translate }}
+                        }
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+</ui-popover>
+
+@if (isDialogVisible()) {
+    <app-saved-view-dialog
+        [view]="editTarget()"
+        (saved)="onDialogSaved($event)"
+        (cancelled)="onDialogCancelled()"
+    />
+}
+
+<!-- The apply target and the actions are siblings, not nested: a <button> may not
+     contain interactive content. -->
+<ng-template #row let-view="view">
+    <div
+        class="sv-item"
+        [class.active]="view.idSavedView === active?.idSavedView"
+        [class.is-confirming]="confirmingId() === view.idSavedView"
+    >
+        <button
+            type="button"
+            class="sv-apply"
+            [attr.aria-current]="view.idSavedView === active?.idSavedView ? 'true' : null"
+            (click)="onApply(view)"
+        >
+            <tabler-icon class="sv-icon" [icon]="view.isShared ? 'users' : 'lock'" [size]="16" />
+            <span class="sv-name">{{ view.name }}</span>
+            <span class="sv-type">{{ viewTypeLabel(view.viewType) | translate }}</span>
+        </button>
+        <span class="sv-actions">
+            <button
+                type="button"
+                class="sv-act"
+                [attr.aria-label]="'ISSUE.VIEWS.COPY_LINK' | translate"
+                (click)="onCopyLink(view)"
+            >
+                <tabler-icon icon="link" [size]="14" />
+            </button>
+            @if (canManage(view)) {
+                <button
+                    type="button"
+                    class="sv-act"
+                    [attr.aria-label]="'ISSUE.VIEWS.RENAME' | translate"
+                    (click)="onRename(view)"
+                >
+                    <tabler-icon icon="pencil" [size]="14" />
+                </button>
+                <button
+                    type="button"
+                    class="sv-act"
+                    [attr.aria-label]="
+                        (view.isShared ? 'ISSUE.VIEWS.MAKE_PRIVATE' : 'ISSUE.VIEWS.MAKE_SHARED')
+                            | translate
+                    "
+                    (click)="onToggleShared(view)"
+                >
+                    <tabler-icon [icon]="view.isShared ? 'lock' : 'users'" [size]="14" />
+                </button>
+                <button
+                    type="button"
+                    class="sv-act danger"
+                    [attr.aria-label]="'ISSUE.VIEWS.DELETE' | translate"
+                    uiConfirm
+                    [confirmText]="'ISSUE.VIEWS.DELETE_CONFIRM' | translate"
+                    (click)="confirmingId.set(view.idSavedView)"
+                    (confirmed)="onDelete(view)"
+                    (closed)="confirmingId.set(null)"
+                >
+                    <tabler-icon icon="trash" [size]="14" />
+                </button>
+            }
+        </span>
+    </div>
+</ng-template>

@@ -34,6 +34,8 @@ import enLocale from '@fullcalendar/core/locales/en-gb';
 import { Router } from '@angular/router';
 import { Issue } from '../../model/issue.model';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
+import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { IssueCalendarService } from './service/issue-calendar.service';
@@ -73,6 +75,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private readonly sIssue = inject(IssueService);
     private readonly projectStore = inject(ProjectStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
+    private readonly savedViewStore = inject(SavedViewStore);
     private readonly issueCalendarService = inject(IssueCalendarService);
     private readonly issueToolbarService = inject(IssueToolbarService);
     private readonly destroyRef = inject(DestroyRef);
@@ -253,6 +256,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             .el.classList.toggle('fc--compact', this.cardMode() === 'CalendarCompact');
 
         this.setInitialFilter();
+        this.onSavedViewResetSignal();
     }
 
     public ngOnDestroy(): void {
@@ -437,9 +441,28 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         });
     }
 
+    private onSavedViewResetSignal(): void {
+        this.savedViewStore.filterResetSignal$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.setInitialFilter());
+    }
+
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
             const now = new Date();
+            // Never persisted in a view, so both branches need it computed here.
+            const scheduledAtFrom = startOfMonth(now);
+            const scheduledAtTo = endOfMonth(now);
+            const pending = this.savedViewStore.consumePending(project.idProject);
+            if (pending) {
+                this.issueFilterStore.setInitialFilter({
+                    ...SavedViewConfigConverter.toFilter(pending.config),
+                    scheduledAtFrom,
+                    scheduledAtTo,
+                    idProject: project.idProject
+                });
+                return;
+            }
             this.issueFilterStore.setInitialFilter({
                 idProject: project.idProject,
                 stateUnset: true,
@@ -450,8 +473,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                 idsAssignedTo: [],
                 orderColumn: this.defaultSortColumn,
                 orderDirection: this.defaultSortOrder > 0 ? 'asc' : 'desc',
-                scheduledAtFrom: startOfMonth(now),
-                scheduledAtTo: endOfMonth(now)
+                scheduledAtFrom,
+                scheduledAtTo
             });
         });
     }

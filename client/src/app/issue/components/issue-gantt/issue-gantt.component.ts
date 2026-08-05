@@ -9,14 +9,17 @@ import {
     inject,
     signal,
     viewChild,
-    computed
+    computed,
+    DestroyRef
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { first, filter } from 'rxjs/operators';
 import { startOfMonth, subMonths, endOfMonth, addMonths } from 'date-fns';
 import { ProjectStore } from 'src/app/project/project.store';
+import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { IssueGanttService } from './service/issue-gantt.service';
 import { GanttTimelineService } from './service/gantt-timeline.service';
@@ -83,6 +86,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
 
     private readonly projectStore = inject(ProjectStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
+    private readonly savedViewStore = inject(SavedViewStore);
     private readonly ganttService = inject(IssueGanttService);
     public readonly timelineService = inject(GanttTimelineService);
     public readonly dragService = inject(GanttDragService);
@@ -97,6 +101,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     private readonly commandPalette = inject(CommandPaletteService);
     private readonly ganttOrderApi = inject(GanttOrderApi);
     private readonly toast = inject(ToastNotificationService);
+    private readonly destroyRef = inject(DestroyRef);
 
     // Optimistic manual-order overlay: set on drop, applied over the shared
     // scheduled list until the refreshed server data matches (then auto-cleared).
@@ -390,6 +395,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public ngAfterViewInit(): void {
         this.issueToolbarService.register(this.toolbarRef());
         this.setInitialFilter();
+        this.onSavedViewResetSignal();
         this.updateRowHeight();
         this._wsSub.add(
             this.noticeService.relation$
@@ -846,9 +852,28 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         this.timelineService.rowHeight.set(height);
     }
 
+    private onSavedViewResetSignal(): void {
+        this.savedViewStore.filterResetSignal$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.setInitialFilter());
+    }
+
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
             const now = new Date();
+            // Never persisted in a view, so both branches need it computed here.
+            const scheduledAtFrom = startOfMonth(subMonths(now, 1));
+            const scheduledAtTo = endOfMonth(addMonths(now, 2));
+            const pending = this.savedViewStore.consumePending(project.idProject);
+            if (pending) {
+                this.issueFilterStore.setInitialFilter({
+                    ...SavedViewConfigConverter.toFilter(pending.config),
+                    scheduledAtFrom,
+                    scheduledAtTo,
+                    idProject: project.idProject
+                });
+                return;
+            }
             this.issueFilterStore.setInitialFilter({
                 idProject: project.idProject,
                 stateUnset: true,
@@ -859,8 +884,8 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 idsAssignedTo: [],
                 orderColumn: 'scheduledAt',
                 orderDirection: 'asc',
-                scheduledAtFrom: startOfMonth(subMonths(now, 1)),
-                scheduledAtTo: endOfMonth(addMonths(now, 2))
+                scheduledAtFrom,
+                scheduledAtTo
             });
         });
     }
