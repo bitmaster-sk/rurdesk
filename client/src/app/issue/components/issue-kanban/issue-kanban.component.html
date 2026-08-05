@@ -43,7 +43,7 @@
     <ui-choice
         [options]="viewModeOptions"
         [ngModel]="viewMode()"
-        (ngModelChange)="viewMode.set($event)"
+        (ngModelChange)="onViewModeChange($event)"
         optionValue="value"
         [allowEmpty]="false"
         size="small"

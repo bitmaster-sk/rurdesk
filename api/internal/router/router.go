@@ -30,6 +30,7 @@ func New(
 	sevCtrl *controller.SeverityController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
+	savedViewCtrl *controller.SavedViewController,
 	trackerCtrl *controller.TrackerController,
 	pinCtrl *controller.PinController,
 	irc *controller.IssueRelationController,
@@ -153,6 +154,11 @@ func New(
 	pri.DELETE("/sprint/:idSprint", sprintCtrl.Delete)
 	pri.POST("/sprint/:idSprint/close", sprintCtrl.Close)
 	pri.GET("/sprint/:idSprint/stats", sprintCtrl.Stats)
+
+	pri.GET("/project/:idProject/saved-view", savedViewCtrl.List)
+	pri.POST("/project/:idProject/saved-view", savedViewCtrl.Create)
+	pri.PATCH("/saved-view/:idSavedView", savedViewCtrl.Edit)
+	pri.DELETE("/saved-view/:idSavedView", savedViewCtrl.Delete)
 
 	// Project builder
 	pri.POST("/project/:idProject/project-builder/generate", pbCtrl.Generate)

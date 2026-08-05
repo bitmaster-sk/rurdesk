@@ -66,7 +66,40 @@ func (s *AdminAclSuite) Test_03_Admin_SeesAllProjects() {
 	s.True(found, "admin must see projects they are not a member of")
 }
 
-func (s *AdminAclSuite) Test_04_NonAdmin_StillForbidden() {
+// Test_03 covers the project listing, which had the admin branch from the start. These
+// three listings did not: they all filtered by membership, so a non-member admin who
+// could read the project and its tasks saw NO states and NO severities, leaving the
+// filter panel's selects empty and every state/severity name unresolvable.
+func (s *AdminAclSuite) Test_04_Admin_SeesStatesOfForeignProject() {
+	res := Request(s.T(), s.App, "GET", "/api/private/state", "", s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var states []*model.State
+	json.NewDecoder(res.Body).Decode(&states)
+	s.NotEmpty(states, "admin must see the states of a project they are not a member of")
+}
+
+func (s *AdminAclSuite) Test_05_Admin_SeesSeveritiesOfForeignProject() {
+	res := Request(s.T(), s.App, "GET", "/api/private/severity", "", s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var severities []*model.Severity
+	json.NewDecoder(res.Body).Decode(&severities)
+	s.NotEmpty(severities, "admin must see the severities of a foreign project")
+}
+
+func (s *AdminAclSuite) Test_06_NonMemberNonAdmin_SeesNoStates() {
+	stranger := createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"nostates","email":"aclnostates@test.sk","password":"kreslo"}`)
+	defer s.App.Pool.Exec(context.Background(),
+		"DELETE FROM users.user WHERE email = 'aclnostates@test.sk'")
+
+	res := Request(s.T(), s.App, "GET", "/api/private/state", "", stranger)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var states []*model.State
+	json.NewDecoder(res.Body).Decode(&states)
+	s.Empty(states, "the admin bypass must not leak states to a plain non-member")
+}
+
+func (s *AdminAclSuite) Test_07_NonAdmin_StillForbidden() {
 	stranger := createUserAsAdmin(s.T(), s.App, s.AdminToken,
 		`{"name":"stranger","email":"aclstranger@test.sk","password":"kreslo"}`)
 	defer s.App.Pool.Exec(context.Background(),

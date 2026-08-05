@@ -24,7 +24,7 @@ interface Opt {
     `
 })
 class HostComponent {
-    public readonly options = signal<Opt[]>([]);
+    public readonly options = signal<Opt[] | null>([]);
     public readonly ctrl = new FormControl<string | null>(null);
     public onChangeCount = 0;
 }
@@ -127,5 +127,13 @@ describe('UiSelectComponent (browser)', () => {
         fixture.detectChanges();
         expect(fixture.componentInstance.ctrl.value).toBe('a'); // first option highlighted on open
         expect(fixture.componentInstance.onChangeCount).toBe(1);
+    });
+
+    it('survives null options, as an async pipe hands over before its first emission', () => {
+        const fixture = TestBed.createComponent(HostComponent);
+        fixture.componentInstance.options.set(null);
+        fixture.detectChanges();
+
+        expect(trigger(fixture.nativeElement)).toBeTruthy();
     });
 });

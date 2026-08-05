@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Subject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { IssuesFilter, IssuesFilterParams, IssuesOrderParams } from './issue-filter.entity';
 
@@ -35,6 +35,10 @@ export class IssueFilterStore {
 
     public showFilter$ = this.showFilter.asObservable();
 
+    /** Should emit only when the filter is modified (not initial or refresh) */
+    private readonly _isFilterEdited = new Subject<void>();
+    public readonly isFilterEdited$ = this._isFilterEdited.asObservable();
+
     public setInitialFilter(initialFilter: IssuesFilter): void {
         this.filter.next({ filter: initialFilter, initial: true, refresh: false });
     }
@@ -43,6 +47,7 @@ export class IssueFilterStore {
         const actualFilter = this.filter.getValue()?.filter;
         const newFilter = { ...actualFilter, ...orderParams };
         this.filter.next({ initial: false, filter: newFilter, refresh: false });
+        this._isFilterEdited.next();
     }
 
     // idSprint === null means the Backlog tab → filter to issues with no sprint.
@@ -56,11 +61,16 @@ export class IssueFilterStore {
         this.filter.next({ initial: false, filter: newFilter, refresh: false });
     }
 
+    public getFilter(): IssuesFilter | null {
+        return this.filter.getValue().filter;
+    }
+
     public setFilter(filterParams: IssuesFilterParams): void {
         const actualFilter = this.filter.getValue()?.filter;
         const newFilter = { ...actualFilter, ...filterParams };
 
         this.filter.next({ filter: newFilter, initial: false, refresh: false });
+        this._isFilterEdited.next();
     }
 
     public toggleShowFilter(): void {

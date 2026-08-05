@@ -156,15 +156,7 @@ func (pc *ProjectController) GetProjects(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	// Instance admins are implicit owners of every project. user.IsAdmin comes from
-	// the session, invalidated on flag change.
-	var projects []*model.Project
-	var err error
-	if user.IsAdmin {
-		projects, err = pc.projectRepo.LoadAllProjects(ctx)
-	} else {
-		projects, err = pc.projectRepo.LoadProjects(ctx, user.IdUser)
-	}
+	projects, err := pc.acl.LoadVisibleProjects(ctx, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)

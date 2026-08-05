@@ -58,6 +58,7 @@ import { AgentPhaseStateMapComponent } from './components/agent-phase-state-map/
 import { AgentModule } from '../agent/agent.module';
 import { CommandRegistryService } from '../core/command/command-registry.service';
 import { NavigationCommandProvider } from './command/navigation.command-provider';
+import { SavedViewCommandProvider } from './command/saved-view.command-provider';
 import { PeopleCommandProvider } from './command/people.command-provider';
 
 @NgModule({
@@ -130,9 +131,11 @@ export class ProjectModule {
     constructor(
         registry: CommandRegistryService,
         nav: NavigationCommandProvider,
-        people: PeopleCommandProvider
+        people: PeopleCommandProvider,
+        savedViews: SavedViewCommandProvider
     ) {
         registry.register(nav);
         registry.register(people);
+        registry.register(savedViews);
     }
 }

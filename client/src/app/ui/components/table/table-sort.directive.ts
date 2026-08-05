@@ -1,4 +1,4 @@
-import { Directive, input, output, signal } from '@angular/core';
+import { Directive, input, linkedSignal, output } from '@angular/core';
 
 /** Emitted on user-driven sort change. `sortOrder`: 1 asc / -1 desc. */
 export interface UiTableSortEvent {
@@ -11,38 +11,37 @@ export interface UiTableSortEvent {
  * child `[uiSortColumn]` headers inject it to read/toggle state. Server-side
  * sort only — this holds state and emits, it never sorts the array.
  *
- * Binary toggle asc↔desc; switching to a new column starts at asc (1). The
- * initial `sortField`/`sortOrder` seed the displayed state WITHOUT emitting —
- * only a click/keyboard interaction emits `sortChange`.
+ * Binary toggle asc↔desc; switching to a new column starts at asc (1).
+ * `sortField`/`sortOrder` are the shown state, so a consumer that owns the sort
+ * elsewhere can bind them and keep the header honest.
  */
 @Directive({
     selector: 'table[uiTableSort]',
     standalone: false
 })
 export class UiTableSortDirective {
-    /** Initial sorted column (display only; does not emit). */
+    /** Sorted column (display only; does not emit). */
     public readonly sortField = input<string | null>(null);
-    /** Initial sort direction (1 asc / -1 desc). */
+    /** Sort direction (1 asc / -1 desc). */
     public readonly sortOrder = input<1 | -1>(1);
 
     public readonly sortChange = output<UiTableSortEvent>();
 
-    /** User-driven state; null until first interaction, then overrides the seed. */
-    private readonly state = signal<{ field: string; order: 1 | -1 } | null>(null);
+    /** Shown state: a click updates it at once, a new input replaces it. */
+    private readonly state = linkedSignal<{ field: string; order: 1 | -1 } | null>(() => {
+        const field = this.sortField();
+        return field ? { field, order: this.sortOrder() } : null;
+    });
 
     /** Active direction for a column, or 0 when it is not the sorted column. */
     public orderFor(field: string): 1 | -1 | 0 {
-        const active =
-            this.state() ??
-            (this.sortField() ? { field: this.sortField()!, order: this.sortOrder() } : null);
+        const active = this.state();
         return active && active.field === field ? active.order : 0;
     }
 
     /** Toggle sort on a column and emit. Binary: same column flips, new column → asc. */
     public toggle(field: string): void {
-        const current =
-            this.state() ??
-            (this.sortField() ? { field: this.sortField()!, order: this.sortOrder() } : null);
+        const current = this.state();
         const order: 1 | -1 =
             current && current.field === field ? (current.order === 1 ? -1 : 1) : 1;
         this.state.set({ field, order });

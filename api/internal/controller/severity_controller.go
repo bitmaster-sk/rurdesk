@@ -38,7 +38,7 @@ func (sc *SeverityController) GetSeverities(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	projects, err := sc.projectRepo.LoadProjects(ctx, user.IdUser)
+	projects, err := sc.acl.LoadVisibleProjects(ctx, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)

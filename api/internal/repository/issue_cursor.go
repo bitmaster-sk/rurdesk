@@ -117,6 +117,13 @@ var issueSortColumns = map[string]sortColumn{
 	"assignedToName": {expr: "ass.name", nullable: true, toArg: argString},
 }
 
+// IsSortColumn reports whether key is a sortable issue column. Exposed so
+// save-time validation shares this allow-list instead of copying it.
+func IsSortColumn(key string) bool {
+	_, ok := issueSortColumns[key]
+	return ok
+}
+
 // sortColumnFor resolves a sort key, falling back to the default (updateAt) for unknown keys.
 func sortColumnFor(key string) (string, sortColumn) {
 	if sc, ok := issueSortColumns[key]; ok {

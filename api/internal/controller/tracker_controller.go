@@ -252,7 +252,7 @@ func (tc *TrackerController) GetTracks(c *gin.Context) {
 			return
 		}
 	} else {
-		idsProject, err := tc.projectRepo.LoadProjectsIds(ctx, user.IdUser)
+		idsProject, err := tc.acl.LoadVisibleProjectIds(ctx, user.IdUser)
 		if err != nil {
 			_ = c.Error(err)
 			c.Status(http.StatusInternalServerError)

@@ -6,11 +6,13 @@ import {
     DestroyRef,
     inject,
     OnDestroy,
+    OnInit,
     signal,
     TemplateRef,
     viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { SavedViewKanbanLayout } from 'src/app/project/model/saved-view.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import {
     prefersReducedMotion,
@@ -33,6 +35,8 @@ import { IssueKanbanService } from './service/issue-kanban.service';
 import { KanbanColumn } from './entity/kanban-column.entity';
 import { KanbanTile } from './entity/kanban-tile.entity';
 import { SwimlaneCell } from './entity/swimlane-cell.entity';
+import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue } from '../../model/issue.model';
 import { SprintStore, selectCurrentSprint } from '../../store/sprint.store';
@@ -50,7 +54,7 @@ import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-a
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
+export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly projectStore = inject(ProjectStore);
 
     private readonly issueService = inject(IssueService);
@@ -58,6 +62,8 @@ export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
     private readonly issueKanbanService = inject(IssueKanbanService);
 
     private readonly issueFilterStore = inject(IssueFilterStore);
+
+    private readonly savedViewStore = inject(SavedViewStore);
 
     private readonly sprintStore = inject(SprintStore);
 
@@ -82,7 +88,7 @@ export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
 
     protected readonly showFilter$ = this.issueFilterStore.showFilter$;
 
-    protected readonly viewMode = signal<'columns' | 'swimlane'>('swimlane');
+    protected readonly viewMode = signal<SavedViewKanbanLayout>('swimlane');
 
     protected readonly viewModeOptions = [
         { label: this.i18n.instant('ISSUE.KANBAN.LAYOUT.COLUMNS'), value: 'columns' },
@@ -191,34 +197,11 @@ export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
         }))
     );
 
-    constructor() {
-        this.projectStore.project$.pipe(first()).subscribe(project => {
-            this.idProject = project.idProject;
-            this.sprintStore.load(project.idProject);
-            this.issueFilterStore.setInitialFilter({
-                idProject: project.idProject,
-                orderColumn: 'title',
-                orderDirection: 'asc',
-                idsState: [],
-                idsSeverity: [],
-                idsAssignedTo: [],
-                stateUnset: true,
-                severityUnset: true,
-                assignedToUnset: true,
-                createAtFrom: null,
-                createAtTo: null,
-                updateAtFrom: null,
-                updateAtTo: null
-            });
-
-            // Once sprints load, default the board scope to the current cycle (or
-            // Backlog when there is none) so a task board is always in exactly one tab.
-            this.sprintStore.sprints$
-                .pipe(first())
-                .subscribe(list =>
-                    this.onSprintChange(selectCurrentSprint(list, new Date())?.idSprint ?? null)
-                );
-        });
+    public ngOnInit(): void {
+        this.savedViewStore.setLiveKanbanLayout(this.viewMode());
+        this.setInitialFilter();
+        this.onSavedViewResetSignal();
+        this.followAppliedViewLayout();
 
         // Live updates: apply teammate changes to the loaded board. A move
         // between columns FLIP-flies the card; own drags land as in-place
@@ -324,6 +307,8 @@ export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
 
     public ngOnDestroy(): void {
         this.issueToolbarService.clear();
+        // left behind, it would land in a view saved from the table or the calendar
+        this.savedViewStore.setLiveKanbanLayout(null);
     }
 
     protected onToggleFilter(): void {
@@ -500,6 +485,74 @@ export class IssueKanbanComponent implements AfterViewInit, OnDestroy {
             error: () => {
                 this.issueFilterStore.refresh();
             }
+        });
+    }
+
+    protected onViewModeChange(layout: SavedViewKanbanLayout): void {
+        this.viewMode.set(layout);
+        this.savedViewStore.setLiveKanbanLayout(layout);
+    }
+
+    private onSavedViewResetSignal(): void {
+        this.savedViewStore.filterResetSignal$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.setDefaultFilter(this.idProject, this.selectedIdSprint()));
+    }
+
+    /** Both apply paths end in setInitialFilter, so this covers a remount and a same-mode push. */
+    private followAppliedViewLayout(): void {
+        this.issueFilterStore.initialFilter$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+                const layout = this.savedViewStore.appliedView()?.config.kanbanLayout;
+                if (layout) {
+                    this.onViewModeChange(layout);
+                }
+            });
+    }
+
+    private setInitialFilter(): void {
+        this.projectStore.project$.pipe(first()).subscribe(project => {
+            this.idProject = project.idProject;
+            this.sprintStore.load(project.idProject);
+
+            const pending = this.savedViewStore.consumePending(project.idProject);
+            if (pending) {
+                // A staged view REPLACES the defaults: a field it omits is unfiltered.
+                this.issueFilterStore.setInitialFilter({
+                    ...SavedViewConfigConverter.toFilter(pending.config),
+                    idProject: project.idProject
+                });
+            } else {
+                this.setDefaultFilter(project.idProject);
+            }
+
+            // Once sprints load, default the board scope to the current cycle (or Backlog
+            // when there is none) so a task board is always in exactly one tab.
+            this.sprintStore.sprints$
+                .pipe(first())
+                .subscribe(list =>
+                    this.onSprintChange(selectCurrentSprint(list, new Date())?.idSprint ?? null)
+                );
+        });
+    }
+
+    private setDefaultFilter(idProject: number, idSprint?: number | null): void {
+        this.issueFilterStore.setInitialFilter({
+            idProject,
+            ...(idSprint === undefined ? {} : { idSprint, sprintUnset: idSprint === null }),
+            orderColumn: 'title',
+            orderDirection: 'asc',
+            idsState: [],
+            idsSeverity: [],
+            idsAssignedTo: [],
+            stateUnset: true,
+            severityUnset: true,
+            assignedToUnset: true,
+            createAtFrom: null,
+            createAtTo: null,
+            updateAtFrom: null,
+            updateAtTo: null
         });
     }
 }

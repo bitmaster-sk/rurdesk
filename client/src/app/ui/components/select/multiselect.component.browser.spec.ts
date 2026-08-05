@@ -24,7 +24,7 @@ interface Opt {
     `
 })
 class HostComponent {
-    public readonly options = signal<Opt[]>([
+    public readonly options = signal<Opt[] | null>([
         { label: 'Alpha', value: 'a' },
         { label: 'Beta', value: 'b' },
         { label: 'Gamma', value: 'c' }
@@ -111,6 +111,15 @@ describe('UiMultiSelectComponent (browser)', () => {
         header()!.click();
         fixture.detectChanges();
         expect(fixture.componentInstance.ctrl.value).toEqual([]);
+    });
+
+    it('survives null options, as an async pipe hands over before its first emission', () => {
+        const fixture = setup();
+
+        fixture.componentInstance.options.set(null);
+        fixture.detectChanges();
+
+        expect(trigger(fixture.nativeElement)).toBeTruthy();
     });
 
     it('header is indeterminate on a partial selection', () => {

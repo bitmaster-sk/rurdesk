@@ -18,6 +18,9 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FilterComponent } from './components/filter/filter.component';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueFilterStore } from './components/filter/issue-filter.store';
+import { SavedViewApplyService } from './service/saved-view-apply.service';
+import { SavedViewMenuComponent } from './components/saved-view-menu/saved-view-menu.component';
+import { SavedViewDialogComponent } from './components/saved-view-dialog/saved-view-dialog.component';
 import { IssueToolbarService } from './issue-toolbar.service';
 import { KanbanTileComponent } from './components/issue-kanban/components/issue-kanban-tile/issue-kanban-tile.component';
 import { TrackerModule } from '../tracker/tracker.module';
@@ -79,6 +82,10 @@ import {
     IconFlag,
     IconCode,
     IconUsers,
+    IconBookmark,
+    IconBookmarkPlus,
+    IconLock,
+    IconSearch,
     IconBell,
     IconBellOff,
     IconRepeat
@@ -134,7 +141,9 @@ import { AgentModule } from '../agent/agent.module';
         MrStatusPillComponent,
         MrLinkPickerComponent,
         AnchorReplyComponent,
-        IssueParticipantsComponent
+        IssueParticipantsComponent,
+        SavedViewMenuComponent,
+        SavedViewDialogComponent
     ],
     imports: [
         CoreModule,
@@ -155,6 +164,7 @@ import { AgentModule } from '../agent/agent.module';
     providers: [
         IssueFilterStore,
         IssueToolbarService,
+        SavedViewApplyService,
         provideTablerIcons({
             IconRepeat,
             IconFilter,
@@ -194,6 +204,10 @@ import { AgentModule } from '../agent/agent.module';
             IconFlag,
             IconCode,
             IconUsers,
+            IconBookmark,
+            IconBookmarkPlus,
+            IconLock,
+            IconSearch,
             IconBell,
             IconBellOff
         })

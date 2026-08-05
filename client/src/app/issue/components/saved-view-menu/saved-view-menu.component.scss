@@ -1,0 +1,275 @@
+// Rows reuse .ui-menu-item geometry so the panel feels native. ::ng-deep because the
+// panel is a body-level CDK overlay; .sv-panel is on both the pane and the surface.
+
+.sv-changed {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+}
+
+.view-name {
+    max-width: 11rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+:host {
+    display: inline-flex;
+}
+
+::ng-deep .sv-panel.ui-popover {
+    width: 21rem;
+}
+
+::ng-deep .sv-panel {
+    .sv-search {
+        position: relative;
+        display: flex;
+        align-items: center;
+        margin-bottom: var(--ui-space);
+
+        .sv-search-icon {
+            position: absolute;
+            left: 0.6rem;
+            color: var(--ui-input-placeholder);
+            pointer-events: none;
+        }
+
+        input {
+            width: 100%;
+            min-height: var(--ui-input-min-height);
+            padding: var(--ui-input-padding-y) var(--ui-input-padding-x) var(--ui-input-padding-y)
+                2.1rem;
+            font-family: inherit;
+            font-size: var(--ui-input-sm-font-size);
+            line-height: var(--ui-input-line-height);
+            color: var(--ui-input-fg);
+            background: var(--ui-input-bg);
+            border: 1px solid var(--ui-input-border);
+            border-radius: var(--ui-input-radius);
+
+            &::placeholder {
+                color: var(--ui-input-placeholder);
+            }
+
+            &:focus {
+                outline: none;
+                border-color: var(--ui-input-border-focus);
+                box-shadow: var(--ui-input-focus-ring);
+            }
+        }
+    }
+
+    // Cancels --ui-popover-padding so the accent bar lands on the panel's inner edge,
+    // as in .ui-menu (zero-padding panel). The bar must stay inside this box: .sv-list
+    // scrolls, and a scroll container clips absolutely positioned children.
+    .sv-list,
+    .sv-footer {
+        margin-inline: calc(-1 * var(--ui-popover-padding));
+    }
+
+    .sv-list {
+        max-height: 19rem;
+        overflow-y: auto;
+    }
+
+    .sv-group {
+        display: block;
+        padding: var(--ui-space-s) var(--ui-space-m);
+        font-size: var(--font-size-s);
+        font-weight: bold;
+        text-transform: uppercase;
+        color: var(--ui-menu-group-fg);
+    }
+
+    .sv-item {
+        position: relative;
+        display: flex;
+        align-items: center;
+        width: calc(100% - 2 * var(--ui-space));
+        // The bottom gap keeps an applied and a hovered row from reading as one block.
+        margin: 0 var(--ui-space) var(--ui-space-xs);
+        border-radius: var(--ui-menu-item-radius);
+        transition:
+            background-color 0.2s,
+            color 0.2s;
+
+        // Geometry copied verbatim from .ui-menu-item.
+        &::before {
+            content: '';
+            position: absolute;
+            left: calc(-1 * var(--ui-space));
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: transparent;
+            border-top-right-radius: var(--ui-menu-item-radius);
+            border-bottom-right-radius: var(--ui-menu-item-radius);
+            transition: background-color 0.2s;
+        }
+
+        // :focus-within, not :focus-visible — focus lands on a CHILD button.
+        &:hover,
+        &:focus-within {
+            background-color: var(--ui-menu-item-hover-bg);
+            color: var(--ui-menu-item-hover-fg);
+            outline: none;
+
+            &::before {
+                background-color: var(--ui-menu-accent);
+            }
+
+            .sv-icon {
+                color: var(--ui-menu-item-hover-fg);
+            }
+        }
+
+        &.active {
+            background-color: var(--ui-color-highlight);
+            color: var(--ui-color-primary-strong);
+            font-weight: bold;
+
+            &::before {
+                background-color: var(--ui-menu-accent);
+            }
+
+            .sv-icon {
+                color: var(--ui-color-primary-strong);
+            }
+
+            .sv-actions {
+                background: var(--ui-color-highlight);
+            }
+        }
+    }
+
+    .sv-apply {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: var(--ui-space) var(--ui-space-m);
+        border: 0;
+        border-radius: var(--ui-menu-item-radius);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+
+        &:focus-visible {
+            outline: none;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+        }
+    }
+
+    .sv-icon {
+        flex: none;
+        color: var(--ui-color-muted-fg);
+    }
+
+    .sv-name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .sv-type {
+        flex: none;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.1rem 0.35rem;
+        border-radius: var(--ui-radius-sm);
+        font-size: var(--font-size-xs);
+        font-weight: var(--ui-tag-font-weight);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        background: var(--ui-sky-100);
+        color: var(--ui-sky-700);
+    }
+
+    // Overlaid, not a permanent flex slot, which would truncate every name at rest. Hidden
+    // via visibility, never display:none: that is unfocusable, and the [uiConfirm] popup
+    // anchored here needs the strip to stay put while it is open (.is-confirming).
+    .sv-actions {
+        position: absolute;
+        right: var(--ui-space-s);
+        top: 50%;
+        transform: translateY(-50%);
+        display: inline-flex;
+        gap: var(--ui-space-xs);
+        visibility: hidden;
+        opacity: 0;
+        transition: opacity 0.12s;
+        padding-left: var(--ui-space);
+        border-radius: var(--ui-menu-item-radius);
+        background: var(--ui-menu-item-hover-bg);
+    }
+
+    .sv-item:has(.sv-apply:disabled):hover {
+        background-color: transparent;
+
+        &::before {
+            background-color: transparent;
+        }
+    }
+
+    .sv-item:hover .sv-actions,
+    .sv-item:focus-within .sv-actions,
+    .sv-item.is-confirming .sv-actions {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    .sv-act {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 0;
+        background: transparent;
+        border-radius: var(--ui-radius-sm);
+        color: var(--ui-color-muted-fg);
+
+        &:hover {
+            background: var(--ui-surface-200);
+            color: var(--ui-surface-700);
+        }
+
+        &:focus-visible {
+            outline: 1px solid var(--ui-color-primary);
+            outline-offset: 1px;
+        }
+
+        &.danger:hover {
+            color: var(--ui-red-700);
+        }
+    }
+
+    .sv-sep {
+        height: 1px;
+        background: var(--ui-menu-border);
+        margin: var(--ui-space) calc(-1 * var(--ui-popover-padding));
+    }
+
+    .sv-footer {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sv-empty {
+        padding: var(--ui-space-l);
+        text-align: center;
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+}

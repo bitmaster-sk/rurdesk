@@ -7,6 +7,8 @@ import { IssueService } from '../../issue.service';
 import { IssueKanbanService } from './service/issue-kanban.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { IssueToolbarService } from '../../issue-toolbar.service';
+import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { SprintStore } from '../../store/sprint.store';
 import { SprintApi } from '../../api/sprint.api.service';
@@ -127,6 +129,8 @@ interface Harness {
     refresh: ReturnType<typeof vi.fn>;
     showError: ReturnType<typeof vi.fn>;
     setSprint: ReturnType<typeof vi.fn>;
+    setInitialFilter: ReturnType<typeof vi.fn>;
+    savedViewStore: SavedViewStore;
 }
 
 function setup(sprints: Sprint[] = []): Harness {
@@ -135,6 +139,7 @@ function setup(sprints: Sprint[] = []): Harness {
     const refresh = vi.fn();
     const showError = vi.fn();
     const setSprint = vi.fn();
+    const setInitialFilter = vi.fn();
 
     const injector = Injector.create({
         providers: [
@@ -158,24 +163,45 @@ function setup(sprints: Sprint[] = []): Harness {
                 provide: IssueFilterStore,
                 useValue: {
                     showFilter$: of(false),
-                    setInitialFilter: () => undefined,
+                    initialFilter$: EMPTY,
+                    setInitialFilter,
                     setSprint,
                     refresh
                 }
             },
             {
                 provide: IssueToolbarService,
-                useValue: { register: () => undefined, clear: () => undefined }
+                useValue: {
+                    register: () => undefined,
+                    clear: () => undefined
+                }
             },
             { provide: ToastNotificationService, useValue: { showError } },
             { provide: NoticeService, useValue: { issue$: EMPTY } },
             { provide: TranslateService, useValue: { instant: (k: string) => k } },
-            { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } }
+            { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
+            // The board reads a staged saved view on mount and drives its layout from
+            // activeView; a stubbed api keeps the real store buildable here.
+            { provide: SavedViewApi, useValue: { loadByProject$: () => of([]) } },
+            SavedViewStore
         ]
     });
 
-    const component = runInInjectionContext(injector, () => new IssueKanbanComponent());
-    return { component, updateIssue, assignIssue, refresh, showError, setSprint };
+    const component = runInInjectionContext(injector, () => {
+        const created = new IssueKanbanComponent();
+        created.ngOnInit();
+        return created;
+    });
+    return {
+        component,
+        updateIssue,
+        assignIssue,
+        refresh,
+        showError,
+        setSprint,
+        setInitialFilter,
+        savedViewStore: injector.get(SavedViewStore)
+    };
 }
 
 // Handlers are protected — reach them through a narrow cast.
@@ -459,5 +485,38 @@ describe('IssueKanbanComponent — onTabTaskDropped (drag onto sprint tab)', () 
         handlers(h.component).onTabTaskDropped(tabDrop(makeColumn(stateA, [tile]), 7));
 
         expect(h.refresh).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('IssueKanbanComponent — saved view reset', () => {
+    it('mounts without a sprint scope in the default filter', () => {
+        const h = setup([openSprint]);
+
+        expect(h.setInitialFilter).toHaveBeenCalledTimes(1);
+        expect(h.setInitialFilter.mock.calls[0][0]).not.toHaveProperty('idSprint');
+    });
+
+    it('keeps the selected sprint when the applied view is cleared', () => {
+        const h = setup([openSprint]);
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        h.setInitialFilter.mockClear();
+
+        h.savedViewStore.sendFilterResetSignal();
+
+        expect(h.setInitialFilter).toHaveBeenCalledWith(
+            expect.objectContaining({ idSprint: openSprint.idSprint, sprintUnset: false })
+        );
+    });
+
+    it('scopes the reset to the backlog when the backlog tab is selected', () => {
+        const h = setup([openSprint]);
+        handlers(h.component).onSprintChange(null);
+        h.setInitialFilter.mockClear();
+
+        h.savedViewStore.sendFilterResetSignal();
+
+        expect(h.setInitialFilter).toHaveBeenCalledWith(
+            expect.objectContaining({ idSprint: null, sprintUnset: true })
+        );
     });
 });
