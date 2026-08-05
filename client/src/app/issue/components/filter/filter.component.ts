@@ -8,8 +8,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { first, map, switchMap } from 'rxjs/operators';
+import { Observable, merge, of } from 'rxjs';
+import { distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -51,12 +51,7 @@ export class FilterComponent implements OnInit {
 
     public readonly users$: Observable<User[]> = this.projectMemberStore.users$;
 
-    public readonly initialFilter$ = this.issueFilterStore.initialFilter$;
-
-    public readonly isFilterInitialized$ = this.initialFilter$.pipe(map(filter => !!filter));
-
     public form: FormGroup = this.fb.group({
-        idProject: this.fb.control(null),
         idsState: this.fb.control(null),
         stateUnset: this.fb.control(null),
         idsSeverity: this.fb.control(null),
@@ -92,12 +87,18 @@ export class FilterComponent implements OnInit {
     }
 
     public ngOnInit(): void {
+        this.onFormChange();
+        this.onFilterChange();
+    }
+
+    private onFormChange(): void {
         this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
             const values = this.form.value;
             const createAt = this.dateFilterFor(values.createAt);
             const updateAt = this.dateFilterFor(values.updateAt);
+            // No idProject on purpose: the panel never edits it, and pushing its own copy
+            // overwrote the store's with null whenever the panel mounted late.
             this.issueFilterStore.setFilter({
-                idProject: values.idProject,
                 title: values.title,
                 idsSeverity: values.idsSeverity,
                 severityUnset: values.severityUnset,
@@ -113,26 +114,40 @@ export class FilterComponent implements OnInit {
                 updateAtWithin: updateAt.within
             });
         });
+    }
 
-        this.initialFilter$.pipe(first()).subscribe(filter => {
-            this.createAtPresets.set(this.withPreset(this.datePresets, filter.createAtWithin));
-            this.updateAtPresets.set(this.withPreset(this.datePresets, filter.updateAtWithin));
-            this.form.patchValue(
-                {
-                    idProject: filter.idProject,
-                    title: filter.title,
-                    idsSeverity: filter.idsSeverity,
-                    severityUnset: filter.severityUnset,
-                    idsState: filter.idsState,
-                    stateUnset: filter.stateUnset,
-                    idsAssignedTo: filter.idsAssignedTo,
-                    assignedToUnset: filter.assignedToUnset,
-                    createAt: this.dateValueFor(filter, 'createAt'),
-                    updateAt: this.dateValueFor(filter, 'updateAt')
-                },
-                { emitEvent: false }
-            );
-        });
+    // The board and gantt create this panel on demand, by which time initialFilter$ usually
+    // replays nothing (the store's latest emission is a plain setFilter/setSprint), so
+    // without the current filter up front the panel would open blank while one is active.
+    private onFilterChange(): void {
+        merge(of(this.issueFilterStore.getFilter()), this.issueFilterStore.initialFilter$)
+            // When the latest emission was initial, both sources carry the same object.
+            .pipe(distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
+            .subscribe(issuesFilter => {
+                if (issuesFilter) {
+                    this.hydrate(issuesFilter);
+                }
+            });
+    }
+
+    /** `emitEvent: false` is what stops this looping back through valueChanges. */
+    private hydrate(filter: IssuesFilterParams): void {
+        this.createAtPresets.set(this.withPreset(this.datePresets, filter.createAtWithin));
+        this.updateAtPresets.set(this.withPreset(this.datePresets, filter.updateAtWithin));
+        this.form.patchValue(
+            {
+                title: filter.title,
+                idsSeverity: filter.idsSeverity,
+                severityUnset: filter.severityUnset,
+                idsState: filter.idsState,
+                stateUnset: filter.stateUnset,
+                idsAssignedTo: filter.idsAssignedTo,
+                assignedToUnset: filter.assignedToUnset,
+                createAt: this.dateValueFor(filter, 'createAt'),
+                updateAt: this.dateValueFor(filter, 'updateAt')
+            },
+            { emitEvent: false }
+        );
     }
 
     /** Control value → filter params. */
