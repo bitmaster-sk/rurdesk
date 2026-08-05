@@ -176,7 +176,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     constructor() {
         effect(() => {
             this.showFilter();
-            queueMicrotask(() => this.calendarRef()?.getApi().updateSize());
+            queueMicrotask(() => this.calendarRef()?.getApi()?.updateSize());
         });
     }
 
