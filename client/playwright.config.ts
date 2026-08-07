@@ -6,14 +6,20 @@ import { defineConfig, devices } from '@playwright/test';
 // (docker-compose up) — point E2E_BASE_URL at a fully running stack for those.
 export default defineConfig({
     testDir: './e2e/playwright',
+    globalSetup: './e2e/playwright/support/global-setup.ts',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     // Terminal summary during the run + HTML report (never auto-open in CI).
     reporter: [['list'], ['html', { open: process.env.CI ? 'never' : 'always' }]],
+    // Failure artefacts only: a green run writes nothing, so this costs no time
+    // and no storage. `on-first-retry` was effectively dead locally, where
+    // retries is 0 — there was never a first retry to capture.
     use: {
         baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:1000',
-        trace: 'on-first-retry'
+        trace: 'retain-on-failure',
+        video: 'retain-on-failure',
+        screenshot: 'only-on-failure'
     },
     projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
     // Locally, start the Angular dev server automatically. When E2E_BASE_URL is

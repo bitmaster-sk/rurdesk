@@ -69,6 +69,17 @@ jobs:
           path: client/playwright-report
           retention-days: 7
 
+      # Traces and videos are copied into the HTML report, but error-context.md
+      # (the DOM snapshot at the moment of failure) only exists here — it is the
+      # fastest way to see what the page actually showed.
+      - name: Upload failure artefacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failures
+          path: client/test-results
+          retention-days: 7
+
       - name: Tear down
         if: ${{ always() }}
         run: docker compose -f docker/e2e/docker-compose.e2e.yml down -v
