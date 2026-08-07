@@ -120,7 +120,7 @@ export class IssueGanttService {
 
     // Relations for the project
     private readonly serverRelations$ = this.issueFilterStore.actualFilter$.pipe(
-        switchMap(filter => this.issueRelationApi.load$(filter.idProject!)),
+        switchMap(filter => this.issueRelationApi.load$(filter.idProject)),
         shareReplay({ bufferSize: 1, refCount: true })
     );
 
@@ -167,8 +167,8 @@ export class IssueGanttService {
     private readonly metadata$ = this.issueFilterStore.actualFilter$.pipe(
         switchMap(filter =>
             combineLatest([
-                this.severityStore.severitiesMapByProject$(filter.idProject!),
-                this.stateStore.statesMapByProject$(filter.idProject!),
+                this.severityStore.severitiesMapByProject$(filter.idProject),
+                this.stateStore.statesMapByProject$(filter.idProject),
                 this.memberStore.usersMap$
             ])
         ),
@@ -186,7 +186,9 @@ export class IssueGanttService {
             const scheduleRelations = relations.filter(
                 r => r.relationType === IssueRelationType.Schedule
             );
-            const scheduledOnly = scheduled.filter(i => i.scheduledAt != null);
+            const scheduledOnly = scheduled.filter(
+                (i): i is Issue & { scheduledAt: Date } => i.scheduledAt != null
+            );
             const sortedScheduled = orderScheduled(scheduledOnly, scheduleRelations);
             return {
                 scheduledTasks: sortedScheduled.map(issue =>
@@ -201,12 +203,12 @@ export class IssueGanttService {
         shareReplay({ bufferSize: 1, refCount: true })
     );
 
-    private buildExtendedIssue(
-        issue: Issue,
+    private buildExtendedIssue<T extends Issue>(
+        issue: T,
         severities: Map<number, IssueSeverity>,
         states: Map<number, IssueState>,
         users: Map<number, User>
-    ): ExtendedIssue {
+    ): ExtendedIssue & T {
         return {
             ...issue,
             state: issue.idState != null ? states.get(issue.idState) : undefined,

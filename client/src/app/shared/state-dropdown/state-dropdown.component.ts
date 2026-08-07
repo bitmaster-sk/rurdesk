@@ -28,7 +28,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 })
 export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
     @Input() public multi = false;
-    @Input() public inputId: string;
+    @Input() public inputId?: string;
     @Input() public states: IssueState[] = [];
     /** Placeholder shown when nothing is selected (e.g. "No mapping"). */
     @Input() public placeholder?: string;

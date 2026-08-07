@@ -1,6 +1,8 @@
+export type IssueDraft = Omit<Issue, 'idIssue' | 'idIssuePublic'>;
+
 export interface Issue {
-    idIssue?: number;
-    idIssuePublic?: number;
+    idIssue: number;
+    idIssuePublic: number;
     idProject: number;
     idState: number | null;
     idSeverity: number | null;
@@ -10,10 +12,10 @@ export interface Issue {
     updateAt?: Date;
     createBy?: number;
     updateBy?: number;
-    assignedTo?: number;
+    assignedTo?: number | null;
     tracked: number;
-    estimated?: number;
-    scheduledAt?: Date;
+    estimated?: number | null;
+    scheduledAt?: Date | null;
     qualityScore?: number | null;
     idGitIntegration?: number | null;
     mrId?: string | null;

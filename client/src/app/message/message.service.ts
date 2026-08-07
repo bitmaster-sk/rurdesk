@@ -4,6 +4,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { MessageRecipientType } from './constant/message-recipient-type.enum';
 import { Message } from './model/message.model';
+import { MessageKeyConverter } from './converter/message-key.converter';
 
 @Injectable({
     providedIn: 'root'
@@ -71,7 +72,11 @@ export class MessageService {
     public unreadPush(messages: Message[]): void {
         const unreadMap = new Map(this.Unread.getValue());
         messages.forEach(m => {
-            const id = `${m.idRecipient}|${m.idMessageRecipientType === MessageRecipientType.user ? m.creator.idUser : null}|${m.idMessageRecipientType}`;
+            const id = MessageKeyConverter.toUnreadKey(
+                m.idRecipient,
+                m.idMessageRecipientType === MessageRecipientType.user ? m.creator.idUser : null,
+                m.idMessageRecipientType
+            );
             const unread = unreadMap.get(id);
             if (unread) {
                 unread.push(m);
@@ -84,12 +89,13 @@ export class MessageService {
 
     public unreadRemove(
         idRecipient: number,
-        idCreator: number,
+        idCreator: number | null,
         idMessageRecipientType: MessageRecipientType
     ): void {
         const unreadMap = new Map(this.Unread.getValue());
-        const id = `${idRecipient}|${idCreator}|${idMessageRecipientType}`;
-        unreadMap.delete(id);
+        unreadMap.delete(
+            MessageKeyConverter.toUnreadKey(idRecipient, idCreator, idMessageRecipientType)
+        );
         this.Unread.next(unreadMap);
     }
 

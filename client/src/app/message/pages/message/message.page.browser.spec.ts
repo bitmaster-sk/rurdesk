@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { Component, input, output } from '@angular/core';
+import { By } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, NEVER, of } from 'rxjs';
@@ -19,6 +20,9 @@ import { UserService } from 'src/app/auth/user.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { MessageEditorStub, TablerIconStub, UiBadgeStub } from 'src/testing/stubs';
 import { User } from 'src/app/auth/model/user.model';
+import { Project } from 'src/app/project/model/project.model';
+import { Message } from '../../model/message.model';
+import { MessageKeyConverter } from '../../converter/message-key.converter';
 
 @Component({ selector: 'app-message-view', template: '', standalone: true })
 class MessageViewStub {
@@ -52,11 +56,15 @@ describe('MessagePage mentionCandidates', () => {
     let teamUsersSubject: BehaviorSubject<User[] | null>;
     let projectUsersSubject: BehaviorSubject<User[] | null>;
     let paramMapSubject: BehaviorSubject<ReturnType<typeof makeParamMap>>;
+    let unreadSubject: BehaviorSubject<Map<string, Message[]>>;
+    let projects: Project[];
 
     beforeEach(async () => {
         teamUsersSubject = new BehaviorSubject<User[] | null>(null);
         projectUsersSubject = new BehaviorSubject<User[] | null>(null);
         paramMapSubject = new BehaviorSubject(makeParamMap(0, 0));
+        unreadSubject = new BehaviorSubject<Map<string, Message[]>>(new Map());
+        projects = [];
 
         const teamMemberStoreStub: Partial<TeamMemberStore> = {
             users$: teamUsersSubject
@@ -95,14 +103,14 @@ describe('MessagePage mentionCandidates', () => {
                     provide: MessageService,
                     useValue: {
                         loadMessages: () => of([]),
-                        Unread: NEVER,
+                        Unread: unreadSubject,
                         insertReadMessage: () => of(null),
                         unreadRemove: () => {}
                     }
                 },
                 {
                     provide: ProjectService,
-                    useValue: { loadProjects: () => of([]), loadMembers: () => of([]) }
+                    useValue: { loadProjects: () => of(projects), loadMembers: () => of([]) }
                 },
                 {
                     provide: TeamService,
@@ -116,6 +124,12 @@ describe('MessagePage mentionCandidates', () => {
                     provide: UserService,
                     useValue: {
                         user: new BehaviorSubject<User>({
+                            idUser: 99,
+                            name: 'Me',
+                            email: '',
+                            colorAvatarBg: ''
+                        }),
+                        getUser: () => ({
                             idUser: 99,
                             name: 'Me',
                             email: '',
@@ -185,5 +199,30 @@ describe('MessagePage mentionCandidates', () => {
         // Switch to DM with alice
         paramMapSubject.next(makeParamMap(1, MessageRecipientType.user));
         expect(page.mentionCandidates()).toEqual([alice]);
+    });
+
+    it('shows no unread badge for a conversation with nothing unread', () => {
+        projects = [{ idProject: 7, name: 'Proj', color: '' }];
+        paramMapSubject.next(makeParamMap(7, MessageRecipientType.project));
+
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelectorAll('ui-badge').length).toBe(0);
+    });
+
+    it('renders the unread count of a conversation and follows later Unread emissions', () => {
+        projects = [{ idProject: 7, name: 'Proj', color: '' }];
+        paramMapSubject.next(makeParamMap(7, MessageRecipientType.project));
+
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+
+        const key = MessageKeyConverter.toUnreadKey(7, null, MessageRecipientType.project);
+        unreadSubject.next(new Map([[key, [{} as Message, {} as Message]]]));
+        fixture.detectChanges();
+
+        const badge = fixture.debugElement.query(By.directive(UiBadgeStub));
+        expect(badge.componentInstance.value()).toBe('2');
     });
 });

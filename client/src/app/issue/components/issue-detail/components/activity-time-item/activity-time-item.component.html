@@ -21,7 +21,7 @@
             } @else {
                 <span class="username">Unknown</span>
             }
-            <span class="duration-badge">{{ formatDuration(track().tracked) }}</span>
+            <span class="duration-badge">{{ formatDuration(track().tracked ?? 0) }}</span>
         </div>
     </div>
 </div>

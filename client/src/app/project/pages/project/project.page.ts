@@ -124,26 +124,28 @@ export class ProjectPage implements OnInit {
                 switchMap(severities =>
                     this.sPin.loadPins(project.idProject, PinDestinationType.PROJECT).pipe(
                         map(pins =>
-                            pins.map(p => {
-                                const sev =
-                                    p.issue?.idSeverity != null
-                                        ? severities.get(p.issue.idSeverity)
-                                        : undefined;
-                                return {
-                                    idPin: p.idPin,
-                                    idSeverity: sev?.idSeverity,
-                                    severityColor: sev?.color,
-                                    severityName: sev?.title,
-                                    idProject: p.issue?.idProject,
-                                    idIssuePublic: p.issue?.idIssuePublic,
-                                    title: p.issue?.title,
-                                    stateName: p.issue?.stateName,
-                                    stateIsStart: p.issue?.stateIsStart,
-                                    stateIsFinal: p.issue?.stateIsFinal,
-                                    assignedToName: p.issue?.assignedToName,
-                                    assignedToColorAvatarBg: p.issue?.assignedToColorAvatarBg
-                                };
-                            })
+                            pins
+                                .filter(p => !!p.issue)
+                                .map(p => {
+                                    const sev =
+                                        p.issue?.idSeverity != null
+                                            ? severities.get(p.issue.idSeverity)
+                                            : undefined;
+                                    return {
+                                        idPin: p.idPin!,
+                                        idSeverity: sev?.idSeverity,
+                                        severityColor: sev?.color,
+                                        severityName: sev?.title,
+                                        idProject: p.issue!.idProject,
+                                        idIssuePublic: p.issue!.idIssuePublic!,
+                                        title: p.issue!.title,
+                                        stateName: p.issue?.stateName,
+                                        stateIsStart: p.issue?.stateIsStart,
+                                        stateIsFinal: p.issue?.stateIsFinal,
+                                        assignedToName: p.issue?.assignedToName,
+                                        assignedToColorAvatarBg: p.issue?.assignedToColorAvatarBg
+                                    };
+                                })
                         )
                     )
                 )

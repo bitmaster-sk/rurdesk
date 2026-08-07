@@ -91,7 +91,7 @@ export class IssueInfoComponent {
     public readonly saveStatus = signal<UiSaveState>(UiSaveState.Idle);
 
     public currentUserId(): number {
-        return this.sUser.user.getValue().idUser;
+        return this.sUser.getUser().idUser;
     }
     public readonly showInputTitle = signal(false);
     public readonly showInputDescription = signal(false);
@@ -275,19 +275,21 @@ export class IssueInfoComponent {
     }
 
     public onTrackAdded(track: Track): void {
-        this.currentIssue.update(issue => ({
-            ...issue,
-            tracked: (issue?.tracked ?? 0) + track.tracked
-        }));
+        this.currentIssue.update(issue =>
+            issue ? { ...issue, tracked: (issue.tracked ?? 0) + (track.tracked ?? 0) } : issue
+        );
         this.trackAdded.emit(track);
     }
 
     public onPin(idPinDestinationType: PinDestinationType): void {
         const issue = this.currentIssue();
+        if (!issue) {
+            return;
+        }
         const idPinDestination =
             idPinDestinationType === PinDestinationType.PROJECT
                 ? issue.idProject
-                : this.sUser.user.getValue().idUser;
+                : this.sUser.getUser().idUser;
         this.sPin
             .insertPin({
                 idPinDestination,
@@ -371,15 +373,15 @@ export class IssueInfoComponent {
     }
 
     private refreshFormValues(issue: Issue): void {
-        this.form
-            .get('estimated')
-            .setValue(
-                DurationFormatter.durationToString(
-                    DurationConverter.secondsToDuration(issue?.estimated)
+        this.form.patchValue(
+            {
+                estimated: DurationFormatter.durationToString(
+                    DurationConverter.secondsToDuration(issue.estimated ?? 0)
                 ),
-                { emitEvent: false }
-            );
-        this.form.get('points').setValue(issue?.points ?? null, { emitEvent: false });
+                points: issue.points ?? null
+            },
+            { emitEvent: false }
+        );
     }
 
     private issueToForm(): FormGroup {
@@ -404,7 +406,7 @@ export class IssueInfoComponent {
             assignedTo: this.fb.control(issue?.assignedTo),
             estimated: this.fb.control(
                 DurationFormatter.durationToString(
-                    DurationConverter.secondsToDuration(issue?.estimated)
+                    DurationConverter.secondsToDuration(issue?.estimated ?? 0)
                 ),
                 { validators: [DurationValidator.duration], updateOn: 'blur' }
             ),

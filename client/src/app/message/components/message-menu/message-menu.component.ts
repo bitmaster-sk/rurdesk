@@ -18,6 +18,7 @@ import { UserService } from 'src/app/auth/user.service';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { Message } from 'src/app/message/model/message.model';
 import { MessageService } from 'src/app/message/message.service';
+import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -55,7 +56,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
 
     protected readonly chats = computed<UiMenuItem[]>(() => {
         const unreadMap = this.unread();
-        const currentUserId = this.sUser.user.getValue().idUser;
+        const currentUserId = this.sUser.getUser().idUser;
         return [
             ...this.toProjectChatMenuItems(this._projects(), unreadMap),
             ...this.toTeamChatMenuItems(this._teams(), unreadMap),
@@ -123,7 +124,11 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     }
 
     private toProjectChatMenuItem(project: Project, unreadMap: Map<string, Message[]>): UiMenuItem {
-        const key = `${project.idProject}|null|${MessageRecipientType.project}`;
+        const key = MessageKeyConverter.toUnreadKey(
+            project.idProject,
+            null,
+            MessageRecipientType.project
+        );
         const count = unreadMap.get(key)?.length ?? 0;
         return {
             label: project.name,
@@ -144,7 +149,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     }
 
     private toTeamChatMenuItem(team: Team, unreadMap: Map<string, Message[]>): UiMenuItem {
-        const key = `${team.idTeam}|null|${MessageRecipientType.team}`;
+        const key = MessageKeyConverter.toUnreadKey(team.idTeam, null, MessageRecipientType.team);
         const count = unreadMap.get(key)?.length ?? 0;
         return {
             label: team.name,
@@ -173,7 +178,11 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         unreadMap: Map<string, Message[]>,
         currentUserId: number
     ): UiMenuItem {
-        const key = `${currentUserId}|${user.idUser}|${MessageRecipientType.user}`;
+        const key = MessageKeyConverter.toUnreadKey(
+            currentUserId,
+            user.idUser,
+            MessageRecipientType.user
+        );
         const count = unreadMap.get(key)?.length ?? 0;
         return {
             label: user.name,

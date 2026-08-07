@@ -13,7 +13,7 @@ import {
     untracked
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { ExtendedIssue } from '../../../../model/extended-issue.model';
+import { ScheduledIssue } from '../../../../model/extended-issue.model';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import {
@@ -52,7 +52,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
 
     protected readonly HandleSide = HandleSide;
 
-    public readonly task = input.required<ExtendedIssue>();
+    public readonly task = input.required<ScheduledIssue>();
     public readonly cardMode = input.required<IssueCardViewType>();
     public readonly rowIndex = input.required<number>();
     public readonly isOnCriticalPath = input<boolean>(false);
@@ -121,17 +121,13 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         );
     }
 
-    public readonly barLeft = computed(() => {
-        if (!this.task().scheduledAt) return 0;
-        return this.timelineService.toPixel(this.task().scheduledAt!);
-    });
+    public readonly barLeft = computed(() => this.timelineService.toPixel(this.task().scheduledAt));
 
     public readonly barWidth = computed(() => {
         const preview = this._resizePreviewWidth();
         if (preview !== null) return preview;
 
         const task = this.task();
-        if (!task.scheduledAt) return MIN_BAR_WIDTH_PX;
         const endDate = addSeconds(task.scheduledAt, task.estimated ?? 3600);
         const endPixel = this.timelineService.toPixel(endDate);
         return Math.max(MIN_BAR_WIDTH_PX, endPixel - this.barLeft());
@@ -207,8 +203,6 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         this._dragMoved = true; // always suppress click after resize
 
         const task = this.task();
-        if (!task.scheduledAt) return;
-
         const startX = event.clientX;
         const startWidth = this.barWidth();
 
@@ -224,12 +218,12 @@ export class GanttTaskBarComponent implements AfterViewChecked {
             const snappedEnd = this.timelineService.snapToNearest(endDate);
             const newEstimated = Math.max(
                 3600,
-                Math.round((snappedEnd.getTime() - task.scheduledAt!.getTime()) / 1000)
+                Math.round((snappedEnd.getTime() - task.scheduledAt.getTime()) / 1000)
             );
 
             // Hold the preview at the snapped width until fresh task data lands
             // (the constructor effect clears it) — no flash of the old width.
-            const snappedEndDate = new Date(task.scheduledAt!.getTime() + newEstimated * 1000);
+            const snappedEndDate = new Date(task.scheduledAt.getTime() + newEstimated * 1000);
             this._resizePreviewWidth.set(
                 Math.max(
                     MIN_BAR_WIDTH_PX,

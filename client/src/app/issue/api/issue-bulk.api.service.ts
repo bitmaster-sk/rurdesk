@@ -14,8 +14,8 @@ export class IssueBulkApi {
             map(issues =>
                 issues.map(issue => ({
                     ...issue,
-                    createAt: new Date(issue.createAt),
-                    updateAt: new Date(issue.updateAt),
+                    createAt: issue.createAt ? new Date(issue.createAt) : undefined,
+                    updateAt: issue.updateAt ? new Date(issue.updateAt) : undefined,
                     scheduledAt: issue.scheduledAt ? new Date(issue.scheduledAt) : null
                 }))
             )

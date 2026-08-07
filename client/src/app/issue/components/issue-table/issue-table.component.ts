@@ -140,8 +140,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public lagMinutes = signal<number | null>(null);
 
-    // Current project id — set in ngOnInit
-    public idProject: number;
+    public idProject: number | null = null;
 
     private dragLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -167,8 +166,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.issueFilterStore.actualFilter$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(filter => {
-                this.sortField.set(filter!.orderColumn);
-                this.sortOrder.set(filter!.orderDirection === 'asc' ? 1 : -1);
+                this.sortField.set(filter.orderColumn);
+                this.sortOrder.set(filter.orderDirection === 'asc' ? 1 : -1);
             });
         this.projectStore.project$.pipe(first()).subscribe(p => {
             this.idProject = p.idProject;
@@ -301,7 +300,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
             else next.add(idIssuePublic);
             return next;
         });
-        if (willExpand && !this.relationsLoaded.has(idIssuePublic)) {
+        if (willExpand && this.idProject !== null && !this.relationsLoaded.has(idIssuePublic)) {
             this.relationsLoaded.add(idIssuePublic);
             this.issueTableService.loadRelationsFor(this.idProject, idIssuePublic);
         }
@@ -398,8 +397,12 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     // --- Delete relation ---
 
     public onDeleteRelation(issue: Issue, rel: IssueRelationRow): void {
+        const idProject = this.idProject;
+        if (idProject === null) {
+            return;
+        }
         this.issueTableService
-            .deleteRelation$(this.idProject, issue.idIssuePublic, rel.idIssueRelation)
+            .deleteRelation$(idProject, issue.idIssuePublic, rel.idIssueRelation)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe();
     }
@@ -432,7 +435,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
                 switchMap(project =>
                     this.stateStore.statesByProject$(project.idProject).pipe(
                         first(),
-                        map(states => [project, states])
+                        map(states => [project, states] as [Project, IssueState[]])
                     )
                 )
             )
@@ -471,8 +474,12 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         subType: string | null,
         lagMinutes: number | null
     ): void {
+        const idProject = this.idProject;
+        if (idProject === null) {
+            return;
+        }
         this.issueTableService
-            .insertRelation$(this.idProject, from, to, relationType, subType, lagMinutes)
+            .insertRelation$(idProject, from, to, relationType, subType, lagMinutes)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({ error: () => {} });
     }

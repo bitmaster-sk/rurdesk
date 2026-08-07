@@ -14,13 +14,13 @@ export class AvatarComponent implements OnChanges {
 
     @Input() radius = 1.5;
 
-    @Input() name: string;
+    @Input() name = '';
 
-    @Input() bgColor: string;
+    @Input() bgColor = '';
 
-    public initials: string;
+    public initials = '';
 
-    public textColor: string;
+    public textColor = '';
 
     public ngOnChanges(change: SimpleChanges): void {
         if (this.name) {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
+import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 
@@ -23,10 +23,7 @@ export class GanttCriticalPathService {
      * The longest path from any source (no inbound) to any sink (no outbound).
      * Edge weight: from.estimated + lagMinutes. Final node adds its own estimated.
      */
-    public computeCriticalPath(
-        tasks: Issue[],
-        relations: ReadIssueRelationDto[]
-    ): CriticalPathResult {
+    public computeCriticalPath(tasks: Issue[], relations: GanttRelation[]): CriticalPathResult {
         const emptyResult = emptyCriticalPath();
 
         if (tasks.length === 0) return emptyResult;

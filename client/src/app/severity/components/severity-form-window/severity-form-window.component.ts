@@ -29,8 +29,8 @@ export class SeverityFormWindowComponent implements OnInit {
 
     public get severity(): IssueSeverity {
         return {
-            idProject: this.winCfg.data['project']?.idProject,
-            ...this.winCfg.data['severity']
+            idProject: this.winCfg.data?.['project']?.idProject,
+            ...this.winCfg.data?.['severity']
         };
     }
 }

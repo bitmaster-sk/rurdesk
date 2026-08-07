@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
@@ -11,15 +11,13 @@ import { ProjectService } from '../../project.service';
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProjectFormWindowComponent implements OnInit {
+export class ProjectFormWindowComponent {
     constructor(
         private winRef: WindowReference,
         public winCfg: WindowConfig,
         private sProject: ProjectService,
         private router: Router
     ) {}
-
-    public ngOnInit(): void {}
 
     public onSave(project: Project): void {
         this.saveProject(project).subscribe(savedProject => {

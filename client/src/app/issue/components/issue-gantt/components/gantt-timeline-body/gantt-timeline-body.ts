@@ -18,9 +18,9 @@ import {
     GanttColumn,
     GanttHeaderRow
 } from '../../service/gantt-timeline.service';
-import { ExtendedIssue } from '../../../../model/extended-issue.model';
+import { ScheduledIssue } from '../../../../model/extended-issue.model';
 import { IssueCardViewType } from '../../../../constants/issue-card-view-type.constant';
-import { ReadIssueRelationDto } from '../../../../model/issue-relation.model';
+import { GanttRelation } from '../../model/gantt-relation.model';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { RelationDropTarget } from '../../service/gantt-drag.service';
 
@@ -39,7 +39,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
     private readonly scrollContainer =
         viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
 
-    public readonly tasks = input.required<ExtendedIssue[]>();
+    public readonly tasks = input.required<ScheduledIssue[]>();
     public readonly columns = input.required<GanttColumn[]>();
     public readonly headerRows = input.required<GanttHeaderRow[]>();
     public readonly cardMode = input.required<IssueCardViewType>();
@@ -51,7 +51,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
     public readonly ghostBars = input<
         { taskId: number; left: number; top: number; width: number; tooltipText: string | null }[]
     >([]);
-    public readonly relations = input<ReadIssueRelationDto[]>([]);
+    public readonly relations = input<GanttRelation[]>([]);
     public readonly selectedTaskIndex = input<number | null>(null);
     public readonly selectedRelationId = input<number | null>(null);
     public readonly drawingLine = input<{

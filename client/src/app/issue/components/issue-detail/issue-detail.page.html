@@ -25,10 +25,10 @@
             (approveAgentRunMockup)="agentRunStore.approve($event)"
         ></app-issue-activity-feed>
     </div>
-    } @if (isSplitDialogOpen() && splitIssue()) {
+    } @if (isSplitDialogOpen() && splitIssue(); as issue) {
     <app-split-dialog
         [idProject]="project.idProject"
-        [issue]="splitIssue()"
+        [issue]="issue"
         (accepted)="onSplitAccepted($event)"
         (cancelled)="onSplitCancelled()"
     ></app-split-dialog>

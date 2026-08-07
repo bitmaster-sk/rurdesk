@@ -43,7 +43,8 @@ export class IssueDetailPage implements OnDestroy {
     public readonly pendingTrack = signal<Track | null>(null);
 
     private readonly params$ = this.route.paramMap.pipe(
-        map(params => this.toIssueDetailPageParams(params))
+        map(params => this.toIssueDetailPageParams(params)),
+        filter((params): params is IssueDetailPageParams => params !== null)
     );
 
     // Load the issue once, then patch it live from SubjectIssue notices that
@@ -128,11 +129,11 @@ export class IssueDetailPage implements OnDestroy {
                   title: '',
                   description: '',
                   tracked: 0
-              })
+              } as Issue)
             : this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
     }
 
-    private toIssueDetailPageParams(params: ParamMap): IssueDetailPageParams {
+    private toIssueDetailPageParams(params: ParamMap): IssueDetailPageParams | null {
         if (!params.get('idProject') || !params.get('idIssuePublic')) {
             return null;
         }

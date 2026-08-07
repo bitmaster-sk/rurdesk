@@ -176,11 +176,11 @@ export class FilterComponent implements OnInit {
         }
         const from = field === 'createAt' ? filter.createAtFrom : filter.updateAtFrom;
         const to = field === 'createAt' ? filter.createAtTo : filter.updateAtTo;
-        return from || to ? { from, to } : null;
+        return from || to ? { from: from ?? undefined, to: to ?? undefined } : null;
     }
 
     /** Adds a row for a value no preset lists (e.g. '1d8h6m' from a saved view or agent). */
-    private withPreset(presets: UiDateRangePreset[], value?: string): UiDateRangePreset[] {
+    private withPreset(presets: UiDateRangePreset[], value?: string | null): UiDateRangePreset[] {
         if (!value || presets.some(preset => preset.value === value)) {
             return [...presets];
         }

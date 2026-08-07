@@ -414,7 +414,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     // endpoint (issue update never carries it), then reload to reconcile.
     protected onTabTaskDropped(payload: {
         idSprint: number | null;
-        event: CdkDragDrop<unknown>;
+        event: CdkDragDrop<SprintTab>;
     }): void {
         // The tab is a cdkDropList, so by drop time CDK has already reparented the
         // dragged tile's DOM node into the tab button. Every path must re-render the

@@ -134,7 +134,7 @@ export class TopMenuComponent implements OnInit, OnDestroy {
         this.sWindow
             .open(ProjectFormWindowComponent, {
                 header: this.i18n.instant('PROJECT.NEW'),
-                data: { project: { name: '' } }
+                data: { project: { idProject: 0, name: '', color: '' } }
             })
             .onClose.subscribe(project => {
                 if (project) {

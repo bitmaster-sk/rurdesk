@@ -1,9 +1,9 @@
-import { FormControl, ValidationErrors } from '@angular/forms';
+import { AbstractControl, ValidationErrors } from '@angular/forms';
 import { DurationConverter } from './duration.converter';
 import { DurationParser } from './duration.parser';
 
 export class DurationValidator {
-    public static duration(c: FormControl): ValidationErrors | null {
+    public static duration(c: AbstractControl): ValidationErrors | null {
         const valid =
             !c.value ||
             DurationConverter.durationToSeconds(DurationParser.stringToDuration(c.value)) > 0;

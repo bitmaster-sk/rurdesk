@@ -78,6 +78,6 @@ describe('IssueCalendarService — events$', () => {
             ])
         );
         expect(events[0].allDay).toBe(true);
-        expect(events[0].end).toBeNull();
+        expect(events[0].end).toBeUndefined();
     });
 });

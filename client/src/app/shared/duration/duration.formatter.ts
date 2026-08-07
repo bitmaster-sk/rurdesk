@@ -8,7 +8,8 @@ const ops = {
 
 const locale = {
     locale: {
-        formatDistance: (token, count, options) => ops[token].replace('{{count}}', count)
+        formatDistance: (token: string, count: number): string =>
+            (ops as Record<string, string>)[token]?.replace('{{count}}', `${count}`) ?? ''
     }
 };
 

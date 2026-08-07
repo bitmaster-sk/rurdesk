@@ -512,7 +512,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             days: evt.endDelta.days,
             seconds: Math.trunc(evt.endDelta.milliseconds / 1000)
         });
-        issue.estimated = issue.estimated + deltaSeconds;
+        issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
         this.sIssue.updateIssue(issue).subscribe({
             error: err => {
                 evt.revert();

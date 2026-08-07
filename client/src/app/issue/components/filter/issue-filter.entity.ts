@@ -1,6 +1,6 @@
 export interface IssuesFilterParams {
     idProject?: number;
-    title?: string;
+    title?: string | null;
     idsSeverity?: number[];
     severityUnset?: boolean;
     idsState?: number[];
@@ -8,14 +8,14 @@ export interface IssuesFilterParams {
     idsAssignedTo?: number[];
     assignedToUnset?: boolean;
     idsIssuePublic?: number[];
-    createAtFrom?: Date;
-    createAtTo?: Date;
-    updateAtFrom?: Date;
-    updateAtTo?: Date;
-    createAtWithin?: string;
-    updateAtWithin?: string;
-    scheduledAtFrom?: Date;
-    scheduledAtTo?: Date;
+    createAtFrom?: Date | null;
+    createAtTo?: Date | null;
+    updateAtFrom?: Date | null;
+    updateAtTo?: Date | null;
+    createAtWithin?: string | null;
+    updateAtWithin?: string | null;
+    scheduledAtFrom?: Date | null;
+    scheduledAtTo?: Date | null;
     scheduledAtUnset?: boolean;
     assignedToNull?: boolean;
     idSprint?: number | null;
@@ -27,4 +27,6 @@ export interface IssuesOrderParams {
     orderDirection: 'asc' | 'desc';
 }
 
-export interface IssuesFilter extends IssuesFilterParams, IssuesOrderParams {}
+export interface IssuesFilter extends IssuesFilterParams, IssuesOrderParams {
+    idProject: number;
+}

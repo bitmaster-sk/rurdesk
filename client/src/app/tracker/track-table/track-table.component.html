@@ -1,4 +1,4 @@
-<app-track-form [track]="track$ | async"></app-track-form>
+<app-track-form [track]="(track$ | async) ?? null"></app-track-form>
 <table class="ui-table ui-table--hover">
     <thead>
         <tr>
@@ -13,7 +13,7 @@
         @for (track of (tracks$ | async) ?? []; track track.idTrack) {
             <tr>
                 <td>
-                    @if (users.get(track.idUser); as user) {
+                    @if (users.get(track.idUser!); as user) {
                         <span class="flex items-center">
                             <app-avatar
                                 [height]="1"
@@ -26,7 +26,7 @@
                         </span>
                     }
                 </td>
-                <td>{{ track.tracked | secDuration }}</td>
+                <td>{{ track.tracked ?? 0 | secDuration }}</td>
                 <td>{{ track.startAt | date: 'medium' }}</td>
                 <td>{{ track.endAt | date: 'medium' }}</td>
                 <td class="action-column">

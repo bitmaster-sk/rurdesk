@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormControl, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ProjectService } from '../../../project/project.service';
-import { Project } from '../../../project/model/project.model';
+import { ProjectInsert } from '../../../project/model/project.model';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 
 @Component({
@@ -47,7 +47,7 @@ export class OnboardingFirstProjectComponent {
         this.isSubmitting.set(true);
         // Project requires name + color (idProject/defaults optional). Empty color
         // matches the existing "+" dialog create — the API treats color as omitempty.
-        const project: Project = { name, color: '' };
+        const project: ProjectInsert = { name, color: '' };
         this.sProject.insertProject(project).subscribe({
             next: saved => then(saved.idProject),
             error: () => {

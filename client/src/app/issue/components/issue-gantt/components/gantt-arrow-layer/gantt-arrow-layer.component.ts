@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { ExtendedIssue } from '../../../../model/extended-issue.model';
-import { ReadIssueRelationDto } from '../../../../model/issue-relation.model';
+import { GanttRelation } from '../../model/gantt-relation.model';
 import { IssueRelationType } from '../../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
@@ -53,7 +53,7 @@ export class GanttArrowLayerComponent {
     public readonly idHoveredRelation$ = this.idHoveredRelation.asReadonly();
 
     public readonly tasks = input.required<ExtendedIssue[]>();
-    public readonly relations = input.required<ReadIssueRelationDto[]>();
+    public readonly relations = input.required<GanttRelation[]>();
     public readonly totalWidth = input.required<number>();
     public readonly totalHeight = input.required<number>();
     public readonly scrollLeft = input<number>(0);
@@ -137,7 +137,7 @@ export class GanttArrowLayerComponent {
 
         // First pass: resolve endpoints for visible relations
         interface Candidate {
-            relation: ReadIssueRelationDto;
+            relation: GanttRelation;
             subType: IssueRelationSubType;
             sourceX: number;
             targetX: number;

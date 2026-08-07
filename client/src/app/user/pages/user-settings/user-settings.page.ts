@@ -69,7 +69,7 @@ export class UserSettingsPage implements OnInit {
         });
 
         // Auto-save the name on blur — only when it's valid and actually changed.
-        const nameControl = this.profileForm.get('name');
+        const nameControl = this.profileForm.get('name')!;
         nameControl.valueChanges
             .pipe(
                 filter(() => nameControl.valid && nameControl.value !== this.currentUser()?.name),
@@ -79,7 +79,7 @@ export class UserSettingsPage implements OnInit {
 
         // The colour control drives the live preview immediately, and auto-saves
         // (debounced, since the native picker streams events while dragging).
-        const colorControl = this.profileForm.get('colorAvatarBg');
+        const colorControl = this.profileForm.get('colorAvatarBg')!;
         colorControl.valueChanges
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe((value: string) => this.avatarColor.set(value));
@@ -93,7 +93,7 @@ export class UserSettingsPage implements OnInit {
     }
 
     public onShuffleColor(): void {
-        this.profileForm.get('colorAvatarBg').setValue(Color.randomAvatarBg());
+        this.profileForm.get('colorAvatarBg')!.setValue(Color.randomAvatarBg());
     }
 
     public onSaveUser(source: 'name' | 'color' = 'name'): void {

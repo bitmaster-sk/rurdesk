@@ -41,7 +41,7 @@ export class SprintTabStripComponent implements AfterViewInit {
     public readonly editRequested = output<number>();
     public readonly taskDropped = output<{
         idSprint: number | null;
-        event: CdkDragDrop<unknown>;
+        event: CdkDragDrop<SprintTab>;
     }>();
 
     /** Backlog tab is pinned left; cycle tabs scroll in the middle; ＋ is pinned right. */
@@ -74,7 +74,7 @@ export class SprintTabStripComponent implements AfterViewInit {
         el.scrollBy({ left: direction * Math.max(200, el.clientWidth * 0.6), behavior: 'smooth' });
     }
 
-    protected onDrop(event: CdkDragDrop<unknown>, idSprint: number | null): void {
+    protected onDrop(event: CdkDragDrop<SprintTab>, idSprint: number | null): void {
         this.dragSvc.hoveredName.set(null);
         this.taskDropped.emit({ idSprint, event });
     }

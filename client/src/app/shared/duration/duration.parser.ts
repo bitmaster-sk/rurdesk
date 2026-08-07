@@ -17,9 +17,9 @@ export class DurationParser {
         const secMatch = value.match(/\d+(?=s)/);
         const hoursMatch = value.match(/\d+(?=h)/);
 
-        const minutes = minMatch?.length > 0 ? Number(minMatch[0]) : 0;
-        const seconds = secMatch?.length > 0 ? Number(secMatch[0]) : 0;
-        const hours = hoursMatch?.length > 0 ? Number(hoursMatch[0]) : 0;
+        const minutes = minMatch ? Number(minMatch[0]) : 0;
+        const seconds = secMatch ? Number(secMatch[0]) : 0;
+        const hours = hoursMatch ? Number(hoursMatch[0]) : 0;
 
         return { minutes, seconds, hours };
     }

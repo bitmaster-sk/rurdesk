@@ -256,7 +256,10 @@ export class SavedViewMenuComponent {
     }
 
     private liveConfig(): SavedViewConfig {
-        const current = this.filterStore.getFilter() ?? { ...SAVED_VIEW_DEFAULT_ORDER };
+        const current = this.filterStore.getFilter() ?? {
+            ...SAVED_VIEW_DEFAULT_ORDER,
+            idProject: this.idProject()
+        };
         return SavedViewConfigConverter.toConfig(
             current,
             this.store.liveKanbanLayout() ?? undefined

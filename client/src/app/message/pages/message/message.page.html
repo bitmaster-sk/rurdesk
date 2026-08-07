@@ -15,7 +15,7 @@
                 <span class="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                     {{ c.name }}
                 </span>
-                @if (getUnreadCount$(c.unreadKey) | async; as cnt) {
+                @if (getUnreadCount(c.unreadKey); as cnt) {
                 <ui-badge [value]="formatCount(cnt)" severity="danger"></ui-badge>
                 }
             </a>

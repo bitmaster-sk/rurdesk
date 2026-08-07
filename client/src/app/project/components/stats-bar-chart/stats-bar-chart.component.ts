@@ -52,7 +52,7 @@ export class StatsBarChartComponent {
                 tooltip: {
                     callbacks: {
                         label: ctx => {
-                            const value = ctx.parsed.x;
+                            const value = ctx.parsed.x ?? 0;
                             if (format === 'hours') {
                                 const h = Math.floor(value);
                                 const m = Math.round((value - h) * 60);

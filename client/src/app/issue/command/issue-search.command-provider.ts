@@ -64,6 +64,10 @@ export class IssueSearchCommandProvider implements CommandProvider {
     }
 
     private createIssue(title: string, ctx: CommandContext): void {
+        const idProject = ctx.idProject;
+        if (idProject === null) {
+            return;
+        }
         // Default state = the project's START state (IssueState.start), fallback = lowest orderRank.
         // StateStore does NOT sort, so select explicitly — never rely on array position.
         const projectStates = this.states().filter(s => s.idProject === ctx.idProject);
@@ -72,7 +76,7 @@ export class IssueSearchCommandProvider implements CommandProvider {
             [...projectStates].sort((a, b) => a.orderRank - b.orderRank)[0];
         this.issueService
             .insertIssue({
-                idProject: ctx.idProject!,
+                idProject,
                 title,
                 description: title,
                 idState: defaultState?.idState ?? null,
