@@ -57,18 +57,6 @@ func (uc *UserController) Register(c *gin.Context) {
 
 	// Public registration is a one-time bootstrap: the first ever user becomes the instance
 	// admin, after which the endpoint is closed and all user creation is admin-gated.
-	count, err := uc.userService.CountUsers(c.Request.Context())
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	if count > 0 {
-		_ = c.Error(errRegistrationClosed)
-		c.Status(http.StatusForbidden)
-		return
-	}
-
 	bHash, err := bcrypt.GenerateFromPassword([]byte(dto.Password), bcrypt.DefaultCost)
 	if err != nil {
 		_ = c.Error(err)
@@ -83,9 +71,15 @@ func (uc *UserController) Register(c *gin.Context) {
 		ColorAvatarBg: randomAvatarColor(),
 		IsAdmin:       true, // first ever user bootstraps as instance admin
 	}
-	if _, err := uc.userService.Register(c.Request.Context(), user); err != nil {
+	_, created, err := uc.userService.RegisterFirst(c.Request.Context(), user)
+	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if !created {
+		_ = c.Error(errRegistrationClosed)
+		c.Status(http.StatusForbidden)
 		return
 	}
 	c.Status(http.StatusOK)
