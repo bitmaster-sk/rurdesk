@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, switchMap } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
 import { Issue } from '../../model/issue.model';
 import { ProposedIssue } from '../../model/split.model';
 import { SplitApi } from '../../api/split.api.service';
@@ -65,21 +65,18 @@ export class SplitDialogComponent {
         () => this.step() === 'loading' || this.step() === 'saving'
     );
 
-    // project.idProject is number | undefined — guard with filter before passing to stores
-    private readonly project$ = this.projectStore.project$.pipe(
-        filter(project => project.idProject != null)
-    );
+    private readonly project$ = this.projectStore.project$;
 
     public readonly severities = toSignal(
         this.project$.pipe(
-            switchMap(project => this.severityStore.severitiesByProject$(project.idProject!))
+            switchMap(project => this.severityStore.severitiesByProject$(project.idProject))
         ),
         { initialValue: [] }
     );
 
     public readonly states = toSignal(
         this.project$.pipe(
-            switchMap(project => this.stateStore.statesByProject$(project.idProject!))
+            switchMap(project => this.stateStore.statesByProject$(project.idProject))
         ),
         { initialValue: [] }
     );

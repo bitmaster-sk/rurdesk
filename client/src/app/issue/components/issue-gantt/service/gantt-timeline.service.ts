@@ -162,13 +162,15 @@ export class GanttTimelineService {
      * enforcing the minimum column count. Safe to call with an empty task list —
      * falls back to today as the content anchor.
      */
-    public computeRange(tasks: { scheduledAt?: Date; estimated?: number }[]): {
+    public computeRange(tasks: { scheduledAt?: Date | null; estimated?: number | null }[]): {
         start: Date;
         end: Date;
     } {
         const cfg = this.config();
 
-        const scheduled = tasks.filter(t => t.scheduledAt != null);
+        const scheduled = tasks.filter(
+            (t): t is { scheduledAt: Date; estimated?: number | null } => t.scheduledAt != null
+        );
 
         let contentStart: Date;
         let contentEnd: Date;
@@ -179,18 +181,18 @@ export class GanttTimelineService {
             contentEnd = now;
         } else {
             contentStart = scheduled.reduce(
-                (min, t) => (t.scheduledAt! < min ? t.scheduledAt! : min),
-                scheduled[0].scheduledAt!
+                (min, t) => (t.scheduledAt < min ? t.scheduledAt : min),
+                scheduled[0].scheduledAt
             );
             contentEnd = scheduled.reduce(
                 (max, t) => {
                     const taskEnd = new Date(
-                        t.scheduledAt!.getTime() + (t.estimated ?? 3600) * 1000
+                        t.scheduledAt.getTime() + (t.estimated ?? 3600) * 1000
                     );
                     return taskEnd > max ? taskEnd : max;
                 },
                 new Date(
-                    scheduled[0].scheduledAt!.getTime() + (scheduled[0].estimated ?? 3600) * 1000
+                    scheduled[0].scheduledAt.getTime() + (scheduled[0].estimated ?? 3600) * 1000
                 )
             );
         }

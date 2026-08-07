@@ -1,4 +1,4 @@
 export interface IssueDetailPageParams {
     idProject: number;
-    idIssuePublic: number;
+    idIssuePublic: number | null;
 }

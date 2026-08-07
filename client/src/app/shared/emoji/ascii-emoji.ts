@@ -30,5 +30,5 @@ const asciiRegex =
     /(<3)|(:-D)|(:\))|(:-\))|(:D)|(;\))|(;-\))|(:\()|(:-\()|(%\))|(%-\))|(:-P)|(:-b)|(:-p)|(:P)|(:b)|(:p)|(:-O)|(:-o)|(:O)|(:o)|(>:\()|(>:\))|(>:-\))|(>:\/)/gm;
 
 export function fromAsciiToEmoji(value: string): string {
-    return value.replace(asciiRegex, r => (asciiMap[r] ? asciiMap[r] : r));
+    return value.replace(asciiRegex, r => (asciiMap as Record<string, string>)[r] ?? r);
 }

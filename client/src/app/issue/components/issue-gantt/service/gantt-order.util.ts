@@ -1,5 +1,5 @@
 import type { Issue } from '../../../model/issue.model';
-import type { ReadIssueRelationDto } from '../../../model/issue-relation.model';
+import type { GanttRelation } from '../model/gantt-relation.model';
 
 /**
  * applyPendingOrder reorders `tasks` to match `order` (a list of idIssuePublic)
@@ -24,14 +24,14 @@ export function applyPendingOrder<T extends { idIssuePublic?: number }>(
  * For typical project sizes (< 1000 issues), this completes in < 1ms.
  * Falls back to scheduledAt order for unconnected components.
  */
-export function topologicalSort(issues: Issue[], relations: ReadIssueRelationDto[]): Issue[] {
+export function topologicalSort<T extends Issue>(issues: T[], relations: GanttRelation[]): T[] {
     const issueMap = new Map(issues.map(i => [i.idIssuePublic, i]));
     const adjacency = new Map<number, number[]>();
     const inDegree = new Map<number, number>();
 
     for (const issue of issues) {
-        adjacency.set(issue.idIssuePublic!, []);
-        inDegree.set(issue.idIssuePublic!, 0);
+        adjacency.set(issue.idIssuePublic, []);
+        inDegree.set(issue.idIssuePublic, 0);
     }
 
     for (const relation of relations) {
@@ -60,7 +60,7 @@ export function topologicalSort(issues: Issue[], relations: ReadIssueRelationDto
             : (issueA?.title ?? '').localeCompare(issueB?.title ?? '');
     });
 
-    const sorted: Issue[] = [];
+    const sorted: T[] = [];
     while (queue.length > 0) {
         const currentId = queue.shift()!;
         const issue = issueMap.get(currentId);
@@ -105,7 +105,7 @@ export function topologicalSort(issues: Issue[], relations: ReadIssueRelationDto
  * preserves today's dependency-driven topological order. Null-rank issues (newly
  * scheduled, not yet placed) fall to the bottom, tie-broken by scheduledAt then title.
  */
-export function orderScheduled(issues: Issue[], relations: ReadIssueRelationDto[]): Issue[] {
+export function orderScheduled<T extends Issue>(issues: T[], relations: GanttRelation[]): T[] {
     const hasRank = issues.some(i => i.ganttRank != null);
     if (!hasRank) {
         return topologicalSort(issues, relations);

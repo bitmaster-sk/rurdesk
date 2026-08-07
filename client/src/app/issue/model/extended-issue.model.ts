@@ -8,3 +8,5 @@ export interface ExtendedIssue extends Issue {
     severity: IssueSeverity | undefined;
     assignedToUser: User | undefined;
 }
+
+export type ScheduledIssue = ExtendedIssue & { scheduledAt: Date };

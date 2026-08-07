@@ -38,7 +38,7 @@ import { BulkEditIssueEntry } from '../../model/bulk-edit-issues.model';
 import { IssueService } from '../../issue.service';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
-import { ReadIssueRelationDto } from '../../model/issue-relation.model';
+import { GanttRelation } from './model/gantt-relation.model';
 import { IssueRelationApi } from '../../api/issue-relation.api.service';
 import {
     MIN_BAR_WIDTH_PX,
@@ -133,7 +133,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     }
 
     // Pending relations (optimistic updates)
-    private readonly _pendingRelations = signal<ReadIssueRelationDto[]>([]);
+    private readonly _pendingRelations = signal<GanttRelation[]>([]);
 
     // Relation the user just drew — its arrow animates in (cleared on API settle
     // so the confirmed re-render doesn't replay the animation)
@@ -971,7 +971,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
 
         const subType = this.inferRelationSubType(sourceSide, targetSide);
         const tempId = -Date.now();
-        const pendingRelation: ReadIssueRelationDto = {
+        const pendingRelation: GanttRelation = {
             idIssueRelation: tempId,
             relationType: IssueRelationType.Schedule,
             relationSubType: subType,
@@ -979,8 +979,8 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             direction: 'outbound',
             label: '',
             inverseLabel: '',
-            from: { idIssuePublic: sourceId } as any,
-            to: { idIssuePublic: targetId } as any,
+            from: { idIssuePublic: sourceId },
+            to: { idIssuePublic: targetId },
             createdAt: new Date().toISOString(),
             createdBy: 0
         };

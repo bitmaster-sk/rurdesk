@@ -40,10 +40,10 @@
     <!-- Row 3: state badge + assignee avatar -->
     <div class="flex items-center justify-between">
         <app-state-badge [state]="tile().state" size="s"></app-state-badge>
-        @if (tile().assignedToUser) {
+        @if (tile().assignedToUser; as assignedToUser) {
             <app-avatar
-                [name]="tile().assignedToUser.name"
-                [bgColor]="tile().assignedToUser.colorAvatarBg"
+                [name]="assignedToUser.name"
+                [bgColor]="assignedToUser.colorAvatarBg"
                 [height]="1.75"
                 [width]="1.75"
                 [radius]="1"

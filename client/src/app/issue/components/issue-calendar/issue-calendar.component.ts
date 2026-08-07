@@ -512,7 +512,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             days: evt.endDelta.days,
             seconds: Math.trunc(evt.endDelta.milliseconds / 1000)
         });
-        issue.estimated = issue.estimated + deltaSeconds;
+        issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
         this.sIssue.updateIssue(issue).subscribe({
             error: err => {
                 evt.revert();
@@ -522,7 +522,12 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     }
 
     private onCalendarEventDrop(evt: EventDropArg): void {
-        const issue = evt.event.extendedProps['issue'] as Issue;
+        const issue = cloneDeep(evt.event.extendedProps['issue'] as Issue);
+        if (!issue.scheduledAt) {
+            console.warn('calendar event dropped for an issue without scheduledAt', issue.idIssue);
+            evt.revert();
+            return;
+        }
         if (evt.event.allDay && !evt.oldEvent.allDay) {
             issue.estimated = null;
         } else if (!evt.event.allDay && evt.oldEvent.allDay) {

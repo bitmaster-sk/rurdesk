@@ -50,11 +50,12 @@ export class IssueCalendarService {
         states: Map<number, IssueState>
     ): EventInput[] {
         return issues
-            .filter(issue => issue.scheduledAt)
+            .filter((issue): issue is Issue & { scheduledAt: Date } => !!issue.scheduledAt)
             .map(issue => {
-                const severity = severities.get(issue.idSeverity);
-                const assigned = users.get(issue.assignedTo);
-                const state = states.get(issue.idState);
+                const severity =
+                    issue.idSeverity !== null ? severities.get(issue.idSeverity) : undefined;
+                const assigned = issue.assignedTo != null ? users.get(issue.assignedTo) : undefined;
+                const state = issue.idState !== null ? states.get(issue.idState) : undefined;
                 const isAllDay = !issue.estimated;
                 const severityColor = severity?.color ?? null;
                 return {
@@ -63,8 +64,8 @@ export class IssueCalendarService {
                     title: issue.title,
                     start: issue.scheduledAt.toISOString(),
                     end: isAllDay
-                        ? null
-                        : add(issue.scheduledAt, { seconds: issue.estimated }).toISOString(),
+                        ? undefined
+                        : add(issue.scheduledAt, { seconds: issue.estimated ?? 0 }).toISOString(),
                     extendedProps: { severity, assigned, state, issue }
                 };
             });

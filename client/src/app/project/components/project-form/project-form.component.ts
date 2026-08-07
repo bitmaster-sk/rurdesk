@@ -1,4 +1,4 @@
-import { Component, EventEmitter, inject, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Component, inject, input, OnDestroy, OnInit, output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
@@ -11,18 +11,18 @@ import { Project } from '../../model/project.model';
     standalone: false
 })
 export class ProjectFormComponent implements OnInit, OnDestroy {
-    @Input() saveOnBlur = false;
+    public readonly saveOnBlur = input(false);
 
     /** Auto-save status shown as an inline chip on the name field (settings). */
-    @Input() saveStatus: UiSaveState = UiSaveState.Idle;
+    public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
 
-    @Input() project: Project;
+    public readonly project = input.required<Project>();
 
-    @Output() save: EventEmitter<Project> = new EventEmitter<Project>();
+    public readonly save = output<Project>();
 
-    @Output() saveGenerate: EventEmitter<Project> = new EventEmitter<Project>();
+    public readonly saveGenerate = output<Project>();
 
-    @Output() cancel: EventEmitter<void> = new EventEmitter<void>();
+    public readonly cancel = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -32,20 +32,22 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
 
     public ngOnInit(): void {
         this.form = this.fb.group({
-            idProject: this.fb.control(this.project?.idProject),
-            name: this.fb.control(this.project?.name, {
+            idProject: this.fb.control(this.project().idProject),
+            name: this.fb.control(this.project().name, {
                 validators: [Validators.required, Validators.maxLength(250)],
-                updateOn: this.saveOnBlur ? 'blur' : 'change'
+                updateOn: this.saveOnBlur() ? 'blur' : 'change'
             })
         });
 
-        if (this.saveOnBlur) {
+        if (this.saveOnBlur()) {
             this.subscription.add(
                 this.form.valueChanges
                     // Only auto-save a genuine change: a blur that didn't edit the name
                     // must not fire a redundant PUT (and flash the save chip).
                     .pipe(
-                        filter(() => this.form.valid && this.form.value.name !== this.project?.name)
+                        filter(
+                            () => this.form.valid && this.form.value.name !== this.project().name
+                        )
                     )
                     .subscribe(() => this.onSave())
             );
@@ -57,16 +59,18 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     }
 
     public onSave(): void {
-        this.project.name = this.form.value.name;
-        this.save.emit(this.project);
+        this.save.emit(this.editedProject());
     }
 
     public onSaveGenerate(): void {
-        this.project.name = this.form.value.name;
-        this.saveGenerate.emit(this.project);
+        this.saveGenerate.emit(this.editedProject());
     }
 
     public onCancel(): void {
         this.cancel.emit();
+    }
+
+    private editedProject(): Project {
+        return { ...this.project(), name: this.form.value.name };
     }
 }

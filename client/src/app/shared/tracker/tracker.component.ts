@@ -69,7 +69,7 @@ export class TrackerComponent {
     public trackerIssue = toSignal(
         this.sTracker.tracker$.pipe(
             distinctUntilChanged((x, y) => x?.idIssue === y?.idIssue),
-            filter(tracker => !!tracker?.idTracker),
+            filter((tracker): tracker is Tracker => !!tracker?.idTracker),
             switchMap(tracker => this.sIssue.loadIssue(tracker.idProject, tracker.idIssuePublic))
         ),
         { initialValue: null }
@@ -81,21 +81,26 @@ export class TrackerComponent {
     ]);
 
     public onSaveTrack(): void {
+        const issue = this.issue();
+        if (!issue) {
+            return;
+        }
         const seconds = DurationConverter.durationToSeconds(
-            DurationParser.stringToDuration(this.trackedControl.value)
+            DurationParser.stringToDuration(this.trackedControl.value ?? '')
         );
-        this.sTracker
-            .insertTrack({ idIssue: this.issue().idIssue, tracked: seconds })
-            .subscribe(track => {
-                this.trackedControl.reset();
-                this.trackAdded.emit(track);
-            });
+        this.sTracker.insertTrack({ idIssue: issue.idIssue, tracked: seconds }).subscribe(track => {
+            this.trackedControl.reset();
+            this.trackAdded.emit(track);
+        });
     }
 
     public onStartTracker(): void {
-        this.sTracker
-            .insertTracker(this.project().idProject, this.issue().idIssuePublic)
-            .subscribe();
+        const issue = this.issue();
+        const project = this.project();
+        if (!issue || !project) {
+            return;
+        }
+        this.sTracker.insertTracker(project.idProject, issue.idIssuePublic).subscribe();
     }
 
     public onSubmitTracker(tracker: Tracker): void {

@@ -250,7 +250,8 @@ export class UiDateRangeSelectComponent implements ControlValueAccessor {
     private applyValue(value: UiDateRangeValue | null): void {
         this.value.set(value);
         this.isCustomOpen.set(!!value && !value.preset && (!!value.from || !!value.to));
-        const range = value?.from || value?.to ? [value.from, value.to].filter(Boolean) : null;
+        const range =
+            value?.from || value?.to ? [value.from, value.to].filter((d): d is Date => !!d) : null;
         this.rangeControl.setValue(range, { emitEvent: false });
     }
 

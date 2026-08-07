@@ -8,9 +8,11 @@ import { ProjectService } from './project.service';
     providedIn: 'root'
 })
 export class ProjectStore {
-    private project = new BehaviorSubject<Project>(null);
+    private project = new BehaviorSubject<Project | null>(null);
 
-    public project$ = this.project.asObservable().pipe(filter(project => !!project));
+    public project$ = this.project
+        .asObservable()
+        .pipe(filter((project): project is Project => !!project));
 
     private readonly sProject = inject(ProjectService);
 

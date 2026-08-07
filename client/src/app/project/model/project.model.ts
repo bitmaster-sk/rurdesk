@@ -1,7 +1,9 @@
+export type ProjectInsert = Omit<Project, 'idProject'>;
+
 export interface Project {
-    idProject?: number;
+    idProject: number;
     name: string;
     color: string;
-    idStateDefault?: number;
-    idSeverityDefault?: number;
+    idStateDefault?: number | null;
+    idSeverityDefault?: number | null;
 }

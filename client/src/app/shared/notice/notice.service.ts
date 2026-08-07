@@ -48,7 +48,7 @@ export class NoticeService {
         Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
     > = this.participantSubject.asObservable();
 
-    private socket: WebSocket;
+    private socket: WebSocket | null = null;
 
     private readonly RECONNECT_DELAY = 60 * 1000;
 
@@ -97,7 +97,7 @@ export class NoticeService {
 
     private onOpen(evt: Event): void {}
 
-    private onError(evt: ErrorEvent): void {
+    private onError(evt: Event): void {
         console.error(evt);
     }
 

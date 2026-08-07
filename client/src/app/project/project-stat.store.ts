@@ -65,13 +65,14 @@ export class ProjectStatStore {
             this.severityStore.severities$
         ])
             .pipe(
-                map(([project, states, severities]) => {
-                    return [
-                        project,
-                        states.filter(s => s.idProject === project.idProject),
-                        severities.filter(s => s.idProject === project.idProject)
-                    ];
-                }),
+                map(
+                    ([project, states, severities]) =>
+                        [
+                            project,
+                            states.filter(s => s.idProject === project.idProject),
+                            severities.filter(s => s.idProject === project.idProject)
+                        ] as [Project, IssueState[], IssueSeverity[]]
+                ),
                 switchMap(
                     ([project, states, severities]: [Project, IssueState[], IssueSeverity[]]) =>
                         this.issueService
@@ -98,7 +99,14 @@ export class ProjectStatStore {
                             // good numbers on screen until the next project/state/severity
                             // change retriggers the fetch.
                             .pipe(
-                                map(issues => [issues, states, severities]),
+                                map(
+                                    issues =>
+                                        [issues, states, severities] as [
+                                            Issue[],
+                                            IssueState[],
+                                            IssueSeverity[]
+                                        ]
+                                ),
                                 catchError(err => {
                                     console.error('loading issues for project stats failed', err);
                                     return EMPTY;
@@ -123,8 +131,8 @@ export class ProjectStatStore {
     private issueToStats(stats: ProjectStats, issue: Issue): ProjectStats {
         stats.totalIssues++;
 
-        if (issue.estimated > 0) {
-            stats.totalEstimatedSeconds += issue.estimated;
+        if ((issue.estimated ?? 0) > 0) {
+            stats.totalEstimatedSeconds += issue.estimated ?? 0;
         }
 
         if (issue.tracked > 0) {

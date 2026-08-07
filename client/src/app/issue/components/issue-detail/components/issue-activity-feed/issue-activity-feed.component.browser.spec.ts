@@ -72,7 +72,8 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     };
 
     const stubUser = {
-        user: new BehaviorSubject({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' })
+        user: new BehaviorSubject({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' }),
+        getUser: () => ({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' })
     };
 
     beforeEach(async () => {

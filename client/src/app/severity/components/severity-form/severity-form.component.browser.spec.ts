@@ -15,7 +15,7 @@ describe('SeverityFormComponent', () => {
 
     function create(severity?: IssueSeverity) {
         const fixture = TestBed.createComponent(SeverityFormComponent);
-        fixture.componentInstance.severity = severity as IssueSeverity;
+        fixture.componentRef.setInput('severity', severity ?? ({} as IssueSeverity));
         fixture.detectChanges();
         return fixture;
     }

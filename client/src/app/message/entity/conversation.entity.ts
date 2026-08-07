@@ -4,7 +4,7 @@ export interface Conversation {
     idRecipient: number;
     idMessageRecipientType: MessageRecipientType;
     name: string;
-    idCreator?: number;
-    url: any[];
+    idCreator: number | null;
+    url: (string | number)[];
     unreadKey: string;
 }

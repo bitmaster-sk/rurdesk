@@ -29,12 +29,12 @@
             </div>
             <div class="gantt-bar--user">
                 <span class="gantt-bar--user-name">
-                    {{ task().assignedToUser ? task().assignedToUser.name : 'Unassigned' }}
+                    {{ task().assignedToUser?.name ?? 'Unassigned' }}
                 </span>
-                @if (task().assignedToUser) {
+                @if (task().assignedToUser; as assignedToUser) {
                 <app-avatar
-                    [name]="task().assignedToUser.name"
-                    [bgColor]="task().assignedToUser.colorAvatarBg"
+                    [name]="assignedToUser.name"
+                    [bgColor]="assignedToUser.colorAvatarBg"
                     [width]="1.5"
                     [height]="1.5"
                 />
@@ -46,10 +46,10 @@
         } @if (!isComfortable()) {
         <div class="gantt-bar--compact-content">
             <app-state-badge [state]="task().state" size="xs" />
-            @if (task().assignedToUser) {
+            @if (task().assignedToUser; as assignedToUser) {
             <app-avatar
-                [name]="task().assignedToUser.name"
-                [bgColor]="task().assignedToUser.colorAvatarBg"
+                [name]="assignedToUser.name"
+                [bgColor]="assignedToUser.colorAvatarBg"
                 [width]="1.25"
                 [height]="1.25"
             />

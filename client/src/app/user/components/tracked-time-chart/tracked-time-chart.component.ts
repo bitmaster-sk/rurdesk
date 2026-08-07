@@ -103,7 +103,7 @@ export class TrackedTimeChartComponent {
                 callbacks: {
                     title: items => items[0]?.label ?? '',
                     label: ctx => {
-                        const hours = ctx.parsed.y;
+                        const hours = ctx.parsed.y ?? 0;
                         const h = Math.floor(hours);
                         const m = Math.round((hours - h) * 60);
                         return ` ${ctx.dataset.label}: ${h}h ${m}m`;

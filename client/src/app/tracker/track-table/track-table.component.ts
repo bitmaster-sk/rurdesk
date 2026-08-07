@@ -3,7 +3,7 @@ import { combineLatest, merge, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { UserService } from 'src/app/auth/user.service';
-import { Track } from 'src/app/shared/tracker/model/track.model';
+import { Track, TrackForm } from 'src/app/shared/tracker/model/track.model';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 
@@ -19,7 +19,7 @@ export class TrackTableComponent implements OnInit {
 
     public total$ = this.sTracker.totalTracked$;
 
-    public _track$ = new Subject<Track>();
+    public _track$ = new Subject<TrackForm>();
 
     public track$ = merge(
         this._track$,
@@ -28,13 +28,17 @@ export class TrackTableComponent implements OnInit {
                 if (!user || !filter) {
                     return null;
                 }
-                return {
+                if (filter.idIssue == null) {
+                    return null;
+                }
+                const seed: TrackForm = {
                     idTrack: null,
                     idIssue: filter.idIssue,
                     idUser: user.idUser,
                     tracked: null,
                     endAt: null
-                } as Track;
+                };
+                return seed;
             })
         )
     );
@@ -59,10 +63,13 @@ export class TrackTableComponent implements OnInit {
     }
 
     public onEditTrack(track: Track): void {
-        if (track === null) {
-            return;
-        }
-        this._track$.next(track);
+        this._track$.next({
+            idTrack: track.idTrack,
+            idUser: track.idUser,
+            idIssue: track.idIssue,
+            tracked: track.tracked,
+            endAt: track.endAt
+        });
     }
 
     public onConfirmDeleteTrack(track: Track): void {

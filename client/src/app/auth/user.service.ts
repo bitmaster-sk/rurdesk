@@ -10,11 +10,19 @@ import { silentErrors } from 'src/app/core/http-error-context';
     providedIn: 'root'
 })
 export class UserService {
-    public user: BehaviorSubject<User> = new BehaviorSubject<User>(null);
+    public user: BehaviorSubject<User | null> = new BehaviorSubject<User | null>(null);
 
-    public user$ = this.user.pipe(filter(u => u !== null));
+    public user$ = this.user.pipe(filter((u): u is User => u !== null));
 
     constructor(private http: HttpClient) {}
+
+    public getUser(): User {
+        const user = this.user.getValue();
+        if (user === null) {
+            throw new Error('getUser called before UserResolver loaded the user');
+        }
+        return user;
+    }
 
     public login(email: string, password: string): Observable<string> {
         return this.http
@@ -61,7 +69,7 @@ export class UserService {
         localStorage.removeItem('Authorization');
     }
 
-    public getAuthLocal(): string {
+    public getAuthLocal(): string | null {
         return localStorage.getItem('Authorization');
     }
 

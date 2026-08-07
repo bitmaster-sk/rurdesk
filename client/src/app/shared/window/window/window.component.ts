@@ -11,7 +11,7 @@ import { WindowReference } from '../window.reference';
 })
 export class WindowComponent {
     /** typ komponenty zobrazenej vo vnútri okna (vytvorí ju *ngComponentOutlet) */
-    public contentType: Type<unknown>;
+    public contentType!: Type<unknown>;
 
     /** príznak zobrazenia dialógu (dvojsmerne viazaný na <ui-dialog>) */
     public visible = true;

@@ -9,7 +9,7 @@
         </header>
         <div class="panel-body flex items-end gap-4" [formGroup]="profileForm">
             <app-avatar
-                [name]="currentUser().name"
+                [name]="currentUser()?.name ?? ''"
                 [bgColor]="avatarColor()"
                 [width]="3.5"
                 [height]="3.5"

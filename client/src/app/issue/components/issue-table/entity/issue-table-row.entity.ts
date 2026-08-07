@@ -15,8 +15,8 @@ export interface IssueRelationRow {
 
 export interface IssueTableRow {
     issue: Issue;
-    state: IssueState;
-    severity: IssueSeverity;
-    assigned: User;
+    state: IssueState | undefined;
+    severity: IssueSeverity | undefined;
+    assigned: User | undefined;
     relations: IssueRelationRow[];
 }

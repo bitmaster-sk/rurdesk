@@ -46,10 +46,10 @@
     (splitRequested)="onSplitRequested($event)"
 ></app-issue-quick-actions>
 
-@if (isSplitDialogOpen() && splitIssue()) {
+@if (isSplitDialogOpen() && splitIssue(); as issue) {
     <app-split-dialog
-        [idProject]="splitIssue().idProject"
-        [issue]="splitIssue()"
+        [idProject]="issue.idProject"
+        [issue]="issue"
         (accepted)="onSplitAccepted()"
         (cancelled)="onSplitCancelled()"
     ></app-split-dialog>

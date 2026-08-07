@@ -11,7 +11,7 @@ export interface MessageAnchor {
 }
 
 export interface Message {
-    idMessage?: number;
+    idMessage: number;
     message: string;
     messageKind: MessageKind;
     createdAt: Date;

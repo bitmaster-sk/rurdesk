@@ -176,7 +176,7 @@
                                             [name]="row.assigned.name"
                                             [bgColor]="row.assigned.colorAvatarBg"
                                         ></app-avatar>
-                                        <span>{{ row.assigned?.name }}</span>
+                                        <span>{{ row.assigned.name }}</span>
                                     } @else {
                                         <span class="unknown-avatar">?</span>
                                         <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
@@ -329,10 +329,10 @@
     ></app-issue-quick-actions>
 
     <!-- Split dialog -->
-    @if (isSplitDialogOpen() && splitIssue()) {
+    @if (isSplitDialogOpen() && splitIssue(); as issue) {
         <app-split-dialog
-            [idProject]="splitIssue().idProject"
-            [issue]="splitIssue()"
+            [idProject]="issue.idProject"
+            [issue]="issue"
             (accepted)="onSplitAccepted($event)"
             (cancelled)="onSplitCancelled()"
         ></app-split-dialog>

@@ -72,10 +72,10 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(issue.scheduledAt).toEqual(
+        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        expect(passedIssue.scheduledAt).toEqual(
             add(new Date('2025-01-15T09:00:00Z'), { days: 1, months: 0, years: 0, seconds: 0 })
         );
-        expect(mocks.sIssueMock.updateIssue).toHaveBeenCalledWith(issue);
     });
 
     it('timed → timed: shifts by milliseconds too (seconds truncated)', () => {
@@ -93,7 +93,10 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(issue.scheduledAt).toEqual(add(new Date('2025-01-15T09:00:00Z'), { seconds: 1800 }));
+        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        expect(passedIssue.scheduledAt).toEqual(
+            add(new Date('2025-01-15T09:00:00Z'), { seconds: 1800 })
+        );
     });
 
     it('allDay → timed: sets scheduledAt to event.start, estimated to 1h', () => {
@@ -111,9 +114,9 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(issue.scheduledAt).toEqual(new Date('2025-01-16T10:00:00Z'));
-        expect(issue.estimated).toBe(3600);
-        expect(mocks.sIssueMock.updateIssue).toHaveBeenCalled();
+        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        expect(passedIssue.scheduledAt).toEqual(new Date('2025-01-16T10:00:00Z'));
+        expect(passedIssue.estimated).toBe(3600);
     });
 
     it('timed → allDay: sets estimated to null', () => {
@@ -127,8 +130,8 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(issue.estimated).toBeNull();
-        expect(mocks.sIssueMock.updateIssue).toHaveBeenCalled();
+        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        expect(passedIssue.estimated).toBeNull();
     });
 
     it('on API error: calls revert', () => {
@@ -151,7 +154,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
         expect(revertSpy).toHaveBeenCalled();
     });
 
-    it('drop mutates the issue in-place (no cloneDeep)', () => {
+    it('cloneDeep: original issue is not mutated', () => {
         const issue = makeIssue({ scheduledAt: new Date('2025-01-15T09:00:00Z'), estimated: 3600 });
         const originalScheduledAt = issue.scheduledAt;
 
@@ -163,8 +166,26 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(issue.scheduledAt).not.toEqual(originalScheduledAt);
-        expect(mocks.sIssueMock.updateIssue.mock.calls[0][0]).toBe(issue);
+        expect(issue.scheduledAt).toEqual(originalScheduledAt);
+        expect(mocks.sIssueMock.updateIssue.mock.calls[0][0]).not.toBe(issue);
+    });
+
+    it('without scheduledAt: reverts without updating', () => {
+        const revertSpy = vi.fn();
+        const issue = makeIssue({ scheduledAt: null, estimated: 3600 });
+
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        comp.onCalendarEventDrop(
+            makeDropArg({
+                event: { extendedProps: { issue }, allDay: false },
+                oldEvent: { allDay: false },
+                delta: { years: 0, months: 0, days: 1, milliseconds: 0 },
+                revert: revertSpy
+            })
+        );
+
+        expect(revertSpy).toHaveBeenCalled();
+        expect(mocks.sIssueMock.updateIssue).not.toHaveBeenCalled();
     });
 });
 

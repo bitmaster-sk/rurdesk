@@ -76,7 +76,7 @@ export class IssueTableService {
             severity: issue.idSeverity != null ? severities.get(issue.idSeverity) : undefined,
             state: issue.idState != null ? states.get(issue.idState) : undefined,
             assigned: issue.assignedTo != null ? users.get(issue.assignedTo) : undefined,
-            relations: relations.get(issue.idIssuePublic!) ?? []
+            relations: relations.get(issue.idIssuePublic) ?? []
         }));
     });
 
@@ -149,14 +149,14 @@ export class IssueTableService {
         const apiFrom = isHierarchyChild ? to : from;
         const apiTo = isHierarchyChild ? from : to;
         const dto: CreateIssueRelationDto = {
-            idIssuePublicTo: apiTo.idIssuePublic!,
+            idIssuePublicTo: apiTo.idIssuePublic,
             relationType,
             ...(subType && relationType !== 'hierarchy' ? { relationSubType: subType } : {}),
             ...(lagMinutes != null ? { lagMinutes } : {})
         };
-        return this.relationApi.insert$(idProject, apiFrom.idIssuePublic!, dto).pipe(
+        return this.relationApi.insert$(idProject, apiFrom.idIssuePublic, dto).pipe(
             tap(() => {
-                this.loadRelationsFor(idProject, from.idIssuePublic!);
+                this.loadRelationsFor(idProject, from.idIssuePublic);
                 this.refresh$.next();
             }),
             map(() => undefined)

@@ -4,13 +4,15 @@
     (click)="onMarkRead()"
 >
     <div class="flex items-start gap-2">
-        <app-avatar
-            [name]="notification().actorName"
-            [bgColor]="notification().actorAvatarBg"
-            [height]="2"
-            [width]="2"
-            [radius]="1"
-        ></app-avatar>
+        @if (notification().actorName; as actorName) {
+            <app-avatar
+                [name]="actorName"
+                [bgColor]="notification().actorAvatarBg ?? ''"
+                [height]="2"
+                [width]="2"
+                [radius]="1"
+            ></app-avatar>
+        }
 
         <div class="flex flex-col gap-4 min-w-0 flex-1">
             <div class="ui-color-text">

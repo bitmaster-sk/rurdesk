@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
+import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
@@ -31,7 +31,7 @@ export class GanttCascadeService {
         newScheduledAt: Date,
         newEstimated: number,
         allTasks: Issue[],
-        relations: ReadIssueRelationDto[]
+        relations: GanttRelation[]
     ): CascadeResult {
         const taskMap = new Map<number, TaskSnapshot>();
         for (const task of allTasks) {

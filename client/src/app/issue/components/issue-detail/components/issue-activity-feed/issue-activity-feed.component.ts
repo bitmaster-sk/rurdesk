@@ -64,7 +64,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
     private readonly sUser = inject(UserService);
     private readonly destroyRef = inject(DestroyRef);
 
-    public readonly currentUserId = this.sUser.user.getValue().idUser;
+    public readonly currentUserId = this.sUser.getUser().idUser;
 
     private readonly allItems = signal<TimelineItem[]>([]);
     private readonly liveItems = signal<TimelineItem[]>([]);
@@ -162,10 +162,11 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
 
         effect(() => {
             const track = this.pendingTrack();
-            if (track == null || !track.tracked) return;
+            if (track == null || !track.tracked || !track.endAt) return;
+            const endAt = track.endAt;
             this.liveItems.update(items => [
                 ...items,
-                { type: 'time', date: new Date(track.endAt), data: track }
+                { type: 'time', date: new Date(endAt), data: track }
             ]);
             this.scrollToBottom();
         });
@@ -261,7 +262,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
         event: { lineStart: number; lineEnd: number }
     ): void {
         this.anchorTarget.set({
-            idParentMessage: parentMessage.idMessage!,
+            idParentMessage: parentMessage.idMessage,
             lineStart: event.lineStart,
             lineEnd: event.lineEnd
         });
@@ -332,7 +333,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
         }));
 
         const timeItems: TimelineItem[] = tracks
-            .filter(t => t.tracked > 0)
+            .filter((t): t is Track & { endAt: Date } => (t.tracked ?? 0) > 0 && !!t.endAt)
             .map(t => ({
                 type: 'time' as const,
                 date: new Date(t.endAt),

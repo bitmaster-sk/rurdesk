@@ -32,13 +32,13 @@
 </div>
 
 <!-- Children (recursive) -->
-@if (node().children?.length) {
-    @for (child of node().children; track child.data?.ref; let i = $index) {
+@if (node().children.length) {
+    @for (child of node().children; track child.data.ref; let i = $index) {
         <app-staged-issue-tree-node
             [node]="child"
             [states]="states()"
             [severities]="severities()"
-            [isLastChild]="i === node().children!.length - 1"
+            [isLastChild]="i === node().children.length - 1"
             [ancestorHasMoreSiblings]="childAncestorHasMoreSiblings()"
             (issueChange)="issueChange.emit($event)"
             (deleteNode)="deleteNode.emit($event)"

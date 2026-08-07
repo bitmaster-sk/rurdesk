@@ -14,8 +14,8 @@ export class IssueFilterStore {
     private showFilter = new BehaviorSubject<boolean>(false);
 
     public actualFilter$ = this.filter.asObservable().pipe(
-        filter(f => !!f.filter),
-        map(f => f.filter)
+        map(f => f.filter),
+        filter((f): f is IssuesFilter => !!f)
     );
 
     // Same emissions as actualFilter$, but carries whether this is a pure data refresh
@@ -24,13 +24,16 @@ export class IssueFilterStore {
     // kanban columns) subscribe here so a refresh() after a mutation keeps their current
     // page instead of resetting to page 1.
     public actualFilterChange$ = this.filter.asObservable().pipe(
-        filter(f => !!f.filter),
-        map(f => ({ filter: f.filter!, refresh: f.refresh }))
+        filter(
+            (f): f is { filter: IssuesFilter; initial: boolean; refresh: boolean } => !!f.filter
+        ),
+        map(f => ({ filter: f.filter, refresh: f.refresh }))
     );
 
     public initialFilter$ = this.filter.asObservable().pipe(
-        filter(f => f.initial && !!f.filter),
-        map(f => f.filter)
+        filter(f => f.initial),
+        map(f => f.filter),
+        filter((f): f is IssuesFilter => !!f)
     );
 
     public showFilter$ = this.showFilter.asObservable();
@@ -45,7 +48,7 @@ export class IssueFilterStore {
 
     public setOrder(orderParams: IssuesOrderParams): void {
         const actualFilter = this.filter.getValue()?.filter;
-        const newFilter = { ...actualFilter, ...orderParams };
+        const newFilter = { ...actualFilter, ...orderParams } as IssuesFilter;
         this.filter.next({ initial: false, filter: newFilter, refresh: false });
         this._isFilterEdited.next();
     }
@@ -67,7 +70,7 @@ export class IssueFilterStore {
 
     public setFilter(filterParams: IssuesFilterParams): void {
         const actualFilter = this.filter.getValue()?.filter;
-        const newFilter = { ...actualFilter, ...filterParams };
+        const newFilter = { ...actualFilter, ...filterParams } as IssuesFilter;
 
         this.filter.next({ filter: newFilter, initial: false, refresh: false });
         this._isFilterEdited.next();

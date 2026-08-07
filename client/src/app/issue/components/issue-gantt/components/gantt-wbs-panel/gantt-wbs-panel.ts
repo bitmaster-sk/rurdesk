@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
-import { ExtendedIssue } from '../../../../model/extended-issue.model';
+import { ExtendedIssue, ScheduledIssue } from '../../../../model/extended-issue.model';
 import { STORAGE_KEY_WBS_WIDTH } from '../../constants/gantt-storage-keys';
 
 const DEFAULT_WIDTH = 280;
@@ -30,7 +30,7 @@ export class GanttWbsPanelComponent {
 
     private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-    public readonly scheduledTasks = input.required<ExtendedIssue[]>();
+    public readonly scheduledTasks = input.required<ScheduledIssue[]>();
     public readonly backlogTasks = input.required<ExtendedIssue[]>();
     public readonly backlogHasMore = input<boolean>(false);
     public readonly backlogLoading = input<boolean>(false);
@@ -121,7 +121,7 @@ export class GanttWbsPanelComponent {
 
     public onScheduledDrop(event: CdkDragDrop<unknown>): void {
         if (event.previousIndex === event.currentIndex) return;
-        const ids = this.scheduledTasks().map(t => t.idIssuePublic!);
+        const ids = this.scheduledTasks().map(t => t.idIssuePublic);
         this.reordered.emit(
             GanttWbsPanelComponent.buildReorder(ids, event.previousIndex, event.currentIndex)
         );

@@ -8,7 +8,7 @@ export class WindowInjector implements Injector {
     ) {}
 
     get<T>(token: Type<T> | InjectionToken<T>, notFoundValue?: T, options?: InjectOptions): T;
-    get(token: any, notFoundValue?: any);
+    get(token: any, notFoundValue?: any): any;
     get(token: any, notFoundValue?: any, options?: any) {
         const value = this.extended.get(token);
 

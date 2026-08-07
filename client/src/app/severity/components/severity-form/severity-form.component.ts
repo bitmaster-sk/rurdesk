@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { Component, OnInit, inject, input, output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { randomSeverityColor } from '../../constants/severity-colors';
 import { IssueSeverity } from '../../model/issue-severity.model';
@@ -10,11 +10,11 @@ import { IssueSeverity } from '../../model/issue-severity.model';
     standalone: false
 })
 export class SeverityFormComponent implements OnInit {
-    @Input() severity: IssueSeverity;
+    public readonly severity = input.required<IssueSeverity>();
 
-    @Output() save: EventEmitter<IssueSeverity> = new EventEmitter<IssueSeverity>();
+    public readonly save = output<IssueSeverity>();
 
-    @Output() cancel: EventEmitter<void> = new EventEmitter<void>();
+    public readonly cancel = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -22,18 +22,18 @@ export class SeverityFormComponent implements OnInit {
 
     public ngOnInit(): void {
         this.form = this.fb.group({
-            idSeverity: this.fb.control(this.severity?.idSeverity),
-            idProject: this.fb.control(this.severity?.idProject),
-            title: this.fb.control(this.severity?.title, [
+            idSeverity: this.fb.control(this.severity().idSeverity),
+            idProject: this.fb.control(this.severity().idProject),
+            title: this.fb.control(this.severity().title, [
                 Validators.required,
                 Validators.maxLength(20)
             ]),
             // A new severity starts on a palette colour: an empty <input type="color">
             // renders black and blocks the required validator.
-            color: this.fb.control(this.severity?.color ?? randomSeverityColor(), [
+            color: this.fb.control(this.severity().color ?? randomSeverityColor(), [
                 Validators.required
             ]),
-            orderRank: this.fb.control(this.severity?.orderRank)
+            orderRank: this.fb.control(this.severity().orderRank)
         });
     }
 

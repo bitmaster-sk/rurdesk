@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IssuesFilter } from './components/filter/issue-filter.entity';
-import { Issue } from './model/issue.model';
+import { Issue, IssueDraft } from './model/issue.model';
 import { IssuesPage, IssueGroup } from './model/issues-page.model';
 
 @Injectable({
@@ -20,16 +20,16 @@ export class IssueService {
         if (filter.orderDirection) {
             params = params.set('orderDirection', filter.orderDirection);
         }
-        if (filter.idsSeverity?.length > 0) {
+        if (filter.idsSeverity?.length) {
             params = params.set('idsSeverity', filter.idsSeverity.join(','));
         }
-        if (filter.idsState?.length > 0) {
+        if (filter.idsState?.length) {
             params = params.set('idsState', filter.idsState.join(','));
         }
-        if (filter.idsAssignedTo?.length > 0) {
+        if (filter.idsAssignedTo?.length) {
             params = params.set('idsAssignedTo', filter.idsAssignedTo.join(','));
         }
-        if (filter.idsIssuePublic?.length > 0) {
+        if (filter.idsIssuePublic?.length) {
             params = params.set('idsIssuePublic', filter.idsIssuePublic.join(','));
         }
         // A window wins over the absolute pair — sending both would make the URL lie.
@@ -129,7 +129,7 @@ export class IssueService {
             .pipe(map(issue => this.toIssue(issue)));
     }
 
-    public insertIssue(issue: Issue): Observable<Issue> {
+    public insertIssue(issue: IssueDraft): Observable<Issue> {
         return this.http
             .post<Issue>(`/api/private/project/${issue.idProject}/issue`, issue)
             .pipe(map(iss => this.toIssue(iss)));
@@ -152,8 +152,8 @@ export class IssueService {
     // issue$ payload) can normalize its date fields the same way HTTP responses
     // are normalized.
     public toIssue(issue: Issue): Issue {
-        issue.createAt = new Date(issue.createAt);
-        issue.updateAt = new Date(issue.updateAt);
+        issue.createAt = issue.createAt ? new Date(issue.createAt) : undefined;
+        issue.updateAt = issue.updateAt ? new Date(issue.updateAt) : undefined;
         issue.scheduledAt = issue.scheduledAt ? new Date(issue.scheduledAt) : null;
         return issue;
     }

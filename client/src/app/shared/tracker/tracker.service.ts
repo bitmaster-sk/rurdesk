@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
-import { Track } from './model/track.model';
+import { Track, TrackInsert, TrackUpdate } from './model/track.model';
 import { Tracker } from './model/tracker.model';
 
 @Injectable({
@@ -38,7 +38,7 @@ export class TrackerService {
     );
 
     public totalTracked$ = this.tracks$.pipe(
-        map(tracks => tracks.reduce((sum, curr) => sum + curr.tracked, 0))
+        map(tracks => tracks.reduce((sum, curr) => sum + (curr.tracked ?? 0), 0))
     );
 
     constructor(private http: HttpClient) {}
@@ -99,14 +99,14 @@ export class TrackerService {
             .pipe(map(tracks => this.toTracks(tracks)));
     }
 
-    public insertTrack(track: Track): Observable<Track> {
+    public insertTrack(track: TrackInsert): Observable<Track> {
         return this.http.post<Track>('/api/private/track', track).pipe(
             map(savedTrack => this.toTrack(savedTrack)),
             tap(() => this.tracksChange$.next(true))
         );
     }
 
-    public updateTrack(track: Track): Observable<Track> {
+    public updateTrack(track: TrackUpdate): Observable<Track> {
         return this.http.patch<Track>(`/api/private/track/${track.idTrack}`, track).pipe(
             map(savedTrack => this.toTrack(savedTrack)),
             tap(() => this.tracksChange$.next(true))
@@ -120,7 +120,7 @@ export class TrackerService {
     }
 
     private toTracks(tracks: Track[]): Track[] {
-        return tracks.map(t => this.toTrack(t));
+        return tracks.map(track => this.toTrack(track));
     }
 
     private toTrack(track: Track): Track {

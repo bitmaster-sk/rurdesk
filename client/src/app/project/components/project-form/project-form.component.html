@@ -6,13 +6,13 @@
                 formControlName="name"
                 type="text"
                 uiInput
-                [uiSaveStatus]="saveStatus"
+                [uiSaveStatus]="saveStatus()"
                 class="w-full"
                 id="project-title"
             />
         </div>
     </div>
-    @if (!saveOnBlur) {
+    @if (!saveOnBlur()) {
         <div class="form-footer">
             <ui-button
                 [disabled]="!form.valid"
@@ -22,7 +22,7 @@
             >
                 <tabler-icon icon="device-floppy" [size]="16" />
             </ui-button>
-            @if (!project?.idProject) {
+            @if (!project().idProject) {
                 <ui-button
                     [disabled]="!form.valid"
                     severity="primary"

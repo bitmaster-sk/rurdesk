@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnInit, Output, inject } from '@angular/core';
+import { Component, OnInit, inject, input, output } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 
@@ -8,11 +8,11 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
     standalone: false
 })
 export class StateFormComponent implements OnInit {
-    @Input() state: IssueState;
+    public readonly state = input.required<IssueState>();
 
-    @Output() save: EventEmitter<IssueState> = new EventEmitter<IssueState>();
+    public readonly save = output<IssueState>();
 
-    @Output() cancel: EventEmitter<void> = new EventEmitter<void>();
+    public readonly cancel = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -20,15 +20,15 @@ export class StateFormComponent implements OnInit {
 
     public ngOnInit(): void {
         this.form = this.fb.group({
-            idProject: this.fb.control(this.state?.idProject),
-            idState: this.fb.control(this.state?.idState),
-            name: this.fb.control(this.state?.name, [
+            idProject: this.fb.control(this.state().idProject),
+            idState: this.fb.control(this.state().idState),
+            name: this.fb.control(this.state().name, [
                 Validators.required,
                 Validators.maxLength(20)
             ]),
-            start: this.fb.control(this.state?.start),
-            final: this.fb.control(this.state?.final),
-            orderRank: this.fb.control(this.state?.orderRank)
+            start: this.fb.control(this.state().start),
+            final: this.fb.control(this.state().final),
+            orderRank: this.fb.control(this.state().orderRank)
         });
     }
 

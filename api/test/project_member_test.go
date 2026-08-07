@@ -94,6 +94,25 @@ func (s *ProjectMemberSuite) Test_03_GetMembers_Owner() {
 	s.Equal(model.RoleOwner, body.Users[0].Role)
 }
 
+// A direct member belongs to no team, so IdsTeams stays empty. It must still
+// serialize as [] — a nil slice would marshal to null and the client models the
+// field as a plain array.
+func (s *ProjectMemberSuite) Test_03a_GetMembers_IdsTeamsIsArrayNotNull() {
+	res := Request(s.T(), s.App, "GET",
+		fmt.Sprintf("/api/private/project/%d/member", s.ProjectID), "", s.OwnerToken)
+	s.Equal(http.StatusOK, res.StatusCode)
+
+	var body struct {
+		Users []struct {
+			IdsTeams *[]int64 `json:"idsTeams"`
+		} `json:"users"`
+	}
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&body))
+	s.Require().Len(body.Users, 1)
+	s.Require().NotNil(body.Users[0].IdsTeams, "idsTeams must serialize as [], not null")
+	s.Empty(*body.Users[0].IdsTeams)
+}
+
 func (s *ProjectMemberSuite) Test_04_AddUser_AsMember() {
 	// Get member user ID
 	userRes := Request(s.T(), s.App, "GET", "/api/private/user", "", s.MemberToken)
