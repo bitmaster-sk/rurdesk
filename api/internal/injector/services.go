@@ -300,10 +300,17 @@ func GetPinRepository() *repository.PinRepository {
 	return instance.(*repository.PinRepository)
 }
 
+func GetAdvisoryLockRepository() *repository.AdvisoryLockRepository {
+	instance, _ := di.GetWithNew("advisory-lock-repository", func() (any, error) {
+		return repository.NewAdvisoryLockRepository(mustDb()), nil
+	})
+	return instance.(*repository.AdvisoryLockRepository)
+}
+
 func GetUserService() *service.UserService {
 	instance, _ := di.GetWithNew("user-service", func() (any, error) {
 		cache := mustCache()
-		return service.NewUserService(GetUserRepository(), cache), nil
+		return service.NewUserService(GetUserRepository(), GetAdvisoryLockRepository(), cache, mustDb()), nil
 	})
 	return instance.(*service.UserService)
 }
