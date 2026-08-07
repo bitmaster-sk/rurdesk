@@ -277,7 +277,9 @@ func (r *AclRepository) GetProjectMembers(ctx context.Context, idProject int64) 
 		direct, isDirect := directMap[idUser]
 		teamInfo, inTeam := teamAccum[idUser]
 
-		var aro model.AroUser
+		// A nil slice marshals to JSON null; the client models idsTeams as a
+		// plain array, so a user in no team must still serialize as [].
+		aro := model.AroUser{IdsTeams: []int64{}}
 		if isDirect {
 			aro.User = direct.user
 			aro.IsDirect = true
