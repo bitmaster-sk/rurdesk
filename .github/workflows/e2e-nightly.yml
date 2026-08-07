@@ -9,10 +9,17 @@ on:
     - cron: "0 3 * * *"
   workflow_dispatch:
 
+# cancel-in-progress stays false: a manual dispatch must not kill a nightly run
+# that is already halfway through building the image.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   e2e:
     name: Playwright e2e
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
