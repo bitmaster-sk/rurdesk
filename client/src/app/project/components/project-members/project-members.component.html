@@ -51,7 +51,7 @@
                             <td>
                                 @if (user.isDirect) {
                                     <ui-tag severity="info" value="direct" />
-                                    @if (user.idsTeams?.length > 0) {
+                                    @if (user.idsTeams.length > 0) {
                                         <ui-tag severity="secondary" value="team" class="ml-1" />
                                     }
                                 } @else {
