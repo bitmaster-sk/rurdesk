@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,17 +21,46 @@ const sessionIndexPrefix = "sessions:user:"
 // (or the user cannot use password auth at all, e.g. bots).
 var ErrInvalidPassword = errors.New("invalid password")
 
+const bootstrapLockKey int64 = 2 << 48
+
 type UserService struct {
 	userRepo *repository.UserRepository
+	lockRepo *repository.AdvisoryLockRepository
 	cache    *redis.Client
+	pool     *pgxpool.Pool
 }
 
-func NewUserService(repo *repository.UserRepository, cache *redis.Client) *UserService {
-	return &UserService{userRepo: repo, cache: cache}
+func NewUserService(repo *repository.UserRepository, lockRepo *repository.AdvisoryLockRepository, cache *redis.Client, pool *pgxpool.Pool) *UserService {
+	return &UserService{userRepo: repo, lockRepo: lockRepo, cache: cache, pool: pool}
 }
 
 func (s *UserService) Register(ctx context.Context, user *model.User) (*model.User, error) {
 	return s.userRepo.InsertUser(ctx, user)
+}
+
+func (s *UserService) RegisterFirst(ctx context.Context, user *model.User) (*model.User, bool, error) {
+	var created bool
+	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+		if err := s.lockRepo.Lock(ctx, bootstrapLockKey); err != nil {
+			return err
+		}
+		count, err := s.userRepo.CountUsers(ctx)
+		if err != nil {
+			return err
+		}
+		if count > 0 {
+			return nil
+		}
+		if _, err := s.userRepo.InsertUser(ctx, user); err != nil {
+			return err
+		}
+		created = true
+		return nil
+	})
+	if err != nil || !created {
+		return nil, false, err
+	}
+	return user, true, nil
 }
 
 func (s *UserService) LoadByEmail(ctx context.Context, email string) (*model.User, error) {
