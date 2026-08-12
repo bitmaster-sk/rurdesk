@@ -23,6 +23,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		TablePageSize:        sc.settings.TablePageSize(),
 		KanbanPageSize:       sc.settings.KanbanPageSize(),
 		GanttBacklogPageSize: sc.settings.GanttBacklogPageSize(),
+		SprintVelocityLimit:  sc.settings.SprintVelocityLimit(),
 	})
 }
 
@@ -43,6 +44,9 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.GanttBacklogPageSize != nil {
 		changes[constants.SettingGanttBacklogPageSize] = *req.GanttBacklogPageSize
+	}
+	if req.SprintVelocityLimit != nil {
+		changes[constants.SettingSprintVelocityLimit] = *req.SprintVelocityLimit
 	}
 	if err := sc.settings.Update(c.Request.Context(), changes); err != nil {
 		_ = c.Error(err)

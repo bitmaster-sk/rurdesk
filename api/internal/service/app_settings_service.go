@@ -56,10 +56,20 @@ func (s *AppSettingsService) get(key string) int {
 	return snap.values[key]
 }
 
-func (s *AppSettingsService) TablePageSize() int  { return s.get(constants.SettingTablePageSize) }
-func (s *AppSettingsService) KanbanPageSize() int { return s.get(constants.SettingKanbanPageSize) }
+func (s *AppSettingsService) TablePageSize() int {
+	return s.get(constants.SettingTablePageSize)
+}
+
+func (s *AppSettingsService) KanbanPageSize() int {
+	return s.get(constants.SettingKanbanPageSize)
+}
+
 func (s *AppSettingsService) GanttBacklogPageSize() int {
 	return s.get(constants.SettingGanttBacklogPageSize)
+}
+
+func (s *AppSettingsService) SprintVelocityLimit() int {
+	return s.get(constants.SettingSprintVelocityLimit)
 }
 
 // Update validates every key, persists, then reloads the snapshot.
