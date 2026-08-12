@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Sprint, SprintStats } from '../model/sprint.model';
+import { Sprint } from '../model/sprint.model';
+import { SprintStats } from '../model/sprint-stats.model';
+import { SprintVelocity } from '../model/sprint-velocity.model';
 
 @Injectable({ providedIn: 'root' })
 export class SprintApi {
@@ -38,7 +40,15 @@ export class SprintApi {
         );
     }
 
-    public stats$(idSprint: number): Observable<SprintStats> {
+    public loadSprintStats$(idSprint: number): Observable<SprintStats> {
         return this.http.get<SprintStats>(`/api/private/sprint/${idSprint}/stats`);
+    }
+
+    public loadBacklogStats$(idProject: number): Observable<SprintStats> {
+        return this.http.get<SprintStats>(`/api/private/project/${idProject}/backlog/stats`);
+    }
+
+    public loadVelocity$(idProject: number): Observable<SprintVelocity[]> {
+        return this.http.get<SprintVelocity[]>(`/api/private/project/${idProject}/sprint/velocity`);
     }
 }
