@@ -34,7 +34,7 @@ export class AdminSettingsComponent {
         return `${info.version} (${info.commit.slice(0, 7)})`;
     });
 
-    // All three page sizes save together as one settings object → form-level
+    // All settings save together as one object → form-level
     // auto-save on blur, one panel-level chip (like the issue detail header).
     protected readonly form = this.fb.nonNullable.group(
         {
@@ -43,7 +43,8 @@ export class AdminSettingsComponent {
             ganttBacklogPageSize: [
                 30,
                 [Validators.required, Validators.min(1), Validators.max(200)]
-            ]
+            ],
+            sprintVelocityLimit: [10, [Validators.required, Validators.min(1), Validators.max(50)]]
         },
         { updateOn: 'blur' }
     );

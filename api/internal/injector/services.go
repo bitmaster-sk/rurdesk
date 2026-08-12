@@ -231,11 +231,18 @@ func GetSeverityService() *service.SeverityService {
 	return instance.(*service.SeverityService)
 }
 
-func GetSprintController() *controller.SprintController {
-	instance, _ := di.GetWithNew("sprint-controller", func() (any, error) {
-		return controller.NewSprintController(GetSprintRepository(), GetStateRepository(), GetSprintService(), GetAclService()), nil
+func GetSprintController() (*controller.SprintController, error) {
+	instance, err := di.GetWithNew("sprint-controller", func() (any, error) {
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewSprintController(GetSprintRepository(), GetStateRepository(), GetSprintService(), GetAclService(), settings), nil
 	})
-	return instance.(*controller.SprintController)
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.SprintController), nil
 }
 
 func GetSavedViewController() *controller.SavedViewController {
@@ -851,6 +858,11 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		sprintController, err := GetSprintController()
+		if err != nil {
+			return nil, err
+		}
+
 		return router.New(
 			GetHttpServer(),
 			GetBaseLogger(),
@@ -865,7 +877,7 @@ func GetRouter() (*router.Router, error) {
 			GetIssueController(),
 			GetSeverityController(),
 			GetStateController(),
-			GetSprintController(),
+			sprintController,
 			GetSavedViewController(),
 			GetTrackerController(),
 			GetPinController(),

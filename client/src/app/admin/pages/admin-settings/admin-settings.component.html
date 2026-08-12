@@ -31,6 +31,17 @@
                     formControlName="ganttBacklogPageSize"
                 />
             </div>
+            <div class="flex flex-col gap-1">
+                <label for="sprintVelocityLimit">
+                    {{ 'SETTINGS.SPRINT_VELOCITY_LIMIT' | translate }}
+                </label>
+                <input
+                    id="sprintVelocityLimit"
+                    uiInput
+                    type="number"
+                    formControlName="sprintVelocityLimit"
+                />
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

@@ -12,6 +12,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { MarkdownModule } from 'ngx-markdown';
+import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
 import { UiToastModule } from './ui/ui-toast.module';
 
 @NgModule({
@@ -27,6 +28,7 @@ import { UiToastModule } from './ui/ui-toast.module';
     providers: [
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
+        { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } },
         provideTranslateService({
             defaultLanguage: 'en',
             useDefaultLang: true,

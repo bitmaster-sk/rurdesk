@@ -48,6 +48,40 @@ func finalAndNonFinalState(t *testing.T, app *issue.Application, token string, i
 	return *final, *nonFinal
 }
 
+func projectStates(t *testing.T, app *issue.Application, token string, idProject int64) (model.State, model.State, model.State) {
+	states := loadProjectStates(t, app, token, idProject)
+	var start, progress, final *model.State
+	for i := range states {
+		switch {
+		case states[i].Final && final == nil:
+			final = &states[i]
+		case !states[i].Final && states[i].Start && start == nil:
+			start = &states[i]
+		case !states[i].Final && !states[i].Start && progress == nil:
+			progress = &states[i]
+		}
+	}
+	require.NotNil(t, start, "project must have a start default state")
+	require.NotNil(t, progress, "project must have a plain in-progress default state")
+	require.NotNil(t, final, "project must have a final default state")
+	return *start, *progress, *final
+}
+
+func createBucketIssue(t *testing.T, app *issue.Application, token string, idProject int64, idState *int64, points *int) int64 {
+	body, _ := json.Marshal(model.CreateIssueReq{
+		IdProject:   idProject,
+		IdState:     idState,
+		Title:       "bucket issue",
+		Description: "x",
+		Points:      points,
+	})
+	res := Request(t, app, "POST", "/api/private/project/"+itoa(idProject)+"/issue", string(body), token)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var created model.Issue
+	require.Nil(t, json.NewDecoder(res.Body).Decode(&created))
+	return created.IdIssuePublic
+}
+
 // createIssueWithPoints creates an issue in a given state with story points.
 func createIssueWithPoints(t *testing.T, app *issue.Application, token string, idProject, idState int64, points int) int64 {
 	body, _ := json.Marshal(model.CreateIssueReq{
@@ -267,4 +301,207 @@ func TestSprintApi_Stats(t *testing.T) {
 	require.Equal(t, 3, stats.DonePoints, "velocity = points in a final state")
 	require.Equal(t, 2, stats.TotalIssues)
 	require.Equal(t, 1, stats.DoneIssues)
+}
+
+func TestSprintApi_StatsBuckets(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-stats-buckets")
+	start, progress, final := projectStates(t, app, token, idProject)
+
+	sprint := createSprint(t, app, token, idProject, `{}`)
+	points := func(v int) *int { return &v }
+	state := func(v int64) *int64 { return &v }
+
+	issues := []int64{
+		createBucketIssue(t, app, token, idProject, state(start.IdState), points(3)),
+		createBucketIssue(t, app, token, idProject, state(progress.IdState), points(5)),
+		createBucketIssue(t, app, token, idProject, state(final.IdState), points(2)),
+		createBucketIssue(t, app, token, idProject, state(progress.IdState), nil),
+		createBucketIssue(t, app, token, idProject, nil, nil),
+	}
+	for _, idIssuePublic := range issues {
+		res := assignSprint(t, app, token, idProject, idIssuePublic, fmt.Sprintf(`{"idSprint":%d}`, sprint.IdSprint))
+		require.Equal(t, http.StatusNoContent, res.StatusCode)
+	}
+
+	res := Request(t, app, "GET", fmt.Sprintf("/api/private/sprint/%d/stats", sprint.IdSprint), "", token)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var stats model.SprintStats
+	require.Nil(t, json.NewDecoder(res.Body).Decode(&stats))
+
+	require.Equal(t, 10, stats.TotalPoints)
+	require.Equal(t, 2, stats.DonePoints)
+	require.Equal(t, 3, stats.StartPoints)
+	require.Equal(t, 5, stats.ProgressPoints)
+	require.Equal(t, 5, stats.TotalIssues)
+	require.Equal(t, 1, stats.DoneIssues)
+	require.Equal(t, 2, stats.StartIssues)
+	require.Equal(t, 2, stats.ProgressIssues)
+	require.Equal(t, 3, stats.PointedIssues)
+
+	require.Equal(t, stats.TotalPoints, stats.StartPoints+stats.ProgressPoints+stats.DonePoints)
+	require.Equal(t, stats.TotalIssues, stats.StartIssues+stats.ProgressIssues+stats.DoneIssues)
+}
+
+func TestSprintApi_BacklogStats(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "backlog-stats")
+	start, progress, final := projectStates(t, app, token, idProject)
+
+	sprint := createSprint(t, app, token, idProject, `{}`)
+	points := func(v int) *int { return &v }
+	state := func(v int64) *int64 { return &v }
+
+	createBucketIssue(t, app, token, idProject, state(start.IdState), points(3))
+	createBucketIssue(t, app, token, idProject, state(progress.IdState), nil)
+	assigned := createBucketIssue(t, app, token, idProject, state(final.IdState), points(7))
+	require.Equal(t, http.StatusNoContent,
+		assignSprint(t, app, token, idProject, assigned, fmt.Sprintf(`{"idSprint":%d}`, sprint.IdSprint)).StatusCode)
+
+	res := Request(t, app, "GET", fmt.Sprintf("/api/private/project/%d/backlog/stats", idProject), "", token)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var stats model.SprintStats
+	require.Nil(t, json.NewDecoder(res.Body).Decode(&stats))
+
+	require.Equal(t, 2, stats.TotalIssues)
+	require.Equal(t, 3, stats.TotalPoints)
+	require.Equal(t, 0, stats.DoneIssues)
+	require.Equal(t, 1, stats.StartIssues)
+	require.Equal(t, 1, stats.ProgressIssues)
+	require.Equal(t, 1, stats.PointedIssues)
+	require.Equal(t, stats.TotalIssues, stats.StartIssues+stats.ProgressIssues+stats.DoneIssues)
+	require.Equal(t, stats.TotalPoints, stats.StartPoints+stats.ProgressPoints+stats.DonePoints)
+}
+
+func TestSprintApi_VelocityReturnsMostRecentAscending(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-velocity")
+	_, _, final := projectStates(t, app, token, idProject)
+	points := func(v int) *int { return &v }
+	state := func(v int64) *int64 { return &v }
+
+	windows := []struct {
+		name    string
+		startAt string
+		endAt   string
+		points  int
+	}{
+		{"Old", "2026-01-01T00:00:00Z", "2026-01-15T00:00:00Z", 2},
+		{"Mid", "2026-02-01T00:00:00Z", "2026-02-15T00:00:00Z", 3},
+		{"New", "2026-03-01T00:00:00Z", "2026-03-15T00:00:00Z", 5},
+	}
+	for _, w := range windows {
+		sprint := createSprint(t, app, token, idProject,
+			fmt.Sprintf(`{"name":"%s","startAt":"%s","endAt":"%s"}`, w.name, w.startAt, w.endAt))
+		idIssuePublic := createBucketIssue(t, app, token, idProject, state(final.IdState), points(w.points))
+		require.Equal(t, http.StatusNoContent,
+			assignSprint(t, app, token, idProject, idIssuePublic, fmt.Sprintf(`{"idSprint":%d}`, sprint.IdSprint)).StatusCode)
+		require.Equal(t, http.StatusOK, closeSprint(t, app, token, sprint.IdSprint).StatusCode)
+	}
+	openSprint := createSprint(t, app, token, idProject,
+		`{"name":"Open","startAt":"2026-04-01T00:00:00Z","endAt":"2026-04-15T00:00:00Z"}`)
+	require.NotZero(t, openSprint.IdSprint)
+
+	res := Request(t, app, "GET",
+		fmt.Sprintf("/api/private/project/%d/sprint/velocity?limit=2", idProject), "", token)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var entries []model.SprintVelocity
+	require.Nil(t, json.NewDecoder(res.Body).Decode(&entries))
+
+	require.Len(t, entries, 2)
+	require.Equal(t, "Mid", entries[0].Name)
+	require.Equal(t, "New", entries[1].Name)
+	require.Equal(t, 3, entries[0].DonePoints)
+	require.Equal(t, 5, entries[1].DonePoints)
+	require.Equal(t, 1, entries[1].DoneIssues)
+	require.False(t, entries[1].Frozen)
+}
+
+func TestSprintApi_VelocityEmptyProjectAndBadLimit(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-velocity-empty")
+
+	res := Request(t, app, "GET", fmt.Sprintf("/api/private/project/%d/sprint/velocity", idProject), "", token)
+	require.Equal(t, http.StatusOK, res.StatusCode)
+	var entries []model.SprintVelocity
+	require.Nil(t, json.NewDecoder(res.Body).Decode(&entries))
+	require.NotNil(t, entries)
+	require.Empty(t, entries)
+
+	for _, limit := range []string{"0", "51", "x"} {
+		bad := Request(t, app, "GET",
+			fmt.Sprintf("/api/private/project/%d/sprint/velocity?limit=%s", idProject, limit), "", token)
+		require.Equal(t, http.StatusBadRequest, bad.StatusCode, "limit=%s", limit)
+	}
+}
+
+func TestSprintApi_BacklogStatsAndVelocityForbiddenForNonMember(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-analytics-acl")
+	outsiderToken := createUserAsAdmin(t, app, token,
+		`{"name":"o","email":"sprint-analytics-outsider@test.sk","password":"kreslo"}`)
+
+	statsRes := Request(t, app, "GET",
+		fmt.Sprintf("/api/private/project/%d/backlog/stats", idProject), "", outsiderToken)
+	require.Equal(t, http.StatusForbidden, statsRes.StatusCode)
+
+	velocityRes := Request(t, app, "GET",
+		fmt.Sprintf("/api/private/project/%d/sprint/velocity", idProject), "", outsiderToken)
+	require.Equal(t, http.StatusForbidden, velocityRes.StatusCode)
+}
+
+func TestSprintApi_EditClosedSprintConflicts(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-edit-closed")
+
+	sprint := createSprint(t, app, token, idProject,
+		`{"name":"Frozen","startAt":"2026-05-01T00:00:00Z","endAt":"2026-05-15T00:00:00Z"}`)
+	require.Equal(t, http.StatusOK, closeSprint(t, app, token, sprint.IdSprint).StatusCode)
+
+	body := `{"name":"Moved","startAt":"2026-06-01T00:00:00Z","endAt":"2026-06-15T00:00:00Z"}`
+	res := Request(t, app, "PATCH", fmt.Sprintf("/api/private/sprint/%d", sprint.IdSprint), body, token)
+	require.Equal(t, http.StatusConflict, res.StatusCode)
+
+	listRes := Request(t, app, "GET", fmt.Sprintf("/api/private/project/%d/sprint", idProject), "", token)
+	var sprints []model.Sprint
+	require.Nil(t, json.NewDecoder(listRes.Body).Decode(&sprints))
+	var found *model.Sprint
+	for i := range sprints {
+		if sprints[i].IdSprint == sprint.IdSprint {
+			found = &sprints[i]
+		}
+	}
+	require.NotNil(t, found)
+	require.Equal(t, "Frozen", found.Name)
+}
+
+func TestSprintApi_RejectsSprintEndingBeforeItStarts(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "sprint-window-order")
+
+	backwards := `{"name":"Backwards","startAt":"2026-08-20T00:00:00Z","endAt":"2026-08-10T00:00:00Z"}`
+	res := Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/sprint", idProject), backwards, token)
+	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode)
+
+	sameDay := `{"name":"Zero","startAt":"2026-08-20T00:00:00Z","endAt":"2026-08-20T00:00:00Z"}`
+	res = Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/sprint", idProject), sameDay, token)
+	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode)
+
+	sprint := createSprint(t, app, token, idProject,
+		`{"name":"Sane","startAt":"2026-08-01T00:00:00Z","endAt":"2026-08-15T00:00:00Z"}`)
+	editRes := Request(t, app, "PATCH", fmt.Sprintf("/api/private/sprint/%d", sprint.IdSprint), backwards, token)
+	require.Equal(t, http.StatusUnprocessableEntity, editRes.StatusCode)
+
+	listRes := Request(t, app, "GET", fmt.Sprintf("/api/private/project/%d/sprint", idProject), "", token)
+	var sprints []model.Sprint
+	require.Nil(t, json.NewDecoder(listRes.Body).Decode(&sprints))
+	require.Len(t, sprints, 1)
+	require.Equal(t, "Sane", sprints[0].Name)
 }

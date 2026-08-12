@@ -28,9 +28,13 @@ type AssignSprintReq struct {
 }
 
 type SprintStats struct {
-	IdSprint    int64 `json:"idSprint"`
-	TotalPoints int   `json:"totalPoints"`
-	DonePoints  int   `json:"donePoints"` // velocity: points in a final state
-	TotalIssues int   `json:"totalIssues"`
-	DoneIssues  int   `json:"doneIssues"`
+	TotalPoints    int `json:"totalPoints"`
+	DonePoints     int `json:"donePoints"` // velocity: points in a final state
+	StartPoints    int `json:"startPoints"`
+	ProgressPoints int `json:"progressPoints"`
+	TotalIssues    int `json:"totalIssues"`
+	DoneIssues     int `json:"doneIssues"`
+	StartIssues    int `json:"startIssues"`
+	ProgressIssues int `json:"progressIssues"`
+	PointedIssues  int `json:"pointedIssues"`
 }

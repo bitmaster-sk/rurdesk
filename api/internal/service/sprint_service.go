@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/bitmaster-sk/rurdesk/api/internal/timeutil"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,7 +33,17 @@ func DefaultWindow(latestEnd *time.Time, now time.Time) (time.Time, time.Time) {
 	if latestEnd != nil && latestEnd.After(now) {
 		start = *latestEnd
 	}
+	start = timeutil.TruncateClock(start.UTC())
 	return start, start.Add(sprintWindow)
+}
+
+func sprintWindowOf(startAt, endAt time.Time) (time.Time, time.Time, error) {
+	start := timeutil.TruncateClock(startAt.UTC())
+	end := timeutil.TruncateClock(endAt.UTC())
+	if !end.After(start) {
+		return time.Time{}, time.Time{}, errs.ErrSprintWindow
+	}
+	return start, end, nil
 }
 
 type SprintService struct {
@@ -54,7 +67,11 @@ func (s *SprintService) Create(ctx context.Context, idProject int64, req model.C
 	}
 	var start, end time.Time
 	if req.StartAt != nil && req.EndAt != nil {
-		start, end = *req.StartAt, *req.EndAt
+		var err error
+		start, end, err = sprintWindowOf(*req.StartAt, *req.EndAt)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		latest, err := s.sprintRepo.LatestEnd(ctx, idProject)
 		if err != nil {
@@ -67,8 +84,22 @@ func (s *SprintService) Create(ctx context.Context, idProject int64, req model.C
 		Name:      name,
 		StartAt:   start,
 		EndAt:     end,
-		State:     "planned",
+		State:     constants.SprintStatePlanned,
 	}, idUser)
+}
+
+func (s *SprintService) Edit(ctx context.Context, sprint *model.Sprint, req model.EditSprintReq, idUser int64) (*model.Sprint, error) {
+	if sprint.State == constants.SprintStateClosed {
+		return nil, ErrSprintClosed
+	}
+	start, end, err := sprintWindowOf(req.StartAt, req.EndAt)
+	if err != nil {
+		return nil, err
+	}
+	sprint.Name = req.Name
+	sprint.StartAt = start
+	sprint.EndAt = end
+	return s.sprintRepo.Update(ctx, sprint, idUser)
 }
 
 // Close is transactional and idempotent: closing an already-closed sprint returns
@@ -81,7 +112,7 @@ func (s *SprintService) Close(ctx context.Context, idSprint int64, idUser int64)
 		if err != nil {
 			return err
 		}
-		if sprint.State == "closed" {
+		if sprint.State == constants.SprintStateClosed {
 			return ErrSprintClosed
 		}
 		finalIds, err := s.stateRepo.FinalStateIds(ctx, sprint.IdProject)
@@ -100,7 +131,7 @@ func (s *SprintService) Close(ctx context.Context, idSprint int64, idUser int64)
 		if err != nil {
 			return err
 		}
-		sprint.State = "closed"
+		sprint.State = constants.SprintStateClosed
 		_, err = s.sprintRepo.Update(ctx, sprint, idUser)
 		return err
 	})

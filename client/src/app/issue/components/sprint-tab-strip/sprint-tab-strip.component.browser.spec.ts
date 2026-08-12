@@ -84,7 +84,6 @@ describe('SprintTabStripComponent', () => {
         expect(closedTab).toBeTruthy();
         expect(closedTab.nativeElement.textContent).toContain('Sprint 9');
         expect(closedTab.query(By.css('.sprint-tab__edit'))).toBeNull();
-        // Open sprint tabs keep the edit affordance.
         const openTab = fixture.debugElement
             .queryAll(By.css('.sprint-tab:not(.sprint-tabs__pinned)'))
             .find(el => el.nativeElement.textContent.includes('Sprint 12'));
@@ -114,5 +113,70 @@ describe('SprintTabStripComponent', () => {
         tabEls[1].triggerEventHandler('cdkDropListDropped', { previousIndex: 0, currentIndex: 0 });
         expect(emitted.length).toBe(1);
         expect(emitted[0].idSprint).toBe(12);
+    });
+});
+
+describe('SprintTabStripComponent — revealing the current cycle', () => {
+    let fixture: ComponentFixture<SprintTabStripComponent>;
+
+    function manyTabs(currentIndex: number): SprintTab[] {
+        return Array.from({ length: 30 }, (_, i) => ({
+            idSprint: i + 1,
+            label: `Sprint ${i + 1}`,
+            isCurrent: i === currentIndex,
+            isClosed: false,
+            listId: `sprint-tab-${i + 1}`
+        }));
+    }
+
+    function scroller(): HTMLElement {
+        return fixture.debugElement.query(By.css('.sprint-tabs__scroll')).nativeElement;
+    }
+
+    async function render(tabs: SprintTab[]): Promise<void> {
+        await TestBed.configureTestingModule({
+            declarations: [SprintTabStripComponent],
+            imports: [
+                DragDropModule,
+                TranslateModule.forRoot(),
+                CommonModule,
+                TablerIconStub,
+                UiButtonStub
+            ]
+        }).compileComponents();
+        fixture = TestBed.createComponent(SprintTabStripComponent);
+        fixture.nativeElement.style.width = '400px';
+        fixture.componentRef.setInput('tabs', tabs);
+        fixture.componentRef.setInput('selectedIdSprint', null);
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve));
+    }
+
+    it('scrolls a far-right current cycle into view on first render', async () => {
+        await render(manyTabs(27));
+        expect(scroller().scrollLeft).toBeGreaterThan(0);
+
+        const tab = fixture.debugElement.query(By.css('.sprint-tab--current')).nativeElement;
+        const view = scroller().getBoundingClientRect();
+        const rect = tab.getBoundingClientRect();
+        expect(rect.left).toBeGreaterThanOrEqual(view.left - 1);
+        expect(rect.right).toBeLessThanOrEqual(view.right + 1);
+    });
+
+    it('leaves the scroll alone when the current cycle is already visible', async () => {
+        await render(manyTabs(0));
+        expect(scroller().scrollLeft).toBe(0);
+    });
+
+    it('does not fight a later manual scroll', async () => {
+        await render(manyTabs(27));
+        const el = scroller();
+        el.scrollLeft = 0;
+
+        fixture.componentRef.setInput('tabs', manyTabs(27).slice(0, 29));
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve));
+
+        expect(el.scrollLeft).toBe(0);
     });
 });

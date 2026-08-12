@@ -254,19 +254,38 @@ func (r *StateRepository) RepointAgentPhaseState(ctx context.Context, idProject,
 // link to projects via projects.project_issue_state (issues.state has no
 // id_project column), so join through it.
 func (r *StateRepository) FinalStateIds(ctx context.Context, idProject int64) ([]int64, error) {
+	idsFinal, _, err := r.FinalAndStartStateIds(ctx, idProject)
+	return idsFinal, err
+}
+
+func (r *StateRepository) FinalAndStartStateIds(ctx context.Context, idProject int64) ([]int64, []int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT sta.id_state
+		SELECT sta.id_state, sta.final, sta.start
 		FROM issues.state sta
 		INNER JOIN projects.project_issue_state pis ON sta.id_state = pis.id_state
-		WHERE pis.id_project = $1 AND sta.final = TRUE
+		WHERE pis.id_project = $1 AND (sta.final = TRUE OR sta.start = TRUE)
 	`, idProject)
 	if err != nil {
-		return nil, fmt.Errorf("querying final state ids: %w", err)
+		return nil, nil, fmt.Errorf("querying state flags: %w", err)
 	}
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
-	if err != nil {
-		return nil, fmt.Errorf("collecting final state ids: %w", err)
+	defer rows.Close()
+	idsFinal, idsStart := []int64{}, []int64{}
+	for rows.Next() {
+		var idState int64
+		var final, start bool
+		if err := rows.Scan(&idState, &final, &start); err != nil {
+			return nil, nil, fmt.Errorf("scanning state flags: %w", err)
+		}
+		if final {
+			idsFinal = append(idsFinal, idState)
+		}
+		if start {
+			idsStart = append(idsStart, idState)
+		}
 	}
-	return ids, nil
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("iterating state flags: %w", err)
+	}
+	return idsFinal, idsStart, nil
 }

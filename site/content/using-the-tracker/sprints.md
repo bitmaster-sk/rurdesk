@@ -65,6 +65,8 @@ popover** (the adjust button in the toolbar) and switch on **Show closed
 sprints**. Closed cycles then appear at the end of the sprint strip, muted,
 most recently ended first.
 
+A cycle must end after it starts; the dialog rejects anything else.
+
 A closed cycle is immutable history:
 
 - clicking its tab shows its tasks, and you can still drag a task **out**
@@ -75,3 +77,57 @@ A closed cycle is immutable history:
 
 The setting is a personal display preference — it is remembered per browser
 and doesn't affect anyone else.
+
+## Sprint health
+
+Under the sprint strip sits a one-line **health strip**. It always shows
+something — on the Backlog tab it counts the work that is still open and in no
+cycle, so the board never jumps as you switch tabs.
+
+For a cycle it shows the name and window, a segmented bar (done / in progress /
+not started), the done-out-of-total figure, where you are in the window, the
+pace so far against the pace needed, and a verdict chip. A **Points / Tasks**
+toggle on the right switches every number between story points and task counts.
+
+The chips mean:
+
+- **on track** — at the current pace the commitment is projected to be met
+  (within 5 %);
+- **behind N** — the projection falls short by roughly N points or tasks;
+- **too early to forecast** — fewer than three days have elapsed, so no pace and
+  no forecast are shown;
+- **over-committed vs avg N** — the cycle hasn't started and its commitment is
+  more than 15 % above the average of the recent closed cycles. How many cycles
+  that average covers is an instance setting (**Cycles averaged for velocity**,
+  ten by default). Cycles that finished nothing in the unit being shown are left
+  out of that average, so cycles you ran before adopting points do not drag the
+  points baseline down.
+
+### What it does not claim
+
+- The forecast is a straight-line projection from the pace so far. It is not a
+  model of your team, and it says nothing at all for the first two days.
+- With no points set anywhere in the cycle, the strip counts **tasks** instead
+  and says so. With only *some* tasks pointed, the points figure covers only
+  those tasks — it is not scaled up to the rest.
+- A closed cycle shows its **window**, not the moment it was closed; the closing
+  time isn't recorded.
+- Until the burndown and velocity charts ship, a closed cycle shows only what
+  was **finished**, with no out-of-total fraction, because unfinished work has
+  already rolled into the next cycle and is no longer counted here.
+- The strip updates live for changes **you** make, and for task changes your
+  teammates make in the same project — a burst of them is collapsed into a single
+  refresh. Creating, renaming or deleting a *cycle* elsewhere reaches you on your
+  next refresh.
+- While the numbers for a cycle are still loading, the strip shows only its name
+  and window rather than a stale count from the tab you came from.
+- With no points anywhere in the cycle the **Points / Tasks** toggle is locked to
+  Tasks — there is nothing for the points view to show.
+- The **Backlog** row counts only work that is still open, so a finished task that
+  never belonged to a cycle is left out of both figures — the board below it still
+  lists that task, since the tab shows every state. The row prints tasks and points
+  side by side, so the unit toggle is hidden there.
+- A closed cycle draws a **full** bar. It reports what was finished, so reopening
+  a task afterwards changes the figure rather than leaving an unexplained gap.
+- When **Save** is greyed out in the cycle dialog, hovering it says which field is
+  the problem.

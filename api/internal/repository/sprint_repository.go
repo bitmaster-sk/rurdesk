@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/jackc/pgx/v5"
@@ -134,9 +137,9 @@ func (r *SprintRepository) NextPlanned(ctx context.Context, idProject, excludeSp
 	rows, err := db.Query(ctx, `
 		SELECT id_sprint, id_project, name, start_at, end_at, state
 		FROM issues.sprint
-		WHERE id_project = $1 AND state = 'planned' AND id_sprint <> $2
+		WHERE id_project = $1 AND state = $3 AND id_sprint <> $2
 		ORDER BY start_at LIMIT 1
-	`, idProject, excludeSprint)
+	`, idProject, excludeSprint, constants.SprintStatePlanned)
 	if err != nil {
 		return nil, fmt.Errorf("querying next planned sprint: %w", err)
 	}
@@ -175,9 +178,9 @@ func (r *SprintRepository) AssignIssue(ctx context.Context, idProject, idIssuePu
 
 // MoveUnfinished reassigns member issues NOT in a final state from fromSprint to
 // toSprint (nil clears to Backlog). Returns the number of issues moved.
-func (r *SprintRepository) MoveUnfinished(ctx context.Context, fromSprint int64, toSprint *int64, finalStateIds []int64) (int64, error) {
-	if finalStateIds == nil {
-		finalStateIds = []int64{} // nil would encode as SQL NULL and silently match nothing
+func (r *SprintRepository) MoveUnfinished(ctx context.Context, fromSprint int64, toSprint *int64, idsFinal []int64) (int64, error) {
+	if idsFinal == nil {
+		idsFinal = []int64{} // nil would encode as SQL NULL and silently match nothing
 	}
 	db := extctx.GetDb(ctx, r.pool)
 	tag, err := db.Exec(ctx, `
@@ -185,29 +188,105 @@ func (r *SprintRepository) MoveUnfinished(ctx context.Context, fromSprint int64,
 		SET id_sprint = $2, carryover_count = carryover_count + 1
 		WHERE id_sprint = $1
 		  AND (id_state IS NULL OR NOT (id_state = ANY($3)))
-	`, fromSprint, toSprint, finalStateIds)
+	`, fromSprint, toSprint, idsFinal)
 	if err != nil {
 		return 0, fmt.Errorf("moving unfinished issues: %w", err)
 	}
 	return tag.RowsAffected(), nil
 }
 
-func (r *SprintRepository) Stats(ctx context.Context, idSprint int64, finalStateIds []int64) (*model.SprintStats, error) {
-	if finalStateIds == nil {
-		finalStateIds = []int64{}
+func (r *SprintRepository) SprintStats(ctx context.Context, filter model.SprintStatsFilter) (*model.SprintStats, error) {
+	if filter.IdSprint == nil && filter.IdProject == nil {
+		return nil, errs.ErrUnscopedSprintStats
 	}
+	idsFinal, idsStart := filter.IdsFinal, filter.IdsStart
+	if idsFinal == nil {
+		idsFinal = []int64{}
+	}
+	if idsStart == nil {
+		idsStart = []int64{}
+	}
+	args := []any{idsFinal, idsStart}
+	where := make([]string, 0, 2)
+	if filter.IdSprint != nil {
+		args = append(args, *filter.IdSprint)
+		where = append(where, fmt.Sprintf("id_sprint = $%d", len(args)))
+	} else {
+		where = append(where, "id_sprint IS NULL")
+	}
+	if filter.IdProject != nil {
+		args = append(args, *filter.IdProject)
+		where = append(where, fmt.Sprintf("id_project = $%d", len(args)))
+	}
+
+	stats := &model.SprintStats{}
 	db := extctx.GetDb(ctx, r.pool)
-	stats := &model.SprintStats{IdSprint: idSprint}
 	err := db.QueryRow(ctx, `
 		SELECT
 			COALESCE(sum(points), 0),
-			COALESCE(sum(points) FILTER (WHERE id_state = ANY($2)), 0),
+			COALESCE(sum(points) FILTER (WHERE bucket = 'done'), 0),
+			COALESCE(sum(points) FILTER (WHERE bucket = 'start'), 0),
+			COALESCE(sum(points) FILTER (WHERE bucket = 'progress'), 0),
 			count(*),
-			count(*) FILTER (WHERE id_state = ANY($2))
-		FROM issues.issue WHERE id_sprint = $1
-	`, idSprint, finalStateIds).Scan(&stats.TotalPoints, &stats.DonePoints, &stats.TotalIssues, &stats.DoneIssues)
+			count(*) FILTER (WHERE bucket = 'done'),
+			count(*) FILTER (WHERE bucket = 'start'),
+			count(*) FILTER (WHERE bucket = 'progress'),
+			count(*) FILTER (WHERE points IS NOT NULL)
+		FROM (
+			SELECT
+				points,
+				CASE
+					WHEN id_state = ANY($1) THEN 'done'
+					WHEN id_state IS NULL OR id_state = ANY($2) THEN 'start'
+					ELSE 'progress'
+				END AS bucket
+			FROM issues.issue WHERE `+strings.Join(where, " AND ")+`
+		) scoped`, args...).Scan(
+		&stats.TotalPoints, &stats.DonePoints, &stats.StartPoints, &stats.ProgressPoints,
+		&stats.TotalIssues, &stats.DoneIssues, &stats.StartIssues, &stats.ProgressIssues,
+		&stats.PointedIssues,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("querying sprint stats: %w", err)
 	}
 	return stats, nil
+}
+
+func (r *SprintRepository) VelocityByProject(ctx context.Context, idProject int64, idsFinal []int64, limit int) ([]*model.SprintVelocity, error) {
+	if idsFinal == nil {
+		idsFinal = []int64{}
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT
+			recent.id_sprint,
+			recent.name,
+			recent.end_at,
+			done.done_points,
+			done.done_issues,
+			FALSE AS frozen
+		FROM (
+			SELECT s.id_sprint, s.name, s.end_at
+			FROM issues.sprint s
+			WHERE s.id_project = $1 AND s.state = $4
+			ORDER BY s.end_at DESC
+			LIMIT $3
+		) recent
+		LEFT JOIN LATERAL (
+			SELECT
+				COALESCE(sum(i.points), 0)::int AS done_points,
+				count(*)::int AS done_issues
+			FROM issues.issue i
+			WHERE i.id_sprint = recent.id_sprint AND i.id_state = ANY($2)
+		) done ON TRUE
+		ORDER BY recent.end_at
+	`, idProject, idsFinal, limit, constants.SprintStateClosed)
+	if err != nil {
+		return nil, fmt.Errorf("querying sprint velocity: %w", err)
+	}
+	entries, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.SprintVelocity])
+	if err != nil {
+		return nil, fmt.Errorf("collecting sprint velocity: %w", err)
+	}
+	return entries, nil
 }
