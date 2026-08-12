@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateModule } from '@ngx-translate/core';
+import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
 import { UiModule } from '../../ui.module';
 import { UiDialogComponent } from './dialog.component';
 
@@ -271,5 +272,67 @@ describe('UiDialogComponent (browser)', () => {
         fixture.detectChanges();
         expect(panel()).toBeNull();
         expect(fixture.componentInstance.hideCount).toBe(0);
+    });
+});
+
+describe('UiDialogComponent (browser) — body-level popups stack over the dialog', () => {
+    function openDialog() {
+        const fixture = TestBed.createComponent(HostComponent);
+        fixture.componentInstance.open = true;
+        fixture.detectChanges();
+        return fixture;
+    }
+
+    function bodyPopupOverDialog(): { probe: [number, number]; el: HTMLElement } {
+        const dialogRect = document.querySelector('.ui-dialog')!.getBoundingClientRect();
+        const el = document.createElement('div');
+        el.className = 'body-level-popup';
+        el.style.cssText = `position:absolute;z-index:99999;left:${
+            dialogRect.left + window.scrollX
+        }px;top:${dialogRect.top + window.scrollY}px;width:60px;height:60px;background:#fff;`;
+        document.body.appendChild(el);
+        return { probe: [dialogRect.left + 10, dialogRect.top + 10], el };
+    }
+
+    afterEach(() => {
+        document.querySelectorAll('.body-level-popup').forEach(el => el.remove());
+    });
+
+    it('paints a body-level popup above the dialog when usePopover is off', async () => {
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            declarations: [HostComponent, ChildComponent],
+            imports: [UiModule, TranslateModule.forRoot()],
+            providers: [
+                provideNoopAnimations(),
+                { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } }
+            ]
+        }).compileComponents();
+
+        openDialog();
+        expect(document.querySelector('.cdk-overlay-popover')).toBeNull();
+
+        const { probe, el } = bodyPopupOverDialog();
+        expect(document.elementsFromPoint(probe[0], probe[1])[0]).toBe(el);
+    });
+
+    it('cannot be escaped by z-index once the dialog is in the top layer', async () => {
+        TestBed.resetTestingModule();
+        await TestBed.configureTestingModule({
+            declarations: [HostComponent, ChildComponent],
+            imports: [UiModule, TranslateModule.forRoot()],
+            providers: [
+                provideNoopAnimations(),
+                { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: true } }
+            ]
+        }).compileComponents();
+
+        openDialog();
+        const wrapper = document.querySelector('.cdk-overlay-popover');
+        expect(wrapper).not.toBeNull();
+        expect(wrapper!.matches(':popover-open')).toBe(true);
+
+        const { probe, el } = bodyPopupOverDialog();
+        expect(document.elementsFromPoint(probe[0], probe[1])[0]).not.toBe(el);
     });
 });

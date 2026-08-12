@@ -8,6 +8,7 @@ ui-tag {
 
     display: inline-flex;
     align-items: center;
+    gap: var(--ui-tag-gap);
     padding: var(--ui-tag-padding-y) var(--ui-tag-padding-x);
     border-radius: var(--ui-tag-radius);
     font-size: var(--ui-tag-font-size);

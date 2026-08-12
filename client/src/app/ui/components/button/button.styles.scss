@@ -67,6 +67,10 @@ ui-button.ui-button--fluid > .ui-button {
     cursor: not-allowed;
 }
 
+.ui-button:disabled {
+    pointer-events: none;
+}
+
 .ui-button--small {
     height: var(--ui-button-sm-height);
     font-size: var(--ui-button-sm-font-size);
