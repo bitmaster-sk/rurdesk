@@ -40,6 +40,12 @@
     </form>
 
     <ng-template #footer>
+        @let hint = saveHint();
+        @if (hint) {
+            <span class="mr-auto text-sm text-[var(--ui-color-danger)]" data-testid="sprint-hint">
+                {{ hint | translate }}
+            </span>
+        }
         @if (isEdit()) {
             <ui-button
                 [label]="'ISSUE.KANBAN.SPRINTS.DELETE' | translate"
@@ -58,6 +64,7 @@
             [label]="
                 (isEdit() ? 'ISSUE.KANBAN.SPRINTS.SAVE' : 'ISSUE.KANBAN.SPRINTS.CREATE') | translate
             "
+            [uiTooltip]="hint ? (hint | translate) : ''"
             [disabled]="form.invalid"
             (click)="onSubmit()"
         />

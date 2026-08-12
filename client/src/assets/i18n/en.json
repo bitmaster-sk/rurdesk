@@ -220,6 +220,7 @@
     "SETTINGS.TABLE_PAGE_SIZE": "Table page size",
     "SETTINGS.KANBAN_PAGE_SIZE": "Kanban page size",
     "SETTINGS.GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
+    "SETTINGS.SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
     "CANCEL": "Cancel",
     "BACK": "Back",
     "RESET": "Reset",
@@ -365,6 +366,10 @@
                 "NAME_PLACEHOLDER": "Leave empty to auto-name (Sprint N)",
                 "START": "Start",
                 "END": "End",
+                "WINDOW_ORDER": "The end date must be after the start date",
+                "DATES_REQUIRED": "Pick a start date and an end date",
+                "NAME_REQUIRED": "Give the sprint a name",
+                "NAME_TOO_LONG": "The name is limited to 60 characters",
                 "SAVE": "Save",
                 "CREATE": "Create",
                 "CANCEL": "Cancel",
@@ -376,7 +381,38 @@
                 "CLOSE_CONFIRM": "Close this sprint? Unfinished work rolls over to the next cycle.",
                 "CLOSED_TOAST": "Sprint closed",
                 "CLOSE_CONFLICT": "Sprint is already closed",
-                "ASSIGN_FAILED": "Could not move the issue to that sprint"
+                "ASSIGN_FAILED": "Could not move the issue to that sprint",
+                "HEALTH_DAYS_LEFT": {
+                    "SINGULAR": "{{count}} day left",
+                    "PLURAL": "{{count}} days left"
+                },
+                "HEALTH_DAY_X_OF_Y": "day {{day}} of {{days}}",
+                "HEALTH_STARTS_IN": {
+                    "SINGULAR": "starts in {{count}} day",
+                    "PLURAL": "starts in {{count}} days"
+                },
+                "HEALTH_CLOSED_TAG": "closed",
+                "HEALTH_WINDOW": "{{start}} – {{end}}",
+                "HEALTH_PACE": "pace {{pace}}/day, needs {{needed}}",
+                "HEALTH_ON_TRACK": "on track",
+                "HEALTH_BEHIND": "behind {{gap}} {{unit}}",
+                "HEALTH_TOO_EARLY": "too early to forecast",
+                "HEALTH_OVER_COMMITTED": "over-committed vs avg {{avg}}",
+                "HEALTH_PLANNED": "{{count}} {{unit}} planned",
+                "HEALTH_PROGRESS": "{{done}}/{{total}} {{unit}}",
+                "HEALTH_DONE_ONLY": "{{done}} {{unit}} done",
+                "HEALTH_NO_POINTS": "no points set — showing tasks",
+                "HEALTH_BACKLOG_SUMMARY": "{{tasks}} {{taskUnit}} · {{points}} {{pointUnit}} open, in no sprint",
+                "UNIT_POINTS": "Points",
+                "UNIT_TASKS": "Tasks",
+                "UNIT_POINTS_SHORT": {
+                    "SINGULAR": "pt",
+                    "PLURAL": "pts"
+                },
+                "UNIT_TASKS_SHORT": {
+                    "SINGULAR": "task",
+                    "PLURAL": "tasks"
+                }
             },
             "LAYOUT.COLUMNS": "Columns",
             "LAYOUT.SWIMLANE": "Swimlane"
@@ -593,6 +629,8 @@
         "unauthorized": "You are not authorized. Please log in.",
         "not_found": "The requested resource was not found.",
         "relation_cycle": "This relation would create a cycle.",
+        "sprint_window": "A cycle must end after it starts.",
+        "unscoped_sprint_stats": "Could not load cycle statistics.",
         "bad_request": "Invalid request. Please check your input.",
         "internal": "An unexpected error occurred. Please try again.",
         "ai_unavailable": "AI service is temporarily unavailable. Please try again later.",

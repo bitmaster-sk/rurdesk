@@ -1,0 +1,88 @@
+<div class="strip flex items-center gap-3" data-testid="sprint-health-strip">
+    @if (sprint(); as s) {
+        <span class="strip__name shrink-0">{{ s.name }}</span>
+        @if (health().phase === sprintPhase.Closed) {
+            <ui-tag
+                class="shrink-0"
+                severity="secondary"
+                [value]="'ISSUE.KANBAN.SPRINTS.HEALTH_CLOSED_TAG' | translate"
+            ></ui-tag>
+        }
+        <span class="strip__muted shrink-0">{{ window() }}</span>
+
+        @if (stats()) {
+            <div class="bar shrink-0" aria-hidden="true">
+                <span class="bar__segment segment--done" [style.width.%]="segments().done"></span>
+                <span
+                    class="bar__segment segment--progress"
+                    [style.width.%]="segments().progress"
+                ></span>
+                <span class="bar__segment segment--todo" [style.width.%]="segments().todo"></span>
+            </div>
+        }
+    }
+
+    @if (stats()) {
+        <span class="strip__progress shrink-0" data-testid="sprint-health-progress">
+            {{ progressText().key | translate: progressText().params }}
+        </span>
+
+        @if (timingText(); as timing) {
+            <span class="strip__muted shrink-0">{{ timing.key | translate: timing.params }}</span>
+        }
+
+        @if (forecast(); as pace) {
+            <span class="strip__muted shrink-0">
+                {{
+                    'ISSUE.KANBAN.SPRINTS.HEALTH_PACE'
+                        | translate
+                            : {
+                                  pace: pace.paceSoFar | number: '1.0-1',
+                                  needed: pace.paceNeeded | number: '1.0-1'
+                              }
+                }}
+            </span>
+        }
+
+        @if (verdictChip(); as chip) {
+            <ui-tag
+                class="shrink-0"
+                data-testid="sprint-health-verdict"
+                [severity]="chip.severity"
+                [value]="chip.key | translate: chip.params"
+            >
+                @if (chip.icon) {
+                    <tabler-icon [icon]="chip.icon" [size]="14" />
+                }
+            </ui-tag>
+        }
+
+        @if (health().isUnitForced) {
+            <span class="strip__muted shrink-0">
+                {{ 'ISSUE.KANBAN.SPRINTS.HEALTH_NO_POINTS' | translate }}
+            </span>
+        }
+    }
+
+    <span class="grow"></span>
+
+    @if (sprint()) {
+        <ui-choice
+            class="shrink-0"
+            data-testid="sprint-health-unit"
+            [uiTooltip]="
+                health().isUnitForced ? ('ISSUE.KANBAN.SPRINTS.HEALTH_NO_POINTS' | translate) : ''
+            "
+            [options]="unitOptions"
+            optionLabel="labelKey"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+            [disabled]="health().isUnitForced"
+            [ngModel]="health().unit"
+            (ngModelChange)="onUnitChange($event)"
+        >
+            <ng-template #item let-item>{{ item.labelKey | translate }}</ng-template>
+        </ui-choice>
+    }
+</div>

@@ -1,5 +1,6 @@
 import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
-import { EMPTY, of, throwError } from 'rxjs';
+import { SprintState } from '../../constants/sprint-state.enum';
+import { EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { TranslateService } from '@ngx-translate/core';
 import { IssueKanbanComponent } from './issue-kanban.component';
@@ -11,6 +12,7 @@ import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { SprintStore } from '../../store/sprint.store';
+import { SprintAnalyticsStore, STATS_DEBOUNCE_MS } from '../../store/sprint-analytics.store';
 import { SprintApi } from '../../api/sprint.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { IssueState } from 'src/app/state/model/issue-state.model';
@@ -20,8 +22,12 @@ import { SwimlaneCell } from './entity/swimlane-cell.entity';
 import { User } from 'src/app/auth/model/user.model';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { Sprint } from '../../model/sprint.model';
+import { SprintVelocity } from '../../model/sprint-velocity.model';
+import { SprintStats } from '../../model/sprint-stats.model';
+import { Notice } from 'src/app/shared/notice/model/notice.model';
+import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
+import { Issue } from '../../model/issue.model';
 
-// Node env has no localStorage; the component persists display settings there.
 const storage = new Map<string, string>();
 vi.stubGlobal('localStorage', {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -131,15 +137,41 @@ interface Harness {
     setSprint: ReturnType<typeof vi.fn>;
     setInitialFilter: ReturnType<typeof vi.fn>;
     savedViewStore: SavedViewStore;
+    stats: ReturnType<typeof vi.fn>;
+    backlogStats: ReturnType<typeof vi.fn>;
+    velocity: ReturnType<typeof vi.fn>;
+    injector: Injector;
 }
 
-function setup(sprints: Sprint[] = []): Harness {
+function makeStats(overrides: Partial<SprintStats> = {}): SprintStats {
+    return {
+        totalPoints: 0,
+        donePoints: 0,
+        startPoints: 0,
+        progressPoints: 0,
+        totalIssues: 0,
+        doneIssues: 0,
+        startIssues: 0,
+        progressIssues: 0,
+        pointedIssues: 0,
+        ...overrides
+    };
+}
+
+function setup(
+    sprints: Sprint[] = [],
+    project: { idProject: number } | null = { idProject: 1 },
+    issueNotices: Observable<Notice<Issue>> = EMPTY
+): Harness {
     const updateIssue = vi.fn().mockReturnValue(of({} as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
     const refresh = vi.fn();
     const showError = vi.fn();
     const setSprint = vi.fn();
     const setInitialFilter = vi.fn();
+    const stats = vi.fn().mockReturnValue(of(makeStats()));
+    const backlogStats = vi.fn().mockReturnValue(of(makeStats()));
+    const velocity = vi.fn().mockReturnValue(of([]));
 
     const injector = Injector.create({
         providers: [
@@ -149,16 +181,22 @@ function setup(sprints: Sprint[] = []): Harness {
                 provide: IssueKanbanService,
                 useValue: { columns$: of([]), swimlaneRows$: of([]), states$: of([]) }
             },
+            SprintStore,
+            SprintAnalyticsStore,
             {
-                provide: SprintStore,
+                provide: SprintApi,
                 useValue: {
-                    sprints$: of(sprints),
-                    currentSprint$: of(undefined),
-                    load: () => undefined,
-                    create: () => undefined
+                    assignIssue$: assignIssue,
+                    close$: () => of({ moved: 0 }),
+                    loadByProject$: () => of(sprints),
+                    create$: () => of(sprints[0] ?? null),
+                    edit$: () => of(sprints[0] ?? null),
+                    delete$: () => of(undefined),
+                    loadSprintStats$: stats,
+                    loadBacklogStats$: backlogStats,
+                    loadVelocity$: velocity
                 }
             },
-            { provide: SprintApi, useValue: { assignIssue$: assignIssue } },
             {
                 provide: IssueFilterStore,
                 useValue: {
@@ -177,11 +215,12 @@ function setup(sprints: Sprint[] = []): Harness {
                 }
             },
             { provide: ToastNotificationService, useValue: { showError } },
-            { provide: NoticeService, useValue: { issue$: EMPTY } },
+            { provide: NoticeService, useValue: { issue$: issueNotices } },
             { provide: TranslateService, useValue: { instant: (k: string) => k } },
-            { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
-            // The board reads a staged saved view on mount and drives its layout from
-            // activeView; a stubbed api keeps the real store buildable here.
+            {
+                provide: ProjectStore,
+                useValue: { project$: project === null ? NEVER : of(project) }
+            },
             { provide: SavedViewApi, useValue: { loadByProject$: () => of([]) } },
             SavedViewStore
         ]
@@ -200,11 +239,14 @@ function setup(sprints: Sprint[] = []): Harness {
         showError,
         setSprint,
         setInitialFilter,
-        savedViewStore: injector.get(SavedViewStore)
+        savedViewStore: injector.get(SavedViewStore),
+        stats,
+        backlogStats,
+        velocity,
+        injector
     };
 }
 
-// Handlers are protected — reach them through a narrow cast.
 type Handlers = {
     onStateChange(evt: CdkDragDrop<KanbanColumn>): void;
     onSwimlaneCardDrop(evt: CdkDragDrop<SwimlaneCell>): void;
@@ -221,8 +263,21 @@ type Handlers = {
     showClosedSprints(): boolean;
     onShowClosedSprintsChange(value: boolean): void;
     onSprintChange(idSprint: number | null): void;
+    onEditSprint(idSprint: number): void;
+    onSprintDeleted(): void;
 };
 const handlers = (c: IssueKanbanComponent): Handlers => c as unknown as Handlers;
+
+type Analytics = {
+    stats(): SprintStats | null;
+    velocities(): SprintVelocity[];
+    onRollOver(): void;
+};
+const analytics = (c: IssueKanbanComponent): Analytics => c as unknown as Analytics;
+
+function setupWithNotices(notices: Observable<Notice<Issue>>): Harness {
+    return setup([], { idProject: 1 }, notices);
+}
 
 function makeSprint(overrides: Partial<Sprint> & { idSprint: number }): Sprint {
     return {
@@ -230,24 +285,62 @@ function makeSprint(overrides: Partial<Sprint> & { idSprint: number }): Sprint {
         name: `Sprint ${overrides.idSprint}`,
         startAt: '2020-01-01T00:00:00Z',
         endAt: '2099-01-01T00:00:00Z',
-        state: 'planned',
+        state: SprintState.Planned,
         ...overrides
     };
 }
 
-// One open sprint whose window contains "now" (= current), plus two closed ones.
 const openSprint = makeSprint({ idSprint: 1 });
 const closedOld = makeSprint({
     idSprint: 2,
-    state: 'closed',
+    state: SprintState.Closed,
     startAt: '2026-01-01T00:00:00Z',
     endAt: '2026-01-15T00:00:00Z'
 });
+const secondSprint = makeSprint({ idSprint: 4 });
 const closedNew = makeSprint({
     idSprint: 3,
-    state: 'closed',
+    state: SprintState.Closed,
     startAt: '2026-02-01T00:00:00Z',
     endAt: '2026-02-15T00:00:00Z'
+});
+
+describe('IssueKanbanComponent — tab order', () => {
+    beforeEach(() => storage.clear());
+
+    it('orders open sprints by start date, not by which one is current', () => {
+        const overdue = makeSprint({
+            idSprint: 3,
+            startAt: '2026-07-26T00:00:00Z',
+            endAt: '2026-08-10T00:00:00Z'
+        });
+        const active = makeSprint({
+            idSprint: 4,
+            startAt: '2026-08-10T00:00:00Z',
+            endAt: '2026-08-16T00:00:00Z'
+        });
+        const future = makeSprint({
+            idSprint: 5,
+            startAt: '2026-08-17T00:00:00Z',
+            endAt: '2026-08-23T00:00:00Z'
+        });
+
+        const tabs = handlers(setup([active, overdue, future]).component).sprintTabs();
+
+        expect(tabs.map(t => t.idSprint)).toEqual([null, 3, 4, 5]);
+    });
+
+    it('still marks the current cycle, wherever it sits in the order', () => {
+        const past = makeSprint({
+            idSprint: 3,
+            startAt: '2019-01-01T00:00:00Z',
+            endAt: '2019-01-15T00:00:00Z'
+        });
+        const tabs = handlers(setup([openSprint, past]).component).sprintTabs();
+
+        expect(tabs.map(t => t.idSprint)).toEqual([null, 3, 1]);
+        expect(tabs.find(t => t.isCurrent)?.idSprint).toBe(openSprint.idSprint);
+    });
 });
 
 describe('IssueKanbanComponent — closed sprints display setting', () => {
@@ -351,7 +444,6 @@ describe('IssueKanbanComponent — onStateChange (columns)', () => {
             makeColumnDropEvent(makeColumn(stateA, [tile]), makeColumn(stateB, []))
         );
 
-        // Notifying is ErrorInterceptor's job; the board only has to reconcile.
         expect(h.refresh).toHaveBeenCalledTimes(1);
     });
 });
@@ -412,7 +504,6 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
-        // Notifying is ErrorInterceptor's job; the board only has to reconcile.
         expect(h.refresh).toHaveBeenCalledTimes(1);
     });
 });
@@ -518,5 +609,204 @@ describe('IssueKanbanComponent — saved view reset', () => {
         expect(h.setInitialFilter).toHaveBeenCalledWith(
             expect.objectContaining({ idSprint: null, sprintUnset: true })
         );
+    });
+});
+
+describe('IssueKanbanComponent — sprint analytics', () => {
+    beforeEach(() => {
+        storage.clear();
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => vi.useRealTimers());
+
+    const settle = (): void => {
+        vi.advanceTimersByTime(STATS_DEBOUNCE_MS);
+    };
+
+    it('loads stats for the auto-selected cycle and velocity once the project resolves', () => {
+        const h = setup([openSprint]);
+
+        expect(h.velocity).toHaveBeenCalledWith(1);
+        expect(h.stats).toHaveBeenCalledWith(openSprint.idSprint);
+    });
+
+    it('loads backlog stats when the project has no open cycle to select', () => {
+        const h = setup([]);
+        expect(h.backlogStats).toHaveBeenCalledWith(1);
+    });
+
+    it('requests nothing while no project is loaded', () => {
+        const h = setup([], null);
+        expect(h.stats).not.toHaveBeenCalled();
+        expect(h.backlogStats).not.toHaveBeenCalled();
+        expect(h.velocity).not.toHaveBeenCalled();
+    });
+
+    it('switches between sprint stats and backlog stats with the tab, without waiting', () => {
+        const h = setup([openSprint]);
+        h.backlogStats.mockClear();
+
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        expect(h.stats).toHaveBeenCalledWith(openSprint.idSprint);
+
+        handlers(h.component).onSprintChange(null);
+        expect(h.backlogStats).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps only the last response when the tab is switched fast', () => {
+        const first = new Subject<SprintStats>();
+        const second = new Subject<SprintStats>();
+        const h = setup([openSprint, secondSprint]);
+        h.stats.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        handlers(h.component).onSprintChange(secondSprint.idSprint);
+
+        first.next(makeStats({ totalPoints: 111 }));
+        second.next(makeStats({ totalPoints: 222 }));
+
+        expect(analytics(h.component).stats()?.totalPoints).toBe(222);
+    });
+
+    it('re-requests stats for an issue notice from this project only', () => {
+        const notices = new Subject<Notice<Issue>>();
+        const h = setupWithNotices(notices);
+        h.backlogStats.mockClear();
+
+        notices.next({
+            action: NoticeAction.Create,
+            payload: { idProject: 2, idIssue: 5 } as Issue
+        } as Notice<Issue>);
+        settle();
+        expect(h.backlogStats).not.toHaveBeenCalled();
+
+        notices.next({
+            action: NoticeAction.Create,
+            payload: { idProject: 1, idIssue: 5 } as Issue
+        } as Notice<Issue>);
+        settle();
+        expect(h.backlogStats).toHaveBeenCalledWith(1);
+    });
+
+    it('clears the previous cycle stats when the tab changes, so no stale numbers show', () => {
+        const pending = new Subject<SprintStats>();
+        const h = setup([openSprint, secondSprint]);
+        h.stats.mockReturnValue(of(makeStats({ totalPoints: 21 })));
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        expect(analytics(h.component).stats()?.totalPoints).toBe(21);
+
+        h.stats.mockReturnValue(pending);
+        handlers(h.component).onSprintChange(secondSprint.idSprint);
+        expect(analytics(h.component).stats()).toBeNull();
+
+        pending.next(makeStats({ totalPoints: 8 }));
+        expect(analytics(h.component).stats()?.totalPoints).toBe(8);
+    });
+
+    it('keeps the current stats visible while a teammate notice refreshes them', () => {
+        const notices = new Subject<Notice<Issue>>();
+        const pending = new Subject<SprintStats>();
+        const h = setupWithNotices(notices);
+        h.backlogStats.mockReturnValue(of(makeStats({ totalIssues: 4 })));
+        handlers(h.component).onSprintChange(null);
+        expect(analytics(h.component).stats()?.totalIssues).toBe(4);
+
+        h.backlogStats.mockReturnValue(pending);
+        notices.next({
+            action: NoticeAction.Create,
+            payload: { idProject: 1, idIssue: 5 } as Issue
+        } as Notice<Issue>);
+        settle();
+
+        expect(analytics(h.component).stats()?.totalIssues).toBe(4);
+        pending.next(makeStats({ totalIssues: 5 }));
+        expect(analytics(h.component).stats()?.totalIssues).toBe(5);
+    });
+
+    it('answers a burst of teammate notices with one stats request', () => {
+        const notices = new Subject<Notice<Issue>>();
+        const h = setupWithNotices(notices);
+        h.backlogStats.mockClear();
+
+        for (let i = 0; i < 20; i++) {
+            notices.next({
+                action: NoticeAction.Create,
+                payload: { idProject: 1, idIssue: i } as Issue
+            } as Notice<Issue>);
+        }
+        settle();
+
+        expect(h.backlogStats).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to the backlog when the selected cycle is deleted', () => {
+        const h = setup([openSprint]);
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        h.backlogStats.mockClear();
+
+        handlers(h.component).onEditSprint(openSprint.idSprint);
+        handlers(h.component).onSprintDeleted();
+
+        expect(handlers(h.component).selectedIdSprint()).toBeNull();
+        expect(h.backlogStats).toHaveBeenCalledWith(1);
+    });
+
+    it('leaves the scope alone when a cycle other than the selected one is deleted', () => {
+        const h = setup([openSprint, secondSprint]);
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+
+        handlers(h.component).onEditSprint(secondSprint.idSprint);
+        handlers(h.component).onSprintDeleted();
+
+        expect(handlers(h.component).selectedIdSprint()).toBe(openSprint.idSprint);
+    });
+
+    it('asks for the backlog once, not twice, after rolling a cycle over', () => {
+        const h = setup([openSprint]);
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        h.backlogStats.mockClear();
+
+        analytics(h.component).onRollOver();
+
+        expect(h.backlogStats).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-requests velocity after closing a sprint', () => {
+        const h = setup([openSprint]);
+        handlers(h.component).onSprintChange(openSprint.idSprint);
+        h.velocity.mockClear();
+
+        analytics(h.component).onRollOver();
+
+        expect(h.velocity).toHaveBeenCalledWith(1);
+    });
+
+    it('keeps the loaded velocity list for the strip to average', () => {
+        const h = setup([openSprint]);
+        h.velocity.mockReturnValue(
+            of([
+                {
+                    idSprint: 1,
+                    name: 'a',
+                    endAt: '',
+                    donePoints: 100,
+                    doneIssues: 50,
+                    frozen: false
+                },
+                { idSprint: 2, name: 'b', endAt: '', donePoints: 2, doneIssues: 1, frozen: false },
+                { idSprint: 3, name: 'c', endAt: '', donePoints: 4, doneIssues: 2, frozen: false },
+                { idSprint: 4, name: 'd', endAt: '', donePoints: 6, doneIssues: 3, frozen: false },
+                { idSprint: 5, name: 'e', endAt: '', donePoints: 8, doneIssues: 4, frozen: false },
+                { idSprint: 6, name: 'f', endAt: '', donePoints: 10, doneIssues: 5, frozen: false }
+            ])
+        );
+        analytics(h.component).onRollOver();
+
+        expect(
+            analytics(h.component)
+                .velocities()
+                .map(v => v.donePoints)
+        ).toEqual([100, 2, 4, 6, 8, 10]);
     });
 });

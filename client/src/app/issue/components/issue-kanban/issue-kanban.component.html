@@ -88,29 +88,38 @@
         (taskDropped)="onTabTaskDropped($event)"
     ></app-sprint-tab-strip>
 
-    <div class="grow overflow-auto ui-box">
-        @if (viewMode() === 'columns') {
-            @if (columns$ | async; as columns) {
-                <app-issue-kanban-columns
-                    [columns]="columns"
-                    [connectedTo]="sprintTabListIds()"
-                    (stateChange)="onStateChange($event)"
-                    (contextMenuRequested)="onContextMenuRequested($event)"
-                    (loadMore)="onColumnLoadMore($event)"
-                ></app-issue-kanban-columns>
+    <div class="grow min-h-0 flex flex-col overflow-hidden ui-box">
+        <app-sprint-health-strip
+            [sprint]="selectedSprint()"
+            [stats]="stats()"
+            [velocities]="velocities()"
+            [(unit)]="unit"
+        ></app-sprint-health-strip>
+
+        <div class="grow overflow-auto">
+            @if (viewMode() === 'columns') {
+                @if (columns$ | async; as columns) {
+                    <app-issue-kanban-columns
+                        [columns]="columns"
+                        [connectedTo]="sprintTabListIds()"
+                        (stateChange)="onStateChange($event)"
+                        (contextMenuRequested)="onContextMenuRequested($event)"
+                        (loadMore)="onColumnLoadMore($event)"
+                    ></app-issue-kanban-columns>
+                }
+            } @else {
+                @if (swimlaneData$ | async; as data) {
+                    <app-issue-kanban-swimlane
+                        [rows]="data.rows"
+                        [states]="data.states"
+                        [connectedTo]="sprintTabListIds()"
+                        (cardDrop)="onSwimlaneCardDrop($event)"
+                        (contextMenuRequested)="onContextMenuRequested($event)"
+                        (cellLoadMore)="onCellLoadMore($event)"
+                    ></app-issue-kanban-swimlane>
+                }
             }
-        } @else {
-            @if (swimlaneData$ | async; as data) {
-                <app-issue-kanban-swimlane
-                    [rows]="data.rows"
-                    [states]="data.states"
-                    [connectedTo]="sprintTabListIds()"
-                    (cardDrop)="onSwimlaneCardDrop($event)"
-                    (contextMenuRequested)="onContextMenuRequested($event)"
-                    (cellLoadMore)="onCellLoadMore($event)"
-                ></app-issue-kanban-swimlane>
-            }
-        }
+        </div>
     </div>
 </div>
 

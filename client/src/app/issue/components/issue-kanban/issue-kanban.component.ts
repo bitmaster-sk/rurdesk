@@ -39,18 +39,21 @@ import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.conve
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue } from '../../model/issue.model';
-import { SprintStore, selectCurrentSprint } from '../../store/sprint.store';
+import { SprintStore } from '../../store/sprint.store';
+import { SprintAnalyticsStore } from '../../store/sprint-analytics.store';
 import { SprintApi } from '../../api/sprint.api.service';
 import { SprintTab } from '../sprint-tab-strip/sprint-tab-strip.component';
 import { SprintDialogSave } from '../sprint-dialog/sprint-dialog.component';
 import { Sprint } from '../../model/sprint.model';
+import { SprintUnit } from '../../constants/sprint-unit.enum';
+import { SprintState } from '../../constants/sprint-state.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
 
 @Component({
     selector: 'app-issue-kanban',
     templateUrl: './issue-kanban.component.html',
     styleUrls: ['./issue-kanban.component.scss'],
-    providers: [IssueKanbanService],
+    providers: [IssueKanbanService, SprintAnalyticsStore],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -66,6 +69,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly savedViewStore = inject(SavedViewStore);
 
     private readonly sprintStore = inject(SprintStore);
+
+    private readonly analytics = inject(SprintAnalyticsStore);
 
     private readonly sprintApi = inject(SprintApi);
 
@@ -102,7 +107,21 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private readonly sprints = toSignal(this.sprintStore.sprints$, { initialValue: [] });
 
+    private readonly currentSprint = toSignal(this.sprintStore.currentSprint$, {
+        initialValue: undefined
+    });
+
     protected readonly selectedIdSprint = signal<number | null>(null);
+
+    protected readonly selectedSprint = computed<Sprint | null>(
+        () => this.sprints().find(s => s.idSprint === this.selectedIdSprint()) ?? null
+    );
+
+    protected readonly unit = signal(SprintUnit.Points);
+
+    protected readonly stats = this.analytics.stats;
+
+    protected readonly velocities = this.analytics.velocities;
 
     // Display setting: show closed sprints as (read-only) tabs. Pure display
     // preference, persisted per user in localStorage like the table settings.
@@ -112,27 +131,20 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.getItem(IssueKanbanComponent.showClosedSprintsKey) === 'true'
     );
 
-    // Tab strip model: Backlog first, then the current cycle, then the remaining
-    // planned cycles by start date. Closed cycles are omitted unless the
-    // "show closed sprints" setting is on — then they trail the open ones,
-    // most recently ended first.
     protected readonly sprintTabs = computed<SprintTab[]>(() => {
         const list = this.sprints();
-        const current = selectCurrentSprint(list, new Date());
+        const current = this.currentSprint();
         const byStart = (
             a: { startAt: string; idSprint: number },
             b: { startAt: string; idSprint: number }
         ): number => a.startAt.localeCompare(b.startAt) || a.idSprint - b.idSprint;
-        const open = list
-            .filter(s => s.state !== 'closed')
+        const ordered = list
+            .filter(s => s.state !== SprintState.Closed)
             .slice()
             .sort(byStart);
-        const ordered = current
-            ? [current, ...open.filter(s => s.idSprint !== current.idSprint)]
-            : open;
         const closed = this.showClosedSprints()
             ? list
-                  .filter(s => s.state === 'closed')
+                  .filter(s => s.state === SprintState.Closed)
                   .slice()
                   .sort((a, b) => b.endAt.localeCompare(a.endAt) || b.idSprint - a.idSprint)
             : [];
@@ -148,7 +160,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
                 idSprint: s.idSprint,
                 label: s.name,
                 isCurrent: current?.idSprint === s.idSprint,
-                isClosed: s.state === 'closed',
+                isClosed: s.state === SprintState.Closed,
                 listId: `sprint-tab-${s.idSprint}`
             }))
         ];
@@ -162,13 +174,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     );
 
     protected readonly isSelectedSprintClosed = computed(
-        () => this.sprints().find(s => s.idSprint === this.selectedIdSprint())?.state === 'closed'
+        () => this.selectedSprint()?.state === SprintState.Closed
     );
 
     protected readonly dialogOpen = signal(false);
     protected readonly editingSprint = signal<Sprint | null>(null);
 
-    private idProject = 0;
+    private readonly idProject = signal(0);
 
     protected readonly isSplitDialogOpen = signal(false);
 
@@ -201,7 +213,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.savedViewStore.setLiveKanbanLayout(this.viewMode());
         this.setInitialFilter();
         this.onSavedViewResetSignal();
-        this.followAppliedViewLayout();
+        this.applyViewLayoutOnChange();
 
         // Live updates: apply teammate changes to the loaded board. A move
         // between columns FLIP-flies the card; own drags land as in-place
@@ -213,7 +225,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private onRemoteIssueNotice(notice: Notice<Issue>): void {
         const issue = notice.payload;
-        if (!issue || issue.idProject !== this.idProject) return;
+        if (!issue || issue.idProject !== this.idProject()) return;
+        this.analytics.reloadStatsAfterNotice();
 
         if (notice.action !== NoticeAction.Update) {
             this.issueFilterStore.refresh();
@@ -357,6 +370,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected onSprintChange(idSprint: number | null): void {
         this.selectedIdSprint.set(idSprint);
         this.issueFilterStore.setSprint(idSprint);
+        this.analytics.scopeAndReload(this.idProject(), idSprint);
     }
 
     protected onShowClosedSprintsChange(value: boolean): void {
@@ -364,7 +378,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.setItem(IssueKanbanComponent.showClosedSprintsKey, String(value));
         // Never leave the board scoped to a tab that just became invisible.
         if (!value && this.isSelectedSprintClosed()) {
-            this.onSprintChange(selectCurrentSprint(this.sprints(), new Date())?.idSprint ?? null);
+            this.onSprintChange(this.currentSprint()?.idSprint ?? null);
         }
     }
 
@@ -378,7 +392,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sprintApi.close$(idSprint).subscribe({
             next: () => {
                 this.onSprintChange(null); // closed sprint leaves the strip; reload board unscoped
-                this.sprintStore.load(this.idProject);
+                this.sprintStore.load(this.idProject());
+                this.analytics.reloadVelocity();
             }
         });
     }
@@ -396,17 +411,22 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected onSprintSaved(payload: SprintDialogSave): void {
         const editing = this.editingSprint();
         if (editing) {
-            this.sprintStore.edit(this.idProject, editing.idSprint, payload);
+            this.sprintStore.edit(this.idProject(), editing.idSprint, payload);
         } else {
-            this.sprintStore.create(this.idProject, payload);
+            this.sprintStore.create(this.idProject(), payload);
         }
     }
 
     protected onSprintDeleted(): void {
         const editing = this.editingSprint();
-        if (editing) {
-            this.sprintStore.remove(this.idProject, editing.idSprint);
+        if (!editing) {
+            return;
         }
+        this.sprintStore.remove$(this.idProject(), editing.idSprint).subscribe(() => {
+            if (this.selectedIdSprint() === editing.idSprint) {
+                this.onSprintChange(null);
+            }
+        });
     }
 
     // A task dragged from any board list onto a sprint tab → assign it to that
@@ -439,7 +459,10 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sprintApi
             .assignIssue$(tile.idProject, tile.idIssuePublic, payload.idSprint)
             .subscribe({
-                next: () => this.issueFilterStore.refresh(),
+                next: () => {
+                    this.issueFilterStore.refresh();
+                    this.analytics.reloadStats();
+                },
                 error: () => {
                     this.issueFilterStore.refresh();
                 }
@@ -496,11 +519,11 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private onSavedViewResetSignal(): void {
         this.savedViewStore.filterResetSignal$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.setDefaultFilter(this.idProject, this.selectedIdSprint()));
+            .subscribe(() => this.setDefaultFilter(this.idProject(), this.selectedIdSprint()));
     }
 
     /** Both apply paths end in setInitialFilter, so this covers a remount and a same-mode push. */
-    private followAppliedViewLayout(): void {
+    private applyViewLayoutOnChange(): void {
         this.issueFilterStore.initialFilter$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(() => {
@@ -513,8 +536,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
-            this.idProject = project.idProject;
+            this.idProject.set(project.idProject);
+            this.sprintStore.currentSprintOnLoad$
+                .pipe(first(), takeUntilDestroyed(this.destroyRef))
+                .subscribe(current => this.onSprintChange(current?.idSprint ?? null));
             this.sprintStore.load(project.idProject);
+            this.analytics.setScope(project.idProject, this.selectedIdSprint());
+            this.analytics.reloadVelocity();
 
             const pending = this.savedViewStore.consumePending(project.idProject);
             if (pending) {
@@ -526,14 +554,6 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
             } else {
                 this.setDefaultFilter(project.idProject);
             }
-
-            // Once sprints load, default the board scope to the current cycle (or Backlog
-            // when there is none) so a task board is always in exactly one tab.
-            this.sprintStore.sprints$
-                .pipe(first())
-                .subscribe(list =>
-                    this.onSprintChange(selectCurrentSprint(list, new Date())?.idSprint ?? null)
-                );
         });
     }
 

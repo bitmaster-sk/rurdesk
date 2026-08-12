@@ -33,6 +33,7 @@ import { SplitDoneStepComponent } from './components/split-dialog/split-done-ste
 import { IssueQuickActionsComponent } from './components/issue-quick-actions/issue-quick-actions.component';
 import { IssueKanbanSwimlaneComponent } from './components/issue-kanban/components/issue-kanban-swimlane/issue-kanban-swimlane.component';
 import { SprintTabStripComponent } from './components/sprint-tab-strip/sprint-tab-strip.component';
+import { SprintHealthStripComponent } from './components/sprint-health-strip/sprint-health-strip.component';
 import { SprintDialogComponent } from './components/sprint-dialog/sprint-dialog.component';
 import { IssueKanbanColumnsComponent } from './components/issue-kanban/components/issue-kanban-columns/issue-kanban-columns.component';
 import { QualityBadgeComponent } from './components/quality-badge/quality-badge.component';
@@ -45,6 +46,8 @@ import { ActivityTimeItemComponent } from './components/issue-detail/components/
 import {
     TablerIconComponent,
     provideTablerIcons,
+    IconCheck,
+    IconAlertTriangle,
     IconFilter,
     IconArrowsSort,
     IconSortAscending,
@@ -122,6 +125,7 @@ import { AgentModule } from '../agent/agent.module';
         IssueQuickActionsComponent,
         IssueKanbanSwimlaneComponent,
         SprintTabStripComponent,
+        SprintHealthStripComponent,
         SprintDialogComponent,
         IssueKanbanColumnsComponent,
         QualityBadgeComponent,
@@ -166,6 +170,8 @@ import { AgentModule } from '../agent/agent.module';
         IssueToolbarService,
         SavedViewApplyService,
         provideTablerIcons({
+            IconCheck,
+            IconAlertTriangle,
             IconRepeat,
             IconFilter,
             IconArrowsSort,

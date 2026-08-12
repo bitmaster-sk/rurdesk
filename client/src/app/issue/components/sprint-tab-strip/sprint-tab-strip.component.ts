@@ -52,12 +52,17 @@ export class SprintTabStripComponent implements AfterViewInit {
     protected readonly canScrollLeft = signal(false);
     protected readonly canScrollRight = signal(false);
 
+    private hasScrolledToCurrent = false;
+
     constructor() {
         // Recompute arrow visibility when the tab set changes (deferred until the
         // new tabs are laid out).
         effect(() => {
             this.tabs();
-            setTimeout(() => this.updateScrollState());
+            setTimeout(() => {
+                this.updateScrollState();
+                this.scrollToCurrentSprint();
+            });
         });
     }
 
@@ -83,5 +88,26 @@ export class SprintTabStripComponent implements AfterViewInit {
         const el = this.scroller().nativeElement;
         this.canScrollLeft.set(el.scrollLeft > 1);
         this.canScrollRight.set(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    }
+
+    private scrollToCurrentSprint(): void {
+        if (this.hasScrolledToCurrent || this.cycleTabs().length === 0) {
+            return;
+        }
+        const el = this.scroller().nativeElement;
+        const current = el.querySelector<HTMLElement>('.sprint-tab--current');
+        if (!current) {
+            return;
+        }
+        this.hasScrolledToCurrent = true;
+
+        const tab = current.getBoundingClientRect();
+        const view = el.getBoundingClientRect();
+        const isFullyVisible = tab.left >= view.left && tab.right <= view.right;
+        if (isFullyVisible) {
+            return;
+        }
+        el.scrollLeft += tab.left - view.left - (view.width - tab.width) / 2;
+        this.updateScrollState();
     }
 }

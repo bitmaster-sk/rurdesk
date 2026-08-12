@@ -1,0 +1,51 @@
+:host {
+    display: block;
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--ui-color-border);
+}
+
+.strip {
+    height: 2.6rem;
+    // 1px less than the tab strip's padding, so the unit toggle lines up with
+    // the "+ Sprint" button above across the panel border.
+    padding: 0 calc(var(--ui-space) - 1px);
+    font-size: 0.8125rem;
+    color: var(--ui-color-text);
+}
+
+.strip__name {
+    font-weight: 600;
+}
+
+.strip__muted {
+    color: var(--ui-color-text-muted);
+}
+
+.strip__progress {
+    font-variant-numeric: tabular-nums;
+}
+
+.bar {
+    display: flex;
+    width: 10rem;
+    height: 0.5rem;
+    overflow: hidden;
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-surface-300);
+}
+
+.bar__segment {
+    height: 100%;
+}
+
+.segment--done {
+    background: var(--ui-brand-500);
+}
+
+.segment--progress {
+    background: var(--ui-brand-300);
+}
+
+.segment--todo {
+    background: var(--ui-surface-300);
+}
