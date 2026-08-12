@@ -153,7 +153,9 @@ func New(
 	pri.PATCH("/sprint/:idSprint", sprintCtrl.Edit)
 	pri.DELETE("/sprint/:idSprint", sprintCtrl.Delete)
 	pri.POST("/sprint/:idSprint/close", sprintCtrl.Close)
-	pri.GET("/sprint/:idSprint/stats", sprintCtrl.Stats)
+	pri.GET("/sprint/:idSprint/stats", sprintCtrl.SprintStats)
+	pri.GET("/project/:idProject/backlog/stats", sprintCtrl.BacklogStats)
+	pri.GET("/project/:idProject/sprint/velocity", sprintCtrl.Velocity)
 
 	pri.GET("/project/:idProject/saved-view", savedViewCtrl.List)
 	pri.POST("/project/:idProject/saved-view", savedViewCtrl.Create)

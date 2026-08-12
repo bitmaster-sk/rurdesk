@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -17,10 +19,11 @@ type SprintController struct {
 	stateRepo  *repository.StateRepository
 	sprintSvc  *service.SprintService
 	acl        *service.AclService
+	settings   *service.AppSettingsService
 }
 
-func NewSprintController(sprintRepo *repository.SprintRepository, stateRepo *repository.StateRepository, sprintSvc *service.SprintService, acl *service.AclService) *SprintController {
-	return &SprintController{sprintRepo: sprintRepo, stateRepo: stateRepo, sprintSvc: sprintSvc, acl: acl}
+func NewSprintController(sprintRepo *repository.SprintRepository, stateRepo *repository.StateRepository, sprintSvc *service.SprintService, acl *service.AclService, settings *service.AppSettingsService) *SprintController {
+	return &SprintController{sprintRepo: sprintRepo, stateRepo: stateRepo, sprintSvc: sprintSvc, acl: acl, settings: settings}
 }
 
 func (sc *SprintController) List(c *gin.Context) {
@@ -65,7 +68,12 @@ func (sc *SprintController) Create(c *gin.Context) {
 	sprint, err := sc.sprintSvc.Create(ctx, idProject, req, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, errs.ErrSprintWindow):
+			c.Status(errs.ErrSprintWindow.HttpStatus())
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
 		return
 	}
 	c.JSON(http.StatusCreated, sprint)
@@ -102,7 +110,7 @@ func (sc *SprintController) Close(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"moved": moved})
 }
 
-func (sc *SprintController) Stats(c *gin.Context) {
+func (sc *SprintController) SprintStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
@@ -120,19 +128,83 @@ func (sc *SprintController) Stats(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	finalIds, err := sc.stateRepo.FinalStateIds(ctx, sprint.IdProject)
+	sc.respondStats(c, &idSprint, nil, sprint.IdProject)
+}
+
+func (sc *SprintController) BacklogStats(c *gin.Context) {
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
+		c.Status(http.StatusForbidden)
+		return
+	}
+	sc.respondStats(c, nil, &idProject, idProject)
+}
+
+func (sc *SprintController) respondStats(c *gin.Context, idSprint, idProject *int64, idStateScope int64) {
+	ctx := c.Request.Context()
+	idsFinal, idsStart, err := sc.stateRepo.FinalAndStartStateIds(ctx, idStateScope)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	stats, err := sc.sprintRepo.Stats(ctx, idSprint, finalIds)
+	stats, err := sc.sprintRepo.SprintStats(ctx, model.SprintStatsFilter{
+		IdSprint:  idSprint,
+		IdProject: idProject,
+		IdsFinal:  idsFinal,
+		IdsStart:  idsStart,
+	})
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
 	c.JSON(http.StatusOK, stats)
+}
+
+func (sc *SprintController) Velocity(c *gin.Context) {
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
+		c.Status(http.StatusForbidden)
+		return
+	}
+	spec := constants.KnownAppSettings[constants.SettingSprintVelocityLimit]
+	limit := sc.settings.SprintVelocityLimit()
+	if raw := c.Query("limit"); raw != "" {
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < spec.Min || limit > spec.Max {
+			c.Status(http.StatusBadRequest)
+			return
+		}
+	}
+	idsFinal, err := sc.stateRepo.FinalStateIds(ctx, idProject)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	velocity, err := sc.sprintRepo.VelocityByProject(ctx, idProject, idsFinal, limit)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if velocity == nil {
+		velocity = []*model.SprintVelocity{}
+	}
+	c.JSON(http.StatusOK, velocity)
 }
 
 func (sc *SprintController) Edit(c *gin.Context) {
@@ -159,13 +231,17 @@ func (sc *SprintController) Edit(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	sprint.Name = req.Name
-	sprint.StartAt = req.StartAt
-	sprint.EndAt = req.EndAt
-	updated, err := sc.sprintRepo.Update(ctx, sprint, user.IdUser)
+	updated, err := sc.sprintSvc.Edit(ctx, sprint, req, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		switch {
+		case errors.Is(err, service.ErrSprintClosed):
+			c.Status(http.StatusConflict)
+		case errors.Is(err, errs.ErrSprintWindow):
+			c.Status(errs.ErrSprintWindow.HttpStatus())
+		default:
+			c.Status(http.StatusInternalServerError)
+		}
 		return
 	}
 	c.JSON(http.StatusOK, updated)
