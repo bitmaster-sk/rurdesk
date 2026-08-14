@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { Sprint } from '../model/sprint.model';
+import { SprintBurndown } from '../model/sprint-burndown.model';
 import { SprintStats } from '../model/sprint-stats.model';
 import { SprintVelocity } from '../model/sprint-velocity.model';
 
@@ -46,6 +47,10 @@ export class SprintApi {
 
     public loadBacklogStats$(idProject: number): Observable<SprintStats> {
         return this.http.get<SprintStats>(`/api/private/project/${idProject}/backlog/stats`);
+    }
+
+    public loadBurndown$(idSprint: number): Observable<SprintBurndown> {
+        return this.http.get<SprintBurndown>(`/api/private/sprint/${idSprint}/burndown`);
     }
 
     public loadVelocity$(idProject: number): Observable<SprintVelocity[]> {

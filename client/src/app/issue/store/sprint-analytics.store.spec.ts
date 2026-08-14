@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
-import { defer, Observable, of, throwError } from 'rxjs';
+import { defer, Observable, of, Subject, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { SprintApi } from '../api/sprint.api.service';
+import { SprintState } from '../constants/sprint-state.enum';
+import { SprintBurndown } from '../model/sprint-burndown.model';
 import { SprintStats } from '../model/sprint-stats.model';
 import { SprintVelocity } from '../model/sprint-velocity.model';
 import { SprintAnalyticsStore, STATS_RETRY_MS } from './sprint-analytics.store';
@@ -29,6 +31,16 @@ function makeVelocity(): SprintVelocity {
         donePoints: 12,
         doneIssues: 6,
         frozen: false
+    };
+}
+
+function makeBurndown(idSprint: number): SprintBurndown {
+    return {
+        idSprint,
+        startAt: '2026-05-01T00:00:00Z',
+        endAt: '2026-05-15T00:00:00Z',
+        state: SprintState.Planned,
+        days: []
     };
 }
 
@@ -136,5 +148,71 @@ describe('SprintAnalyticsStore', () => {
 
         expect(loadBacklogStats$).toHaveBeenCalledWith(1);
         expect(store.stats()?.donePoints).toBe(9);
+    });
+
+    it('asks for the burndown of the scoped cycle', () => {
+        const loadBurndown$ = vi.fn().mockReturnValue(of(makeBurndown(5)));
+        const store = setup({ loadBurndown$ });
+
+        store.setScope(1, 5);
+        store.reloadBurndown();
+
+        expect(loadBurndown$).toHaveBeenCalledWith(5);
+        expect(store.burndown()?.idSprint).toBe(5);
+        expect(store.isBurndownLoading()).toBe(false);
+    });
+
+    it('has no burndown to ask for on the backlog tab', () => {
+        const loadBurndown$ = vi.fn();
+        const store = setup({ loadBurndown$ });
+
+        store.setScope(1, null);
+        store.reloadBurndown();
+
+        expect(loadBurndown$).not.toHaveBeenCalled();
+        expect(store.burndown()).toBeNull();
+        expect(store.isBurndownLoading()).toBe(false);
+    });
+
+    it('keeps serving the board after a failed burndown request', () => {
+        const loadBurndown$ = vi.fn().mockReturnValue(throwError(() => new Error('boom')));
+        const store = setup({ loadBurndown$ });
+
+        store.setScope(1, 5);
+        store.reloadBurndown();
+
+        expect(store.burndown()).toBeNull();
+        expect(store.isBurndownLoading()).toBe(false);
+    });
+
+    it('keeps the drawn history on screen while the same cycle reloads', () => {
+        const loadBurndown$ = vi
+            .fn()
+            .mockReturnValueOnce(of(makeBurndown(5)))
+            .mockReturnValueOnce(new Subject<SprintBurndown>());
+        const store = setup({ loadBurndown$ });
+
+        store.setScope(1, 5);
+        store.reloadBurndown();
+        store.reloadBurndown();
+
+        expect(store.isBurndownLoading()).toBe(true);
+        expect(store.burndown()?.idSprint).toBe(5);
+    });
+
+    it('drops the drawn history the moment the scope moves to another cycle', () => {
+        const loadBurndown$ = vi
+            .fn()
+            .mockReturnValueOnce(of(makeBurndown(5)))
+            .mockReturnValueOnce(new Subject<SprintBurndown>());
+        const store = setup({ loadBurndown$ });
+
+        store.setScope(1, 5);
+        store.reloadBurndown();
+        store.setScope(1, 6);
+        store.reloadBurndown();
+
+        expect(store.isBurndownLoading()).toBe(true);
+        expect(store.burndown()).toBeNull();
     });
 });
