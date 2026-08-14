@@ -4,6 +4,8 @@ export interface SprintVelocity {
     endAt: string;
     donePoints: number;
     doneIssues: number;
+    plannedPoints?: number;
+    plannedIssues?: number;
     frozen: boolean;
 }
 
