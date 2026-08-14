@@ -650,6 +650,20 @@ const SHOTS = [
       await shoot(page, 'sprint-board.png');
     } },
 
+  { id: 'sprint-charts', file: 'sprint-charts.png', kind: 'png', desc: 'Charts band above the board (burndown + velocity)',
+    run: async (page) => {
+      await gotoApp(page, `${BASE}/project/${PROJECT}/issue/view/kanban`); await settle(page);
+      await selectSwimlane(page);
+      const toggle = page.locator('[data-testid="kanban-charts-toggle"] button').first();
+      await toggle.waitFor({ state: 'visible', timeout: 10000 });
+      if (await toggle.isDisabled()) throw new Error('the Charts toggle is disabled — the project has no cycles');
+      if (!(await page.locator('[data-testid="sprint-charts-band"]').count())) { await toggle.click(); }
+      const band = page.locator('[data-testid="sprint-charts-band"]').first();
+      await band.waitFor({ state: 'visible', timeout: 10000 });
+      await page.waitForTimeout(1200);
+      await shoot(page, 'sprint-charts.png');
+    } },
+
   // --- sprint create: click the "＋ Sprint" button in the tab strip, which
   // opens the sprint dialog directly (no intermediate menu — TASKS.md's "chip
   // menu with ＋ New sprint row" is stale). Screenshots the OPEN dialog and
