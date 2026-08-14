@@ -217,9 +217,7 @@ describe('SprintChartsBandComponent', () => {
             velocities: [makeVelocity('S1', 8), makeVelocity('S2', 11, 13)]
         });
         expect(chartData(VELOCITY).datasets[1].data).toEqual([null, 13]);
-        expect(text('[data-testid="sprint-velocity-fallback"]')).toContain(
-            'without a planned bar'
-        );
+        expect(text('[data-testid="sprint-velocity-fallback"]')).toContain('without a planned bar');
     });
 
     it('keeps the trend line off while the older window is a single cycle', () => {
