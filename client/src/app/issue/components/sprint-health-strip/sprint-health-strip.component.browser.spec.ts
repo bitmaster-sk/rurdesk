@@ -111,7 +111,13 @@ describe('SprintHealthStripComponent', () => {
         render(
             makeSprint(daysFromToday(3), daysFromToday(17)),
             makeStats({ totalPoints: 21, startPoints: 21, pointedIssues: 5 }),
-            [makeVelocity(1, 1), makeVelocity(2, 2), makeVelocity(2, 2)]
+            [
+                makeVelocity(5, 5),
+                makeVelocity(5, 5),
+                makeVelocity(1, 1),
+                makeVelocity(2, 2),
+                makeVelocity(2, 2)
+            ]
         );
         expect(text('[data-testid="sprint-health-verdict"]')).toContain(
             'over-committed vs avg 1.7'
@@ -367,5 +373,39 @@ describe('SprintHealthStripComponent', () => {
         choice.triggerEventHandler('ngModelChange', SprintUnit.Issues);
         fixture.detectChanges();
         expect(fixture.componentInstance.unit()).toBe(SprintUnit.Issues);
+    });
+
+    it('restores the fraction and the rolled-over chip for a frozen closed cycle', () => {
+        render(
+            makeSprint(daysFromToday(-20), daysFromToday(-6), SprintState.Closed),
+            makeStats({
+                totalPoints: 14,
+                donePoints: 14,
+                totalIssues: 14,
+                doneIssues: 14,
+                pointedIssues: 14,
+                rolledOverIssues: 6,
+                frozenTotalPoints: 20,
+                frozenDonePoints: 14,
+                frozenTotalIssues: 20,
+                frozenDoneIssues: 14,
+                frozenPointedIssues: 20
+            })
+        );
+        expect(text('[data-testid="sprint-health-progress"]')).toBe('14/20 pts');
+        expect(text('[data-testid="sprint-health-verdict"]')).toContain('6 tasks rolled over');
+        const done = fixture.debugElement.query(By.css('.segment--done'))
+            .nativeElement as HTMLElement;
+        expect(done.style.width).toBe('70%');
+    });
+
+    it('has no rolled-over chip for a cycle closed before snapshots existed', () => {
+        render(
+            makeSprint(daysFromToday(-20), daysFromToday(-6), SprintState.Closed),
+            makeStats({ totalPoints: 14, donePoints: 14, pointedIssues: 6 })
+        );
+        expect(
+            fixture.debugElement.query(By.css('[data-testid="sprint-health-verdict"]'))
+        ).toBeNull();
     });
 });

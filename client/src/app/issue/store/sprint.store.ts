@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { map, tap } from 'rxjs/operators';
+import { BehaviorSubject, combineLatest, Observable, Subject } from 'rxjs';
+import { map, startWith, tap } from 'rxjs/operators';
+import { utcDayRollover$ } from 'src/app/shared/date/date.util';
 import { SprintState } from '../constants/sprint-state.enum';
 import { Sprint } from '../model/sprint.model';
 import { SprintApi } from '../api/sprint.api.service';
@@ -32,9 +33,10 @@ export class SprintStore {
         .asObservable()
         .pipe(map(s => s ?? []));
 
-    public readonly currentSprint$: Observable<Sprint | undefined> = this.sprints$.pipe(
-        map(s => this.selectCurrent(s, new Date()))
-    );
+    public readonly currentSprint$: Observable<Sprint | undefined> = combineLatest([
+        this.sprints$,
+        utcDayRollover$.pipe(startWith(new Date()))
+    ]).pipe(map(([sprints, now]) => this.selectCurrent(sprints, now)));
 
     public readonly currentSprintOnLoad$: Observable<Sprint | undefined> = this.loaded.pipe(
         map(s => this.selectCurrent(s, new Date()))
