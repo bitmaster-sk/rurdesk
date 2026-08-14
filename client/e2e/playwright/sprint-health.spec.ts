@@ -1,52 +1,12 @@
 import { test, expect, APIRequestContext, Page } from '@playwright/test';
-import { createUser, TestUser } from './support/user';
+import { createUser } from './support/user';
 import { Interaction } from './support/interaction';
+import { assignToSprint, createSprint, isoDay, tokenOf } from './support/sprint';
 
 const STRIP = '[data-testid="sprint-health-strip"]';
 const PROGRESS = '[data-testid="sprint-health-progress"]';
 const VERDICT = '[data-testid="sprint-health-verdict"]';
 const UNIT = '[data-testid="sprint-health-unit"]';
-
-async function tokenOf(
-    request: APIRequestContext,
-    baseURL: string,
-    user: TestUser
-): Promise<string> {
-    const login = await request.post(`${baseURL}/api/public/login`, {
-        data: { email: user.email, password: user.password }
-    });
-    return ((await login.json()) as { token: string }).token;
-}
-
-async function createSprint(
-    request: APIRequestContext,
-    baseURL: string,
-    token: string,
-    idProject: number,
-    body: Record<string, unknown>
-): Promise<number> {
-    const res = await request.post(`${baseURL}/api/private/project/${idProject}/sprint`, {
-        headers: { Authorization: token },
-        data: body
-    });
-    expect(res.status(), 'sprint creation').toBe(201);
-    return ((await res.json()) as { idSprint: number }).idSprint;
-}
-
-async function assignToSprint(
-    request: APIRequestContext,
-    baseURL: string,
-    token: string,
-    idProject: number,
-    idIssuePublic: number,
-    idSprint: number
-): Promise<void> {
-    const res = await request.patch(
-        `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}/sprint`,
-        { headers: { Authorization: token }, data: { idSprint } }
-    );
-    expect(res.status(), 'sprint assignment').toBe(204);
-}
 
 async function setPoints(
     request: APIRequestContext,
@@ -85,12 +45,6 @@ async function openSprintTab(page: Page, idProject: number, tab: string | RegExp
     await page.goto(`/project/${idProject}/issue/view/kanban`);
     await expect(page.locator(STRIP)).toBeVisible();
     await page.getByRole('button', { name: tab }).first().click();
-}
-
-function isoDay(offsetDays: number): string {
-    const now = new Date();
-    const day = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-    return new Date(day + offsetDays * 86_400_000).toISOString();
 }
 
 test('the strip counts the backlog and follows the selected tab', async ({
