@@ -98,8 +98,8 @@ func (sc *SprintController) Close(c *gin.Context) {
 		return
 	}
 	moved, err := sc.sprintSvc.Close(ctx, idSprint, user.IdUser)
-	if errors.Is(err, service.ErrSprintClosed) {
-		c.Status(http.StatusConflict)
+	if errors.Is(err, errs.ErrSprintClosed) {
+		c.Status(errs.ErrSprintClosed.HttpStatus())
 		return
 	}
 	if err != nil {
@@ -128,7 +128,41 @@ func (sc *SprintController) SprintStats(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	sc.respondStats(c, &idSprint, nil, sprint.IdProject)
+	idsFinal, idsStart, err := sc.stateRepo.FinalAndStartStateIds(ctx, sprint.IdProject)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	stats, err := sc.sprintRepo.SprintStats(ctx, idSprint, idsFinal, idsStart)
+	sc.respondStats(c, stats, err)
+}
+
+func (sc *SprintController) Burndown(c *gin.Context) {
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
+	if err != nil {
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	sprint, err := sc.sprintRepo.LoadOne(ctx, idSprint)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if !sc.acl.CanReadProject(ctx, user.IdUser, sprint.IdProject) {
+		c.Status(http.StatusForbidden)
+		return
+	}
+	burndown, err := sc.sprintSvc.Burndown(ctx, sprint)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, burndown)
 }
 
 func (sc *SprintController) BacklogStats(c *gin.Context) {
@@ -143,23 +177,17 @@ func (sc *SprintController) BacklogStats(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	sc.respondStats(c, nil, &idProject, idProject)
-}
-
-func (sc *SprintController) respondStats(c *gin.Context, idSprint, idProject *int64, idStateScope int64) {
-	ctx := c.Request.Context()
-	idsFinal, idsStart, err := sc.stateRepo.FinalAndStartStateIds(ctx, idStateScope)
+	idsFinal, idsStart, err := sc.stateRepo.FinalAndStartStateIds(ctx, idProject)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	stats, err := sc.sprintRepo.SprintStats(ctx, model.SprintStatsFilter{
-		IdSprint:  idSprint,
-		IdProject: idProject,
-		IdsFinal:  idsFinal,
-		IdsStart:  idsStart,
-	})
+	stats, err := sc.sprintRepo.BacklogStats(ctx, idProject, idsFinal, idsStart)
+	sc.respondStats(c, stats, err)
+}
+
+func (sc *SprintController) respondStats(c *gin.Context, stats *model.SprintStats, err error) {
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -181,7 +209,7 @@ func (sc *SprintController) Velocity(c *gin.Context) {
 		return
 	}
 	spec := constants.KnownAppSettings[constants.SettingSprintVelocityLimit]
-	limit := sc.settings.SprintVelocityLimit()
+	limit := 2 * sc.settings.SprintVelocityLimit()
 	if raw := c.Query("limit"); raw != "" {
 		limit, err = strconv.Atoi(raw)
 		if err != nil || limit < spec.Min || limit > spec.Max {
@@ -235,8 +263,8 @@ func (sc *SprintController) Edit(c *gin.Context) {
 	if err != nil {
 		_ = c.Error(err)
 		switch {
-		case errors.Is(err, service.ErrSprintClosed):
-			c.Status(http.StatusConflict)
+		case errors.Is(err, errs.ErrSprintClosed):
+			c.Status(errs.ErrSprintClosed.HttpStatus())
 		case errors.Is(err, errs.ErrSprintWindow):
 			c.Status(errs.ErrSprintWindow.HttpStatus())
 		default:

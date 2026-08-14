@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
-	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/jackc/pgx/v5"
@@ -195,61 +193,201 @@ func (r *SprintRepository) MoveUnfinished(ctx context.Context, fromSprint int64,
 	return tag.RowsAffected(), nil
 }
 
-func (r *SprintRepository) SprintStats(ctx context.Context, filter model.SprintStatsFilter) (*model.SprintStats, error) {
-	if filter.IdSprint == nil && filter.IdProject == nil {
-		return nil, errs.ErrUnscopedSprintStats
-	}
-	idsFinal, idsStart := filter.IdsFinal, filter.IdsStart
+const statsAggregate = `
+	SELECT
+		COALESCE(sum(points), 0) AS total_points,
+		COALESCE(sum(points) FILTER (WHERE bucket = 'done'), 0) AS done_points,
+		COALESCE(sum(points) FILTER (WHERE bucket = 'start'), 0) AS start_points,
+		COALESCE(sum(points) FILTER (WHERE bucket = 'progress'), 0) AS progress_points,
+		count(*) AS total_issues,
+		count(*) FILTER (WHERE bucket = 'done') AS done_issues,
+		count(*) FILTER (WHERE bucket = 'start') AS start_issues,
+		count(*) FILTER (WHERE bucket = 'progress') AS progress_issues,
+		count(*) FILTER (WHERE points IS NOT NULL) AS pointed_issues
+	FROM (
+		SELECT
+			points,
+			CASE
+				WHEN id_state = ANY($1) THEN 'done'
+				WHEN id_state IS NULL OR id_state = ANY($2) THEN 'start'
+				ELSE 'progress'
+			END AS bucket
+		FROM issues.issue WHERE %s
+	) scoped`
+
+func sanitizeStateIds(idsFinal, idsStart []int64) ([]int64, []int64) {
 	if idsFinal == nil {
 		idsFinal = []int64{}
 	}
 	if idsStart == nil {
 		idsStart = []int64{}
 	}
-	args := []any{idsFinal, idsStart}
-	where := make([]string, 0, 2)
-	if filter.IdSprint != nil {
-		args = append(args, *filter.IdSprint)
-		where = append(where, fmt.Sprintf("id_sprint = $%d", len(args)))
-	} else {
-		where = append(where, "id_sprint IS NULL")
-	}
-	if filter.IdProject != nil {
-		args = append(args, *filter.IdProject)
-		where = append(where, fmt.Sprintf("id_project = $%d", len(args)))
-	}
+	return idsFinal, idsStart
+}
 
-	stats := &model.SprintStats{}
-	db := extctx.GetDb(ctx, r.pool)
-	err := db.QueryRow(ctx, `
-		SELECT
-			COALESCE(sum(points), 0),
-			COALESCE(sum(points) FILTER (WHERE bucket = 'done'), 0),
-			COALESCE(sum(points) FILTER (WHERE bucket = 'start'), 0),
-			COALESCE(sum(points) FILTER (WHERE bucket = 'progress'), 0),
-			count(*),
-			count(*) FILTER (WHERE bucket = 'done'),
-			count(*) FILTER (WHERE bucket = 'start'),
-			count(*) FILTER (WHERE bucket = 'progress'),
-			count(*) FILTER (WHERE points IS NOT NULL)
-		FROM (
-			SELECT
-				points,
-				CASE
-					WHEN id_state = ANY($1) THEN 'done'
-					WHEN id_state IS NULL OR id_state = ANY($2) THEN 'start'
-					ELSE 'progress'
-				END AS bucket
-			FROM issues.issue WHERE `+strings.Join(where, " AND ")+`
-		) scoped`, args...).Scan(
+func bucketTargets(stats *model.SprintStats) []any {
+	return []any{
 		&stats.TotalPoints, &stats.DonePoints, &stats.StartPoints, &stats.ProgressPoints,
 		&stats.TotalIssues, &stats.DoneIssues, &stats.StartIssues, &stats.ProgressIssues,
 		&stats.PointedIssues,
-	)
+	}
+}
+
+func (r *SprintRepository) SprintStats(ctx context.Context, idSprint int64, idsFinal, idsStart []int64) (*model.SprintStats, error) {
+	idsFinal, idsStart = sanitizeStateIds(idsFinal, idsStart)
+	stats := &model.SprintStats{}
+	targets := append(bucketTargets(stats),
+		&stats.FrozenTotalPoints, &stats.FrozenDonePoints, &stats.FrozenTotalIssues,
+		&stats.FrozenDoneIssues, &stats.FrozenPointedIssues)
+
+	db := extctx.GetDb(ctx, r.pool)
+	err := db.QueryRow(ctx, `
+		SELECT agg.total_points, agg.done_points, agg.start_points, agg.progress_points,
+		       agg.total_issues, agg.done_issues, agg.start_issues, agg.progress_issues,
+		       agg.pointed_issues,
+		       frozen.total_points, frozen.done_points, frozen.total_issues,
+		       frozen.done_issues, frozen.pointed_issues
+		FROM (`+fmt.Sprintf(statsAggregate, "id_sprint = $3")+`) agg
+		LEFT JOIN LATERAL (
+			SELECT sn.total_points, sn.done_points, sn.total_issues, sn.done_issues, sn.pointed_issues
+			FROM issues.sprint s
+			JOIN issues.sprint_snapshot sn ON sn.id_sprint = s.id_sprint
+			WHERE s.id_sprint = $3 AND s.state = $4
+			ORDER BY sn.day DESC
+			LIMIT 1
+		) frozen ON TRUE
+	`, idsFinal, idsStart, idSprint, constants.SprintStateClosed).Scan(targets...)
 	if err != nil {
 		return nil, fmt.Errorf("querying sprint stats: %w", err)
 	}
+	if stats.FrozenTotalIssues != nil && stats.FrozenDoneIssues != nil {
+		rolled := *stats.FrozenTotalIssues - *stats.FrozenDoneIssues
+		stats.RolledOverIssues = &rolled
+	}
 	return stats, nil
+}
+
+func (r *SprintRepository) BacklogStats(ctx context.Context, idProject int64, idsFinal, idsStart []int64) (*model.SprintStats, error) {
+	idsFinal, idsStart = sanitizeStateIds(idsFinal, idsStart)
+	stats := &model.SprintStats{}
+
+	db := extctx.GetDb(ctx, r.pool)
+	err := db.QueryRow(ctx,
+		fmt.Sprintf(statsAggregate, "id_sprint IS NULL AND id_project = $3"),
+		idsFinal, idsStart, idProject).Scan(bucketTargets(stats)...)
+	if err != nil {
+		return nil, fmt.Errorf("querying backlog stats: %w", err)
+	}
+	return stats, nil
+}
+
+func (r *SprintRepository) UpsertSnapshotToday(ctx context.Context, idSprint int64, idsFinal []int64) error {
+	if idsFinal == nil {
+		idsFinal = []int64{}
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO issues.sprint_snapshot(
+			id_sprint, day, total_points, done_points, total_issues, done_issues, pointed_issues)
+		SELECT
+			s.id_sprint,
+			(now() at time zone 'utc')::date,
+			COALESCE(sum(i.points), 0)::int,
+			COALESCE(sum(i.points) FILTER (WHERE i.id_state = ANY($2)), 0)::int,
+			count(i.id_issue)::int,
+			count(i.id_issue) FILTER (WHERE i.id_state = ANY($2))::int,
+			count(i.points)::int
+		FROM issues.sprint s
+		LEFT JOIN issues.issue i ON i.id_sprint = s.id_sprint
+		WHERE s.id_sprint = $1
+		  AND s.state <> $3
+		  AND (now() at time zone 'utc')::date >= s.start_at::date
+		GROUP BY s.id_sprint
+		ON CONFLICT (id_sprint, day) DO UPDATE SET
+			total_points   = EXCLUDED.total_points,
+			done_points    = EXCLUDED.done_points,
+			total_issues   = EXCLUDED.total_issues,
+			done_issues    = EXCLUDED.done_issues,
+			pointed_issues = EXCLUDED.pointed_issues
+		WHERE (
+			issues.sprint_snapshot.total_points,
+			issues.sprint_snapshot.done_points,
+			issues.sprint_snapshot.total_issues,
+			issues.sprint_snapshot.done_issues,
+			issues.sprint_snapshot.pointed_issues
+		) IS DISTINCT FROM (
+			EXCLUDED.total_points,
+			EXCLUDED.done_points,
+			EXCLUDED.total_issues,
+			EXCLUDED.done_issues,
+			EXCLUDED.pointed_issues
+		)
+	`, idSprint, idsFinal, constants.SprintStateClosed)
+	if err != nil {
+		return fmt.Errorf("upserting sprint snapshot: %w", err)
+	}
+	return nil
+}
+
+func (r *SprintRepository) UpsertSnapshotsForOpenSprints(ctx context.Context) (int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	tag, err := db.Exec(ctx, `
+		INSERT INTO issues.sprint_snapshot(
+			id_sprint, day, total_points, done_points, total_issues, done_issues, pointed_issues)
+		SELECT
+			s.id_sprint,
+			(now() at time zone 'utc')::date,
+			COALESCE(sum(i.points), 0)::int,
+			COALESCE(sum(i.points) FILTER (WHERE st.final), 0)::int,
+			count(i.id_issue)::int,
+			count(i.id_issue) FILTER (WHERE st.final)::int,
+			count(i.points)::int
+		FROM issues.sprint s
+		LEFT JOIN issues.issue i ON i.id_sprint = s.id_sprint
+		LEFT JOIN issues.state st ON st.id_state = i.id_state
+		WHERE s.state <> $1
+		  AND (now() at time zone 'utc')::date >= s.start_at::date
+		GROUP BY s.id_sprint
+		ON CONFLICT (id_sprint, day) DO UPDATE SET
+			total_points   = EXCLUDED.total_points,
+			done_points    = EXCLUDED.done_points,
+			total_issues   = EXCLUDED.total_issues,
+			done_issues    = EXCLUDED.done_issues,
+			pointed_issues = EXCLUDED.pointed_issues
+		WHERE (
+			issues.sprint_snapshot.total_points,
+			issues.sprint_snapshot.done_points,
+			issues.sprint_snapshot.total_issues,
+			issues.sprint_snapshot.done_issues,
+			issues.sprint_snapshot.pointed_issues
+		) IS DISTINCT FROM (
+			EXCLUDED.total_points,
+			EXCLUDED.done_points,
+			EXCLUDED.total_issues,
+			EXCLUDED.done_issues,
+			EXCLUDED.pointed_issues
+		)
+	`, constants.SprintStateClosed)
+	if err != nil {
+		return 0, fmt.Errorf("upserting open sprint snapshots: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}
+
+func (r *SprintRepository) LoadSnapshots(ctx context.Context, idSprint int64) ([]*model.SprintSnapshot, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT id_sprint, day, total_points, done_points, total_issues, done_issues, pointed_issues
+		FROM issues.sprint_snapshot WHERE id_sprint = $1 ORDER BY day
+	`, idSprint)
+	if err != nil {
+		return nil, fmt.Errorf("querying sprint snapshots: %w", err)
+	}
+	snapshots, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.SprintSnapshot])
+	if err != nil {
+		return nil, fmt.Errorf("collecting sprint snapshots: %w", err)
+	}
+	return snapshots, nil
 }
 
 func (r *SprintRepository) VelocityByProject(ctx context.Context, idProject int64, idsFinal []int64, limit int) ([]*model.SprintVelocity, error) {
@@ -262,23 +400,43 @@ func (r *SprintRepository) VelocityByProject(ctx context.Context, idProject int6
 			recent.id_sprint,
 			recent.name,
 			recent.end_at,
-			done.done_points,
-			done.done_issues,
-			FALSE AS frozen
+			COALESCE(last.done_points, live.done_points) AS done_points,
+			COALESCE(last.done_issues, live.done_issues) AS done_issues,
+			CASE WHEN base.day <> last.day THEN base.total_points END AS planned_points,
+			CASE WHEN base.day <> last.day THEN base.total_issues END AS planned_issues,
+			(last.day IS NOT NULL) AS frozen
 		FROM (
-			SELECT s.id_sprint, s.name, s.end_at
+			SELECT s.id_sprint, s.name, s.start_at, s.end_at
 			FROM issues.sprint s
 			WHERE s.id_project = $1 AND s.state = $4
 			ORDER BY s.end_at DESC
 			LIMIT $3
 		) recent
 		LEFT JOIN LATERAL (
+			SELECT sn.day, sn.done_points, sn.done_issues
+			FROM issues.sprint_snapshot sn
+			WHERE sn.id_sprint = recent.id_sprint
+			ORDER BY sn.day DESC
+			LIMIT 1
+		) last ON TRUE
+		LEFT JOIN LATERAL (
 			SELECT
 				COALESCE(sum(i.points), 0)::int AS done_points,
 				count(*)::int AS done_issues
 			FROM issues.issue i
-			WHERE i.id_sprint = recent.id_sprint AND i.id_state = ANY($2)
-		) done ON TRUE
+			WHERE last.day IS NULL
+			  AND i.id_sprint = recent.id_sprint
+			  AND i.id_state = ANY($2)
+		) live ON TRUE
+		LEFT JOIN LATERAL (
+			SELECT sn.day, sn.total_points, sn.total_issues
+			FROM issues.sprint_snapshot sn
+			WHERE sn.id_sprint = recent.id_sprint
+			ORDER BY (sn.day >= recent.start_at::date) DESC,
+			         CASE WHEN sn.day >= recent.start_at::date THEN sn.day END ASC NULLS LAST,
+			         sn.day DESC
+			LIMIT 1
+		) base ON TRUE
 		ORDER BY recent.end_at
 	`, idProject, idsFinal, limit, constants.SprintStateClosed)
 	if err != nil {

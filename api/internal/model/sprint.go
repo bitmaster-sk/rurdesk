@@ -37,4 +37,40 @@ type SprintStats struct {
 	StartIssues    int `json:"startIssues"`
 	ProgressIssues int `json:"progressIssues"`
 	PointedIssues  int `json:"pointedIssues"`
+
+	RolledOverIssues    *int `json:"rolledOverIssues,omitempty"`
+	FrozenTotalPoints   *int `json:"frozenTotalPoints,omitempty"`
+	FrozenDonePoints    *int `json:"frozenDonePoints,omitempty"`
+	FrozenTotalIssues   *int `json:"frozenTotalIssues,omitempty"`
+	FrozenDoneIssues    *int `json:"frozenDoneIssues,omitempty"`
+	FrozenPointedIssues *int `json:"frozenPointedIssues,omitempty"`
+}
+
+type SprintBurndown struct {
+	IdSprint int64               `json:"idSprint"`
+	StartAt  time.Time           `json:"startAt"`
+	EndAt    time.Time           `json:"endAt"`
+	State    string              `json:"state"`
+	Days     []SprintBurndownDay `json:"days"`
+}
+
+type SprintBurndownDay struct {
+	Day             time.Time `json:"day"`
+	TotalPoints     *int      `json:"totalPoints"`
+	DonePoints      *int      `json:"donePoints"`
+	RemainingPoints *int      `json:"remainingPoints"`
+	TotalIssues     *int      `json:"totalIssues"`
+	DoneIssues      *int      `json:"doneIssues"`
+	RemainingIssues *int      `json:"remainingIssues"`
+	Snapshot        bool      `json:"snapshot"`
+}
+
+type SprintSnapshot struct {
+	IdSprint      int64     `json:"idSprint"      db:"id_sprint"`
+	Day           time.Time `json:"day"           db:"day"`
+	TotalPoints   int       `json:"totalPoints"   db:"total_points"`
+	DonePoints    int       `json:"donePoints"    db:"done_points"`
+	TotalIssues   int       `json:"totalIssues"   db:"total_issues"`
+	DoneIssues    int       `json:"doneIssues"    db:"done_issues"`
+	PointedIssues int       `json:"pointedIssues" db:"pointed_issues"`
 }
