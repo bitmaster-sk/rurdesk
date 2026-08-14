@@ -154,6 +154,7 @@ func New(
 	pri.DELETE("/sprint/:idSprint", sprintCtrl.Delete)
 	pri.POST("/sprint/:idSprint/close", sprintCtrl.Close)
 	pri.GET("/sprint/:idSprint/stats", sprintCtrl.SprintStats)
+	pri.GET("/sprint/:idSprint/burndown", sprintCtrl.Burndown)
 	pri.GET("/project/:idProject/backlog/stats", sprintCtrl.BacklogStats)
 	pri.GET("/project/:idProject/sprint/velocity", sprintCtrl.Velocity)
 

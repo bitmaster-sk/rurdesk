@@ -41,6 +41,7 @@ func main() {
 	go sweep.StartHeartbeatSweep(ctx)
 	go injector.GetMergePoller().Start(ctx)
 	go injector.GetScheduler().Start(ctx)
+	go injector.GetJobScheduler().Start(ctx)
 
 	err = app.Start(ctx)
 	injector.GetApiKeyService().Shutdown()

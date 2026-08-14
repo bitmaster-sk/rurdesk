@@ -6,6 +6,7 @@ import { SprintState } from '../constants/sprint-state.enum';
 import { Sprint } from '../model/sprint.model';
 import { SprintStats } from '../model/sprint-stats.model';
 import {
+    SprintForecastFinish,
     SprintHealth,
     SprintHealthBase,
     SprintHealthClosed,
@@ -41,7 +42,7 @@ export class SprintHealthService {
         const base = this.toBase(stats, unit, true);
         const window = this.toWindow(sprint, now);
         if (sprint.state === SprintState.Closed) {
-            return this.toClosed(base);
+            return this.toClosed(base, stats, unit);
         }
         if (!window.hasStarted) {
             return this.toPlanned(base, avgVelocity);
@@ -49,13 +50,20 @@ export class SprintHealthService {
         return this.toRunning(base, window);
     }
 
+    public forcedUnit(stats: SprintStats | null, unit: SprintUnit): SprintUnit {
+        return this.isUnitForced(stats) ? SprintUnit.Issues : unit;
+    }
+
+    private isUnitForced(stats: SprintStats | null): boolean {
+        return (stats?.totalIssues ?? 0) > 0 && stats?.pointedIssues === 0;
+    }
+
     private toBase(
         stats: SprintStats | null,
         unit: SprintUnit,
         canForceUnit: boolean
     ): SprintHealthBase {
-        const isUnitForced =
-            canForceUnit && (stats?.totalIssues ?? 0) > 0 && stats?.pointedIssues === 0;
+        const isUnitForced = canForceUnit && this.isUnitForced(stats);
         const effectiveUnit = isUnitForced ? SprintUnit.Issues : unit;
         const usePoints = effectiveUnit === SprintUnit.Points;
 
@@ -88,14 +96,57 @@ export class SprintHealthService {
         };
     }
 
-    private toClosed(base: SprintHealthBase): SprintHealthClosed {
+    private toClosed(
+        base: SprintHealthBase,
+        stats: SprintStats | null,
+        unit: SprintUnit
+    ): SprintHealthClosed {
+        const rolledOverIssues = stats?.rolledOverIssues ?? null;
+        if (stats?.frozenTotalIssues == null || stats.frozenPointedIssues == null) {
+            return {
+                ...base,
+                phase: SprintPhase.Closed,
+                isFrozen: false,
+                rolledOverIssues,
+                committed: base.done,
+                inProgress: 0,
+                notStarted: 0
+            };
+        }
+        const isUnitForced = stats.frozenTotalIssues > 0 && stats.frozenPointedIssues === 0;
+        const effectiveUnit = isUnitForced ? SprintUnit.Issues : unit;
+        const usePoints = effectiveUnit === SprintUnit.Points;
+        const committed = usePoints ? (stats.frozenTotalPoints ?? 0) : stats.frozenTotalIssues;
+        const done = usePoints ? (stats.frozenDonePoints ?? 0) : (stats.frozenDoneIssues ?? 0);
         return {
             ...base,
-            phase: SprintPhase.Closed,
-            committed: base.done,
+            unit: effectiveUnit,
+            isUnitForced,
+            committed,
+            done,
             inProgress: 0,
-            notStarted: 0
+            notStarted: Math.max(committed - done, 0),
+            phase: SprintPhase.Closed,
+            isFrozen: true,
+            rolledOverIssues
         };
+    }
+
+    public toForecastFinish(sprint: Sprint, health: SprintHealth): SprintForecastFinish | null {
+        if (health.phase !== SprintPhase.Running || health.forecast === null) {
+            return null;
+        }
+        const remaining = health.committed - health.done;
+        if (remaining <= 0 || health.forecast.paceSoFar === 0) {
+            return null;
+        }
+        const finishDay = health.daysElapsed + Math.ceil(remaining / health.forecast.paceSoFar);
+        const daysLate = Math.max(finishDay - health.daysTotal, 0);
+        const anchor =
+            daysLate > 0
+                ? DateUtil.truncateTimeUtc(sprint.endAt).getTime() + daysLate * DAY_MS
+                : DateUtil.truncateTimeUtc(sprint.startAt).getTime() + (finishDay - 1) * DAY_MS;
+        return { finish: new Date(anchor), daysLate };
     }
 
     private toPlanned(

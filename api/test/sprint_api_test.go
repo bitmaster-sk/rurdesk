@@ -417,7 +417,9 @@ func TestSprintApi_VelocityReturnsMostRecentAscending(t *testing.T) {
 	require.Equal(t, 3, entries[0].DonePoints)
 	require.Equal(t, 5, entries[1].DonePoints)
 	require.Equal(t, 1, entries[1].DoneIssues)
-	require.False(t, entries[1].Frozen)
+	require.True(t, entries[1].Frozen, "closing freezes the cycle's numbers")
+	require.Nil(t, entries[1].PlannedPoints,
+		"a cycle whose only snapshot is the close row has no plan to compare against")
 }
 
 func TestSprintApi_VelocityEmptyProjectAndBadLimit(t *testing.T) {
@@ -493,6 +495,11 @@ func TestSprintApi_RejectsSprintEndingBeforeItStarts(t *testing.T) {
 	sameDay := `{"name":"Zero","startAt":"2026-08-20T00:00:00Z","endAt":"2026-08-20T00:00:00Z"}`
 	res = Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/sprint", idProject), sameDay, token)
 	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode)
+
+	mistyped := `{"name":"Decade","startAt":"2026-08-01T00:00:00Z","endAt":"2036-08-01T00:00:00Z"}`
+	res = Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/sprint", idProject), mistyped, token)
+	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode,
+		"a decade-long window is a typo, and its burndown would be one row per day")
 
 	sprint := createSprint(t, app, token, idProject,
 		`{"name":"Sane","startAt":"2026-08-01T00:00:00Z","endAt":"2026-08-15T00:00:00Z"}`)

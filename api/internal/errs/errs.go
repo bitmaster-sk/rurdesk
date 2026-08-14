@@ -52,8 +52,8 @@ var (
 	ErrRateLimited                    = newErr("RATE_LIMITED", "too many requests", "error.rate_limited", http.StatusTooManyRequests)
 	ErrInvalidStateMigrationTarget    = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different state of the same project", "error.invalid_state_migration_target", http.StatusUnprocessableEntity)
 	ErrInvalidSeverityMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different severity of the same project", "error.invalid_severity_migration_target", http.StatusUnprocessableEntity)
-	ErrUnscopedSprintStats            = newErr("UNSCOPED_SPRINT_STATS", "sprint stats need a sprint or a project", "error.unscoped_sprint_stats", http.StatusInternalServerError)
 	ErrSprintWindow                   = newErr("SPRINT_WINDOW", "sprint must end after it starts", "error.sprint_window", http.StatusUnprocessableEntity)
+	ErrSprintClosed                   = newErr("SPRINT_CLOSED", "sprint is already closed", "error.sprint_closed", http.StatusConflict)
 )
 
 // As reports whether err is (or wraps) an *Error, storing it in target. It

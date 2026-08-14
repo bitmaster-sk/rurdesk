@@ -8,4 +8,10 @@ export interface SprintStats {
     startIssues: number;
     progressIssues: number;
     pointedIssues: number;
+    rolledOverIssues?: number;
+    frozenTotalPoints?: number;
+    frozenDonePoints?: number;
+    frozenTotalIssues?: number;
+    frozenDoneIssues?: number;
+    frozenPointedIssues?: number;
 }

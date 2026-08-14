@@ -1,4 +1,14 @@
+import { defer, Observable, timer } from 'rxjs';
+import { map, repeat } from 'rxjs/operators';
+
 export const DAY_MS = 86_400_000;
+
+export const utcDayRollover$: Observable<Date> = defer(() =>
+    timer(msUntilNextUtcDay(new Date()))
+).pipe(
+    repeat(),
+    map(() => new Date())
+);
 
 export function msUntilNextUtcDay(now: Date): number {
     const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);

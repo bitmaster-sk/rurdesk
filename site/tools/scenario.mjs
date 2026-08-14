@@ -166,6 +166,8 @@ async function getProject(page) {
 // sprints keep a tab but are useless as a rollover target, hence the extra :not.
 const OPEN_SPRINT_TABS = '.sprint-tab:not(.sprint-tabs__pinned):not(.sprint-tab--closed)';
 const ADD_SPRINT_BUTTON = 'ui-button.sprint-tabs__pinned';
+const CHARTS_TOGGLE = '[data-testid="kanban-charts-toggle"] button';
+const CHARTS_BAND = '[data-testid="sprint-charts-band"]';
 
 // Creates sprints via the "+ Sprint" dialog until `want` open ones exist. Idempotent
 // across re-runs: earlier rollovers close sprints, so a step that needs a live one
@@ -516,6 +518,19 @@ const STEPS = [
 
   { id: 'sprint-board', type: 'screenshot', file: 'sprint-board.png', title: 'Board with sprint tab strip (Swimlane)',
     run: async ({ page }) => { const P = await getProject(page); await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/kanban`); await L.settle(page); await L.selectSwimlane(page); await L.shootPage(page, 'sprint-board.png'); } },
+
+  { id: 'sprint-charts', type: 'screenshot', file: 'sprint-charts.png', title: 'Charts band above the board (burndown + velocity)',
+    run: async ({ page }) => {
+      const P = await getProject(page); await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/kanban`); await L.settle(page); await L.selectSwimlane(page);
+      const toggle = page.locator(CHARTS_TOGGLE).first();
+      await toggle.waitFor({ state: 'visible', timeout: 10000 });
+      if (await toggle.isDisabled()) throw new Error('the Charts toggle is disabled — the project has no cycles');
+      if (!(await page.locator(CHARTS_BAND).count())) { await toggle.click(); }
+      const band = page.locator(CHARTS_BAND).first();
+      await band.waitFor({ state: 'visible', timeout: 10000 });
+      await page.waitForTimeout(1200);
+      await L.shootPage(page, 'sprint-charts.png');
+    } },
 
   { id: 'sprint-create', type: 'screenshot', file: 'sprint-create.png', title: 'New-sprint dialog (opened, not submitted)',
     run: async ({ page }) => {

@@ -412,7 +412,46 @@
                 "UNIT_TASKS_SHORT": {
                     "SINGULAR": "task",
                     "PLURAL": "tasks"
-                }
+                },
+                "CHARTS": "Charts",
+                "BURNDOWN": "Burndown",
+                "BURNUP": "Burnup",
+                "VELOCITY": "Velocity",
+                "VELOCITY_OF": "Velocity — {{project}}",
+                "IDEAL": "Ideal",
+                "REMAINING": "Remaining",
+                "COMPLETED": "Done",
+                "SCOPE": "Scope",
+                "FORECAST": "Forecast",
+                "AVG_VELOCITY": "{{avg}} {{unit}} avg",
+                "AVG_VELOCITY_LEGEND": "Average",
+                "SCOPE_ADDED": "+{{delta}} {{unit}} added",
+                "SCOPE_REMOVED": "−{{delta}} {{unit}} removed",
+                "SCOPE_UNCHANGED": "unchanged",
+                "SCOPE_ADDED_DETAIL": "on {{date}}, day {{day}} of {{days}}",
+                "FORECAST_FINISH": "{{date}} finish",
+                "FORECAST_LATE": {
+                    "SINGULAR": "{{count}} day past the sprint end",
+                    "PLURAL": "{{count}} days past the sprint end"
+                },
+                "ROLLED_OVER": {
+                    "SINGULAR": "{{count}} task rolled over",
+                    "PLURAL": "{{count}} tasks rolled over"
+                },
+                "NO_HISTORY": "No history recorded for this cycle yet",
+                "BURNDOWN_GAP_NOTE": "Dashed segments carry the last recorded day forward.",
+                "LIVE_FALLBACK": "A cycle with no recorded plan shows what it finished, without a planned bar.",
+                "CLOSE_FAILED": "Could not close the sprint",
+                "AVG_VELOCITY_TREND_UP": {
+                    "SINGULAR": "up from {{avg}} in the one before",
+                    "PLURAL": "up from {{avg}} in the {{count}} before"
+                },
+                "AVG_VELOCITY_TREND_DOWN": {
+                    "SINGULAR": "down from {{avg}} in the one before",
+                    "PLURAL": "down from {{avg}} in the {{count}} before"
+                },
+                "SCOPE_CHANGE_DETAIL_LATE": "on {{date}}, after the sprint window",
+                "PLANNED": "Planned"
             },
             "LAYOUT.COLUMNS": "Columns",
             "LAYOUT.SWIMLANE": "Swimlane"
@@ -630,7 +669,6 @@
         "not_found": "The requested resource was not found.",
         "relation_cycle": "This relation would create a cycle.",
         "sprint_window": "A cycle must end after it starts.",
-        "unscoped_sprint_stats": "Could not load cycle statistics.",
         "bad_request": "Invalid request. Please check your input.",
         "internal": "An unexpected error occurred. Please try again.",
         "ai_unavailable": "AI service is temporarily unavailable. Please try again later.",
@@ -653,7 +691,8 @@
         "state_in_use": "This state is still in use — choose where to move its references",
         "severity_in_use": "This severity is still in use — choose where to move its references",
         "invalid_state_migration_target": "The target must be a different state of the same project",
-        "invalid_severity_migration_target": "The target must be a different severity of the same project"
+        "invalid_severity_migration_target": "The target must be a different severity of the same project",
+        "sprint_closed": "That cycle is already closed."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",

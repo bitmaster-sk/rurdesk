@@ -112,9 +112,10 @@ The chips mean:
   those tasks — it is not scaled up to the rest.
 - A closed cycle shows its **window**, not the moment it was closed; the closing
   time isn't recorded.
-- Until the burndown and velocity charts ship, a closed cycle shows only what
-  was **finished**, with no out-of-total fraction, because unfinished work has
-  already rolled into the next cycle and is no longer counted here.
+- A closed cycle **without frozen numbers** shows only what was **finished**, with
+  no out-of-total fraction: its unfinished work rolled into the next cycle and is
+  not counted here. A cycle whose numbers were frozen at closing time shows the
+  full fraction.
 - The strip updates live for changes **you** make, and for task changes your
   teammates make in the same project — a burst of them is collapsed into a single
   refresh. Creating, renaming or deleting a *cycle* elsewhere reaches you on your
@@ -127,7 +128,47 @@ The chips mean:
   never belonged to a cycle is left out of both figures — the board below it still
   lists that task, since the tab shows every state. The row prints tasks and points
   side by side, so the unit toggle is hidden there.
-- A closed cycle draws a **full** bar. It reports what was finished, so reopening
-  a task afterwards changes the figure rather than leaving an unexplained gap.
+- A closed cycle without frozen numbers draws a **full** bar. It reports what was
+  finished, so reopening a task afterwards changes the figure rather than leaving
+  an unexplained gap. With frozen numbers the bar splits into finished and rolled
+  over, and a chip counts the tasks that moved on.
 - When **Save** is greyed out in the cycle dialog, hovering it says which field is
   the problem.
+
+## Burndown, burnup and velocity
+
+The toolbar's **Charts** button opens a band above the board. It is remembered
+per browser, and it is disabled for a project that has no cycles.
+
+For a cycle the band shows three things: how much scope moved since the cycle
+started, the projected finish date, and the recent velocity average — then a
+**Burndown / Burnup** chart and a velocity chart of the recent closed cycles
+(what each finished, against the scope it started with). On the **Backlog** tab there
+is no history to draw, so the band shows the velocity chart alone. The band uses
+whatever the strip's **Points / Tasks** toggle is set to; it has no toggle of its
+own.
+
+The burndown line is the work still remaining, day by day, against a dashed
+ideal line that runs from the starting scope to zero on the last day. Burnup
+swaps it for what has been completed against the total scope.
+
+![Charts band above the board — burndown and velocity](../../site/assets/img/sprint-charts.png)
+
+### What it does not claim
+
+- **A cycle needs more than one recorded day to show a plan.** The planned bar is
+  the scope of the cycle's *first* recorded day. A cycle whose only recorded day is
+  the day it closed has nothing to compare against, so it draws the done bar alone.
+- Closing a cycle freezes its numbers before the rollover runs, so dragging a task
+  out of a closed cycle afterwards does not rewrite its history.
+- The projected finish is the same straight-line projection the health strip
+  uses, and it is absent for the first two days, when nothing remains, or when
+  nothing has been finished yet.
+- The velocity trend ("up from N in the M before", or "down from") needs at least
+  four closed cycles that scored in the unit being shown; with fewer, the line is
+  left out rather than invented.
+- **A cycle can be at most 400 days long.** The burndown is one row per calendar
+  day, so a window past that is a typo rather than a cycle, and the dialog rejects
+  it.
+- **A cycle closed before its first day was recorded** has no history to draw: no
+  planned bar and no rolled-over chip, just what it finished.

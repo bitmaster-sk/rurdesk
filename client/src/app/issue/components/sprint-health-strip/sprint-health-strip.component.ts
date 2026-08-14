@@ -2,9 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, model } fr
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
-import { defer, timer } from 'rxjs';
-import { map, repeat } from 'rxjs/operators';
-import { DAY_MS, DateUtil, msUntilNextUtcDay } from 'src/app/shared/date/date.util';
+import { DAY_MS, DateUtil, utcDayRollover$ } from 'src/app/shared/date/date.util';
 import { SprintPhase } from '../../constants/sprint-phase.enum';
 import { SprintUnit } from '../../constants/sprint-unit.enum';
 import { SprintHealth, SprintHealthForecast } from '../../entity/sprint-health.entity';
@@ -12,6 +10,7 @@ import { Sprint } from '../../model/sprint.model';
 import { SprintStats } from '../../model/sprint-stats.model';
 import { SprintVelocity, SprintVelocityAverages } from '../../model/sprint-velocity.model';
 import { SprintHealthService } from '../../service/sprint-health.service';
+import { SprintAnalyticsConverter } from '../../converter/sprint-analytics.converter';
 import { UiTagSeverity } from 'src/app/ui/components/tag/tag.component';
 
 export interface SprintHealthText {
@@ -23,11 +22,6 @@ export interface SprintHealthChip extends SprintHealthText {
     severity: UiTagSeverity;
     icon: string | null;
 }
-
-const utcDayRollover$ = defer(() => timer(msUntilNextUtcDay(new Date()))).pipe(
-    repeat(),
-    map(() => new Date())
-);
 
 @Component({
     selector: 'app-sprint-health-strip',
@@ -63,16 +57,9 @@ export class SprintHealthStripComponent {
         { labelKey: 'ISSUE.KANBAN.SPRINTS.UNIT_TASKS', value: SprintUnit.Issues }
     ];
 
-    protected readonly avgVelocity = computed<SprintVelocityAverages | null>(() => {
-        const recent = this.velocities();
-        if (recent.length === 0) {
-            return null;
-        }
-        return {
-            points: this.averageOfScored(recent.map(v => v.donePoints)),
-            issues: this.averageOfScored(recent.map(v => v.doneIssues))
-        };
-    });
+    protected readonly avgVelocity = computed<SprintVelocityAverages | null>(() =>
+        SprintAnalyticsConverter.toRecentAverages(this.velocities())
+    );
 
     protected readonly health = computed<SprintHealth>(() =>
         this.healthService.toHealth(
@@ -126,10 +113,19 @@ export class SprintHealthStripComponent {
             };
         }
         if (health.phase === SprintPhase.Closed) {
-            return {
-                key: 'ISSUE.KANBAN.SPRINTS.HEALTH_DONE_ONLY',
-                params: { done: health.done, unit: this.unitLabel(health.done) }
-            };
+            return health.isFrozen
+                ? {
+                      key: 'ISSUE.KANBAN.SPRINTS.HEALTH_PROGRESS',
+                      params: {
+                          done: health.done,
+                          total: health.committed,
+                          unit: this.unitLabel(health.committed)
+                      }
+                  }
+                : {
+                      key: 'ISSUE.KANBAN.SPRINTS.HEALTH_DONE_ONLY',
+                      params: { done: health.done, unit: this.unitLabel(health.done) }
+                  };
         }
         if (health.phase === SprintPhase.NotStarted) {
             return {
@@ -197,6 +193,19 @@ export class SprintHealthStripComponent {
                   }
                 : null;
         }
+        if (health.phase === SprintPhase.Closed) {
+            return health.rolledOverIssues !== null && health.rolledOverIssues > 0
+                ? {
+                      key: this.pluralKey(
+                          'ISSUE.KANBAN.SPRINTS.ROLLED_OVER',
+                          health.rolledOverIssues
+                      ),
+                      params: { count: health.rolledOverIssues },
+                      severity: 'secondary',
+                      icon: null
+                  }
+                : null;
+        }
         if (health.phase !== SprintPhase.Running) {
             return null;
         }
@@ -254,12 +263,5 @@ export class SprintHealthStripComponent {
             month: 'short',
             day: 'numeric'
         });
-    }
-
-    private averageOfScored(values: number[]): number {
-        const scored = values.filter(value => value > 0);
-        return scored.length === 0
-            ? 0
-            : scored.reduce((sum, value) => sum + value, 0) / scored.length;
     }
 }

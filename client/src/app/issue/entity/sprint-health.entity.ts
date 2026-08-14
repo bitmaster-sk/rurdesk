@@ -38,6 +38,13 @@ export interface SprintHealthRunning extends SprintHealthBase {
 
 export interface SprintHealthClosed extends SprintHealthBase {
     phase: SprintPhase.Closed;
+    isFrozen: boolean;
+    rolledOverIssues: number | null;
+}
+
+export interface SprintForecastFinish {
+    finish: Date;
+    daysLate: number;
 }
 
 export type SprintHealth =

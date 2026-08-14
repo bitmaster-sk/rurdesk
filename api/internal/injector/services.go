@@ -14,6 +14,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/router"
+	"github.com/bitmaster-sk/rurdesk/api/internal/scheduler"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-redis/redis/v8"
@@ -478,6 +479,21 @@ func GetScheduler() *agent.Scheduler {
 		), nil
 	})
 	return instance.(*agent.Scheduler)
+}
+
+func GetJobScheduler() *scheduler.Scheduler {
+	instance, _ := di.GetWithNew("job-scheduler", func() (any, error) {
+		return scheduler.New(scheduler.Task{
+			Name:       "sprint-snapshot",
+			Interval:   time.Hour,
+			RunOnStart: true,
+			Run: func(ctx context.Context) error {
+				_, err := GetSprintRepository().UpsertSnapshotsForOpenSprints(ctx)
+				return err
+			},
+		}), nil
+	})
+	return instance.(*scheduler.Scheduler)
 }
 
 func GetAgentRunController() *controller.AgentRunController {
