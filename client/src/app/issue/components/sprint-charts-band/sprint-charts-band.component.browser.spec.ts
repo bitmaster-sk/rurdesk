@@ -211,13 +211,15 @@ describe('SprintChartsBandComponent', () => {
         expect(chartData(BURNDOWN).datasets[0].data).toEqual([0, 6]);
     });
 
-    it('draws no planned bar for a cycle closed before snapshots existed', () => {
+    it('draws no planned bar for a cycle that recorded no plan', () => {
         render({
             sprint: makeSprint(),
             velocities: [makeVelocity('S1', 8), makeVelocity('S2', 11, 13)]
         });
         expect(chartData(VELOCITY).datasets[1].data).toEqual([null, 13]);
-        expect(text('[data-testid="sprint-velocity-fallback"]')).toContain('live numbers');
+        expect(text('[data-testid="sprint-velocity-fallback"]')).toContain(
+            'without a planned bar'
+        );
     });
 
     it('keeps the trend line off while the older window is a single cycle', () => {

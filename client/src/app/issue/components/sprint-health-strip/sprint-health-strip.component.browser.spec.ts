@@ -399,7 +399,7 @@ describe('SprintHealthStripComponent', () => {
         expect(done.style.width).toBe('70%');
     });
 
-    it('has no rolled-over chip for a cycle closed before snapshots existed', () => {
+    it('has no rolled-over chip for a closed cycle without frozen numbers', () => {
         render(
             makeSprint(daysFromToday(-20), daysFromToday(-6), SprintState.Closed),
             makeStats({ totalPoints: 14, donePoints: 14, pointedIssues: 6 })
