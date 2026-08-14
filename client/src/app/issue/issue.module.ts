@@ -48,6 +48,7 @@ import {
     provideTablerIcons,
     IconCheck,
     IconAlertTriangle,
+    IconChartLine,
     IconFilter,
     IconArrowsSort,
     IconSortAscending,
@@ -104,6 +105,8 @@ import { MrStatusPillComponent } from './components/issue-detail/components/mr-s
 import { MrLinkPickerComponent } from './components/issue-detail/components/mr-link-picker/mr-link-picker.component';
 import { AnchorReplyComponent } from './components/issue-detail/components/anchor-reply/anchor-reply.component';
 import { IssueParticipantsComponent } from './components/issue-detail/components/issue-participants/issue-participants.component';
+import { BaseChartDirective } from 'ng2-charts';
+import { SprintChartsBandComponent } from './components/sprint-charts-band/sprint-charts-band.component';
 import { UiModule } from '../ui/ui.module';
 import { AgentModule } from '../agent/agent.module';
 
@@ -126,6 +129,7 @@ import { AgentModule } from '../agent/agent.module';
         IssueKanbanSwimlaneComponent,
         SprintTabStripComponent,
         SprintHealthStripComponent,
+        SprintChartsBandComponent,
         SprintDialogComponent,
         IssueKanbanColumnsComponent,
         QualityBadgeComponent,
@@ -161,6 +165,7 @@ import { AgentModule } from '../agent/agent.module';
         TrackerModule,
         FullCalendarModule,
         TablerIconComponent,
+        BaseChartDirective,
         SeverityModule,
         UiModule,
         AgentModule
@@ -172,6 +177,7 @@ import { AgentModule } from '../agent/agent.module';
         provideTablerIcons({
             IconCheck,
             IconAlertTriangle,
+            IconChartLine,
             IconRepeat,
             IconFilter,
             IconArrowsSort,

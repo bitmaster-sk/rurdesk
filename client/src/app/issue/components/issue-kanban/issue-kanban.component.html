@@ -30,6 +30,17 @@
         ></ui-button>
     </div>
 
+    <ui-toggle-button
+        data-testid="kanban-charts-toggle"
+        [ngModel]="showCharts()"
+        (ngModelChange)="onToggleCharts($event)"
+        [disabled]="sprints().length === 0"
+        size="small"
+    >
+        <tabler-icon icon="chart-line" [size]="14" />
+        {{ 'ISSUE.KANBAN.SPRINTS.CHARTS' | translate }}
+    </ui-toggle-button>
+
     <ui-button
         severity="secondary"
         variant="outlined"
@@ -78,7 +89,20 @@
     <app-filter></app-filter>
 }
 
-<div class="h-full flex flex-col overflow-hidden">
+@if (showCharts() && sprints().length > 0) {
+    <app-sprint-charts-band
+        class="ui-box"
+        [sprint]="selectedSprint()"
+        [projectName]="projectName()"
+        [burndown]="burndown()"
+        [stats]="stats()"
+        [velocities]="velocities()"
+        [unit]="unit()"
+        [isLoading]="isBurndownLoading()"
+    ></app-sprint-charts-band>
+}
+
+<div class="flex-1 min-h-0 flex flex-col overflow-hidden">
     <app-sprint-tab-strip
         [tabs]="sprintTabs()"
         [selectedIdSprint]="selectedIdSprint()"

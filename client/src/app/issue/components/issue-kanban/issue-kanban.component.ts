@@ -22,6 +22,7 @@ import {
 } from 'src/app/ui/util/motion';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateService } from '@ngx-translate/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
@@ -105,7 +106,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.issueKanbanService.states$
     ]).pipe(map(([rows, states]) => ({ rows, states })));
 
-    private readonly sprints = toSignal(this.sprintStore.sprints$, { initialValue: [] });
+    protected readonly sprints = toSignal(this.sprintStore.sprints$, { initialValue: [] });
 
     private readonly currentSprint = toSignal(this.sprintStore.currentSprint$, {
         initialValue: undefined
@@ -122,6 +123,18 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected readonly stats = this.analytics.stats;
 
     protected readonly velocities = this.analytics.velocities;
+
+    protected readonly burndown = this.analytics.burndown;
+
+    protected readonly isBurndownLoading = this.analytics.isBurndownLoading;
+
+    protected readonly projectName = signal('');
+
+    private static readonly showChartsKey = 'issue-kanban-show-charts';
+
+    protected readonly showCharts = signal(
+        localStorage.getItem(IssueKanbanComponent.showChartsKey) === 'true'
+    );
 
     // Display setting: show closed sprints as (read-only) tabs. Pure display
     // preference, persisted per user in localStorage like the table settings.
@@ -227,6 +240,9 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         const issue = notice.payload;
         if (!issue || issue.idProject !== this.idProject()) return;
         this.analytics.reloadStatsAfterNotice();
+        if (this.showCharts() && this.selectedIdSprint() !== null) {
+            this.analytics.reloadBurndownAfterNotice();
+        }
 
         if (notice.action !== NoticeAction.Update) {
             this.issueFilterStore.refresh();
@@ -371,6 +387,17 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.selectedIdSprint.set(idSprint);
         this.issueFilterStore.setSprint(idSprint);
         this.analytics.scopeAndReload(this.idProject(), idSprint);
+        if (this.showCharts()) {
+            this.analytics.reloadBurndown();
+        }
+    }
+
+    protected onToggleCharts(value: boolean): void {
+        this.showCharts.set(value);
+        localStorage.setItem(IssueKanbanComponent.showChartsKey, String(value));
+        if (value) {
+            this.analytics.reloadBurndown();
+        }
     }
 
     protected onShowClosedSprintsChange(value: boolean): void {
@@ -394,6 +421,14 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
                 this.onSprintChange(null); // closed sprint leaves the strip; reload board unscoped
                 this.sprintStore.load(this.idProject());
                 this.analytics.reloadVelocity();
+                this.toast.showSuccess('ISSUE.KANBAN.SPRINTS.CLOSED_TOAST');
+            },
+            error: (error: HttpErrorResponse) => {
+                this.toast.showError(
+                    error.status === 409
+                        ? 'ISSUE.KANBAN.SPRINTS.CLOSE_CONFLICT'
+                        : 'ISSUE.KANBAN.SPRINTS.CLOSE_FAILED'
+                );
             }
         });
     }
@@ -462,6 +497,9 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
                 next: () => {
                     this.issueFilterStore.refresh();
                     this.analytics.reloadStats();
+                    if (this.showCharts()) {
+                        this.analytics.reloadBurndown();
+                    }
                 },
                 error: () => {
                     this.issueFilterStore.refresh();
@@ -477,6 +515,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.previousContainer.data.tiles.splice(evt.previousIndex, 1);
         evt.container.data.tiles.unshift(issue);
         this.shiftTotals(evt);
+        this.refreshBurndown();
         this.issueService.updateIssue(issue).subscribe({
             error: () => {
                 this.issueFilterStore.refresh();
@@ -504,11 +543,18 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.previousContainer.data.tiles.splice(evt.previousIndex, 1);
         evt.container.data.tiles.unshift(updated);
         this.shiftTotals(evt);
+        this.refreshBurndown();
         this.issueService.updateIssue(updated).subscribe({
             error: () => {
                 this.issueFilterStore.refresh();
             }
         });
+    }
+
+    private refreshBurndown(): void {
+        if (this.showCharts() && this.selectedIdSprint() !== null) {
+            this.analytics.reloadBurndown();
+        }
     }
 
     protected onViewModeChange(layout: SavedViewKanbanLayout): void {
@@ -537,6 +583,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
             this.idProject.set(project.idProject);
+            this.projectName.set(project.name);
             this.sprintStore.currentSprintOnLoad$
                 .pipe(first(), takeUntilDestroyed(this.destroyRef))
                 .subscribe(current => this.onSprintChange(current?.idSprint ?? null));

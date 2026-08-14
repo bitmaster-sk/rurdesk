@@ -1,0 +1,132 @@
+<div class="py-3 px-4" data-testid="sprint-charts-band">
+    <div class="band__header" data-testid="sprint-charts-header">{{ header() }}</div>
+
+    <div class="band__grid" [class.band__grid--velocity-only]="sprint() === null">
+        @if (sprint() !== null) {
+            <div class="flex flex-col justify-between gap-3 min-w-0">
+                <div class="flex flex-col">
+                    <span class="stat__label">{{ 'ISSUE.KANBAN.SPRINTS.SCOPE' | translate }}</span>
+                    <span class="stat__value" data-testid="sprint-charts-scope">
+                        {{ scopeText().key | translate: scopeText().params }}
+                    </span>
+                    <span class="stat__detail">
+                        @if (scopeDetail(); as detail) {
+                            {{ detail.key | translate: detail.params }}
+                        } @else {
+                            &mdash;
+                        }
+                    </span>
+                </div>
+
+                <div class="flex flex-col">
+                    <span class="stat__label">
+                        {{ 'ISSUE.KANBAN.SPRINTS.FORECAST' | translate }}
+                    </span>
+                    <span class="stat__value" data-testid="sprint-charts-forecast">
+                        @if (forecastText(); as forecast) {
+                            {{ forecast.key | translate: forecast.params }}
+                        } @else {
+                            &mdash;
+                        }
+                    </span>
+                    <span class="stat__detail">
+                        @if (forecastDetail(); as detail) {
+                            {{ detail.key | translate: detail.params }}
+                        } @else {
+                            &mdash;
+                        }
+                    </span>
+                </div>
+
+                <div class="flex flex-col">
+                    <span class="stat__label">
+                        {{ 'ISSUE.KANBAN.SPRINTS.VELOCITY' | translate }}
+                    </span>
+                    <span class="stat__value" data-testid="sprint-charts-avg">
+                        @if (avgText(); as avg) {
+                            {{ avg.key | translate: avg.params }}
+                        } @else {
+                            &mdash;
+                        }
+                    </span>
+                    <span class="stat__detail">
+                        @if (avgTrend(); as trend) {
+                            {{ trend.key | translate: trend.params }}
+                        } @else {
+                            &mdash;
+                        }
+                    </span>
+                </div>
+            </div>
+
+            <div class="band__chart">
+                <div class="flex items-center justify-between">
+                    <ui-choice
+                        data-testid="sprint-charts-mode"
+                        [options]="modeOptions"
+                        optionLabel="labelKey"
+                        optionValue="value"
+                        size="small"
+                        [allowEmpty]="false"
+                        [ngModel]="mode()"
+                        (ngModelChange)="onModeChange($event)"
+                    >
+                        <ng-template #item let-item>{{ item.labelKey | translate }}</ng-template>
+                    </ui-choice>
+                </div>
+
+                <div class="band__canvas">
+                    @if (hasBurndown()) {
+                        <canvas
+                            baseChart
+                            type="line"
+                            data-testid="sprint-burndown-chart"
+                            [data]="burndownData()"
+                            [options]="chartOptions"
+                            [plugins]="burndownPlugins"
+                        ></canvas>
+                    } @else if (!isLoading()) {
+                        <div class="chart-empty-overlay" data-testid="sprint-burndown-empty">
+                            {{ 'ISSUE.KANBAN.SPRINTS.NO_HISTORY' | translate }}
+                        </div>
+                    }
+                </div>
+
+                <div class="band__note">
+                    {{ 'ISSUE.KANBAN.SPRINTS.BURNDOWN_GAP_NOTE' | translate }}
+                </div>
+            </div>
+        }
+
+        <div class="band__chart">
+            <div class="flex items-center justify-between">
+                <span class="band__chart-title">
+                    {{ 'ISSUE.KANBAN.SPRINTS.VELOCITY' | translate }}
+                </span>
+            </div>
+
+            <div class="band__canvas">
+                @if (hasVelocity()) {
+                    <canvas
+                        baseChart
+                        type="bar"
+                        data-testid="sprint-velocity-chart"
+                        [data]="velocityData()"
+                        [options]="velocityOptions"
+                        [plugins]="velocityPlugins"
+                    ></canvas>
+                } @else {
+                    <div class="chart-empty-overlay" data-testid="sprint-velocity-empty">
+                        {{ 'NO_DATA_YET' | translate }}
+                    </div>
+                }
+            </div>
+
+            @if (hasLiveFallback()) {
+                <div class="band__note" data-testid="sprint-velocity-fallback">
+                    {{ 'ISSUE.KANBAN.SPRINTS.LIVE_FALLBACK' | translate }}
+                </div>
+            }
+        </div>
+    </div>
+</div>
