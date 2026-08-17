@@ -231,6 +231,13 @@ jobs:
               working-directory: client
               run: npm run format:check
 
+            # Gates on errors only — warnings are the documented paydown backlog
+            # in eslint.config.mjs, so do not add --max-warnings here until a
+            # rule has been promoted to 'error'.
+            - name: ESLint
+              working-directory: client
+              run: npm run lint
+
             # The only step that type-checks the client: Vitest transpiles with
             # esbuild and ignores types, so without this a violation of `strict`
             # merges green and surfaces a day later as a failed nightly e2e image
