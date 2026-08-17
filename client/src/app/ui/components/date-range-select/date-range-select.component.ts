@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor, FormControl, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UI_DATE_PATTERN, uiFormatDate } from '../../util/ui-date-format';
 import { UiPopoverComponent } from '../popover/popover.component';
 
@@ -49,7 +49,7 @@ let nextPanelId = 0;
     templateUrl: './date-range-select.component.html'
 })
 export class UiDateRangeSelectComponent implements ControlValueAccessor {
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     /** "Custom range" is appended by the component itself. */
     public readonly presets = input<readonly UiDateRangePreset[]>([]);

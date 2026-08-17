@@ -14,7 +14,7 @@ import {
     getISOWeek,
     format
 } from 'date-fns';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 export enum GanttZoomLevel {
     Hour = 'Hour',
@@ -36,7 +36,7 @@ export interface ZoomConfig {
     snapFn: (date: Date) => Date;
     advanceFn: (date: Date, count: number) => Date;
     diffFn: (start: Date, end: Date) => number;
-    labelFn: (date: Date, translate: TranslateService) => string;
+    labelFn: (date: Date, i18n: I18nService) => string;
     headerRow1GroupFn: (date: Date) => string;
     headerRow1LabelFn: (date: Date) => string;
 }
@@ -69,12 +69,12 @@ export const ZOOM_CONFIGS: Record<GanttZoomLevel, ZoomConfig> = {
         },
         advanceFn: (date, n) => addHours(date, n * 6),
         diffFn: (start, end) => Math.floor(differenceInHours(end, start) / 6),
-        labelFn: (date, translate) => {
+        labelFn: (date, i18n) => {
             const period = Math.floor(date.getHours() / 6);
-            if (period === 0) return translate.instant('ISSUE.GANTT.QUARTER.NIGHT');
-            if (period === 1) return translate.instant('ISSUE.GANTT.QUARTER.MORNING');
-            if (period === 2) return translate.instant('ISSUE.GANTT.QUARTER.AFTERNOON');
-            return translate.instant('ISSUE.GANTT.QUARTER.EVENING');
+            if (period === 0) return i18n.instant('ISSUE.GANTT.QUARTER.NIGHT');
+            if (period === 1) return i18n.instant('ISSUE.GANTT.QUARTER.MORNING');
+            if (period === 2) return i18n.instant('ISSUE.GANTT.QUARTER.AFTERNOON');
+            return i18n.instant('ISSUE.GANTT.QUARTER.EVENING');
         },
         headerRow1GroupFn: date => format(date, 'yyyy-MM-dd'),
         headerRow1LabelFn: date => format(date, 'EEE d MMM')

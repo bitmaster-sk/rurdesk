@@ -34,12 +34,11 @@ import { PinService } from 'src/app/pin/pin.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { UserService } from 'src/app/auth/user.service';
 import { ProjectStore } from 'src/app/project/project.store';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import {
     GitIntegrationRes,
-    HostType,
     MrDiff,
     MrDiffFile,
     MrStatus
@@ -72,7 +71,7 @@ export class IssueInfoComponent {
 
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly sIssue = inject(IssueService);
     private readonly sPin = inject(PinService);
     private readonly sUser = inject(UserService);

@@ -11,7 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UserService } from 'src/app/auth/user.service';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 import { SavedView, SavedViewConfig } from 'src/app/project/model/saved-view.model';
@@ -54,7 +54,7 @@ export class SavedViewMenuComponent {
     private readonly filterStore = inject(IssueFilterStore);
     private readonly router = inject(Router);
     private readonly toast = inject(UiToastService);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly userService = inject(UserService);
     private readonly destroyRef = inject(DestroyRef);
     protected readonly aclStore = inject(AclStore);

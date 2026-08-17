@@ -7,7 +7,7 @@ import {
     OnInit,
     signal
 } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 
 interface AppMenuItem extends UiMenuItem {
@@ -38,7 +38,7 @@ import { NotificationStore } from 'src/app/notification/store/notification.store
 })
 export class TopMenuComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly sUser = inject(UserService);
     private readonly sProject = inject(ProjectService);
     private readonly projectStore = inject(ProjectStore);

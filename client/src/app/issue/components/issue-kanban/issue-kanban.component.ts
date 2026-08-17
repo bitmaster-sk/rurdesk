@@ -23,7 +23,7 @@ import {
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { HttpErrorResponse } from '@angular/common/http';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
 import { first, map } from 'rxjs/operators';
@@ -77,7 +77,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private readonly issueToolbarService = inject(IssueToolbarService);
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly toast = inject(ToastNotificationService);
 

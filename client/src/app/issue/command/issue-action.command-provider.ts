@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import {
     Command,
     CommandContext,
@@ -25,8 +25,8 @@ export class IssueActionCommandProvider implements CommandProvider {
     private readonly acl = inject(AclStore);
     private readonly userService = inject(UserService);
     private readonly notice = inject(NoticeService);
-    private readonly translate = inject(TranslateService);
-    private readonly t: Translator = (k, p) => this.translate.instant(k, p);
+    private readonly i18n = inject(I18nService);
+    private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
     private readonly states = toSignal(inject(StateStore).states$, { initialValue: [] });
     private readonly severities = toSignal(inject(SeverityStore).severities$, { initialValue: [] });
     private readonly users = toSignal(inject(ProjectMemberStore).users$, { initialValue: [] });

@@ -1,15 +1,23 @@
 import { HttpErrorResponse, HttpHandler, HttpRequest } from '@angular/common/http';
-import type { TranslateService } from '@ngx-translate/core';
+import { Injector, runInInjectionContext } from '@angular/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { of, throwError } from 'rxjs';
 import { ErrorInterceptor } from './error.interceptor';
 import { silentErrors } from './http-error-context';
-import type { ToastNotificationService } from './toast-notification.service';
+import { ToastNotificationService } from './toast-notification.service';
 
 function build() {
     const showError = vi.fn();
-    const translate = { get: (k: string) => of(`t:${k}`) } as unknown as TranslateService;
+    const translate = { get$: (k: string) => of(`t:${k}`) } as unknown as I18nService;
     const toast = { showError } as unknown as ToastNotificationService;
-    return { interceptor: new ErrorInterceptor(translate, toast), showError };
+    const injector = Injector.create({
+        providers: [
+            { provide: I18nService, useValue: translate },
+            { provide: ToastNotificationService, useValue: toast }
+        ]
+    });
+    const interceptor = runInInjectionContext(injector, () => new ErrorInterceptor());
+    return { interceptor, showError };
 }
 
 function run(interceptor: ErrorInterceptor, error: HttpErrorResponse, silent = false) {

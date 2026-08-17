@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { BehaviorSubject, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueSearchCommandProvider } from '../../issue/command/issue-search.command-provider';
 import { IssueActionCommandProvider } from '../../issue/command/issue-action.command-provider';
 import { NavigationCommandProvider } from '../../project/command/navigation.command-provider';
@@ -47,7 +47,7 @@ describe('IssueSearchCommandProvider', () => {
                 { provide: Router, useValue: router },
                 { provide: IssueService, useValue: issueService },
                 { provide: StateStore, useValue: { states$: of(opts.states ?? []) } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(opts.role ?? Role.Member);
@@ -142,7 +142,7 @@ describe('NavigationCommandProvider', () => {
                         deleteAuthLocal: vi.fn()
                     }
                 },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(role);
@@ -194,7 +194,7 @@ describe('IssueActionCommandProvider', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: UserService, useValue: { user: new BehaviorSubject(null) } },
                 { provide: NoticeService, useValue: { emitIssue } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(Role.Member);
@@ -260,7 +260,7 @@ describe('PeopleCommandProvider', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([member]) } },
                 { provide: IssueService, useValue: { updateIssue } },
                 { provide: NoticeService, useValue: { emitIssue } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(Role.Member);

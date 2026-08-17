@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { Chart, ChartData, ChartOptions, LegendItem, Plugin } from 'chart.js';
 import { DateUtil, utcDayRollover$ } from 'src/app/shared/date/date.util';
 import { SprintChartMode } from '../../constants/sprint-chart-mode.enum';
@@ -33,13 +33,13 @@ interface SprintChartPalette {
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SprintChartsBandComponent {
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly decimal = inject(DecimalPipe);
 
     private readonly healthService = inject(SprintHealthService);
 
-    private readonly lang = toSignal(this.i18n.onLangChange, { initialValue: null });
+    private readonly lang = toSignal(this.i18n.langChange$, { initialValue: null });
 
     private readonly clock = toSignal(utcDayRollover$, { initialValue: new Date() });
 
@@ -394,7 +394,7 @@ export class SprintChartsBandComponent {
                 pointStyle: isBar ? 'rect' : 'line',
                 hidden: !chart.isDatasetVisible(index),
                 datasetIndex: index
-            } as LegendItem;
+            };
         });
     }
 
@@ -464,7 +464,7 @@ export class SprintChartsBandComponent {
     }
 
     private formatDay(value: string): string {
-        return new Date(value).toLocaleDateString(this.i18n.currentLang || undefined, {
+        return new Date(value).toLocaleDateString(this.i18n.currentLang, {
             timeZone: 'UTC',
             month: 'short',
             day: 'numeric'

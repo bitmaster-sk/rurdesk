@@ -2,7 +2,7 @@ import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { SprintState } from '../../constants/sprint-state.enum';
 import { EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueKanbanComponent } from './issue-kanban.component';
 import { IssueService } from '../../issue.service';
 import { IssueKanbanService } from './service/issue-kanban.service';
@@ -217,7 +217,7 @@ function setup(
             },
             { provide: ToastNotificationService, useValue: { showError } },
             { provide: NoticeService, useValue: { issue$: issueNotices } },
-            { provide: TranslateService, useValue: { instant: (k: string) => k } },
+            { provide: I18nService, useValue: { instant: (k: string) => k } },
             {
                 provide: ProjectStore,
                 useValue: { project$: project === null ? NEVER : of(project) }

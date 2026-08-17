@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, model } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { DAY_MS, DateUtil, utcDayRollover$ } from 'src/app/shared/date/date.util';
 import { SprintPhase } from '../../constants/sprint-phase.enum';
 import { SprintUnit } from '../../constants/sprint-unit.enum';
@@ -34,11 +34,11 @@ export interface SprintHealthChip extends SprintHealthText {
 export class SprintHealthStripComponent {
     private readonly healthService = inject(SprintHealthService);
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly decimal = inject(DecimalPipe);
 
-    private readonly lang = toSignal(this.i18n.onLangChange, { initialValue: null });
+    private readonly lang = toSignal(this.i18n.langChange$, { initialValue: null });
 
     private readonly clock = toSignal(utcDayRollover$, { initialValue: new Date() });
 
@@ -258,7 +258,7 @@ export class SprintHealthStripComponent {
     }
 
     private formatDay(value: string): string {
-        return new Date(value).toLocaleDateString(this.i18n.currentLang || undefined, {
+        return new Date(value).toLocaleDateString(this.i18n.currentLang, {
             timeZone: 'UTC',
             month: 'short',
             day: 'numeric'

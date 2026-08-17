@@ -53,7 +53,7 @@ import {
     UI_SETTLE_DURATION_MS,
     UI_SETTLE_EASING
 } from 'src/app/ui/util/motion';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 @Component({
     selector: 'app-issue-calendar',
@@ -68,7 +68,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private readonly toolbarRef = viewChild.required<TemplateRef<unknown>>('toolbar');
     private readonly quickActionsRef = viewChild<IssueQuickActionsComponent>('quickActions');
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly zone = inject(NgZone);
     private readonly router = inject(Router);

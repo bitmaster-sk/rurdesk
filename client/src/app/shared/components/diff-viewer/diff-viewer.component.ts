@@ -9,7 +9,7 @@ import {
     input,
     viewChild
 } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { html } from 'diff2html';
 import { MrDiff, MrDiffFile } from 'src/app/project/model/git-integration.model';
 
@@ -69,7 +69,7 @@ export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
     encapsulation: ViewEncapsulation.None
 })
 export class DiffViewerComponent implements AfterViewInit, OnChanges {
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     public readonly diff = input<MrDiff | null>(null);
     public readonly rawPatch = input<string | null>(null);

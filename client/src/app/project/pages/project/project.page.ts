@@ -10,7 +10,7 @@ import { PinView } from 'src/app/pin/entity/pin-view.entity';
 import { StatsChartEntry } from '../../components/project-stats-chart/project-stats-chart.component';
 import { WorkloadEntry } from '../../components/workload-bar-list/workload-bar-list.component';
 import { ProjectMemberStore } from '../../project-member.store';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 @Component({
     selector: 'app-project',
@@ -29,7 +29,7 @@ export class ProjectPage implements OnInit {
 
     private readonly severityStore = inject(SeverityStore);
 
-    private readonly translate = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private _loadSignal$ = new ReplaySubject<void>(1);
 
@@ -44,7 +44,7 @@ export class ProjectPage implements OnInit {
             combineLatest([
                 this.projectStatStore.totalEstimatedSeconds$,
                 this.projectStatStore.totalTrackedSeconds$,
-                this.translate.get(['STATS.ESTIMATED', 'STATS.TRACKED'])
+                this.i18n.getAll$(['STATS.ESTIMATED', 'STATS.TRACKED'])
             ]).pipe(
                 map(([estimated, tracked, labels]): StatsChartEntry[] => [
                     { name: labels['STATS.ESTIMATED'], value: estimated },
@@ -59,7 +59,7 @@ export class ProjectPage implements OnInit {
             combineLatest([
                 this.projectStatStore.openIssuesByAssignee$,
                 this.projectMemberStore.usersMap$,
-                this.translate.get('STATS.UNASSIGNED')
+                this.i18n.get$('STATS.UNASSIGNED')
             ]).pipe(
                 map(([workload, usersMap, unassignedLabel]): WorkloadEntry[] =>
                     workload.map(w => {

@@ -34,7 +34,7 @@ import { UserService } from 'src/app/auth/user.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -54,7 +54,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly sMessage = inject(MessageService);
     private readonly sTracker = inject(TrackerService);

@@ -9,7 +9,7 @@ import {
     signal
 } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
@@ -32,7 +32,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectStateComponent implements OnInit, OnDestroy {
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly fb = inject(FormBuilder);
     private readonly stateApi = inject(StateApi);
     private readonly sProject = inject(ProjectService);

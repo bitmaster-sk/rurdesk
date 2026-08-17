@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import { Observable, of } from 'rxjs';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import {
     Command,
@@ -23,8 +23,8 @@ export class NavigationCommandProvider implements CommandProvider {
     private readonly acl = inject(AclStore);
     private readonly palette = inject(CommandPaletteService);
     private readonly userService = inject(UserService);
-    private readonly translate = inject(TranslateService);
-    private readonly t: Translator = (k, p) => this.translate.instant(k, p);
+    private readonly i18n = inject(I18nService);
+    private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
 
     private projects: { idProject: number; name: string }[] = [];
 

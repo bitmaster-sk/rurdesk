@@ -1,6 +1,6 @@
 import { Injector } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { firstValueFrom, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandContext } from '../../core/command/command.model';
@@ -39,7 +39,7 @@ describe('SavedViewCommandProvider', () => {
                 { provide: SavedViewApi, useValue: { loadByProject$ } },
                 { provide: SavedViewStore, useClass: SavedViewStore },
                 { provide: Router, useValue: { navigate } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } },
+                { provide: I18nService, useValue: { instant: (key: string) => key } },
                 { provide: SavedViewCommandProvider, useClass: SavedViewCommandProvider }
             ]
         });

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { BehaviorSubject, EMPTY, of } from 'rxjs';
 import { ProjectMemberStore } from '../../../project/project-member.store';
 import { ProjectStore } from '../../../project/project.store';
@@ -35,7 +35,7 @@ describe('FilterComponent — date modes (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })
@@ -164,7 +164,7 @@ describe('FilterComponent — late mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })
@@ -203,7 +203,7 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })

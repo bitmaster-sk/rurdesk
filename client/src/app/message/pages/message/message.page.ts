@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { combineLatest, Subject, Subscription } from 'rxjs';
 import { debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
@@ -49,7 +49,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly userApi = inject(UserApi);
     private readonly sUser = inject(UserService);
     private readonly sNotice = inject(NoticeService);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly teamMemberStore = inject(TeamMemberStore);
 

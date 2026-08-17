@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { combineLatest } from 'rxjs';
 import { ProjectStore } from 'src/app/project/project.store';
 import { AclStore } from 'src/app/project/store/acl.store';
@@ -31,7 +31,7 @@ export class IssuePage implements OnInit {
     private readonly applyService = inject(SavedViewApplyService);
     private readonly route = inject(ActivatedRoute);
     private readonly toast = inject(UiToastService);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
     private readonly injector = inject(Injector);
     protected readonly aclStore = inject(AclStore);

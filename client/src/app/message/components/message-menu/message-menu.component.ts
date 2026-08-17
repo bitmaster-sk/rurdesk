@@ -25,7 +25,7 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamService } from 'src/app/team/team.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
 @Component({
@@ -42,7 +42,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly userApi = inject(UserApi);
     private readonly sProject = inject(ProjectService);
     private readonly sNotice = inject(NoticeService);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
 
