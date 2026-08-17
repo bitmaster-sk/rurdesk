@@ -22,7 +22,7 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
 
     public readonly saveGenerate = output<Project>();
 
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -67,7 +67,7 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     }
 
     public onCancel(): void {
-        this.cancel.emit();
+        this.cancelled.emit();
     }
 
     private editedProject(): Project {

@@ -11,7 +11,7 @@ import { UiModule } from '../../ui.module';
             #pop
             [panelClass]="panelClass"
             [dismissable]="dismissable"
-            (onHide)="hideCount = hideCount + 1"
+            (closed)="hideCount = hideCount + 1"
         >
             <div class="pop-content">Hello</div>
         </ui-popover>

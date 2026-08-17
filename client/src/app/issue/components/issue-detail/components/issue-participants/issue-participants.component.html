@@ -47,7 +47,7 @@
         </span>
     </div>
 
-    <ui-popover #addPopover (onHide)="memberSearch.set('')">
+    <ui-popover #addPopover (closed)="memberSearch.set('')">
         <div class="participants-popover">
             <div class="participants-popover__search">
                 <input

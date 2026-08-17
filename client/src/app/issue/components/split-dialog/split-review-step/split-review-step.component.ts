@@ -18,7 +18,7 @@ export class SplitReviewStepComponent {
     public states = input<IssueState[]>([]);
 
     public accept = output<ProposedIssue[]>();
-    public cancel = output<void>();
+    public cancelled = output<void>();
 
     // Seeded from initialChildren and re-seeded only if that input changes. The
     // orchestrator sets initialChildren exactly once (loading→review), so user
@@ -58,7 +58,7 @@ export class SplitReviewStepComponent {
     }
 
     public onCancel(): void {
-        this.cancel.emit();
+        this.cancelled.emit();
     }
 
     private toStaged(child: ProposedIssue): StagedIssue {

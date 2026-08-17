@@ -162,7 +162,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     /** User-driven change only (never on writeValue) — e.g. top-menu navigation.
      *  `value` is the resolved model value (optionValue when set), whose type is
      *  dynamic — hence `unknown` (consumers narrow). */
-    public readonly onChange = output<{ originalEvent?: Event; value: unknown }>();
+    public readonly valueChanged = output<{ originalEvent?: Event; value: unknown }>();
 
     private readonly overlay = inject(Overlay);
     private readonly vcr = inject(ViewContainerRef);
@@ -244,7 +244,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         const value = this.getOptionValue(option);
         this.value.set(value);
         this.onChangeFn(value);
-        this.onChange.emit({ originalEvent, value });
+        this.valueChanged.emit({ originalEvent, value });
         this.close();
     }
 
@@ -252,7 +252,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         event.stopPropagation();
         this.value.set(null);
         this.onChangeFn(null);
-        this.onChange.emit({ originalEvent: event, value: null });
+        this.valueChanged.emit({ originalEvent: event, value: null });
     }
 
     protected onKeydown(event: KeyboardEvent, fromFilter: boolean): void {

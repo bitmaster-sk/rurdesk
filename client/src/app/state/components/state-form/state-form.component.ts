@@ -8,11 +8,11 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
     standalone: false
 })
 export class StateFormComponent implements OnInit {
-    public readonly state = input.required<IssueState>();
+    public readonly state = input.required<Partial<IssueState>>();
 
     public readonly save = output<IssueState>();
 
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -37,7 +37,7 @@ export class StateFormComponent implements OnInit {
     }
 
     public onCancel(): void {
-        this.cancel.emit();
+        this.cancelled.emit();
     }
 
     public get finalControl(): FormControl {

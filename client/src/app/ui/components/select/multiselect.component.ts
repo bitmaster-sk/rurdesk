@@ -147,7 +147,7 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
     public readonly inputId = input<string>();
     public readonly showToggleAll = input(true);
 
-    public readonly onChange = output<{ originalEvent?: Event; value: T[]; itemValue?: T }>();
+    public readonly valueChanged = output<{ originalEvent?: Event; value: T[]; itemValue?: T }>();
 
     private readonly overlay = inject(Overlay);
     private readonly vcr = inject(ViewContainerRef);
@@ -260,7 +260,7 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
     private commit(next: unknown[], itemValue?: T, originalEvent?: Event): void {
         this.value.set(next);
         this.onChangeFn(next);
-        this.onChange.emit({ originalEvent, value: next as T[], itemValue });
+        this.valueChanged.emit({ originalEvent, value: next as T[], itemValue });
     }
 
     protected onKeydown(event: KeyboardEvent): void {

@@ -68,7 +68,7 @@ export class UiListboxComponent<T> {
     public readonly emptyFilterMessage = input<string>();
 
     /** Action emit — fires on every pick (no value binding). */
-    public readonly onChange = output<{ originalEvent?: Event; value: T }>();
+    public readonly valueChanged = output<{ originalEvent?: Event; value: T }>();
 
     protected readonly itemTpl = contentChild<TemplateRef<{ $implicit: T }>>('item');
 
@@ -88,7 +88,7 @@ export class UiListboxComponent<T> {
     protected readonly boundGetOptionLabel = (option: T): string => this.getOptionLabel(option);
 
     protected pick(option: T, originalEvent?: Event): void {
-        this.onChange.emit({ originalEvent, value: option });
+        this.valueChanged.emit({ originalEvent, value: option });
     }
 
     protected onKeydown(event: KeyboardEvent): void {

@@ -17,7 +17,7 @@
             [isLoading]="step() === 'loading'"
             [issueTitle]="issue().title"
             (split)="onSplit($event)"
-            (cancel)="onCancel()"
+            (cancelled)="onCancel()"
         />
     }
 
@@ -28,11 +28,11 @@
             [severities]="severities()"
             [states]="states()"
             (accept)="onAccept($event)"
-            (cancel)="onCancel()"
+            (cancelled)="onCancel()"
         />
     }
 
     @if (step() === 'done') {
-        <app-split-done-step [count]="acceptedCount()" (close)="onCancel()" />
+        <app-split-done-step [count]="acceptedCount()" (closed)="onCancel()" />
     }
 </ui-dialog>

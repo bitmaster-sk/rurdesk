@@ -34,7 +34,7 @@
     }
 </span>
 
-<ui-popover #panel panelClass="sv-panel" (onHide)="onPanelHide()">
+<ui-popover #panel panelClass="sv-panel" (closed)="onPanelHide()">
     <div
         #panelContent
         [id]="panelId"

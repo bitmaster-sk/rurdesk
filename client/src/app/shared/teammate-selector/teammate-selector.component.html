@@ -5,7 +5,7 @@
         optionLabel="name"
         [emptyMessage]="emptyMessage() || ('TEAM.NO_TEAMMATES_TO_ADD' | translate)"
         [emptyFilterMessage]="'NO_DATA' | translate"
-        (onChange)="onSelect($event.value)"
+        (valueChanged)="onSelect($event.value)"
     >
         <ng-template #item let-user>
             <div class="flex items-center gap-2">

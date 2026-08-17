@@ -1,6 +1,6 @@
-<app-project-form
+    <app-project-form
     [project]="winCfg.data?.['project']"
-    (save)="onSave($event)"
-    (saveGenerate)="onSaveGenerate($event)"
-    (cancel)="onCancel()"
-></app-project-form>
+        (save)="onSave($event)"
+        (saveGenerate)="onSaveGenerate($event)"
+        (cancelled)="onCancel()"
+    ></app-project-form>

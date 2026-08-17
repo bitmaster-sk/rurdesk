@@ -11,7 +11,7 @@ class SplitInputStepStub {
     public readonly isLoading = input<boolean>(false);
     public readonly issueTitle = input<string>('');
     public readonly split = output<string>();
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 }
 
 @Component({ selector: 'app-split-review-step', template: '', standalone: true })
@@ -21,13 +21,13 @@ class SplitReviewStepStub {
     public readonly severities = input<unknown[]>([]);
     public readonly states = input<unknown[]>([]);
     public readonly accept = output<unknown[]>();
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 }
 
 @Component({ selector: 'app-split-done-step', template: '', standalone: true })
 class SplitDoneStepStub {
     public readonly count = input<number>(0);
-    public readonly close = output<void>();
+    public readonly closed = output<void>();
 }
 import { SplitApi } from '../../api/split.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';

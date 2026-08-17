@@ -36,7 +36,7 @@ export class SprintTabStripComponent implements AfterViewInit {
     public readonly tabs = input.required<SprintTab[]>();
     public readonly selectedIdSprint = input<number | null>(null);
 
-    public readonly select = output<number | null>();
+    public readonly selected = output<number | null>();
     public readonly createRequested = output<void>();
     public readonly editRequested = output<number>();
     public readonly taskDropped = output<{

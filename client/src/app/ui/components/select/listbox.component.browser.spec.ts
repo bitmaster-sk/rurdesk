@@ -16,7 +16,7 @@ interface Opt {
             [options]="options()"
             optionLabel="name"
             [filter]="filter()"
-            (onChange)="picked = picked.concat([$event.value])"
+            (valueChanged)="picked = picked.concat([$event.value])"
         />
     `
 })

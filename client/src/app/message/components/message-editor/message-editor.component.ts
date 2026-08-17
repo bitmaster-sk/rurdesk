@@ -67,7 +67,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public readonly mentionCandidates = input<User[]>([]);
 
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 
     // Internal source of truth for the editor content. Derived from the model()
     // input via linkedSignal, so an inbound [message] push (or CVA writeValue,

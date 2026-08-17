@@ -40,7 +40,7 @@
             optionValue="idProject"
             placeholder="Choose project"
             [ngModel]="idProjectSelected()"
-            (onChange)="onProjectSelect($event.value)"
+            (valueChanged)="onProjectSelect($event.value)"
         ></ui-select>
         <ui-button
             variant="text"

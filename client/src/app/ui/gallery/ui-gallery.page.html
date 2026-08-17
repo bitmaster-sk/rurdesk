@@ -670,7 +670,7 @@
                 <ui-listbox
                     [options]="listboxOptions"
                     optionLabel="name"
-                    (onChange)="onListboxPick($event.value)"
+                    (valueChanged)="onListboxPick($event.value)"
                 />
                 <code>inline, action mode — last picked: {{ lastPicked }}</code>
             </div>
@@ -680,7 +680,7 @@
                     optionLabel="name"
                     [filter]="true"
                     filterPlaceholder="Search…"
-                    (onChange)="onListboxPick($event.value)"
+                    (valueChanged)="onListboxPick($event.value)"
                 />
                 <code>[filter]="true"</code>
             </div>
