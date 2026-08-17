@@ -147,24 +147,22 @@ export class ProjectStatStore {
         if (issue.idState) {
             const byState = stats.issuesByState.get(issue.idState);
             if (byState) {
-                let [state, count] = byState;
-                count++;
-                stats.issuesByState.set(issue.idState, [state, count]);
+                const [state, count] = byState;
+                stats.issuesByState.set(issue.idState, [state, count + 1]);
             }
         }
 
         if (issue.idSeverity) {
             const bySeverity = stats.issuesBySeverity.get(issue.idSeverity);
             if (bySeverity) {
-                let [severity, count] = bySeverity;
-                count++;
-                stats.issuesBySeverity.set(issue.idSeverity, [severity, count]);
+                const [severity, count] = bySeverity;
+                stats.issuesBySeverity.set(issue.idSeverity, [severity, count + 1]);
             }
         }
 
         // Count open issues (non-final state) per assignee
         const stateEntry = issue.idState ? stats.issuesByState.get(issue.idState) : undefined;
-        const isOpen = !stateEntry || !stateEntry[0].final;
+        const isOpen = !stateEntry?.[0].final;
 
         if (isOpen) {
             const key = issue.assignedTo ?? null;

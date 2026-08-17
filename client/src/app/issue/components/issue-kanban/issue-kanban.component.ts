@@ -238,7 +238,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private onRemoteIssueNotice(notice: Notice<Issue>): void {
         const issue = notice.payload;
-        if (!issue || issue.idProject !== this.idProject()) return;
+        if (issue?.idProject !== this.idProject()) return;
         this.analytics.reloadStatsAfterNotice();
         if (this.showCharts() && this.selectedIdSprint() !== null) {
             this.analytics.reloadBurndownAfterNotice();
