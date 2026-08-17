@@ -26,6 +26,7 @@ import { SprintVelocity } from '../../model/sprint-velocity.model';
 import { SprintStats } from '../../model/sprint-stats.model';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
+import { NoticeSubject } from 'src/app/shared/notice/constant/notice-subject.enum';
 import { Issue } from '../../model/issue.model';
 
 const storage = new Map<string, string>();

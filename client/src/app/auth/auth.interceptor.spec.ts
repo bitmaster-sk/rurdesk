@@ -33,7 +33,7 @@ describe('AuthInterceptor', () => {
         const navigateByUrl = vi.fn();
         const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -58,7 +58,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -76,7 +76,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/login' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -96,7 +96,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/register' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -113,7 +113,7 @@ describe('AuthInterceptor', () => {
         const deleteAuthLocal = vi.fn();
         const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
         const router = { navigateByUrl: vi.fn(), url: '/x' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 500 }))
         } as unknown as HttpHandler;

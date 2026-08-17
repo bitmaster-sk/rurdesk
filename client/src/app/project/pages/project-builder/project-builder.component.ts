@@ -8,7 +8,7 @@ import {
     computed,
     model
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { combineLatest, of, Subscription } from 'rxjs';
 import { switchMap, take } from 'rxjs/operators';

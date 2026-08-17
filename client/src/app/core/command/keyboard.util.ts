@@ -4,9 +4,7 @@ export function isEditableTarget(el: EventTarget | null): boolean {
     if (!el) return false;
     const node = el as HTMLElement;
     const tag = node.tagName;
-    return (
-        tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable === true
-    );
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || node.isContentEditable;
 }
 
 /** An open CDK overlay (dropdown, menu, dialog) owns the keyboard */

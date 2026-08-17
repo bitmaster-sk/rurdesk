@@ -4,7 +4,6 @@ import { TranslateModule } from '@ngx-translate/core';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TablerIconStub, UiButtonStub } from 'src/testing/stubs';
 import { StagedIssueNode } from '../../model/staged-issue-node.model';
-import { ProjectBuilderIssue } from '../../model/project-builder.model';
 
 @Component({ selector: 'app-staged-issue-tree', template: '', standalone: true })
 class StagedIssueTreeStub {

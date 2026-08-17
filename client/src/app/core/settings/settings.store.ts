@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { AppSettings, SettingsApi } from './settings.api.service';
 
 const FALLBACK: AppSettings = {

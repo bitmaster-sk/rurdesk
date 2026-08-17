@@ -4,7 +4,6 @@ import {
     Component,
     DestroyRef,
     ElementRef,
-    OnDestroy,
     computed,
     effect,
     inject,
@@ -13,9 +12,9 @@ import {
     signal,
     viewChild
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
-import { filter, first, map } from 'rxjs/operators';
+import { filter, first } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { MessageService } from 'src/app/message/message.service';
@@ -44,7 +43,7 @@ import { TranslateService } from '@ngx-translate/core';
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
+export class IssueActivityFeedComponent implements AfterViewInit {
     public readonly idIssue = input.required<number>();
     public readonly idProject = input.required<number>();
     public readonly pendingTrack = input<Track | null>(null);
@@ -211,8 +210,6 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
             this.scrollToBottom();
         });
     }
-
-    public ngOnDestroy(): void {}
 
     public setFilter(type: 'all' | TimelineItemType): void {
         if (type === 'all') {

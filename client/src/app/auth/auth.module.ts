@@ -1,5 +1,4 @@
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { AuthPage } from './auth/auth.page';
 import { AuthRobotComponent } from './components/auth-robot/auth-robot.component';
 import { LoginComponent } from './login/login.component';

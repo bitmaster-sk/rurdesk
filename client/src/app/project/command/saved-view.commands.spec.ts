@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CommandContext } from '../../core/command/command.model';
 import { SavedView } from '../model/saved-view.model';
+import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 import { buildSavedViewCommands } from './saved-view.commands';
 
 const t = (key: string): string => key;

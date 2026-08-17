@@ -5,6 +5,7 @@ import { IssueService } from '../../../issue.service';
 import { IssuesPage } from '../../../model/issues-page.model';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SprintStore } from '../../../store/sprint.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';

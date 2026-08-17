@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { UiModule } from 'src/app/ui/ui.module';
@@ -110,12 +109,10 @@ async function createFixture(
 
 describe('GanttArrowLayerComponent (TestBed)', () => {
     let comp: any;
-    let fixture: any;
 
     beforeEach(async () => {
         const result = await createFixture();
         comp = result.comp;
-        fixture = result.fixture;
     });
 
     // =========================================================================

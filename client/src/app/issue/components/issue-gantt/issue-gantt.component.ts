@@ -735,7 +735,6 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 break;
             case 'ArrowUp': {
                 event.preventDefault();
-                const tasks = this.scheduledTasks();
                 const current = this.selectedTaskIndex() ?? 0;
                 const next = Math.max(0, current - 1);
                 this.selectedTaskIndex.set(next);

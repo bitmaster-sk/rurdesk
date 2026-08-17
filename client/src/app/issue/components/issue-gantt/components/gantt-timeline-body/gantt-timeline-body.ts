@@ -9,8 +9,7 @@ import {
     output,
     signal,
     viewChild,
-    AfterViewInit,
-    OnDestroy
+    AfterViewInit
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -31,7 +30,7 @@ import { RelationDropTarget } from '../../service/gantt-drag.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
+export class GanttTimelineBodyComponent implements AfterViewInit {
     private readonly router = inject(Router);
     private readonly ngZone = inject(NgZone);
     public readonly timelineService = inject(GanttTimelineService);
@@ -116,8 +115,6 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
         this.viewportWidth.set(container.clientWidth);
         this.viewportHeight.set(container.clientHeight);
     }
-
-    public ngOnDestroy(): void {}
 
     public onScroll(): void {
         if (this.isSyncingScroll) {

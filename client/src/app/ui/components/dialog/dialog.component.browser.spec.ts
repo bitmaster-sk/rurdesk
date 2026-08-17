@@ -104,7 +104,7 @@ describe('UiDialogComponent (browser)', () => {
     });
 
     it('attaches the overlay and projects content when visible becomes true', () => {
-        const fixture = setup(h => (h.open = true));
+        setup(h => (h.open = true));
         expect(panel()).not.toBeNull();
         expect(panel()!.querySelector('.child')?.textContent).toContain('child');
     });

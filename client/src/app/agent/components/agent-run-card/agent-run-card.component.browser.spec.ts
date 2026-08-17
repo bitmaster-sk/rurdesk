@@ -3,7 +3,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
 import { AgentRunCardComponent } from './agent-run-card.component';
-import { AgentRun } from '../../model/agent-run.model';
 import { AgentPhase } from '../../model/agent-phase.enum';
 import { UiModule } from '../../../ui/ui.module';
 import { TablerIconStub } from 'src/testing/stubs';

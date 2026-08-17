@@ -1,5 +1,5 @@
 import { IssueFilterStore } from './issue-filter.store';
-import { IssuesFilter, IssuesFilterParams, IssuesOrderParams } from './issue-filter.entity';
+import { IssuesFilter } from './issue-filter.entity';
 
 function latest<T>(obs: { subscribe: (fn: (v: T) => void) => unknown }): T | undefined {
     let v: T | undefined;

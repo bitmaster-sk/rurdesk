@@ -12,7 +12,8 @@ import {
     model,
     output,
     signal,
-    viewChild
+    viewChild,
+    AfterViewInit
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
@@ -46,7 +47,7 @@ type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
     ],
     standalone: false
 })
-export class MessageEditorComponent implements ControlValueAccessor {
+export class MessageEditorComponent implements ControlValueAccessor, AfterViewInit {
     private readonly editorRef = viewChild.required<ElementRef<HTMLDivElement>>('editor');
     private readonly destroyRef = inject(DestroyRef);
 

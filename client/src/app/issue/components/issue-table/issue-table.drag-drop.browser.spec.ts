@@ -14,13 +14,11 @@ function makeDropEvent(
 
 describe('IssueTableComponent drag handlers (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     // =========================================================================
@@ -29,7 +27,7 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
 
     describe('onDragStart', () => {
         it('sets isDragging and draggingFromIssue, writes dataTransfer', () => {
-            const issue = makeIssue({ idIssuePublic: 5 } as any);
+            const issue = makeIssue({ idIssuePublic: 5 });
             const dataTransfer = { setData: vi.fn() };
             comp.onDragStart({ dataTransfer } as any, issue);
             expect(comp.isDragging()).toBe(true);
@@ -45,8 +43,8 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
     describe('onDragEnter', () => {
         it('prevents default and sets idIssueDragOver for a different issue', () => {
             const preventDefault = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const targetIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const targetIssue = makeIssue({ idIssuePublic: 2 });
             comp.isDragging.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDragEnter({ preventDefault } as any, targetIssue);
@@ -57,13 +55,13 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
         it('no-op when not dragging', () => {
             const preventDefault = vi.fn();
             comp.isDragging.set(false);
-            comp.onDragEnter({ preventDefault } as any, makeIssue({ idIssuePublic: 2 } as any));
+            comp.onDragEnter({ preventDefault } as any, makeIssue({ idIssuePublic: 2 }));
             expect(preventDefault).not.toHaveBeenCalled();
         });
 
         it('no-op when entering the same issue being dragged', () => {
             const preventDefault = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
             comp.isDragging.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDragEnter({ preventDefault } as any, fromIssue);
@@ -127,13 +125,11 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
 
 describe('IssueTableComponent onDropZone (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     describe('schedule relation with askLag enabled', () => {

@@ -22,6 +22,7 @@ import { Issue } from '../../issue/model/issue.model';
 const t = { instant: (k: string, p?: any) => (p ? `${k}:${JSON.stringify(p)}` : k) };
 const issues: Issue[] = [
     {
+        idIssue: 42,
         idIssuePublic: 428,
         idProject: 1,
         title: 'Login',
@@ -166,7 +167,8 @@ describe('NavigationCommandProvider', () => {
 });
 
 describe('IssueActionCommandProvider', () => {
-    const issue = {
+    const issue: Issue = {
+        idIssue: 15,
         idProject: 1,
         idIssuePublic: 5,
         title: 'Login',

@@ -15,7 +15,6 @@ import { PhaseStateMapApi } from '../../api/phase-state-map.api.service';
 import {
     AGENT_PHASES,
     AGENT_PHASE_LABELS,
-    AgentPhase,
     PhaseStateMappingEntry
 } from '../../model/phase-state-mapping.model';
 import { StateStore } from '../../../state/store/state.store';

@@ -3,8 +3,7 @@ import { DragMode } from './service/gantt-drag.service';
 import { HandleSide } from './constants/gantt-handle-side.enum';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
-import { GanttZoomLevel } from './constants/gantt-zoom-config';
-import { createGanttFixture, makeTask, mockSub } from './gantt-testbed.helper';
+import { createGanttFixture, mockSub } from './gantt-testbed.helper';
 
 describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
     let comp: any;

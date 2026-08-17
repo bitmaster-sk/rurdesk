@@ -15,7 +15,7 @@ import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { IssueService } from '../../issue.service';
-import { Issue } from '../../model/issue.model';
+import { Issue, IssueDraft } from '../../model/issue.model';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 

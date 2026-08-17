@@ -411,7 +411,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         const dx = start > previous ? distance : -distance;
 
         if (snapshot) {
-            snapshot
+            void snapshot
                 .animate(
                     [
                         { transform: 'translateX(0)', opacity: 1 },

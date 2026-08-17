@@ -2,6 +2,7 @@ import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueGanttService } from './issue-gantt.service';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssuesPage } from '../../../model/issues-page.model';
 import { IssueService } from '../../../issue.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';

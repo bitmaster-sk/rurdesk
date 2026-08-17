@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { STORAGE_KEY_CARD_MODE, STORAGE_KEY_MINIMAP } from './constants/gantt-storage-keys';
-import { createGanttFixture, makeTask } from './gantt-testbed.helper';
+import { createGanttFixture } from './gantt-testbed.helper';
 
 describe('IssueGanttComponent toolbar handlers (TestBed)', () => {
     let comp: any;

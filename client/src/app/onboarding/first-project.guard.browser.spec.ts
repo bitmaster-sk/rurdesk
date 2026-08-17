@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Route, UrlSegment } from '@angular/router';
+import { UrlSegment } from '@angular/router';
 import { of, Observable } from 'rxjs';
 import { firstProjectGuard } from './first-project.guard';
 import { ProjectService } from '../project/project.service';

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -9,12 +9,10 @@ import { map } from 'rxjs/operators';
     styleUrls: ['./auth.page.scss'],
     standalone: false
 })
-export class AuthPage implements OnInit {
+export class AuthPage {
     private route = inject(ActivatedRoute);
 
     public isLogin$ = this.isLogin();
-
-    public ngOnInit(): void {}
 
     public isLogin(): Observable<boolean> {
         return this.route.url.pipe(map(segment => segment[0].path.includes('login')));

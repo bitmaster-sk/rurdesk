@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SavedView } from 'src/app/project/model/saved-view.model';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { configureTableTestBed, TableMocks } from './table-testbed.helper';
 import { IssueTableComponent } from './issue-table.component';

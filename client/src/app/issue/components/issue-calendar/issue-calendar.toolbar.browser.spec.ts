@@ -1,16 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createCalendarFixture } from './calendar-testbed.helper';
-import { IssueCardViewType } from '../../constants/issue-card-view-type.constant';
 
 describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
-    let fixture: any;
     let comp: any;
     let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createCalendarFixture();
-        fixture = result.fixture;
         comp = result.comp;
         mocks = result.mocks;
     });

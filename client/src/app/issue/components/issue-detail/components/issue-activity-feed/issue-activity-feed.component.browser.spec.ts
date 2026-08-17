@@ -8,7 +8,7 @@ import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { UserService } from 'src/app/auth/user.service';
-import { BehaviorSubject, of, NEVER } from 'rxjs';
+import { BehaviorSubject, NEVER } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Pipe({ name: 'translate', standalone: false })

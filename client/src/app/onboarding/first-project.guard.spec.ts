@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { hasNoProjects } from './first-project.guard';
-import { Project } from '../project/model/project.model';
 
 describe('hasNoProjects', () => {
     it('is true when the user has no projects', () => {

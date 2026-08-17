@@ -12,6 +12,7 @@ import { Issue } from '../../../model/issue.model';
 function makeIssue(over: Partial<Issue>): Issue {
     return {
         idIssue: 1,
+        idIssuePublic: 1,
         idProject: 1,
         idState: 1,
         idSeverity: 1,

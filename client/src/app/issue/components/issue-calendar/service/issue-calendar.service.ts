@@ -57,7 +57,6 @@ export class IssueCalendarService {
                 const assigned = issue.assignedTo != null ? users.get(issue.assignedTo) : undefined;
                 const state = issue.idState !== null ? states.get(issue.idState) : undefined;
                 const isAllDay = !issue.estimated;
-                const severityColor = severity?.color ?? null;
                 return {
                     id: `${issue.idIssue}`,
                     allDay: isAllDay,
