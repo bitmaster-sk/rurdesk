@@ -49,7 +49,7 @@ export class SeverityDropdownComponent implements ControlValueAccessor {
     private onChange: (value: unknown) => void = () => {};
     private onTouch: (value: unknown) => void = () => {};
 
-    constructor() {
+    public constructor() {
         // Resolve pending ids against the option list whenever either changes.
         effect(() => {
             if (!this.multi()) {

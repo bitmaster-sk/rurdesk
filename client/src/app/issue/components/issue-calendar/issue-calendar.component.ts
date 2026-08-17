@@ -176,7 +176,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         this.validCalendarMode(localStorage.getItem('issue-calendar-card-mode'))
     );
 
-    constructor() {
+    public constructor() {
         effect(() => {
             this.showFilter();
             queueMicrotask(() => this.calendarRef()?.getApi()?.updateSize());

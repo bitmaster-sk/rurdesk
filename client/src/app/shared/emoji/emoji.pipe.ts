@@ -10,7 +10,7 @@ declare var joypixels: {
     standalone: false
 })
 export class EmojiPipe implements PipeTransform {
-    transform(value: string): string {
+    public transform(value: string): string {
         return fromAsciiToEmoji(joypixels.shortnameToUnicode(value));
     }
 }

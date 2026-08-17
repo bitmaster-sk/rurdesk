@@ -7,7 +7,7 @@ import { DurationFormatter } from './duration.formatter';
     standalone: false
 })
 export class SecDurationPipe implements PipeTransform {
-    transform(value: number): string {
+    public transform(value: number): string {
         return DurationFormatter.durationToString(DurationConverter.secondsToDuration(value));
     }
 }

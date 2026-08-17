@@ -49,7 +49,7 @@ export class SprintDialogComponent {
         { validators: [dateOrder('startAt', 'endAt')] }
     );
 
-    constructor() {
+    public constructor() {
         // Re-seed the form each time the dialog opens (create defaults or edit values).
         effect(() => {
             if (this.visible()) {

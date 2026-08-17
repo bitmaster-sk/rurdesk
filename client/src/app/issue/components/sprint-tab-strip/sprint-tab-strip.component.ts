@@ -54,7 +54,7 @@ export class SprintTabStripComponent implements AfterViewInit {
 
     private hasScrolledToCurrent = false;
 
-    constructor() {
+    public constructor() {
         // Recompute arrow visibility when the tab set changes (deferred until the
         // new tabs are laid out).
         effect(() => {

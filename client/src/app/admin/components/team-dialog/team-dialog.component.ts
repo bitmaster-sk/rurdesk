@@ -37,7 +37,7 @@ export class TeamDialogComponent {
         color: ['#6b7280', [Validators.required]]
     });
 
-    constructor() {
+    public constructor() {
         effect(() => {
             if (!this.visible()) return;
             const team = this.team();

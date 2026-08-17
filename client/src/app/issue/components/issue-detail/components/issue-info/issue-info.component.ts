@@ -190,7 +190,7 @@ export class IssueInfoComponent {
 
     private readonly formReset$ = new Subject<void>();
 
-    constructor() {
+    public constructor() {
         this.destroyRef.onDestroy(() => this.formReset$.complete());
 
         effect(() => {

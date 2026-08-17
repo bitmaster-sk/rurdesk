@@ -151,7 +151,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     private hasScrolled = false;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             if (this.allItems().length > 0 && !this.hasScrolled) {
                 this.hasScrolled = true;

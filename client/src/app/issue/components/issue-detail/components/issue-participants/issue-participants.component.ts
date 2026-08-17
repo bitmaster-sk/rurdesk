@@ -55,7 +55,7 @@ export class IssueParticipantsComponent {
         );
     });
 
-    constructor() {
+    public constructor() {
         // React to idIssuePublic changes (e.g. navigating between issues)
         effect(() => {
             const idIssuePublic = this.idIssuePublic();

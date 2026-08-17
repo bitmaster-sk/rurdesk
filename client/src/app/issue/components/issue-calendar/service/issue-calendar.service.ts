@@ -20,7 +20,7 @@ export class IssueCalendarService {
     private readonly stateStore = inject(StateStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
 
-    constructor() {
+    public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
         // stale load before this view's setInitialFilter runs.
         this.issueFilterStore.clear();

@@ -56,7 +56,7 @@ export class BotKeysDialogComponent {
         })
     });
 
-    constructor() {
+    public constructor() {
         effect(() => {
             if (this.visible() && this.bot()) {
                 this.loadKey();

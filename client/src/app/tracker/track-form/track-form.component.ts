@@ -13,6 +13,7 @@ import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
 })
 export class TrackFormComponent implements OnInit, OnChanges {
     @Input() track: TrackForm | null = null;
+    @Input() public track: TrackForm | null = null;
 
     public form: FormGroup = this.fb.group({
         idTrack: [null],

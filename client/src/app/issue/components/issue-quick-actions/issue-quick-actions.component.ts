@@ -81,7 +81,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
 
     private anchor: HTMLElement | null = null;
 
-    constructor() {
+    public constructor() {
         combineLatest([
             this.projectStore.project$,
             this.stateStore.states$,

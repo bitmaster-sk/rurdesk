@@ -41,7 +41,7 @@ export class IssueKanbanService {
     private readonly columnsSubject = new BehaviorSubject<KanbanColumn[]>([]);
     private readonly swimlaneSubject = new BehaviorSubject<SwimlaneRow[]>([]);
 
-    constructor() {
+    public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
         // stale load before this view's setInitialFilter runs.
         this.issueFilterStore.clear();

@@ -17,7 +17,7 @@ function build(token: string | null, protocol = 'http:', port = '9000') {
             public url: string;
             public protocols: string | string[] | undefined;
             public addEventListener = vi.fn();
-            constructor(url: string, protocols?: string | string[]) {
+            public constructor(url: string, protocols?: string | string[]) {
                 this.url = url;
                 this.protocols = protocols;
                 sockets.push(this as unknown as FakeSocket);

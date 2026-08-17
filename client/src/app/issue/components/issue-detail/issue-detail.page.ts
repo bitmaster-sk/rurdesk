@@ -76,7 +76,7 @@ export class IssueDetailPage implements OnDestroy {
     // notice-driven run state, making the panel/timeline flicker or vanish.
     private lastLoadedIdIssue: number | null = null;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             const issue = this.issue();
             const project = this.project();

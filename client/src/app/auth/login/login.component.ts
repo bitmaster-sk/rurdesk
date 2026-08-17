@@ -19,7 +19,7 @@ export class LoginComponent implements OnInit {
     public form: FormGroup;
     public readonly hasFailed = signal(false);
 
-    constructor() {
+    public constructor() {
         this.form = this.buildForm();
     }
 

@@ -50,7 +50,7 @@ export class UiCommandPaletteComponent {
         navigation: 'COMMAND.MODE.NAVIGATION'
     };
 
-    constructor() {
+    public constructor() {
         effect(() => {
             this.groups();
             this.createItem();

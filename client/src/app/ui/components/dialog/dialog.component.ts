@@ -118,7 +118,7 @@ export class UiDialogComponent implements OnDestroy {
     private focusTrap: ConfigurableFocusTrap | null = null;
     private previousActiveElement: HTMLElement | null = null;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             const open = this.visible();
             const tpl = this.tpl(); // both reads MUST be tracked, BEFORE untracked()
