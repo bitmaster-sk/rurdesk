@@ -16,8 +16,12 @@ describe('FilterComponent — date modes (browser)', () => {
     let setFilter: ReturnType<typeof vi.fn>;
     let initialFilter$: BehaviorSubject<IssuesFilter>;
 
-    const filter = (extra: Partial<IssuesFilterParams> = {}) =>
-        ({ idProject: 1, ...extra }) as IssuesFilter;
+    const filter = (extra: Partial<IssuesFilterParams> = {}): IssuesFilter => ({
+        idProject: 1,
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc',
+        ...extra
+    });
 
     beforeEach(async () => {
         setFilter = vi.fn();
@@ -184,8 +188,12 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
     let setFilter: ReturnType<typeof vi.fn>;
     let initialFilter$: BehaviorSubject<IssuesFilter>;
 
-    const filter = (extra: Partial<IssuesFilterParams> = {}) =>
-        ({ idProject: 1, ...extra }) as IssuesFilter;
+    const filter = (extra: Partial<IssuesFilterParams> = {}): IssuesFilter => ({
+        idProject: 1,
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc',
+        ...extra
+    });
 
     beforeEach(async () => {
         setFilter = vi.fn();

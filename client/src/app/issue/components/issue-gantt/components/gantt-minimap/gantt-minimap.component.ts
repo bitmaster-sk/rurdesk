@@ -116,14 +116,14 @@ export class GanttMinimapComponent implements AfterViewInit, OnDestroy {
         this.dragStartX = event.clientX;
         this.dragStartScrollLeft = this.viewportScrollLeft();
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             if (!this.isDraggingViewport) return;
             const deltaX = moveEvent.clientX - this.dragStartX;
             const scrollDelta = deltaX / this.scale();
             this.navigated.emit(Math.max(0, this.dragStartScrollLeft + scrollDelta));
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (): void => {
             this.isDraggingViewport = false;
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);

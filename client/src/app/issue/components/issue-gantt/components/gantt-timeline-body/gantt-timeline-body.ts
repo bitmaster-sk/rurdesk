@@ -191,13 +191,13 @@ export class GanttTimelineBodyComponent implements AfterViewInit {
         const container = this.scrollContainer().nativeElement;
         const startScrollLeft = container.scrollLeft;
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             // Inverted: dragging right pans left (natural pan feel)
             const deltaX = startX - moveEvent.clientX;
             container.scrollLeft = Math.max(0, startScrollLeft + deltaX);
         };
 
-        const onMouseUp = (upEvent: MouseEvent) => {
+        const onMouseUp = (upEvent: MouseEvent): void => {
             if (upEvent.button === 1) {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);

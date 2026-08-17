@@ -190,7 +190,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         if (event.button !== 0) return;
         event.preventDefault(); // prevent text selection during drag
         this._dragMoved = false;
-        const onFirstMove = () => {
+        const onFirstMove = (): void => {
             this._dragMoved = true;
         };
         document.addEventListener('mousemove', onFirstMove, { once: true });
@@ -206,12 +206,12 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         const startX = event.clientX;
         const startWidth = this.barWidth();
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             const delta = moveEvent.clientX - startX;
             this._resizePreviewWidth.set(Math.max(MIN_BAR_WIDTH_PX, startWidth + delta));
         };
 
-        const onMouseUp = (upEvent: MouseEvent) => {
+        const onMouseUp = (upEvent: MouseEvent): void => {
             const finalWidth = Math.max(MIN_BAR_WIDTH_PX, startWidth + (upEvent.clientX - startX));
             const endPixel = this.barLeft() + finalWidth;
             const endDate = this.timelineService.toDate(endPixel);

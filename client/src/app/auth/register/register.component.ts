@@ -96,12 +96,12 @@ export class RegisterComponent implements OnInit {
                         Validators.maxLength(100)
                     ])
                 },
-                { validators: [this.confirmPasswordCheck] }
+                { validators: [RegisterComponent.confirmPasswordCheck] }
             )
         });
     }
 
-    private confirmPasswordCheck(group: FormGroup) {
+    private static confirmPasswordCheck(group: FormGroup): ValidationErrors | null {
         const password = group.get('password')?.value;
         const password2 = group.get('password2')?.value;
 

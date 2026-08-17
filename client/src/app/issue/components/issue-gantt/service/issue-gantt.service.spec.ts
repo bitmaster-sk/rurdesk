@@ -138,20 +138,17 @@ describe('IssueGanttService — topologicalSort', () => {
 // unloading every "Load more" page the user had fetched.
 describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
     function backlogItems(n: number): Issue[] {
-        return Array.from(
-            { length: n },
-            (_, i) =>
-                ({
-                    idIssuePublic: i + 1,
-                    idProject: 1,
-                    idState: null,
-                    idSeverity: null,
-                    title: `Backlog ${i + 1}`,
-                    description: '',
-                    tracked: 0,
-                    scheduledAt: null
-                }) as Issue
-        );
+        return Array.from({ length: n }, (_, i): Issue => ({
+            idIssue: i + 1,
+            idIssuePublic: i + 1,
+            idProject: 1,
+            idState: null,
+            idSeverity: null,
+            title: `Backlog ${i + 1}`,
+            description: '',
+            tracked: 0,
+            scheduledAt: null
+        }));
     }
 
     function buildWithStore(

@@ -17,40 +17,38 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     standalone: false
 })
 export class UserDropdownComponent implements ControlValueAccessor {
-    @Input() multi = false;
-    @Input() filter = false;
-    @Input() appendTo: any = null;
+    @Input() public multi = false;
+    @Input() public filter = false;
+    @Input() public appendTo: string | null = null;
 
-    @Input() users: User[] = [];
+    @Input() public users: User[] = [];
     /** Drives the floating auto-save chip on the trigger (forwarded to ui-select). */
-    @Input() saveStatus: UiSaveState = UiSaveState.Idle;
+    @Input() public saveStatus: UiSaveState = UiSaveState.Idle;
 
-    value: any;
+    public value: UserDropdownValue = null;
 
-    public set selected(value) {
+    public set selected(value: UserDropdownValue) {
         this.value = value;
         this.onChange(value);
         this.onTouch(value);
     }
 
-    public get selected(): any {
+    public get selected(): UserDropdownValue {
         return this.value;
     }
 
-    constructor() {}
+    public onChange: (value: UserDropdownValue) => void = () => {};
+    public onTouch: (value: UserDropdownValue) => void = () => {};
 
-    public onChange: any = () => {};
-    public onTouch: any = () => {};
-
-    public writeValue(value: any): void {
+    public writeValue(value: UserDropdownValue): void {
         this.value = value;
     }
 
-    public registerOnChange(fn: any): void {
+    public registerOnChange(fn: (value: UserDropdownValue) => void): void {
         this.onChange = fn;
     }
 
-    public registerOnTouched(fn: any): void {
+    public registerOnTouched(fn: (value: UserDropdownValue) => void): void {
         this.onTouch = fn;
     }
 }

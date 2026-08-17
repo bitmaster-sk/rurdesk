@@ -305,13 +305,13 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     }
 
     private updateComment(updated: Message): void {
-        const applyUpdate = (items: TimelineItem[]) =>
+        const applyUpdate = (items: TimelineItem[]): TimelineItem[] =>
             items.map(item =>
-                item.type === 'comment' && (item.data as Message).idMessage === updated.idMessage
+                item.type === 'comment' && item.data.idMessage === updated.idMessage
                     ? {
                           ...item,
                           data: {
-                              ...(item.data as Message),
+                              ...item.data,
                               message: updated.message,
                               updatedAt: updated.updatedAt
                           }

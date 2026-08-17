@@ -34,7 +34,7 @@ export class ProjectFormWindowComponent {
         this.winRef.close(null);
     }
 
-    private saveProject(project: Project) {
+    private saveProject(project: Project): Observable<Project> {
         return project.idProject
             ? this.sProject.updateProject(project)
             : this.sProject.insertProject(project);
