@@ -82,8 +82,13 @@ export class IssueActionCommandProvider implements CommandProvider {
                 estimated: src.estimated,
                 scheduledAt: src.scheduledAt
             })
-            .subscribe(created =>
-                this.router.navigate(['/project', ctx.idProject, 'issue', created.idIssuePublic])
-            );
+            .subscribe(created => {
+                void this.router.navigate([
+                    '/project',
+                    ctx.idProject,
+                    'issue',
+                    created.idIssuePublic
+                ]);
+            });
     }
 }

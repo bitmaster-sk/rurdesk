@@ -127,7 +127,7 @@ export class TopMenuComponent implements OnInit, OnDestroy {
     protected onProjectSelect(value: unknown): void {
         const idProject = Number(value);
         localStorage.setItem(this.LAST_PROJECT_KEY, String(idProject));
-        this.router.navigate(['/project', idProject, 'view']);
+        void this.router.navigate(['/project', idProject, 'view']);
     }
 
     protected onNewProject(): void {
@@ -156,7 +156,7 @@ export class TopMenuComponent implements OnInit, OnDestroy {
         const idProject = Number(saved);
         const exists = projects.some(p => p.idProject === idProject);
         if (exists) {
-            this.router.navigate(['/project', idProject, 'view']);
+            void this.router.navigate(['/project', idProject, 'view']);
         } else {
             localStorage.removeItem(this.LAST_PROJECT_KEY);
         }

@@ -60,7 +60,7 @@ export class UiToastService {
 
         // Single SR channel: LiveAnnouncer keeps a persistent hidden aria-live region,
         // reliable across VoiceOver/NVDA unlike role on a node inserted with its content.
-        this.liveAnnouncer.announce(
+        void this.liveAnnouncer.announce(
             input.detail,
             input.severity === 'error' ? 'assertive' : 'polite'
         );

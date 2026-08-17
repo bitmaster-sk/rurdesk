@@ -491,7 +491,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     private onCalendarEventClick(evt: EventClickArg): void {
         const issue = evt.event.extendedProps['issue'] as Issue;
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
     }
 
     private onCalendarEventResize(evt: EventResizeDoneArg): void {

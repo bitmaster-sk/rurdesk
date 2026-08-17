@@ -234,7 +234,13 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
 
     public onGoToIssues(): void {
         if (this.createdIdProject()) {
-            this.router.navigate(['/project', this.createdIdProject(), 'issue', 'view', 'table']);
+            void this.router.navigate([
+                '/project',
+                this.createdIdProject(),
+                'issue',
+                'view',
+                'table'
+            ]);
         }
     }
 

@@ -26,7 +26,7 @@ export class ProjectFormWindowComponent {
     public onSaveGenerate(project: Project): void {
         this.saveProject(project).subscribe(savedProject => {
             this.winRef.close(savedProject);
-            this.router.navigate(['/project', savedProject.idProject, 'project-builder']);
+            void this.router.navigate(['/project', savedProject.idProject, 'project-builder']);
         });
     }
 

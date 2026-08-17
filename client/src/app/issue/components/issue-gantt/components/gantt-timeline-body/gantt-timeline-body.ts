@@ -177,7 +177,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit {
 
         // Navigate to create issue with scheduledAt
         // idProject extracted from current route by parent
-        this.router.navigate([], {
+        void this.router.navigate([], {
             queryParams: { scheduledAt: snapped.toISOString() },
             queryParamsHandling: 'merge'
         });

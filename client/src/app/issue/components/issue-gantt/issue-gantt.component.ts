@@ -759,7 +759,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 if (idx !== null) {
                     const task = this.scheduledTasks()[idx];
                     if (task) {
-                        this.router.navigate([
+                        void this.router.navigate([
                             '/project',
                             task.idProject,
                             'issue',

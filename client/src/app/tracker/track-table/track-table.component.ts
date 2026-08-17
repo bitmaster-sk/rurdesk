@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { combineLatest, merge, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';

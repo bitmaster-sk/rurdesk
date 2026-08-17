@@ -30,7 +30,9 @@ export class SavedViewCommandProvider implements CommandProvider {
         return buildSavedViewCommands(
             ctx,
             this.store.views(),
-            (path, queryParams) => this.router.navigate(path as unknown[], { queryParams }),
+            (path, queryParams) => {
+                void this.router.navigate(path, { queryParams });
+            },
             this.t
         );
     }

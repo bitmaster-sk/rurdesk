@@ -227,7 +227,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     protected onOpen(): void {
         const issue = this.issue();
         if (!issue) return;
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
         this.hide();
     }
 

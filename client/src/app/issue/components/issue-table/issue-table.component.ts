@@ -254,7 +254,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     public onOpenHighlighted(issue: Issue): void {
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
     }
 
     public onLazyLoad(evt: UiTableSortEvent): void {

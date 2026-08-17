@@ -85,7 +85,11 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
     // Last value we propagated outward — used to revert a half-finished range on close.
     private lastValue: UiDatepickerValue = null;
 
-    public async ngAfterViewInit(): Promise<void> {
+    public ngAfterViewInit(): void {
+        void this.initFlatpickr();
+    }
+
+    private async initFlatpickr(): Promise<void> {
         const flatpickr = (await import('flatpickr')).default;
         if (this.destroyed) {
             return;

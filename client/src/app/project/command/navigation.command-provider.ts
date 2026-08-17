@@ -41,7 +41,9 @@ export class NavigationCommandProvider implements CommandProvider {
         const nav = buildNavigationCommands(
             ctx,
             others,
-            p => this.router.navigate(p as unknown[]),
+            p => {
+                void this.router.navigate(p);
+            },
             { canOpenSettings: this.acl.canUpdateProject() },
             this.t
         );
@@ -52,7 +54,7 @@ export class NavigationCommandProvider implements CommandProvider {
                 // → opens the blank issue form, not the table listing.
                 createIssue: () => {
                     if (ctx.idProject != null)
-                        this.router.navigate(['/project', ctx.idProject, 'issue', 0]);
+                        void this.router.navigate(['/project', ctx.idProject, 'issue', 0]);
                 },
                 openShortcuts: () => this.palette.openHelp(),
                 signOut: () => this.signOut()
@@ -66,7 +68,7 @@ export class NavigationCommandProvider implements CommandProvider {
     private signOut(): void {
         const done = (): void => {
             this.userService.deleteAuthLocal();
-            this.router.navigate(['/login']);
+            void this.router.navigate(['/login']);
         };
         this.userService.logout().subscribe({ next: done, error: done });
     }

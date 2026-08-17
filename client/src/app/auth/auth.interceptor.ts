@@ -39,7 +39,7 @@ export class AuthInterceptor implements HttpInterceptor {
                     queueMicrotask(() => {
                         const url = this.router.url;
                         if (!url.startsWith('/login') && !url.startsWith('/register')) {
-                            this.router.navigateByUrl('/login');
+                            void this.router.navigateByUrl('/login');
                         }
                     });
                 }

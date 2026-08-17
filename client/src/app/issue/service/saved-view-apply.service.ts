@@ -25,7 +25,7 @@ export class SavedViewApplyService {
 
         if (view.viewType !== this.currentMode()) {
             this.store.setPending(view, idProject);
-            this.router.navigate(['/project', idProject, 'issue', 'view', view.viewType], {
+            void this.router.navigate(['/project', idProject, 'issue', 'view', view.viewType], {
                 queryParams: { view: view.idSavedView }
             });
             return;
@@ -40,7 +40,7 @@ export class SavedViewApplyService {
 
     /** Zero commands keeps the current route and swaps only the query params. */
     public markUrl(idSavedView: number | null): void {
-        this.router.navigate([], {
+        void this.router.navigate([], {
             queryParams: { view: idSavedView },
             queryParamsHandling: 'merge'
         });

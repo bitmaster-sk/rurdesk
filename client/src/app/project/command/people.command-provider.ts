@@ -44,6 +44,6 @@ export class PeopleCommandProvider implements CommandProvider {
             return;
         }
         if (ctx.idProject != null)
-            this.router.navigate(['/project', ctx.idProject, 'issue', 'view', 'table']);
+            void this.router.navigate(['/project', ctx.idProject, 'issue', 'view', 'table']);
     }
 }

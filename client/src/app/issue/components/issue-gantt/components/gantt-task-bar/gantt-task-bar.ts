@@ -175,7 +175,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
             return;
         }
         const issue = this.task();
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
     }
 
     public onMouseEnter(): void {

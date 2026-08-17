@@ -235,7 +235,7 @@ export class IssueInfoComponent {
                     this.refreshFormValues(savedIssue);
                     this.saveStatus.set(UiSaveState.Saved);
                 } else {
-                    this.router.navigate([
+                    void this.router.navigate([
                         '/project',
                         savedIssue.idProject,
                         'issue',

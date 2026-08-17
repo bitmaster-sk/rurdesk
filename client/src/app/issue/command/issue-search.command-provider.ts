@@ -44,11 +44,13 @@ export class IssueSearchCommandProvider implements CommandProvider {
     }
 
     public getCommands(ctx: CommandContext): Command[] {
-        if (!this.cache || this.cache.idProject !== ctx.idProject) return [];
+        if (this.cache?.idProject !== ctx.idProject) return [];
         return buildIssueJumpCommands(
             ctx,
             this.cache.issues,
-            p => this.router.navigate(p as unknown[]),
+            p => {
+                void this.router.navigate(p);
+            },
             this.t
         );
     }
@@ -83,8 +85,13 @@ export class IssueSearchCommandProvider implements CommandProvider {
                 idSeverity: null,
                 tracked: 0
             })
-            .subscribe(created =>
-                this.router.navigate(['/project', ctx.idProject, 'issue', created.idIssuePublic])
-            );
+            .subscribe(created => {
+                void this.router.navigate([
+                    '/project',
+                    ctx.idProject,
+                    'issue',
+                    created.idIssuePublic
+                ]);
+            });
     }
 }

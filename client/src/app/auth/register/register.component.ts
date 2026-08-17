@@ -57,14 +57,14 @@ export class RegisterComponent implements OnInit {
         // App bootstrap skips the auth-gated settings load for anonymous visitors;
         // now that we have a token, load them (navigation does not re-bootstrap).
         this.settingsStore.load();
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
     }
 
     private onRegisterError(err: unknown): void {
         if (err instanceof HttpErrorResponse && err.url?.includes('/login')) {
             // The account was created but the follow-up auto-login failed —
             // let the user sign in manually instead of failing silently.
-            this.router.navigate(['/login']);
+            void this.router.navigate(['/login']);
             return;
         }
         if (err instanceof HttpErrorResponse && err.status === 403) {

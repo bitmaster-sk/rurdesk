@@ -141,7 +141,7 @@ export class BotKeysDialogComponent {
     protected onCopy(): void {
         const key = this.revealedKey();
         if (key) {
-            navigator.clipboard.writeText(key);
+            this.copyToClipboard(key);
         }
     }
 
@@ -205,8 +205,14 @@ export class BotKeysDialogComponent {
     protected onCopyGatewayToken(): void {
         const token = this.revealedGatewayToken();
         if (token) {
-            navigator.clipboard.writeText(token);
+            this.copyToClipboard(token);
         }
+    }
+
+    private copyToClipboard(text: string): void {
+        navigator.clipboard.writeText(text).catch(() => {
+            this.sToast.showError('API_KEY.COPY_FAILED');
+        });
     }
 
     protected onClose(): void {

@@ -27,11 +27,15 @@ export class OnboardingFirstProjectComponent {
     public readonly isSubmitting = signal(false);
 
     public onCreateBlank(): void {
-        this.create(idProject => this.router.navigate(['/project', idProject, 'view']));
+        this.create(idProject => {
+            void this.router.navigate(['/project', idProject, 'view']);
+        });
     }
 
     public onCreateWithAI(): void {
-        this.create(idProject => this.router.navigate(['/project', idProject, 'project-builder']));
+        this.create(idProject => {
+            void this.router.navigate(['/project', idProject, 'project-builder']);
+        });
     }
 
     private create(then: (idProject: number) => void): void {

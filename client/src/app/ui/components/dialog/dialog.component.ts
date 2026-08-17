@@ -171,7 +171,7 @@ export class UiDialogComponent implements OnDestroy {
         this.overlayRef.attach(new TemplatePortal(this.tpl()!, this.vcr));
 
         this.focusTrap = this.focusTrapFactory.create(this.overlayRef.overlayElement);
-        this.focusTrap.focusInitialElementWhenReady();
+        void this.focusTrap.focusInitialElementWhenReady();
 
         this.overlayRef.backdropClick().subscribe(() => {
             if (this.dismissable()) {
