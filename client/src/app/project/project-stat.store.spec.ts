@@ -1,3 +1,4 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ProjectStatStore } from './project-stat.store';
 import { IssueService } from '../issue/issue.service';
@@ -20,11 +21,28 @@ function issue(over: Partial<Issue>): Issue {
         tracked: 0,
         assignedTo: null,
         ...over
-    } as Issue;
+    };
+}
+
+function buildStore(
+    issueService: IssueService,
+    projectStore: ProjectStore,
+    stateStore: StateStore,
+    severityStore: SeverityStore
+): ProjectStatStore {
+    const injector = Injector.create({
+        providers: [
+            { provide: IssueService, useValue: issueService },
+            { provide: ProjectStore, useValue: projectStore },
+            { provide: StateStore, useValue: stateStore },
+            { provide: SeverityStore, useValue: severityStore }
+        ]
+    });
+    return runInInjectionContext(injector, () => new ProjectStatStore());
 }
 
 function build(issues: Issue[]): ProjectStatStore {
-    return new ProjectStatStore(
+    return buildStore(
         { loadIssues: () => of(issues) } as unknown as IssueService,
         { project$: of({ idProject: 1 }) } as unknown as ProjectStore,
         { states$: of(states) } as unknown as StateStore,

@@ -13,17 +13,17 @@ import { Router } from '@angular/router';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
-    constructor(
-        private sUser: UserService,
-        private router: Router
-    ) {}
+    private readonly sUser = inject(UserService);
+    private readonly router = inject(Router);
 
-    intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    public intercept(
+        request: HttpRequest<unknown>,
+        next: HttpHandler
+    ): Observable<HttpEvent<unknown>> {
         const token = this.sUser.getAuthLocal();
 
         request = request.clone({
             setHeaders: {
-                // eslint-disable-next-line @typescript-eslint/naming-convention
                 Authorization: token ? token : ''
             }
         });

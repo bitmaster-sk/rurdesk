@@ -8,11 +8,11 @@ import { StateApi } from '../api/state.api.service';
     providedIn: 'root'
 })
 export class StateStore {
+    private readonly stateApi = inject(StateApi);
+
     private states = new BehaviorSubject<IssueState[] | null>(null);
 
     public states$ = this.states.asObservable().pipe(filter(states => !!states));
-
-    constructor(private stateApi: StateApi) {}
 
     public load(): void {
         this.stateApi.load$().subscribe(states => this.states.next(states));

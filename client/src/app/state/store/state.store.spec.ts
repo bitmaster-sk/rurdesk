@@ -1,3 +1,4 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { StateStore } from './state.store';
 import { StateApi } from '../api/state.api.service';
@@ -16,7 +17,10 @@ const states = [
 
 describe('StateStore', () => {
     function build(): StateStore {
-        const store = new StateStore({ load$: () => of(states) } as unknown as StateApi);
+        const injector = Injector.create({
+            providers: [{ provide: StateApi, useValue: { load$: () => of(states) } }]
+        });
+        const store = runInInjectionContext(injector, () => new StateStore());
         store.load();
         return store;
     }

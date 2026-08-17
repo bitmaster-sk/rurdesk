@@ -1,8 +1,14 @@
-import type { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { MessageService } from './message.service';
 import { MessageRecipientType } from './constant/message-recipient-type.enum';
 import { Message } from './model/message.model';
+
+function buildService(http: HttpClient): MessageService {
+    const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: http }] });
+    return runInInjectionContext(injector, () => new MessageService());
+}
 
 function userMessage(idRecipient: number, idUser: number): Message {
     return {

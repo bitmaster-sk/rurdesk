@@ -1,12 +1,12 @@
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { QualityReport } from '../model/quality.model';
 import { silentErrors } from 'src/app/core/http-error-context';
 
 @Injectable({ providedIn: 'root' })
 export class QualityApi {
-    constructor(private http: HttpClient) {}
+    private readonly http = inject(HttpClient);
 
     public preview$(
         idProject: number,

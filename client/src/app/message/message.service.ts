@@ -10,12 +10,12 @@ import { MessageKeyConverter } from './converter/message-key.converter';
     providedIn: 'root'
 })
 export class MessageService {
+    private readonly http = inject(HttpClient);
+
+    // TODO plnit unread v tejto service
     public Unread: BehaviorSubject<Map<string, Message[]>> = new BehaviorSubject<
         Map<string, Message[]>
     >(new Map<string, Message[]>());
-
-    // TODO plnit unread v tejto service
-    constructor(private http: HttpClient) {}
 
     public loadMessages(
         idRecipient: number,

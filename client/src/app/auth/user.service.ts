@@ -10,11 +10,11 @@ import { silentErrors } from 'src/app/core/http-error-context';
     providedIn: 'root'
 })
 export class UserService {
+    private readonly http = inject(HttpClient);
+
     public user: BehaviorSubject<User | null> = new BehaviorSubject<User | null>(null);
 
     public user$ = this.user.pipe(filter((u): u is User => u !== null));
-
-    constructor(private http: HttpClient) {}
 
     public getUser(): User {
         const user = this.user.getValue();

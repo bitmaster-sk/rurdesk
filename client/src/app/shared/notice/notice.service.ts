@@ -15,6 +15,9 @@ import { Notice } from './model/notice.model';
     providedIn: 'root'
 })
 export class NoticeService {
+    private readonly location = inject(PlatformLocation);
+    private readonly sUser = inject(UserService);
+
     public Message: Subject<Notice<Message>> = new Subject<Notice<Message>>();
 
     private notificationSubject = new Subject<Notice<Notification>>();

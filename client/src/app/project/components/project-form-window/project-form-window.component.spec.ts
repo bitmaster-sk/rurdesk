@@ -1,10 +1,11 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
-import type { Router } from '@angular/router';
-import type { WindowConfig } from 'src/app/shared/window/entity/window-config';
-import type { WindowReference } from 'src/app/shared/window/window.reference';
+import { Router } from '@angular/router';
+import { WindowConfig } from 'src/app/shared/window/entity/window-config';
+import { WindowReference } from 'src/app/shared/window/window.reference';
 import { ProjectFormWindowComponent } from './project-form-window.component';
-import type { ProjectService } from '../../project.service';
-import { Project } from '../../model/project.model';
+import { ProjectService } from '../../project.service';
+import { Project, ProjectInsert } from '../../model/project.model';
 
 describe('ProjectFormWindowComponent', () => {
     let close: ReturnType<typeof vi.fn>;
@@ -23,12 +24,15 @@ describe('ProjectFormWindowComponent', () => {
         insertProject = vi.fn().mockReturnValue(of(savedProject));
         updateProject = vi.fn().mockReturnValue(of(existingProject));
 
-        component = new ProjectFormWindowComponent(
-            { close } as unknown as WindowReference,
-            {} as WindowConfig,
-            { insertProject, updateProject } as unknown as ProjectService,
-            { navigate } as unknown as Router
-        );
+        const injector = Injector.create({
+            providers: [
+                { provide: WindowReference, useValue: { close } },
+                { provide: WindowConfig, useValue: {} },
+                { provide: ProjectService, useValue: { insertProject, updateProject } },
+                { provide: Router, useValue: { navigate } }
+            ]
+        });
+        component = runInInjectionContext(injector, () => new ProjectFormWindowComponent());
     });
 
     it('onSave inserts a new project and closes the window without navigation', () => {

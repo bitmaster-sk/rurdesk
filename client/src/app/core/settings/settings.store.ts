@@ -9,8 +9,8 @@ const FALLBACK: AppSettings = {
 
 @Injectable({ providedIn: 'root' })
 export class SettingsStore {
-    // Constructor injection (not inject()) keeps the store unit-testable with a fake api.
-    constructor(private readonly api: SettingsApi) {}
+    // Injected as a field, so specs must build the store through an Injector rather than `new`.
+    private readonly api = inject(SettingsApi);
 
     private readonly settings = signal<AppSettings>(FALLBACK);
 

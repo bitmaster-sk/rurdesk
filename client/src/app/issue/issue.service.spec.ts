@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import type { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, type HttpParams } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueService } from './issue.service';
 import { IssuesFilter } from './components/filter/issue-filter.entity';
@@ -8,7 +9,8 @@ import { IssuesPage } from './model/issues-page.model';
 
 function build(getReturn: unknown) {
     const get = vi.fn().mockReturnValue(of(getReturn));
-    const service = new IssueService({ get } as unknown as HttpClient);
+    const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: { get } }] });
+    const service = runInInjectionContext(injector, () => new IssueService());
     return { service, get };
 }
 

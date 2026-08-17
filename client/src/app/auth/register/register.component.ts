@@ -14,17 +14,13 @@ import { UserService } from '../user.service';
     standalone: false
 })
 export class RegisterComponent implements OnInit {
-    public form: FormGroup;
-    public readonly errorKey = signal<string | null>(null);
+    private readonly fb = inject(FormBuilder);
+    private readonly router = inject(Router);
+    private readonly sUser = inject(UserService);
+    private readonly settingsStore = inject(SettingsStore);
 
-    constructor(
-        private fb: FormBuilder,
-        private router: Router,
-        private sUser: UserService,
-        private settingsStore: SettingsStore
-    ) {
-        this.form = this.buildForm();
-    }
+    public readonly form: FormGroup = this.buildForm();
+    public readonly errorKey = signal<string | null>(null);
 
     public ngOnInit(): void {
         // Clear a previous failure as soon as the user edits the form.

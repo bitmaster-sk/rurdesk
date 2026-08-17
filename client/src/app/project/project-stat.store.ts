@@ -23,6 +23,11 @@ interface ProjectStats {
     providedIn: 'root'
 })
 export class ProjectStatStore {
+    private readonly issueService = inject(IssueService);
+    private readonly projectStore = inject(ProjectStore);
+    private readonly stateStore = inject(StateStore);
+    private readonly severityStore = inject(SeverityStore);
+
     private totalEstimatedSeconds = new BehaviorSubject<number>(0);
 
     public totalEstimatedSeconds$ = this.totalEstimatedSeconds.asObservable();

@@ -10,7 +10,7 @@ import { IssuesPage, IssueGroup } from './model/issues-page.model';
     providedIn: 'root'
 })
 export class IssueService {
-    constructor(private http: HttpClient) {}
+    private readonly http = inject(HttpClient);
 
     private toParams(filter: IssuesFilter): HttpParams {
         let params = new HttpParams();

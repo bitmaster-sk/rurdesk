@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
-import type { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { UserService } from './user.service';
 
 function build(httpReturn: unknown = of({})) {
     const post = vi.fn().mockReturnValue(httpReturn);
-    const service = new UserService({ post } as unknown as HttpClient);
+    const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: { post } }] });
+    const service = runInInjectionContext(injector, () => new UserService());
     return { service, post };
 }
 

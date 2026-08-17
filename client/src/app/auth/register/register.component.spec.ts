@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
@@ -34,12 +35,15 @@ describe('RegisterComponent', () => {
             login: vi.fn().mockReturnValue(of('token-123')),
             saveAuthLocal: vi.fn()
         };
-        component = new RegisterComponent(
-            new FormBuilder(),
-            router as unknown as Router,
-            sUser as unknown as UserService,
-            settingsStore as unknown as SettingsStore
-        );
+        const injector = Injector.create({
+            providers: [
+                { provide: FormBuilder, useValue: new FormBuilder() },
+                { provide: Router, useValue: router },
+                { provide: UserService, useValue: sUser },
+                { provide: SettingsStore, useValue: settingsStore }
+            ]
+        });
+        component = runInInjectionContext(injector, () => new RegisterComponent());
         component.ngOnInit();
     });
 

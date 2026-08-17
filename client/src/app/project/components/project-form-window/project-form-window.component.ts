@@ -12,12 +12,10 @@ import { ProjectService } from '../../project.service';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectFormWindowComponent {
-    constructor(
-        private winRef: WindowReference,
-        public winCfg: WindowConfig,
-        private sProject: ProjectService,
-        private router: Router
-    ) {}
+    private readonly winRef = inject(WindowReference);
+    public readonly winCfg = inject<WindowConfig<ProjectWindowData>>(WindowConfig);
+    private readonly sProject = inject(ProjectService);
+    private readonly router = inject(Router);
 
     public onSave(project: Project): void {
         this.saveProject(project).subscribe(savedProject => {

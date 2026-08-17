@@ -10,7 +10,7 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ProjectBuilderApi {
-    constructor(private http: HttpClient) {}
+    private readonly http = inject(HttpClient);
 
     public generate$(
         idProject: number,

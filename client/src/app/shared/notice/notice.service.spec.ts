@@ -1,7 +1,18 @@
 // @vitest-environment jsdom
-import type { PlatformLocation } from '@angular/common';
-import type { UserService } from 'src/app/auth/user.service';
+import { PlatformLocation } from '@angular/common';
+import { Injector, runInInjectionContext } from '@angular/core';
+import { UserService } from 'src/app/auth/user.service';
 import { NoticeService } from './notice.service';
+
+function buildService(location: PlatformLocation, sUser: UserService): NoticeService {
+    const injector = Injector.create({
+        providers: [
+            { provide: PlatformLocation, useValue: location },
+            { provide: UserService, useValue: sUser }
+        ]
+    });
+    return runInInjectionContext(injector, () => new NoticeService());
+}
 
 interface FakeSocket {
     url: string;

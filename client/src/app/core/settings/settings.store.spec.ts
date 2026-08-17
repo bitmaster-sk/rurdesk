@@ -1,10 +1,14 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
-import type { SettingsApi, AppSettings } from './settings.api.service';
+import { SettingsApi, type AppSettings } from './settings.api.service';
 import { SettingsStore } from './settings.store';
 
 function build(getReturn?: AppSettings) {
     const getSettings$ = vi.fn().mockReturnValue(of(getReturn));
-    const store = new SettingsStore({ getSettings$ } as unknown as SettingsApi);
+    const injector = Injector.create({
+        providers: [{ provide: SettingsApi, useValue: { getSettings$ } }]
+    });
+    const store = runInInjectionContext(injector, () => new SettingsStore());
     return { store, getSettings$ };
 }
 
