@@ -34,6 +34,8 @@ import { IssueTableService } from './service/issue-table.service';
 import { UiTableSortEvent } from 'src/app/ui/components/table/table-sort.directive';
 import { Issue } from '../../model/issue.model';
 import { RelationDropEvent } from './components/issue-table-drop-zone/issue-table-drop-zone.component';
+import { IssueRelationType } from '../../constants/issue-relation-type.enum';
+import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
 import { resolveHighlightIndex } from './highlight.util';
 

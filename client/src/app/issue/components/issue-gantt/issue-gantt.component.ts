@@ -38,10 +38,10 @@ import { BulkEditIssueEntry } from '../../model/bulk-edit-issues.model';
 import { IssueService } from '../../issue.service';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../constants/issue-relation-direction.enum';
 import { GanttRelation } from './model/gantt-relation.model';
 import { IssueRelationApi } from '../../api/issue-relation.api.service';
 import {
-    MIN_BAR_WIDTH_PX,
     BAR_BORDER,
     BAR_PADDING_COMFORTABLE,
     BAR_PADDING_COMPACT

@@ -2,6 +2,7 @@ import { GanttCriticalPathService } from './gantt-critical-path.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
 
 describe('GanttCriticalPathService', () => {

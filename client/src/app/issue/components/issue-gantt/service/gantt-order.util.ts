@@ -1,5 +1,6 @@
 import type { Issue } from '../../../model/issue.model';
 import type { GanttRelation } from '../model/gantt-relation.model';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 
 /**
  * applyPendingOrder reorders `tasks` to match `order` (a list of idIssuePublic)

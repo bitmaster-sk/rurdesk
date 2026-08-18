@@ -3,6 +3,7 @@ import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { addSeconds } from 'date-fns';
 
 export interface CascadeResult {

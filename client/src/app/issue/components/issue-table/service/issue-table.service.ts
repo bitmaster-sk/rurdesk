@@ -16,6 +16,9 @@ import { IssueService } from '../../../issue.service';
 import { Issue } from '../../../model/issue.model';
 import { CreateIssueRelationDto, ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
+import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationRow, IssueTableRow } from '../entity/issue-table-row.entity';
 import { CursorPager } from '../../../util/cursor-pager';
 

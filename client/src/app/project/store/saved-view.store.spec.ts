@@ -3,6 +3,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { SavedViewApi } from '../api/saved-view.api.service';
 import { SavedView } from '../model/saved-view.model';
+import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 import { SavedViewStore } from './saved-view.store';
 
 describe('SavedViewStore', () => {

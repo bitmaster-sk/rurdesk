@@ -2,6 +2,7 @@ import { GanttCascadeService } from './gantt-cascade.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
 // Issue is imported for Pick<Issue, 'idIssuePublic'> used in makeRelation
 

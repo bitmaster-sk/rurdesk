@@ -117,9 +117,11 @@ export class MessagePage implements OnInit, OnDestroy {
                 .pipe(
                     tap(params => {
                         const recipientId = Number(params.get('idRecipient'));
-                        const recipientType = Number(params.get('idMessageRecipientType'));
+                        const recipientType = this.toRecipientType(
+                            Number(params.get('idMessageRecipientType'))
+                        );
                         this.idActiveRecipient.set(recipientId);
-                        this.idActiveRecipientType.set(this.toRecipientType(recipientType));
+                        this.idActiveRecipientType.set(recipientType);
                         if (recipientType === MessageRecipientType.project) {
                             this.projectMemberStore.load(recipientId);
                         } else if (recipientType === MessageRecipientType.team) {

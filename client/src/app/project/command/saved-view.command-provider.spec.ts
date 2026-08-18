@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandContext } from '../../core/command/command.model';
 import { SavedViewApi } from '../api/saved-view.api.service';
 import { SavedView } from '../model/saved-view.model';
+import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 import { SavedViewStore } from '../store/saved-view.store';
 import { SavedViewCommandProvider } from './saved-view.command-provider';
 

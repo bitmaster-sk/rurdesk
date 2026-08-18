@@ -14,6 +14,7 @@ import { ExtendedIssue } from '../../../../model/extended-issue.model';
 import { GanttRelation } from '../../model/gantt-relation.model';
 import { IssueRelationType } from '../../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { MIN_BAR_WIDTH_PX, SMALL_BAR_THRESHOLD_PX } from '../gantt-task-bar/gantt-task-bar';
 import { addSeconds } from 'date-fns';

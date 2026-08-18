@@ -8,8 +8,9 @@ import { GanttArrowLayerComponent } from './gantt-arrow-layer.component';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { GanttZoomLevel } from '../../constants/gantt-zoom-config';
 import { ExtendedIssue } from '../../../../model/extended-issue.model';
-import { ReadIssueRelationDto } from '../../../../model/issue-relation.model';
+import { IssueRelationRef, ReadIssueRelationDto } from '../../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 

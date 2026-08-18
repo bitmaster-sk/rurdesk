@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 
 export interface CriticalPathResult {
     taskIds: Set<number>;
