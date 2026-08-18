@@ -57,7 +57,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     standalone: false
 })
 export class IssueInfoComponent {
-    private readonly inputTitle = viewChild<ElementRef>('inputTitle');
+    private readonly inputTitle = viewChild<ElementRef<HTMLInputElement>>('inputTitle');
     private readonly inputDescription = viewChild<MessageEditorComponent>('inputDescription');
 
     public readonly issue = input<Issue | null>(null);

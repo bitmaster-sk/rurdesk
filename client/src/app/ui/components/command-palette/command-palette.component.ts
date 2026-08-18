@@ -66,8 +66,10 @@ export class UiCommandPaletteComponent {
         return this.flat()[this.selected()]?.id === item.id;
     }
 
-    protected onInput(value: string): void {
-        this.queryChange.emit(value);
+    protected onInput(event: Event): void {
+        if (event.target instanceof HTMLInputElement) {
+            this.queryChange.emit(event.target.value);
+        }
     }
 
     protected onKeydown(event: KeyboardEvent): void {

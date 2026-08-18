@@ -55,7 +55,7 @@
                     type="text"
                     [placeholder]="'ISSUE.PARTICIPANTS.SEARCH' | translate"
                     [value]="memberSearch()"
-                    (input)="memberSearch.set($any($event.target).value)"
+                    (input)="onSearchInput($event)"
                     class="w-full"
                     size="small"
                 />

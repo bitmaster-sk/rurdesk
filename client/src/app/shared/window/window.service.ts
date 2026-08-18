@@ -23,12 +23,15 @@ export class WindowService {
     private readonly injector = inject(Injector);
 
     /** otovorí nové okno */
-    public open(componentType: Type<any>, cfg: WindowConfig): WindowReference {
-        const injectorExtension = new WeakMap();
-        injectorExtension.set(WindowConfig as any, merge(cloneDeep(WINDOW_DEFAULT_CONFIG), cfg));
+    public open<TResult = unknown, TData = Record<string, unknown>>(
+        componentType: Type<unknown>,
+        cfg: WindowConfig<TData>
+    ): WindowReference<TResult> {
+        const injectorExtension = new WeakMap<ProviderToken<unknown>, unknown>();
+        injectorExtension.set(WindowConfig, merge(cloneDeep(WINDOW_DEFAULT_CONFIG), cfg));
 
-        const windowRef = new WindowReference();
-        injectorExtension.set(WindowReference as any, windowRef);
+        const windowRef = new WindowReference<TResult>();
+        injectorExtension.set(WindowReference, windowRef);
 
         const window = this.createWindow(componentType, injectorExtension);
 

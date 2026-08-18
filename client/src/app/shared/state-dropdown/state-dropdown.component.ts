@@ -67,22 +67,22 @@ export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
         this.onTouch(ids);
     }
 
-    public writeValue(value: any): void {
+    public writeValue(value: StateDropdownValue): void {
         if (this.multi) {
-            const ids: number[] = value ?? [];
+            const ids = Array.isArray(value) ? value : [];
             this.pendingMultiIds = ids;
             this.multiValue = (this.states ?? []).filter(s => ids.includes(s.idState));
         } else {
-            this.value = value;
+            this.value = typeof value === 'number' ? value : null;
         }
         this.cdr.markForCheck();
     }
 
-    public registerOnChange(fn: any): void {
+    public registerOnChange(fn: (value: StateDropdownValue) => void): void {
         this.onChange = fn;
     }
 
-    public registerOnTouched(fn: any): void {
+    public registerOnTouched(fn: (value: StateDropdownValue) => void): void {
         this.onTouch = fn;
     }
 }

@@ -274,7 +274,13 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
             return;
         }
         try {
-            const snapshot: StagingSnapshot = JSON.parse(raw);
+            const parsed: unknown = JSON.parse(raw);
+            if (!ProjectBuilderComponent.isStagingSnapshot(parsed)) {
+                this.clearStaging();
+                this.step.set(1);
+                return;
+            }
+            const snapshot: StagingSnapshot = parsed;
             const age = Date.now() - new Date(snapshot.generatedAt).getTime();
             if (age > STAGING_TTL_MS) {
                 this.clearStaging();
@@ -290,6 +296,18 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
             this.clearStaging();
             this.step.set(1);
         }
+    }
+
+    private static isStagingSnapshot(value: unknown): value is StagingSnapshot {
+        if (value === null || typeof value !== 'object') {
+            return false;
+        }
+        const snapshot = value as Record<string, unknown>;
+        return (
+            typeof snapshot['summary'] === 'string' &&
+            typeof snapshot['generatedAt'] === 'string' &&
+            Array.isArray(snapshot['issues'])
+        );
     }
 
     // Rate limit handling

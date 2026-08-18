@@ -53,7 +53,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly teamMemberStore = inject(TeamMemberStore);
 
-    private readonly msgList = viewChild<ElementRef>('msgList');
+    private readonly msgList = viewChild<ElementRef<HTMLElement>>('msgList');
     private readonly msgListItems = viewChildren('msgListItems');
 
     protected readonly conversationGroups = signal<ConversationGroup[]>([]);

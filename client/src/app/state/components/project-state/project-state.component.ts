@@ -83,11 +83,11 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
 
     public onNewState(): void {
         this.sWindow
-            .open(StateFormWindowComponent, {
+            .open<IssueState | null>(StateFormWindowComponent, {
                 header: this.i18n.instant('STATE.NEW'),
                 data: { project: this.project() }
             })
-            .onClose.subscribe((savedState: IssueState) => {
+            .onClose.subscribe(savedState => {
                 if (!savedState) {
                     return;
                 }
@@ -98,11 +98,11 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
 
     protected onEditState(state: IssueState): void {
         this.sWindow
-            .open(StateFormWindowComponent, {
+            .open<IssueState | null>(StateFormWindowComponent, {
                 header: this.i18n.instant('STATE.EDIT'),
                 data: { project: this.project(), state }
             })
-            .onClose.subscribe((savedState: IssueState) => {
+            .onClose.subscribe(savedState => {
                 if (!savedState) {
                     return;
                 }

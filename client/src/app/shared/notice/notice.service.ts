@@ -98,23 +98,47 @@ export class NoticeService {
         setTimeout(() => this.openSocket(), this.RECONNECT_DELAY);
     }
 
-    private onOpen(evt: Event): void {}
+    private onOpen(): void {}
 
     private onError(evt: Event): void {
         console.error(evt);
     }
 
-    private onClose(evt: CloseEvent): void {
+    private onClose(): void {
         this.openSocketWithDelay();
     }
 
     private onMessage(evt: MessageEvent): void {
+        const data: unknown = evt.data;
+        if (typeof data !== 'string') {
+            console.warn('unsupported notice');
+            return;
+        }
         try {
-            const notice = JSON.parse(evt.data);
-            this.dispatch(notice);
+            const notice: unknown = JSON.parse(data);
+            if (NoticeService.isNotice(notice)) {
+                this.dispatch(notice);
+            } else {
+                console.warn('unsupported notice');
+            }
         } catch (error) {
             console.error(error);
         }
+    }
+
+    private static isNotice(value: unknown): value is Notice<unknown> {
+        if (value === null || typeof value !== 'object') {
+            return false;
+        }
+        const notice = value as Record<string, unknown>;
+        const subject = notice['subject'];
+        const action = notice['action'];
+        return (
+            typeof subject === 'string' &&
+            Object.values<string>(NoticeSubject).includes(subject) &&
+            typeof action === 'string' &&
+            Object.values<string>(NoticeAction).includes(action)
+        );
     }
 
     private dispatch(notice: Notice<unknown>): void {

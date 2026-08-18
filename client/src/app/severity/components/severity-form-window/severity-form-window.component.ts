@@ -1,20 +1,24 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { Project } from 'src/app/project/model/project.model';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { IssueSeverity } from '../../model/issue-severity.model';
 import { SeverityApi } from '../../api/severity.api.service';
+
+export interface SeverityWindowData {
+    project?: Project;
+    severity?: IssueSeverity;
+}
 
 @Component({
     selector: 'app-severity-form-window',
     templateUrl: './severity-form-window.component.html',
     standalone: false
 })
-export class SeverityFormWindowComponent implements OnInit {
+export class SeverityFormWindowComponent {
     private winRef = inject(WindowReference);
-    public winCfg = inject(WindowConfig);
+    public winCfg = inject<WindowConfig<SeverityWindowData>>(WindowConfig);
     private severityApi = inject(SeverityApi);
-
-    public ngOnInit(): void {}
 
     public onSave(severity: IssueSeverity): void {
         const saver = severity.idSeverity

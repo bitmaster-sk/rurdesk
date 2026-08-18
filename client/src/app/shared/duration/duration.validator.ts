@@ -3,10 +3,14 @@ import { DurationConverter } from './duration.converter';
 import { DurationParser } from './duration.parser';
 
 export class DurationValidator {
-    public static duration(c: AbstractControl): ValidationErrors | null {
+    public static duration(c: AbstractControl<unknown>): ValidationErrors | null {
+        const value = c.value;
+        const text =
+            typeof value === 'string' ? value : typeof value === 'number' ? String(value) : null;
         const valid =
-            !c.value ||
-            DurationConverter.durationToSeconds(DurationParser.stringToDuration(c.value)) > 0;
+            !value ||
+            (text !== null &&
+                DurationConverter.durationToSeconds(DurationParser.stringToDuration(text)) > 0);
         return valid
             ? null
             : {

@@ -89,11 +89,11 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
 
     public onNewSeverity(): void {
         this.sWindow
-            .open(SeverityFormWindowComponent, {
+            .open<IssueSeverity | null>(SeverityFormWindowComponent, {
                 header: this.i18n.instant('SEVERITY.NEW'),
                 data: { project: this.project() }
             })
-            .onClose.subscribe((savedSeverity: IssueSeverity) => {
+            .onClose.subscribe(savedSeverity => {
                 if (!savedSeverity) {
                     return;
                 }
@@ -104,11 +104,11 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
 
     protected onEditSeverity(severity: IssueSeverity): void {
         this.sWindow
-            .open(SeverityFormWindowComponent, {
+            .open<IssueSeverity | null>(SeverityFormWindowComponent, {
                 header: this.i18n.instant('SEVERITY.EDIT'),
                 data: { project: this.project(), severity }
             })
-            .onClose.subscribe((savedSeverity: IssueSeverity) => {
+            .onClose.subscribe(savedSeverity => {
                 if (!savedSeverity) {
                     return;
                 }

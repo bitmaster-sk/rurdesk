@@ -28,7 +28,7 @@ export class ErrorInterceptor implements HttpInterceptor {
                 // specific message, opt out with SILENCE_ERROR_TOAST. The message is still
                 // attached to the re-thrown error either way.
                 const notify = !req.context.get(SILENCE_ERROR_TOAST) && this.shouldNotify(error);
-                const key = error.error?.translateKey;
+                const key = ApiError.translateKeyOf(error);
 
                 if (key) {
                     return this.i18n.get$(key).pipe(
