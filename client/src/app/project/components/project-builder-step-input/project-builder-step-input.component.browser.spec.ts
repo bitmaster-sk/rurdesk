@@ -21,8 +21,8 @@ import { ChangeDetectionStrategy, Component, Input, forwardRef } from '@angular/
     ]
 })
 class SeverityDropdownStub implements ControlValueAccessor {
-    @Input() severities: unknown;
-    @Input() inputId: unknown;
+    @Input() public severities: unknown;
+    @Input() public inputId: unknown;
     public writeValue(): void {}
     public registerOnChange(): void {}
     public registerOnTouched(): void {}
@@ -43,8 +43,8 @@ class SeverityDropdownStub implements ControlValueAccessor {
     ]
 })
 class StateDropdownStub implements ControlValueAccessor {
-    @Input() states: unknown;
-    @Input() inputId: unknown;
+    @Input() public states: unknown;
+    @Input() public inputId: unknown;
     public writeValue(): void {}
     public registerOnChange(): void {}
     public registerOnTouched(): void {}

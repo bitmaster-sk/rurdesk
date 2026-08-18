@@ -8,15 +8,15 @@ import { Color } from 'src/app/shared/color/color';
     standalone: false
 })
 export class AvatarComponent implements OnChanges {
-    @Input() height = 3;
+    @Input() public height = 3;
 
-    @Input() width = 3;
+    @Input() public width = 3;
 
-    @Input() radius = 1.5;
+    @Input() public radius = 1.5;
 
-    @Input() name = '';
+    @Input() public name = '';
 
-    @Input() bgColor = '';
+    @Input() public bgColor = '';
 
     public initials = '';
 
