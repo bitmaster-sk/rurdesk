@@ -2,13 +2,13 @@ import { Observable, Subject } from 'rxjs';
 import { first } from 'rxjs/operators';
 
 /** referencia na okno, zabezpečuje spojenie medzi vnútornou komponentou a komponentou, ktorá okno otvorila */
-export class WindowReference {
-    public readonly subjectClose: Subject<any> = new Subject<any>();
+export class WindowReference<TResult = unknown> {
+    public readonly subjectClose: Subject<TResult> = new Subject<TResult>();
 
-    public onClose: Observable<any> = this.subjectClose.asObservable().pipe(first());
+    public onClose: Observable<TResult> = this.subjectClose.asObservable().pipe(first());
 
     /** odošle informáciu o zavretí okna */
-    public close(v: any): void {
+    public close(v: TResult): void {
         this.subjectClose.next(v);
     }
 }
