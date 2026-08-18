@@ -265,7 +265,7 @@ function setup(
     };
 }
 
-type Handlers = {
+interface Handlers {
     onStateChange(evt: CdkDragDrop<KanbanColumn>): void;
     onSwimlaneCardDrop(evt: CdkDragDrop<SwimlaneCell>): void;
     onTabTaskDropped(payload: { idSprint: number | null; event: CdkDragDrop<unknown> }): void;
@@ -283,14 +283,14 @@ type Handlers = {
     onSprintChange(idSprint: number | null): void;
     onEditSprint(idSprint: number): void;
     onSprintDeleted(): void;
-};
+}
 const handlers = (c: IssueKanbanComponent): Handlers => c as unknown as Handlers;
 
-type Analytics = {
+interface Analytics {
     stats(): SprintStats | null;
     velocities(): SprintVelocity[];
     onRollOver(): void;
-};
+}
 const analytics = (c: IssueKanbanComponent): Analytics => c as unknown as Analytics;
 
 function setupWithNotices(notices: Observable<Notice<Issue>>): Harness {

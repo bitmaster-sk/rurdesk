@@ -3,12 +3,12 @@
 // atom list (buildAtoms) so their length rules can never diverge.
 // Empirically verified across Chromium/Firefox/WebKit.
 
-export type Atom = {
+export interface Atom {
     node: Node;
     kind: 'text' | 'chip' | 'br' | 'blocknl';
     str: string;
     base: number;
-};
+}
 
 export function isChip(n: Node): n is HTMLElement {
     return n.nodeType === 1 && (n as HTMLElement).classList?.contains('mention-chip');
