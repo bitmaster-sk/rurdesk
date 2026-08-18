@@ -117,7 +117,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             comp.onDragCompleted(DragMode.SchedulingBacklog);
 
             expect(mocks.issueServiceMock.updateIssue).toHaveBeenCalled();
-            sub.handlers.next?.({} as any);
+            sub.handlers.next?.({});
             expect(mocks.issueFilterStoreMock.refresh).toHaveBeenCalled();
             expect(mocks.dragServiceMock.reset).toHaveBeenCalled();
         });
@@ -386,7 +386,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             mocks.ganttServiceMock.addRelations.mockClear();
 
             comp.onRelationCreated(1, HandleSide.Right, 2, HandleSide.Left);
-            sub.handlers.next?.([{ idIssueRelation: 100 }] as any);
+            sub.handlers.next?.([{ idIssueRelation: 100 }]);
 
             expect(mocks.ganttServiceMock.addRelations).toHaveBeenCalled();
         });

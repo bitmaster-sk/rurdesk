@@ -57,7 +57,7 @@ function makeIssue(id: number, scheduledAt: string): Issue {
         description: '',
         tracked: 0,
         scheduledAt: new Date(scheduledAt)
-    } as Issue;
+    };
 }
 
 function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {

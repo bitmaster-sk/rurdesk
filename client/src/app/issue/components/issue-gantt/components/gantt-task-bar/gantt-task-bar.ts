@@ -103,9 +103,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         if (previous === null || delay === null || previous === left) return;
         if (prefersReducedMotion()) return;
 
-        const barEl = this.elementRef.nativeElement.querySelector(
-            '.gantt-bar'
-        ) as HTMLElement | null;
+        const barEl = this.elementRef.nativeElement.querySelector('.gantt-bar');
         if (!barEl) return;
         // A slide may still be in flight from a previous drop — replace it
         barEl.getAnimations().forEach(animation => animation.cancel());

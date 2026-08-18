@@ -22,7 +22,7 @@ describe('GanttCriticalPathService', () => {
             tracked: 0,
             estimated,
             scheduledAt: new Date('2026-04-10T09:00:00Z')
-        } as Issue;
+        };
     }
 
     function makeRelation(

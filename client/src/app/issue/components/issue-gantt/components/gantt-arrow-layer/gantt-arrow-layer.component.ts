@@ -172,8 +172,7 @@ export class GanttArrowLayerComponent {
                 toPos.centerY <= vpBottom;
             if (isCullingActive && !fromVisible && !toVisible) continue;
 
-            const subType = (relation.relationSubType ??
-                IssueRelationSubType.FinishToStart) as IssueRelationSubType;
+            const subType = relation.relationSubType ?? IssueRelationSubType.FinishToStart;
             const { sourceX, targetX, exitDirection, enterDirection } = this.getConnectionPoints(
                 fromPos,
                 toPos,

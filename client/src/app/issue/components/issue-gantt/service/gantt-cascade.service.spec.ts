@@ -23,7 +23,7 @@ describe('GanttCascadeService', () => {
             tracked: 0,
             estimated,
             scheduledAt: new Date(scheduledAt)
-        } as Issue;
+        };
     }
 
     function makeRelation(

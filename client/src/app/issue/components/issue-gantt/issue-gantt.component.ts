@@ -432,9 +432,9 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         if (Date.now() - this.pendingPulseAt > 4000) return;
         requestAnimationFrame(() => {
             for (const idIssuePublic of ids) {
-                const barEl = document.querySelector(
+                const barEl = document.querySelector<HTMLElement>(
                     `.gantt-bar[data-task-id="${idIssuePublic}"]`
-                ) as HTMLElement | null;
+                );
                 if (barEl) pulseElement(barEl);
             }
         });
