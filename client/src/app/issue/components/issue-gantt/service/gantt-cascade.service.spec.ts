@@ -15,6 +15,7 @@ describe('GanttCascadeService', () => {
 
     function makeIssue(id: number, scheduledAt: string, estimated: number): Issue {
         return {
+            idIssue: id,
             idIssuePublic: id,
             idProject: 1,
             idState: null,

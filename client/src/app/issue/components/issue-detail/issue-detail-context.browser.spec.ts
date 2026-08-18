@@ -10,7 +10,7 @@ import { CommandPaletteService } from 'src/app/core/command/command-palette.serv
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
 
-const issue = {
+const issue: Issue = {
     idProject: 1,
     idIssue: 10,
     idIssuePublic: 5,

@@ -71,6 +71,7 @@ const bob: User = {
 function makeTile(overrides: Partial<KanbanTile> = {}): KanbanTile {
     return {
         idIssue: 1,
+        idIssuePublic: overrides.idIssue ?? 1,
         idProject: 1,
         idState: 1,
         idSeverity: 1,
@@ -181,7 +182,7 @@ function setup(
     project: { idProject: number } | null = { idProject: 1 },
     issueNotices: Observable<Notice<Issue>> = EMPTY
 ): Harness {
-    const updateIssue = vi.fn().mockReturnValue(of({} as never));
+    const updateIssue = vi.fn().mockReturnValue(of(undefined as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
     const refresh = vi.fn();
     const showError = vi.fn();

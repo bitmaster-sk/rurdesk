@@ -54,6 +54,7 @@ function buildService(): IssueGanttService {
 
 function makeIssue(id: number, scheduledAt: string): Issue {
     return {
+        idIssue: id,
         idIssuePublic: id,
         idProject: 1,
         idState: null,
@@ -208,7 +209,7 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
         };
         const svc = buildWithStore(store, pageResponder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never); // page 1
+        store.setInitialFilter(initialFilter()); // page 1
         svc.loadMoreBacklog(); // page 2 → 60 loaded
         expect(backlogLength(svc)).toBe(60);
 
@@ -228,11 +229,11 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
         });
         const svc = buildWithStore(store, pageResponder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never);
+        store.setInitialFilter(initialFilter());
         svc.loadMoreBacklog();
         calls.length = 0;
 
-        store.setFilter({ title: 'abc' } as never);
+        store.setFilter({ title: 'abc' });
 
         // A filter change fetches page 1 with cursor null and the default page size.
         expect(calls).toEqual([{ limit: 30, cursor: null }]);

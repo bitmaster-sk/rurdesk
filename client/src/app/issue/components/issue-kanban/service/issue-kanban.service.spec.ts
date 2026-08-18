@@ -55,6 +55,7 @@ const sev: IssueSeverity = {
 function makeIssue(overrides: Partial<Issue>): Issue {
     return {
         idIssue: 1,
+        idIssuePublic: overrides.idIssue ?? 1,
         idProject: 1,
         idState: 1,
         idSeverity: 1,
@@ -373,7 +374,7 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
         let columns: KanbanColumn[] = [];
         svc.columns$.subscribe(c => (columns = c));
 
-        store.setInitialFilter({ idProject: 1 } as never); // grouped(perGroup=20) → 20 tiles + cursor
+        store.setInitialFilter(initialFilter()); // grouped(perGroup=20) → 20 tiles + cursor
         const col = columns.find(c => c.state.idState === 1)!;
         svc.loadMoreColumn(col); // → 40 tiles loaded
         expect(columns.find(c => c.state.idState === 1)!.tiles.length).toBe(40);

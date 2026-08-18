@@ -158,8 +158,8 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             const result = await createFixture({
                 relations: [
                     makeRelation({
-                        from: { idIssuePublic: 999 },
-                        to: { idIssuePublic: 2 }
+                        from: makeRelationRef(999),
+                        to: makeRelationRef(2)
                     })
                 ]
             });
@@ -393,7 +393,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 ],
                 relations: [
                     makeRelation({ idIssueRelation: 1 }),
-                    makeRelation({ idIssueRelation: 2, to: { idIssuePublic: 3 } })
+                    makeRelation({ idIssueRelation: 2, to: makeRelationRef(3) })
                 ]
             });
             result.fixture.componentRef.setInput('selectedRelationId', 1);
@@ -412,7 +412,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 ],
                 relations: [
                     makeRelation({ idIssueRelation: 1 }),
-                    makeRelation({ idIssueRelation: 2, to: { idIssuePublic: 3 } })
+                    makeRelation({ idIssueRelation: 2, to: makeRelationRef(3) })
                 ]
             });
             result.fixture.componentRef.setInput('selectedRelationId', 1);
@@ -544,13 +544,13 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 relations: [
                     makeRelation({
                         idIssueRelation: 1,
-                        from: { idIssuePublic: 1 },
-                        to: { idIssuePublic: 2 }
+                        from: makeRelationRef(1),
+                        to: makeRelationRef(2)
                     }),
                     makeRelation({
                         idIssueRelation: 2,
-                        from: { idIssuePublic: 1 },
-                        to: { idIssuePublic: 3 }
+                        from: makeRelationRef(1),
+                        to: makeRelationRef(3)
                     })
                 ]
             });

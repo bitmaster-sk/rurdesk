@@ -14,6 +14,7 @@ describe('GanttCriticalPathService', () => {
 
     function makeIssue(id: number, estimated: number): Issue {
         return {
+            idIssue: id,
             idIssuePublic: id,
             idProject: 1,
             idState: null,

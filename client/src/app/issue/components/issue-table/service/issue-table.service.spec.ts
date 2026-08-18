@@ -198,7 +198,7 @@ describe('IssueTableService — refresh keeps loaded pages', () => {
         };
         const svc = buildWithStore(store, responder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never); // page 1 → 50
+        store.setInitialFilter(initialFilter()); // page 1 → 50
         svc.loadMore(); // page 2 → 100
         expect(svc.rows()).toHaveLength(100);
 
