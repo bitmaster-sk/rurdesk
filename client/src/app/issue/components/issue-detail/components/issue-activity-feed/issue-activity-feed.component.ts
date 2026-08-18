@@ -161,7 +161,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
         effect(() => {
             const track = this.pendingTrack();
-            if (track == null || !track.tracked || !track.endAt) return;
+            if (!track?.tracked || !track.endAt) return;
             const endAt = track.endAt;
             this.liveItems.update(items => [
                 ...items,

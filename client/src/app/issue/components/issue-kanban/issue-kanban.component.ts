@@ -478,7 +478,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
             total?: number;
         };
         const tile = source?.tiles?.[payload.event.previousIndex];
-        if (!tile || tile.idIssuePublic == null || (tile.idSprint ?? null) === payload.idSprint) {
+        if (tile?.idIssuePublic == null || (tile.idSprint ?? null) === payload.idSprint) {
             this.issueFilterStore.refresh();
             return;
         }

@@ -95,7 +95,7 @@ export class UiToastService {
      *  would schedule a second timeout and orphan the first handle). */
     public resume(id: number): void {
         const entry = this.timers.get(id);
-        if (!entry || !entry.paused) {
+        if (!entry?.paused) {
             return;
         }
         entry.startedAt = Date.now();

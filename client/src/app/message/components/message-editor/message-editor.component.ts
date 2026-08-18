@@ -295,7 +295,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const el = this.editorRef().nativeElement;
         el.focus();
         const sel = el.ownerDocument.getSelection();
-        const selected = sel && sel.rangeCount ? sel.getRangeAt(0).toString() : '';
+        const selected = sel?.rangeCount ? sel.getRangeAt(0).toString() : '';
         const block =
             EditorCharacters.CODE_BLOCK +
             lang +

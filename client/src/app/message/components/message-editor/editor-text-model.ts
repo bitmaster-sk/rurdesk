@@ -127,7 +127,7 @@ function posToLinear(root: HTMLElement, container: Node, offset: number): number
 // Current DOM selection → linear offsets in serialize(root).
 export function getLinearSelection(root: HTMLElement): { start: number; end: number } {
     const sel = root.ownerDocument.getSelection();
-    if (!sel || !sel.rangeCount) return { start: 0, end: 0 };
+    if (!sel?.rangeCount) return { start: 0, end: 0 };
     const r = sel.getRangeAt(0);
     return {
         start: posToLinear(root, r.startContainer, r.startOffset),
@@ -184,7 +184,7 @@ export function buildChip(idUser: number, name: string): HTMLElement {
 // preceding char is whitespace/BOF, or the immediately preceding DOM node is a chip.
 export function atMentionBoundary(root: HTMLElement): boolean {
     const sel = root.ownerDocument.getSelection();
-    if (!sel || !sel.rangeCount) return false;
+    if (!sel?.rangeCount) return false;
     const r = sel.getRangeAt(0);
     const c = r.startContainer;
     const o = r.startOffset;
@@ -220,8 +220,8 @@ export function installPasteSanitizer(root: HTMLElement): () => void {
 // so it sits at `before|after` rather than `beforeafter|`.
 export function applyMarker(root: HTMLElement, before: string, after: string): void {
     const sel = root.ownerDocument.getSelection();
-    const collapsed = !sel || !sel.rangeCount || sel.getRangeAt(0).collapsed;
-    const text = sel && sel.rangeCount ? sel.getRangeAt(0).toString() : '';
+    const collapsed = !sel?.rangeCount || sel.getRangeAt(0).collapsed;
+    const text = sel?.rangeCount ? sel.getRangeAt(0).toString() : '';
     root.ownerDocument.execCommand('insertText', false, before + text + after);
     if (collapsed && after.length > 0) {
         // Move caret back by after.length so it sits between the markers.
@@ -234,7 +234,7 @@ export function applyMarker(root: HTMLElement, before: string, after: string): v
 // Insert a chip at the caret position, then place the caret after the trailing space.
 export function insertChipAtCaret(root: HTMLElement, idUser: number, name: string): void {
     const sel = root.ownerDocument.getSelection();
-    if (!sel || !sel.rangeCount) return;
+    if (!sel?.rangeCount) return;
     const r = sel.getRangeAt(0);
     r.deleteContents();
     const chip = buildChip(idUser, name);

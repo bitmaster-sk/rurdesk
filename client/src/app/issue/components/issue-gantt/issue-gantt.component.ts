@@ -375,8 +375,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             const serverIds = (this.ganttData()?.scheduledTasks ?? []).map(t => t.idIssuePublic);
             const pending = this.pendingOrder();
             if (
-                pending &&
-                serverIds.length === pending.length &&
+                serverIds.length === pending?.length &&
                 serverIds.every((id, i) => id === pending[i])
             ) {
                 this.pendingOrder.set(null);
