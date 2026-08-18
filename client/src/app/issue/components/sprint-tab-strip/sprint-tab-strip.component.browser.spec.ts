@@ -64,9 +64,9 @@ describe('SprintTabStripComponent', () => {
         expect(active.nativeElement.textContent).toContain('Sprint 12');
     });
 
-    it('emits select with the sprint id on tab click', () => {
+    it('emits selected with the sprint id on tab click', () => {
         let picked: number | null | undefined;
-        component.select.subscribe(v => (picked = v));
+        component.selected.subscribe(v => (picked = v));
         const tabEls = fixture.debugElement.queryAll(By.css('.sprint-tab'));
         tabEls[2].nativeElement.click(); // Sprint 13
         expect(picked).toBe(13);
@@ -99,9 +99,9 @@ describe('SprintTabStripComponent', () => {
         expect(openTab!.injector.get(CdkDropList).disabled).toBe(false);
     });
 
-    it('still emits select when a closed sprint tab is clicked', () => {
+    it('still emits selected when a closed sprint tab is clicked', () => {
         let picked: number | null | undefined;
-        component.select.subscribe(v => (picked = v));
+        component.selected.subscribe(v => (picked = v));
         fixture.debugElement.query(By.css('.sprint-tab--closed')).nativeElement.click();
         expect(picked).toBe(9);
     });

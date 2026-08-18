@@ -40,9 +40,9 @@ describe('SplitInputStepComponent', () => {
         expect(emitted).toBe('');
     });
 
-    it('emits cancel when onCancel() is called', () => {
+    it('emits cancelled when onCancel() is called', () => {
         let emitted = false;
-        component.cancel.subscribe(() => (emitted = true));
+        component.cancelled.subscribe(() => (emitted = true));
         component.onCancel();
         expect(emitted).toBe(true);
     });
