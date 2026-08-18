@@ -550,9 +550,9 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             TestBed.resetTestingModule();
             const result = await createFixture();
             const line = () =>
-                result.fixture.nativeElement.querySelector('.gantt-arrow path').getAttribute(
-                    'marker-end'
-                );
+                result.fixture.nativeElement
+                    .querySelector('.gantt-arrow path')
+                    .getAttribute('marker-end');
             const idle = line();
 
             result.fixture.componentRef.setInput('drawInRelation', { from: 1, to: 2 });
