@@ -134,8 +134,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
 
     describe('schedule relation with askLag enabled', () => {
         it('opens lag dialog and stores pending relation', () => {
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDropZone(
@@ -158,8 +158,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
     describe('non-schedule or askLag disabled', () => {
         it('submits relation directly without lag dialog', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(false);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -176,8 +176,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
 
         it('schedule with askLag disabled submits directly', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(false);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -199,8 +199,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
 
         it('non-schedule with askLag enabled submits directly (lag only for schedule)', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -223,7 +223,7 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
             const submitSpy = vi.fn();
             comp.draggingFromIssue.set(null);
             comp.submitRelation = submitSpy;
-            comp.onDropZone(makeDropEvent(makeIssue({ idIssuePublic: 2 } as any)));
+            comp.onDropZone(makeDropEvent(makeIssue({ idIssuePublic: 2 })));
             expect(submitSpy).not.toHaveBeenCalled();
         });
     });
@@ -241,8 +241,8 @@ describe('IssueTableComponent lag dialog (TestBed)', () => {
     describe('onConfirmLag', () => {
         it('submits relation with lag minutes and closes dialog', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.pendingRelation = {
                 from: fromIssue,
                 to: toIssue,
@@ -277,8 +277,8 @@ describe('IssueTableComponent lag dialog (TestBed)', () => {
 
         it('submits with null lag when lagMinutes is null', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.pendingRelation = {
                 from: fromIssue,
                 to: toIssue,

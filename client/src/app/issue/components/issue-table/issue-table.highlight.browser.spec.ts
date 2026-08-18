@@ -1,20 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createTableFixture, makeIssue } from './table-testbed.helper';
-import { Issue } from '../../model/issue.model';
 
 function makeRow(idIssuePublic: number) {
-    return { issue: makeIssue({ idIssuePublic } as Issue) };
+    return { issue: makeIssue({ idIssuePublic }) };
 }
 
 describe('IssueTableComponent highlight (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
         // Set up 3 rows for highlight tests
         comp.rows.set([makeRow(1), makeRow(2), makeRow(3)]);
     });
@@ -101,7 +98,7 @@ describe('IssueTableComponent highlight (TestBed)', () => {
     // =========================================================================
 
     it('navigates to the issue detail page', () => {
-        const issue = makeIssue({ idProject: 7, idIssuePublic: 42 } as Issue);
+        const issue = makeIssue({ idProject: 7, idIssuePublic: 42 });
         expect(() => comp.onOpenHighlighted(issue)).not.toThrow();
     });
 });

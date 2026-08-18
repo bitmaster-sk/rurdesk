@@ -23,7 +23,17 @@ import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 import { signal } from '@angular/core';
 
 export function makeIssue(over: Partial<Issue> = {}): Issue {
-    return { idIssuePublic: 1, idProject: 5, title: 'T', tracked: 0, ...over } as Issue;
+    return {
+        idIssue: 1,
+        idIssuePublic: 1,
+        idProject: 5,
+        title: 'T',
+        description: '',
+        idState: null,
+        idSeverity: null,
+        tracked: 0,
+        ...over
+    };
 }
 
 export function mockSub<T = unknown>() {

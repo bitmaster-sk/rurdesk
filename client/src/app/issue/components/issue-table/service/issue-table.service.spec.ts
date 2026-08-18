@@ -25,7 +25,7 @@ function makeIssue(over: Partial<Issue>): Issue {
         assignedTo: 10,
         relationCount: 0,
         ...over
-    } as Issue;
+    };
 }
 
 function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): IssueTableService {
@@ -100,7 +100,7 @@ function relation(fromId: number, toId: number, label: string): ReadIssueRelatio
         },
         createdAt: '',
         createdBy: 1
-    } as unknown as ReadIssueRelationDto;
+    };
 }
 
 describe('IssueTableService — rows', () => {
