@@ -27,11 +27,11 @@ const SAVED_VIEW_EXCLUDED: readonly (keyof IssuesFilterParams)[] = [
 
 export abstract class SavedViewConfigConverter {
     public static toFilter(config: SavedViewConfig): Omit<IssuesFilter, 'idProject'> {
-        const { v, kanbanLayout, orderColumn, orderDirection, ...rest } = config;
+        const { v: _v, kanbanLayout: _kanbanLayout, orderColumn, orderDirection, ...rest } = config;
         const params = { ...rest } as unknown as IssuesFilterParams;
         const writable = params as Record<string, unknown>;
         for (const key of DATE_KEYS) {
-            const parsed = config[key] ? new Date(config[key] as string) : null;
+            const parsed = config[key] ? new Date(config[key]) : null;
             if (parsed && !Number.isNaN(parsed.getTime())) {
                 writable[key] = parsed;
             } else {

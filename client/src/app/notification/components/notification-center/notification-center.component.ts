@@ -58,11 +58,8 @@ export class NotificationCenterComponent {
                 return (
                     this.store
                         .groupedByProject()
-                        .find(
-                            (g: NotificationGroup) =>
-                                g.idProject ===
-                                (filter as { type: 'project'; idProject: number }).idProject
-                        )?.projectName ?? ''
+                        .find((g: NotificationGroup) => g.idProject === filter.idProject)
+                        ?.projectName ?? ''
                 );
         }
     });

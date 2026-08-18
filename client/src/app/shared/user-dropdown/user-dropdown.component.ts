@@ -3,6 +3,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 
+/** `optionValue="idUser"`, so the bound value is an id (multi: a list of ids). */
+type UserDropdownValue = number | number[] | null;
+
 @Component({
     selector: 'app-user-dropdown',
     templateUrl: './user-dropdown.component.html',

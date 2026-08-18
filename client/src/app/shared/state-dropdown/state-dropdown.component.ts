@@ -12,6 +12,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 
+/** Single mode binds one state id; multi binds the list of selected ids. */
+type StateDropdownValue = number | number[] | null;
+
 @Component({
     selector: 'app-state-dropdown',
     templateUrl: './state-dropdown.component.html',

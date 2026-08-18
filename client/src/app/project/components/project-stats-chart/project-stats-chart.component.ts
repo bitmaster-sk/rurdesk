@@ -55,8 +55,11 @@ export class ProjectStatsChartComponent {
                                 backgroundColor: string;
                                 borderColor: string;
                             };
+                            // chart.js types labels as unknown[]; this chart always feeds
+                            // them from StatsChartEntry.name.
+                            const text = typeof label === 'string' ? label : '';
                             return {
-                                text: `${label} (${value})`,
+                                text: `${text} (${value})`,
                                 fillStyle: style.backgroundColor,
                                 strokeStyle: style.borderColor,
                                 hidden: !chart.getDataVisibility(i),

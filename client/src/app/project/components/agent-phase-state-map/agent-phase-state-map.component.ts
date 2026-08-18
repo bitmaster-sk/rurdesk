@@ -96,9 +96,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
         const mappingByPhase = new Map(mappings.map(m => [m.phase, m.idState]));
         this.mappingsFormArray = this.formBuilder.array(
             AGENT_PHASES.map(phase =>
-                this.formBuilder.control<number | null>(
-                    (mappingByPhase.get(phase) ?? null) as number | null
-                )
+                this.formBuilder.control<number | null>(mappingByPhase.get(phase) ?? null)
             )
         );
         // Each row auto-saves on change (pick = commit). Construction doesn't emit,
