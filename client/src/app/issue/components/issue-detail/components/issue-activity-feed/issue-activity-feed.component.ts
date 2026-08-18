@@ -100,7 +100,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         let latestTime = -Infinity;
         for (const item of this.displayItems()) {
             if (item.type !== 'comment') continue;
-            const msg = item.data as Message;
+            const msg = item.data;
             if (
                 msg.messageKind !== MessageKind.Design &&
                 msg.messageKind !== MessageKind.ImplementationPlan
@@ -121,7 +121,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         const result = new Map<number, Message[]>();
         for (const item of this.displayItems()) {
             if (item.type === 'comment') {
-                const msg = item.data as Message;
+                const msg = item.data;
                 if (msg.anchor) {
                     const parentId = msg.anchor.idParentMessage;
                     const existing = result.get(parentId);

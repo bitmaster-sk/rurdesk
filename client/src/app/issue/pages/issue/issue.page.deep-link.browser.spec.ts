@@ -28,7 +28,7 @@ function view(over: Partial<SavedView> = {}): SavedView {
         updateAt: '2026-08-01T00:00:00Z',
         config: { v: 1 },
         ...over
-    } as SavedView;
+    };
 }
 
 function paramMapOf(params: Record<string, string>): { get: (key: string) => string | null } {

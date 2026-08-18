@@ -342,14 +342,14 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
         const harness = this.calendarRef()
             .getApi()
-            .el.querySelector('.fc-view-harness') as HTMLElement | null;
+            .el.querySelector<HTMLElement>('.fc-view-harness');
         if (!harness?.parentElement) return;
 
         // The clone must live OUTSIDE FullCalendar's managed root — FC's render
         // reconciliation removes foreign children inside `.fc` on navigation.
         // The <full-calendar> host element is Angular-managed and safe.
         const fcRoot = this.calendarRef().getApi().el;
-        const host = fcRoot.parentElement as HTMLElement | null;
+        const host = fcRoot.parentElement;
         if (!host) return;
         const hostRect = host.getBoundingClientRect();
         const harnessRect = harness.getBoundingClientRect();
@@ -401,7 +401,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
         const harness = this.calendarRef()
             .getApi()
-            .el.querySelector('.fc-view-harness') as HTMLElement | null;
+            .el.querySelector<HTMLElement>('.fc-view-harness');
         if (!harness) {
             snapshot?.remove();
             return;
@@ -573,7 +573,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             .getApi()
             .el.querySelectorAll(`[data-issue-id="${idIssue}"]`)
             .forEach(el => {
-                const eventEl = el.closest('.fc-event') as HTMLElement | null;
+                const eventEl = el.closest<HTMLElement>('.fc-event');
                 if (eventEl) pulseElement(eventEl);
             });
     }

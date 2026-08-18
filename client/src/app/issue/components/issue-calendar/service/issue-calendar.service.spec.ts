@@ -20,7 +20,7 @@ function makeIssue(over: Partial<Issue>): Issue {
         description: '',
         tracked: 0,
         ...over
-    } as Issue;
+    };
 }
 
 function buildService(issues: Issue[]): IssueCalendarService {

@@ -42,10 +42,10 @@ function makeEvt(overrides: {
                           protected: false,
                           orderRank: 1,
                           ...overrides.severity
-                      } as IssueSeverity)
+                      }
                     : undefined,
                 state: overrides.state
-                    ? ({
+                    ? {
                           idState: 1,
                           idProject: 1,
                           name: 'In Progress',
@@ -54,16 +54,16 @@ function makeEvt(overrides: {
                           protected: false,
                           orderRank: 1,
                           ...overrides.state
-                      } as IssueState)
+                      }
                     : undefined,
                 assigned: overrides.assigned
-                    ? ({
+                    ? {
                           idUser: 1,
                           name: 'John Doe',
                           email: 'j@example.com',
                           colorAvatarBg: '#7c3aed',
                           ...overrides.assigned
-                      } as User)
+                      }
                     : undefined
             }
         }

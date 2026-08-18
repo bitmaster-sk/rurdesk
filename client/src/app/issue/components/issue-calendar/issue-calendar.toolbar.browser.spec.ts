@@ -83,19 +83,19 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
 
     describe('onCardModeChange', () => {
         it('sets cardMode signal, persists to localStorage, toggles FC class', () => {
-            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            comp.onCardModeChange('CalendarCompact');
             expect(comp.cardMode()).toBe('CalendarCompact');
             expect(localStorage.getItem('issue-calendar-card-mode')).toBe('CalendarCompact');
         });
 
         it('comfortable mode removes fc--compact class', () => {
-            comp.onCardModeChange('CalendarComfort' as IssueCardViewType);
+            comp.onCardModeChange('CalendarComfort');
             expect(comp.cardMode()).toBe('CalendarComfort');
         });
 
         it('calls calendarApi.render after mode change', () => {
             getApi().render.mockClear();
-            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            comp.onCardModeChange('CalendarCompact');
             expect(getApi().render).toHaveBeenCalled();
         });
     });

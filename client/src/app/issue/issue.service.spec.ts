@@ -38,7 +38,7 @@ describe('IssueService.loadIssues', () => {
                 ...baseFilter,
                 idsSeverity: [1, 2],
                 orderColumn: 'updateAt'
-            } as IssuesFilter)
+            })
             .subscribe();
 
         const [url, options] = get.mock.calls[0] as [string, { params: HttpParams }];
@@ -126,7 +126,7 @@ describe('IssueService.toIssue', () => {
 describe('IssueService date params', () => {
     const call = (filter: Partial<IssuesFilter>) => {
         const { service, get } = build(page([]));
-        service.loadIssues({ ...baseFilter, ...filter } as IssuesFilter).subscribe();
+        service.loadIssues({ ...baseFilter, ...filter }).subscribe();
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         return options.params;
     };

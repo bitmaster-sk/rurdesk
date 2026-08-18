@@ -19,7 +19,7 @@ const issue = {
     idSeverity: null,
     description: '',
     tracked: 0
-} as Issue;
+};
 
 describe('IssueDetailPage palette context', () => {
     let setContext: any;

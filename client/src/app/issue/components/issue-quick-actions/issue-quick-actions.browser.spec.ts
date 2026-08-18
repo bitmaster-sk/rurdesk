@@ -73,7 +73,7 @@ function makeIssue(over: Partial<Issue> = {}): Issue {
         estimated: 3600,
         assignedTo: 10,
         ...over
-    } as Issue;
+    };
 }
 
 @Component({ selector: 'app-state-badge-selector', template: '', standalone: true })
