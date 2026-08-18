@@ -142,7 +142,7 @@ function locate(root: HTMLElement, target: number): { node: Node; offset: number
         if (target < end || (target === end && a.kind === 'text')) {
             if (a.kind === 'text') return { node: a.node, offset: target - a.base };
             const parent = a.node.parentNode!;
-            const idx = Array.prototype.indexOf.call(parent.childNodes, a.node) as number;
+            const idx = Array.prototype.indexOf.call(parent.childNodes, a.node);
             return { node: parent, offset: target - a.base === 0 ? idx : idx + 1 };
         }
     }
@@ -150,7 +150,7 @@ function locate(root: HTMLElement, target: number): { node: Node; offset: number
         const a = atoms[atoms.length - 1];
         if (a.kind === 'text') return { node: a.node, offset: (a.node as Text).data.length };
         const parent = a.node.parentNode!;
-        const idx = Array.prototype.indexOf.call(parent.childNodes, a.node) as number;
+        const idx = Array.prototype.indexOf.call(parent.childNodes, a.node);
         return { node: parent, offset: idx + 1 };
     }
     return { node: root, offset: 0 };

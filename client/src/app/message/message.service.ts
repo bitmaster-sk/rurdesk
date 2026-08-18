@@ -106,7 +106,7 @@ export class MessageService {
     private toMessage(m: Message): Message {
         m.createdAt = new Date(m.createdAt);
         if (m.updatedAt) {
-            m.updatedAt = new Date(m.updatedAt as unknown as string);
+            m.updatedAt = new Date(m.updatedAt);
         }
         return m;
     }
