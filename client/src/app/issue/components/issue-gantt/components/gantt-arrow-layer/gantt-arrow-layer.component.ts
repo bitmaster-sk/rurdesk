@@ -154,7 +154,7 @@ export class GanttArrowLayerComponent {
         const isCullingActive = !this.isCriticalTracing();
 
         for (const relation of relations) {
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromPos = taskPositions.get(relation.from.idIssuePublic);
             const toPos = taskPositions.get(relation.to.idIssuePublic);
             if (!fromPos || !toPos) continue;
@@ -414,7 +414,7 @@ export class GanttArrowLayerComponent {
         this.idHoveredRelation.set(null);
     }
 
-    private getRelationTypeTranslationKey(relationType: string): string {
+    private getRelationTypeTranslationKey(relationType: IssueRelationType): string {
         switch (relationType) {
             case IssueRelationType.Hierarchy:
                 return 'RELATION.HIERARCHY';
@@ -429,7 +429,7 @@ export class GanttArrowLayerComponent {
         }
     }
 
-    private getRelationSubTypeTranslationKey(relationSubType: string | null): string {
+    private getRelationSubTypeTranslationKey(relationSubType: IssueRelationSubType | null): string {
         switch (relationSubType) {
             case IssueRelationSubType.FinishToStart:
                 return 'RELATION.FINISH_TO_START';

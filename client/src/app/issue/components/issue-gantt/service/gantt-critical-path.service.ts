@@ -44,7 +44,7 @@ export class GanttCriticalPathService {
 
         for (const relation of relations) {
             if (relation.relationType !== IssueRelationType.Schedule) continue;
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromId = relation.from.idIssuePublic;
             const toId = relation.to.idIssuePublic;
             if (!taskMap.has(fromId) || !taskMap.has(toId)) continue;

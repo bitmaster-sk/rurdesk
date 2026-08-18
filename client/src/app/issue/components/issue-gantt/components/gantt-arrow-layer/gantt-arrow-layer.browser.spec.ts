@@ -48,17 +48,33 @@ const timelineServiceMock = {
     toDate: vi.fn(() => new Date('2025-01-15'))
 };
 
+function makeRelationRef(idIssuePublic: number): IssueRelationRef {
+    return {
+        idIssuePublic,
+        title: `Task ${idIssuePublic}`,
+        idSeverity: null,
+        idState: null,
+        assignedTo: null,
+        updateAt: '2025-01-15T00:00:00Z',
+        qualityScore: null
+    };
+}
+
 function makeRelation(over: Partial<ReadIssueRelationDto> = {}): ReadIssueRelationDto {
     return {
         idIssueRelation: 1,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         relationType: IssueRelationType.Schedule,
         relationSubType: IssueRelationSubType.FinishToStart,
-        from: { idIssuePublic: 1 },
-        to: { idIssuePublic: 2 },
+        from: makeRelationRef(1),
+        to: makeRelationRef(2),
         lagMinutes: null,
+        label: 'blocks',
+        inverseLabel: 'blocked by',
+        createdAt: '2025-01-15T00:00:00Z',
+        createdBy: 1,
         ...over
-    } as ReadIssueRelationDto;
+    };
 }
 
 async function createFixture(
@@ -130,7 +146,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
         it('skips inbound relations', async () => {
             TestBed.resetTestingModule();
             const result = await createFixture({
-                relations: [makeRelation({ direction: 'inbound' })]
+                relations: [makeRelation({ direction: IssueRelationDirection.Inbound })]
             });
             expect(result.comp.arrows()).toHaveLength(0);
         });
@@ -338,20 +354,20 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.CHILD');
         });
 
-        it('relationSubTypeTranslationKey default for unknown', async () => {
+        it('relationTypeTranslationKey falls back when the API sends an unknown type', async () => {
             TestBed.resetTestingModule();
             const result = await createFixture({
-                relations: [makeRelation({ relationSubType: 'unknown' as any })]
-            });
-            expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.BASIC');
-        });
-
-        it('relationTypeTranslationKey default for unknown', async () => {
-            TestBed.resetTestingModule();
-            const result = await createFixture({
-                relations: [makeRelation({ relationType: 'unknown' as any })]
+                relations: [makeRelation({ relationType: 'unknown' as IssueRelationType })]
             });
             expect(result.comp.arrows()[0].relationTypeTranslationKey).toBe('RELATION.BASIC');
+        });
+
+        it('relationSubTypeTranslationKey default when the relation has no subtype', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture({
+                relations: [makeRelation({ relationSubType: null })]
+            });
+            expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.BASIC');
         });
     });
 

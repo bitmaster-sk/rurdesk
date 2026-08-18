@@ -74,10 +74,10 @@ function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): 
 function relation(fromId: number, toId: number, label: string): ReadIssueRelationDto {
     return {
         idIssueRelation: 99,
-        relationType: 'schedule',
+        relationType: IssueRelationType.Schedule,
         relationSubType: null,
         lagMinutes: null,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         label,
         inverseLabel: '',
         from: {

@@ -14,13 +14,13 @@ function view(over: Partial<SavedView> = {}): SavedView {
         idSavedView: 7,
         idProject: 1,
         name: 'My bugs',
-        viewType: 'table',
+        viewType: IssueViewMode.TABLE,
         isShared: false,
         createBy: 1,
         updateAt: '2026-08-01T00:00:00Z',
         config: { v: 1 },
         ...over
-    } as SavedView;
+    };
 }
 
 const ctx = (idProject: number | null): CommandContext => ({ idProject, issue: null });

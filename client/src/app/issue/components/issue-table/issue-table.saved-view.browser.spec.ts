@@ -14,7 +14,16 @@ describe('IssueTableComponent saved view handoff (TestBed)', () => {
     const idProject = 10;
 
     function view(config: SavedView['config']): SavedView {
-        return { idSavedView: 3, idProject, viewType: 'table', config } as SavedView;
+        return {
+            idSavedView: 3,
+            idProject,
+            name: 'View',
+            viewType: IssueViewMode.TABLE,
+            config,
+            isShared: false,
+            createBy: 1,
+            updateAt: '2026-08-01T00:00:00Z'
+        };
     }
 
     async function mount(): Promise<void> {

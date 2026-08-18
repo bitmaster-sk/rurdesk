@@ -63,11 +63,10 @@ export class GanttCascadeService {
 
         for (const relation of relations) {
             if (relation.relationType !== IssueRelationType.Schedule) continue;
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromId = relation.from.idIssuePublic;
             const toId = relation.to.idIssuePublic;
-            const subType = (relation.relationSubType ??
-                IssueRelationSubType.FinishToStart) as IssueRelationSubType;
+            const subType = relation.relationSubType ?? IssueRelationSubType.FinishToStart;
             const lagMinutes = relation.lagMinutes ?? 0;
 
             if (!outbound.has(fromId)) outbound.set(fromId, []);

@@ -774,7 +774,9 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 const relId = this.selectedRelationId();
                 if (relId !== null) {
                     const relation = this.relations().find(
-                        r => r.idIssueRelation === relId && r.direction === 'outbound'
+                        r =>
+                            r.idIssueRelation === relId &&
+                            r.direction === IssueRelationDirection.Outbound
                     );
                     if (relation) {
                         const idProject = this.scheduledTasks()[0]?.idProject;
@@ -933,7 +935,10 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         const relations = this.relations();
         const adjacency = new Map<number, number[]>();
         for (const r of relations) {
-            if (r.direction !== 'outbound' || r.relationType !== IssueRelationType.Schedule)
+            if (
+                r.direction !== IssueRelationDirection.Outbound ||
+                r.relationType !== IssueRelationType.Schedule
+            )
                 continue;
             if (!adjacency.has(r.from.idIssuePublic)) adjacency.set(r.from.idIssuePublic, []);
             adjacency.get(r.from.idIssuePublic)!.push(r.to.idIssuePublic);
@@ -975,7 +980,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             relationType: IssueRelationType.Schedule,
             relationSubType: subType,
             lagMinutes: null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: { idIssuePublic: sourceId },

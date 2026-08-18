@@ -66,7 +66,7 @@ function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
         relationType: IssueRelationType.Schedule,
         relationSubType: null,
         lagMinutes: null,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         label: '',
         inverseLabel: '',
         from: {

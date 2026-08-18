@@ -36,7 +36,7 @@ describe('GanttCriticalPathService', () => {
             relationType: IssueRelationType.Schedule,
             relationSubType: IssueRelationSubType.FinishToStart,
             lagMinutes: lag ?? null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: {

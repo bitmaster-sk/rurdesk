@@ -35,7 +35,7 @@ export function topologicalSort<T extends Issue>(issues: T[], relations: GanttRe
     }
 
     for (const relation of relations) {
-        if (relation.direction !== 'outbound') continue;
+        if (relation.direction !== IssueRelationDirection.Outbound) continue;
         const fromId = relation.from.idIssuePublic;
         const toId = relation.to.idIssuePublic;
         if (!adjacency.has(fromId) || !adjacency.has(toId)) continue;

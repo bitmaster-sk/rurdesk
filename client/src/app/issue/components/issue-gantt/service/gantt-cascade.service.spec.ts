@@ -37,7 +37,7 @@ describe('GanttCascadeService', () => {
             relationType: IssueRelationType.Schedule,
             relationSubType: subType,
             lagMinutes: lagMinutes ?? null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: {
