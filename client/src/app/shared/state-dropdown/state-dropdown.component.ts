@@ -40,8 +40,8 @@ export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
 
     private pendingMultiIds: number[] = [];
 
-    public onChange: any = () => {};
-    public onTouch: any = () => {};
+    public onChange: (value: StateDropdownValue) => void = () => {};
+    public onTouch: (value: StateDropdownValue) => void = () => {};
 
     private readonly cdr = inject(ChangeDetectorRef);
 

@@ -29,10 +29,11 @@ export class StateFormWindowComponent {
         this.winRef.close(null);
     }
 
-    public get state(): IssueState {
+    /** Partial: opening the window for a new state supplies only the project. */
+    public get state(): Partial<IssueState> {
         return {
-            idProject: this.winCfg.data?.['project']?.idProject,
-            ...this.winCfg.data?.['state']
+            idProject: this.winCfg.data?.project?.idProject,
+            ...this.winCfg.data?.state
         };
     }
 }

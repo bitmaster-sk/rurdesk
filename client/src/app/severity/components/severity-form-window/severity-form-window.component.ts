@@ -31,10 +31,11 @@ export class SeverityFormWindowComponent {
         this.winRef.close(null);
     }
 
-    public get severity(): IssueSeverity {
+    /** Partial: opening the window for a new severity supplies only the project. */
+    public get severity(): Partial<IssueSeverity> {
         return {
-            idProject: this.winCfg.data?.['project']?.idProject,
-            ...this.winCfg.data?.['severity']
+            idProject: this.winCfg.data?.project?.idProject,
+            ...this.winCfg.data?.severity
         };
     }
 }

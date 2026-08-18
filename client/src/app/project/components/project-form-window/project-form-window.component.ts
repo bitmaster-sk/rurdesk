@@ -1,9 +1,14 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { Project } from '../../model/project.model';
 import { ProjectService } from '../../project.service';
+
+export interface ProjectWindowData {
+    project?: Project;
+}
 
 @Component({
     selector: 'app-project-form-window',

@@ -5,6 +5,7 @@ import {
     EmbeddedViewRef,
     Injectable,
     Injector,
+    ProviderToken,
     Type,
     inject
 } from '@angular/core';
