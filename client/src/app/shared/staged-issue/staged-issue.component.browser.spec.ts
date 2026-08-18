@@ -74,7 +74,7 @@ describe('StagedIssueComponent', () => {
 
     it('formats estimatedMinutes into duration text for display', () => {
         // mockIssue has estimatedMinutes = 120
-        expect(component['estimateText']()).toBe('2h');
+        expect(component.estimateText()).toBe('2h');
     });
 
     it('emits issueChange with updated severity', () => {
@@ -102,7 +102,7 @@ describe('StagedIssueComponent', () => {
         const updated = { ...mockIssue, title: 'Changed externally' };
         fixture.componentRef.setInput('issue', updated);
         fixture.detectChanges();
-        expect(component['editIssue']().title).toBe('Changed externally');
+        expect(component.editIssue().title).toBe('Changed externally');
     });
 
     it('does not emit stale data after issue input resets', () => {
