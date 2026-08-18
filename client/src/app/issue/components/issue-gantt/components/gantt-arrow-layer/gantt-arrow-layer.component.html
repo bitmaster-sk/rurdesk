@@ -113,11 +113,13 @@
             />
 
             <!-- Invisible wider path for easier clicking -->
+            <!-- tabindex keeps arrows out of the tab order — no default Chrome blue focus ring. -->
             <path
                 [attr.d]="arrow.path"
                 fill="none"
                 stroke="transparent"
                 stroke-width="12"
+                tabindex="-1"
                 [uiTooltip]="relationTypeLabel + ' • ' + relationSubTypeLabel"
                 uiTooltipPosition="top"
             />

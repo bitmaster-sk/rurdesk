@@ -1,6 +1,8 @@
+<!-- tabindex keeps the scroller out of the tab order — no default Chrome blue focus ring. -->
 <div
     #scrollContainer
     class="gantt-body"
+    tabindex="-1"
     (scroll)="onScroll()"
     (mousedown)="onMiddleMouseDown($event)"
 >

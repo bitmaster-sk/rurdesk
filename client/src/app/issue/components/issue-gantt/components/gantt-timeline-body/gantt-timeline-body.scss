@@ -9,6 +9,10 @@
     overflow: auto;
     position: relative;
 
+    &:focus {
+        outline: none;
+    }
+
     &--canvas {
         position: relative;
     }
