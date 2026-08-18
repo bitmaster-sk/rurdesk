@@ -84,10 +84,11 @@ describe('NoticeService handshake', () => {
             'WebSocket',
             class {
                 public addEventListener = vi.fn();
-                constructor(
-                    public url: string,
-                    public protocols?: string | string[]
-                ) {
+                public url: string;
+                public protocols?: string | string[];
+                public constructor(url: string, protocols?: string | string[]) {
+                    this.url = url;
+                    this.protocols = protocols;
                     sockets.push(this as unknown as FakeSocket);
                 }
             }

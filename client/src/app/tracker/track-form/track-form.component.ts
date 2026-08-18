@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DurationParser } from 'src/app/shared/duration/duration.parser';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';

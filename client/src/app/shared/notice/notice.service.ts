@@ -1,5 +1,5 @@
 import { PlatformLocation } from '@angular/common';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { Message } from 'src/app/message/model/message.model';
 import { Notification } from 'src/app/notification/model/notification.model';
@@ -55,10 +55,7 @@ export class NoticeService {
 
     private readonly RECONNECT_DELAY = 60 * 1000;
 
-    constructor(
-        private location: PlatformLocation,
-        private sUser: UserService
-    ) {
+    public constructor() {
         if (!this.socket) {
             this.openSocket();
         }

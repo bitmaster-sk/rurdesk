@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, EMPTY, combineLatest } from 'rxjs';
 import { catchError, filter, map, switchMap } from 'rxjs/operators';
 import { IssueService } from '../issue/issue.service';
@@ -54,12 +54,7 @@ export class ProjectStatStore {
 
     public openIssuesByAssignee$ = this.openIssuesByAssignee.asObservable().pipe(filter(v => !!v));
 
-    constructor(
-        private issueService: IssueService,
-        private projectStore: ProjectStore,
-        private stateStore: StateStore,
-        private severityStore: SeverityStore
-    ) {
+    public constructor() {
         this.initialize();
     }
 
