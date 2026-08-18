@@ -1,3 +1,5 @@
+import { OptionConverter } from '../converter/option.converter';
+
 type OptionRecord = Record<string, unknown>;
 
 /**
@@ -19,7 +21,7 @@ export function resolveOptionValue(option: unknown, optionValue?: string): unkno
 export function resolveOptionLabel(option: unknown, optionLabel?: string): string {
     if (option !== null && typeof option === 'object') {
         const key = optionLabel ?? 'label';
-        return String((option as OptionRecord)[key] ?? '');
+        return OptionConverter.toLabel((option as OptionRecord)[key]);
     }
-    return String(option ?? '');
+    return OptionConverter.toLabel(option);
 }

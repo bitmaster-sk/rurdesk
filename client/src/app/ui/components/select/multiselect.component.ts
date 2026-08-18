@@ -21,6 +21,8 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import isEqual from 'lodash-es/isEqual';
 import { UiOptionNav } from './option-nav';
 
+import { OptionConverter } from '../../converter/option.converter';
+
 type OptionRecord = Record<string, unknown>;
 
 /**
@@ -386,10 +388,10 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
     protected getOptionLabel(option: T): string {
         const key = this.optionLabel();
         if (key) {
-            return String((option as OptionRecord)[key] ?? '');
+            return OptionConverter.toLabel((option as OptionRecord)[key]);
         }
         const label = (option as OptionRecord)?.['label'];
-        return String(label ?? option ?? '');
+        return OptionConverter.toLabel(label ?? option);
     }
 
     private getOptionValue(option: T): unknown {
