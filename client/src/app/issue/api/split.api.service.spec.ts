@@ -34,7 +34,8 @@ describe('SplitApi', () => {
     });
 
     it('preview$ POSTs the provided hint value', () => {
-        post.mockReturnValue(of({ children: [] } as SplitPreviewRes));
+        const preview: SplitPreviewRes = { children: [] };
+        post.mockReturnValue(of(preview));
 
         service.preview$(1, 2, 'separate frontend and backend').subscribe();
 

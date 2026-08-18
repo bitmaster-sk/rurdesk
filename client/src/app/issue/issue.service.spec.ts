@@ -18,7 +18,7 @@ const page = (
     items: unknown[],
     nextCursor: string | null = null,
     total = items.length
-): IssuesPage => ({ items, nextCursor, total }) as IssuesPage;
+): IssuesPage => ({ items, nextCursor, total }) as unknown as IssuesPage;
 
 const baseFilter = {
     idProject: 1,

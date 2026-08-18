@@ -13,7 +13,14 @@ import { AdminUsersComponent } from './admin-users.component';
  * or the drag never starts, so the handler must populate it.
  */
 describe('AdminUsersComponent — native drag source (browser)', () => {
-    const user = { idUser: 7, name: 'Ada', email: 'ada@x.io' } as AdminUser;
+    const user: AdminUser = {
+        idUser: 7,
+        name: 'Ada',
+        email: 'ada@x.io',
+        colorAvatarBg: '#123456',
+        isBot: false,
+        isAdmin: false
+    };
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({

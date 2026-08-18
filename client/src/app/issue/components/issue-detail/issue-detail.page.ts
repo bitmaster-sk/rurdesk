@@ -121,16 +121,19 @@ export class IssueDetailPage implements OnDestroy {
     }
 
     private loadIssue(params: IssueDetailPageParams): Observable<Issue> {
-        return params.idIssuePublic === null
-            ? of({
-                  idProject: params.idProject,
-                  idState: null,
-                  idSeverity: null,
-                  title: '',
-                  description: '',
-                  tracked: 0
-              } as Issue)
-            : this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
+        if (params.idIssuePublic !== null) {
+            return this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
+        }
+        // idIssue/idIssuePublic stay absent on purpose — the form reads their absence as "new issue".
+        const draft: IssueDraft = {
+            idProject: params.idProject,
+            idState: null,
+            idSeverity: null,
+            title: '',
+            description: '',
+            tracked: 0
+        };
+        return of(draft as Issue);
     }
 
     private toIssueDetailPageParams(params: ParamMap): IssueDetailPageParams | null {

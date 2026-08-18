@@ -418,7 +418,7 @@ export class IssueInfoComponent {
     }
 
     private formToIssue(): Issue {
-        const issue = { ...this.form.value } as Issue;
+        const issue: Issue = { ...(this.form.value as Issue) };
         issue.estimated = DurationConverter.durationToSeconds(
             DurationParser.stringToDuration(this.form.value.estimated)
         );

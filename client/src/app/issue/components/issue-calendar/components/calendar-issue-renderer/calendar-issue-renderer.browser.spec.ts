@@ -14,25 +14,27 @@ function makeEvt(overrides: {
     isEnd?: boolean;
     title?: string;
 }): any {
+    const issue: Issue = {
+        idIssue: 1,
+        idIssuePublic: 1,
+        idProject: 1,
+        title: overrides.title ?? 'Test Issue',
+        description: '',
+        tracked: 0,
+        estimated: 3600,
+        idState: null,
+        idSeverity: null,
+        ...overrides.issue
+    };
     return {
         isStart: overrides.isStart ?? true,
         isEnd: overrides.isEnd ?? true,
         event: {
             title: overrides.title ?? 'Test Issue',
             extendedProps: {
-                issue: {
-                    idIssue: 1,
-                    idProject: 1,
-                    title: overrides.title ?? 'Test Issue',
-                    description: '',
-                    tracked: 0,
-                    estimated: 3600,
-                    idState: null,
-                    idSeverity: null,
-                    ...overrides.issue
-                } as Issue,
+                issue,
                 severity: overrides.severity
-                    ? ({
+                    ? {
                           idSeverity: 1,
                           idProject: 1,
                           title: 'High',

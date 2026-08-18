@@ -268,7 +268,16 @@ describe('PeopleCommandProvider', () => {
     }
 
     it('assigns the picked person to the open issue on a detail and emits the change (not navigate)', () => {
-        const issue = { idProject: 1, idIssuePublic: 5, title: 'X' } as Issue;
+        const issue: Issue = {
+            idIssue: 15,
+            idProject: 1,
+            idIssuePublic: 5,
+            title: 'X',
+            description: '',
+            idState: null,
+            idSeverity: null,
+            tracked: 0
+        };
         const { provider, router, updateIssue, emitIssue } = setup();
         provider.getCommands({ idProject: 1, issue })[0].run();
         expect(updateIssue).toHaveBeenCalledWith(expect.objectContaining({ assignedTo: 9 }));

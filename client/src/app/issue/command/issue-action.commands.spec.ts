@@ -2,13 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import { buildIssueActionCommands, buildIssueCloneCommand } from './issue-action.commands';
 import { Issue } from '../model/issue.model';
 
-const issue = {
+const issue: Issue = {
+    idIssue: 15,
     idIssuePublic: 5,
     idProject: 1,
     idState: 10,
     idSeverity: null,
-    title: 'X'
-} as Issue;
+    title: 'X',
+    description: '',
+    tracked: 0
+};
 const data = {
     states: [{ idState: 11, idProject: 1, name: 'Done' }] as any,
     severities: [{ idSeverity: 2, idProject: 1, title: 'High', color: '#f00' }] as any,

@@ -30,13 +30,15 @@ describe('SeverityFormComponent', () => {
     });
 
     it('keeps the stored colour when editing', () => {
-        const fixture = create({
+        const severity: IssueSeverity = {
             idSeverity: 1,
             idProject: 10,
             title: 'High',
             color: '#d32f2f',
+            protected: false,
             orderRank: 1
-        } as IssueSeverity);
+        };
+        const fixture = create(severity);
 
         expect(fixture.componentInstance.form.value.color).toBe('#d32f2f');
     });

@@ -14,9 +14,11 @@ describe('ProjectFormWindowComponent', () => {
     let updateProject: ReturnType<typeof vi.fn>;
     let component: ProjectFormWindowComponent;
 
-    const newProject = { name: 'New' } as Project;
-    const savedProject = { idProject: 7, name: 'New' } as Project;
-    const existingProject = { idProject: 3, name: 'Edit' } as Project;
+    // idProject is absent on purpose — the component treats its absence as "insert, not update".
+    const draftProject: ProjectInsert = { name: 'New', color: '#123456' };
+    const newProject = draftProject as Project;
+    const savedProject: Project = { idProject: 7, name: 'New', color: '#123456' };
+    const existingProject: Project = { idProject: 3, name: 'Edit', color: '#654321' };
 
     beforeEach(() => {
         close = vi.fn();

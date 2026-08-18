@@ -144,11 +144,13 @@ describe('FilterComponent — date modes (browser)', () => {
 
 // The board and gantt create the panel on demand, by when initialFilter$ replays nothing.
 describe('FilterComponent — late mount (browser)', () => {
-    const activeFilter = {
+    const activeFilter: IssuesFilter = {
         idProject: 1,
         idsState: [4],
-        updateAtWithin: '30d'
-    } as IssuesFilter;
+        updateAtWithin: '30d',
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc'
+    };
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({

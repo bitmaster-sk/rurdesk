@@ -1,10 +1,18 @@
-import { describe, beforeEach, expect, it, vi } from 'vitest';
+import { describe, beforeEach, expect, it } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { DeleteMigrationDialogComponent } from './delete-migration-dialog.component';
 
-const targetState = { idState: 2, name: 'In progress' } as IssueState;
+const targetState: IssueState = {
+    idState: 2,
+    idProject: 1,
+    name: 'In progress',
+    start: false,
+    final: false,
+    protected: false,
+    orderRank: 1
+};
 
 describe('DeleteMigrationDialogComponent', () => {
     beforeEach(() => {

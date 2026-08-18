@@ -14,8 +14,15 @@ import { AdminTeamsComponent } from './admin-teams.component';
  * happens, so we assert `defaultPrevented` and the resulting API call.
  */
 describe('AdminTeamsComponent — native drop targets (browser)', () => {
-    const team = { idTeam: 3, name: 'Core', color: '#fff' } as Team;
-    const user = { idUser: 7, name: 'Ada', email: 'ada@x.io' } as AdminUser;
+    const team = { idTeam: 3, name: 'Core', color: '#fff' };
+    const user: AdminUser = {
+        idUser: 7,
+        name: 'Ada',
+        email: 'ada@x.io',
+        colorAvatarBg: '#123456',
+        isBot: false,
+        isAdmin: false
+    };
     let addTeamMember$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {

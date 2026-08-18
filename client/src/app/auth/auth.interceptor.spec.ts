@@ -35,8 +35,9 @@ describe('AuthInterceptor', () => {
             navigateByUrl: vi.fn(),
             getCurrentNavigation: () => null
         } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
-        const next = handlerReturning(of({} as HttpEvent<unknown>));
+        const interceptor = buildInterceptor(sUser, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
 
         interceptor.intercept(new HttpRequest('GET', '/api/x'), next).subscribe();
 
