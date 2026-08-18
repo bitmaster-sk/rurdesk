@@ -84,7 +84,24 @@ function makeTile(overrides: Partial<KanbanTile> = {}): KanbanTile {
         assignedToUser: alice,
         assignedTo: alice.idUser,
         ...overrides
-    } as KanbanTile;
+    };
+}
+
+function issueNotice(idProject: number, idIssue: number): Notice<Issue> {
+    return {
+        subject: NoticeSubject.Issue,
+        action: NoticeAction.Create,
+        payload: {
+            idIssue,
+            idIssuePublic: idIssue,
+            idProject,
+            idState: null,
+            idSeverity: null,
+            title: 'T',
+            description: '',
+            tracked: 0
+        }
+    };
 }
 
 function makeColumn(state: IssueState, tiles: KanbanTile[]): KanbanColumn {
@@ -675,17 +692,11 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         const h = setupWithNotices(notices);
         h.backlogStats.mockClear();
 
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 2, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(2, 5));
         settle();
         expect(h.backlogStats).not.toHaveBeenCalled();
 
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 1, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(1, 5));
         settle();
         expect(h.backlogStats).toHaveBeenCalledWith(1);
     });
@@ -714,10 +725,7 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         expect(analytics(h.component).stats()?.totalIssues).toBe(4);
 
         h.backlogStats.mockReturnValue(pending);
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 1, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(1, 5));
         settle();
 
         expect(analytics(h.component).stats()?.totalIssues).toBe(4);
@@ -731,10 +739,7 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         h.backlogStats.mockClear();
 
         for (let i = 0; i < 20; i++) {
-            notices.next({
-                action: NoticeAction.Create,
-                payload: { idProject: 1, idIssue: i } as Issue
-            } as Notice<Issue>);
+            notices.next(issueNotice(1, i));
         }
         settle();
 

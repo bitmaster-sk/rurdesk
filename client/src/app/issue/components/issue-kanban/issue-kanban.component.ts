@@ -249,9 +249,9 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
 
-        const sourceRect = (
-            document.querySelector(`[data-tile-id="${issue.idIssue}"]`) as HTMLElement | null
-        )?.getBoundingClientRect();
+        const sourceRect = document
+            .querySelector<HTMLElement>(`[data-tile-id="${issue.idIssue}"]`)
+            ?.getBoundingClientRect();
 
         const result = this.issueKanbanService.applyRemoteIssue(
             issue,
@@ -276,7 +276,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Shared "this just changed" ring on an in-place updated tile. */
     private pulseTile(idIssue: number): void {
         requestAnimationFrame(() => {
-            const el = document.querySelector(`[data-tile-id="${idIssue}"]`) as HTMLElement | null;
+            const el = document.querySelector<HTMLElement>(`[data-tile-id="${idIssue}"]`);
             if (el) pulseElement(el);
         });
     }
@@ -291,9 +291,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         // by the first frame; if it still sits at the old rect, check next frame.
         const attempt = (retriesLeft: number): void => {
             requestAnimationFrame(() => {
-                const el = document.querySelector(
-                    `[data-tile-id="${idIssue}"]`
-                ) as HTMLElement | null;
+                const el = document.querySelector(`[data-tile-id="${idIssue}"]`);
                 if (!el) return;
                 const to = el.getBoundingClientRect();
                 const dx = from.left - to.left;

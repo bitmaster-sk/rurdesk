@@ -60,7 +60,7 @@ function makeIssue(overrides: Partial<Issue>): Issue {
         createBy: 1,
         updateBy: 1,
         ...overrides
-    } as Issue;
+    };
 }
 
 // Mimics the backend grouped endpoint: groups issues by state (and assignedTo for swimlane).
