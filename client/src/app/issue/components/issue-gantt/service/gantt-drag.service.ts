@@ -273,7 +273,7 @@ export class GanttDragService {
         const el = document.elementFromPoint(clientX, clientY);
         if (!el) return null;
 
-        const handleEl = el.closest('.connection-handle') as HTMLElement | null;
+        const handleEl = el.closest<HTMLElement>('.connection-handle');
         if (handleEl) {
             const taskId = Number(handleEl.dataset['taskId']);
             const side = handleEl.dataset['side'] as HandleSide | undefined;
@@ -281,7 +281,7 @@ export class GanttDragService {
             return null;
         }
 
-        const barEl = el.closest('.gantt-bar') as HTMLElement | null;
+        const barEl = el.closest<HTMLElement>('.gantt-bar');
         if (!barEl) return null;
         const taskId = Number(barEl.dataset['taskId']);
         if (!taskId || taskId === this.state().taskId) return null;

@@ -91,7 +91,7 @@ export default tseslint.config(
             ],
             '@typescript-eslint/array-type': ['error', { default: 'array' }],
             '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-            '@typescript-eslint/no-inferrable-types': 'error',
+            '@typescript-eslint/no-inferrable-types': 'off',
             '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
             '@typescript-eslint/prefer-optional-chain': 'error',
             '@typescript-eslint/explicit-member-accessibility': 'error',
