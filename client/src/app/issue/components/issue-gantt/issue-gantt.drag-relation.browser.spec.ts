@@ -442,6 +442,53 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             expect(comp.selectedRelationId()).toBeNull();
         });
     });
+
+    // =========================================================================
+    // onDocumentPointerDown — click outside clears arrow selection
+    // =========================================================================
+
+    describe('onDocumentPointerDown', () => {
+        it('does nothing when no relation is selected', () => {
+            comp.selectedRelationId.set(null);
+            const event = { target: document.body } as unknown as PointerEvent;
+            comp.onDocumentPointerDown(event);
+            expect(comp.selectedRelationId()).toBeNull();
+        });
+
+        it('clears selectedRelationId on pointerdown outside the arrow', () => {
+            comp.selectedRelationId.set(5);
+            const event = { target: document.body } as unknown as PointerEvent;
+            comp.onDocumentPointerDown(event);
+            expect(comp.selectedRelationId()).toBeNull();
+        });
+
+        it('keeps selectedRelationId when pointerdown lands on a gantt-arrow element', () => {
+            comp.selectedRelationId.set(5);
+            const arrow = document.createElement('g');
+            arrow.classList.add('gantt-arrow');
+            const event = { target: arrow } as unknown as PointerEvent;
+            comp.onDocumentPointerDown(event);
+            expect(comp.selectedRelationId()).toBe(5);
+        });
+
+        it('keeps selectedRelationId when pointerdown lands inside a gantt-arrow (delete button)', () => {
+            comp.selectedRelationId.set(5);
+            const arrow = document.createElement('g');
+            arrow.classList.add('gantt-arrow');
+            const child = document.createElement('circle');
+            arrow.appendChild(child);
+            const event = { target: child } as unknown as PointerEvent;
+            comp.onDocumentPointerDown(event);
+            expect(comp.selectedRelationId()).toBe(5);
+        });
+
+        it('clears selectedRelationId when target is null', () => {
+            comp.selectedRelationId.set(5);
+            const event = { target: null } as unknown as PointerEvent;
+            comp.onDocumentPointerDown(event);
+            expect(comp.selectedRelationId()).toBeNull();
+        });
+    });
 });
 
 // =========================================================================

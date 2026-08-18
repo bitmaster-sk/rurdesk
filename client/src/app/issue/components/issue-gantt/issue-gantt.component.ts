@@ -800,6 +800,14 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         }
     }
 
+    @HostListener('document:pointerdown', ['$event'])
+    public onDocumentPointerDown(event: PointerEvent): void {
+        if (this.selectedRelationId() === null) return;
+        const target = event.target as HTMLElement | null;
+        if (target?.closest('.gantt-arrow')) return;
+        this.selectedRelationId.set(null);
+    }
+
     @HostListener('wheel', ['$event'])
     public onWheel(event: WheelEvent): void {
         if (!event.ctrlKey) return;
