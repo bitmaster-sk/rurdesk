@@ -17,6 +17,10 @@ import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SwimlaneRow } from '../entity/swimlane-row.entity';
 import { KanbanColumn } from '../entity/kanban-column.entity';
 
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
+
 const stateA: IssueState = {
     idState: 1,
     name: 'Todo',

@@ -13,7 +13,12 @@ import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
+import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
 import { topologicalSort } from './gantt-order.util';
+
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
 
 // IssueGanttService uses inject() for 6 deps; only actualFilter$ is touched at
 // construction (the rest stay lazy inside switchMap). topologicalSort is pure, so we

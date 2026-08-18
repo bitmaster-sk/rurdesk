@@ -7,6 +7,10 @@ function latest<T>(obs: { subscribe: (fn: (v: T) => void) => unknown }): T | und
     return v;
 }
 
+function baseFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
+
 describe('IssueFilterStore', () => {
     let store: IssueFilterStore;
     beforeEach(() => (store = new IssueFilterStore()));

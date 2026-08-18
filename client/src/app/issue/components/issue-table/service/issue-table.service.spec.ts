@@ -8,9 +8,16 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
+import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
+
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
 
 function makeIssue(over: Partial<Issue>): Issue {
     return {
