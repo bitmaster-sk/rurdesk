@@ -307,7 +307,7 @@ export class MessagePage implements OnInit, OnDestroy {
     }
 
     private toRecipientType(value: number): MessageRecipientType | null {
-        return value in MessageRecipientType ? (value as MessageRecipientType) : null;
+        return value in MessageRecipientType ? value : null;
     }
 
     private toConversationGroups(

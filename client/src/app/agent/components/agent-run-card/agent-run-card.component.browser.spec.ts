@@ -45,7 +45,7 @@ describe('AgentRunCardComponent', () => {
             phase,
             prUrl: 'https://github.com/acme/repo/pull/7',
             stages: []
-        } as Partial<AgentRun> as AgentRun);
+        });
         fixture.detectChanges();
         return fixture.nativeElement as HTMLElement;
     }

@@ -46,7 +46,7 @@ export function buildAtoms(root: HTMLElement): Atom[] {
                 atoms.push({
                     node: c,
                     kind: 'chip',
-                    str: (c as HTMLElement).dataset['token'] ?? '',
+                    str: c.dataset['token'] ?? '',
                     base: 0
                 });
             } else if (c.nodeType === 1 && (c as HTMLElement).tagName === 'BR') {

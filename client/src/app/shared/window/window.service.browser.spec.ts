@@ -30,7 +30,7 @@ describe('WindowService', () => {
 
     function openWindow(): void {
         TestBed.inject(WindowService)
-            .open(WindowTestContentComponent, { header: 'Test' } as WindowConfig)
+            .open(WindowTestContentComponent, { header: 'Test' })
             .onClose.subscribe();
         TestBed.inject(WindowService); // ensure DI graph is realised before CD
         TestBed.flushEffects();

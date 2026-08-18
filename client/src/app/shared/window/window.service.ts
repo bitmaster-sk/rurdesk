@@ -42,15 +42,15 @@ export class WindowService {
 
     /** vytvorí okno */
     private createWindow(
-        componentType: Type<any>,
-        injectorExtension: WeakMap<any, any>
+        componentType: Type<unknown>,
+        injectorExtension: WeakMap<ProviderToken<unknown>, unknown>
     ): ComponentRef<WindowComponent> {
         const factory = this.componentFactoryResolver.resolveComponentFactory(WindowComponent);
         const component = factory.create(new WindowInjector(this.injector, injectorExtension));
 
         this.appRef.attachView(component.hostView);
         document.body.appendChild(
-            (component.hostView as EmbeddedViewRef<any>).rootNodes[0] as HTMLElement
+            (component.hostView as EmbeddedViewRef<unknown>).rootNodes[0] as HTMLElement
         );
         component.instance.contentType = componentType;
 

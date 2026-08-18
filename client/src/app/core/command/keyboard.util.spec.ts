@@ -8,7 +8,7 @@ const key = (init: Partial<KeyboardEvent> & { key: string }): KeyboardEvent =>
         isComposing: false,
         target: null,
         ...init
-    }) as KeyboardEvent;
+    }) as unknown as KeyboardEvent;
 
 describe('isEditableTarget', () => {
     it('true for input/textarea/select/contenteditable', () => {

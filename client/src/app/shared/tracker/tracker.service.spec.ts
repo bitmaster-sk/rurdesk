@@ -18,7 +18,7 @@ describe('TrackerService.loadTracks', () => {
                 idIssue: 5,
                 idProject: 1,
                 from: new Date('2026-01-01T00:00:00Z')
-            } as TrackFilter)
+            })
             .subscribe(t => (tracks = t));
 
         const [url, options] = get.mock.calls[0] as [string, { params: HttpParams }];

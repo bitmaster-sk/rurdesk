@@ -177,7 +177,7 @@ describe('IssueActionCommandProvider', () => {
         idSeverity: 2,
         assignedTo: 7,
         tracked: 0
-    } as Issue;
+    };
     function setup(states: any[] = []) {
         const router = { navigate: vi.fn() };
         const insertIssue = vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }));

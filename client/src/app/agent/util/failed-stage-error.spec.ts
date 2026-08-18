@@ -3,7 +3,7 @@ import { resolveFailedStageError } from './failed-stage-error';
 import { AgentStageProgress } from '../model/agent-run.model';
 
 function stage(partial: Partial<AgentStageProgress>): AgentStageProgress {
-    return { stage: 'brainstorming', status: 'pending', ...partial } as AgentStageProgress;
+    return { stage: 'brainstorming', status: 'pending', ...partial };
 }
 
 describe('resolveFailedStageError', () => {

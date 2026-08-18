@@ -31,14 +31,14 @@ function build(token: string | null, protocol = 'http:', port = '9000') {
             public constructor(url: string, protocols?: string | string[]) {
                 this.url = url;
                 this.protocols = protocols;
-                sockets.push(this as unknown as FakeSocket);
+                sockets.push(this);
             }
         }
     );
 
     const location = { protocol, hostname: 'localhost', port } as unknown as PlatformLocation;
     const sUser = { getAuthLocal: () => token } as unknown as UserService;
-    const service = new NoticeService(location, sUser);
+    const service = buildService(location, sUser);
     return { service, sockets };
 }
 

@@ -16,10 +16,6 @@ export const GIT_PROVIDERS: readonly GitProvider[] = [
     { value: HostType.Gitea, label: 'Gitea', icon: 'assets/image/icons/gitea.svg' }
 ];
 
-export const GIT_PROVIDER_BY_TYPE: Record<HostType, GitProvider> = GIT_PROVIDERS.reduce(
-    (map, provider) => {
-        map[provider.value] = provider;
-        return map;
-    },
-    {} as Record<HostType, GitProvider>
-);
+export const GIT_PROVIDER_BY_TYPE = Object.fromEntries(
+    GIT_PROVIDERS.map(provider => [provider.value, provider])
+) as Record<HostType, GitProvider>;

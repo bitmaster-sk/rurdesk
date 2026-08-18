@@ -12,7 +12,7 @@ describe('firstProjectGuard', () => {
             providers: [{ provide: ProjectService, useValue: { loadProjects: () => of(projects) } }]
         });
         const result = TestBed.runInInjectionContext(() =>
-            firstProjectGuard({} as Route, [] as UrlSegment[])
+            firstProjectGuard({}, [] as UrlSegment[])
         ) as Observable<boolean>;
         let value = undefined as unknown as boolean;
         result.subscribe(v => (value = v));
