@@ -49,7 +49,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
     private readonly subscription = new Subscription();
 
     public ngOnInit(): void {
-        const idProject = this.project().idProject!;
+        const idProject = this.project().idProject;
 
         // The two sources are deliberately NOT combined. The rows are fixed
         // (AGENT_PHASES), so the form is built once from the saved mappings, while
@@ -72,7 +72,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
     private loadMappings(): void {
         this.isLoading.set(true);
         this.subscription.add(
-            this.phaseStateMapApi.load$(this.project().idProject!).subscribe({
+            this.phaseStateMapApi.load$(this.project().idProject).subscribe({
                 next: mappings => this.buildForm(mappings),
                 error: () => {
                     this.isLoading.set(false);

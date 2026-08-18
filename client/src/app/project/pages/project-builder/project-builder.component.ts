@@ -107,8 +107,8 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
                     switchMap(project =>
                         combineLatest([
                             of(project),
-                            this.stateStore.statesByProject$(project.idProject!),
-                            this.severityStore.severitiesByProject$(project.idProject!)
+                            this.stateStore.statesByProject$(project.idProject),
+                            this.severityStore.severitiesByProject$(project.idProject)
                         ])
                     )
                 )

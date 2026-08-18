@@ -31,7 +31,7 @@ export class NavigationCommandProvider implements CommandProvider {
     public prime(_ctx: CommandContext): Observable<unknown> {
         return this.projectService.loadProjects().pipe(
             tap((list: Project[]) => {
-                this.projects = list.map(p => ({ idProject: p.idProject!, name: p.name }));
+                this.projects = list.map(p => ({ idProject: p.idProject, name: p.name }));
             })
         );
     }

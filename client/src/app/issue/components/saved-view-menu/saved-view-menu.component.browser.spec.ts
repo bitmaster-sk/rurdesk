@@ -464,7 +464,7 @@ describe('SavedViewMenuComponent (browser)', () => {
         page.open();
 
         const labels = Array.from(page.panel()!.querySelectorAll('.sv-footer .sv-name')).map(node =>
-            node.textContent!.trim()
+            node.textContent.trim()
         );
         expect(labels.some(label => label.includes('SAVE_CURRENT'))).toBe(false);
     });

@@ -193,8 +193,8 @@ describe('toTree / fromTree utilities', () => {
     it('toTree builds nested structure', () => {
         const tree = StagedIssuesTree.toTree(issues);
         expect(tree.length).toBe(1);
-        expect(tree[0].data!.ref).toBe('P');
-        expect(tree[0].children!.length).toBe(2);
+        expect(tree[0].data.ref).toBe('P');
+        expect(tree[0].children.length).toBe(2);
     });
 
     it('fromTree flattens tree back to array', () => {
