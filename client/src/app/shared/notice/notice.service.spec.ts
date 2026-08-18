@@ -101,7 +101,7 @@ describe('NoticeService handshake', () => {
             port: '9000'
         } as unknown as PlatformLocation;
         const sUser = { getAuthLocal: () => token } as unknown as UserService;
-        new NoticeService(location, sUser);
+        buildService(location, sUser);
         expect(sockets).toHaveLength(0);
 
         token = 'jwt-after-login';

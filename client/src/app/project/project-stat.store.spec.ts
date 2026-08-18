@@ -15,6 +15,11 @@ const severities = [{ idSeverity: 1, idProject: 1, title: 'Low' }];
 
 function issue(over: Partial<Issue>): Issue {
     return {
+        idIssue: 1,
+        idIssuePublic: 1,
+        idProject: 1,
+        title: 'T',
+        description: '',
         idState: 1,
         idSeverity: 1,
         estimated: 0,
@@ -102,7 +107,7 @@ describe('ProjectStatStore', () => {
             }
         } as unknown as IssueService;
 
-        const store = new ProjectStatStore(
+        const store = buildStore(
             issueService,
             { project$ } as unknown as ProjectStore,
             { states$: of(states) } as unknown as StateStore,

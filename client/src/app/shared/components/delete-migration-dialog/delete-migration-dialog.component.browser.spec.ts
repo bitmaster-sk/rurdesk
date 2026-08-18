@@ -42,7 +42,7 @@ describe('DeleteMigrationDialogComponent', () => {
 
     it('emits migrateTo id on confirm in migrate mode', () => {
         const fixture = create();
-        const emitted: Array<{ migrateTo: number | null }> = [];
+        const emitted: { migrateTo: number | null }[] = [];
         fixture.componentInstance.confirmed.subscribe(v => emitted.push(v));
         fixture.componentInstance.selectedId.set(2);
         fixture.componentInstance.onConfirm();
@@ -51,7 +51,7 @@ describe('DeleteMigrationDialogComponent', () => {
 
     it('emits null on confirm in unassign mode', () => {
         const fixture = create();
-        const emitted: Array<{ migrateTo: number | null }> = [];
+        const emitted: { migrateTo: number | null }[] = [];
         fixture.componentInstance.confirmed.subscribe(v => emitted.push(v));
         fixture.componentInstance.mode.set('unassign');
         fixture.componentInstance.onConfirm();
