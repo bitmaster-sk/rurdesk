@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { TestBed } from '@angular/core/testing';
 import { Component, input, output } from '@angular/core';
@@ -66,14 +66,17 @@ function makeTask(idIssuePublic: number): ScheduledIssue {
         idIssue: idIssuePublic,
         idIssuePublic,
         idProject: 10,
+        idState: null,
+        idSeverity: null,
         title: `Task ${idIssuePublic}`,
         description: '',
         tracked: 0,
-        idState: null,
-        idSeverity: null,
+        estimated: 3600,
         scheduledAt: new Date('2025-01-15T00:00:00Z'),
-        estimated: 3600
-    } as ScheduledIssue;
+        state: undefined,
+        severity: undefined,
+        assignedToUser: undefined
+    };
 }
 
 describe('GanttTimelineBodyComponent (TestBed)', () => {
