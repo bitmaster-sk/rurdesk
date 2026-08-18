@@ -314,7 +314,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
                     ],
                     { duration: UI_SETTLE_DURATION_MS, easing: UI_SETTLE_EASING }
                 );
-                animation.finished
+                void animation.finished
                     .catch(() => undefined)
                     .then(() => el.classList.remove('tile-flying'));
             });

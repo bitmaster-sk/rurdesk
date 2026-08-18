@@ -198,7 +198,7 @@ export class GanttTimelineService {
         }
 
         // Apply padding — advanceFn supports negative counts via date-fns
-        let start = cfg.snapFn(cfg.advanceFn(contentStart, -cfg.paddingBefore));
+        const start = cfg.snapFn(cfg.advanceFn(contentStart, -cfg.paddingBefore));
         let end = cfg.advanceFn(contentEnd, cfg.paddingAfter);
 
         // Enforce minimum column count, extending the end if needed
