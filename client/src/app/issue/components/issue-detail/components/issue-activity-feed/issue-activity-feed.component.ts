@@ -4,7 +4,6 @@ import {
     Component,
     DestroyRef,
     ElementRef,
-    OnDestroy,
     computed,
     effect,
     inject,
@@ -13,9 +12,9 @@ import {
     signal,
     viewChild
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
-import { filter, first, map } from 'rxjs/operators';
+import { filter, first } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { MessageService } from 'src/app/message/message.service';
@@ -35,7 +34,7 @@ import { UserService } from 'src/app/auth/user.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -44,7 +43,7 @@ import { TranslateService } from '@ngx-translate/core';
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
+export class IssueActivityFeedComponent implements AfterViewInit {
     public readonly idIssue = input.required<number>();
     public readonly idProject = input.required<number>();
     public readonly pendingTrack = input<Track | null>(null);
@@ -55,7 +54,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
 
     private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly sMessage = inject(MessageService);
     private readonly sTracker = inject(TrackerService);
@@ -101,7 +100,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
         let latestTime = -Infinity;
         for (const item of this.displayItems()) {
             if (item.type !== 'comment') continue;
-            const msg = item.data as Message;
+            const msg = item.data;
             if (
                 msg.messageKind !== MessageKind.Design &&
                 msg.messageKind !== MessageKind.ImplementationPlan
@@ -122,7 +121,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
         const result = new Map<number, Message[]>();
         for (const item of this.displayItems()) {
             if (item.type === 'comment') {
-                const msg = item.data as Message;
+                const msg = item.data;
                 if (msg.anchor) {
                     const parentId = msg.anchor.idParentMessage;
                     const existing = result.get(parentId);
@@ -152,7 +151,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
 
     private hasScrolled = false;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             if (this.allItems().length > 0 && !this.hasScrolled) {
                 this.hasScrolled = true;
@@ -162,7 +161,7 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
 
         effect(() => {
             const track = this.pendingTrack();
-            if (track == null || !track.tracked || !track.endAt) return;
+            if (!track?.tracked || !track.endAt) return;
             const endAt = track.endAt;
             this.liveItems.update(items => [
                 ...items,
@@ -211,8 +210,6 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
             this.scrollToBottom();
         });
     }
-
-    public ngOnDestroy(): void {}
 
     public setFilter(type: 'all' | TimelineItemType): void {
         if (type === 'all') {
@@ -308,13 +305,13 @@ export class IssueActivityFeedComponent implements AfterViewInit, OnDestroy {
     }
 
     private updateComment(updated: Message): void {
-        const applyUpdate = (items: TimelineItem[]) =>
+        const applyUpdate = (items: TimelineItem[]): TimelineItem[] =>
             items.map(item =>
-                item.type === 'comment' && (item.data as Message).idMessage === updated.idMessage
+                item.type === 'comment' && item.data.idMessage === updated.idMessage
                     ? {
                           ...item,
                           data: {
-                              ...(item.data as Message),
+                              ...item.data,
                               message: updated.message,
                               updatedAt: updated.updatedAt
                           }

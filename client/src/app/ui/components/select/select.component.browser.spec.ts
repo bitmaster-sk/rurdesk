@@ -19,7 +19,7 @@ interface Opt {
             optionValue="value"
             placeholder="Pick one"
             [formControl]="ctrl"
-            (onChange)="onChangeCount = onChangeCount + 1"
+            (valueChanged)="onChangeCount = onChangeCount + 1"
         />
     `
 })

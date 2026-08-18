@@ -14,6 +14,7 @@ import { ExtendedIssue } from '../../../../model/extended-issue.model';
 import { GanttRelation } from '../../model/gantt-relation.model';
 import { IssueRelationType } from '../../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { MIN_BAR_WIDTH_PX, SMALL_BAR_THRESHOLD_PX } from '../gantt-task-bar/gantt-task-bar';
 import { addSeconds } from 'date-fns';
@@ -154,7 +155,7 @@ export class GanttArrowLayerComponent {
         const isCullingActive = !this.isCriticalTracing();
 
         for (const relation of relations) {
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromPos = taskPositions.get(relation.from.idIssuePublic);
             const toPos = taskPositions.get(relation.to.idIssuePublic);
             if (!fromPos || !toPos) continue;
@@ -172,8 +173,7 @@ export class GanttArrowLayerComponent {
                 toPos.centerY <= vpBottom;
             if (isCullingActive && !fromVisible && !toVisible) continue;
 
-            const subType = (relation.relationSubType ??
-                IssueRelationSubType.FinishToStart) as IssueRelationSubType;
+            const subType = relation.relationSubType ?? IssueRelationSubType.FinishToStart;
             const { sourceX, targetX, exitDirection, enterDirection } = this.getConnectionPoints(
                 fromPos,
                 toPos,
@@ -414,7 +414,7 @@ export class GanttArrowLayerComponent {
         this.idHoveredRelation.set(null);
     }
 
-    private getRelationTypeTranslationKey(relationType: string): string {
+    private getRelationTypeTranslationKey(relationType: IssueRelationType): string {
         switch (relationType) {
             case IssueRelationType.Hierarchy:
                 return 'RELATION.HIERARCHY';
@@ -429,7 +429,7 @@ export class GanttArrowLayerComponent {
         }
     }
 
-    private getRelationSubTypeTranslationKey(relationSubType: string | null): string {
+    private getRelationSubTypeTranslationKey(relationSubType: IssueRelationSubType | null): string {
         switch (relationSubType) {
             case IssueRelationSubType.FinishToStart:
                 return 'RELATION.FINISH_TO_START';

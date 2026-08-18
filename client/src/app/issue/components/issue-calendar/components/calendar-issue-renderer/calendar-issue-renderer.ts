@@ -14,7 +14,7 @@ export interface CalendarRenderData {
 }
 
 export class CalendarIssueRenderer {
-    render(data: CalendarRenderData): { domNodes: HTMLElement[] } {
+    public render(data: CalendarRenderData): { domNodes: HTMLElement[] } {
         const { evt, cardMode } = data;
         const issue = evt.event.extendedProps['issue'] as Issue;
         const assigned = evt.event.extendedProps['assigned'] as User | undefined;

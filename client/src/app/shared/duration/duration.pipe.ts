@@ -7,7 +7,7 @@ import { Duration } from 'date-fns';
     standalone: false
 })
 export class DurationPipe implements PipeTransform {
-    transform(value: Duration): string {
+    public transform(value: Duration): string {
         return DurationFormatter.durationToString(value);
     }
 }

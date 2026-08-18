@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
     HttpRequest,
     HttpHandler,
@@ -8,18 +8,17 @@ import {
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from '../shared/i18n/i18n.service';
 import { ToastNotificationService } from './toast-notification.service';
 import { SILENCE_ERROR_TOAST } from './http-error-context';
+import { ApiError } from '../shared/model/api-error.model';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
-    constructor(
-        private translate: TranslateService,
-        private toast: ToastNotificationService
-    ) {}
+    private readonly i18n = inject(I18nService);
+    private readonly toast = inject(ToastNotificationService);
 
-    intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
+    public intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
         return next.handle(req).pipe(
             catchError((error: HttpErrorResponse) => {
                 // The API renders a uniform { code, message, translateKey } body for every
@@ -29,10 +28,10 @@ export class ErrorInterceptor implements HttpInterceptor {
                 // specific message, opt out with SILENCE_ERROR_TOAST. The message is still
                 // attached to the re-thrown error either way.
                 const notify = !req.context.get(SILENCE_ERROR_TOAST) && this.shouldNotify(error);
-                const key = error.error?.translateKey;
+                const key = ApiError.translateKeyOf(error);
 
                 if (key) {
-                    return this.translate.get(key).pipe(
+                    return this.i18n.get$(key).pipe(
                         switchMap(msg => {
                             if (notify) {
                                 this.toast.showError(key);

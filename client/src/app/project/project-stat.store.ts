@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, EMPTY, combineLatest } from 'rxjs';
 import { catchError, filter, map, switchMap } from 'rxjs/operators';
 import { IssueService } from '../issue/issue.service';
@@ -23,6 +23,11 @@ interface ProjectStats {
     providedIn: 'root'
 })
 export class ProjectStatStore {
+    private readonly issueService = inject(IssueService);
+    private readonly projectStore = inject(ProjectStore);
+    private readonly stateStore = inject(StateStore);
+    private readonly severityStore = inject(SeverityStore);
+
     private totalEstimatedSeconds = new BehaviorSubject<number>(0);
 
     public totalEstimatedSeconds$ = this.totalEstimatedSeconds.asObservable();
@@ -49,12 +54,7 @@ export class ProjectStatStore {
 
     public openIssuesByAssignee$ = this.openIssuesByAssignee.asObservable().pipe(filter(v => !!v));
 
-    constructor(
-        private issueService: IssueService,
-        private projectStore: ProjectStore,
-        private stateStore: StateStore,
-        private severityStore: SeverityStore
-    ) {
+    public constructor() {
         this.initialize();
     }
 
@@ -142,24 +142,22 @@ export class ProjectStatStore {
         if (issue.idState) {
             const byState = stats.issuesByState.get(issue.idState);
             if (byState) {
-                let [state, count] = byState;
-                count++;
-                stats.issuesByState.set(issue.idState, [state, count]);
+                const [state, count] = byState;
+                stats.issuesByState.set(issue.idState, [state, count + 1]);
             }
         }
 
         if (issue.idSeverity) {
             const bySeverity = stats.issuesBySeverity.get(issue.idSeverity);
             if (bySeverity) {
-                let [severity, count] = bySeverity;
-                count++;
-                stats.issuesBySeverity.set(issue.idSeverity, [severity, count]);
+                const [severity, count] = bySeverity;
+                stats.issuesBySeverity.set(issue.idSeverity, [severity, count + 1]);
             }
         }
 
         // Count open issues (non-final state) per assignee
         const stateEntry = issue.idState ? stats.issuesByState.get(issue.idState) : undefined;
-        const isOpen = !stateEntry || !stateEntry[0].final;
+        const isOpen = !stateEntry?.[0].final;
 
         if (isOpen) {
             const key = issue.assignedTo ?? null;

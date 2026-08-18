@@ -8,9 +8,16 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
+import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
+
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
 
 function makeIssue(over: Partial<Issue>): Issue {
     return {
@@ -25,7 +32,7 @@ function makeIssue(over: Partial<Issue>): Issue {
         assignedTo: 10,
         relationCount: 0,
         ...over
-    } as Issue;
+    };
 }
 
 function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): IssueTableService {
@@ -74,10 +81,10 @@ function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): 
 function relation(fromId: number, toId: number, label: string): ReadIssueRelationDto {
     return {
         idIssueRelation: 99,
-        relationType: 'schedule',
+        relationType: IssueRelationType.Schedule,
         relationSubType: null,
         lagMinutes: null,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         label,
         inverseLabel: '',
         from: {
@@ -100,7 +107,7 @@ function relation(fromId: number, toId: number, label: string): ReadIssueRelatio
         },
         createdAt: '',
         createdBy: 1
-    } as unknown as ReadIssueRelationDto;
+    };
 }
 
 describe('IssueTableService — rows', () => {
@@ -191,7 +198,7 @@ describe('IssueTableService — refresh keeps loaded pages', () => {
         };
         const svc = buildWithStore(store, responder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never); // page 1 → 50
+        store.setInitialFilter(initialFilter()); // page 1 → 50
         svc.loadMore(); // page 2 → 100
         expect(svc.rows()).toHaveLength(100);
 

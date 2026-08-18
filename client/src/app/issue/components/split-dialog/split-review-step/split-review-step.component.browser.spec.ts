@@ -97,9 +97,9 @@ describe('SplitReviewStepComponent', () => {
         expect((emitted?.[0] as Record<string, unknown>)['ref']).toBeUndefined();
     });
 
-    it('onCancel emits cancel', () => {
+    it('onCancel emits cancelled', () => {
         let emitted = false;
-        component.cancel.subscribe(() => (emitted = true));
+        component.cancelled.subscribe(() => (emitted = true));
         component.onCancel();
         expect(emitted).toBe(true);
     });

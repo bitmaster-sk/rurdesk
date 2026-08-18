@@ -60,7 +60,7 @@ export class UiToastService {
 
         // Single SR channel: LiveAnnouncer keeps a persistent hidden aria-live region,
         // reliable across VoiceOver/NVDA unlike role on a node inserted with its content.
-        this.liveAnnouncer.announce(
+        void this.liveAnnouncer.announce(
             input.detail,
             input.severity === 'error' ? 'assertive' : 'polite'
         );
@@ -95,7 +95,7 @@ export class UiToastService {
      *  would schedule a second timeout and orphan the first handle). */
     public resume(id: number): void {
         const entry = this.timers.get(id);
-        if (!entry || !entry.paused) {
+        if (!entry?.paused) {
             return;
         }
         entry.startedAt = Date.now();

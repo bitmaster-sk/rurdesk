@@ -42,7 +42,7 @@ export class IssueGanttService {
     public readonly backlogHasMore = signal(false);
     public readonly backlogLoading = signal(false);
 
-    constructor() {
+    public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
         // stale load before this view's setInitialFilter runs.
         this.issueFilterStore.clear();

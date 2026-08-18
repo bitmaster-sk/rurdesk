@@ -42,8 +42,9 @@ export function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
         estimated: 3600,
         state: undefined,
         severity: undefined,
+        assignedToUser: undefined,
         ...over
-    } as ExtendedIssue;
+    };
 }
 
 export function mockSub<T = unknown>() {

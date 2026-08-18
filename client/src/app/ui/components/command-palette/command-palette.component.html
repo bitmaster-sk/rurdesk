@@ -17,7 +17,7 @@
             [attr.aria-label]="'COMMAND.INPUT_LABEL' | translate"
             [attr.placeholder]="'COMMAND.PLACEHOLDER' | translate"
             [value]="query()"
-            (input)="onInput($any($event.target).value)"
+            (input)="onInput($event)"
             (keydown)="onKeydown($event)"
         />
         <span class="palette__esc">esc</span>

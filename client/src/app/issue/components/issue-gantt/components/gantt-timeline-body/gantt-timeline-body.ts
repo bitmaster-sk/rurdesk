@@ -9,8 +9,7 @@ import {
     output,
     signal,
     viewChild,
-    AfterViewInit,
-    OnDestroy
+    AfterViewInit
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -31,7 +30,7 @@ import { RelationDropTarget } from '../../service/gantt-drag.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
+export class GanttTimelineBodyComponent implements AfterViewInit {
     private readonly router = inject(Router);
     private readonly ngZone = inject(NgZone);
     public readonly timelineService = inject(GanttTimelineService);
@@ -117,8 +116,6 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
         this.viewportHeight.set(container.clientHeight);
     }
 
-    public ngOnDestroy(): void {}
-
     public onScroll(): void {
         if (this.isSyncingScroll) {
             this.isSyncingScroll = false;
@@ -180,7 +177,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
 
         // Navigate to create issue with scheduledAt
         // idProject extracted from current route by parent
-        this.router.navigate([], {
+        void this.router.navigate([], {
             queryParams: { scheduledAt: snapped.toISOString() },
             queryParamsHandling: 'merge'
         });
@@ -194,13 +191,13 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
         const container = this.scrollContainer().nativeElement;
         const startScrollLeft = container.scrollLeft;
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             // Inverted: dragging right pans left (natural pan feel)
             const deltaX = startX - moveEvent.clientX;
             container.scrollLeft = Math.max(0, startScrollLeft + deltaX);
         };
 
-        const onMouseUp = (upEvent: MouseEvent) => {
+        const onMouseUp = (upEvent: MouseEvent): void => {
             if (upEvent.button === 1) {
                 document.removeEventListener('mousemove', onMouseMove);
                 document.removeEventListener('mouseup', onMouseUp);

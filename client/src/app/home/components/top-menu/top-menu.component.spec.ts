@@ -1,6 +1,6 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { TopMenuComponent } from './top-menu.component';
 import { UserService } from 'src/app/auth/user.service';
 import { ProjectService } from 'src/app/project/project.service';
@@ -26,7 +26,7 @@ function setup(user: User) {
     const injector = Injector.create({
         providers: [
             // instant() echoes the key so assertions stay i18n-independent
-            { provide: TranslateService, useValue: { instant: (k: string) => k } },
+            { provide: I18nService, useValue: { instant: (k: string) => k } },
             { provide: UserService, useValue: { user$: of(user) } },
             { provide: ProjectService, useValue: { loadProjects: () => of([]) } },
             { provide: ProjectStore, useValue: { project$: of(null) } },

@@ -125,11 +125,11 @@ export class CommandPaletteService {
         this.ref.setInput(
             'createItem',
             create
-                ? ({
+                ? {
                       ...create,
                       score: 0,
                       highlight: [{ text: create.title, hit: false }]
-                  } as RankedCommand)
+                  }
                 : null
         );
     }

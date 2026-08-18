@@ -62,7 +62,7 @@ export class MrLinkPickerComponent implements OnInit {
             .subscribe(list => this.integrations.set(list));
     }
 
-    protected get integrationOptions() {
+    protected get integrationOptions(): { label: string; value: number }[] {
         return this.integrations().map(i => ({ label: i.name, value: i.idGitIntegration }));
     }
 

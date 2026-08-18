@@ -17,7 +17,7 @@ import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import {
     UiDateRangePreset,
     UiDateRangeValue
@@ -39,7 +39,7 @@ export class FilterComponent implements OnInit {
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly projectStore = inject(ProjectStore);
     private readonly destroyRef = inject(DestroyRef);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     public readonly severities$: Observable<IssueSeverity[]> = this.projectStore.project$.pipe(
         switchMap(project => this.severityStore.severitiesByProject$(project.idProject))

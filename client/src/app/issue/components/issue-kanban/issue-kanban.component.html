@@ -106,7 +106,7 @@
     <app-sprint-tab-strip
         [tabs]="sprintTabs()"
         [selectedIdSprint]="selectedIdSprint()"
-        (select)="onSprintChange($event)"
+        (selected)="onSprintChange($event)"
         (createRequested)="onCreateSprint()"
         (editRequested)="onEditSprint($event)"
         (taskDropped)="onTabTaskDropped($event)"

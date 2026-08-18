@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { UiModule } from 'src/app/ui/ui.module';
@@ -9,8 +8,9 @@ import { GanttArrowLayerComponent } from './gantt-arrow-layer.component';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { GanttZoomLevel } from '../../constants/gantt-zoom-config';
 import { ExtendedIssue } from '../../../../model/extended-issue.model';
-import { ReadIssueRelationDto } from '../../../../model/issue-relation.model';
+import { IssueRelationRef, ReadIssueRelationDto } from '../../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 
@@ -28,8 +28,9 @@ function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
         estimated: 3600,
         state: undefined,
         severity: undefined,
+        assignedToUser: undefined,
         ...over
-    } as ExtendedIssue;
+    };
 }
 
 const rowHeightSignal = Object.assign(() => 72, { set: vi.fn() });
@@ -49,17 +50,33 @@ const timelineServiceMock = {
     toDate: vi.fn(() => new Date('2025-01-15'))
 };
 
+function makeRelationRef(idIssuePublic: number): IssueRelationRef {
+    return {
+        idIssuePublic,
+        title: `Task ${idIssuePublic}`,
+        idSeverity: null,
+        idState: null,
+        assignedTo: null,
+        updateAt: '2025-01-15T00:00:00Z',
+        qualityScore: null
+    };
+}
+
 function makeRelation(over: Partial<ReadIssueRelationDto> = {}): ReadIssueRelationDto {
     return {
         idIssueRelation: 1,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         relationType: IssueRelationType.Schedule,
         relationSubType: IssueRelationSubType.FinishToStart,
-        from: { idIssuePublic: 1 },
-        to: { idIssuePublic: 2 },
+        from: makeRelationRef(1),
+        to: makeRelationRef(2),
         lagMinutes: null,
+        label: 'blocks',
+        inverseLabel: 'blocked by',
+        createdAt: '2025-01-15T00:00:00Z',
+        createdBy: 1,
         ...over
-    } as ReadIssueRelationDto;
+    };
 }
 
 async function createFixture(
@@ -110,12 +127,10 @@ async function createFixture(
 
 describe('GanttArrowLayerComponent (TestBed)', () => {
     let comp: any;
-    let fixture: any;
 
     beforeEach(async () => {
         const result = await createFixture();
         comp = result.comp;
-        fixture = result.fixture;
     });
 
     // =========================================================================
@@ -133,7 +148,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
         it('skips inbound relations', async () => {
             TestBed.resetTestingModule();
             const result = await createFixture({
-                relations: [makeRelation({ direction: 'inbound' })]
+                relations: [makeRelation({ direction: IssueRelationDirection.Inbound })]
             });
             expect(result.comp.arrows()).toHaveLength(0);
         });
@@ -143,8 +158,8 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             const result = await createFixture({
                 relations: [
                     makeRelation({
-                        from: { idIssuePublic: 999 },
-                        to: { idIssuePublic: 2 }
+                        from: makeRelationRef(999),
+                        to: makeRelationRef(2)
                     })
                 ]
             });
@@ -341,20 +356,20 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.CHILD');
         });
 
-        it('relationSubTypeTranslationKey default for unknown', async () => {
+        it('relationTypeTranslationKey falls back when the API sends an unknown type', async () => {
             TestBed.resetTestingModule();
             const result = await createFixture({
-                relations: [makeRelation({ relationSubType: 'unknown' as any })]
-            });
-            expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.BASIC');
-        });
-
-        it('relationTypeTranslationKey default for unknown', async () => {
-            TestBed.resetTestingModule();
-            const result = await createFixture({
-                relations: [makeRelation({ relationType: 'unknown' as any })]
+                relations: [makeRelation({ relationType: 'unknown' as IssueRelationType })]
             });
             expect(result.comp.arrows()[0].relationTypeTranslationKey).toBe('RELATION.BASIC');
+        });
+
+        it('relationSubTypeTranslationKey default when the relation has no subtype', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture({
+                relations: [makeRelation({ relationSubType: null })]
+            });
+            expect(result.comp.arrows()[0].relationSubTypeTranslationKey).toBe('RELATION.BASIC');
         });
     });
 
@@ -378,7 +393,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 ],
                 relations: [
                     makeRelation({ idIssueRelation: 1 }),
-                    makeRelation({ idIssueRelation: 2, to: { idIssuePublic: 3 } })
+                    makeRelation({ idIssueRelation: 2, to: makeRelationRef(3) })
                 ]
             });
             result.fixture.componentRef.setInput('selectedRelationId', 1);
@@ -397,7 +412,7 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 ],
                 relations: [
                     makeRelation({ idIssueRelation: 1 }),
-                    makeRelation({ idIssueRelation: 2, to: { idIssuePublic: 3 } })
+                    makeRelation({ idIssueRelation: 2, to: makeRelationRef(3) })
                 ]
             });
             result.fixture.componentRef.setInput('selectedRelationId', 1);
@@ -529,13 +544,13 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
                 relations: [
                     makeRelation({
                         idIssueRelation: 1,
-                        from: { idIssuePublic: 1 },
-                        to: { idIssuePublic: 2 }
+                        from: makeRelationRef(1),
+                        to: makeRelationRef(2)
                     }),
                     makeRelation({
                         idIssueRelation: 2,
-                        from: { idIssuePublic: 1 },
-                        to: { idIssuePublic: 3 }
+                        from: makeRelationRef(1),
+                        to: makeRelationRef(3)
                     })
                 ]
             });

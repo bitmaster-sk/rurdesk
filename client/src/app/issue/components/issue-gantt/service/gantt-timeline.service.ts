@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { differenceInMilliseconds, isSameDay, isWeekend as dateFnsIsWeekend } from 'date-fns';
-import { TranslateService } from '@ngx-translate/core';
-import { GanttZoomLevel, ZoomConfig, ZOOM_CONFIGS } from '../constants/gantt-zoom-config';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { GanttZoomLevel, ZOOM_CONFIGS } from '../constants/gantt-zoom-config';
 import { STORAGE_KEY_ZOOM } from '../constants/gantt-storage-keys';
 
 export interface GanttColumn {
@@ -26,7 +26,7 @@ export interface GanttHeaderRow {
 
 @Injectable()
 export class GanttTimelineService {
-    private readonly translate = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     public readonly zoomLevel = signal<GanttZoomLevel>(this.loadZoomLevel());
     public readonly rowHeight = signal<number>(64);
@@ -100,7 +100,7 @@ export class GanttTimelineService {
                 date: current,
                 left: index * cfg.columnWidthPx,
                 width: cfg.columnWidthPx,
-                label: cfg.labelFn(current, this.translate),
+                label: cfg.labelFn(current, this.i18n),
                 isToday: isSameDay(current, today),
                 isWeekend: cfg.showWeekend && dateFnsIsWeekend(current)
             });
@@ -198,7 +198,7 @@ export class GanttTimelineService {
         }
 
         // Apply padding — advanceFn supports negative counts via date-fns
-        let start = cfg.snapFn(cfg.advanceFn(contentStart, -cfg.paddingBefore));
+        const start = cfg.snapFn(cfg.advanceFn(contentStart, -cfg.paddingBefore));
         let end = cfg.advanceFn(contentEnd, cfg.paddingAfter);
 
         // Enforce minimum column count, extending the end if needed

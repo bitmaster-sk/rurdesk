@@ -3,6 +3,7 @@ import { of, Subject, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { SavedViewApi } from '../api/saved-view.api.service';
 import { SavedView } from '../model/saved-view.model';
+import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 import { SavedViewStore } from './saved-view.store';
 
 describe('SavedViewStore', () => {
@@ -21,7 +22,16 @@ describe('SavedViewStore', () => {
     }
 
     function view(idSavedView: number, idProject = 1): SavedView {
-        return { idSavedView, idProject, name: `v${idSavedView}` } as SavedView;
+        return {
+            idSavedView,
+            idProject,
+            name: `v${idSavedView}`,
+            viewType: IssueViewMode.TABLE,
+            config: { v: 1 },
+            isShared: false,
+            createBy: 1,
+            updateAt: '2026-08-01T00:00:00Z'
+        };
     }
 
     it('drops a pending record staged for another project', () => {

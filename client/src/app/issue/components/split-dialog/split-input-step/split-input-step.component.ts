@@ -12,7 +12,7 @@ export class SplitInputStepComponent {
     public issueTitle = input.required<string>();
 
     public split = output<string>();
-    public cancel = output<void>();
+    public cancelled = output<void>();
 
     public readonly hintControl = new FormControl('');
 
@@ -21,6 +21,6 @@ export class SplitInputStepComponent {
     }
 
     public onCancel(): void {
-        this.cancel.emit();
+        this.cancelled.emit();
     }
 }

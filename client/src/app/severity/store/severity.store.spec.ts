@@ -1,3 +1,4 @@
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { SeverityStore } from './severity.store';
 import { SeverityApi } from '../api/severity.api.service';
@@ -16,7 +17,10 @@ const severities = [
 
 describe('SeverityStore', () => {
     function build(): SeverityStore {
-        const store = new SeverityStore({ load$: () => of(severities) } as unknown as SeverityApi);
+        const injector = Injector.create({
+            providers: [{ provide: SeverityApi, useValue: { load$: () => of(severities) } }]
+        });
+        const store = runInInjectionContext(injector, () => new SeverityStore());
         store.load();
         return store;
     }

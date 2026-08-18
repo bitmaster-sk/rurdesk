@@ -10,6 +10,8 @@ import {
 } from '@angular/core';
 import { UiOptionNav } from './option-nav';
 
+import { OptionConverter } from '../../converter/option.converter';
+
 type OptionRecord = Record<string, unknown>;
 
 /**
@@ -68,7 +70,7 @@ export class UiListboxComponent<T> {
     public readonly emptyFilterMessage = input<string>();
 
     /** Action emit — fires on every pick (no value binding). */
-    public readonly onChange = output<{ originalEvent?: Event; value: T }>();
+    public readonly valueChanged = output<{ originalEvent?: Event; value: T }>();
 
     protected readonly itemTpl = contentChild<TemplateRef<{ $implicit: T }>>('item');
 
@@ -88,7 +90,7 @@ export class UiListboxComponent<T> {
     protected readonly boundGetOptionLabel = (option: T): string => this.getOptionLabel(option);
 
     protected pick(option: T, originalEvent?: Event): void {
-        this.onChange.emit({ originalEvent, value: option });
+        this.valueChanged.emit({ originalEvent, value: option });
     }
 
     protected onKeydown(event: KeyboardEvent): void {
@@ -134,10 +136,10 @@ export class UiListboxComponent<T> {
     protected getOptionLabel(option: T): string {
         const key = this.optionLabel();
         if (key) {
-            return String((option as OptionRecord)[key] ?? '');
+            return OptionConverter.toLabel((option as OptionRecord)[key]);
         }
         const label = (option as OptionRecord)?.['label'];
-        return String(label ?? option ?? '');
+        return OptionConverter.toLabel(label ?? option);
     }
 }
 

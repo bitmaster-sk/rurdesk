@@ -23,7 +23,7 @@ import {
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { HttpErrorResponse } from '@angular/common/http';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
 import { first, map } from 'rxjs/operators';
@@ -77,7 +77,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private readonly issueToolbarService = inject(IssueToolbarService);
 
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
 
     private readonly toast = inject(ToastNotificationService);
 
@@ -238,7 +238,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private onRemoteIssueNotice(notice: Notice<Issue>): void {
         const issue = notice.payload;
-        if (!issue || issue.idProject !== this.idProject()) return;
+        if (issue?.idProject !== this.idProject()) return;
         this.analytics.reloadStatsAfterNotice();
         if (this.showCharts() && this.selectedIdSprint() !== null) {
             this.analytics.reloadBurndownAfterNotice();
@@ -249,9 +249,9 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
             return;
         }
 
-        const sourceRect = (
-            document.querySelector(`[data-tile-id="${issue.idIssue}"]`) as HTMLElement | null
-        )?.getBoundingClientRect();
+        const sourceRect = document
+            .querySelector<HTMLElement>(`[data-tile-id="${issue.idIssue}"]`)
+            ?.getBoundingClientRect();
 
         const result = this.issueKanbanService.applyRemoteIssue(
             issue,
@@ -276,7 +276,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     /** Shared "this just changed" ring on an in-place updated tile. */
     private pulseTile(idIssue: number): void {
         requestAnimationFrame(() => {
-            const el = document.querySelector(`[data-tile-id="${idIssue}"]`) as HTMLElement | null;
+            const el = document.querySelector<HTMLElement>(`[data-tile-id="${idIssue}"]`);
             if (el) pulseElement(el);
         });
     }
@@ -291,9 +291,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         // by the first frame; if it still sits at the old rect, check next frame.
         const attempt = (retriesLeft: number): void => {
             requestAnimationFrame(() => {
-                const el = document.querySelector(
-                    `[data-tile-id="${idIssue}"]`
-                ) as HTMLElement | null;
+                const el = document.querySelector(`[data-tile-id="${idIssue}"]`);
                 if (!el) return;
                 const to = el.getBoundingClientRect();
                 const dx = from.left - to.left;
@@ -316,7 +314,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
                     ],
                     { duration: UI_SETTLE_DURATION_MS, easing: UI_SETTLE_EASING }
                 );
-                animation.finished
+                void animation.finished
                     .catch(() => undefined)
                     .then(() => el.classList.remove('tile-flying'));
             });
@@ -480,7 +478,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
             total?: number;
         };
         const tile = source?.tiles?.[payload.event.previousIndex];
-        if (!tile || tile.idIssuePublic == null || (tile.idSprint ?? null) === payload.idSprint) {
+        if (tile?.idIssuePublic == null || (tile.idSprint ?? null) === payload.idSprint) {
             this.issueFilterStore.refresh();
             return;
         }

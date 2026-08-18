@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import {
@@ -22,8 +22,8 @@ export class IssueSearchCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
     private readonly issueService = inject(IssueService);
     private readonly acl = inject(AclStore);
-    private readonly translate = inject(TranslateService);
-    private readonly t: Translator = (k, p) => this.translate.instant(k, p);
+    private readonly i18n = inject(I18nService);
+    private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
     private readonly states = toSignal(inject(StateStore).states$, { initialValue: [] });
 
     /** Cache keyed by project — cleared/refetched on project switch so a stale project's
@@ -44,11 +44,13 @@ export class IssueSearchCommandProvider implements CommandProvider {
     }
 
     public getCommands(ctx: CommandContext): Command[] {
-        if (!this.cache || this.cache.idProject !== ctx.idProject) return [];
+        if (this.cache?.idProject !== ctx.idProject) return [];
         return buildIssueJumpCommands(
             ctx,
             this.cache.issues,
-            p => this.router.navigate(p as unknown[]),
+            p => {
+                void this.router.navigate(p);
+            },
             this.t
         );
     }
@@ -83,8 +85,13 @@ export class IssueSearchCommandProvider implements CommandProvider {
                 idSeverity: null,
                 tracked: 0
             })
-            .subscribe(created =>
-                this.router.navigate(['/project', ctx.idProject, 'issue', created.idIssuePublic])
-            );
+            .subscribe(created => {
+                void this.router.navigate([
+                    '/project',
+                    ctx.idProject,
+                    'issue',
+                    created.idIssuePublic
+                ]);
+            });
     }
 }

@@ -20,7 +20,7 @@ function savedView(overrides: Partial<SavedView> = {}): SavedView {
         updateAt: '2026-08-01T00:00:00Z',
         config: { v: 1, idsState: [1, 2] },
         ...overrides
-    } as SavedView;
+    };
 }
 
 describe('SavedViewApplyService', () => {

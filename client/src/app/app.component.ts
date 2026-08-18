@@ -13,9 +13,9 @@ export class AppComponent {
     private readonly sUser = inject(UserService);
     private readonly hotkeys = inject(HotkeyService);
 
-    title = 'issue-client';
+    public title = 'issue-client';
 
-    constructor() {
+    public constructor() {
         // Settings are auth-gated on the server; an anonymous visitor (login/register)
         // runs on the store's fallback defaults and must not trigger a guaranteed 401.
         // After a successful login/registration the auth components load them.

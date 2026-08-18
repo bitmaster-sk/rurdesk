@@ -8,7 +8,7 @@ import {
     computed,
     model
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { combineLatest, of, Subscription } from 'rxjs';
 import { switchMap, take } from 'rxjs/operators';
@@ -107,8 +107,8 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
                     switchMap(project =>
                         combineLatest([
                             of(project),
-                            this.stateStore.statesByProject$(project.idProject!),
-                            this.severityStore.severitiesByProject$(project.idProject!)
+                            this.stateStore.statesByProject$(project.idProject),
+                            this.severityStore.severitiesByProject$(project.idProject)
                         ])
                     )
                 )
@@ -234,7 +234,13 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
 
     public onGoToIssues(): void {
         if (this.createdIdProject()) {
-            this.router.navigate(['/project', this.createdIdProject(), 'issue', 'view', 'table']);
+            void this.router.navigate([
+                '/project',
+                this.createdIdProject(),
+                'issue',
+                'view',
+                'table'
+            ]);
         }
     }
 
@@ -268,7 +274,13 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
             return;
         }
         try {
-            const snapshot: StagingSnapshot = JSON.parse(raw);
+            const parsed: unknown = JSON.parse(raw);
+            if (!ProjectBuilderComponent.isStagingSnapshot(parsed)) {
+                this.clearStaging();
+                this.step.set(1);
+                return;
+            }
+            const snapshot: StagingSnapshot = parsed;
             const age = Date.now() - new Date(snapshot.generatedAt).getTime();
             if (age > STAGING_TTL_MS) {
                 this.clearStaging();
@@ -284,6 +296,18 @@ export class ProjectBuilderComponent implements OnInit, OnDestroy {
             this.clearStaging();
             this.step.set(1);
         }
+    }
+
+    private static isStagingSnapshot(value: unknown): value is StagingSnapshot {
+        if (value === null || typeof value !== 'object') {
+            return false;
+        }
+        const snapshot = value as Record<string, unknown>;
+        return (
+            typeof snapshot['summary'] === 'string' &&
+            typeof snapshot['generatedAt'] === 'string' &&
+            Array.isArray(snapshot['issues'])
+        );
     }
 
     // Rate limit handling

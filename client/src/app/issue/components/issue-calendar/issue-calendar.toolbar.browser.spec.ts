@@ -1,16 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createCalendarFixture } from './calendar-testbed.helper';
-import { IssueCardViewType } from '../../constants/issue-card-view-type.constant';
 
 describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
-    let fixture: any;
     let comp: any;
     let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createCalendarFixture();
-        fixture = result.fixture;
         comp = result.comp;
         mocks = result.mocks;
     });
@@ -86,19 +83,19 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
 
     describe('onCardModeChange', () => {
         it('sets cardMode signal, persists to localStorage, toggles FC class', () => {
-            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            comp.onCardModeChange('CalendarCompact');
             expect(comp.cardMode()).toBe('CalendarCompact');
             expect(localStorage.getItem('issue-calendar-card-mode')).toBe('CalendarCompact');
         });
 
         it('comfortable mode removes fc--compact class', () => {
-            comp.onCardModeChange('CalendarComfort' as IssueCardViewType);
+            comp.onCardModeChange('CalendarComfort');
             expect(comp.cardMode()).toBe('CalendarComfort');
         });
 
         it('calls calendarApi.render after mode change', () => {
             getApi().render.mockClear();
-            comp.onCardModeChange('CalendarCompact' as IssueCardViewType);
+            comp.onCardModeChange('CalendarCompact');
             expect(getApi().render).toHaveBeenCalled();
         });
     });

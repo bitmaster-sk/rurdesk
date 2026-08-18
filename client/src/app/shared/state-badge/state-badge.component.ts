@@ -9,8 +9,8 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
     standalone: false
 })
 export class StateBadgeComponent {
-    @Input() state: IssueState | undefined;
-    @Input() size: 'xs' | 's' | 'default' | 'm' | 'l' | 'xl' = 'default';
+    @Input() public state: IssueState | undefined;
+    @Input() public size: 'xs' | 's' | 'default' | 'm' | 'l' | 'xl' = 'default';
 
     public get stateClass(): string {
         if (this.state?.start) return 'state-badge--start';

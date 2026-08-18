@@ -43,7 +43,7 @@ export class CreateUserDialogComponent {
         colorAvatarBg: [Color.randomAvatarBg()]
     });
 
-    constructor() {
+    public constructor() {
         // Re-apply the email/password/gateway validators whenever the bot flag
         // flips. Driven off the control's valueChanges (not a DOM event) so it
         // always runs AFTER the value is written to the model, which a native

@@ -4,11 +4,6 @@ import { SeverityCircleComponent } from './severity-circle.component';
 // Proof-of-concept Vitest browser-mode component test: renders the component in a real
 // browser via TestBed and asserts the computed inline style.
 describe('SeverityCircleComponent (browser)', () => {
-    function render(): HTMLElement {
-        const fixture = TestBed.createComponent(SeverityCircleComponent);
-        return fixture.nativeElement as HTMLElement;
-    }
-
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             declarations: [SeverityCircleComponent]

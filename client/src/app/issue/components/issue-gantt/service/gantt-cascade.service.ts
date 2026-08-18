@@ -3,6 +3,7 @@ import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { addSeconds } from 'date-fns';
 
 export interface CascadeResult {
@@ -63,11 +64,10 @@ export class GanttCascadeService {
 
         for (const relation of relations) {
             if (relation.relationType !== IssueRelationType.Schedule) continue;
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromId = relation.from.idIssuePublic;
             const toId = relation.to.idIssuePublic;
-            const subType = (relation.relationSubType ??
-                IssueRelationSubType.FinishToStart) as IssueRelationSubType;
+            const subType = relation.relationSubType ?? IssueRelationSubType.FinishToStart;
             const lagMinutes = relation.lagMinutes ?? 0;
 
             if (!outbound.has(fromId)) outbound.set(fromId, []);

@@ -81,7 +81,7 @@ export class ActivityCommentItemComponent {
 
     protected readonly isPlanComment = computed(() => {
         const run = this.agentRun();
-        if (run === null || run.phase !== AgentPhase.AwaitingApproval) {
+        if (run?.phase !== AgentPhase.AwaitingApproval) {
             return false;
         }
         const kind = this.message().messageKind;

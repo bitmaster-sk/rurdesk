@@ -15,7 +15,7 @@ import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { IssueService } from '../../issue.service';
-import { Issue } from '../../model/issue.model';
+import { Issue, IssueDraft } from '../../model/issue.model';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 
@@ -76,7 +76,7 @@ export class IssueDetailPage implements OnDestroy {
     // notice-driven run state, making the panel/timeline flicker or vanish.
     private lastLoadedIdIssue: number | null = null;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             const issue = this.issue();
             const project = this.project();
@@ -121,16 +121,19 @@ export class IssueDetailPage implements OnDestroy {
     }
 
     private loadIssue(params: IssueDetailPageParams): Observable<Issue> {
-        return params.idIssuePublic === null
-            ? of({
-                  idProject: params.idProject,
-                  idState: null,
-                  idSeverity: null,
-                  title: '',
-                  description: '',
-                  tracked: 0
-              } as Issue)
-            : this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
+        if (params.idIssuePublic !== null) {
+            return this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
+        }
+        // idIssue/idIssuePublic stay absent on purpose — the form reads their absence as "new issue".
+        const draft: IssueDraft = {
+            idProject: params.idProject,
+            idState: null,
+            idSeverity: null,
+            title: '',
+            description: '',
+            tracked: 0
+        };
+        return of(draft as Issue);
     }
 
     private toIssueDetailPageParams(params: ParamMap): IssueDetailPageParams | null {

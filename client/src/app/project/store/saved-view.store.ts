@@ -101,7 +101,7 @@ export class SavedViewStore {
     public consumePending(idProject: number): SavedView | null {
         const staged = this.pending;
         this.pending = null;
-        if (!staged || staged.idProject !== idProject) {
+        if (staged?.idProject !== idProject) {
             return null;
         }
         return staged.view;

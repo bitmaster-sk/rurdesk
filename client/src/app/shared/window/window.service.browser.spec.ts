@@ -2,7 +2,6 @@ import { describe, beforeEach, expect, it } from 'vitest';
 import { Component, ErrorHandler } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { WindowConfig } from './entity/window-config';
 import { WindowModule } from './window.module';
 import { WindowService } from './window.service';
 
@@ -31,7 +30,7 @@ describe('WindowService', () => {
 
     function openWindow(): void {
         TestBed.inject(WindowService)
-            .open(WindowTestContentComponent, { header: 'Test' } as WindowConfig)
+            .open(WindowTestContentComponent, { header: 'Test' })
             .onClose.subscribe();
         TestBed.inject(WindowService); // ensure DI graph is realised before CD
         TestBed.flushEffects();

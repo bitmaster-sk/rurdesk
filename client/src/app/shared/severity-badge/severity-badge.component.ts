@@ -9,8 +9,8 @@ import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
     standalone: false
 })
 export class SeverityBadgeComponent {
-    @Input() severity: IssueSeverity | undefined;
-    @Input() size: 'xs' | 's' | 'default' | 'm' | 'l' | 'xl' = 'default';
+    @Input() public severity: IssueSeverity | undefined;
+    @Input() public size: 'xs' | 's' | 'default' | 'm' | 'l' | 'xl' = 'default';
 
     public get sizeClass(): string {
         return `severity-badge--${this.size}`;

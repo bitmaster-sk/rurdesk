@@ -1,9 +1,13 @@
+import { IssueRelationDirection } from '../constants/issue-relation-direction.enum';
+import { IssueRelationSubType } from '../constants/issue-relation-subtype.enum';
+import { IssueRelationType } from '../constants/issue-relation-type.enum';
+
 export interface ReadIssueRelationDto {
     idIssueRelation: number;
-    relationType: string;
-    relationSubType: string | null;
+    relationType: IssueRelationType;
+    relationSubType: IssueRelationSubType | null;
     lagMinutes: number | null;
-    direction: string;
+    direction: IssueRelationDirection;
     label: string;
     inverseLabel: string;
     from: IssueRelationRef;
@@ -24,7 +28,7 @@ export interface IssueRelationRef {
 
 export interface CreateIssueRelationDto {
     idIssuePublicTo: number;
-    relationType: string;
-    relationSubType?: string | null;
+    relationType: IssueRelationType;
+    relationSubType?: IssueRelationSubType | null;
     lagMinutes?: number | null;
 }

@@ -9,7 +9,7 @@ import {
     signal
 } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { Subscription } from 'rxjs';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
@@ -32,7 +32,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectSeverityComponent implements OnInit, OnDestroy {
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly fb = inject(FormBuilder);
     private readonly sSeverity = inject(SeverityApi);
     private readonly sProject = inject(ProjectService);
@@ -89,11 +89,11 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
 
     public onNewSeverity(): void {
         this.sWindow
-            .open(SeverityFormWindowComponent, {
+            .open<IssueSeverity | null>(SeverityFormWindowComponent, {
                 header: this.i18n.instant('SEVERITY.NEW'),
                 data: { project: this.project() }
             })
-            .onClose.subscribe((savedSeverity: IssueSeverity) => {
+            .onClose.subscribe(savedSeverity => {
                 if (!savedSeverity) {
                     return;
                 }
@@ -104,11 +104,11 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
 
     protected onEditSeverity(severity: IssueSeverity): void {
         this.sWindow
-            .open(SeverityFormWindowComponent, {
+            .open<IssueSeverity | null>(SeverityFormWindowComponent, {
                 header: this.i18n.instant('SEVERITY.EDIT'),
                 data: { project: this.project(), severity }
             })
-            .onClose.subscribe((savedSeverity: IssueSeverity) => {
+            .onClose.subscribe(savedSeverity => {
                 if (!savedSeverity) {
                     return;
                 }

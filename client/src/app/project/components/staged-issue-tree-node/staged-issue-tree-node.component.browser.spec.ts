@@ -51,36 +51,36 @@ describe('StagedIssueTreeNodeComponent', () => {
     describe('depth', () => {
         it('is 1 when ancestorHasMoreSiblings is empty', () => {
             setup(makeNode('I-1'), true, []);
-            expect(component['depth']()).toBe(1);
+            expect(component.depth()).toBe(1);
         });
 
         it('is 3 when ancestorHasMoreSiblings has 2 entries', () => {
             setup(makeNode('I-1'), true, [true, false]);
-            expect(component['depth']()).toBe(3);
+            expect(component.depth()).toBe(3);
         });
     });
 
     describe('childAncestorHasMoreSiblings', () => {
         it('appends true when current node is NOT last child', () => {
             setup(makeNode('I-1', [makeNode('I-2')]), false, []);
-            expect(component['childAncestorHasMoreSiblings']()).toEqual([true]);
+            expect(component.childAncestorHasMoreSiblings()).toEqual([true]);
         });
 
         it('appends false when current node IS last child', () => {
             setup(makeNode('I-1', [makeNode('I-2')]), true, [false]);
-            expect(component['childAncestorHasMoreSiblings']()).toEqual([false, false]);
+            expect(component.childAncestorHasMoreSiblings()).toEqual([false, false]);
         });
 
         it('preserves existing ancestor flags', () => {
             setup(makeNode('I-1', [makeNode('I-2')]), false, [true, false]);
-            expect(component['childAncestorHasMoreSiblings']()).toEqual([true, false, true]);
+            expect(component.childAncestorHasMoreSiblings()).toEqual([true, false, true]);
         });
     });
 
     describe('event wrapping', () => {
         it('merges card issueChange onto node data, preserving hierarchy fields', () => {
             const node = makeNode('I-1');
-            node.data!.hierarchyParentRef = 'P-9';
+            node.data.hierarchyParentRef = 'P-9';
             setup(node, true, []);
             const emitted: IssueChangeEvent[] = [];
             component.issueChange.subscribe(e => emitted.push(e));

@@ -4,8 +4,19 @@ import { CursorPager } from './cursor-pager';
 import { IssuesPage } from '../model/issues-page.model';
 import { Issue } from '../model/issue.model';
 
+const issue = (idIssuePublic: number): Issue => ({
+    idIssue: idIssuePublic,
+    idIssuePublic,
+    idProject: 1,
+    idState: null,
+    idSeverity: null,
+    title: `Issue ${idIssuePublic}`,
+    description: '',
+    tracked: 0
+});
+
 const page = (ids: number[], next: string | null, total: number): IssuesPage => ({
-    items: ids.map(id => ({ idIssuePublic: id }) as Issue),
+    items: ids.map(issue),
     nextCursor: next,
     total
 });

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Route, UrlSegment } from '@angular/router';
+import { UrlSegment } from '@angular/router';
 import { of, Observable } from 'rxjs';
 import { firstProjectGuard } from './first-project.guard';
 import { ProjectService } from '../project/project.service';
@@ -12,7 +12,7 @@ describe('firstProjectGuard', () => {
             providers: [{ provide: ProjectService, useValue: { loadProjects: () => of(projects) } }]
         });
         const result = TestBed.runInInjectionContext(() =>
-            firstProjectGuard({} as Route, [] as UrlSegment[])
+            firstProjectGuard({}, [] as UrlSegment[])
         ) as Observable<boolean>;
         let value = undefined as unknown as boolean;
         result.subscribe(v => (value = v));

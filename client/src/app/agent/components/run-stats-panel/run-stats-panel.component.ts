@@ -49,7 +49,7 @@ export class RunStatsPanelComponent implements OnInit {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(notice => {
                 const payload = notice.payload as { idRun: number; stats: RunStats } | null;
-                if (payload && payload.idRun === this.idRun()) {
+                if (payload?.idRun === this.idRun()) {
                     this.stats.set(payload.stats);
                 }
             });

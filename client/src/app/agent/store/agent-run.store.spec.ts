@@ -5,9 +5,27 @@ import { AgentRunApi } from '../api/agent-run.api.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { AgentRun } from '../model/agent-run.model';
+import { AgentPhase } from '../model/agent-phase.enum';
 
 function makeRun(idRun: number, idIssue = 10): AgentRun {
-    return { idRun, idIssue } as AgentRun;
+    return {
+        idRun,
+        idIssue,
+        idProject: 1,
+        idUserBot: 2,
+        idGitIntegration: null,
+        phase: AgentPhase.Queued,
+        stagePlan: { stages: [] },
+        queuePosition: null,
+        prUrl: null,
+        prHostType: null,
+        prId: null,
+        branchName: null,
+        errorMessage: null,
+        startedAt: null,
+        finishedAt: null,
+        createdAt: '2026-01-01T00:00:00Z'
+    };
 }
 
 interface ApiMock {

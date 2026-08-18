@@ -1,5 +1,6 @@
 import { of } from 'rxjs';
-import type { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { ProjectBuilderApi } from './project-builder.api.service';
 import {
     ProjectBuilderGenerateReq,
@@ -12,7 +13,10 @@ describe('ProjectBuilderApi', () => {
 
     beforeEach(() => {
         post = vi.fn();
-        service = new ProjectBuilderApi({ post } as unknown as HttpClient);
+        const injector = Injector.create({
+            providers: [{ provide: HttpClient, useValue: { post } }]
+        });
+        service = runInInjectionContext(injector, () => new ProjectBuilderApi());
     });
 
     it('generate$ POSTs the request body (description, idState, idSeverity) to the generate endpoint', () => {

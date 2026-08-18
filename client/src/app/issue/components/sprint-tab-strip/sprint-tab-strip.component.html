@@ -10,7 +10,7 @@
             (cdkDropListDropped)="onDrop($event, backlog.idSprint)"
             (cdkDropListEntered)="dragSvc.hoveredName.set(backlog.label)"
             (cdkDropListExited)="dragSvc.hoveredName.set(null)"
-            (click)="select.emit(backlog.idSprint)"
+            (click)="selected.emit(backlog.idSprint)"
         >
             {{ backlog.label }}
         </button>
@@ -50,7 +50,7 @@
                 (cdkDropListDropped)="onDrop($event, tab.idSprint)"
                 (cdkDropListEntered)="dragSvc.hoveredName.set(tab.label)"
                 (cdkDropListExited)="dragSvc.hoveredName.set(null)"
-                (click)="select.emit(tab.idSprint)"
+                (click)="selected.emit(tab.idSprint)"
             >
                 @if (tab.isCurrent) {
                     <span class="sprint-tab--dot" aria-hidden="true"></span>

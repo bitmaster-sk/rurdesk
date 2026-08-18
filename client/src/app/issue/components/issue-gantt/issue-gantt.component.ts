@@ -38,10 +38,10 @@ import { BulkEditIssueEntry } from '../../model/bulk-edit-issues.model';
 import { IssueService } from '../../issue.service';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../constants/issue-relation-direction.enum';
 import { GanttRelation } from './model/gantt-relation.model';
 import { IssueRelationApi } from '../../api/issue-relation.api.service';
 import {
-    MIN_BAR_WIDTH_PX,
     BAR_BORDER,
     BAR_PADDING_COMFORTABLE,
     BAR_PADDING_COMPACT
@@ -375,8 +375,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             const serverIds = (this.ganttData()?.scheduledTasks ?? []).map(t => t.idIssuePublic);
             const pending = this.pendingOrder();
             if (
-                pending &&
-                serverIds.length === pending.length &&
+                serverIds.length === pending?.length &&
                 serverIds.every((id, i) => id === pending[i])
             ) {
                 this.pendingOrder.set(null);
@@ -432,9 +431,9 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         if (Date.now() - this.pendingPulseAt > 4000) return;
         requestAnimationFrame(() => {
             for (const idIssuePublic of ids) {
-                const barEl = document.querySelector(
+                const barEl = document.querySelector<HTMLElement>(
                     `.gantt-bar[data-task-id="${idIssuePublic}"]`
-                ) as HTMLElement | null;
+                );
                 if (barEl) pulseElement(barEl);
             }
         });
@@ -735,7 +734,6 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 break;
             case 'ArrowUp': {
                 event.preventDefault();
-                const tasks = this.scheduledTasks();
                 const current = this.selectedTaskIndex() ?? 0;
                 const next = Math.max(0, current - 1);
                 this.selectedTaskIndex.set(next);
@@ -760,7 +758,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 if (idx !== null) {
                     const task = this.scheduledTasks()[idx];
                     if (task) {
-                        this.router.navigate([
+                        void this.router.navigate([
                             '/project',
                             task.idProject,
                             'issue',
@@ -775,7 +773,9 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 const relId = this.selectedRelationId();
                 if (relId !== null) {
                     const relation = this.relations().find(
-                        r => r.idIssueRelation === relId && r.direction === 'outbound'
+                        r =>
+                            r.idIssueRelation === relId &&
+                            r.direction === IssueRelationDirection.Outbound
                     );
                     if (relation) {
                         const idProject = this.scheduledTasks()[0]?.idProject;
@@ -934,7 +934,10 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         const relations = this.relations();
         const adjacency = new Map<number, number[]>();
         for (const r of relations) {
-            if (r.direction !== 'outbound' || r.relationType !== IssueRelationType.Schedule)
+            if (
+                r.direction !== IssueRelationDirection.Outbound ||
+                r.relationType !== IssueRelationType.Schedule
+            )
                 continue;
             if (!adjacency.has(r.from.idIssuePublic)) adjacency.set(r.from.idIssuePublic, []);
             adjacency.get(r.from.idIssuePublic)!.push(r.to.idIssuePublic);
@@ -976,7 +979,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             relationType: IssueRelationType.Schedule,
             relationSubType: subType,
             lagMinutes: null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: { idIssuePublic: sourceId },

@@ -3,13 +3,11 @@ import { createTableFixture } from './table-testbed.helper';
 
 describe('IssueTableComponent.onRelationModeChange (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     it('sets isRelationMode and persists it to localStorage', () => {

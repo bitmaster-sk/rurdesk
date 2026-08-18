@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { BehaviorSubject, EMPTY, of } from 'rxjs';
 import { ProjectMemberStore } from '../../../project/project-member.store';
 import { ProjectStore } from '../../../project/project.store';
@@ -16,8 +16,12 @@ describe('FilterComponent — date modes (browser)', () => {
     let setFilter: ReturnType<typeof vi.fn>;
     let initialFilter$: BehaviorSubject<IssuesFilter>;
 
-    const filter = (extra: Partial<IssuesFilterParams> = {}) =>
-        ({ idProject: 1, ...extra }) as IssuesFilter;
+    const filter = (extra: Partial<IssuesFilterParams> = {}): IssuesFilter => ({
+        idProject: 1,
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc',
+        ...extra
+    });
 
     beforeEach(async () => {
         setFilter = vi.fn();
@@ -35,7 +39,7 @@ describe('FilterComponent — date modes (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })
@@ -140,11 +144,13 @@ describe('FilterComponent — date modes (browser)', () => {
 
 // The board and gantt create the panel on demand, by when initialFilter$ replays nothing.
 describe('FilterComponent — late mount (browser)', () => {
-    const activeFilter = {
+    const activeFilter: IssuesFilter = {
         idProject: 1,
         idsState: [4],
-        updateAtWithin: '30d'
-    } as IssuesFilter;
+        updateAtWithin: '30d',
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc'
+    };
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
@@ -164,7 +170,7 @@ describe('FilterComponent — late mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })
@@ -184,8 +190,12 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
     let setFilter: ReturnType<typeof vi.fn>;
     let initialFilter$: BehaviorSubject<IssuesFilter>;
 
-    const filter = (extra: Partial<IssuesFilterParams> = {}) =>
-        ({ idProject: 1, ...extra }) as IssuesFilter;
+    const filter = (extra: Partial<IssuesFilterParams> = {}): IssuesFilter => ({
+        idProject: 1,
+        orderColumn: 'idIssuePublic',
+        orderDirection: 'desc',
+        ...extra
+    });
 
     beforeEach(async () => {
         setFilter = vi.fn();
@@ -203,7 +213,7 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
-                { provide: TranslateService, useValue: { instant: (key: string) => key } }
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
             .overrideComponent(FilterComponent, { set: { template: '' } })

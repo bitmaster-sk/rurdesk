@@ -1,6 +1,6 @@
 import { User } from './model/user.model';
 import { HttpClient } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter, map, tap } from 'rxjs/operators';
 import { Register } from './model/register.model';
@@ -10,11 +10,11 @@ import { silentErrors } from 'src/app/core/http-error-context';
     providedIn: 'root'
 })
 export class UserService {
+    private readonly http = inject(HttpClient);
+
     public user: BehaviorSubject<User | null> = new BehaviorSubject<User | null>(null);
 
     public user$ = this.user.pipe(filter((u): u is User => u !== null));
-
-    constructor(private http: HttpClient) {}
 
     public getUser(): User {
         const user = this.user.getValue();

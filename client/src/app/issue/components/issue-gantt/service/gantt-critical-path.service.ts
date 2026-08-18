@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { GanttRelation } from '../model/gantt-relation.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 
 export interface CriticalPathResult {
     taskIds: Set<number>;
@@ -44,7 +45,7 @@ export class GanttCriticalPathService {
 
         for (const relation of relations) {
             if (relation.relationType !== IssueRelationType.Schedule) continue;
-            if (relation.direction !== 'outbound') continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
             const fromId = relation.from.idIssuePublic;
             const toId = relation.to.idIssuePublic;
             if (!taskMap.has(fromId) || !taskMap.has(toId)) continue;

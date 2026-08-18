@@ -23,7 +23,7 @@
                     {{ tile().carryoverCount }}
                 </span>
             }
-            @if (tile().points != null) {
+            @if (tile().points !== null && tile().points !== undefined) {
                 <span class="tile-card--points" data-testid="tile-points">{{ tile().points }}</span>
             }
         </div>

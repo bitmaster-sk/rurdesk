@@ -2,9 +2,9 @@ import { Injectable, signal, TemplateRef } from '@angular/core';
 
 @Injectable()
 export class IssueToolbarService {
-    public readonly toolbarTemplate = signal<TemplateRef<any> | null>(null);
+    public readonly toolbarTemplate = signal<TemplateRef<unknown> | null>(null);
 
-    public register(template: TemplateRef<any>): void {
+    public register(template: TemplateRef<unknown>): void {
         this.toolbarTemplate.set(template);
     }
 

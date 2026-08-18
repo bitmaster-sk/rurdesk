@@ -3,8 +3,7 @@ import { DragMode } from './service/gantt-drag.service';
 import { HandleSide } from './constants/gantt-handle-side.enum';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
-import { GanttZoomLevel } from './constants/gantt-zoom-config';
-import { createGanttFixture, makeTask, mockSub } from './gantt-testbed.helper';
+import { createGanttFixture, mockSub } from './gantt-testbed.helper';
 
 describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
     let comp: any;
@@ -118,7 +117,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             comp.onDragCompleted(DragMode.SchedulingBacklog);
 
             expect(mocks.issueServiceMock.updateIssue).toHaveBeenCalled();
-            sub.handlers.next?.({} as any);
+            sub.handlers.next?.({});
             expect(mocks.issueFilterStoreMock.refresh).toHaveBeenCalled();
             expect(mocks.dragServiceMock.reset).toHaveBeenCalled();
         });
@@ -387,7 +386,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             mocks.ganttServiceMock.addRelations.mockClear();
 
             comp.onRelationCreated(1, HandleSide.Right, 2, HandleSide.Left);
-            sub.handlers.next?.([{ idIssueRelation: 100 }] as any);
+            sub.handlers.next?.([{ idIssueRelation: 100 }]);
 
             expect(mocks.ganttServiceMock.addRelations).toHaveBeenCalled();
         });

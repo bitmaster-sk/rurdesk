@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import {
     Command,
     CommandContext,
@@ -20,8 +20,8 @@ export class PeopleCommandProvider implements CommandProvider {
     private readonly acl = inject(AclStore);
     private readonly issueService = inject(IssueService);
     private readonly notice = inject(NoticeService);
-    private readonly translate = inject(TranslateService);
-    private readonly t: Translator = (k, p) => this.translate.instant(k, p);
+    private readonly i18n = inject(I18nService);
+    private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
     private readonly users = toSignal(inject(ProjectMemberStore).users$, { initialValue: [] });
 
     public getCommands(ctx: CommandContext): Command[] {
@@ -44,6 +44,6 @@ export class PeopleCommandProvider implements CommandProvider {
             return;
         }
         if (ctx.idProject != null)
-            this.router.navigate(['/project', ctx.idProject, 'issue', 'view', 'table']);
+            void this.router.navigate(['/project', ctx.idProject, 'issue', 'view', 'table']);
     }
 }

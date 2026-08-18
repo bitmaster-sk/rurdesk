@@ -1,16 +1,13 @@
-import { Injectable } from '@angular/core';
-import { ActivatedRouteSnapshot, Resolve, RouterStateSnapshot } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import { Observable } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { Resolve } from '@angular/router';
+import { Observable, map } from 'rxjs';
+import { I18nService } from './shared/i18n/i18n.service';
 
 @Injectable({ providedIn: 'root' })
 export class TranslateResolver implements Resolve<void> {
-    constructor(private i18n: TranslateService) {}
+    private readonly i18n = inject(I18nService);
 
-    public resolve(
-        route: ActivatedRouteSnapshot,
-        state: RouterStateSnapshot
-    ): Observable<void> | Promise<void> | void {
-        return this.i18n.get('LOGIN');
+    public resolve(): Observable<void> {
+        return this.i18n.get$('LOGIN').pipe(map((): void => undefined));
     }
 }

@@ -8,9 +8,9 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class SplitDoneStepComponent {
     public count = input.required<number>();
-    public close = output<void>();
+    public closed = output<void>();
 
     public onClose(): void {
-        this.close.emit();
+        this.closed.emit();
     }
 }

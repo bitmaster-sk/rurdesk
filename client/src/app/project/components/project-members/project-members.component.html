@@ -189,7 +189,7 @@
             [filter]="true"
             [emptyMessage]="'TEAM.NO.TEAMMATES.TO.ADD' | translate"
             [emptyFilterMessage]="'NO_DATA' | translate"
-            (onChange)="onAddUser($event.value)"
+            (valueChanged)="onAddUser($event.value)"
         >
             <ng-template #item let-user>
                 <div class="flex items-center gap-2">
@@ -221,7 +221,7 @@
             [options]="availableTeams()"
             optionLabel="name"
             [emptyMessage]="'NO_DATA' | translate"
-            (onChange)="onAddTeam($event.value)"
+            (valueChanged)="onAddTeam($event.value)"
         >
             <ng-template #item let-team>{{ team.name }}</ng-template>
         </ui-listbox>

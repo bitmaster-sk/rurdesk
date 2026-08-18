@@ -1,6 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 import { SettingsStore } from '../../core/settings/settings.store';
@@ -14,17 +14,13 @@ import { UserService } from '../user.service';
     standalone: false
 })
 export class RegisterComponent implements OnInit {
-    public form: FormGroup;
-    public readonly errorKey = signal<string | null>(null);
+    private readonly fb = inject(FormBuilder);
+    private readonly router = inject(Router);
+    private readonly sUser = inject(UserService);
+    private readonly settingsStore = inject(SettingsStore);
 
-    constructor(
-        private fb: FormBuilder,
-        private router: Router,
-        private sUser: UserService,
-        private settingsStore: SettingsStore
-    ) {
-        this.form = this.buildForm();
-    }
+    public readonly form: FormGroup = this.buildForm();
+    public readonly errorKey = signal<string | null>(null);
 
     public ngOnInit(): void {
         // Clear a previous failure as soon as the user edits the form.
@@ -61,14 +57,14 @@ export class RegisterComponent implements OnInit {
         // App bootstrap skips the auth-gated settings load for anonymous visitors;
         // now that we have a token, load them (navigation does not re-bootstrap).
         this.settingsStore.load();
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
     }
 
     private onRegisterError(err: unknown): void {
         if (err instanceof HttpErrorResponse && err.url?.includes('/login')) {
             // The account was created but the follow-up auto-login failed —
             // let the user sign in manually instead of failing silently.
-            this.router.navigate(['/login']);
+            void this.router.navigate(['/login']);
             return;
         }
         if (err instanceof HttpErrorResponse && err.status === 403) {
@@ -100,12 +96,12 @@ export class RegisterComponent implements OnInit {
                         Validators.maxLength(100)
                     ])
                 },
-                { validators: [this.confirmPasswordCheck] }
+                { validators: [RegisterComponent.confirmPasswordCheck] }
             )
         });
     }
 
-    private confirmPasswordCheck(group: FormGroup) {
+    private static confirmPasswordCheck(group: FormGroup): ValidationErrors | null {
         const password = group.get('password')?.value;
         const password2 = group.get('password2')?.value;
 

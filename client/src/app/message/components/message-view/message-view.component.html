@@ -32,7 +32,7 @@
                     sendLabel="{{ 'SAVE' | translate }}"
                     [disableCancelButton]="false"
                     (messageChange)="editSave.emit($event)"
-                    (cancel)="onEditCancel()"
+                    (cancelled)="onEditCancel()"
                 ></app-message-editor>
             </div>
         } @else {

@@ -13,7 +13,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DestroyRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { startOfDay } from 'date-fns';
 import {
     UI_DATETIME_PATTERN,
@@ -58,7 +58,7 @@ type UiDatepickerValue = Date | Date[] | null;
 export class UiDatepickerDirective implements ControlValueAccessor, AfterViewInit, OnDestroy {
     private readonly el = inject<ElementRef<HTMLInputElement>>(ElementRef);
     private readonly zone = inject(NgZone);
-    private readonly translate = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
     /** `date` (default) · `datetime` (12h) · `range` ([from,to]). */
@@ -85,7 +85,11 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
     // Last value we propagated outward — used to revert a half-finished range on close.
     private lastValue: UiDatepickerValue = null;
 
-    public async ngAfterViewInit(): Promise<void> {
+    public ngAfterViewInit(): void {
+        void this.initFlatpickr();
+    }
+
+    private async initFlatpickr(): Promise<void> {
         const flatpickr = (await import('flatpickr')).default;
         if (this.destroyed) {
             return;
@@ -214,11 +218,11 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
         const clear = this.makeFooterButton();
 
         const setLabels = (): void => {
-            today.textContent = this.translate.instant('UI.DATEPICKER.TODAY');
-            clear.textContent = this.translate.instant('UI.DATEPICKER.CLEAR');
+            today.textContent = this.i18n.instant('UI.DATEPICKER.TODAY');
+            clear.textContent = this.i18n.instant('UI.DATEPICKER.CLEAR');
         };
         setLabels();
-        this.translate.onLangChange.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(setLabels);
+        this.i18n.langChange$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(setLabels);
 
         today.addEventListener('click', () =>
             this.zone.run(() => {

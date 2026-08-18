@@ -19,6 +19,6 @@ export class NotFoundPage {
     private readonly router = inject(Router);
 
     protected onHome(): void {
-        this.router.navigateByUrl('/');
+        void this.router.navigateByUrl('/');
     }
 }

@@ -19,7 +19,7 @@ export class LoginComponent implements OnInit {
     public form: FormGroup;
     public readonly hasFailed = signal(false);
 
-    constructor() {
+    public constructor() {
         this.form = this.buildForm();
     }
 
@@ -45,7 +45,7 @@ export class LoginComponent implements OnInit {
         // App bootstrap skips the auth-gated settings load for anonymous visitors;
         // now that we have a token, load them (navigation does not re-bootstrap).
         this.settingsStore.load();
-        this.router.navigate(['/']);
+        void this.router.navigate(['/']);
     }
 
     private logout(): void {

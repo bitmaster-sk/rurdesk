@@ -6,6 +6,8 @@
         "ng": "ng",
         "start": "ng serve --host 0.0.0.0 --port 1000",
         "build": "ng build",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "test": "npm run test:unit && npm run test:ct",
@@ -73,6 +75,7 @@
         "@angular/build": "^21.2.19",
         "@angular/cli": "^21.0.0",
         "@angular/compiler-cli": "^21.0.0",
+        "@eslint/js": "^10.0.1",
         "@playwright/test": "1.60.0",
         "@tailwindcss/postcss": "^4.3.2",
         "@types/lodash-es": "^4.17.12",
@@ -80,11 +83,15 @@
         "@vitest/browser": "^4.1.10",
         "@vitest/browser-playwright": "^4.1.10",
         "@vitest/coverage-v8": "^4.1.10",
+        "angular-eslint": "^21.4.0",
+        "eslint": "^10.8.1",
+        "eslint-config-prettier": "^10.1.8",
         "jsdom": "^28.1.0",
         "playwright": "1.60.0",
         "prettier": "3.9.6",
         "tailwindcss": "^4.3.2",
         "typescript": "~5.9.2",
+        "typescript-eslint": "^8.67.0",
         "vitest": "^4.1.10"
     }
 }

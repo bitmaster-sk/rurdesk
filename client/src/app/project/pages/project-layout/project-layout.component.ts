@@ -15,7 +15,7 @@ export class ProjectLayoutComponent implements OnDestroy {
     private readonly projectStore = inject(ProjectStore);
     private readonly commandPalette = inject(CommandPaletteService);
 
-    constructor() {
+    public constructor() {
         // Baseline command-palette context: the current project (issue is set by the detail page).
         this.projectStore.project$.pipe(takeUntilDestroyed()).subscribe(project =>
             this.commandPalette.setContext({

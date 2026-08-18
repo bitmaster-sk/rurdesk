@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 import { Injector, runInInjectionContext } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { GanttTimelineService } from './gantt-timeline.service';
 import { GanttZoomLevel } from '../constants/gantt-zoom-config';
 
-// GanttTimelineService injects TranslateService and reads localStorage on init, so it
+// GanttTimelineService injects I18nService and reads localStorage on init, so it
 // runs under jsdom with a stubbed translate (instant returns the key). Constructed via
 // `new` inside an injection context to avoid Angular DI JIT-compiling the @Injectable.
 function buildService(): GanttTimelineService {
     const injector = Injector.create({
-        providers: [{ provide: TranslateService, useValue: { instant: (k: string) => k } }]
+        providers: [{ provide: I18nService, useValue: { instant: (k: string) => k } }]
     });
     return runInInjectionContext(injector, () => new GanttTimelineService());
 }

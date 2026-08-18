@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { SavedView } from 'src/app/project/model/saved-view.model';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { configureTableTestBed, TableMocks } from './table-testbed.helper';
 import { IssueTableComponent } from './issue-table.component';
@@ -13,7 +14,16 @@ describe('IssueTableComponent saved view handoff (TestBed)', () => {
     const idProject = 10;
 
     function view(config: SavedView['config']): SavedView {
-        return { idSavedView: 3, idProject, viewType: 'table', config } as SavedView;
+        return {
+            idSavedView: 3,
+            idProject,
+            name: 'View',
+            viewType: IssueViewMode.TABLE,
+            config,
+            isShared: false,
+            createBy: 1,
+            updateAt: '2026-08-01T00:00:00Z'
+        };
     }
 
     async function mount(): Promise<void> {

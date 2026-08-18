@@ -12,6 +12,9 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 
+/** Single mode binds one state id; multi binds the list of selected ids. */
+type StateDropdownValue = number | number[] | null;
+
 @Component({
     selector: 'app-state-dropdown',
     templateUrl: './state-dropdown.component.html',
@@ -40,8 +43,8 @@ export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
 
     private pendingMultiIds: number[] = [];
 
-    public onChange: any = () => {};
-    public onTouch: any = () => {};
+    public onChange: (value: StateDropdownValue) => void = () => {};
+    public onTouch: (value: StateDropdownValue) => void = () => {};
 
     private readonly cdr = inject(ChangeDetectorRef);
 
@@ -67,22 +70,22 @@ export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
         this.onTouch(ids);
     }
 
-    public writeValue(value: any): void {
+    public writeValue(value: StateDropdownValue): void {
         if (this.multi) {
-            const ids: number[] = value ?? [];
+            const ids = Array.isArray(value) ? value : [];
             this.pendingMultiIds = ids;
             this.multiValue = (this.states ?? []).filter(s => ids.includes(s.idState));
         } else {
-            this.value = value;
+            this.value = typeof value === 'number' ? value : null;
         }
         this.cdr.markForCheck();
     }
 
-    public registerOnChange(fn: any): void {
+    public registerOnChange(fn: (value: StateDropdownValue) => void): void {
         this.onChange = fn;
     }
 
-    public registerOnTouched(fn: any): void {
+    public registerOnTouched(fn: (value: StateDropdownValue) => void): void {
         this.onTouch = fn;
     }
 }

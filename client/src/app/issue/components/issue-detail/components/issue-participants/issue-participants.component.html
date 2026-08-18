@@ -47,7 +47,7 @@
         </span>
     </div>
 
-    <ui-popover #addPopover (onHide)="memberSearch.set('')">
+    <ui-popover #addPopover (closed)="memberSearch.set('')">
         <div class="participants-popover">
             <div class="participants-popover__search">
                 <input
@@ -55,7 +55,7 @@
                     type="text"
                     [placeholder]="'ISSUE.PARTICIPANTS.SEARCH' | translate"
                     [value]="memberSearch()"
-                    (input)="memberSearch.set($any($event.target).value)"
+                    (input)="onSearchInput($event)"
                     class="w-full"
                     size="small"
                 />

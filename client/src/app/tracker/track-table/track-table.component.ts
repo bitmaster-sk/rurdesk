@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { combineLatest, merge, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
@@ -13,6 +13,10 @@ import { UserApi } from 'src/app/user/api/user.api.service';
     standalone: false
 })
 export class TrackTableComponent implements OnInit {
+    private readonly sTracker = inject(TrackerService);
+    private readonly userApi = inject(UserApi);
+    private readonly sUser = inject(UserService);
+
     public users = new Map<number, User>();
 
     public tracks$ = this.sTracker.tracks$;
@@ -42,12 +46,6 @@ export class TrackTableComponent implements OnInit {
             })
         )
     );
-
-    constructor(
-        private sTracker: TrackerService,
-        private userApi: UserApi,
-        private sUser: UserService
-    ) {}
 
     public ngOnInit(): void {
         this.userApi

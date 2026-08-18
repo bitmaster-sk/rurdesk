@@ -53,7 +53,7 @@ export class AdminSettingsComponent {
      *  doesn't fire a redundant save (and flash the chip). */
     private lastSaved = '';
 
-    constructor() {
+    public constructor() {
         this.versionApi
             .getVersion$()
             .pipe(takeUntilDestroyed())

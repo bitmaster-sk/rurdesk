@@ -36,7 +36,7 @@ export class SprintTabStripComponent implements AfterViewInit {
     public readonly tabs = input.required<SprintTab[]>();
     public readonly selectedIdSprint = input<number | null>(null);
 
-    public readonly select = output<number | null>();
+    public readonly selected = output<number | null>();
     public readonly createRequested = output<void>();
     public readonly editRequested = output<number>();
     public readonly taskDropped = output<{
@@ -54,7 +54,7 @@ export class SprintTabStripComponent implements AfterViewInit {
 
     private hasScrolledToCurrent = false;
 
-    constructor() {
+    public constructor() {
         // Recompute arrow visibility when the tab set changes (deferred until the
         // new tabs are laid out).
         effect(() => {

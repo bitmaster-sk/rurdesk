@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
-import { createGanttFixture, configureGanttTestBed, makeTask } from './gantt-testbed.helper';
+import { createGanttFixture } from './gantt-testbed.helper';
 import { IssueGanttComponent } from './issue-gantt.component';
 import { TestBed } from '@angular/core/testing';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
@@ -256,7 +256,6 @@ describe('IssueGanttComponent empty task list (TestBed)', () => {
 describe('IssueGanttComponent Delete with relations (TestBed)', () => {
     let fixture: any;
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
@@ -272,7 +271,6 @@ describe('IssueGanttComponent Delete with relations (TestBed)', () => {
         const result = await createGanttFixture({ relations });
         fixture = result.fixture;
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     function keyDown(key: string) {

@@ -20,7 +20,7 @@ export class IssueCalendarService {
     private readonly stateStore = inject(StateStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
 
-    constructor() {
+    public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
         // stale load before this view's setInitialFilter runs.
         this.issueFilterStore.clear();
@@ -57,7 +57,6 @@ export class IssueCalendarService {
                 const assigned = issue.assignedTo != null ? users.get(issue.assignedTo) : undefined;
                 const state = issue.idState !== null ? states.get(issue.idState) : undefined;
                 const isAllDay = !issue.estimated;
-                const severityColor = severity?.color ?? null;
                 return {
                     id: `${issue.idIssue}`,
                     allDay: isAllDay,

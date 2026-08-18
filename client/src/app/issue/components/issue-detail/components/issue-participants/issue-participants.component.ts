@@ -46,6 +46,12 @@ export class IssueParticipantsComponent {
     public readonly isCollapsed = signal(true);
     public readonly memberSearch = signal('');
 
+    public onSearchInput(event: Event): void {
+        if (event.target instanceof HTMLInputElement) {
+            this.memberSearch.set(event.target.value);
+        }
+    }
+
     /** Members that are NOT yet participants — available for the add popover. */
     public readonly availableMembers = computed(() => {
         const participantIds = new Set(this.participants().map(p => p.idUser));
@@ -55,7 +61,7 @@ export class IssueParticipantsComponent {
         );
     });
 
-    constructor() {
+    public constructor() {
         // React to idIssuePublic changes (e.g. navigating between issues)
         effect(() => {
             const idIssuePublic = this.idIssuePublic();

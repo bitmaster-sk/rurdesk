@@ -6,7 +6,6 @@ import {
     inject,
     input,
     OnDestroy,
-    OnInit,
     output,
     signal,
     viewChild
@@ -35,7 +34,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class IssueQuickActionsComponent implements OnInit, OnDestroy {
+export class IssueQuickActionsComponent implements OnDestroy {
     private readonly router = inject(Router);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly projectStore = inject(ProjectStore);
@@ -82,7 +81,7 @@ export class IssueQuickActionsComponent implements OnInit, OnDestroy {
 
     private anchor: HTMLElement | null = null;
 
-    constructor() {
+    public constructor() {
         combineLatest([
             this.projectStore.project$,
             this.stateStore.states$,
@@ -96,8 +95,6 @@ export class IssueQuickActionsComponent implements OnInit, OnDestroy {
                 this.users.set(users);
             });
     }
-
-    public ngOnInit(): void {}
 
     public ngOnDestroy(): void {
         this.anchor?.remove();
@@ -230,7 +227,7 @@ export class IssueQuickActionsComponent implements OnInit, OnDestroy {
     protected onOpen(): void {
         const issue = this.issue();
         if (!issue) return;
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
         this.hide();
     }
 

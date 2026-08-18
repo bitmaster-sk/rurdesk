@@ -1,7 +1,7 @@
 import { Pipe, PipeTransform } from '@angular/core';
 import { fromAsciiToEmoji } from './ascii-emoji';
 
-declare var joypixels: {
+declare let joypixels: {
     shortnameToUnicode(input: string): string;
 };
 
@@ -10,7 +10,7 @@ declare var joypixels: {
     standalone: false
 })
 export class EmojiPipe implements PipeTransform {
-    transform(value: string): string {
+    public transform(value: string): string {
         return fromAsciiToEmoji(joypixels.shortnameToUnicode(value));
     }
 }

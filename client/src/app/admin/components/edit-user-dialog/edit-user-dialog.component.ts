@@ -52,7 +52,7 @@ export class EditUserDialogComponent {
         colorAvatarBg: ['']
     });
 
-    constructor() {
+    public constructor() {
         // Re-seed the form whenever a different user is opened for editing.
         effect(() => {
             const user = this.user();

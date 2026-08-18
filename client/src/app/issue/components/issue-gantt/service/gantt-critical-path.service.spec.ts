@@ -2,6 +2,7 @@ import { GanttCriticalPathService } from './gantt-critical-path.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
 
 describe('GanttCriticalPathService', () => {
@@ -13,6 +14,7 @@ describe('GanttCriticalPathService', () => {
 
     function makeIssue(id: number, estimated: number): Issue {
         return {
+            idIssue: id,
             idIssuePublic: id,
             idProject: 1,
             idState: null,
@@ -22,7 +24,7 @@ describe('GanttCriticalPathService', () => {
             tracked: 0,
             estimated,
             scheduledAt: new Date('2026-04-10T09:00:00Z')
-        } as Issue;
+        };
     }
 
     function makeRelation(
@@ -36,7 +38,7 @@ describe('GanttCriticalPathService', () => {
             relationType: IssueRelationType.Schedule,
             relationSubType: IssueRelationSubType.FinishToStart,
             lagMinutes: lag ?? null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: {

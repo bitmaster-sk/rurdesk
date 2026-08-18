@@ -14,13 +14,11 @@ function makeDropEvent(
 
 describe('IssueTableComponent drag handlers (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     // =========================================================================
@@ -29,7 +27,7 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
 
     describe('onDragStart', () => {
         it('sets isDragging and draggingFromIssue, writes dataTransfer', () => {
-            const issue = makeIssue({ idIssuePublic: 5 } as any);
+            const issue = makeIssue({ idIssuePublic: 5 });
             const dataTransfer = { setData: vi.fn() };
             comp.onDragStart({ dataTransfer } as any, issue);
             expect(comp.isDragging()).toBe(true);
@@ -45,8 +43,8 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
     describe('onDragEnter', () => {
         it('prevents default and sets idIssueDragOver for a different issue', () => {
             const preventDefault = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const targetIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const targetIssue = makeIssue({ idIssuePublic: 2 });
             comp.isDragging.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDragEnter({ preventDefault } as any, targetIssue);
@@ -57,13 +55,13 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
         it('no-op when not dragging', () => {
             const preventDefault = vi.fn();
             comp.isDragging.set(false);
-            comp.onDragEnter({ preventDefault } as any, makeIssue({ idIssuePublic: 2 } as any));
+            comp.onDragEnter({ preventDefault } as any, makeIssue({ idIssuePublic: 2 }));
             expect(preventDefault).not.toHaveBeenCalled();
         });
 
         it('no-op when entering the same issue being dragged', () => {
             const preventDefault = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
             comp.isDragging.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDragEnter({ preventDefault } as any, fromIssue);
@@ -127,19 +125,17 @@ describe('IssueTableComponent drag handlers (TestBed)', () => {
 
 describe('IssueTableComponent onDropZone (TestBed)', () => {
     let comp: any;
-    let mocks: any;
 
     beforeEach(async () => {
         localStorage.clear();
         const result = await createTableFixture();
         comp = result.comp;
-        mocks = result.mocks;
     });
 
     describe('schedule relation with askLag enabled', () => {
         it('opens lag dialog and stores pending relation', () => {
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.onDropZone(
@@ -162,8 +158,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
     describe('non-schedule or askLag disabled', () => {
         it('submits relation directly without lag dialog', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(false);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -180,8 +176,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
 
         it('schedule with askLag disabled submits directly', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(false);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -203,8 +199,8 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
 
         it('non-schedule with askLag enabled submits directly (lag only for schedule)', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.isAskLag.set(true);
             comp.draggingFromIssue.set(fromIssue);
             comp.submitRelation = submitSpy;
@@ -227,7 +223,7 @@ describe('IssueTableComponent onDropZone (TestBed)', () => {
             const submitSpy = vi.fn();
             comp.draggingFromIssue.set(null);
             comp.submitRelation = submitSpy;
-            comp.onDropZone(makeDropEvent(makeIssue({ idIssuePublic: 2 } as any)));
+            comp.onDropZone(makeDropEvent(makeIssue({ idIssuePublic: 2 })));
             expect(submitSpy).not.toHaveBeenCalled();
         });
     });
@@ -245,8 +241,8 @@ describe('IssueTableComponent lag dialog (TestBed)', () => {
     describe('onConfirmLag', () => {
         it('submits relation with lag minutes and closes dialog', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.pendingRelation = {
                 from: fromIssue,
                 to: toIssue,
@@ -281,8 +277,8 @@ describe('IssueTableComponent lag dialog (TestBed)', () => {
 
         it('submits with null lag when lagMinutes is null', () => {
             const submitSpy = vi.fn();
-            const fromIssue = makeIssue({ idIssuePublic: 1 } as any);
-            const toIssue = makeIssue({ idIssuePublic: 2 } as any);
+            const fromIssue = makeIssue({ idIssuePublic: 1 });
+            const toIssue = makeIssue({ idIssuePublic: 2 });
             comp.pendingRelation = {
                 from: fromIssue,
                 to: toIssue,

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, EMPTY } from 'rxjs';
+import { of } from 'rxjs';
 import { Component, input, output } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
@@ -73,7 +73,7 @@ function makeIssue(over: Partial<Issue> = {}): Issue {
         estimated: 3600,
         assignedTo: 10,
         ...over
-    } as Issue;
+    };
 }
 
 @Component({ selector: 'app-state-badge-selector', template: '', standalone: true })
@@ -174,18 +174,14 @@ async function createFixture(
 
 describe('IssueQuickActionsComponent (TestBed)', () => {
     let comp: any;
-    let fixture: any;
     let issueServiceMock: any;
     let issueFilterStoreMock: any;
-    let toastMock: any;
 
     beforeEach(async () => {
         const result = await createFixture();
         comp = result.comp;
-        fixture = result.fixture;
         issueServiceMock = result.issueServiceMock;
         issueFilterStoreMock = result.issueFilterStoreMock;
-        toastMock = result.toastMock;
     });
 
     // =========================================================================

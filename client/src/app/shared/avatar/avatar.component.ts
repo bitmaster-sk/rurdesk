@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { Color } from 'src/app/shared/color/color';
 
 @Component({
@@ -8,21 +8,21 @@ import { Color } from 'src/app/shared/color/color';
     standalone: false
 })
 export class AvatarComponent implements OnChanges {
-    @Input() height = 3;
+    @Input() public height = 3;
 
-    @Input() width = 3;
+    @Input() public width = 3;
 
-    @Input() radius = 1.5;
+    @Input() public radius = 1.5;
 
-    @Input() name = '';
+    @Input() public name = '';
 
-    @Input() bgColor = '';
+    @Input() public bgColor = '';
 
     public initials = '';
 
     public textColor = '';
 
-    public ngOnChanges(change: SimpleChanges): void {
+    public ngOnChanges(): void {
         if (this.name) {
             this.initials = this.buildInitials();
         }

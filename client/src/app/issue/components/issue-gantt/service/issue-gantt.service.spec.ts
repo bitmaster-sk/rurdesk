@@ -2,6 +2,7 @@ import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueGanttService } from './issue-gantt.service';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssuesPage } from '../../../model/issues-page.model';
 import { IssueService } from '../../../issue.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
@@ -12,7 +13,12 @@ import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
+import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
 import { topologicalSort } from './gantt-order.util';
+
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
 
 // IssueGanttService uses inject() for 6 deps; only actualFilter$ is touched at
 // construction (the rest stay lazy inside switchMap). topologicalSort is pure, so we
@@ -48,6 +54,7 @@ function buildService(): IssueGanttService {
 
 function makeIssue(id: number, scheduledAt: string): Issue {
     return {
+        idIssue: id,
         idIssuePublic: id,
         idProject: 1,
         idState: null,
@@ -56,7 +63,7 @@ function makeIssue(id: number, scheduledAt: string): Issue {
         description: '',
         tracked: 0,
         scheduledAt: new Date(scheduledAt)
-    } as Issue;
+    };
 }
 
 function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
@@ -65,7 +72,7 @@ function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
         relationType: IssueRelationType.Schedule,
         relationSubType: null,
         lagMinutes: null,
-        direction: 'outbound',
+        direction: IssueRelationDirection.Outbound,
         label: '',
         inverseLabel: '',
         from: {
@@ -137,20 +144,17 @@ describe('IssueGanttService — topologicalSort', () => {
 // unloading every "Load more" page the user had fetched.
 describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
     function backlogItems(n: number): Issue[] {
-        return Array.from(
-            { length: n },
-            (_, i) =>
-                ({
-                    idIssuePublic: i + 1,
-                    idProject: 1,
-                    idState: null,
-                    idSeverity: null,
-                    title: `Backlog ${i + 1}`,
-                    description: '',
-                    tracked: 0,
-                    scheduledAt: null
-                }) as Issue
-        );
+        return Array.from({ length: n }, (_, i): Issue => ({
+            idIssue: i + 1,
+            idIssuePublic: i + 1,
+            idProject: 1,
+            idState: null,
+            idSeverity: null,
+            title: `Backlog ${i + 1}`,
+            description: '',
+            tracked: 0,
+            scheduledAt: null
+        }));
     }
 
     function buildWithStore(
@@ -205,7 +209,7 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
         };
         const svc = buildWithStore(store, pageResponder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never); // page 1
+        store.setInitialFilter(initialFilter()); // page 1
         svc.loadMoreBacklog(); // page 2 → 60 loaded
         expect(backlogLength(svc)).toBe(60);
 
@@ -225,11 +229,11 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
         });
         const svc = buildWithStore(store, pageResponder, calls);
 
-        store.setInitialFilter({ idProject: 1 } as never);
+        store.setInitialFilter(initialFilter());
         svc.loadMoreBacklog();
         calls.length = 0;
 
-        store.setFilter({ title: 'abc' } as never);
+        store.setFilter({ title: 'abc' });
 
         // A filter change fetches page 1 with cursor null and the default page size.
         expect(calls).toEqual([{ limit: 30, cursor: null }]);

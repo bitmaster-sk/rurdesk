@@ -17,9 +17,11 @@ export class CursorPager {
     // appends rows from the old query, then overwrites the cursor with a stale one.
     private generation = 0;
 
-    constructor(
-        private readonly fetch: (cursor: string | null, limit?: number) => Observable<IssuesPage>
-    ) {}
+    private readonly fetch: (cursor: string | null, limit?: number) => Observable<IssuesPage>;
+
+    public constructor(fetch: (cursor: string | null, limit?: number) => Observable<IssuesPage>) {
+        this.fetch = fetch;
+    }
 
     // Keep the current items visible while the first page reloads (filter/sort
     // change) — `fetchPage(true)` replaces them wholesale on arrival. Clearing

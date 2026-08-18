@@ -16,6 +16,9 @@ import { IssueService } from '../../../issue.service';
 import { Issue } from '../../../model/issue.model';
 import { CreateIssueRelationDto, ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
+import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationRow, IssueTableRow } from '../entity/issue-table-row.entity';
 import { CursorPager } from '../../../util/cursor-pager';
 
@@ -80,7 +83,7 @@ export class IssueTableService {
         }));
     });
 
-    constructor() {
+    public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
         // stale load before this view's setInitialFilter runs.
         this.issueFilterStore.clear();
@@ -141,17 +144,20 @@ export class IssueTableService {
         idProject: number,
         from: Issue,
         to: Issue,
-        relationType: string,
-        subType: string | null,
+        relationType: IssueRelationType,
+        subType: IssueRelationSubType | null,
         lagMinutes: number | null
     ): Observable<void> {
-        const isHierarchyChild = relationType === 'hierarchy' && subType === 'child';
+        const isHierarchyChild =
+            relationType === IssueRelationType.Hierarchy && subType === IssueRelationSubType.Child;
         const apiFrom = isHierarchyChild ? to : from;
         const apiTo = isHierarchyChild ? from : to;
         const dto: CreateIssueRelationDto = {
             idIssuePublicTo: apiTo.idIssuePublic,
             relationType,
-            ...(subType && relationType !== 'hierarchy' ? { relationSubType: subType } : {}),
+            ...(subType && relationType !== IssueRelationType.Hierarchy
+                ? { relationSubType: subType }
+                : {}),
             ...(lagMinutes != null ? { lagMinutes } : {})
         };
         return this.relationApi.insert$(idProject, apiFrom.idIssuePublic, dto).pipe(
@@ -182,9 +188,11 @@ export class IssueTableService {
         const users = this.users();
         const out: IssueRelationRow[] = [];
         for (const rel of relations) {
-            const ref = rel.direction === 'outbound' ? rel.to : rel.from;
+            const ref = rel.direction === IssueRelationDirection.Outbound ? rel.to : rel.from;
             const owner =
-                rel.direction === 'outbound' ? rel.from.idIssuePublic : rel.to.idIssuePublic;
+                rel.direction === IssueRelationDirection.Outbound
+                    ? rel.from.idIssuePublic
+                    : rel.to.idIssuePublic;
             if (owner !== idIssuePublic) continue;
             out.push({
                 idIssueRelation: rel.idIssueRelation,

@@ -1,9 +1,14 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { Project } from '../../model/project.model';
 import { ProjectService } from '../../project.service';
+
+export interface ProjectWindowData {
+    project?: Project;
+}
 
 @Component({
     selector: 'app-project-form-window',
@@ -12,12 +17,10 @@ import { ProjectService } from '../../project.service';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectFormWindowComponent {
-    constructor(
-        private winRef: WindowReference,
-        public winCfg: WindowConfig,
-        private sProject: ProjectService,
-        private router: Router
-    ) {}
+    private readonly winRef = inject(WindowReference);
+    public readonly winCfg = inject<WindowConfig<ProjectWindowData>>(WindowConfig);
+    private readonly sProject = inject(ProjectService);
+    private readonly router = inject(Router);
 
     public onSave(project: Project): void {
         this.saveProject(project).subscribe(savedProject => {
@@ -28,7 +31,7 @@ export class ProjectFormWindowComponent {
     public onSaveGenerate(project: Project): void {
         this.saveProject(project).subscribe(savedProject => {
             this.winRef.close(savedProject);
-            this.router.navigate(['/project', savedProject.idProject, 'project-builder']);
+            void this.router.navigate(['/project', savedProject.idProject, 'project-builder']);
         });
     }
 
@@ -36,7 +39,7 @@ export class ProjectFormWindowComponent {
         this.winRef.close(null);
     }
 
-    private saveProject(project: Project) {
+    private saveProject(project: Project): Observable<Project> {
         return project.idProject
             ? this.sProject.updateProject(project)
             : this.sProject.insertProject(project);

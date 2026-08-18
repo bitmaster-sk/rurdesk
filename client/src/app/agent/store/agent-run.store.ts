@@ -23,7 +23,7 @@ export class AgentRunStore {
 
     private readonly fetch$ = new Subject<void>();
 
-    constructor() {
+    public constructor() {
         this.fetch$
             .pipe(
                 switchMap(() => this.fetchOnce$()),

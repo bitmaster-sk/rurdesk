@@ -227,7 +227,7 @@ import { AgentModule } from '../agent/agent.module';
 })
 export class IssueModule {
     // Lazy modules can't be collected via an injector token — register imperatively on load.
-    constructor(
+    public constructor(
         registry: CommandRegistryService,
         actions: IssueActionCommandProvider,
         search: IssueSearchCommandProvider

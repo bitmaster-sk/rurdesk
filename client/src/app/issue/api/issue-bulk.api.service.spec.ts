@@ -20,7 +20,7 @@ describe('IssueBulkApi', () => {
         const entries: BulkEditIssueEntry[] = [
             { idIssuePublic: 42, scheduledAt: '2026-04-15T09:00:00Z' },
             { idIssuePublic: 43, estimated: 7200 }
-        ] as unknown as BulkEditIssueEntry[];
+        ];
 
         service.update$(1, entries).subscribe();
 

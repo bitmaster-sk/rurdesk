@@ -1,5 +1,6 @@
 import { of } from 'rxjs';
-import type { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { QualityApi } from './quality.api.service';
 import { QualityReport } from '../model/quality.model';
 
@@ -22,7 +23,10 @@ describe('QualityApi', () => {
     beforeEach(() => {
         post = vi.fn().mockReturnValue(of(mockReport));
         get = vi.fn().mockReturnValue(of(mockReport));
-        service = new QualityApi({ post, get } as unknown as HttpClient);
+        const injector = Injector.create({
+            providers: [{ provide: HttpClient, useValue: { post, get } }]
+        });
+        service = runInInjectionContext(injector, () => new QualityApi());
     });
 
     it('preview$ POSTs to /api/private/project/:id/quality with title and description', () => {

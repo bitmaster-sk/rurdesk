@@ -740,6 +740,7 @@
         "REVOKE_CONFIRM": "Revoke this token? This cannot be undone.",
         "CLOSE": "Close",
         "COPY_KEY": "Copy",
+        "COPY_FAILED": "Copying to the clipboard failed — select the token and copy it manually",
         "KEY_SHOWN_ONCE": "This token will only be shown once. Copy it now and set it as GATEWAY_TO_TRACKER_TOKEN in the gateway environment.",
         "CREATED_AT": "Created",
         "LAST_USED": "Last used",

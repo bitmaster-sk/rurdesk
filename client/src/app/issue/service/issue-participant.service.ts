@@ -25,7 +25,7 @@ export class IssueParticipantService {
 
     public readonly participants = this._participants.asReadonly();
 
-    constructor() {
+    public constructor() {
         this.noticeService.participant$.pipe(takeUntilDestroyed()).subscribe(notice => {
             if (notice.payload.idIssue === this._loadedIdIssue) {
                 this._participants.set(notice.payload.participants);

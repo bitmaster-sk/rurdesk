@@ -91,7 +91,7 @@ export class UiOptionPanelComponent<T> {
 
     private readonly optionEls = viewChildren<ElementRef<HTMLLIElement>>('optionEl');
 
-    constructor() {
+    public constructor() {
         // Scroll the highlighted row into view whenever the index changes.
         afterRenderEffect(() => {
             const index = this.highlightedIndex();

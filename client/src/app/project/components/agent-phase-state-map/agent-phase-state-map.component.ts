@@ -15,7 +15,6 @@ import { PhaseStateMapApi } from '../../api/phase-state-map.api.service';
 import {
     AGENT_PHASES,
     AGENT_PHASE_LABELS,
-    AgentPhase,
     PhaseStateMappingEntry
 } from '../../model/phase-state-mapping.model';
 import { StateStore } from '../../../state/store/state.store';
@@ -50,7 +49,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
     private readonly subscription = new Subscription();
 
     public ngOnInit(): void {
-        const idProject = this.project().idProject!;
+        const idProject = this.project().idProject;
 
         // The two sources are deliberately NOT combined. The rows are fixed
         // (AGENT_PHASES), so the form is built once from the saved mappings, while
@@ -73,7 +72,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
     private loadMappings(): void {
         this.isLoading.set(true);
         this.subscription.add(
-            this.phaseStateMapApi.load$(this.project().idProject!).subscribe({
+            this.phaseStateMapApi.load$(this.project().idProject).subscribe({
                 next: mappings => this.buildForm(mappings),
                 error: () => {
                     this.isLoading.set(false);
@@ -97,9 +96,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
         const mappingByPhase = new Map(mappings.map(m => [m.phase, m.idState]));
         this.mappingsFormArray = this.formBuilder.array(
             AGENT_PHASES.map(phase =>
-                this.formBuilder.control<number | null>(
-                    (mappingByPhase.get(phase) ?? null) as number | null
-                )
+                this.formBuilder.control<number | null>(mappingByPhase.get(phase) ?? null)
             )
         );
         // Each row auto-saves on change (pick = commit). Construction doesn't emit,
@@ -115,7 +112,7 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
     }
 
     public getMappingControl(index: number): FormControl<number | null> {
-        return this.mappingsFormArray.at(index) as FormControl<number | null>;
+        return this.mappingsFormArray.at(index);
     }
 
     public rowSaveStatus(index: number): UiSaveState {
@@ -124,9 +121,9 @@ export class AgentPhaseStateMapComponent implements OnInit, OnDestroy {
 
     private onSaveRow(index: number): void {
         this.setRowStatus(index, UiSaveState.Saving);
-        const idProject = this.project().idProject!;
+        const idProject = this.project().idProject;
         const mappings: PhaseStateMappingEntry[] = AGENT_PHASES.map((phase, i) => ({
-            phase: phase as AgentPhase,
+            phase: phase,
             idState: this.getMappingControl(i).value
         })).filter(entry => entry.idState !== null);
 

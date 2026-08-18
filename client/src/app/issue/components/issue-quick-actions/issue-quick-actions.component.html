@@ -1,4 +1,4 @@
-<ui-popover #popover panelClass="qap-popover" (onHide)="onPopoverHide()">
+<ui-popover #popover panelClass="qap-popover" (closed)="onPopoverHide()">
     @if (issue()) {
         <div class="qap" [class.qap--date-mode]="view() === 'date'">
             @switch (view()) {

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DurationParser } from 'src/app/shared/duration/duration.parser';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
@@ -12,7 +12,10 @@ import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
     standalone: false
 })
 export class TrackFormComponent implements OnInit, OnChanges {
-    @Input() track: TrackForm | null = null;
+    private readonly fb = inject(FormBuilder);
+    private readonly sTracker = inject(TrackerService);
+
+    @Input() public track: TrackForm | null = null;
 
     public form: FormGroup = this.fb.group({
         idTrack: [null],
@@ -21,11 +24,6 @@ export class TrackFormComponent implements OnInit, OnChanges {
         tracked: [null, [Validators.min(0)]],
         endAt: [null, [Validators.required]]
     });
-
-    constructor(
-        private fb: FormBuilder,
-        private sTracker: TrackerService
-    ) {}
 
     public ngOnInit(): void {
         if (this.track) {

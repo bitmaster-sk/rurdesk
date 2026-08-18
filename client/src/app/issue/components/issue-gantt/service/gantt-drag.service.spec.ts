@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { Injector, NgZone, runInInjectionContext } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { GanttDragService } from './gantt-drag.service';
 import { GanttTimelineService } from './gantt-timeline.service';
 
@@ -8,7 +8,7 @@ import { GanttTimelineService } from './gantt-timeline.service';
 // listeners on drag start, so it runs under jsdom with stubbed DI.
 function buildService(): GanttDragService {
     const timelineInjector = Injector.create({
-        providers: [{ provide: TranslateService, useValue: { instant: (k: string) => k } }]
+        providers: [{ provide: I18nService, useValue: { instant: (k: string) => k } }]
     });
     const timeline = runInInjectionContext(timelineInjector, () => new GanttTimelineService());
     timeline.setRange(new Date('2026-04-01'), new Date('2026-04-30'));

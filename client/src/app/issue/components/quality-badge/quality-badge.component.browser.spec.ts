@@ -8,7 +8,7 @@ import { Component } from '@angular/core';
     standalone: false
 })
 class TestHostComponent {
-    score: number | null = null;
+    public score: number | null = null;
 }
 
 describe('QualityBadgeComponent', () => {

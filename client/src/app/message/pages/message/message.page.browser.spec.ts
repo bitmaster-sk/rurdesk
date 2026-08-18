@@ -23,6 +23,22 @@ import { User } from 'src/app/auth/model/user.model';
 import { Project } from 'src/app/project/model/project.model';
 import { Message } from '../../model/message.model';
 import { MessageKeyConverter } from '../../converter/message-key.converter';
+import { MessageKind } from '../../constant/message-kind.enum';
+
+function unreadMessage(idMessage: number): Message {
+    return {
+        idMessage,
+        message: 'hi',
+        messageKind: MessageKind.Comment,
+        createdAt: new Date('2026-08-01T00:00:00Z'),
+        isRead: false,
+        creator: { idUser: 1, name: 'Ada', email: 'ada@x.io', colorAvatarBg: '#123456' },
+        idRecipient: 7,
+        idMessageRecipientType: MessageRecipientType.project,
+        version: 1,
+        anchor: null
+    };
+}
 
 @Component({ selector: 'app-message-view', template: '', standalone: true })
 class MessageViewStub {
@@ -67,18 +83,14 @@ describe('MessagePage mentionCandidates', () => {
         projects = [];
 
         const teamMemberStoreStub: Partial<TeamMemberStore> = {
-            users$: teamUsersSubject
-                .asObservable()
-                .pipe(filter((v): v is User[] => v !== null)) as TeamMemberStore['users$'],
+            users$: teamUsersSubject.asObservable().pipe(filter((v): v is User[] => v !== null)),
             load: () => {
                 /* no-op in tests */
             }
         };
 
         const projectMemberStoreStub: Partial<ProjectMemberStore> = {
-            users$: projectUsersSubject
-                .asObservable()
-                .pipe(filter((v): v is User[] => v !== null)) as ProjectMemberStore['users$'],
+            users$: projectUsersSubject.asObservable().pipe(filter((v): v is User[] => v !== null)),
             load: () => {
                 /* no-op in tests */
             }
@@ -219,7 +231,7 @@ describe('MessagePage mentionCandidates', () => {
         fixture.detectChanges();
 
         const key = MessageKeyConverter.toUnreadKey(7, null, MessageRecipientType.project);
-        unreadSubject.next(new Map([[key, [{} as Message, {} as Message]]]));
+        unreadSubject.next(new Map([[key, [unreadMessage(1), unreadMessage(2)]]]));
         fixture.detectChanges();
 
         const badge = fixture.debugElement.query(By.directive(UiBadgeStub));

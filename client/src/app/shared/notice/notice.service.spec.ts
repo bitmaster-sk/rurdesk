@@ -1,7 +1,18 @@
 // @vitest-environment jsdom
-import type { PlatformLocation } from '@angular/common';
-import type { UserService } from 'src/app/auth/user.service';
+import { PlatformLocation } from '@angular/common';
+import { Injector, runInInjectionContext } from '@angular/core';
+import { UserService } from 'src/app/auth/user.service';
 import { NoticeService } from './notice.service';
+
+function buildService(location: PlatformLocation, sUser: UserService): NoticeService {
+    const injector = Injector.create({
+        providers: [
+            { provide: PlatformLocation, useValue: location },
+            { provide: UserService, useValue: sUser }
+        ]
+    });
+    return runInInjectionContext(injector, () => new NoticeService());
+}
 
 interface FakeSocket {
     url: string;
@@ -17,17 +28,17 @@ function build(token: string | null, protocol = 'http:', port = '9000') {
             public url: string;
             public protocols: string | string[] | undefined;
             public addEventListener = vi.fn();
-            constructor(url: string, protocols?: string | string[]) {
+            public constructor(url: string, protocols?: string | string[]) {
                 this.url = url;
                 this.protocols = protocols;
-                sockets.push(this as unknown as FakeSocket);
+                sockets.push(this);
             }
         }
     );
 
     const location = { protocol, hostname: 'localhost', port } as unknown as PlatformLocation;
     const sUser = { getAuthLocal: () => token } as unknown as UserService;
-    const service = new NoticeService(location, sUser);
+    const service = buildService(location, sUser);
     return { service, sockets };
 }
 
@@ -73,10 +84,11 @@ describe('NoticeService handshake', () => {
             'WebSocket',
             class {
                 public addEventListener = vi.fn();
-                constructor(
-                    public url: string,
-                    public protocols?: string | string[]
-                ) {
+                public url: string;
+                public protocols?: string | string[];
+                public constructor(url: string, protocols?: string | string[]) {
+                    this.url = url;
+                    this.protocols = protocols;
                     sockets.push(this as unknown as FakeSocket);
                 }
             }
@@ -89,7 +101,7 @@ describe('NoticeService handshake', () => {
             port: '9000'
         } as unknown as PlatformLocation;
         const sUser = { getAuthLocal: () => token } as unknown as UserService;
-        new NoticeService(location, sUser);
+        buildService(location, sUser);
         expect(sockets).toHaveLength(0);
 
         token = 'jwt-after-login';

@@ -12,13 +12,13 @@ import { IssueChangeEvent } from '../project-builder-step-staging/project-builde
     standalone: false
 })
 class StagedIssueTreeNodeStub {
-    @Input() node: any;
-    @Input() states: any;
-    @Input() severities: any;
-    @Input() isLastChild: any;
-    @Input() ancestorHasMoreSiblings: any;
-    @Output() issueChange = new EventEmitter<IssueChangeEvent>();
-    @Output() deleteNode = new EventEmitter<StagedIssueNode>();
+    @Input() public node: any;
+    @Input() public states: any;
+    @Input() public severities: any;
+    @Input() public isLastChild: any;
+    @Input() public ancestorHasMoreSiblings: any;
+    @Output() public issueChange = new EventEmitter<IssueChangeEvent>();
+    @Output() public deleteNode = new EventEmitter<StagedIssueNode>();
 }
 
 const makeIssue = (ref: string): ProjectBuilderIssue => ({

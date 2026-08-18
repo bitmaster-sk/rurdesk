@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IssuesFilter } from './components/filter/issue-filter.entity';
@@ -10,7 +10,7 @@ import { IssuesPage, IssueGroup } from './model/issues-page.model';
     providedIn: 'root'
 })
 export class IssueService {
-    constructor(private http: HttpClient) {}
+    private readonly http = inject(HttpClient);
 
     private toParams(filter: IssuesFilter): HttpParams {
         let params = new HttpParams();

@@ -7,7 +7,7 @@ import {
     OnInit,
     signal
 } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 
 interface AppMenuItem extends UiMenuItem {
@@ -38,7 +38,7 @@ import { NotificationStore } from 'src/app/notification/store/notification.store
 })
 export class TopMenuComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly sUser = inject(UserService);
     private readonly sProject = inject(ProjectService);
     private readonly projectStore = inject(ProjectStore);
@@ -127,12 +127,12 @@ export class TopMenuComponent implements OnInit, OnDestroy {
     protected onProjectSelect(value: unknown): void {
         const idProject = Number(value);
         localStorage.setItem(this.LAST_PROJECT_KEY, String(idProject));
-        this.router.navigate(['/project', idProject, 'view']);
+        void this.router.navigate(['/project', idProject, 'view']);
     }
 
     protected onNewProject(): void {
         this.sWindow
-            .open(ProjectFormWindowComponent, {
+            .open<Project | null>(ProjectFormWindowComponent, {
                 header: this.i18n.instant('PROJECT.NEW'),
                 data: { project: { idProject: 0, name: '', color: '' } }
             })
@@ -156,7 +156,7 @@ export class TopMenuComponent implements OnInit, OnDestroy {
         const idProject = Number(saved);
         const exists = projects.some(p => p.idProject === idProject);
         if (exists) {
-            this.router.navigate(['/project', idProject, 'view']);
+            void this.router.navigate(['/project', idProject, 'view']);
         } else {
             localStorage.removeItem(this.LAST_PROJECT_KEY);
         }

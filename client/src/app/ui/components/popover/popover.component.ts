@@ -46,7 +46,7 @@ export class UiPopoverComponent implements OnDestroy {
     public readonly dismissable = input(true);
 
     /** Fires on every close (outside click, Escape, `.hide()`, re-`.toggle()`). */
-    public readonly onHide = output<void>();
+    public readonly closed = output<void>();
 
     private readonly overlay = inject(Overlay);
     private readonly vcr = inject(ViewContainerRef);
@@ -149,7 +149,7 @@ export class UiPopoverComponent implements OnDestroy {
         }
         this.disposeOverlay();
         this.isOpen.set(false);
-        this.onHide.emit();
+        this.closed.emit();
     }
 
     /** Recompute the connected position — call after the projected content

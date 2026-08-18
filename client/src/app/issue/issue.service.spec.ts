@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import type { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, type HttpParams } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueService } from './issue.service';
 import { IssuesFilter } from './components/filter/issue-filter.entity';
@@ -8,7 +9,8 @@ import { IssuesPage } from './model/issues-page.model';
 
 function build(getReturn: unknown) {
     const get = vi.fn().mockReturnValue(of(getReturn));
-    const service = new IssueService({ get } as unknown as HttpClient);
+    const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: { get } }] });
+    const service = runInInjectionContext(injector, () => new IssueService());
     return { service, get };
 }
 
@@ -16,7 +18,7 @@ const page = (
     items: unknown[],
     nextCursor: string | null = null,
     total = items.length
-): IssuesPage => ({ items, nextCursor, total }) as IssuesPage;
+): IssuesPage => ({ items, nextCursor, total }) as unknown as IssuesPage;
 
 const baseFilter = {
     idProject: 1,
@@ -36,7 +38,7 @@ describe('IssueService.loadIssues', () => {
                 ...baseFilter,
                 idsSeverity: [1, 2],
                 orderColumn: 'updateAt'
-            } as IssuesFilter)
+            })
             .subscribe();
 
         const [url, options] = get.mock.calls[0] as [string, { params: HttpParams }];
@@ -124,7 +126,7 @@ describe('IssueService.toIssue', () => {
 describe('IssueService date params', () => {
     const call = (filter: Partial<IssuesFilter>) => {
         const { service, get } = build(page([]));
-        service.loadIssues({ ...baseFilter, ...filter } as IssuesFilter).subscribe();
+        service.loadIssues({ ...baseFilter, ...filter }).subscribe();
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         return options.params;
     };

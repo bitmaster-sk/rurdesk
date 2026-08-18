@@ -1,4 +1,3 @@
-import { IssuesFilterParams } from '../../issue/components/filter/issue-filter.entity';
 import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 
 export type SavedViewKanbanLayout = 'columns' | 'swimlane';

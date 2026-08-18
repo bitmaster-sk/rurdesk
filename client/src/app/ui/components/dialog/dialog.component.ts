@@ -118,7 +118,7 @@ export class UiDialogComponent implements OnDestroy {
     private focusTrap: ConfigurableFocusTrap | null = null;
     private previousActiveElement: HTMLElement | null = null;
 
-    constructor() {
+    public constructor() {
         effect(() => {
             const open = this.visible();
             const tpl = this.tpl(); // both reads MUST be tracked, BEFORE untracked()
@@ -171,7 +171,7 @@ export class UiDialogComponent implements OnDestroy {
         this.overlayRef.attach(new TemplatePortal(this.tpl()!, this.vcr));
 
         this.focusTrap = this.focusTrapFactory.create(this.overlayRef.overlayElement);
-        this.focusTrap.focusInitialElementWhenReady();
+        void this.focusTrap.focusInitialElementWhenReady();
 
         this.overlayRef.backdropClick().subscribe(() => {
             if (this.dismissable()) {

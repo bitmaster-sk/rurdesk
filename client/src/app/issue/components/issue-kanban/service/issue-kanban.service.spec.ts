@@ -5,6 +5,7 @@ import { IssueService } from '../../../issue.service';
 import { IssuesPage } from '../../../model/issues-page.model';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
+import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SprintStore } from '../../../store/sprint.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
@@ -15,6 +16,10 @@ import { User } from 'src/app/auth/model/user.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SwimlaneRow } from '../entity/swimlane-row.entity';
 import { KanbanColumn } from '../entity/kanban-column.entity';
+
+function initialFilter(): IssuesFilter {
+    return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
+}
 
 const stateA: IssueState = {
     idState: 1,
@@ -50,6 +55,7 @@ const sev: IssueSeverity = {
 function makeIssue(overrides: Partial<Issue>): Issue {
     return {
         idIssue: 1,
+        idIssuePublic: overrides.idIssue ?? 1,
         idProject: 1,
         idState: 1,
         idSeverity: 1,
@@ -59,7 +65,7 @@ function makeIssue(overrides: Partial<Issue>): Issue {
         createBy: 1,
         updateBy: 1,
         ...overrides
-    } as Issue;
+    };
 }
 
 // Mimics the backend grouped endpoint: groups issues by state (and assignedTo for swimlane).
@@ -368,7 +374,7 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
         let columns: KanbanColumn[] = [];
         svc.columns$.subscribe(c => (columns = c));
 
-        store.setInitialFilter({ idProject: 1 } as never); // grouped(perGroup=20) → 20 tiles + cursor
+        store.setInitialFilter(initialFilter()); // grouped(perGroup=20) → 20 tiles + cursor
         const col = columns.find(c => c.state.idState === 1)!;
         svc.loadMoreColumn(col); // → 40 tiles loaded
         expect(columns.find(c => c.state.idState === 1)!.tiles.length).toBe(40);

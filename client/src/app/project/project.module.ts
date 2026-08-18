@@ -128,7 +128,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
 })
 export class ProjectModule {
     // Lazy modules can't be collected via an injector token — register imperatively on load.
-    constructor(
+    public constructor(
         registry: CommandRegistryService,
         nav: NavigationCommandProvider,
         people: PeopleCommandProvider,

@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
@@ -10,6 +10,8 @@ import { Tracker } from './model/tracker.model';
     providedIn: 'root'
 })
 export class TrackerService {
+    private readonly http = inject(HttpClient);
+
     private readonly _localTracker$ = new ReplaySubject<Tracker | null>(1);
 
     private localTracker$ = this._localTracker$.asObservable();
@@ -40,8 +42,6 @@ export class TrackerService {
     public totalTracked$ = this.tracks$.pipe(
         map(tracks => tracks.reduce((sum, curr) => sum + (curr.tracked ?? 0), 0))
     );
-
-    constructor(private http: HttpClient) {}
 
     public loadTracker(): Observable<Tracker> {
         return this.http.get<Tracker>('/api/private/tracker').pipe(

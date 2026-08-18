@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { Observable, of } from 'rxjs';
 import {
     Command,
@@ -15,8 +15,8 @@ import { buildSavedViewCommands } from './saved-view.commands';
 export class SavedViewCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
     private readonly store = inject(SavedViewStore);
-    private readonly translate = inject(TranslateService);
-    private readonly t: Translator = (key, params) => this.translate.instant(key, params);
+    private readonly i18n = inject(I18nService);
+    private readonly t: Translator = (key, params) => this.i18n.instant(key, params);
 
     public prime(ctx: CommandContext): Observable<unknown> {
         const idProject = ctx.idProject;
@@ -30,7 +30,9 @@ export class SavedViewCommandProvider implements CommandProvider {
         return buildSavedViewCommands(
             ctx,
             this.store.views(),
-            (path, queryParams) => this.router.navigate(path as unknown[], { queryParams }),
+            (path, queryParams) => {
+                void this.router.navigate(path, { queryParams });
+            },
             this.t
         );
     }

@@ -1,16 +1,16 @@
 import { Injector, runInInjectionContext } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { of } from 'rxjs';
 import { UiToastService } from '../ui/service/ui-toast.service';
 import { ToastNotificationService } from './toast-notification.service';
 
 function make() {
     const show = vi.fn();
-    const translate = { get: (k: string) => of(`t:${k}`) } as unknown as TranslateService;
+    const translate = { get$: (k: string) => of(`t:${k}`) } as unknown as I18nService;
     const injector = Injector.create({
         providers: [
             { provide: UiToastService, useValue: { show } },
-            { provide: TranslateService, useValue: translate }
+            { provide: I18nService, useValue: translate }
         ]
     });
     const service = runInInjectionContext(injector, () => new ToastNotificationService());

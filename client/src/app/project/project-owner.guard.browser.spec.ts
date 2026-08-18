@@ -21,7 +21,7 @@ describe('projectOwnerGuard', () => {
         } as unknown as ActivatedRouteSnapshot;
 
         const result = TestBed.runInInjectionContext(() =>
-            projectOwnerGuard(route, {} as never)
+            projectOwnerGuard(route, undefined as never)
         ) as Observable<boolean | UrlTree>;
 
         let value = undefined as unknown as boolean | UrlTree;

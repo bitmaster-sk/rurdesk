@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { CommandContext } from '../../core/command/command.model';
 import { SavedView } from '../model/saved-view.model';
+import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
 import { buildSavedViewCommands } from './saved-view.commands';
 
 const t = (key: string): string => key;
@@ -14,13 +15,13 @@ function view(over: Partial<SavedView> = {}): SavedView {
         idSavedView: 7,
         idProject: 1,
         name: 'My bugs',
-        viewType: 'table',
+        viewType: IssueViewMode.TABLE,
         isShared: false,
         createBy: 1,
         updateAt: '2026-08-01T00:00:00Z',
         config: { v: 1 },
         ...over
-    } as SavedView;
+    };
 }
 
 describe('buildSavedViewCommands', () => {
@@ -50,7 +51,7 @@ describe('buildSavedViewCommands', () => {
     it('makes the view type searchable as a keyword', () => {
         const [command] = buildSavedViewCommands(
             ctx(1),
-            [view({ viewType: 'kanban' })],
+            [view({ viewType: IssueViewMode.KANBAN })],
             vi.fn(),
             t
         );
@@ -64,7 +65,7 @@ describe('buildSavedViewCommands', () => {
         const nav = vi.fn();
         const [command] = buildSavedViewCommands(
             ctx(1),
-            [view({ idSavedView: 9, viewType: 'gantt' })],
+            [view({ idSavedView: 9, viewType: IssueViewMode.GANTT })],
             nav,
             t
         );

@@ -10,11 +10,11 @@ import { IssueSeverity } from '../../model/issue-severity.model';
     standalone: false
 })
 export class SeverityFormComponent implements OnInit {
-    public readonly severity = input.required<IssueSeverity>();
+    public readonly severity = input.required<Partial<IssueSeverity>>();
 
     public readonly save = output<IssueSeverity>();
 
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 
     public form: FormGroup = new FormGroup({});
 
@@ -42,6 +42,6 @@ export class SeverityFormComponent implements OnInit {
     }
 
     public onCancel(): void {
-        this.cancel.emit();
+        this.cancelled.emit();
     }
 }

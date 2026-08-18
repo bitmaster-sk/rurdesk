@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { BehaviorSubject, of } from 'rxjs';
 import { Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueSearchCommandProvider } from '../../issue/command/issue-search.command-provider';
 import { IssueActionCommandProvider } from '../../issue/command/issue-action.command-provider';
 import { NavigationCommandProvider } from '../../project/command/navigation.command-provider';
@@ -22,6 +22,7 @@ import { Issue } from '../../issue/model/issue.model';
 const t = { instant: (k: string, p?: any) => (p ? `${k}:${JSON.stringify(p)}` : k) };
 const issues: Issue[] = [
     {
+        idIssue: 42,
         idIssuePublic: 428,
         idProject: 1,
         title: 'Login',
@@ -46,7 +47,7 @@ describe('IssueSearchCommandProvider', () => {
                 { provide: Router, useValue: router },
                 { provide: IssueService, useValue: issueService },
                 { provide: StateStore, useValue: { states$: of(opts.states ?? []) } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(opts.role ?? Role.Member);
@@ -141,7 +142,7 @@ describe('NavigationCommandProvider', () => {
                         deleteAuthLocal: vi.fn()
                     }
                 },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(role);
@@ -166,7 +167,8 @@ describe('NavigationCommandProvider', () => {
 });
 
 describe('IssueActionCommandProvider', () => {
-    const issue = {
+    const issue: Issue = {
+        idIssue: 15,
         idProject: 1,
         idIssuePublic: 5,
         title: 'Login',
@@ -175,7 +177,7 @@ describe('IssueActionCommandProvider', () => {
         idSeverity: 2,
         assignedTo: 7,
         tracked: 0
-    } as Issue;
+    };
     function setup(states: any[] = []) {
         const router = { navigate: vi.fn() };
         const insertIssue = vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }));
@@ -192,7 +194,7 @@ describe('IssueActionCommandProvider', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: UserService, useValue: { user: new BehaviorSubject(null) } },
                 { provide: NoticeService, useValue: { emitIssue } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(Role.Member);
@@ -258,7 +260,7 @@ describe('PeopleCommandProvider', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([member]) } },
                 { provide: IssueService, useValue: { updateIssue } },
                 { provide: NoticeService, useValue: { emitIssue } },
-                { provide: TranslateService, useValue: t }
+                { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(Role.Member);
@@ -266,7 +268,16 @@ describe('PeopleCommandProvider', () => {
     }
 
     it('assigns the picked person to the open issue on a detail and emits the change (not navigate)', () => {
-        const issue = { idProject: 1, idIssuePublic: 5, title: 'X' } as Issue;
+        const issue: Issue = {
+            idIssue: 15,
+            idProject: 1,
+            idIssuePublic: 5,
+            title: 'X',
+            description: '',
+            idState: null,
+            idSeverity: null,
+            tracked: 0
+        };
         const { provider, router, updateIssue, emitIssue } = setup();
         provider.getCommands({ idProject: 1, issue })[0].run();
         expect(updateIssue).toHaveBeenCalledWith(expect.objectContaining({ assignedTo: 9 }));

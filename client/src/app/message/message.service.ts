@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { MessageRecipientType } from './constant/message-recipient-type.enum';
@@ -10,12 +10,12 @@ import { MessageKeyConverter } from './converter/message-key.converter';
     providedIn: 'root'
 })
 export class MessageService {
+    private readonly http = inject(HttpClient);
+
+    // TODO plnit unread v tejto service
     public Unread: BehaviorSubject<Map<string, Message[]>> = new BehaviorSubject<
         Map<string, Message[]>
     >(new Map<string, Message[]>());
-
-    // TODO plnit unread v tejto service
-    constructor(private http: HttpClient) {}
 
     public loadMessages(
         idRecipient: number,
@@ -106,7 +106,7 @@ export class MessageService {
     private toMessage(m: Message): Message {
         m.createdAt = new Date(m.createdAt);
         if (m.updatedAt) {
-            m.updatedAt = new Date(m.updatedAt as unknown as string);
+            m.updatedAt = new Date(m.updatedAt);
         }
         return m;
     }

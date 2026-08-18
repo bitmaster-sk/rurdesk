@@ -1,11 +1,28 @@
-import { HttpErrorResponse, HttpHandler, HttpRequest, HttpEvent } from '@angular/common/http';
-import type { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import {
+    HttpErrorResponse,
+    HttpHandler,
+    HttpRequest,
+    HttpEvent,
+    HttpEventType
+} from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
+import { Router } from '@angular/router';
+import { Observable, of, throwError } from 'rxjs';
 import { AuthInterceptor } from './auth.interceptor';
 import { UserService } from './user.service';
 
-function handlerReturning(obs: ReturnType<typeof of>): HttpHandler {
-    return { handle: vi.fn().mockReturnValue(obs) } as unknown as HttpHandler;
+function handlerReturning(obs: Observable<HttpEvent<unknown>>): HttpHandler {
+    return { handle: vi.fn().mockReturnValue(obs) };
+}
+
+function buildInterceptor(sUser: UserService, router: Router): AuthInterceptor {
+    const injector = Injector.create({
+        providers: [
+            { provide: UserService, useValue: sUser },
+            { provide: Router, useValue: router }
+        ]
+    });
+    return runInInjectionContext(injector, () => new AuthInterceptor());
 }
 
 describe('AuthInterceptor', () => {
@@ -18,8 +35,9 @@ describe('AuthInterceptor', () => {
             navigateByUrl: vi.fn(),
             getCurrentNavigation: () => null
         } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
-        const next = handlerReturning(of({} as HttpEvent<unknown>));
+        const interceptor = buildInterceptor(sUser, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
 
         interceptor.intercept(new HttpRequest('GET', '/api/x'), next).subscribe();
 
@@ -33,7 +51,7 @@ describe('AuthInterceptor', () => {
         const navigateByUrl = vi.fn();
         const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -58,7 +76,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -76,7 +94,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/login' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -96,7 +114,7 @@ describe('AuthInterceptor', () => {
             deleteAuthLocal: vi.fn()
         } as unknown as UserService;
         const router = { navigateByUrl, url: '/register' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -113,7 +131,7 @@ describe('AuthInterceptor', () => {
         const deleteAuthLocal = vi.fn();
         const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
         const router = { navigateByUrl: vi.fn(), url: '/x' } as unknown as Router;
-        const interceptor = new AuthInterceptor(sUser, router);
+        const interceptor = buildInterceptor(sUser, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 500 }))
         } as unknown as HttpHandler;

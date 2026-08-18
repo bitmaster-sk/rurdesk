@@ -2,6 +2,7 @@ import { GanttCascadeService } from './gantt-cascade.service';
 import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
+import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
 // Issue is imported for Pick<Issue, 'idIssuePublic'> used in makeRelation
 
@@ -14,6 +15,7 @@ describe('GanttCascadeService', () => {
 
     function makeIssue(id: number, scheduledAt: string, estimated: number): Issue {
         return {
+            idIssue: id,
             idIssuePublic: id,
             idProject: 1,
             idState: null,
@@ -23,7 +25,7 @@ describe('GanttCascadeService', () => {
             tracked: 0,
             estimated,
             scheduledAt: new Date(scheduledAt)
-        } as Issue;
+        };
     }
 
     function makeRelation(
@@ -37,7 +39,7 @@ describe('GanttCascadeService', () => {
             relationType: IssueRelationType.Schedule,
             relationSubType: subType,
             lagMinutes: lagMinutes ?? null,
-            direction: 'outbound',
+            direction: IssueRelationDirection.Outbound,
             label: '',
             inverseLabel: '',
             from: {

@@ -33,7 +33,7 @@ function view(over: Partial<SavedView> = {}): SavedView {
         updateAt: '2026-08-01T00:00:00Z',
         config: { v: 1 },
         ...over
-    } as SavedView;
+    };
 }
 
 @Component({ selector: 'app-saved-view-dialog', template: '', standalone: true })
@@ -120,7 +120,7 @@ describe('SavedViewMenuComponent (browser)', () => {
             fixture.nativeElement.querySelector('.ui-button-group button');
         return {
             fixture,
-            component: fixture.componentInstance as unknown as Record<string, any>,
+            component: fixture.componentInstance,
             trigger,
             panel: () => document.querySelector<HTMLElement>('.sv-panel'),
             open: () => {
@@ -464,7 +464,7 @@ describe('SavedViewMenuComponent (browser)', () => {
         page.open();
 
         const labels = Array.from(page.panel()!.querySelectorAll('.sv-footer .sv-name')).map(node =>
-            node.textContent!.trim()
+            node.textContent.trim()
         );
         expect(labels.some(label => label.includes('SAVE_CURRENT'))).toBe(false);
     });

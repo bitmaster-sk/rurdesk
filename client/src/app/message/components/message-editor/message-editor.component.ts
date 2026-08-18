@@ -12,7 +12,8 @@ import {
     model,
     output,
     signal,
-    viewChild
+    viewChild,
+    AfterViewInit
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
@@ -46,7 +47,7 @@ type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
     ],
     standalone: false
 })
-export class MessageEditorComponent implements ControlValueAccessor {
+export class MessageEditorComponent implements ControlValueAccessor, AfterViewInit {
     private readonly editorRef = viewChild.required<ElementRef<HTMLDivElement>>('editor');
     private readonly destroyRef = inject(DestroyRef);
 
@@ -66,7 +67,7 @@ export class MessageEditorComponent implements ControlValueAccessor {
 
     public readonly mentionCandidates = input<User[]>([]);
 
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 
     // Internal source of truth for the editor content. Derived from the model()
     // input via linkedSignal, so an inbound [message] push (or CVA writeValue,
@@ -294,7 +295,7 @@ export class MessageEditorComponent implements ControlValueAccessor {
         const el = this.editorRef().nativeElement;
         el.focus();
         const sel = el.ownerDocument.getSelection();
-        const selected = sel && sel.rangeCount ? sel.getRangeAt(0).toString() : '';
+        const selected = sel?.rangeCount ? sel.getRangeAt(0).toString() : '';
         const block =
             EditorCharacters.CODE_BLOCK +
             lang +

@@ -2,7 +2,7 @@ import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { SprintState } from '../../constants/sprint-state.enum';
 import { EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueKanbanComponent } from './issue-kanban.component';
 import { IssueService } from '../../issue.service';
 import { IssueKanbanService } from './service/issue-kanban.service';
@@ -26,6 +26,7 @@ import { SprintVelocity } from '../../model/sprint-velocity.model';
 import { SprintStats } from '../../model/sprint-stats.model';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
+import { NoticeSubject } from 'src/app/shared/notice/constant/notice-subject.enum';
 import { Issue } from '../../model/issue.model';
 
 const storage = new Map<string, string>();
@@ -70,6 +71,7 @@ const bob: User = {
 function makeTile(overrides: Partial<KanbanTile> = {}): KanbanTile {
     return {
         idIssue: 1,
+        idIssuePublic: overrides.idIssue ?? 1,
         idProject: 1,
         idState: 1,
         idSeverity: 1,
@@ -83,7 +85,24 @@ function makeTile(overrides: Partial<KanbanTile> = {}): KanbanTile {
         assignedToUser: alice,
         assignedTo: alice.idUser,
         ...overrides
-    } as KanbanTile;
+    };
+}
+
+function issueNotice(idProject: number, idIssue: number): Notice<Issue> {
+    return {
+        subject: NoticeSubject.Issue,
+        action: NoticeAction.Create,
+        payload: {
+            idIssue,
+            idIssuePublic: idIssue,
+            idProject,
+            idState: null,
+            idSeverity: null,
+            title: 'T',
+            description: '',
+            tracked: 0
+        }
+    };
 }
 
 function makeColumn(state: IssueState, tiles: KanbanTile[]): KanbanColumn {
@@ -163,7 +182,7 @@ function setup(
     project: { idProject: number } | null = { idProject: 1 },
     issueNotices: Observable<Notice<Issue>> = EMPTY
 ): Harness {
-    const updateIssue = vi.fn().mockReturnValue(of({} as never));
+    const updateIssue = vi.fn().mockReturnValue(of(undefined as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
     const refresh = vi.fn();
     const showError = vi.fn();
@@ -216,7 +235,7 @@ function setup(
             },
             { provide: ToastNotificationService, useValue: { showError } },
             { provide: NoticeService, useValue: { issue$: issueNotices } },
-            { provide: TranslateService, useValue: { instant: (k: string) => k } },
+            { provide: I18nService, useValue: { instant: (k: string) => k } },
             {
                 provide: ProjectStore,
                 useValue: { project$: project === null ? NEVER : of(project) }
@@ -247,7 +266,7 @@ function setup(
     };
 }
 
-type Handlers = {
+interface Handlers {
     onStateChange(evt: CdkDragDrop<KanbanColumn>): void;
     onSwimlaneCardDrop(evt: CdkDragDrop<SwimlaneCell>): void;
     onTabTaskDropped(payload: { idSprint: number | null; event: CdkDragDrop<unknown> }): void;
@@ -265,14 +284,14 @@ type Handlers = {
     onSprintChange(idSprint: number | null): void;
     onEditSprint(idSprint: number): void;
     onSprintDeleted(): void;
-};
+}
 const handlers = (c: IssueKanbanComponent): Handlers => c as unknown as Handlers;
 
-type Analytics = {
+interface Analytics {
     stats(): SprintStats | null;
     velocities(): SprintVelocity[];
     onRollOver(): void;
-};
+}
 const analytics = (c: IssueKanbanComponent): Analytics => c as unknown as Analytics;
 
 function setupWithNotices(notices: Observable<Notice<Issue>>): Harness {
@@ -674,17 +693,11 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         const h = setupWithNotices(notices);
         h.backlogStats.mockClear();
 
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 2, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(2, 5));
         settle();
         expect(h.backlogStats).not.toHaveBeenCalled();
 
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 1, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(1, 5));
         settle();
         expect(h.backlogStats).toHaveBeenCalledWith(1);
     });
@@ -713,10 +726,7 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         expect(analytics(h.component).stats()?.totalIssues).toBe(4);
 
         h.backlogStats.mockReturnValue(pending);
-        notices.next({
-            action: NoticeAction.Create,
-            payload: { idProject: 1, idIssue: 5 } as Issue
-        } as Notice<Issue>);
+        notices.next(issueNotice(1, 5));
         settle();
 
         expect(analytics(h.component).stats()?.totalIssues).toBe(4);
@@ -730,10 +740,7 @@ describe('IssueKanbanComponent — sprint analytics', () => {
         h.backlogStats.mockClear();
 
         for (let i = 0; i < 20; i++) {
-            notices.next({
-                action: NoticeAction.Create,
-                payload: { idProject: 1, idIssue: i } as Issue
-            } as Notice<Issue>);
+            notices.next(issueNotice(1, i));
         }
         settle();
 

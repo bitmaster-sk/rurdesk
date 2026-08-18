@@ -34,6 +34,8 @@ import { IssueTableService } from './service/issue-table.service';
 import { UiTableSortEvent } from 'src/app/ui/components/table/table-sort.directive';
 import { Issue } from '../../model/issue.model';
 import { RelationDropEvent } from './components/issue-table-drop-zone/issue-table-drop-zone.component';
+import { IssueRelationType } from '../../constants/issue-relation-type.enum';
+import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
 import { resolveHighlightIndex } from './highlight.util';
 
@@ -152,8 +154,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private pendingRelation: {
         from: Issue;
         to: Issue;
-        relationType: string;
-        subType: string | null;
+        relationType: IssueRelationType;
+        subType: IssueRelationSubType | null;
     } | null = null;
 
     public ngAfterViewInit(): void {
@@ -254,7 +256,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     public onOpenHighlighted(issue: Issue): void {
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
     }
 
     public onLazyLoad(evt: UiTableSortEvent): void {
@@ -368,7 +370,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         if (!fromIssue) return;
         this.onDragEnd();
 
-        if (evt.relationType === 'schedule' && this.isAskLag()) {
+        if (evt.relationType === IssueRelationType.Schedule && this.isAskLag()) {
             this.pendingRelation = {
                 from: fromIssue,
                 to: evt.toIssue,
@@ -470,8 +472,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private submitRelation(
         from: Issue,
         to: Issue,
-        relationType: string,
-        subType: string | null,
+        relationType: IssueRelationType,
+        subType: IssueRelationSubType | null,
         lagMinutes: number | null
     ): void {
         const idProject = this.idProject;

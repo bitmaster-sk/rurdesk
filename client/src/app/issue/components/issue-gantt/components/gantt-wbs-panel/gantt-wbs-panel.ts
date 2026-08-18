@@ -86,13 +86,13 @@ export class GanttWbsPanelComponent {
         const startX = event.clientX;
         const startWidth = this.panelWidth();
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             const delta = moveEvent.clientX - startX;
             const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth + delta));
             this.panelWidth.set(newWidth);
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (): void => {
             this.isResizing = false;
             localStorage.setItem(STORAGE_KEY_WBS_WIDTH, String(this.panelWidth()));
             document.removeEventListener('mousemove', onMouseMove);
@@ -153,7 +153,7 @@ export class GanttWbsPanelComponent {
         const startY = event.clientY;
         const DRAG_THRESHOLD = 5;
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             const dx = moveEvent.clientX - startX;
             const dy = moveEvent.clientY - startY;
             if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
@@ -163,7 +163,7 @@ export class GanttWbsPanelComponent {
             }
         };
 
-        const onMouseUp = () => {
+        const onMouseUp = (): void => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('mouseup', onMouseUp);
             // Threshold not exceeded — treat as click

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { AdminApi } from '../../api/admin.api.service';
 import { AdminUser, UserCreatedEvent } from '../../model/admin-user.model';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { ApiError } from 'src/app/shared/model/api-error.model';
 
 @Component({
     selector: 'app-admin-users',
@@ -62,14 +63,16 @@ export class AdminUsersComponent implements OnInit {
     protected onToggleAdmin(user: AdminUser): void {
         this.adminApi.setAdmin$(user.idUser, !user.isAdmin).subscribe({
             next: () => this.loadUsers(),
-            error: err => this.sToast.showError(err.error?.translateKey ?? 'ADMIN.ACTION_FAILED')
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
         });
     }
 
     protected onConfirmDelete(user: AdminUser): void {
         this.adminApi.deleteUser$(user.idUser).subscribe({
             next: () => this.loadUsers(),
-            error: err => this.sToast.showError(err.error?.translateKey ?? 'ADMIN.ACTION_FAILED')
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
         });
     }
 

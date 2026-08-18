@@ -40,7 +40,7 @@ export class MessageEditorStub {
     public readonly sendLabel = input<string>('');
     public readonly disableCancelButton = input<boolean>(true);
     public readonly messageChange = output<string>();
-    public readonly cancel = output<void>();
+    public readonly cancelled = output<void>();
 }
 
 @Component({ selector: 'app-message-body', template: '', standalone: true })

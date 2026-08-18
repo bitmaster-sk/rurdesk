@@ -103,9 +103,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         if (previous === null || delay === null || previous === left) return;
         if (prefersReducedMotion()) return;
 
-        const barEl = this.elementRef.nativeElement.querySelector(
-            '.gantt-bar'
-        ) as HTMLElement | null;
+        const barEl = this.elementRef.nativeElement.querySelector('.gantt-bar');
         if (!barEl) return;
         // A slide may still be in flight from a previous drop — replace it
         barEl.getAnimations().forEach(animation => animation.cancel());
@@ -175,7 +173,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
             return;
         }
         const issue = this.task();
-        this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
     }
 
     public onMouseEnter(): void {
@@ -190,7 +188,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         if (event.button !== 0) return;
         event.preventDefault(); // prevent text selection during drag
         this._dragMoved = false;
-        const onFirstMove = () => {
+        const onFirstMove = (): void => {
             this._dragMoved = true;
         };
         document.addEventListener('mousemove', onFirstMove, { once: true });
@@ -206,12 +204,12 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         const startX = event.clientX;
         const startWidth = this.barWidth();
 
-        const onMouseMove = (moveEvent: MouseEvent) => {
+        const onMouseMove = (moveEvent: MouseEvent): void => {
             const delta = moveEvent.clientX - startX;
             this._resizePreviewWidth.set(Math.max(MIN_BAR_WIDTH_PX, startWidth + delta));
         };
 
-        const onMouseUp = (upEvent: MouseEvent) => {
+        const onMouseUp = (upEvent: MouseEvent): void => {
             const finalWidth = Math.max(MIN_BAR_WIDTH_PX, startWidth + (upEvent.clientX - startX));
             const endPixel = this.barLeft() + finalWidth;
             const endDate = this.timelineService.toDate(endPixel);

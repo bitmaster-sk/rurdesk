@@ -3,7 +3,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { of, throwError } from 'rxjs';
-import { Component, input, model, output, signal } from '@angular/core';
+import { Component, input, model, output } from '@angular/core';
 
 import { TranslateModule } from '@ngx-translate/core';
 import { UiLoaderStub } from 'src/testing/stubs';
@@ -135,7 +135,6 @@ describe('ProjectBuilderComponent', () => {
         component.description.set(
             'A detailed project description that is long enough to pass validation.'
         );
-        const headers = new Headers({ 'Retry-After': '15' });
         mockApi.generate$.mockReturnValue(
             throwError(() => ({
                 status: 429,
@@ -194,8 +193,8 @@ describe('toTree / fromTree utilities', () => {
     it('toTree builds nested structure', () => {
         const tree = StagedIssuesTree.toTree(issues);
         expect(tree.length).toBe(1);
-        expect(tree[0].data!.ref).toBe('P');
-        expect(tree[0].children!.length).toBe(2);
+        expect(tree[0].data.ref).toBe('P');
+        expect(tree[0].children.length).toBe(2);
     });
 
     it('fromTree flattens tree back to array', () => {

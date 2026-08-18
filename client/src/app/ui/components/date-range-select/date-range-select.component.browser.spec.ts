@@ -47,7 +47,7 @@ describe('UiDateRangeSelectComponent (browser)', () => {
             host: fixture.componentInstance,
             panel,
             trigger: () => el.querySelector<HTMLElement>('.ui-date-range-select__trigger')!,
-            triggerText: () => el.querySelector('.ui-select-trigger__value')!.textContent!.trim(),
+            triggerText: () => el.querySelector('.ui-select-trigger__value')!.textContent.trim(),
             clearBtn: () => el.querySelector<HTMLButtonElement>('.ui-select-trigger__clear'),
             outside: () => el.querySelector<HTMLInputElement>('#outside')!,
             presetRows: () =>
@@ -89,7 +89,7 @@ describe('UiDateRangeSelectComponent (browser)', () => {
         page.open();
 
         expect(page.panel()).not.toBeNull();
-        expect(page.presetRows().map(row => row.textContent!.trim())).toEqual([
+        expect(page.presetRows().map(row => row.textContent.trim())).toEqual([
             'Last 7 days',
             'Last 30 days',
             'UI.DATE_RANGE.CUSTOM'

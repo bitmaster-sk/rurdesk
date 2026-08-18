@@ -33,14 +33,24 @@ export class UiOptionNav<T> {
     private typeAheadBuffer = '';
     private typeAheadAt = 0;
 
-    constructor(
-        private readonly options: Signal<readonly T[]>,
-        private readonly getLabel: (option: T) => string,
-        /** Index of the selected option in `visibleOptions` (single-select), or -1
-         *  (multiselect/listbox have no single selected row → land on 0 on open). */
-        private readonly getSelectedIndex: () => number,
-        private readonly now: () => number = () => performance.now()
-    ) {}
+    private readonly options: Signal<readonly T[]>;
+    private readonly getLabel: (option: T) => string;
+    /** Index of the selected option in `visibleOptions` (single-select), or -1
+     *  (multiselect/listbox have no single selected row → land on 0 on open). */
+    private readonly getSelectedIndex: () => number;
+    private readonly now: () => number;
+
+    public constructor(
+        options: Signal<readonly T[]>,
+        getLabel: (option: T) => string,
+        getSelectedIndex: () => number,
+        now: () => number = () => performance.now()
+    ) {
+        this.options = options;
+        this.getLabel = getLabel;
+        this.getSelectedIndex = getSelectedIndex;
+        this.now = now;
+    }
 
     /** On open: highlight the selected option, else the first option. */
     public initHighlight(): void {

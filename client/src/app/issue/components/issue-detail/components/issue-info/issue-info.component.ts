@@ -34,12 +34,11 @@ import { PinService } from 'src/app/pin/pin.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { UserService } from 'src/app/auth/user.service';
 import { ProjectStore } from 'src/app/project/project.store';
-import { TranslateService } from '@ngx-translate/core';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import {
     GitIntegrationRes,
-    HostType,
     MrDiff,
     MrDiffFile,
     MrStatus
@@ -58,7 +57,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     standalone: false
 })
 export class IssueInfoComponent {
-    private readonly inputTitle = viewChild<ElementRef>('inputTitle');
+    private readonly inputTitle = viewChild<ElementRef<HTMLInputElement>>('inputTitle');
     private readonly inputDescription = viewChild<MessageEditorComponent>('inputDescription');
 
     public readonly issue = input<Issue | null>(null);
@@ -72,7 +71,7 @@ export class IssueInfoComponent {
 
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly i18n = inject(TranslateService);
+    private readonly i18n = inject(I18nService);
     private readonly sIssue = inject(IssueService);
     private readonly sPin = inject(PinService);
     private readonly sUser = inject(UserService);
@@ -190,7 +189,7 @@ export class IssueInfoComponent {
 
     private readonly formReset$ = new Subject<void>();
 
-    constructor() {
+    public constructor() {
         this.destroyRef.onDestroy(() => this.formReset$.complete());
 
         effect(() => {
@@ -236,7 +235,7 @@ export class IssueInfoComponent {
                     this.refreshFormValues(savedIssue);
                     this.saveStatus.set(UiSaveState.Saved);
                 } else {
-                    this.router.navigate([
+                    void this.router.navigate([
                         '/project',
                         savedIssue.idProject,
                         'issue',
@@ -419,7 +418,7 @@ export class IssueInfoComponent {
     }
 
     private formToIssue(): Issue {
-        const issue = { ...this.form.value } as Issue;
+        const issue: Issue = { ...(this.form.value as Issue) };
         issue.estimated = DurationConverter.durationToSeconds(
             DurationParser.stringToDuration(this.form.value.estimated)
         );

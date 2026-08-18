@@ -35,7 +35,7 @@
     <tabler-icon class="ui-select-trigger__chevron" icon="calendar" [size]="16" />
 </div>
 
-<ui-popover #panel panelClass="ui-date-range-panel" (onHide)="onPanelHide()">
+<ui-popover #panel panelClass="ui-date-range-panel" (closed)="onPanelHide()">
     <!-- Escape lands here before CDK's document-level dispatcher. -->
     <div
         role="dialog"

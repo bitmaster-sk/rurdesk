@@ -1,5 +1,6 @@
 import { of } from 'rxjs';
-import type { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { SplitApi } from './split.api.service';
 import { SplitPreviewRes, SplitAcceptRes, ProposedIssue } from '../model/split.model';
 
@@ -9,7 +10,10 @@ describe('SplitApi', () => {
 
     beforeEach(() => {
         post = vi.fn();
-        service = new SplitApi({ post } as unknown as HttpClient);
+        const injector = Injector.create({
+            providers: [{ provide: HttpClient, useValue: { post } }]
+        });
+        service = runInInjectionContext(injector, () => new SplitApi());
     });
 
     it('preview$ defaults hint to empty string when undefined', () => {
@@ -30,7 +34,8 @@ describe('SplitApi', () => {
     });
 
     it('preview$ POSTs the provided hint value', () => {
-        post.mockReturnValue(of({ children: [] } as SplitPreviewRes));
+        const preview: SplitPreviewRes = { children: [] };
+        post.mockReturnValue(of(preview));
 
         service.preview$(1, 2, 'separate frontend and backend').subscribe();
 

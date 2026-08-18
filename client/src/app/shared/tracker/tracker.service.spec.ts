@@ -1,13 +1,16 @@
-import type { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, type HttpParams } from '@angular/common/http';
+import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { TrackerService } from './tracker.service';
-import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
 import { Track } from './model/track.model';
 
 describe('TrackerService.loadTracks', () => {
     it('serializes the track filter into query params and maps dates', () => {
         const get = vi.fn().mockReturnValue(of([{ startAt: '2026-01-01T00:00:00Z', endAt: null }]));
-        const service = new TrackerService({ get } as unknown as HttpClient);
+        const injector = Injector.create({
+            providers: [{ provide: HttpClient, useValue: { get } }]
+        });
+        const service = runInInjectionContext(injector, () => new TrackerService());
 
         let tracks: Track[] = [];
         service
@@ -15,7 +18,7 @@ describe('TrackerService.loadTracks', () => {
                 idIssue: 5,
                 idProject: 1,
                 from: new Date('2026-01-01T00:00:00Z')
-            } as TrackFilter)
+            })
             .subscribe(t => (tracks = t));
 
         const [url, options] = get.mock.calls[0] as [string, { params: HttpParams }];

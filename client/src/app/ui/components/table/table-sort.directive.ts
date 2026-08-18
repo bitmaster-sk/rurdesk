@@ -36,14 +36,13 @@ export class UiTableSortDirective {
     /** Active direction for a column, or 0 when it is not the sorted column. */
     public orderFor(field: string): 1 | -1 | 0 {
         const active = this.state();
-        return active && active.field === field ? active.order : 0;
+        return active?.field === field ? active.order : 0;
     }
 
     /** Toggle sort on a column and emit. Binary: same column flips, new column → asc. */
     public toggle(field: string): void {
         const current = this.state();
-        const order: 1 | -1 =
-            current && current.field === field ? (current.order === 1 ? -1 : 1) : 1;
+        const order: 1 | -1 = current?.field === field ? (current.order === 1 ? -1 : 1) : 1;
         this.state.set({ field, order });
         this.sortChange.emit({ sortField: field, sortOrder: order });
     }
