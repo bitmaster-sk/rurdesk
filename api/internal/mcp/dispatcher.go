@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 )
@@ -209,8 +210,8 @@ func extractMessage(raw []byte) string {
 		}
 	}
 	s := strings.TrimSpace(string(raw))
-	if len(s) > 200 {
-		return s[:200]
+	if utf8.RuneCountInString(s) > 200 {
+		return string([]rune(s)[:200])
 	}
 	return s
 }
