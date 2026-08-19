@@ -8,6 +8,7 @@ import {
     signal
 } from '@angular/core';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
+import { ClipboardService } from '../../../core/clipboard.service';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { AdminApi } from '../../api/admin.api.service';
 import { AdminUser, BotApiKey, BotGateway } from '../../model/admin-user.model';
@@ -33,6 +34,7 @@ const DEFAULT_KEY_NAME = 'default';
 export class BotKeysDialogComponent {
     private readonly adminApi = inject(AdminApi);
     private readonly sToast = inject(ToastNotificationService);
+    private readonly clipboard = inject(ClipboardService);
 
     public readonly bot = input<AdminUser | null>(null);
     public readonly visible = model<boolean>(false);
@@ -210,8 +212,12 @@ export class BotKeysDialogComponent {
     }
 
     private copyToClipboard(text: string): void {
-        navigator.clipboard.writeText(text).catch(() => {
-            this.sToast.showError('API_KEY.COPY_FAILED');
+        void this.clipboard.copy(text).then(isCopied => {
+            if (isCopied) {
+                this.sToast.showSuccess('API_KEY.COPIED');
+            } else {
+                this.sToast.showError('API_KEY.COPY_FAILED');
+            }
         });
     }
 

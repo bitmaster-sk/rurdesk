@@ -40,9 +40,9 @@ script/deploy-site.env
 .gemini/
 .github/copilot-instructions.md
 .superpowers/
-AGENTS.md
-GEMINI.md
-CLAUDE.md
+/AGENTS.md
+/GEMINI.md
+/CLAUDE.md
 
 # Logs
 *.log

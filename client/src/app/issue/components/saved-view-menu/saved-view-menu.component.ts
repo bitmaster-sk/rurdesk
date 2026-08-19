@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { ClipboardService } from 'src/app/core/clipboard.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UserService } from 'src/app/auth/user.service';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
@@ -57,6 +58,7 @@ export class SavedViewMenuComponent {
     private readonly i18n = inject(I18nService);
     private readonly userService = inject(UserService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly clipboard = inject(ClipboardService);
     protected readonly aclStore = inject(AclStore);
 
     public readonly idProject = input.required<number>();
@@ -155,10 +157,13 @@ export class SavedViewMenuComponent {
                 { queryParams: { view: view.idSavedView } }
             )
         );
-        navigator.clipboard
-            ?.writeText(`${location.origin}${path}`)
-            .then(() => this.notify('ISSUE.VIEWS.LINK_COPIED'))
-            .catch(() => this.notify('ISSUE.VIEWS.LINK_COPY_FAILED', 'error'));
+        void this.clipboard.copy(`${location.origin}${path}`).then(isCopied => {
+            if (isCopied) {
+                this.notify('ISSUE.VIEWS.LINK_COPIED');
+            } else {
+                this.notify('ISSUE.VIEWS.LINK_COPY_FAILED', 'error');
+            }
+        });
     }
 
     protected onRename(view: SavedView): void {
