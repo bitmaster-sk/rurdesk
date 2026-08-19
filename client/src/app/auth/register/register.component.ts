@@ -3,8 +3,8 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
-import { SettingsStore } from '../../core/settings/settings.store';
-import { UserService } from '../user.service';
+import { AuthApi } from '../api/auth.api.service';
+import { SessionService } from '../service/session.service';
 
 @Component({
     selector: 'app-register',
@@ -16,8 +16,8 @@ import { UserService } from '../user.service';
 export class RegisterComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly router = inject(Router);
-    private readonly sUser = inject(UserService);
-    private readonly settingsStore = inject(SettingsStore);
+    private readonly authApi = inject(AuthApi);
+    private readonly session = inject(SessionService);
 
     public readonly form: FormGroup = this.buildForm();
     public readonly errorKey = signal<string | null>(null);
@@ -39,25 +39,17 @@ export class RegisterComponent implements OnInit {
         }
 
         const values = this.form.value;
-        this.sUser
-            .register({
+        this.authApi
+            .register$({
                 name: values.name,
                 email: values.email,
                 password: values.credentials.password
             })
-            .pipe(switchMap(() => this.sUser.login(values.email, values.credentials.password)))
+            .pipe(switchMap(() => this.authApi.login$(values.email, values.credentials.password)))
             .subscribe({
-                next: token => this.onRegisterSuccess(token),
+                next: token => this.session.start(token),
                 error: err => this.onRegisterError(err)
             });
-    }
-
-    private onRegisterSuccess(token: string): void {
-        this.sUser.saveAuthLocal(token);
-        // App bootstrap skips the auth-gated settings load for anonymous visitors;
-        // now that we have a token, load them (navigation does not re-bootstrap).
-        this.settingsStore.load();
-        void this.router.navigate(['/']);
     }
 
     private onRegisterError(err: unknown): void {

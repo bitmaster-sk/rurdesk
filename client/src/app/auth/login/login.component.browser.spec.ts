@@ -5,27 +5,24 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { UiModule } from '../../ui/ui.module';
 import { AuthRobotStub } from 'src/testing/stubs';
-import { UserService } from '../user.service';
-import { SettingsStore } from '../../core/settings/settings.store';
+import { AuthApi } from '../api/auth.api.service';
+import { SessionService } from '../service/session.service';
+import { AuthTokenStore } from '../store/auth-token.store';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent (browser)', () => {
-    let userService: {
-        login: ReturnType<typeof vi.fn>;
-        hasAuthLocal: ReturnType<typeof vi.fn>;
-        saveAuthLocal: ReturnType<typeof vi.fn>;
-    };
+    let authApi: { login$: ReturnType<typeof vi.fn> };
+    let tokenStore: { hasToken: ReturnType<typeof vi.fn> };
+    let session: { start: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
 
     function error(): HTMLElement | null {
         return document.querySelector('.login__error');
     }
 
     beforeEach(async () => {
-        userService = {
-            login: vi.fn(),
-            hasAuthLocal: vi.fn().mockReturnValue(false),
-            saveAuthLocal: vi.fn()
-        };
+        authApi = { login$: vi.fn() };
+        tokenStore = { hasToken: vi.fn().mockReturnValue(false) };
+        session = { start: vi.fn(), end: vi.fn() };
 
         await TestBed.configureTestingModule({
             declarations: [LoginComponent],
@@ -37,10 +34,9 @@ describe('LoginComponent (browser)', () => {
                 AuthRobotStub
             ],
             providers: [
-                { provide: UserService, useValue: userService },
-                // A successful login calls SettingsStore.load(), which otherwise fires a
-                // real HTTP GET /api/private/settings and 404s as an unhandled rejection.
-                { provide: SettingsStore, useValue: { load: () => {} } }
+                { provide: AuthApi, useValue: authApi },
+                { provide: AuthTokenStore, useValue: tokenStore },
+                { provide: SessionService, useValue: session }
             ]
         }).compileComponents();
     });
@@ -52,7 +48,7 @@ describe('LoginComponent (browser)', () => {
     }
 
     it('shows an error message when login fails', () => {
-        userService.login.mockReturnValue(throwError(() => new Error('401')));
+        authApi.login$.mockReturnValue(throwError(() => new Error('401')));
         const fixture = setup();
         expect(error()).toBeNull();
 
@@ -63,18 +59,18 @@ describe('LoginComponent (browser)', () => {
     });
 
     it('does not show an error message on a successful login', () => {
-        userService.login.mockReturnValue(of('a-token'));
+        authApi.login$.mockReturnValue(of('a-token'));
         const fixture = setup();
 
         fixture.componentInstance.onLogin();
         fixture.detectChanges();
 
         expect(error()).toBeNull();
-        expect(userService.saveAuthLocal).toHaveBeenCalledWith('a-token');
+        expect(session.start).toHaveBeenCalledWith('a-token');
     });
 
     it('clears the error once the user edits the form', () => {
-        userService.login.mockReturnValue(throwError(() => new Error('401')));
+        authApi.login$.mockReturnValue(throwError(() => new Error('401')));
         const fixture = setup();
         fixture.componentInstance.onLogin();
         fixture.detectChanges();

@@ -8,7 +8,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthInterceptor } from './auth.interceptor';
-import { UserService } from './user.service';
+import { AuthTokenStore } from './store/auth-token.store';
 
 /**
  * Regression guard for the app-module HTTP wiring: the class interceptors are
@@ -17,11 +17,11 @@ import { UserService } from './user.service';
  * never clear the token or redirect — this test fails if that feature is dropped.
  */
 describe('AuthInterceptor wiring (browser)', () => {
-    const deleteAuthLocal = vi.fn();
+    const clearToken = vi.fn();
     const navigateByUrl = vi.fn();
 
     beforeEach(() => {
-        deleteAuthLocal.mockClear();
+        clearToken.mockClear();
         navigateByUrl.mockClear();
         TestBed.configureTestingModule({
             providers: [
@@ -29,8 +29,8 @@ describe('AuthInterceptor wiring (browser)', () => {
                 provideHttpClientTesting(),
                 { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
                 {
-                    provide: UserService,
-                    useValue: { getAuthLocal: () => 'my-token', deleteAuthLocal }
+                    provide: AuthTokenStore,
+                    useValue: { getToken: () => 'my-token', clearToken }
                 },
                 { provide: Router, useValue: { navigateByUrl, url: '/project/1' } }
             ]
@@ -50,7 +50,7 @@ describe('AuthInterceptor wiring (browser)', () => {
         req.flush('unauthorized', { status: 401, statusText: 'Unauthorized' });
 
         await Promise.resolve(); // flush the queueMicrotask redirect
-        expect(deleteAuthLocal).toHaveBeenCalled();
+        expect(clearToken).toHaveBeenCalled();
         expect(navigateByUrl).toHaveBeenCalledWith('/login');
         ctrl.verify();
     });

@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { UserService } from './auth/user.service';
+import { AuthTokenStore } from './auth/store/auth-token.store';
 import { SettingsStore } from './core/settings/settings.store';
 import { HotkeyService } from './core/command/hotkey.service';
 
@@ -10,7 +10,7 @@ import { HotkeyService } from './core/command/hotkey.service';
 })
 export class AppComponent {
     private readonly settingsStore = inject(SettingsStore);
-    private readonly sUser = inject(UserService);
+    private readonly tokenStore = inject(AuthTokenStore);
     private readonly hotkeys = inject(HotkeyService);
 
     public title = 'issue-client';
@@ -19,7 +19,7 @@ export class AppComponent {
         // Settings are auth-gated on the server; an anonymous visitor (login/register)
         // runs on the store's fallback defaults and must not trigger a guaranteed 401.
         // After a successful login/registration the auth components load them.
-        if (this.sUser.hasAuthLocal()) {
+        if (this.tokenStore.hasToken()) {
             this.settingsStore.load();
         }
         // Global keyboard entry point for the command palette (⌘K / bare `/` / `?`).

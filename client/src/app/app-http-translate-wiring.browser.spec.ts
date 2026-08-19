@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { TranslateService, provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { AuthInterceptor } from './auth/auth.interceptor';
-import { UserService } from './auth/user.service';
+import { AuthTokenStore } from './auth/store/auth-token.store';
 import { ToastNotificationService } from './core/toast-notification.service';
 import { ErrorInterceptor } from './core/error.interceptor';
 
@@ -27,8 +27,8 @@ describe('HttpClient + interceptors + TranslateService wiring (browser)', () => 
                 { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
                 { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
                 {
-                    provide: UserService,
-                    useValue: { getAuthLocal: () => null, deleteAuthLocal: () => {} }
+                    provide: AuthTokenStore,
+                    useValue: { getToken: () => null, clearToken: () => {} }
                 },
                 { provide: Router, useValue: { navigateByUrl: () => {}, url: '/login' } },
                 { provide: ToastNotificationService, useValue: { showError: () => {} } },

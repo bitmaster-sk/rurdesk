@@ -17,7 +17,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { combineLatest, Subject, Subscription } from 'rxjs';
 import { debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectService } from 'src/app/project/project.service';
@@ -47,7 +47,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly sProject = inject(ProjectService);
     private readonly sTeam = inject(TeamService);
     private readonly userApi = inject(UserApi);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly sNotice = inject(NoticeService);
     private readonly i18n = inject(I18nService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
@@ -60,7 +60,7 @@ export class MessagePage implements OnInit, OnDestroy {
     protected readonly messages = signal<Message[]>([]);
     protected readonly currentConversationName = signal<string>('');
     protected readonly idMessageEdit = signal<number | null>(null);
-    protected readonly currentUserId = this.sUser.getUser().idUser;
+    protected readonly currentUserId = this.authStore.getUser().idUser;
 
     private readonly idActiveRecipient = signal<number>(0);
     private readonly idActiveRecipientType = signal<MessageRecipientType | null>(null);
@@ -204,7 +204,7 @@ export class MessagePage implements OnInit, OnDestroy {
                 .subscribe(({ idRecipient, idMessageRecipientType }) => {
                     const recipientKey =
                         idMessageRecipientType === MessageRecipientType.user
-                            ? this.sUser.getUser().idUser
+                            ? this.authStore.getUser().idUser
                             : idRecipient;
                     const creatorKey =
                         idMessageRecipientType === MessageRecipientType.user ? idRecipient : null;
@@ -317,7 +317,7 @@ export class MessagePage implements OnInit, OnDestroy {
         teams: Team[],
         users: User[]
     ): ConversationGroup[] {
-        const currentUserId = this.sUser.getUser().idUser;
+        const currentUserId = this.authStore.getUser().idUser;
         return [
             {
                 name: this.i18n.instant('PROJECT.CHATS'),

@@ -30,7 +30,7 @@ import {
     TimelineItem,
     TimelineItemType
 } from '../../entity/timeline-item.entity';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
@@ -60,10 +60,10 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly sTracker = inject(TrackerService);
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly destroyRef = inject(DestroyRef);
 
-    public readonly currentUserId = this.sUser.getUser().idUser;
+    public readonly currentUserId = this.authStore.getUser().idUser;
 
     private readonly allItems = signal<TimelineItem[]>([]);
     private readonly liveItems = signal<TimelineItem[]>([]);

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { BehaviorSubject, of } from 'rxjs';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
 import { Router } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
@@ -13,7 +14,8 @@ import { SeverityStore } from '../../severity/store/severity.store';
 import { AclStore } from '../../project/store/acl.store';
 import { ProjectService } from '../../project/project.service';
 import { ProjectMemberStore } from '../../project/project-member.store';
-import { UserService } from '../../auth/user.service';
+import { SessionService } from '../../auth/service/session.service';
+import { AuthStore } from '../../auth/store/auth.store';
 import { NoticeService } from '../../shared/notice/notice.service';
 import { CommandPaletteService } from './command-palette.service';
 import { Role } from '../../shared/constants/role.enum';
@@ -135,13 +137,10 @@ describe('NavigationCommandProvider', () => {
                 },
                 { provide: CommandPaletteService, useValue: { openHelp: vi.fn() } },
                 {
-                    provide: UserService,
-                    useValue: {
-                        user: new BehaviorSubject(null),
-                        logout: () => of(null),
-                        deleteAuthLocal: vi.fn()
-                    }
+                    provide: AuthStore,
+                    useValue: { user: signal(null) }
                 },
+                { provide: SessionService, useValue: { end: vi.fn() } },
                 { provide: I18nService, useValue: t }
             ]
         });
@@ -192,7 +191,7 @@ describe('IssueActionCommandProvider', () => {
                 { provide: StateStore, useValue: { states$: of(states) } },
                 { provide: SeverityStore, useValue: { severities$: of([]) } },
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
-                { provide: UserService, useValue: { user: new BehaviorSubject(null) } },
+                { provide: AuthStore, useValue: { user: signal(null) } },
                 { provide: NoticeService, useValue: { emitIssue } },
                 { provide: I18nService, useValue: t }
             ]

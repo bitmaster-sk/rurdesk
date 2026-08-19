@@ -14,7 +14,7 @@ interface AppMenuItem extends UiMenuItem {
     tablerIcon?: string;
 }
 import { Subscription } from 'rxjs';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectFormWindowComponent } from 'src/app/project/components/project-form-window/project-form-window.component';
 import { ProjectService } from 'src/app/project/project.service';
@@ -39,7 +39,7 @@ import { NotificationStore } from 'src/app/notification/store/notification.store
 export class TopMenuComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
     private readonly i18n = inject(I18nService);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly sProject = inject(ProjectService);
     private readonly projectStore = inject(ProjectStore);
     private readonly sNotice = inject(NoticeService);
@@ -62,8 +62,7 @@ export class TopMenuComponent implements OnInit, OnDestroy {
         if (!this.currentUrl()?.startsWith('/project')) return null;
         return this.project()?.idProject ?? null;
     });
-    protected readonly user$ = this.sUser.user$;
-    private readonly user = toSignal(this.sUser.user$);
+    protected readonly user = this.authStore.user;
 
     protected readonly userMenuItems = computed<AppMenuItem[]>(() => {
         const items: AppMenuItem[] = [

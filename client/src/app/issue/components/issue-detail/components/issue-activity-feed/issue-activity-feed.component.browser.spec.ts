@@ -1,4 +1,4 @@
-import { Component, Pipe, PipeTransform, input, output } from '@angular/core';
+import { Component, Pipe, PipeTransform, input, output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
 import { IssueActivityFeedComponent } from './issue-activity-feed.component';
@@ -7,8 +7,8 @@ import { MessageService } from 'src/app/message/message.service';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
-import { UserService } from 'src/app/auth/user.service';
-import { BehaviorSubject, NEVER } from 'rxjs';
+import { AuthStore } from 'src/app/auth/store/auth.store';
+import { NEVER } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 
 @Pipe({ name: 'translate', standalone: false })
@@ -72,7 +72,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     };
 
     const stubUser = {
-        user: new BehaviorSubject({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' }),
+        user: signal({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' }),
         getUser: () => ({ idUser: 1, name: 'Me', email: '', colorAvatarBg: '' })
     };
 
@@ -91,7 +91,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
                 { provide: TrackerService, useValue: stubTracker },
                 { provide: NoticeService, useValue: stubNotice },
                 { provide: ProjectMemberStore, useValue: stubProjectMemberStore },
-                { provide: UserService, useValue: stubUser }
+                { provide: AuthStore, useValue: stubUser }
             ]
         }).compileComponents();
     });
