@@ -176,7 +176,7 @@ func (r *IssueRepository) appendIssueFilters(sb *strings.Builder, args *[]any, i
 	}
 
 	if f.ExcludeFinalStates {
-		sb.WriteString("AND iss.id_state NOT IN (SELECT s.id_state FROM issues.state s WHERE s.id_project = iss.id_project AND s.final = TRUE) ")
+		sb.WriteString("AND NOT EXISTS (SELECT 1 FROM issues.state s WHERE s.id_state = iss.id_state AND s.final = TRUE) ")
 	}
 
 	if !f.CreateAtFrom.IsZero() {
