@@ -1,14 +1,14 @@
 // @vitest-environment jsdom
 import { PlatformLocation } from '@angular/common';
 import { Injector, runInInjectionContext } from '@angular/core';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthTokenStore } from 'src/app/auth/store/auth-token.store';
 import { NoticeService } from './notice.service';
 
-function buildService(location: PlatformLocation, sUser: UserService): NoticeService {
+function buildService(location: PlatformLocation, tokenStore: AuthTokenStore): NoticeService {
     const injector = Injector.create({
         providers: [
             { provide: PlatformLocation, useValue: location },
-            { provide: UserService, useValue: sUser }
+            { provide: AuthTokenStore, useValue: tokenStore }
         ]
     });
     return runInInjectionContext(injector, () => new NoticeService());
@@ -37,8 +37,8 @@ function build(token: string | null, protocol = 'http:', port = '9000') {
     );
 
     const location = { protocol, hostname: 'localhost', port } as unknown as PlatformLocation;
-    const sUser = { getAuthLocal: () => token } as unknown as UserService;
-    const service = buildService(location, sUser);
+    const tokenStore = { getToken: () => token } as unknown as AuthTokenStore;
+    const service = buildService(location, tokenStore);
     return { service, sockets };
 }
 
@@ -100,8 +100,8 @@ describe('NoticeService handshake', () => {
             hostname: 'localhost',
             port: '9000'
         } as unknown as PlatformLocation;
-        const sUser = { getAuthLocal: () => token } as unknown as UserService;
-        buildService(location, sUser);
+        const tokenStore = { getToken: () => token } as unknown as AuthTokenStore;
+        buildService(location, tokenStore);
         expect(sockets).toHaveLength(0);
 
         token = 'jwt-after-login';

@@ -3,7 +3,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { UiToastStub } from 'src/testing/stubs';
 import { AppComponent } from './app.component';
 import { SettingsStore } from './core/settings/settings.store';
-import { UserService } from './auth/user.service';
+import { AuthTokenStore } from './auth/store/auth-token.store';
 import { HotkeyService } from './core/command/hotkey.service';
 
 describe('AppComponent', () => {
@@ -16,10 +16,7 @@ describe('AppComponent', () => {
             declarations: [AppComponent],
             providers: [
                 { provide: SettingsStore, useValue: { load: () => {} } },
-                // AppComponent also injects UserService (→ CookieService) and
-                // HotkeyService; stub both so the shell constructs without the full
-                // DI graph. hasAuthLocal:false keeps the settings load path off too.
-                { provide: UserService, useValue: { hasAuthLocal: () => false } },
+                { provide: AuthTokenStore, useValue: { hasToken: () => false } },
                 { provide: HotkeyService, useValue: { start: () => {} } }
             ]
         }).compileComponents();

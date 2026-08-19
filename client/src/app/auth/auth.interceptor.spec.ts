@@ -9,16 +9,16 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthInterceptor } from './auth.interceptor';
-import { UserService } from './user.service';
+import { AuthTokenStore } from './store/auth-token.store';
 
 function handlerReturning(obs: Observable<HttpEvent<unknown>>): HttpHandler {
     return { handle: vi.fn().mockReturnValue(obs) };
 }
 
-function buildInterceptor(sUser: UserService, router: Router): AuthInterceptor {
+function buildInterceptor(tokenStore: AuthTokenStore, router: Router): AuthInterceptor {
     const injector = Injector.create({
         providers: [
-            { provide: UserService, useValue: sUser },
+            { provide: AuthTokenStore, useValue: tokenStore },
             { provide: Router, useValue: router }
         ]
     });
@@ -27,15 +27,15 @@ function buildInterceptor(sUser: UserService, router: Router): AuthInterceptor {
 
 describe('AuthInterceptor', () => {
     it('attaches the local token as the Authorization header', () => {
-        const sUser = {
-            getAuthLocal: () => 'my-token',
-            deleteAuthLocal: vi.fn()
-        } as unknown as UserService;
+        const tokenStore = {
+            getToken: () => 'my-token',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
         const router = {
             navigateByUrl: vi.fn(),
             getCurrentNavigation: () => null
         } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
         const next = handlerReturning(of(event));
 
@@ -47,11 +47,11 @@ describe('AuthInterceptor', () => {
     });
 
     it('on 401 clears the token, redirects to /login, and rethrows', async () => {
-        const deleteAuthLocal = vi.fn();
+        const clearToken = vi.fn();
         const navigateByUrl = vi.fn();
-        const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
+        const tokenStore = { getToken: () => 't', clearToken } as unknown as AuthTokenStore;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -61,7 +61,7 @@ describe('AuthInterceptor', () => {
             .intercept(new HttpRequest('GET', '/x'), next)
             .subscribe({ error: () => (errored = true) });
 
-        expect(deleteAuthLocal).toHaveBeenCalled();
+        expect(clearToken).toHaveBeenCalled();
         expect(errored).toBe(true);
         await Promise.resolve(); // flush queueMicrotask
         expect(navigateByUrl).toHaveBeenCalledWith('/login');
@@ -71,12 +71,12 @@ describe('AuthInterceptor', () => {
         // The old guard skipped the redirect while a navigation was in progress,
         // deferring to a resolver that may not re-check auth. Now it always redirects.
         const navigateByUrl = vi.fn();
-        const sUser = {
-            getAuthLocal: () => 't',
-            deleteAuthLocal: vi.fn()
-        } as unknown as UserService;
+        const tokenStore = {
+            getToken: () => 't',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
         const router = { navigateByUrl, url: '/project/1/view' } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -89,12 +89,12 @@ describe('AuthInterceptor', () => {
 
     it('does not redirect again when already on /login', async () => {
         const navigateByUrl = vi.fn();
-        const sUser = {
-            getAuthLocal: () => 't',
-            deleteAuthLocal: vi.fn()
-        } as unknown as UserService;
+        const tokenStore = {
+            getToken: () => 't',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
         const router = { navigateByUrl, url: '/login' } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -109,12 +109,12 @@ describe('AuthInterceptor', () => {
 
     it('does not redirect away from /register (anonymous bootstrap page)', async () => {
         const navigateByUrl = vi.fn();
-        const sUser = {
-            getAuthLocal: () => '',
-            deleteAuthLocal: vi.fn()
-        } as unknown as UserService;
+        const tokenStore = {
+            getToken: () => '',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
         const router = { navigateByUrl, url: '/register' } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
         } as unknown as HttpHandler;
@@ -128,10 +128,10 @@ describe('AuthInterceptor', () => {
     });
 
     it('does not touch auth on non-401 errors', () => {
-        const deleteAuthLocal = vi.fn();
-        const sUser = { getAuthLocal: () => 't', deleteAuthLocal } as unknown as UserService;
+        const clearToken = vi.fn();
+        const tokenStore = { getToken: () => 't', clearToken } as unknown as AuthTokenStore;
         const router = { navigateByUrl: vi.fn(), url: '/x' } as unknown as Router;
-        const interceptor = buildInterceptor(sUser, router);
+        const interceptor = buildInterceptor(tokenStore, router);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 500 }))
         } as unknown as HttpHandler;
@@ -141,7 +141,7 @@ describe('AuthInterceptor', () => {
             .intercept(new HttpRequest('GET', '/x'), next)
             .subscribe({ error: () => (errored = true) });
 
-        expect(deleteAuthLocal).not.toHaveBeenCalled();
+        expect(clearToken).not.toHaveBeenCalled();
         expect(errored).toBe(true);
     });
 });

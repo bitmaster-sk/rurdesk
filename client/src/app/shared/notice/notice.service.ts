@@ -5,7 +5,7 @@ import { Message } from 'src/app/message/model/message.model';
 import { Notification } from 'src/app/notification/model/notification.model';
 import { ReadIssueRelationDto } from 'src/app/issue/model/issue-relation.model';
 import { Issue } from 'src/app/issue/model/issue.model';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthTokenStore } from 'src/app/auth/store/auth-token.store';
 import { IssueParticipantModel } from 'src/app/issue/model/issue-participant.model';
 import { NoticeSubject } from './constant/notice-subject.enum';
 import { NoticeAction } from './constant/notice-action.enum';
@@ -16,7 +16,7 @@ import { Notice } from './model/notice.model';
 })
 export class NoticeService {
     private readonly location = inject(PlatformLocation);
-    private readonly sUser = inject(UserService);
+    private readonly tokenStore = inject(AuthTokenStore);
 
     public Message: Subject<Notice<Message>> = new Subject<Notice<Message>>();
 
@@ -65,7 +65,7 @@ export class NoticeService {
         try {
             // Anonymous visitors (login page) have no token — connecting would be a
             // guaranteed 401, so wait and retry until a session exists.
-            const token = this.sUser.getAuthLocal();
+            const token = this.tokenStore.getToken();
             if (!token) {
                 this.openSocketWithDelay();
                 return;

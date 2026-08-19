@@ -1,17 +1,17 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthGuard } from './auth.guard';
-import { UserService } from './user.service';
+import { AuthTokenStore } from './store/auth-token.store';
 
 describe('AuthGuard', () => {
     function build(hasAuth: boolean) {
         const navigate = vi.fn();
         const router = { navigate } as unknown as Router;
-        const sUser = { hasAuthLocal: () => hasAuth } as unknown as UserService;
+        const tokenStore = { hasToken: () => hasAuth } as unknown as AuthTokenStore;
         const injector = Injector.create({
             providers: [
                 { provide: Router, useValue: router },
-                { provide: UserService, useValue: sUser }
+                { provide: AuthTokenStore, useValue: tokenStore }
             ]
         });
         const guard = runInInjectionContext(injector, () => new AuthGuard());
