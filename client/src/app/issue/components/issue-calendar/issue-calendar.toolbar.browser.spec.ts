@@ -139,7 +139,7 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
     // =========================================================================
 
     describe('setFilter', () => {
-        it('with start and end: passes them to issueFilterStore.setFilter', () => {
+        it('passes the provided start/end dates to issueFilterStore.setFilter', () => {
             mocks.issueFilterStoreMock.setFilter.mockClear();
             const start = new Date('2025-01-01T00:00:00Z');
             const end = new Date('2025-01-31T00:00:00Z');
@@ -148,14 +148,6 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
                 scheduledAtFrom: start,
                 scheduledAtTo: end
             });
-        });
-
-        it('without args: defaults to current month', () => {
-            mocks.issueFilterStoreMock.setFilter.mockClear();
-            comp.setFilter();
-            const arg = mocks.issueFilterStoreMock.setFilter.mock.calls[0][0];
-            expect(arg.scheduledAtFrom).toBeInstanceOf(Date);
-            expect(arg.scheduledAtTo).toBeInstanceOf(Date);
         });
     });
 });

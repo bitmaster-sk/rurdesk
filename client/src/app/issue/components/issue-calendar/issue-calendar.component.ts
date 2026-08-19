@@ -434,10 +434,10 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         );
     }
 
-    private setFilter(start?: Date, end?: Date): void {
+    private setFilter(start: Date, end: Date): void {
         this.issueFilterStore.setFilter({
-            scheduledAtFrom: !start ? startOfMonth(new Date()) : start,
-            scheduledAtTo: !end ? endOfMonth(new Date()) : end
+            scheduledAtFrom: start,
+            scheduledAtTo: end
         });
     }
 
