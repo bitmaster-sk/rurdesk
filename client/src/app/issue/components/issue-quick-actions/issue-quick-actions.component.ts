@@ -26,6 +26,7 @@ import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue } from '../../model/issue.model';
 import { IssueService } from '../../issue.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { ClipboardService } from 'src/app/core/clipboard.service';
 
 @Component({
     selector: 'app-issue-quick-actions',
@@ -44,6 +45,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     private readonly issueService = inject(IssueService);
     private readonly toast = inject(ToastNotificationService);
     private readonly issueFilterStore = inject(IssueFilterStore);
+    private readonly clipboard = inject(ClipboardService);
 
     private readonly popoverRef = viewChild.required<UiPopoverComponent>('popover');
 
@@ -237,7 +239,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
         // Clipboard writes reject when the document isn't focused or permission is
         // denied — it's best-effort UX, so swallow the failure instead of leaving an
         // unhandled rejection.
-        void navigator.clipboard.writeText(String(issue.idIssuePublic)).catch(() => {});
+        void this.clipboard.copy(String(issue.idIssuePublic));
         this.hide();
     }
 

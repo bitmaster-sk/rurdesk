@@ -2,7 +2,7 @@
     [visible]="visible()"
     (visibleChange)="$event ? visible.set(true) : onClose()"
     [header]="(bot()?.name ?? '') + ' — ' + ('API_KEY.TITLE' | translate)"
-    width="42rem"
+    width="56rem"
 >
     <!-- Gateway → Tracker token (the bot's API key) -->
     <div class="cred-card">

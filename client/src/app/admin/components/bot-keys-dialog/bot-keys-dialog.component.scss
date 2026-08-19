@@ -68,9 +68,14 @@
     border: 1px solid var(--ui-color-border);
     border-radius: var(--ui-radius-md);
     padding: 0.5rem 0.6rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    // The token must stay fully reachable: one line, scrolled horizontally, and
+    // selectable in a single click for the manual-copy fallback.
+    overflow-x: auto;
+    overflow-y: hidden;
     white-space: nowrap;
+    scrollbar-gutter: stable;
+    user-select: all;
+    -webkit-user-select: all;
 }
 
 .cred-meta {
