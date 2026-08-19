@@ -3,7 +3,9 @@ package mcp_test
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/mcp"
 	"github.com/gin-gonic/gin"
@@ -194,4 +196,39 @@ func TestDispatcher_EmptyBody_ReturnsNull(t *testing.T) {
 	require.NoError(t, err)
 	assert.False(t, resp.IsError)
 	assert.Equal(t, "null", string(resp.Body))
+}
+
+func TestDispatcher_400_LongNonJSONBodyCutOnRuneBoundary(t *testing.T) {
+	engine := newTestEngine(http.StatusBadRequest, strings.Repeat("ť", 300), nil)
+	d := mcp.NewDispatcher(engine)
+
+	resp, err := d.Request(context.Background(), mcp.RequestOpts{Method: "GET", Path: "/test", Bearer: "Bearer tok", ToolName: "t"})
+
+	require.NoError(t, err)
+	require.True(t, resp.IsError)
+	assert.Equal(t, "invalid request: "+strings.Repeat("ť", 200), resp.ErrorMessage)
+	assert.True(t, utf8.ValidString(resp.ErrorMessage), "must not cut a rune in half")
+}
+
+func TestDispatcher_400_ShortDiacriticsBodyKeptWhole(t *testing.T) {
+	engine := newTestEngine(http.StatusBadRequest, strings.Repeat("ť", 150), nil)
+	d := mcp.NewDispatcher(engine)
+
+	resp, err := d.Request(context.Background(), mcp.RequestOpts{Method: "GET", Path: "/test", Bearer: "Bearer tok", ToolName: "t"})
+
+	require.NoError(t, err)
+	require.True(t, resp.IsError)
+	assert.Equal(t, "invalid request: "+strings.Repeat("ť", 150), resp.ErrorMessage)
+}
+
+func TestDispatcher_400_ThreeByteRuneNotSplit(t *testing.T) {
+	engine := newTestEngine(http.StatusBadRequest, strings.Repeat("—", 100), nil)
+	d := mcp.NewDispatcher(engine)
+
+	resp, err := d.Request(context.Background(), mcp.RequestOpts{Method: "GET", Path: "/test", Bearer: "Bearer tok", ToolName: "t"})
+
+	require.NoError(t, err)
+	require.True(t, resp.IsError)
+	assert.True(t, utf8.ValidString(resp.ErrorMessage), "must not cut a rune in half")
+	assert.Equal(t, "invalid request: "+strings.Repeat("—", 100), resp.ErrorMessage)
 }

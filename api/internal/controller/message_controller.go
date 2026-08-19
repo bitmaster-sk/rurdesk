@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -423,7 +424,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 					if mentionedIds[idRecipient] {
 						notifType = constants.NotificationTypeMention
 					}
-					_ = mc.notifSvc.Notify(ctx, &model.CreateNotificationReq{
+					if notifErr := mc.notifSvc.Notify(ctx, &model.CreateNotificationReq{
 						IdUser:        idRecipient,
 						Type:          notifType,
 						IdProject:     &idProject,
@@ -437,7 +438,9 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 						RefPublicId:   refPublicId,
 						Body:          truncate(stripMentionTokens(dto.Message), 200),
 						Source:        source,
-					})
+					}); notifErr != nil {
+						log.Warn().Err(notifErr).Int64("idUser", idRecipient).Int64("idIssue", dto.IdRecipient).Msg("CreateMessage: failed to create notification")
+					}
 				}
 			}
 		}
@@ -596,10 +599,10 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 }
 
 func truncate(s string, max int) string {
-	if len(s) <= max {
+	if utf8.RuneCountInString(s) <= max {
 		return s
 	}
-	return s[:max] + "..."
+	return string([]rune(s)[:max]) + "..."
 }
 
 // handleAgentRunHook reacts to a user comment on an issue with an active agent
