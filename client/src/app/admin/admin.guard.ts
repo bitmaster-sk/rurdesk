@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { CanActivate, Router, UrlTree } from '@angular/router';
 import { Observable, of } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import { UserService } from '../auth/user.service';
+import { AuthStore } from '../auth/store/auth.store';
 
 /**
  * AdminGuard blocks the admin area for non-admin users. This is UX only — the server
@@ -13,11 +13,11 @@ import { UserService } from '../auth/user.service';
 @Injectable({ providedIn: 'root' })
 export class AdminGuard implements CanActivate {
     private readonly router = inject(Router);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
 
     public canActivate(): Observable<boolean | UrlTree> {
-        const current = this.sUser.user.getValue();
-        const user$ = current ? of(current) : this.sUser.loadUser();
+        const current = this.authStore.user();
+        const user$ = current ? of(current) : this.authStore.loadUser$();
         return user$.pipe(
             map(user => (user?.isAdmin ? true : this.router.parseUrl('/'))),
             catchError(() => of(this.router.parseUrl('/')))

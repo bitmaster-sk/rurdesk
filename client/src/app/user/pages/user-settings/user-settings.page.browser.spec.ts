@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule, type FormGroup } from '@angular/forms';
-import { BehaviorSubject, of } from 'rxjs';
-import { UserService } from 'src/app/auth/user.service';
+import { signal } from '@angular/core';
+import { of } from 'rxjs';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 import { UserSettingsPage } from './user-settings.page';
@@ -16,10 +17,10 @@ describe('UserSettingsPage — avatar colour (browser)', () => {
         isAdmin: false
     };
 
-    let updateUser: ReturnType<typeof vi.fn>;
+    let updateUser$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
-        updateUser = vi.fn((name: string, colorAvatarBg?: string) =>
+        updateUser$ = vi.fn((name: string, colorAvatarBg?: string) =>
             of({ ...baseUser, name, colorAvatarBg: colorAvatarBg ?? baseUser.colorAvatarBg })
         );
         await TestBed.configureTestingModule({
@@ -27,8 +28,8 @@ describe('UserSettingsPage — avatar colour (browser)', () => {
             imports: [ReactiveFormsModule],
             providers: [
                 {
-                    provide: UserService,
-                    useValue: { user: new BehaviorSubject(baseUser), updateUser }
+                    provide: AuthStore,
+                    useValue: { user: signal(baseUser), updateUser$ }
                 },
                 {
                     provide: ToastNotificationService,
@@ -67,7 +68,7 @@ describe('UserSettingsPage — avatar colour (browser)', () => {
         const form = (comp as unknown as { profileForm: FormGroup }).profileForm;
         form.get('colorAvatarBg')!.setValue('#abcdef');
         comp.onSaveUser();
-        expect(updateUser).toHaveBeenCalledWith('tester', '#abcdef');
+        expect(updateUser$).toHaveBeenCalledWith('tester', '#abcdef');
     });
 
     it('a colour save shows the chip on the colour control, not the name input', () => {

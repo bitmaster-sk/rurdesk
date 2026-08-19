@@ -14,7 +14,7 @@ import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { filter } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { Message } from 'src/app/message/model/message.model';
 import { MessageService } from 'src/app/message/message.service';
@@ -37,7 +37,7 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
 })
 export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly sMessage = inject(MessageService);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly sTeam = inject(TeamService);
     private readonly userApi = inject(UserApi);
     private readonly sProject = inject(ProjectService);
@@ -56,7 +56,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
 
     protected readonly chats = computed<UiMenuItem[]>(() => {
         const unreadMap = this.unread();
-        const currentUserId = this.sUser.getUser().idUser;
+        const currentUserId = this.authStore.getUser().idUser;
         return [
             ...this.toProjectChatMenuItems(this._projects(), unreadMap),
             ...this.toTeamChatMenuItems(this._teams(), unreadMap),

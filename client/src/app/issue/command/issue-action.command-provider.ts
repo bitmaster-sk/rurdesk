@@ -14,7 +14,7 @@ import { StateStore } from '../../state/store/state.store';
 import { SeverityStore } from '../../severity/store/severity.store';
 import { ProjectMemberStore } from '../../project/project-member.store';
 import { AclStore } from '../../project/store/acl.store';
-import { UserService } from '../../auth/user.service';
+import { AuthStore } from '../../auth/store/auth.store';
 import { NoticeService } from '../../shared/notice/notice.service';
 import { Issue } from '../model/issue.model';
 
@@ -23,7 +23,7 @@ export class IssueActionCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
     private readonly issueService = inject(IssueService);
     private readonly acl = inject(AclStore);
-    private readonly userService = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly notice = inject(NoticeService);
     private readonly i18n = inject(I18nService);
     private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
@@ -41,7 +41,7 @@ export class IssueActionCommandProvider implements CommandProvider {
                         states: this.states(),
                         severities: this.severities(),
                         users: this.users() ?? [],
-                        currentUserId: this.userService.user.getValue()?.idUser ?? null
+                        currentUserId: this.authStore.user()?.idUser ?? null
                     },
                     (over: Partial<Issue>) => this.patch(ctx, over),
                     this.t

@@ -58,7 +58,7 @@
         <app-message-menu></app-message-menu>
         <app-notification-menu></app-notification-menu>
 
-        @if (user$ | async; as user) {
+        @if (user(); as user) {
             <!-- Renders into an overlay; hidden so it claims no flex gap slot. -->
             <ui-menu #userMenu class="hidden" panelClass="user-menu" [model]="userMenuItems()">
                 <ng-template #item let-item>

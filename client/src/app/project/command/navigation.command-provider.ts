@@ -14,7 +14,7 @@ import { ProjectService } from '../project.service';
 import { Project } from '../model/project.model';
 import { AclStore } from '../store/acl.store';
 import { CommandPaletteService } from '../../core/command/command-palette.service';
-import { UserService } from '../../auth/user.service';
+import { SessionService } from '../../auth/service/session.service';
 
 @Injectable({ providedIn: 'root' })
 export class NavigationCommandProvider implements CommandProvider {
@@ -22,7 +22,7 @@ export class NavigationCommandProvider implements CommandProvider {
     private readonly projectService = inject(ProjectService);
     private readonly acl = inject(AclStore);
     private readonly palette = inject(CommandPaletteService);
-    private readonly userService = inject(UserService);
+    private readonly session = inject(SessionService);
     private readonly i18n = inject(I18nService);
     private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
 
@@ -57,19 +57,11 @@ export class NavigationCommandProvider implements CommandProvider {
                         void this.router.navigate(['/project', ctx.idProject, 'issue', 0]);
                 },
                 openShortcuts: () => this.palette.openHelp(),
-                signOut: () => this.signOut()
+                signOut: () => this.session.end('/login')
             },
             { canCreateIssue: this.acl.canCreateIssue() },
             this.t
         );
         return [...nav, ...global];
-    }
-
-    private signOut(): void {
-        const done = (): void => {
-            this.userService.deleteAuthLocal();
-            void this.router.navigate(['/login']);
-        };
-        this.userService.logout().subscribe({ next: done, error: done });
     }
 }

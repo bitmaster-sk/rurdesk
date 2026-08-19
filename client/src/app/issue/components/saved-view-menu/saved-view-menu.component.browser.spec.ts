@@ -5,7 +5,7 @@ import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 import { SavedView } from 'src/app/project/model/saved-view.model';
 import { AclStore } from 'src/app/project/store/acl.store';
@@ -90,7 +90,7 @@ describe('SavedViewMenuComponent (browser)', () => {
                 },
                 { provide: AclStore, useValue: { canUpdateProject, canCreateIssue } },
                 { provide: UiToastService, useValue: { show: vi.fn() } },
-                { provide: UserService, useValue: { user: { getValue: () => ({ idUser: ME }) } } },
+                { provide: AuthStore, useValue: { user: signal({ idUser: ME }) } },
                 { provide: Router, useValue: { navigate: vi.fn(), serializeUrl: () => '/x' } }
             ]
         }).compileComponents();

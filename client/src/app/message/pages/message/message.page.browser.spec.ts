@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -16,7 +16,7 @@ import { MessageService } from '../../message.service';
 import { ProjectService } from 'src/app/project/project.service';
 import { TeamService } from 'src/app/team/team.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { MessageEditorStub, TablerIconStub, UiBadgeStub } from 'src/testing/stubs';
 import { User } from 'src/app/auth/model/user.model';
@@ -133,9 +133,9 @@ describe('MessagePage mentionCandidates', () => {
                     useValue: { loadUsers$: () => of([alice, bob, carol]) }
                 },
                 {
-                    provide: UserService,
+                    provide: AuthStore,
                     useValue: {
-                        user: new BehaviorSubject<User>({
+                        user: signal<User>({
                             idUser: 99,
                             name: 'Me',
                             email: '',

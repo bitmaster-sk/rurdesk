@@ -1,8 +1,8 @@
-import { Injector, runInInjectionContext } from '@angular/core';
+import { Injector, runInInjectionContext, signal } from '@angular/core';
 import { of } from 'rxjs';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { TopMenuComponent } from './top-menu.component';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectService } from 'src/app/project/project.service';
 import { ProjectStore } from 'src/app/project/project.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -27,7 +27,7 @@ function setup(user: User) {
         providers: [
             // instant() echoes the key so assertions stay i18n-independent
             { provide: I18nService, useValue: { instant: (k: string) => k } },
-            { provide: UserService, useValue: { user$: of(user) } },
+            { provide: AuthStore, useValue: { user: signal(user) } },
             { provide: ProjectService, useValue: { loadProjects: () => of([]) } },
             { provide: ProjectStore, useValue: { project$: of(null) } },
             { provide: NoticeService, useValue: { notification$: of() } },

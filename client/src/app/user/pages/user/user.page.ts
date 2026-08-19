@@ -6,12 +6,15 @@ import {
     effect,
     inject,
     OnInit,
-    signal
+    signal,
+    untracked
 } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { addDays, subDays } from 'date-fns';
 import { combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
-import { first, map, switchMap } from 'rxjs/operators';
-import { UserService } from 'src/app/auth/user.service';
+import { filter, first, map, switchMap } from 'rxjs/operators';
+import { User } from 'src/app/auth/model/user.model';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { PinView } from 'src/app/pin/entity/pin-view.entity';
 import { PinService } from 'src/app/pin/pin.service';
@@ -28,12 +31,14 @@ import { TrackerService } from 'src/app/shared/tracker/tracker.service';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserPage implements OnInit {
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly sPin = inject(PinService);
     private readonly severityStore = inject(SeverityStore);
     private readonly sTracker = inject(TrackerService);
 
-    private readonly _user$ = this.sUser.user$;
+    private readonly _user$ = toObservable(this.authStore.user).pipe(
+        filter((u): u is User => u !== null)
+    );
 
     private readonly _loadSignal$ = new ReplaySubject<void>(1);
 
@@ -92,9 +97,11 @@ export class UserPage implements OnInit {
         // Trigger when weekRange changes (reads the computed)
         const range = this.weekRange();
         // Update filter with current user and week range
-        this._user$.pipe(first()).subscribe(user => {
-            this.sTracker.setTrackFilter({ idUser: user.idUser, ...range });
-        });
+        const user = untracked(() => this.authStore.user());
+        if (user === null) {
+            return;
+        }
+        this.sTracker.setTrackFilter({ idUser: user.idUser, ...range });
     });
 
     public ngOnInit(): void {

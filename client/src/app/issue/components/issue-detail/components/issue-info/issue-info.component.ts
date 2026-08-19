@@ -32,7 +32,7 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { PinService } from 'src/app/pin/pin.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
@@ -74,7 +74,7 @@ export class IssueInfoComponent {
     private readonly i18n = inject(I18nService);
     private readonly sIssue = inject(IssueService);
     private readonly sPin = inject(PinService);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
@@ -90,7 +90,7 @@ export class IssueInfoComponent {
     public readonly saveStatus = signal<UiSaveState>(UiSaveState.Idle);
 
     public currentUserId(): number {
-        return this.sUser.getUser().idUser;
+        return this.authStore.getUser().idUser;
     }
     public readonly showInputTitle = signal(false);
     public readonly showInputDescription = signal(false);
@@ -288,7 +288,7 @@ export class IssueInfoComponent {
         const idPinDestination =
             idPinDestinationType === PinDestinationType.PROJECT
                 ? issue.idProject
-                : this.sUser.getUser().idUser;
+                : this.authStore.getUser().idUser;
         this.sPin
             .insertPin({
                 idPinDestination,

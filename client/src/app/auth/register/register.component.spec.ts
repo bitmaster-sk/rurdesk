@@ -4,8 +4,8 @@ import { FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { RegisterComponent } from './register.component';
-import { SettingsStore } from '../../core/settings/settings.store';
-import { UserService } from '../user.service';
+import { AuthApi } from '../api/auth.api.service';
+import { SessionService } from '../service/session.service';
 
 const VALID_FORM = {
     name: 'Admin',
@@ -20,27 +20,25 @@ function httpError(status: number, url: string): HttpErrorResponse {
 describe('RegisterComponent', () => {
     let component: RegisterComponent;
     let router: { navigate: ReturnType<typeof vi.fn> };
-    let settingsStore: { load: ReturnType<typeof vi.fn> };
-    let sUser: {
-        register: ReturnType<typeof vi.fn>;
-        login: ReturnType<typeof vi.fn>;
-        saveAuthLocal: ReturnType<typeof vi.fn>;
+    let authApi: {
+        register$: ReturnType<typeof vi.fn>;
+        login$: ReturnType<typeof vi.fn>;
     };
+    let session: { start: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         router = { navigate: vi.fn() };
-        settingsStore = { load: vi.fn() };
-        sUser = {
-            register: vi.fn().mockReturnValue(of(undefined)),
-            login: vi.fn().mockReturnValue(of('token-123')),
-            saveAuthLocal: vi.fn()
+        authApi = {
+            register$: vi.fn().mockReturnValue(of(undefined)),
+            login$: vi.fn().mockReturnValue(of('token-123'))
         };
+        session = { start: vi.fn(), end: vi.fn() };
         const injector = Injector.create({
             providers: [
                 { provide: FormBuilder, useValue: new FormBuilder() },
                 { provide: Router, useValue: router },
-                { provide: UserService, useValue: sUser },
-                { provide: SettingsStore, useValue: settingsStore }
+                { provide: AuthApi, useValue: authApi },
+                { provide: SessionService, useValue: session }
             ]
         });
         component = runInInjectionContext(injector, () => new RegisterComponent());
@@ -51,19 +49,17 @@ describe('RegisterComponent', () => {
         component.form.setValue(VALID_FORM);
         component.onRegister();
 
-        expect(sUser.register).toHaveBeenCalledWith({
+        expect(authApi.register$).toHaveBeenCalledWith({
             name: 'Admin',
             email: 'admin@example.com',
             password: 'secret'
         });
-        expect(sUser.saveAuthLocal).toHaveBeenCalledWith('token-123');
-        expect(settingsStore.load).toHaveBeenCalled();
-        expect(router.navigate).toHaveBeenCalledWith(['/']);
+        expect(session.start).toHaveBeenCalledWith('token-123');
         expect(component.errorKey()).toBeNull();
     });
 
     it('shows the closed message when the server returns 403', () => {
-        sUser.register.mockReturnValue(throwError(() => httpError(403, '/api/public/register')));
+        authApi.register$.mockReturnValue(throwError(() => httpError(403, '/api/public/register')));
         component.form.setValue(VALID_FORM);
         component.onRegister();
 
@@ -72,7 +68,7 @@ describe('RegisterComponent', () => {
     });
 
     it('shows a generic message on other server errors', () => {
-        sUser.register.mockReturnValue(throwError(() => httpError(500, '/api/public/register')));
+        authApi.register$.mockReturnValue(throwError(() => httpError(500, '/api/public/register')));
         component.form.setValue(VALID_FORM);
         component.onRegister();
 
@@ -80,12 +76,12 @@ describe('RegisterComponent', () => {
     });
 
     it('redirects to /login when registration succeeds but auto-login fails', () => {
-        sUser.login.mockReturnValue(throwError(() => httpError(401, '/api/public/login')));
+        authApi.login$.mockReturnValue(throwError(() => httpError(401, '/api/public/login')));
         component.form.setValue(VALID_FORM);
         component.onRegister();
 
         expect(router.navigate).toHaveBeenCalledWith(['/login']);
-        expect(sUser.saveAuthLocal).not.toHaveBeenCalled();
+        expect(session.start).not.toHaveBeenCalled();
     });
 
     it('does not call the server and flags mismatched passwords', () => {
@@ -95,14 +91,14 @@ describe('RegisterComponent', () => {
         });
         component.onRegister();
 
-        expect(sUser.register).not.toHaveBeenCalled();
+        expect(authApi.register$).not.toHaveBeenCalled();
         expect(component.errorKey()).toBe('REGISTER.PASSWORD.MISMATCH');
     });
 
     it('does not call the server on an incomplete form', () => {
         component.onRegister();
 
-        expect(sUser.register).not.toHaveBeenCalled();
+        expect(authApi.register$).not.toHaveBeenCalled();
         expect(component.errorKey()).toBe('REGISTER.INVALID');
     });
 

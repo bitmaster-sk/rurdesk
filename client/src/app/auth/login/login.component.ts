@@ -1,8 +1,8 @@
-import { UserService } from './../user.service';
+import { AuthApi } from '../api/auth.api.service';
+import { SessionService } from '../service/session.service';
+import { AuthTokenStore } from '../store/auth-token.store';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { SettingsStore } from '../../core/settings/settings.store';
 
 @Component({
     selector: 'app-login',
@@ -12,9 +12,9 @@ import { SettingsStore } from '../../core/settings/settings.store';
 })
 export class LoginComponent implements OnInit {
     private fb = inject(FormBuilder);
-    private router = inject(Router);
-    private sUser = inject(UserService);
-    private settingsStore = inject(SettingsStore);
+    private authApi = inject(AuthApi);
+    private tokenStore = inject(AuthTokenStore);
+    private session = inject(SessionService);
 
     public form: FormGroup;
     public readonly hasFailed = signal(false);
@@ -24,8 +24,8 @@ export class LoginComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        if (this.sUser.hasAuthLocal()) {
-            this.logout();
+        if (this.tokenStore.hasToken()) {
+            this.session.end();
         }
         // Clear a previous failure as soon as the user edits their credentials.
         this.form.valueChanges.subscribe(() => this.hasFailed.set(false));
@@ -34,29 +34,10 @@ export class LoginComponent implements OnInit {
     public onLogin(): void {
         this.hasFailed.set(false);
         const credentials = this.form.value as { email: string; password: string };
-        this.sUser.login(credentials.email, credentials.password).subscribe({
-            next: token => this.onLoginSuccess(token),
+        this.authApi.login$(credentials.email, credentials.password).subscribe({
+            next: token => this.session.start(token),
             error: () => this.hasFailed.set(true)
         });
-    }
-
-    private onLoginSuccess(token: string): void {
-        this.sUser.saveAuthLocal(token);
-        // App bootstrap skips the auth-gated settings load for anonymous visitors;
-        // now that we have a token, load them (navigation does not re-bootstrap).
-        this.settingsStore.load();
-        void this.router.navigate(['/']);
-    }
-
-    private logout(): void {
-        this.sUser.logout().subscribe({
-            next: () => this.onLogoutSuccess(),
-            error: () => this.onLogoutSuccess()
-        });
-    }
-
-    private onLogoutSuccess(): void {
-        this.sUser.deleteAuthLocal();
     }
 
     private buildForm(): FormGroup {

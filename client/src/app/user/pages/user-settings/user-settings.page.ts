@@ -6,10 +6,11 @@ import {
     inject,
     signal
 } from '@angular/core';
-import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, filter } from 'rxjs/operators';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthApi } from 'src/app/auth/api/auth.api.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
@@ -21,14 +22,13 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserSettingsPage implements OnInit {
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
+    private readonly authApi = inject(AuthApi);
     private readonly sToast = inject(ToastNotificationService);
     private readonly fb = inject(FormBuilder);
     private readonly destroyRef = inject(DestroyRef);
 
-    public readonly currentUser = toSignal(this.sUser.user, {
-        requireSync: true
-    });
+    public readonly currentUser = this.authStore.user;
 
     // Per-field save chips so feedback appears next to the control the user
     // actually edited — a colour save must not light the chip over the name input.
@@ -99,8 +99,8 @@ export class UserSettingsPage implements OnInit {
     public onSaveUser(source: 'name' | 'color' = 'name'): void {
         const status = source === 'color' ? this.colorSaveStatus : this.nameSaveStatus;
         status.set(UiSaveState.Saving);
-        this.sUser
-            .updateUser(this.profileForm.value.name, this.profileForm.value.colorAvatarBg)
+        this.authStore
+            .updateUser$(this.profileForm.value.name, this.profileForm.value.colorAvatarBg)
             .subscribe({
                 next: user => {
                     this.profileForm.patchValue(
@@ -119,7 +119,7 @@ export class UserSettingsPage implements OnInit {
 
     public onChangePassword(): void {
         const { currentPassword, newPassword } = this.passwordForm.value;
-        this.sUser.changePassword$(currentPassword, newPassword).subscribe({
+        this.authApi.changePassword$(currentPassword, newPassword).subscribe({
             next: () => {
                 this.passwordForm.reset();
                 this.sToast.showSuccess('USER.PASSWORD_CHANGED');

@@ -12,7 +12,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 import { SavedView, SavedViewConfig } from 'src/app/project/model/saved-view.model';
 import {
@@ -55,7 +55,7 @@ export class SavedViewMenuComponent {
     private readonly router = inject(Router);
     private readonly toast = inject(UiToastService);
     private readonly i18n = inject(I18nService);
-    private readonly userService = inject(UserService);
+    private readonly authStore = inject(AuthStore);
     private readonly destroyRef = inject(DestroyRef);
     protected readonly aclStore = inject(AclStore);
 
@@ -277,7 +277,7 @@ export class SavedViewMenuComponent {
     }
 
     private currentUserId(): number | null {
-        return this.userService.user.getValue()?.idUser ?? null;
+        return this.authStore.user()?.idUser ?? null;
     }
 
     private closePanel(): void {

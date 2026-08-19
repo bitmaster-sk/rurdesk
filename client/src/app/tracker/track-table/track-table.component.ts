@@ -1,8 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, merge, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
-import { UserService } from 'src/app/auth/user.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Track, TrackForm } from 'src/app/shared/tracker/model/track.model';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
@@ -15,7 +16,7 @@ import { UserApi } from 'src/app/user/api/user.api.service';
 export class TrackTableComponent implements OnInit {
     private readonly sTracker = inject(TrackerService);
     private readonly userApi = inject(UserApi);
-    private readonly sUser = inject(UserService);
+    private readonly authStore = inject(AuthStore);
 
     public users = new Map<number, User>();
 
@@ -27,7 +28,7 @@ export class TrackTableComponent implements OnInit {
 
     public track$ = merge(
         this._track$,
-        combineLatest([this.sUser.user$, this.sTracker.tracksFilter$]).pipe(
+        combineLatest([toObservable(this.authStore.user), this.sTracker.tracksFilter$]).pipe(
             map(([user, filter]) => {
                 if (!user || !filter) {
                     return null;
