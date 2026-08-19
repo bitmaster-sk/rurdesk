@@ -7,7 +7,7 @@
     justify-content: center;
     align-items: center;
     font-weight: bold;
-    color: var(--color-text-dark);
+    color: var(--ui-color-text);
     // Host is display: contents, so this is the flex item — never let a
     // fixed-size avatar squash; tight containers clip it via overflow instead
     flex-shrink: 0;

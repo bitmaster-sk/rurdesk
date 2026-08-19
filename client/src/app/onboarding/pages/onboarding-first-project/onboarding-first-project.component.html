@@ -36,15 +36,15 @@
                     <li>{{ 'ONBOARDING.AI_BULLET_1' | translate }}</li>
                     <li>{{ 'ONBOARDING.AI_BULLET_2' | translate }}</li>
                 </ul>
-                <button
-                    type="button"
-                    class="ui-btn ui-btn--primary ui-btn--block"
+                <ui-button
+                    severity="primary"
+                    [fluid]="true"
                     [disabled]="name.invalid || isSubmitting()"
                     (click)="onCreateWithAI()"
                 >
                     <tabler-icon icon="sparkles" [size]="16" />
                     <span>{{ 'ONBOARDING.AI_CTA' | translate }}</span>
-                </button>
+                </ui-button>
             </div>
 
             <div class="ob-path">
@@ -57,14 +57,14 @@
                     <li>{{ 'ONBOARDING.BLANK_BULLET_1' | translate }}</li>
                     <li>{{ 'ONBOARDING.BLANK_BULLET_2' | translate }}</li>
                 </ul>
-                <button
-                    type="button"
-                    class="ui-btn ui-btn--secondary ui-btn--block"
+                <ui-button
+                    severity="secondary"
+                    [fluid]="true"
                     [disabled]="name.invalid || isSubmitting()"
                     (click)="onCreateBlank()"
                 >
                     <span>{{ 'ONBOARDING.BLANK_CTA' | translate }}</span>
-                </button>
+                </ui-button>
             </div>
         </div>
     </div>
