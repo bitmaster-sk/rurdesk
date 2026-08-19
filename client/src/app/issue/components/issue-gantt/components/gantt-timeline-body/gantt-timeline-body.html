@@ -12,6 +12,7 @@
         [totalWidth]="totalWidth()"
     />
     <div
+        #canvas
         class="gantt-body--canvas"
         [style.width.px]="totalWidth()"
         [style.height.px]="totalHeight()"
@@ -45,15 +46,7 @@
             [style.width.px]="bar.width"
             [style.height.px]="timelineService.rowHeight() - 4"
         ></div>
-        @if (bar.tooltipText) {
-        <span
-            class="gantt-body--ghost-label"
-            [style.left.px]="bar.left + bar.width / 2"
-            [style.top.px]="bar.top"
-        >
-            {{ bar.tooltipText }}
-        </span>
-        } }
+        }
 
         <!-- Task bars -->
         @for (task of tasks(); track task.idIssuePublic; let i = $index) {
