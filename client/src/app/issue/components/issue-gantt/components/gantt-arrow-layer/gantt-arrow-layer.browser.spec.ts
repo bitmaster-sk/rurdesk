@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -525,6 +526,79 @@ describe('GanttArrowLayerComponent (TestBed)', () => {
             result.fixture.componentRef.setInput('isCriticalTracing', true);
             result.fixture.detectChanges();
             expect(result.comp.arrows()).toHaveLength(1);
+        });
+    });
+
+    // =========================================================================
+    // arrowhead colour
+    // =========================================================================
+
+    describe('arrowhead colour', () => {
+        it('takes the arrowhead colour from the line, not from a second marker', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture();
+            const root = result.fixture.nativeElement;
+
+            expect(root.querySelectorAll('marker[id^="arrowhead"]')).toHaveLength(1);
+            expect(root.querySelector('#arrowhead path').getAttribute('fill')).toBe(
+                'context-stroke'
+            );
+            expect(root.querySelector('#dot circle').getAttribute('fill')).toBe('context-stroke');
+        });
+
+        it('points at the same arrowhead while drawing in as when idle', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture();
+            const line = () =>
+                result.fixture.nativeElement
+                    .querySelector('.gantt-arrow path')
+                    .getAttribute('marker-end');
+            const idle = line();
+
+            result.fixture.componentRef.setInput('drawInRelation', { from: 1, to: 2 });
+            result.fixture.detectChanges();
+            expect(result.comp.arrows()[0].isDrawIn).toBe(true);
+            expect(line()).toBe(idle);
+
+            result.fixture.componentRef.setInput('drawInRelation', null);
+            result.fixture.componentRef.setInput('criticalRelationIds', new Set([1]));
+            result.fixture.detectChanges();
+            expect(line()).toBe(idle);
+
+            result.fixture.componentRef.setInput('selectedRelationId', 1);
+            result.fixture.detectChanges();
+            expect(line()).toBe(idle);
+        });
+    });
+
+    // =========================================================================
+    // keyboard focus
+    // =========================================================================
+
+    describe('keyboard tab order', () => {
+        it('never lands focus on an arrow while tabbing', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture();
+            const svg = result.fixture.nativeElement.querySelector('svg.gantt-arrows');
+            expect(svg.querySelectorAll('path[stroke="transparent"]').length).toBeGreaterThan(0);
+
+            for (let i = 0; i < 5; i++) {
+                await userEvent.tab();
+                expect(document.activeElement?.closest('svg.gantt-arrows')).toBeNull();
+            }
+        });
+
+        it('draws no focus ring on an arrow that gets focused anyway', async () => {
+            TestBed.resetTestingModule();
+            const result = await createFixture();
+            const path: SVGPathElement = result.fixture.nativeElement.querySelector(
+                'svg.gantt-arrows path[stroke="transparent"]'
+            );
+
+            path.focus();
+
+            expect(document.activeElement).toBe(path);
+            expect(getComputedStyle(path).outlineStyle).toBe('none');
         });
     });
 

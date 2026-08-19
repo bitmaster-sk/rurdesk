@@ -21,6 +21,10 @@
     pointer-events: auto;
     cursor: pointer;
 
+    path:focus {
+        outline: none;
+    }
+
     &:hover path:first-child {
         stroke: var(--ui-color-primary);
         stroke-width: 3;
