@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EMPTY, of } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { IssueDetailPage } from './issue-detail.page';
@@ -7,6 +7,7 @@ import { IssueService } from '../../issue.service';
 import { ProjectStore } from 'src/app/project/project.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
 
@@ -21,10 +22,13 @@ const issue: Issue = {
     tracked: 0
 };
 
-describe('IssueDetailPage palette context', () => {
+describe('IssueDetailPage title', () => {
     let setContext: any;
+    let issue$: Subject<any>;
     beforeEach(() => {
         setContext = vi.fn();
+        issue$ = new Subject<any>();
+        document.title = DEFAULT_TITLE;
         TestBed.configureTestingModule({
             declarations: [IssueDetailPage],
             providers: [
@@ -39,7 +43,7 @@ describe('IssueDetailPage palette context', () => {
                     useValue: { loadIssue: () => of(issue), toIssue: (x: Issue) => x }
                 },
                 { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
-                { provide: NoticeService, useValue: { issue$: EMPTY } },
+                { provide: NoticeService, useValue: { issue$ } },
                 { provide: CommandPaletteService, useValue: { setContext } }
             ]
         }).overrideComponent(IssueDetailPage, {
@@ -50,16 +54,39 @@ describe('IssueDetailPage palette context', () => {
         });
     });
 
-    it('pushes {idProject, issue} when the issue loads', () => {
+    it('sets document.title to issue number and title after load', () => {
         TestBed.createComponent(IssueDetailPage).detectChanges();
-        expect(setContext).toHaveBeenCalledWith({ idProject: 1, issue });
+        expect(document.title).toBe('#5 X · RuRdesk');
     });
 
-    it('clears the issue (keeps idProject) on destroy', () => {
+    it('restores document.title to default on destroy', () => {
         const f = TestBed.createComponent(IssueDetailPage);
         f.detectChanges();
-        setContext.mockClear();
         f.destroy();
-        expect(setContext).toHaveBeenCalledWith({ idProject: 1, issue: null });
+        expect(document.title).toBe(DEFAULT_TITLE);
+    });
+
+    it('updates document.title when the issue title changes via notice', () => {
+        const f = TestBed.createComponent(IssueDetailPage);
+        f.detectChanges();
+        const renamed: Issue = { ...issue, title: 'Renamed' };
+        issue$.next({ payload: renamed, subject: 'issue', action: 'update' });
+        f.detectChanges();
+        expect(document.title).toBe('#5 Renamed · RuRdesk');
+    });
+
+    it('truncates a long issue title while keeping the number visible', () => {
+        const longIssue: Issue = { ...issue, title: 'a'.repeat(80) };
+        TestBed.configureTestingModule({
+            providers: [
+                {
+                    provide: IssueService,
+                    useValue: { loadIssue: () => of(longIssue), toIssue: (x: Issue) => x }
+                }
+            ]
+        });
+        TestBed.createComponent(IssueDetailPage).detectChanges();
+        expect(document.title.startsWith('#5 ')).toBe(true);
+        expect(document.title).toContain('… · RuRdesk');
     });
 });
