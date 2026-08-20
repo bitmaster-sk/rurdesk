@@ -232,7 +232,12 @@ export class IssueQuickActionsComponent implements OnDestroy {
         const issue = this.issue();
         if (!issue) return;
 
-        const urlTree = this.router.createUrlTree(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+        const urlTree = this.router.createUrlTree([
+            '/project',
+            issue.idProject,
+            'issue',
+            issue.idIssuePublic
+        ]);
         const internalUrl = this.router.serializeUrl(urlTree);
         const externalUrl = this.location.prepareExternalUrl(internalUrl);
         const fullUrl = `${window.location.origin}${externalUrl}`;
