@@ -1,9 +1,12 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    ComponentRef,
     ElementRef,
     NgZone,
+    OnDestroy,
     computed,
+    effect,
     inject,
     input,
     output,
@@ -12,6 +15,14 @@ import {
     AfterViewInit
 } from '@angular/core';
 import { Router } from '@angular/router';
+import {
+    ConnectedPosition,
+    FlexibleConnectedPositionStrategy,
+    Overlay,
+    OverlayRef
+} from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { UiTooltipComponent } from '../../../../../ui/components/tooltip/tooltip.component';
 import {
     GanttTimelineService,
     GanttColumn,
@@ -23,6 +34,11 @@ import { GanttRelation } from '../../model/gantt-relation.model';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { RelationDropTarget } from '../../service/gantt-drag.service';
 
+const DRAG_TOOLTIP_POSITIONS: ConnectedPosition[] = [
+    { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -8 },
+    { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 8 }
+];
+
 @Component({
     selector: 'app-gantt-timeline-body',
     templateUrl: './gantt-timeline-body.html',
@@ -30,13 +46,15 @@ import { RelationDropTarget } from '../../service/gantt-drag.service';
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class GanttTimelineBodyComponent implements AfterViewInit {
+export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
     private readonly router = inject(Router);
     private readonly ngZone = inject(NgZone);
+    private readonly overlay = inject(Overlay);
     public readonly timelineService = inject(GanttTimelineService);
 
     private readonly scrollContainer =
         viewChild.required<ElementRef<HTMLDivElement>>('scrollContainer');
+    private readonly canvas = viewChild.required<ElementRef<HTMLDivElement>>('canvas');
 
     public readonly tasks = input.required<ScheduledIssue[]>();
     public readonly columns = input.required<GanttColumn[]>();
@@ -107,6 +125,31 @@ export class GanttTimelineBodyComponent implements AfterViewInit {
 
     private isSyncingScroll = false;
 
+    private dragTooltipOverlayRef: OverlayRef | null = null;
+    private dragTooltipRef: ComponentRef<UiTooltipComponent> | null = null;
+    private dragTooltipPosition: FlexibleConnectedPositionStrategy | null = null;
+
+    public constructor() {
+        this.effectDragTooltip();
+    }
+
+    private effectDragTooltip(): void {
+        effect(() => {
+            const ghost = this.ghostBars().find(bar => bar.tooltipText);
+            this.scrollLeft();
+            this.scrollTop();
+            if (!ghost?.tooltipText) {
+                this.hideDragTooltip();
+                return;
+            }
+            this.showDragTooltip(ghost.tooltipText, ghost.left, ghost.top, ghost.width);
+        });
+    }
+
+    public ngOnDestroy(): void {
+        this.hideDragTooltip();
+    }
+
     public ngAfterViewInit(): void {
         // Scroll to today on init
         const todayPx = this.todayLeft();
@@ -166,6 +209,46 @@ export class GanttTimelineBodyComponent implements AfterViewInit {
 
     public getScrollContainer(): HTMLDivElement {
         return this.scrollContainer().nativeElement;
+    }
+
+    private showDragTooltip(text: string, left: number, top: number, width: number): void {
+        const canvasRect = this.canvas().nativeElement.getBoundingClientRect();
+        const origin = {
+            x: canvasRect.left + left,
+            y: canvasRect.top + top,
+            width,
+            height: this.timelineService.rowHeight() - 4
+        };
+
+        if (!this.dragTooltipOverlayRef) {
+            this.dragTooltipPosition = this.overlay
+                .position()
+                .flexibleConnectedTo(origin)
+                .withPositions(DRAG_TOOLTIP_POSITIONS)
+                .withPush(true);
+            this.dragTooltipOverlayRef = this.overlay.create({
+                positionStrategy: this.dragTooltipPosition,
+                scrollStrategy: this.overlay.scrollStrategies.noop(),
+                hasBackdrop: false
+            });
+            this.dragTooltipRef = this.dragTooltipOverlayRef.attach(
+                new ComponentPortal(UiTooltipComponent)
+            );
+        } else {
+            this.dragTooltipPosition?.setOrigin(origin);
+        }
+
+        this.dragTooltipRef?.setInput('text', text);
+        this.dragTooltipRef?.changeDetectorRef.detectChanges();
+        this.dragTooltipOverlayRef.updatePosition();
+    }
+
+    private hideDragTooltip(): void {
+        if (!this.dragTooltipOverlayRef) return;
+        this.dragTooltipOverlayRef.dispose();
+        this.dragTooltipOverlayRef = null;
+        this.dragTooltipRef = null;
+        this.dragTooltipPosition = null;
     }
 
     public onDoubleClick(event: MouseEvent): void {

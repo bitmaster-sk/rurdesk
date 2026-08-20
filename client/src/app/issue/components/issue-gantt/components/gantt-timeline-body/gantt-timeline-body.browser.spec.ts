@@ -5,6 +5,7 @@ import { Component, input, output } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { GanttTimelineBodyComponent } from './gantt-timeline-body';
+import { UiTooltipComponent } from '../../../../../ui/components/tooltip/tooltip.component';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { ScheduledIssue } from '../../../../model/extended-issue.model';
 
@@ -86,7 +87,7 @@ describe('GanttTimelineBodyComponent (TestBed)', () => {
     beforeEach(async () => {
         TestBed.configureTestingModule({
             imports: [TimelineHeaderStub, TaskBarStub, ArrowLayerStub],
-            declarations: [GanttTimelineBodyComponent],
+            declarations: [GanttTimelineBodyComponent, UiTooltipComponent],
             providers: [
                 { provide: GanttTimelineService, useValue: timelineServiceMock },
                 provideRouter([])
@@ -124,6 +125,65 @@ describe('GanttTimelineBodyComponent (TestBed)', () => {
 
             expect(document.activeElement).toBe(scroller);
             expect(getComputedStyle(scroller).outlineStyle).toBe('none');
+        });
+    });
+
+    describe('drag date tooltip', () => {
+        const ghost = (top: number) => [
+            { taskId: 1, left: 120, top, width: 80, tooltipText: 'Wed 15 Jan, 09:00' }
+        ];
+
+        function bubble(): HTMLElement | null {
+            return document.querySelector('.cdk-overlay-container .ui-tooltip');
+        }
+
+        function centerX(rect: DOMRect): number {
+            return rect.left + rect.width / 2;
+        }
+
+        async function setGhostBars(bars: unknown[]): Promise<void> {
+            fixture.componentRef.setInput('ghostBars', bars);
+            fixture.detectChanges();
+            await fixture.whenStable();
+        }
+
+        it('renders the date bubble outside the timeline scroller so bars cannot cover it', async () => {
+            await setGhostBars(ghost(64 + 2));
+
+            const tip = bubble();
+            expect(tip).not.toBeNull();
+            expect(tip!.textContent?.trim()).toBe('Wed 15 Jan, 09:00');
+            expect(tip!.closest('.gantt-body')).toBeNull();
+        });
+
+        it('places the bubble horizontally over the ghost bar', async () => {
+            await setGhostBars(ghost(64 + 2));
+
+            const canvas = fixture.nativeElement.querySelector('.gantt-body--canvas');
+            const ghostBar = fixture.nativeElement.querySelector('.gantt-body--ghost');
+            const tipRect = bubble()!.getBoundingClientRect();
+            const barRect = ghostBar.getBoundingClientRect();
+
+            expect(canvas).not.toBeNull();
+            expect(Math.abs(centerX(tipRect) - centerX(barRect))).toBeLessThan(24);
+        });
+
+        it('keeps the bubble inside the viewport when the ghost sits in the first row', async () => {
+            await setGhostBars(ghost(2));
+
+            const tipRect = bubble()!.getBoundingClientRect();
+
+            expect(tipRect.top).toBeGreaterThanOrEqual(0);
+            expect(tipRect.bottom).toBeLessThanOrEqual(window.innerHeight);
+        });
+
+        it('removes the bubble when the drag ends', async () => {
+            await setGhostBars(ghost(64 + 2));
+            expect(bubble()).not.toBeNull();
+
+            await setGhostBars([]);
+
+            expect(bubble()).toBeNull();
         });
     });
 
