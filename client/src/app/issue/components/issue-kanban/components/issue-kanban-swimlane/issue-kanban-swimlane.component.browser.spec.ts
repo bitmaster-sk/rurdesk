@@ -108,7 +108,14 @@ describe('IssueKanbanSwimlaneComponent', () => {
         const emitted: any[] = [];
         component.cardDrop.subscribe(e => emitted.push(e));
         const cells = fixture.debugElement.queryAll(By.css('.swimlane-cell'));
-        cells[0].triggerEventHandler('cdkDropListDropped', { previousIndex: 0, currentIndex: 0 });
+        const cellData = rows[0].cells[0];
+        const dropEvent = {
+            previousIndex: 0,
+            currentIndex: 0,
+            previousContainer: { data: cellData },
+            container: { data: cellData }
+        } as any;
+        cells[0].triggerEventHandler('cdkDropListDropped', dropEvent);
         expect(emitted.length).toBe(1);
     });
 });
