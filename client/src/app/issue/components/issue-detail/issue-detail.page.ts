@@ -11,6 +11,7 @@ import { ActivatedRoute, ParamMap } from '@angular/router';
 import { Observable, concat, of } from 'rxjs';
 import { filter, map, shareReplay, switchMap } from 'rxjs/operators';
 import { ProjectStore } from 'src/app/project/project.store';
+import { BrowserTitleService } from 'src/app/core/browser-title.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
@@ -32,6 +33,7 @@ export class IssueDetailPage implements OnDestroy {
     private readonly sIssue = inject(IssueService);
     private readonly projectStore = inject(ProjectStore);
     private readonly notice = inject(NoticeService);
+    private readonly browserTitle = inject(BrowserTitleService);
     private readonly commandPalette = inject(CommandPaletteService);
     private lastIdProject: number | null = null;
 
@@ -90,6 +92,8 @@ export class IssueDetailPage implements OnDestroy {
             this.agentRunStore.loadForIssue(project.idProject, issue.idIssuePublic, issue.idIssue);
         });
 
+        this.effectBrowserTabTitle();
+
         // Feed the open issue into the palette so `>` actions target it contextually.
         this.issue$.pipe(takeUntilDestroyed()).subscribe(issue => {
             this.lastIdProject = issue.idProject ?? null;
@@ -100,7 +104,21 @@ export class IssueDetailPage implements OnDestroy {
     public ngOnDestroy(): void {
         // Stop `>` actions targeting a left issue; the layout nulls idProject if the whole
         // project is being left (children destroy before the layout).
+        this.browserTitle.setDefault();
         this.commandPalette.setContext({ idProject: this.lastIdProject, issue: null });
+    }
+
+    private effectBrowserTabTitle(): void {
+        // Keep the browser tab title in sync with the open issue. The number
+        // is first so it survives truncation in narrow tabs; the title is
+        // truncated in the helper so long names stay readable in history.
+        effect(() => {
+            const issue = this.issue();
+            if (!issue) {
+                return;
+            }
+            this.browserTitle.setIssueTitle(issue);
+        });
     }
 
     public onTrackAdded(track: Track): void {
