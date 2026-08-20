@@ -471,6 +471,7 @@
             "REMOVE_DATE": "Remove date",
             "PICK_DATE": "Pick a date…",
             "OPEN": "Open",
+            "OPEN_IN_NEW_TAB": "Open in new tab",
             "COPY_ID": "Copy ID",
             "DELETE": "Delete",
             "AI": "AI"

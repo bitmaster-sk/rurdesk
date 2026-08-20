@@ -11,6 +11,7 @@ import {
     viewChild
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Location } from '@angular/common';
 import { Router } from '@angular/router';
 import { UiPopoverComponent } from 'src/app/ui/components/popover/popover.component';
 import { combineLatest } from 'rxjs';
@@ -37,6 +38,7 @@ import { ClipboardService } from 'src/app/core/clipboard.service';
 })
 export class IssueQuickActionsComponent implements OnDestroy {
     private readonly router = inject(Router);
+    private readonly location = inject(Location);
     private readonly cdr = inject(ChangeDetectorRef);
     private readonly projectStore = inject(ProjectStore);
     private readonly stateStore = inject(StateStore);
@@ -229,7 +231,18 @@ export class IssueQuickActionsComponent implements OnDestroy {
     protected onOpen(): void {
         const issue = this.issue();
         if (!issue) return;
-        void this.router.navigate(['/project', issue.idProject, 'issue', issue.idIssuePublic]);
+
+        const urlTree = this.router.createUrlTree([
+            '/project',
+            issue.idProject,
+            'issue',
+            issue.idIssuePublic
+        ]);
+        const internalUrl = this.router.serializeUrl(urlTree);
+        const externalUrl = this.location.prepareExternalUrl(internalUrl);
+        const fullUrl = `${window.location.origin}${externalUrl}`;
+
+        window.open(fullUrl, '_blank', 'noopener');
         this.hide();
     }
 
