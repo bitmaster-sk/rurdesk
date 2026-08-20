@@ -141,7 +141,7 @@
 }
 
 // Role badges — same visual language as .kind-badge in activity-comment-item.
-// Uses PrimeNG semantic color tokens so dark/light themes apply automatically.
+// Uses --ui-* palette tokens so dark/light themes apply automatically.
 .role-badge {
     display: inline-flex;
     align-items: center;

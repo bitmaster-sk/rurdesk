@@ -466,7 +466,6 @@ tabler-icon {
     // let that content grow while the min-height keeps the control at the 32px
     // default. Opt-in via `--ui-input-padding-y: var(--ui-input-rich-padding-y)`.
     --ui-input-rich-padding-y: 0.2rem;
-    --ui-float-focus-color: var(--ui-brand-600);
     --ui-input-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
 
     //####################################################

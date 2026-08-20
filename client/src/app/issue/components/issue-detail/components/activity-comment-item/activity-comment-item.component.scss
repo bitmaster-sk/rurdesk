@@ -38,7 +38,7 @@
     }
 
     // Each productive stage gets a tinted left border + matching kind-badge color.
-    // Colors lean on PrimeNG tokens so dark/light themes follow automatically.
+    // Colors lean on --ui-* palette tokens so dark/light themes follow automatically.
     &.kind-brainstorming-question {
         border-left: 3px solid var(--ui-blue-500);
         .kind-badge {

@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Official Playwright E2E config. Tests live in e2e/playwright (kept separate from the
-// legacy Protractor specs under e2e/src). The webServer block starts the Angular dev
-// server; full agent/issue flows additionally need the API + Postgres + Redis running
-// (docker-compose up) — point E2E_BASE_URL at a fully running stack for those.
+// Official Playwright E2E config. Tests live in e2e/playwright. The webServer block
+// starts the Angular dev server; full agent/issue flows additionally need the API +
+// Postgres + Redis running (docker-compose up) — point E2E_BASE_URL at a fully
+// running stack for those.
 export default defineConfig({
     testDir: './e2e/playwright',
     globalSetup: './e2e/playwright/support/global-setup.ts',
