@@ -90,6 +90,46 @@ tabler-icon {
 // description preview): restore list markers, link styling and rules that
 // Preflight strips.
 [markdown] {
+    > *:first-child {
+        margin-top: 0;
+    }
+    > *:last-child {
+        margin-bottom: 0;
+    }
+    p {
+        margin: 0.5em 0;
+    }
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 1.2em 0 0.4em;
+        font-weight: 700;
+        line-height: 1.25;
+    }
+    h1 {
+        font-size: 1.4em;
+        padding-bottom: 0.2em;
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+    h2 {
+        font-size: 1.25em;
+    }
+    h3 {
+        font-size: 1.15em;
+    }
+    h4 {
+        font-size: 1.05em;
+    }
+    h5 {
+        font-size: 1em;
+    }
+    h6 {
+        font-size: 1em;
+        color: var(--ui-color-text-muted);
+    }
     ul {
         list-style: disc;
         padding-left: 1.5em;
@@ -100,6 +140,13 @@ tabler-icon {
         padding-left: 1.5em;
         margin: 0.5em 0;
     }
+    li + li {
+        margin-top: 0.15em;
+    }
+    li > ul,
+    li > ol {
+        margin: 0.15em 0;
+    }
     a {
         color: var(--ui-color-primary);
         text-decoration: underline;
@@ -109,10 +156,106 @@ tabler-icon {
         border-top: 1px solid var(--ui-color-border);
         margin: 0.75em 0;
     }
+    blockquote {
+        margin: 0.75em 0;
+        padding: 0.1em 0 0.1em var(--ui-space-m);
+        border-left: 3px solid var(--ui-color-border);
+        color: var(--ui-color-text-muted);
+    }
+    code {
+        padding: 0.15em 0.35em;
+        border: 1px solid var(--ui-surface-200);
+        border-radius: var(--ui-radius-sm);
+        background: var(--ui-surface-100);
+        color: var(--ui-brand-700);
+        font-family: var(--ui-font-mono);
+        font-size: 0.875em;
+    }
+    pre,
+    pre[class*='language-'] {
+        margin: 0.75em 0;
+        padding: var(--ui-space-m);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-surface-50);
+        overflow-x: auto;
+        font-family: var(--ui-font-mono);
+        font-size: 0.875em;
+        line-height: 1.5;
+
+        code {
+            padding: 0;
+            border: 0;
+            background: none;
+            color: var(--ui-color-text);
+            font-family: inherit;
+            font-size: inherit;
+        }
+    }
+
+    li > p {
+        margin: 0.15em 0;
+    }
+    img {
+        max-width: 100%;
+    }
+    details {
+        margin: 0.75em 0;
+    }
+    summary {
+        cursor: pointer;
+    }
+
+    // ngx-markdown renders tables as plain <table> elements. A wide table
+    // (e.g. an agent plan's verification checklist) overflows its container
+    // instead of scrolling. `display: block` + `width: max-content` lets the
+    // table size to its content, `max-width: 100%` caps it at the container,
+    // and `overflow-x: auto` adds a horizontal scrollbar only when needed.
+    table {
+        display: block;
+        width: max-content;
+        max-width: 100%;
+        margin: 0.75em 0;
+        overflow-x: auto;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--ui-table-border);
+        border-radius: var(--ui-radius-md);
+        font-size: var(--ui-table-font-size);
+        color: var(--ui-table-fg);
+
+        th,
+        td {
+            padding: var(--ui-table-cell-padding);
+            border-bottom: 1px solid var(--ui-table-border);
+            text-align: left;
+        }
+
+        thead th {
+            font-weight: var(--ui-table-header-weight);
+            color: var(--ui-table-header-fg);
+            background: var(--ui-table-header-bg);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        th[align='center'],
+        td[align='center'] {
+            text-align: center;
+        }
+        th[align='right'],
+        td[align='right'] {
+            text-align: right;
+        }
+    }
 }
 
 :root {
     --font-family: Lato, Helvetica, sans-serif;
+    --ui-font-mono:
+        ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
     --font-size-2xs: 0.5rem;
     --font-size-xs: 0.6rem;
@@ -1063,13 +1206,6 @@ body {
     }
 
     //####################################################
-    //## MARKDOWN
-    //####################################################
-    pre[class*='language-'] {
-        border: 1px solid var(--ui-color-border);
-    }
-
-    //####################################################
     //## GANTT
     //####################################################
     .gantt-container {
@@ -1436,39 +1572,6 @@ body {
     .required::after {
         content: ' *';
         color: var(--ui-color-danger);
-    }
-
-    //####################################################
-    //## MARKDOWN
-    //####################################################
-    // ngx-markdown renders tables as plain <table> elements. A wide table
-    // (e.g. an agent plan's verification checklist) overflows its container
-    // instead of scrolling. `display: block` + `width: max-content` lets the
-    // table size to its content, `max-width: 100%` caps it at the container,
-    // and `overflow-x: auto` adds a horizontal scrollbar only when needed.
-    [markdown] table {
-        display: block;
-        width: max-content;
-        max-width: 100%;
-        overflow-x: auto;
-        border-collapse: collapse;
-        font-size: var(--font-size-s);
-        border: 1px solid var(--ui-surface-200);
-
-        th,
-        td {
-            padding: var(--ui-space-s) var(--ui-space-m);
-            border: 1px solid var(--ui-surface-200);
-            text-align: left;
-        }
-
-        // Non-invasive header: just a bold weight and a faint tint so it reads
-        // as a header without fighting the surrounding card.
-        th {
-            font-weight: 700;
-            color: var(--ui-color-text);
-            background: var(--ui-surface-100);
-        }
     }
 }
 

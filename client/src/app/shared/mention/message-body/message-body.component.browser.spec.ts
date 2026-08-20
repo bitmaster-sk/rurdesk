@@ -1,6 +1,7 @@
 import { Component, Pipe, PipeTransform, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
+import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
 import { TablerIconStub } from 'src/testing/stubs';
@@ -25,7 +26,7 @@ class DiffViewerStub {
 async function setup() {
     await TestBed.configureTestingModule({
         imports: [
-            MarkdownModule.forRoot(),
+            MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
@@ -153,6 +154,66 @@ describe('MessageBodyComponent (browser)', () => {
         // Also verify the text run's computed display is not 'block'.
         const display = window.getComputedStyle(trailingRun).display;
         expect(display).not.toBe('block');
+    });
+
+    it('renders a single newline as a line break, not as a space', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', 'first line\nsecond line');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const run = fixture.nativeElement.querySelector('.text-run') as HTMLElement;
+        expect(run.querySelectorAll('br').length).toBe(1);
+        expect(run.querySelectorAll('p').length).toBe(1);
+    });
+
+    it('still starts a new paragraph on a blank line', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', 'first paragraph\n\nsecond paragraph');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const run = fixture.nativeElement.querySelector('.text-run') as HTMLElement;
+        expect(run.querySelectorAll('p').length).toBe(2);
+    });
+
+    it('keeps a fenced code block verbatim — no line breaks injected inside it', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', '```\nline one\nline two\n```');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const code = fixture.nativeElement.querySelector('pre code') as HTMLElement;
+        expect(code.querySelectorAll('br').length).toBe(0);
+        expect(code.textContent).toContain('line one\nline two');
+    });
+
+    it('renders inline backticks as a code element the stylesheet can target', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', 'see `issue_repository.go` for details');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const code = fixture.nativeElement.querySelector('code') as HTMLElement;
+        expect(code).not.toBeNull();
+        expect(code.textContent).toBe('issue_repository.go');
+        expect(code.closest('pre')).toBeNull();
+    });
+
+    it('keeps a table column alignment attribute the stylesheet can target', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', '| A | B |\n| --- | ---: |\n| 1 | 2 |');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelectorAll('table thead th').length).toBe(2);
+        expect(host.querySelector('td[align="right"]')).not.toBeNull();
     });
 
     it('emits the mockup ref when an approvable mockup card requests approval', () => {
