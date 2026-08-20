@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiModule } from '../ui/ui.module';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import {
     TablerIconComponent,
@@ -44,6 +44,7 @@ import { AdminSettingsComponent } from './pages/admin-settings/admin-settings.co
     imports: [
         CommonModule,
         ReactiveFormsModule,
+        FormsModule,
         TranslateModule,
         AdminRoutingModule,
         SharedModule,

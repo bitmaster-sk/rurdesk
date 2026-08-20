@@ -81,4 +81,12 @@ describe('LoginComponent (browser)', () => {
 
         expect(error()).toBeNull();
     });
+
+    it('keeps the form invalid while email or password is empty', () => {
+        const fixture = setup();
+        fixture.componentInstance.form.patchValue({ email: '', password: '' });
+        expect(fixture.componentInstance.form.valid).toBe(false);
+        fixture.componentInstance.form.patchValue({ email: 'a@b.c', password: '12345' });
+        expect(fixture.componentInstance.form.valid).toBe(true);
+    });
 });

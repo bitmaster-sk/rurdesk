@@ -8,7 +8,7 @@ import {
     OnInit,
     signal
 } from '@angular/core';
-import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
+import { FormBuilder, FormGroup } from '@angular/forms';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { Subscription } from 'rxjs';
 import { Project } from 'src/app/project/model/project.model';
@@ -70,17 +70,16 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
         this.subscription.unsubscribe();
     }
 
-    protected get idSeverityDefaultControl(): FormControl {
-        return this.form.get('idSeverityDefault') as FormControl;
-    }
-
     protected onProjectSave(): void {
         const project: Project = cloneDeep(this.project());
-        project.idSeverityDefault = this.form.value.idSeverityDefault;
+        project.idSeverityDefault = this.form.value.idSeverityDefault as number;
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
             next: savedProject => {
-                this.project().idSeverityDefault = savedProject.idSeverityDefault;
+                this.form.patchValue(
+                    { idSeverityDefault: savedProject.idSeverityDefault },
+                    { emitEvent: false }
+                );
                 this.defaultSaveStatus.set(UiSaveState.Saved);
             },
             error: () => this.defaultSaveStatus.set(UiSaveState.Error)

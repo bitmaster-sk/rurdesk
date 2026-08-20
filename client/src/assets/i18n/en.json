@@ -541,7 +541,8 @@
         "CALENDAR": {
             "DAY": "Day",
             "WEEK": "Week",
-            "MONTH": "Month"
+            "MONTH": "Month",
+            "UPDATE_FAILED": "Could not update the task. Please try again."
         },
         "COPY_SUFFIX": "{{title}} (copy)"
     },
@@ -804,6 +805,7 @@
         "CONFIRM_REMOVE_MEMBER": "Remove this member from the team?"
     },
     "GIT_INTEGRATION": {
+        "CONFIRM_DELETE": "Delete this git integration? It cannot be undone.",
         "SINGULAR": "Git Integration",
         "PLURAL": "Git Integrations",
         "NEW": "New integration",

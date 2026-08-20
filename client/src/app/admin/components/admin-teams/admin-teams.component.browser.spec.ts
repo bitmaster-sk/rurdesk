@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, fakeAsync, tick } from '@angular/core/testing';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { TeamService } from '../../../team/team.service';
@@ -113,4 +113,31 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         drop(render(user).membersPanel);
         expect(addTeamMember$).not.toHaveBeenCalled();
     });
+
+    it('dropping a user on a team row triggers exactly one member reload', fakeAsync(() => {
+        const listTeamMembers$ = vi.fn(() => of([]));
+        TestBed.overrideProvider(AdminApi, {
+            useValue: { listTeamMembers$, addTeamMember$: vi.fn(() => of(void 0)) }
+        });
+        const { teamRow } = render(user);
+        drop(teamRow);
+        tick();
+        expect(listTeamMembers$).toHaveBeenCalledTimes(1);
+        expect(listTeamMembers$).toHaveBeenCalledWith(team.idTeam);
+    }));
+
+    it('debounces the title filter', fakeAsync(() => {
+        const fixture = render(user).fixture;
+        const component = fixture.componentInstance as any;
+        component.titleFilter.set('A');
+        component.titleFilter.set('AB');
+        component.titleFilter.set('ABC');
+        tick(50);
+        expect(component.debouncedTitleFilter()).toBe('');
+        tick(200);
+        expect(component.debouncedTitleFilter()).toBe('ABC');
+        component.titleFilter.set('ABC');
+        tick(300);
+        expect(component.debouncedTitleFilter()).toBe('ABC');
+    }));
 });

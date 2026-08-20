@@ -121,6 +121,17 @@ describe('IssueService.toIssue', () => {
         } as unknown as Issue);
         expect(out.scheduledAt).toBeInstanceOf(Date);
     });
+
+    it('does not mutate the input object', () => {
+        const { service } = build(page([]));
+        const original = {
+            createAt: '2026-01-01T00:00:00Z',
+            scheduledAt: '2026-03-03T00:00:00Z'
+        } as unknown as Issue;
+        const out = service.toIssue(original);
+        expect(out).not.toBe(original);
+        expect(original.createAt).toBe('2026-01-01T00:00:00Z');
+    });
 });
 
 describe('IssueService date params', () => {

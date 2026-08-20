@@ -178,11 +178,23 @@ describe('ProjectStateComponent delete flow (browser)', () => {
     it('refreshes the local default when the deleted state was the project default', () => {
         const fixture = setup({ issues: 0, isProjectDefault: true, agentPhases: 0 });
         const component = fixture.componentInstance as any;
+        const originalDefault = component.project().idStateDefault;
 
         component.onDeleteState(state(2, 2));
         component.onConfirmDelete({ migrateTo: 3 });
 
-        expect(component.project().idStateDefault).toBe(3);
         expect(component.form.value.idStateDefault).toBe(3);
+        expect(component.project().idStateDefault).toBe(originalDefault);
+    });
+
+    it('does not mutate the project input when the default changes', () => {
+        const fixture = setup();
+        const component = fixture.componentInstance as any;
+        const original = { ...component.project() };
+
+        component.form.patchValue({ idStateDefault: 3 });
+        component.onProjectSave();
+
+        expect(component.project()).toEqual(original);
     });
 });
