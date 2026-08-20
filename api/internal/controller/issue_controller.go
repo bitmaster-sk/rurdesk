@@ -347,6 +347,11 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+	if err := dto.Validate(); err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
 	dto.IdProject = idProject
 	dto.IdIssuePublic = idIssuePublic
 
@@ -359,12 +364,12 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, dto.IdProject) {
 			return errForbidden
 		}
-		if dto.AssignedTo != nil {
-			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo, dto.IdProject) {
+		if dto.AssignedTo.Value != nil {
+			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
 				return errForbidden
 			}
 		}
-		if err := ic.validateStateSeverityInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity); err != nil {
+		if err := ic.validateStateSeverityInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value); err != nil {
 			return err
 		}
 		issue, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &dto.IdProject, IdIssuePublic: &dto.IdIssuePublic})
@@ -373,12 +378,16 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 		snapshot := *issue
 		oldIssue = &snapshot
+
+		idGitIntegration := dto.IdGitIntegration.PtrOrElse(issue.IdGitIntegration)
+		mrId := dto.MrId.PtrOrElse(issue.MrId)
+
 		// Both-or-neither: MR link fields must move together.
-		if (dto.IdGitIntegration == nil) != (dto.MrId == nil) {
+		if (idGitIntegration == nil) != (mrId == nil) {
 			return errInvalidMrLink
 		}
-		if dto.IdGitIntegration != nil && ic.gitIntRepo != nil {
-			gi, loadErr := ic.gitIntRepo.LoadByID(ctx, *dto.IdGitIntegration, dto.IdProject)
+		if dto.IdGitIntegration.IsDefined && dto.IdGitIntegration.Value != nil && ic.gitIntRepo != nil {
+			gi, loadErr := ic.gitIntRepo.LoadByID(ctx, *dto.IdGitIntegration.Value, dto.IdProject)
 			if loadErr != nil {
 				return loadErr
 			}
@@ -388,8 +397,8 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 
 		// A bot with no configured gateway can't be assigned.
-		if ic.botGwRepo != nil && dto.AssignedTo != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo) {
-			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo)
+		if ic.botGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
+			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
 			if loadErr == nil && assignee.IsBot {
 				gw, gwErr := ic.botGwRepo.LoadByBotUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
@@ -399,23 +408,23 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 
 		issue.UpdateBy = user.IdUser
-		issue.IdState = dto.IdState
-		issue.IdSeverity = dto.IdSeverity
-		issue.Title = dto.Title
-		issue.Description = dto.Description
-		issue.AssignedTo = dto.AssignedTo
-		issue.Estimated = dto.Estimated
-		issue.Points = dto.Points
-		issue.ScheduledAt = dto.ScheduledAt
-		issue.IdGitIntegration = dto.IdGitIntegration
-		issue.MrId = dto.MrId
+		issue.IdState = dto.IdState.PtrOrElse(issue.IdState)
+		issue.IdSeverity = dto.IdSeverity.PtrOrElse(issue.IdSeverity)
+		issue.Title = dto.Title.OrElse(issue.Title)
+		issue.Description = dto.Description.OrElse(issue.Description)
+		issue.AssignedTo = dto.AssignedTo.PtrOrElse(issue.AssignedTo)
+		issue.Estimated = dto.Estimated.OrElse(issue.Estimated)
+		issue.Points = dto.Points.PtrOrElse(issue.Points)
+		issue.ScheduledAt = dto.ScheduledAt.PtrOrElse(issue.ScheduledAt)
+		issue.IdGitIntegration = idGitIntegration
+		issue.MrId = mrId
 
 		result, err = ic.issueRepo.UpdateIssue(ctx, issue)
 		if err != nil {
 			return err
 		}
-		if dto.AssignedTo != nil {
-			if addErr := ic.participantRepo.Add(ctx, issue.IdIssue, *dto.AssignedTo, "assignee", &user.IdUser); addErr != nil {
+		if dto.AssignedTo.Value != nil {
+			if addErr := ic.participantRepo.Add(ctx, issue.IdIssue, *dto.AssignedTo.Value, "assignee", &user.IdUser); addErr != nil {
 				return fmt.Errorf("auto-adding assignee as participant (edit): %w", addErr)
 			}
 		}
@@ -466,7 +475,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 
 	// An assignee change may have added a participant inside the tx above;
 	// broadcast the updated list so open clients refresh without a reload.
-	if dto.AssignedTo != nil {
+	if dto.AssignedTo.Value != nil {
 		broadcastParticipants(ctx, ic.notifier, ic.projectRepo, ic.participantRepo, dto.IdProject, result.IdIssue)
 	}
 
