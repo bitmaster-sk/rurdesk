@@ -1,20 +1,24 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AppSettingsController struct {
 	settings *service.AppSettingsService
+	pool     *pgxpool.Pool
 }
 
-func NewAppSettingsController(settings *service.AppSettingsService) *AppSettingsController {
-	return &AppSettingsController{settings: settings}
+func NewAppSettingsController(settings *service.AppSettingsService, pool *pgxpool.Pool) *AppSettingsController {
+	return &AppSettingsController{settings: settings, pool: pool}
 }
 
 // Get returns the resolved settings. Readable by any authenticated user.
@@ -48,7 +52,10 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	if req.SprintVelocityLimit != nil {
 		changes[constants.SettingSprintVelocityLimit] = *req.SprintVelocityLimit
 	}
-	if err := sc.settings.Update(c.Request.Context(), changes); err != nil {
+	ctx := c.Request.Context()
+	if err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
+		return sc.settings.Update(ctx, changes)
+	}); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusUnprocessableEntity)
 		return

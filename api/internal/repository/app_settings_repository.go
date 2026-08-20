@@ -40,19 +40,19 @@ func (r *AppSettingsRepository) LoadAll(ctx context.Context) (map[string]string,
 }
 
 // Upsert writes each key/value (value is a raw JSON string) — one statement per key.
+// When the caller passes a tx-bearing context (e.g. via extctx.RunInTx in the
+// controller) every Exec participates in that transaction.
 func (r *AppSettingsRepository) Upsert(ctx context.Context, values map[string]string) error {
-	return extctx.RunInTx(ctx, r.pool, func(ctx context.Context) error {
-		db := extctx.GetDb(ctx, r.pool)
-		for k, v := range values {
-			_, err := db.Exec(ctx, `
-				INSERT INTO projects.app_settings (key, value, update_at)
-				VALUES ($1, $2::jsonb, now())
-				ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, update_at = now()
-			`, k, v)
-			if err != nil {
-				return fmt.Errorf("upserting app setting %q: %w", k, err)
-			}
+	db := extctx.GetDb(ctx, r.pool)
+	for k, v := range values {
+		_, err := db.Exec(ctx, `
+			INSERT INTO projects.app_settings (key, value, update_at)
+			VALUES ($1, $2::jsonb, now())
+			ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, update_at = now()
+		`, k, v)
+		if err != nil {
+			return fmt.Errorf("upserting app setting %q: %w", k, err)
 		}
-		return nil
-	})
+	}
+	return nil
 }
