@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { Component, input, output } from '@angular/core';
+import { provideLocationMocks } from '@angular/common/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { IssueQuickActionsComponent } from './issue-quick-actions.component';
@@ -159,6 +160,7 @@ async function createFixture(
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
             { provide: ToastNotificationService, useValue: toastMock },
             provideRouter([]),
+            provideLocationMocks(),
             provideNoopAnimations()
         ]
     });
@@ -426,14 +428,32 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
     // onOpen
     // =========================================================================
 
-    it('onOpen navigates to the issue detail page', () => {
+    it('onOpen opens the issue detail page in a new browser tab', () => {
         comp.issue.set(makeIssue({ idProject: 5, idIssuePublic: 42 }));
+        const openSpy = vi.spyOn(window, 'open');
+        const router = TestBed.inject(Router);
+        const navigateSpy = vi.spyOn(router, 'navigate');
+
         expect(() => comp.onOpen()).not.toThrow();
+
+        expect(openSpy).toHaveBeenCalledTimes(1);
+        const [url, target, features] = openSpy.mock.calls[0];
+        expect(url).toContain('/project/5');
+        expect(url).toContain('/issue/42');
+        expect(target).toBe('_blank');
+        expect(features).toContain('noopener');
+        expect(navigateSpy).not.toHaveBeenCalled();
+
+        openSpy.mockRestore();
+        navigateSpy.mockRestore();
     });
 
     it('onOpen with no issue: no-op', () => {
         comp.issue.set(null);
+        const openSpy = vi.spyOn(window, 'open');
         expect(() => comp.onOpen()).not.toThrow();
+        expect(openSpy).not.toHaveBeenCalled();
+        openSpy.mockRestore();
     });
 
     // =========================================================================
