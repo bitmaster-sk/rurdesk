@@ -110,10 +110,9 @@ describe('AuthInterceptor', () => {
         const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
         const next = handlerReturning(of(event));
 
-        interceptor.intercept(
-            new HttpRequest('GET', 'https://evil.example.com/steal'),
-            next
-        ).subscribe();
+        interceptor
+            .intercept(new HttpRequest('GET', 'https://evil.example.com/steal'), next)
+            .subscribe();
 
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
@@ -133,10 +132,7 @@ describe('AuthInterceptor', () => {
         const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
         const next = handlerReturning(of(event));
 
-        interceptor.intercept(
-            new HttpRequest('GET', 'https://[::1:not-valid'),
-            next
-        ).subscribe();
+        interceptor.intercept(new HttpRequest('GET', 'https://[::1:not-valid'), next).subscribe();
 
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
