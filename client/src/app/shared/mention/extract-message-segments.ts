@@ -83,8 +83,5 @@ export function extractMessageSegments(body: string): MessageSegment[] {
         segments.push({ type: 'text', content: tail });
     }
 
-    if (segments.length === 0) {
-        return [{ type: 'text', content: body }];
-    }
     return segments;
 }

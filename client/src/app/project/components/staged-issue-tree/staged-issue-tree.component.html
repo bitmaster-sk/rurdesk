@@ -1,4 +1,4 @@
-@for (root of roots(); track root.data?.ref; let i = $index) {
+@for (root of roots(); track root.data.ref; let i = $index) {
     <app-staged-issue-tree-node
         [node]="root"
         [states]="states()"

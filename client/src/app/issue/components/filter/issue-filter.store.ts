@@ -47,7 +47,7 @@ export class IssueFilterStore {
     }
 
     public setOrder(orderParams: IssuesOrderParams): void {
-        const actualFilter = this.filter.getValue()?.filter;
+        const actualFilter = this.filter.getValue().filter;
         const merged: Partial<IssuesFilter> = { ...actualFilter, ...orderParams };
         const newFilter = merged as IssuesFilter;
         this.filter.next({ initial: false, filter: newFilter, refresh: false });
@@ -56,7 +56,7 @@ export class IssueFilterStore {
 
     // idSprint === null means the Backlog tab → filter to issues with no sprint.
     public setSprint(idSprint: number | null): void {
-        const actualFilter = this.filter.getValue()?.filter;
+        const actualFilter = this.filter.getValue().filter;
         const merged: Partial<IssuesFilter> = {
             ...actualFilter,
             idSprint,
@@ -71,7 +71,7 @@ export class IssueFilterStore {
     }
 
     public setFilter(filterParams: IssuesFilterParams): void {
-        const actualFilter = this.filter.getValue()?.filter;
+        const actualFilter = this.filter.getValue().filter;
         const merged: Partial<IssuesFilter> = { ...actualFilter, ...filterParams };
         const newFilter = merged as IssuesFilter;
 

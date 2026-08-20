@@ -56,9 +56,7 @@ export class NoticeService {
     private readonly RECONNECT_DELAY = 60 * 1000;
 
     public constructor() {
-        if (!this.socket) {
-            this.openSocket();
-        }
+        this.openSocket();
     }
 
     private openSocket(): void {

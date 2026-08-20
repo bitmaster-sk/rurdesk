@@ -66,7 +66,7 @@ export class IssueKanbanSwimlaneComponent {
     private landTimer: ReturnType<typeof setTimeout> | null = null;
 
     protected onDropped(event: CdkDragDrop<SwimlaneCell>): void {
-        const tile = event.previousContainer?.data?.tiles?.[event.previousIndex];
+        const tile = event.previousContainer.data.tiles[event.previousIndex];
         if (tile) {
             this.landedTileId.set(tile.idIssue);
             if (this.landTimer) clearTimeout(this.landTimer);

@@ -109,10 +109,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         // from what is currently in the editor.
         effect(() => {
             const body = this.text();
-            const el = this.editorRef()?.nativeElement;
-            if (!el) {
-                return;
-            }
+            const el = this.editorRef().nativeElement;
             if (serialize(el) === body) {
                 this.lastRendered = body;
                 return;
