@@ -26,6 +26,12 @@ func (e *Error) WithTranslateKey(key string) *Error {
 	return &cp
 }
 
+func (e *Error) WithMessage(message string) *Error {
+	cp := *e
+	cp.Message = message
+	return &cp
+}
+
 func newErr(code, message, translateKey string, status int) *Error {
 	return &Error{Code: code, Message: message, TranslateKey: translateKey, status: status}
 }
@@ -38,6 +44,7 @@ func NewErr(code, message, translateKey string) *Error {
 
 var (
 	ErrBadRequest                     = newErr("BAD_REQUEST", "bad request", "error.bad_request", http.StatusBadRequest)
+	ErrValidation                     = newErr("VALIDATION_FAILED", "request validation failed", "error.validation", http.StatusBadRequest)
 	ErrUnauthorized                   = newErr("UNAUTHORIZED", "unauthorized", "error.unauthorized", http.StatusUnauthorized)
 	ErrForbidden                      = newErr("FORBIDDEN", "forbidden", "error.forbidden", http.StatusForbidden)
 	ErrNotFound                       = newErr("NOT_FOUND", "not found", "error.not_found", http.StatusNotFound)
