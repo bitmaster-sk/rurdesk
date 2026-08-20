@@ -11,6 +11,14 @@ import { Observable, of, throwError } from 'rxjs';
 import { AuthInterceptor } from './auth.interceptor';
 import { AuthTokenStore } from './store/auth-token.store';
 
+// Node environment has no `window`; the interceptor reads window.location.origin
+// at construction time. Provide a minimal stub so the allowlist builds correctly.
+if (typeof globalThis.window === 'undefined') {
+    (globalThis as Record<string, unknown>).window = {
+        location: { origin: 'http://localhost:1000' }
+    };
+}
+
 function handlerReturning(obs: Observable<HttpEvent<unknown>>): HttpHandler {
     return { handle: vi.fn().mockReturnValue(obs) };
 }
@@ -44,6 +52,115 @@ describe('AuthInterceptor', () => {
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
         expect(passed.headers.get('Authorization')).toBe('my-token');
+    });
+
+    // ── Origin-allowlist tests ──────────────────────────────────────────
+
+    it('attaches the token for a relative URL (same-origin by definition)', () => {
+        const tokenStore = {
+            getToken: () => 'my-token',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = {
+            navigateByUrl: vi.fn(),
+            getCurrentNavigation: () => null
+        } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
+
+        interceptor.intercept(new HttpRequest('GET', '/api/private/data'), next).subscribe();
+
+        const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
+            .mock.calls[0][0];
+        expect(passed.headers.get('Authorization')).toBe('my-token');
+    });
+
+    it('attaches the token for an absolute same-origin URL', () => {
+        const tokenStore = {
+            getToken: () => 'my-token',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = {
+            navigateByUrl: vi.fn(),
+            getCurrentNavigation: () => null
+        } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
+        const sameOrigin = window.location.origin + '/api/private/data';
+
+        interceptor.intercept(new HttpRequest('GET', sameOrigin), next).subscribe();
+
+        const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
+            .mock.calls[0][0];
+        expect(passed.headers.get('Authorization')).toBe('my-token');
+    });
+
+    it('does NOT attach the token for a foreign-origin absolute URL', () => {
+        const tokenStore = {
+            getToken: () => 'my-token',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = {
+            navigateByUrl: vi.fn(),
+            getCurrentNavigation: () => null
+        } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
+
+        interceptor.intercept(
+            new HttpRequest('GET', 'https://evil.example.com/steal'),
+            next
+        ).subscribe();
+
+        const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
+            .mock.calls[0][0];
+        expect(passed.headers.get('Authorization')).toBeNull();
+    });
+
+    it('does NOT attach the token for a malformed URL (fail-closed)', () => {
+        const tokenStore = {
+            getToken: () => 'my-token',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = {
+            navigateByUrl: vi.fn(),
+            getCurrentNavigation: () => null
+        } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
+
+        interceptor.intercept(
+            new HttpRequest('GET', 'https://[::1:not-valid'),
+            next
+        ).subscribe();
+
+        const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
+            .mock.calls[0][0];
+        expect(passed.headers.get('Authorization')).toBeNull();
+    });
+
+    it('does NOT attach an empty Authorization header when no token exists', () => {
+        const tokenStore = {
+            getToken: () => '',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = {
+            navigateByUrl: vi.fn(),
+            getCurrentNavigation: () => null
+        } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router);
+        const event: HttpEvent<unknown> = { type: HttpEventType.Sent };
+        const next = handlerReturning(of(event));
+
+        interceptor.intercept(new HttpRequest('GET', '/api/private/data'), next).subscribe();
+
+        const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
+            .mock.calls[0][0];
+        expect(passed.headers.get('Authorization')).toBeNull();
     });
 
     it('on 401 clears the token, redirects to /login, and rethrows', async () => {
