@@ -31,7 +31,10 @@ export function buildIssueTitle(issue: Issue): string {
     return `#${issue.idIssuePublic} ${title} · ${DEFAULT_TITLE}`;
 }
 
-export function truncateIssueTitle(title: string | null | undefined, maxLength = ISSUE_TITLE_MAX_LENGTH): string {
+export function truncateIssueTitle(
+    title: string | null | undefined,
+    maxLength = ISSUE_TITLE_MAX_LENGTH
+): string {
     const safeTitle = title ?? '';
     if (safeTitle.length <= maxLength) {
         return safeTitle;

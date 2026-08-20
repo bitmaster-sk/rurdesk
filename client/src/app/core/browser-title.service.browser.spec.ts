@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { BrowserTitleService, DEFAULT_TITLE, buildIssueTitle, truncateIssueTitle } from './browser-title.service';
+import {
+    BrowserTitleService,
+    DEFAULT_TITLE,
+    buildIssueTitle,
+    truncateIssueTitle
+} from './browser-title.service';
 import { Issue } from 'src/app/issue/model/issue.model';
 
 const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({

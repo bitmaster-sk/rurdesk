@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { EMPTY, of, Subject } from 'rxjs';
+import { of, Subject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { IssueDetailPage } from './issue-detail.page';
@@ -7,7 +7,7 @@ import { IssueService } from '../../issue.service';
 import { ProjectStore } from 'src/app/project/project.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
-import { BrowserTitleService, DEFAULT_TITLE } from 'src/app/core/browser-title.service';
+import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
 
