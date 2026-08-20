@@ -1,6 +1,7 @@
 import { Component, Pipe, PipeTransform, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
+import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
 import { AvatarStub, MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
@@ -90,7 +91,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [
-                MarkdownModule.forRoot(),
+                MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
                 UiModule,
                 TranslateModule.forRoot(),
                 AvatarStub,
@@ -181,7 +182,7 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [
-                MarkdownModule.forRoot(),
+                MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
                 UiModule,
                 TranslateModule.forRoot(),
                 AvatarStub,

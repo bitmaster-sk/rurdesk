@@ -12,6 +12,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideTranslateService } from '@ngx-translate/core';
 import { provideTranslateHttpLoader } from '@ngx-translate/http-loader';
 import { MarkdownModule } from 'ngx-markdown';
+import { MARKDOWN_MARKED_OPTIONS } from './shared/markdown/marked-options';
 import { OVERLAY_DEFAULT_CONFIG } from '@angular/cdk/overlay';
 import { UiToastModule } from './ui/ui-toast.module';
 
@@ -22,7 +23,7 @@ import { UiToastModule } from './ui/ui-toast.module';
         CoreModule,
         AppRoutingModule,
         AuthModule,
-        MarkdownModule.forRoot(),
+        MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
         UiToastModule
     ],
     providers: [
