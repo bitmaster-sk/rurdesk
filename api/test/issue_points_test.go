@@ -33,14 +33,14 @@ func TestEditIssue_TitleOnlyPreservesPointsAndSprint(t *testing.T) {
 	editBody, _ := json.Marshal(model.EditIssueReq{
 		IdProject:     idProject,
 		IdIssuePublic: issuePublic,
-		IdState:       loaded.IdState,
-		IdSeverity:    loaded.IdSeverity,
-		Title:         "renamed",
-		Description:   loaded.Description,
-		AssignedTo:    loaded.AssignedTo,
-		Estimated:     loaded.Estimated,
-		Points:        loaded.Points,
-		ScheduledAt:   loaded.ScheduledAt,
+		IdState:       model.NewOptionalPtr(loaded.IdState),
+		IdSeverity:    model.NewOptionalPtr(loaded.IdSeverity),
+		Title:         model.NewOptional("renamed"),
+		Description:   model.NewOptional(loaded.Description),
+		AssignedTo:    model.NewOptionalPtr(loaded.AssignedTo),
+		Estimated:     model.NewOptional(loaded.Estimated),
+		Points:        model.NewOptionalPtr(loaded.Points),
+		ScheduledAt:   model.NewOptionalPtr(loaded.ScheduledAt),
 	})
 	editRes := Request(t, app, "PATCH",
 		fmt.Sprintf("/api/private/project/%d/issue/%d", idProject, issuePublic), string(editBody), token)

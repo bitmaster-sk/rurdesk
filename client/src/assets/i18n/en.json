@@ -671,6 +671,7 @@
         "relation_cycle": "This relation would create a cycle.",
         "sprint_window": "A cycle must end after it starts.",
         "bad_request": "Invalid request. Please check your input.",
+        "validation": "Some fields are invalid. Please check your input.",
         "internal": "An unexpected error occurred. Please try again.",
         "ai_unavailable": "AI service is temporarily unavailable. Please try again later.",
         "ai_not_configured": "AI is not configured. Set AI_MODEL to a model for your provider.",

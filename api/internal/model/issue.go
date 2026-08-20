@@ -29,73 +29,6 @@ type Issue struct {
 	CarryoverCount   int        `json:"carryoverCount"            db:"carryover_count"`
 }
 
-type CreateIssueReq struct {
-	IdProject      int64      `json:"idProject"`
-	IdState        *int64     `json:"idState"      binding:"omitempty"`
-	IdSeverity     *int64     `json:"idSeverity"   binding:"omitempty"`
-	Title          string     `json:"title"        binding:"required,max=100"`
-	Description    string     `json:"description"  binding:"required"`
-	AssignedTo     *int64     `json:"assignedTo"   binding:"omitempty"`
-	Estimated      int64      `json:"estimated"`
-	Points         *int       `json:"points"       binding:"omitempty,min=0"`
-	ScheduledAt    *time.Time `json:"scheduledAt"`
-	IdempotencyKey *string    `json:"-"` // populated from Idempotency-Key header only
-}
-
-type EditIssueReq struct {
-	IdProject        int64      `json:"idProject"`
-	IdIssuePublic    int64      `json:"idIssuePublic"`
-	IdState          *int64     `json:"idState"            binding:"omitempty"`
-	IdSeverity       *int64     `json:"idSeverity"         binding:"omitempty"`
-	Title            string     `json:"title"              binding:"required,max=100"`
-	Description      string     `json:"description"        binding:"required"`
-	AssignedTo       *int64     `json:"assignedTo"         binding:"omitempty"`
-	Estimated        int64      `json:"estimated"`
-	Points           *int       `json:"points"             binding:"omitempty,min=0"`
-	ScheduledAt      *time.Time `json:"scheduledAt"`
-	IdGitIntegration *int64     `json:"idGitIntegration"   binding:"omitempty"`
-	MrId             *string    `json:"mrId"               binding:"omitempty,max=50"`
-}
-
-type BulkEditIssueEntryReq struct {
-	IdIssuePublic  int64      `json:"idIssuePublic"  binding:"required"`
-	ScheduledAt    *time.Time `json:"scheduledAt"`
-	Estimated      *int64     `json:"estimated"`
-	IdState        *int64     `json:"idState"`
-	IdSeverity     *int64     `json:"idSeverity"`
-	IdUserAssigned *int64     `json:"idUserAssigned"` // explicit null clears assignment
-}
-
-type BulkEditIssuesReq struct {
-	Issues []BulkEditIssueEntryReq `json:"issues" binding:"required,min=1,max=100"`
-}
-
-type LoadIssuesReq struct {
-	IdProject       int64     `json:"idProject"`
-	OrderColumn     string    `json:"orderColumn"`
-	OrderDirection  string    `json:"orderDirection"`
-	IdsSeverity     []int64   `json:"idsSeverity"`
-	SeverityUnset   bool      `json:"severityUnset"`
-	IdsState        []int64   `json:"idsState"`
-	StateUnset      bool      `json:"stateUnset"`
-	IdsAssignedTo   []int64   `json:"idsAssignedTo"`
-	AssignedToUnset bool      `json:"assignedToUnset"`
-	Title           string    `json:"title"`
-	CreateAtFrom    time.Time `json:"createAtFrom"`
-	CreateAtTo      time.Time `json:"createAtTo"`
-	UpdateAtFrom    time.Time `json:"updateAtFrom"`
-	UpdateAtTo      time.Time `json:"updateAtTo"`
-	ScheduledAtFrom time.Time `json:"scheduledAtFrom"`
-	ScheduledAtTo   time.Time `json:"scheduledAtTo"`
-}
-
-func (dto *LoadIssuesReq) GetOrder() *Order {
-	return &Order{
-		Column:    dto.OrderColumn,
-		Direction: dto.OrderDirection,
-	}
-}
-
 type LoadIssuesFilter struct {
 	IdProject          int64
 	IdsIssue           []int64
@@ -125,39 +58,4 @@ type LoadIssuesFilter struct {
 	Offset             *int64
 	Cursor             *string // keyset pagination cursor (opaque); takes precedence over Offset
 	Order              *Order
-}
-
-// IssuesPageRes is the flat-list envelope. NextCursor == nil means no further pages.
-type IssuesPageRes struct {
-	Items      []*Issue `json:"items"`
-	NextCursor *string  `json:"nextCursor"`
-	Total      int      `json:"total"`
-}
-
-// IssueGroupRes is one group of the grouped (kanban) representation.
-type IssueGroupRes struct {
-	Key        map[string]any `json:"key"`
-	Items      []*Issue       `json:"items"`
-	Total      int            `json:"total"`
-	NextCursor *string        `json:"nextCursor"`
-}
-
-func NewLoadIssuesFilter(dto *LoadIssuesReq) *LoadIssuesFilter {
-	return &LoadIssuesFilter{
-		IdProject:       dto.IdProject,
-		IdsSeverity:     dto.IdsSeverity,
-		SeverityUnset:   dto.SeverityUnset,
-		IdsState:        dto.IdsState,
-		StateUnset:      dto.StateUnset,
-		IdsAssignedTo:   dto.IdsAssignedTo,
-		AssignedToUnset: dto.AssignedToUnset,
-		Title:           dto.Title,
-		CreateAtFrom:    dto.CreateAtFrom,
-		CreateAtTo:      dto.CreateAtTo,
-		UpdateAtFrom:    dto.UpdateAtFrom,
-		UpdateAtTo:      dto.UpdateAtTo,
-		ScheduledAtFrom: dto.ScheduledAtFrom,
-		ScheduledAtTo:   dto.ScheduledAtTo,
-		Order:           dto.GetOrder(),
-	}
 }

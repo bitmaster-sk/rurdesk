@@ -99,9 +99,9 @@ func TestEditIssue_ForeignState_Rejected(t *testing.T) {
 
 	editBody, _ := json.Marshal(model.EditIssueReq{
 		IdProject:   projectA,
-		IdState:     &foreignState,
-		Title:       "moved to foreign state",
-		Description: "x",
+		IdState:     model.NewOptionalPtr(&foreignState),
+		Title:       model.NewOptional("moved to foreign state"),
+		Description: model.NewOptional("x"),
 	})
 	res := Request(t, app, "PATCH", "/api/private/project/"+itoa(projectA)+"/issue/"+itoa(idIssuePublic), string(editBody), token)
 	require.Equal(t, http.StatusBadRequest, res.StatusCode)
@@ -119,9 +119,9 @@ func TestEditIssue_ForeignSeverity_Rejected(t *testing.T) {
 
 	editBody, _ := json.Marshal(model.EditIssueReq{
 		IdProject:   projectA,
-		IdSeverity:  &foreignSeverity,
-		Title:       "moved to foreign severity",
-		Description: "x",
+		IdSeverity:  model.NewOptionalPtr(&foreignSeverity),
+		Title:       model.NewOptional("moved to foreign severity"),
+		Description: model.NewOptional("x"),
 	})
 	res := Request(t, app, "PATCH", "/api/private/project/"+itoa(projectA)+"/issue/"+itoa(idIssuePublic), string(editBody), token)
 	require.Equal(t, http.StatusBadRequest, res.StatusCode)
