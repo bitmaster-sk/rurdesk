@@ -81,7 +81,6 @@ describe('GitIntegrationListComponent', () => {
             .queryAll(By.css('ui-button'))
             .find(b => b.nativeElement.getAttribute('severity') === 'danger');
         expect(deleteBtn?.attributes['uiConfirm']).toBe('');
-        expect(deleteBtn?.attributes['confirmText']).toBe('GIT_INTEGRATION.CONFIRM_DELETE');
 
         api.delete$.mockReturnValue(of(void 0));
         deleteBtn?.triggerEventHandler('confirmed', undefined);

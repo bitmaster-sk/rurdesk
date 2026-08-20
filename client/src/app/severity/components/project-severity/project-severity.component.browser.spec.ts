@@ -114,7 +114,7 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
         component.onDeleteSeverity(severity(2, 2));
         component.onConfirmDelete({ migrateTo: 3 });
 
-        expect(component.idSeverityDefaultControl.value).toBe(3);
+        expect(component.form.value.idSeverityDefault).toBe(3);
         expect(component.project().idSeverityDefault).toBe(originalDefault);
     });
 

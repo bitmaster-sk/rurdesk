@@ -283,13 +283,12 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         expect(passedIssue.estimated).toBe(7200 + expectedDelta);
     });
 
-    it('on API error: calls revert', () => {
+    it('on API error: calls revert and shows a toast', () => {
         const sub = mockSub();
         mocks.sIssueMock.updateIssue.mockReturnValue(sub);
         const revertSpy = vi.fn();
         const issue = makeIssue({ estimated: 3600 });
 
-        vi.spyOn(console, 'error').mockImplementation(() => {});
         comp.onCalendarEventResize(
             makeResizeArg({
                 event: { extendedProps: { issue } },
@@ -299,8 +298,9 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
             })
         );
 
-        expect(() => sub.handlers.error?.(new Error('fail'))).toThrow('fail');
+        sub.handlers.error?.(new Error('fail'));
         expect(revertSpy).toHaveBeenCalled();
+        expect(mocks.toastMock.showError).toHaveBeenCalledWith('ISSUE.CALENDAR_UPDATE_FAILED');
     });
 
     it('cloneDeep: original issue is not mutated', () => {
