@@ -950,7 +950,7 @@ func GetAppSettingsController() (*controller.AppSettingsController, error) {
 		if err != nil {
 			return nil, err
 		}
-		return controller.NewAppSettingsController(svc), nil
+		return controller.NewAppSettingsController(svc, mustDb()), nil
 	})
 	if err != nil {
 		return nil, err

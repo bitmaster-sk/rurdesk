@@ -40,6 +40,8 @@ func (r *AppSettingsRepository) LoadAll(ctx context.Context) (map[string]string,
 }
 
 // Upsert writes each key/value (value is a raw JSON string) — one statement per key.
+// When the caller passes a tx-bearing context (e.g. via extctx.RunInTx in the
+// controller) every Exec participates in that transaction.
 func (r *AppSettingsRepository) Upsert(ctx context.Context, values map[string]string) error {
 	db := extctx.GetDb(ctx, r.pool)
 	for k, v := range values {
