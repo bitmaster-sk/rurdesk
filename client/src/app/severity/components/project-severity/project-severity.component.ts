@@ -80,7 +80,10 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
             next: savedProject => {
-                this.project().idSeverityDefault = savedProject.idSeverityDefault;
+                this.form.patchValue(
+                    { idSeverityDefault: savedProject.idSeverityDefault },
+                    { emitEvent: false }
+                );
                 this.defaultSaveStatus.set(UiSaveState.Saved);
             },
             error: () => this.defaultSaveStatus.set(UiSaveState.Error)

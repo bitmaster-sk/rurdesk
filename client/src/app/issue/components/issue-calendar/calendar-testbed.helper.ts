@@ -66,6 +66,7 @@ export interface CalendarMocks {
     sIssueMock: any;
     commandPaletteMock: any;
     noticeServiceMock: any;
+    toastMock: any;
 }
 
 export function configureCalendarTestBed(
@@ -98,6 +99,7 @@ export function configureCalendarTestBed(
         updateIssue: vi.fn(() => mockSub())
     };
 
+    const toastMock = { showError: vi.fn() };
     const commandPaletteMock = {
         isOverlayOpen: vi.fn(() => false),
         setContext: vi.fn()
@@ -120,7 +122,7 @@ export function configureCalendarTestBed(
             { provide: IssueToolbarService, useValue: { register: vi.fn(), clear: vi.fn() } },
             { provide: NoticeService, useValue: noticeServiceMock },
             { provide: CommandPaletteService, useValue: commandPaletteMock },
-            { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+            { provide: ToastNotificationService, useValue: toastMock },
             {
                 provide: SeverityStore,
                 useValue: { severitiesByProject$: vi.fn(() => of(new Map())) }
@@ -144,7 +146,8 @@ export function configureCalendarTestBed(
         projectStoreMock,
         sIssueMock,
         commandPaletteMock,
-        noticeServiceMock
+        noticeServiceMock,
+        toastMock
     };
 }
 

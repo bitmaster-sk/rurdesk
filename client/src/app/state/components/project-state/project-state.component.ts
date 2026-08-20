@@ -74,7 +74,10 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
             next: savedProject => {
-                this.project().idStateDefault = savedProject.idStateDefault;
+                this.form.patchValue(
+                    { idStateDefault: savedProject.idStateDefault },
+                    { emitEvent: false }
+                );
                 this.defaultSaveStatus.set(UiSaveState.Saved);
             },
             error: () => this.defaultSaveStatus.set(UiSaveState.Error)

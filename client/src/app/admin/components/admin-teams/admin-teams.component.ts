@@ -7,6 +7,8 @@ import {
     input,
     signal
 } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { AdminApi } from '../../api/admin.api.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
@@ -39,6 +41,14 @@ export class AdminTeamsComponent implements OnInit {
     protected readonly members = signal<User[]>([]);
     protected readonly showTeamDialog = signal(false);
     protected readonly editedTeam = signal<Team | null>(null);
+    protected readonly titleFilter = signal<string>('');
+    protected readonly debouncedTitleFilter = signal<string>('');
+    protected readonly filteredTeams = computed<Team[]>(() => {
+        const query = this.debouncedTitleFilter().trim().toLowerCase();
+        const teams = this.teams();
+        if (!query) return teams;
+        return teams.filter(t => t.name.toLowerCase().includes(query));
+    });
 
     protected readonly availableUsers = computed<User[]>(() => {
         const memberIds = new Set(this.members().map(m => m.idUser));
@@ -46,6 +56,14 @@ export class AdminTeamsComponent implements OnInit {
         // selector, which renders name and avatar only.
         return (this.users() as unknown as User[]).filter(u => !memberIds.has(u.idUser));
     });
+
+    public constructor() {
+        toObservable(this.titleFilter)
+            .pipe(debounceTime(200), distinctUntilChanged())
+            .subscribe(value => {
+                this.debouncedTitleFilter.set(value);
+            });
+    }
 
     public ngOnInit(): void {
         this.loadTeams();
@@ -124,8 +142,10 @@ export class AdminTeamsComponent implements OnInit {
         ) {
             return;
         }
-        this.onAddMember(user, team);
-        this.onSelectTeam(team);
+        this.adminApi.addTeamMember$(team.idTeam, user.idUser).subscribe(() => {
+            this.selectedTeam.set(team);
+            this.loadMembers(team.idTeam);
+        });
     }
 
     /** Drop target on the members table — adds the dragged user to the selected team */
