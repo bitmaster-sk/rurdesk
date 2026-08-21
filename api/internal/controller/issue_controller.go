@@ -20,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 )
 
 type IssueController struct {
@@ -855,7 +856,12 @@ func (ic *IssueController) sendIssueNotifications(
 			dto := *base
 			dto.IdUser = *newIssue.AssignedTo
 			dto.Type = constants.NotificationTypeAssigned
-			_ = ic.notifSvc.Notify(ctx, &dto)
+			if notifErr := ic.notifSvc.Notify(ctx, &dto); notifErr != nil {
+				log.Warn().Err(notifErr).
+					Int64("idUser", dto.IdUser).
+					Int64("idIssue", newIssue.IdIssue).
+					Msg("sendIssueNotifications: failed to create notification")
+			}
 		}
 	}
 
@@ -872,7 +878,12 @@ func (ic *IssueController) sendIssueNotifications(
 			dto.IdUser = recipientId
 			dto.Type = constants.NotificationTypeStateChanged
 			dto.Body = stateBody
-			_ = ic.notifSvc.Notify(ctx, &dto)
+			if notifErr := ic.notifSvc.Notify(ctx, &dto); notifErr != nil {
+				log.Warn().Err(notifErr).
+					Int64("idUser", recipientId).
+					Int64("idIssue", newIssue.IdIssue).
+					Msg("sendIssueNotifications: failed to create notification")
+			}
 		}
 	}
 
@@ -900,7 +911,12 @@ func (ic *IssueController) sendIssueNotifications(
 			dto.IdUser = recipientId
 			dto.Type = notificationType
 			dto.Body = severityBody
-			_ = ic.notifSvc.Notify(ctx, &dto)
+			if notifErr := ic.notifSvc.Notify(ctx, &dto); notifErr != nil {
+				log.Warn().Err(notifErr).
+					Int64("idUser", recipientId).
+					Int64("idIssue", newIssue.IdIssue).
+					Msg("sendIssueNotifications: failed to create notification")
+			}
 		}
 	}
 }

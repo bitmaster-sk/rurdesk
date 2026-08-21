@@ -10,6 +10,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
 )
 
 type TeamController struct {
@@ -197,7 +198,7 @@ func (tc *TeamController) AddTeamMember(c *gin.Context) {
 
 	// Notify the added user.
 	if team, lErr := tc.teamRepo.LoadTeam(ctx, dto.IdTeam); lErr == nil {
-		_ = tc.notifSvc.Notify(ctx, &model.CreateNotificationReq{
+		notifReq := &model.CreateNotificationReq{
 			IdUser:        dto.IdUser,
 			Type:          constants.NotificationTypeTeamJoined,
 			ActorName:     user.Name,
@@ -205,7 +206,13 @@ func (tc *TeamController) AddTeamMember(c *gin.Context) {
 			RefType:       constants.NotificationRefTypeTeam,
 			RefId:         strconv.FormatInt(team.IdTeam, 10),
 			RefTitle:      team.Name,
-		})
+		}
+		if notifErr := tc.notifSvc.Notify(ctx, notifReq); notifErr != nil {
+			log.Warn().Err(notifErr).
+				Int64("idUser", notifReq.IdUser).
+				Int64("idTeam", dto.IdTeam).
+				Msg("AddTeamMember: failed to create notification")
+		}
 	}
 	c.Status(http.StatusOK)
 }
