@@ -59,7 +59,7 @@
             </label>
             <app-severity-dropdown
                 [severities]="severities()"
-                [formControl]="idSeverityDefaultControl"
+                formControlName="idSeverityDefault"
                 [saveStatus]="defaultSaveStatus()"
                 inputId="project-severity"
             ></app-severity-dropdown>

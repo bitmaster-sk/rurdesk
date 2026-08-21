@@ -109,11 +109,23 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
     it('refreshes the local default when the deleted severity was the project default', () => {
         const fixture = setup({ issues: 0, isProjectDefault: true });
         const component = fixture.componentInstance as any;
+        const originalDefault = component.project().idSeverityDefault;
 
         component.onDeleteSeverity(severity(2, 2));
         component.onConfirmDelete({ migrateTo: 3 });
 
-        expect(component.project().idSeverityDefault).toBe(3);
-        expect(component.idSeverityDefaultControl.value).toBe(3);
+        expect(component.form.value.idSeverityDefault).toBe(3);
+        expect(component.project().idSeverityDefault).toBe(originalDefault);
+    });
+
+    it('does not mutate the project input when the default changes', () => {
+        const fixture = setup();
+        const component = fixture.componentInstance as any;
+        const original = { ...component.project() };
+
+        component.form.patchValue({ idSeverityDefault: 3 });
+        component.onProjectSave();
+
+        expect(component.project()).toEqual(original);
     });
 });

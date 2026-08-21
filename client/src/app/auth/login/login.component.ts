@@ -42,8 +42,16 @@ export class LoginComponent implements OnInit {
 
     private buildForm(): FormGroup {
         return this.fb.group({
-            email: this.fb.control(null, [Validators.email, Validators.maxLength(250)]),
-            password: this.fb.control(null, [Validators.minLength(5), Validators.maxLength(100)])
+            email: this.fb.control(null, [
+                Validators.required,
+                Validators.email,
+                Validators.maxLength(250)
+            ]),
+            password: this.fb.control(null, [
+                Validators.required,
+                Validators.minLength(5),
+                Validators.maxLength(100)
+            ])
         });
     }
 }

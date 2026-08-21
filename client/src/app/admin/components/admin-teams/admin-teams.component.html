@@ -12,7 +12,17 @@
     <div class="panel-body panel-body--flush flex flex-1 min-h-0">
         <!-- team list (drop targets) -->
         <div class="team-list w-80 shrink-0 overflow-y-auto py-1">
-            @for (team of teams(); track team.idTeam) {
+            <div class="p-2">
+                <input
+                    type="text"
+                    uiInput
+                    class="w-full"
+                    [placeholder]="'UI.SEARCH' | translate"
+                    [ngModel]="titleFilter()"
+                    (ngModelChange)="titleFilter.set($event)"
+                />
+            </div>
+            @for (team of filteredTeams(); track team.idTeam) {
                 <div
                     class="flex items-center gap-2 p-2 cursor-pointer"
                     [class.ui-bg-surface-100]="selectedTeam()?.idTeam === team.idTeam"

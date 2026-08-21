@@ -113,4 +113,32 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         drop(render(user).membersPanel);
         expect(addTeamMember$).not.toHaveBeenCalled();
     });
+
+    it('dropping a user on a team row triggers exactly one member reload', async () => {
+        const listTeamMembers$ = vi.fn(() => of([]));
+        TestBed.overrideProvider(AdminApi, {
+            useValue: { listTeamMembers$, addTeamMember$: vi.fn(() => of(void 0)) }
+        });
+        const { teamRow } = render(user);
+        drop(teamRow);
+        // Wait for the rxjs debounce + the async member reload
+        await new Promise(r => setTimeout(r, 250));
+        expect(listTeamMembers$).toHaveBeenCalledTimes(1);
+        expect(listTeamMembers$).toHaveBeenCalledWith(team.idTeam);
+    });
+
+    it('debounces the title filter', async () => {
+        const fixture = render(user).fixture;
+        const component = fixture.componentInstance as any;
+        component.titleFilter.set('A');
+        component.titleFilter.set('AB');
+        component.titleFilter.set('ABC');
+        await new Promise(r => setTimeout(r, 50));
+        expect(component.debouncedTitleFilter()).toBe('');
+        await new Promise(r => setTimeout(r, 200));
+        expect(component.debouncedTitleFilter()).toBe('ABC');
+        component.titleFilter.set('ABC');
+        await new Promise(r => setTimeout(r, 300));
+        expect(component.debouncedTitleFilter()).toBe('ABC');
+    });
 });

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
@@ -39,10 +40,9 @@ describe('GitIntegrationListComponent', () => {
             imports: [HttpClientTestingModule, TranslateModule.forRoot()],
             providers: [
                 { provide: GitIntegrationApi, useValue: api },
-                // Read-only viewer: hides the manage column so the row never
-                // pulls ui-button/tabler-icon children into this DOM-focused spec.
-                { provide: AclStore, useValue: { canManageGitIntegration: signal(false) } }
-            ]
+                { provide: AclStore, useValue: { canManageGitIntegration: signal(true) } }
+            ],
+            schemas: [NO_ERRORS_SCHEMA]
         });
     });
 
@@ -72,5 +72,21 @@ describe('GitIntegrationListComponent', () => {
             .nativeElement.textContent.trim();
 
         expect(cellText).toBe('Gitea');
+    });
+
+    it('confirms before deleting a git integration', () => {
+        setup([makeIntegration(1, HostType.GitHub)]);
+
+        const deleteBtn = fixture.debugElement
+            .queryAll(By.css('ui-button'))
+            .find(b => b.nativeElement.getAttribute('severity') === 'danger');
+        expect(deleteBtn?.attributes['uiConfirm']).toBe('');
+
+        api.delete$.mockReturnValue(of(void 0));
+        deleteBtn?.triggerEventHandler('confirmed', undefined);
+        fixture.detectChanges();
+
+        expect(api.delete$).toHaveBeenCalledWith(1, 1);
+        expect(fixture.componentInstance.integrations().length).toBe(0);
     });
 });

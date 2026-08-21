@@ -32,6 +32,7 @@ import { first } from 'rxjs/operators';
 import cloneDeep from 'lodash-es/cloneDeep';
 import enLocale from '@fullcalendar/core/locales/en-gb';
 import { Router } from '@angular/router';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Issue } from '../../model/issue.model';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
 import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
@@ -81,6 +82,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private readonly destroyRef = inject(DestroyRef);
     private readonly commandPalette = inject(CommandPaletteService);
     private readonly noticeService = inject(NoticeService);
+    private readonly toast = inject(ToastNotificationService);
 
     // Keeps Calendar import alive to prevent tree-shaking of the plugin
     private readonly _calendar = Calendar;
@@ -514,9 +516,9 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         });
         issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
+                this.toast.showError('ISSUE.CALENDAR_UPDATE_FAILED');
             }
         });
     }
@@ -542,9 +544,9 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             });
         }
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
+                this.toast.showError('ISSUE.CALENDAR_UPDATE_FAILED');
             }
         });
         this.settleDroppedEvent(issue.idIssue);

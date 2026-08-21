@@ -70,11 +70,10 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
 
     protected onProjectSave(): void {
         const project: Project = cloneDeep(this.project());
-        project.idStateDefault = this.form.value.idStateDefault;
+        project.idStateDefault = this.form.value.idStateDefault as number;
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
-            next: savedProject => {
-                this.project().idStateDefault = savedProject.idStateDefault;
+            next: () => {
                 this.defaultSaveStatus.set(UiSaveState.Saved);
             },
             error: () => this.defaultSaveStatus.set(UiSaveState.Error)
@@ -174,7 +173,6 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
                 this.stateStore.load();
                 // refresh the local default so a later save doesn't PATCH the stale id back
                 if (this.project().idStateDefault === target.idState) {
-                    this.project().idStateDefault = choice.migrateTo;
                     this.form.patchValue(
                         { idStateDefault: choice.migrateTo },
                         { emitEvent: false }
