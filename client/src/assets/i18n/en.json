@@ -842,6 +842,8 @@
             "SUCCESS": "CI passed",
             "FAILED": "CI failed",
             "PENDING": "CI pending",
+            "CANCELED": "CI canceled",
+            "SKIPPED": "CI skipped",
             "UNKNOWN": "CI unknown"
         },
         "APPROVED": "Approved",
