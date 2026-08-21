@@ -41,8 +41,8 @@ func NewGitHubHost(baseUrl, repoPath, token string) *GitHubHost {
 	}
 }
 
-func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*Diff, error) {
-	prURL := fmt.Sprintf("%s/repos/%s/pulls/%s", h.apiBase, h.repoPath, mrID)
+func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error) {
+	prURL := fmt.Sprintf("%s/repos/%s/pulls/%s", h.apiBase, h.repoPath, idMr)
 	prReq, err := h.newRequest(ctx, prURL)
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*
 	var files []DiffFile
 	page := 1
 	for page <= 10 {
-		filesURL := fmt.Sprintf("%s/repos/%s/pulls/%s/files?per_page=100&page=%d", h.apiBase, h.repoPath, mrID, page)
+		filesURL := fmt.Sprintf("%s/repos/%s/pulls/%s/files?per_page=100&page=%d", h.apiBase, h.repoPath, idMr, page)
 		req, err := h.newRequest(ctx, filesURL)
 		if err != nil {
 			return nil, err
@@ -109,8 +109,8 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*
 	return &Diff{HeadSHA: prData.Head.SHA, Files: files}, nil
 }
 
-func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*Status, error) {
-	prURL := fmt.Sprintf("%s/repos/%s/pulls/%s", h.apiBase, h.repoPath, mrID)
+func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
+	prURL := fmt.Sprintf("%s/repos/%s/pulls/%s", h.apiBase, h.repoPath, idMr)
 	req, err := h.newRequest(ctx, prURL)
 	if err != nil {
 		return nil, err
@@ -144,76 +144,16 @@ func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*S
 
 	ciStatus := constants.CiStatusUnknown
 	if prData.Head.SHA != "" {
-		ciStatus = h.fetchCiStatus(ctx, prData.Head.SHA)
+		ciStatus = h.getCiStatus(ctx, idMr, prData.Head.SHA)
 	}
 
-	approved := h.fetchApproved(ctx, mrID)
+	approved := h.hasApproval(ctx, idMr)
 
 	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: prData.Head.SHA}, nil
 }
 
-func (h *GitHubHost) fetchCiStatus(ctx context.Context, sha string) string {
-	url := fmt.Sprintf("%s/repos/%s/commits/%s/status", h.apiBase, h.repoPath, sha)
-	req, err := h.newRequest(ctx, url)
-	if err != nil {
-		return constants.CiStatusUnknown
-	}
-	resp, err := doWithRetry(ctx, h.client, req)
-	if err != nil {
-		return constants.CiStatusUnknown
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return constants.CiStatusUnknown
-	}
-	var status struct {
-		State string `json:"state"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
-		return constants.CiStatusUnknown
-	}
-	switch status.State {
-	case "success":
-		return constants.CiStatusSuccess
-	case "failure", "error":
-		return constants.CiStatusFailed
-	case "pending":
-		return constants.CiStatusPending
-	default:
-		return constants.CiStatusUnknown
-	}
-}
-
-func (h *GitHubHost) fetchApproved(ctx context.Context, mrID string) bool {
-	url := fmt.Sprintf("%s/repos/%s/pulls/%s/reviews", h.apiBase, h.repoPath, mrID)
-	req, err := h.newRequest(ctx, url)
-	if err != nil {
-		return false
-	}
-	resp, err := doWithRetry(ctx, h.client, req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return false
-	}
-	var reviews []struct {
-		State string `json:"state"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&reviews); err != nil {
-		return false
-	}
-	for _, r := range reviews {
-		if r.State == "APPROVED" {
-			return true
-		}
-	}
-	return false
-}
-
-func (h *GitHubHost) GetMergeRequestUrl(mrID string) string {
-	return fmt.Sprintf("%s/%s/pull/%s", h.webBase, h.repoPath, mrID)
+func (h *GitHubHost) GetMergeRequestUrl(idMr string) string {
+	return fmt.Sprintf("%s/%s/pull/%s", h.webBase, h.repoPath, idMr)
 }
 
 func (h *GitHubHost) newRequest(ctx context.Context, url string) (*http.Request, error) {

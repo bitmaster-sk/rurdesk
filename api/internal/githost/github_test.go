@@ -76,6 +76,10 @@ func TestGitHubHost_GetMergeRequestChanges_Pagination(t *testing.T) {
 	assert.Equal(t, 2, callCount)
 }
 
+func githubCheckRunsPayload(runs ...map[string]any) map[string]any {
+	return map[string]any{"total_count": len(runs), "check_runs": runs}
+}
+
 func TestGitHubHost_GetMergeRequestStatus_Open(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -84,8 +88,11 @@ func TestGitHubHost_GetMergeRequestStatus_Open(t *testing.T) {
 				"state": "open", "merged": false,
 				"head": map[string]any{"sha": "abc123"},
 			})
-		case "/api/v3/repos/owner/repo/commits/abc123/status":
-			json.NewEncoder(w).Encode(map[string]any{"state": "success"})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			json.NewEncoder(w).Encode(githubCheckRunsPayload(
+				map[string]any{"name": "build", "status": "completed", "conclusion": "success"},
+				map[string]any{"name": "test", "status": "completed", "conclusion": "success"},
+			))
 		case "/api/v3/repos/owner/repo/pulls/1/reviews":
 			json.NewEncoder(w).Encode([]map[string]any{})
 		}
@@ -108,8 +115,10 @@ func TestGitHubHost_GetMergeRequestStatus_Merged(t *testing.T) {
 				"state": "closed", "merged": true,
 				"head": map[string]any{"sha": "abc123"},
 			})
-		case "/api/v3/repos/owner/repo/commits/abc123/status":
-			json.NewEncoder(w).Encode(map[string]any{"state": "success"})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			json.NewEncoder(w).Encode(githubCheckRunsPayload(
+				map[string]any{"name": "build", "status": "completed", "conclusion": "success"},
+			))
 		case "/api/v3/repos/owner/repo/pulls/1/reviews":
 			json.NewEncoder(w).Encode([]map[string]any{{"state": "APPROVED"}})
 		}
@@ -121,6 +130,174 @@ func TestGitHubHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
+}
+
+func TestGitHubHost_CiStatus_FailureOnSecondCheckRunsPage(t *testing.T) {
+	var pagesServed []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "abc123"},
+			})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			assert.Equal(t, "latest", r.URL.Query().Get("filter"))
+			page := r.URL.Query().Get("page")
+			pagesServed = append(pagesServed, page)
+			runs := make([]map[string]any, 0, githubCheckRunsPageSize)
+			if page == "2" {
+				runs = append(runs, map[string]any{"name": "flaky", "status": "completed", "conclusion": "failure"})
+			} else {
+				for i := 0; i < githubCheckRunsPageSize; i++ {
+					runs = append(runs, map[string]any{"name": "job", "status": "completed", "conclusion": "success"})
+				}
+			}
+			json.NewEncoder(w).Encode(map[string]any{
+				"total_count": githubCheckRunsPageSize + 1,
+				"check_runs":  runs,
+			})
+		case "/api/v3/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.Equal(t, constants.CiStatusFailed, status.CiStatus)
+	assert.Equal(t, []string{"1", "2"}, pagesServed)
+}
+
+func TestGitHubHost_CiStatus_FallsBackToCommitStatuses(t *testing.T) {
+	statusesCalled := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "abc123"},
+			})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			json.NewEncoder(w).Encode(map[string]any{"total_count": 0, "check_runs": []map[string]any{}})
+		case "/api/v3/repos/owner/repo/commits/abc123/status":
+			statusesCalled = true
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "failure",
+				"statuses": []map[string]any{
+					{"context": "ci/jenkins", "state": "failure"},
+				},
+			})
+		case "/api/v3/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.True(t, statusesCalled)
+	assert.Equal(t, constants.CiStatusFailed, status.CiStatus)
+}
+
+func TestGitHubHost_CiStatus_NoCiAtAll(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "abc123"},
+			})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			json.NewEncoder(w).Encode(map[string]any{"total_count": 0, "check_runs": []map[string]any{}})
+		case "/api/v3/repos/owner/repo/commits/abc123/status":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state":       "pending",
+				"total_count": 0,
+				"statuses":    []map[string]any{},
+			})
+		case "/api/v3/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.Equal(t, constants.CiStatusUnknown, status.CiStatus)
+}
+
+func TestGitHubHost_CiStatus_CheckRunConclusions(t *testing.T) {
+	tests := []struct {
+		name string
+		run  map[string]any
+		want string
+	}{
+		{name: "queued has no conclusion yet", run: map[string]any{"status": "queued"}, want: constants.CiStatusPending},
+		{name: "in progress", run: map[string]any{"status": "in_progress"}, want: constants.CiStatusPending},
+		{name: "success", run: map[string]any{"status": "completed", "conclusion": "success"}, want: constants.CiStatusSuccess},
+		{name: "neutral counts as passing", run: map[string]any{"status": "completed", "conclusion": "neutral"}, want: constants.CiStatusSuccess},
+		{name: "failure", run: map[string]any{"status": "completed", "conclusion": "failure"}, want: constants.CiStatusFailed},
+		{name: "timed out", run: map[string]any{"status": "completed", "conclusion": "timed_out"}, want: constants.CiStatusFailed},
+		{name: "action required", run: map[string]any{"status": "completed", "conclusion": "action_required"}, want: constants.CiStatusFailed},
+		{name: "cancelled", run: map[string]any{"status": "completed", "conclusion": "cancelled"}, want: constants.CiStatusCanceled},
+		{name: "skipped", run: map[string]any{"status": "completed", "conclusion": "skipped"}, want: constants.CiStatusSkipped},
+		{name: "a conclusion we have never seen", run: map[string]any{"status": "completed", "conclusion": "brand_new_thing"}, want: constants.CiStatusUnknown},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/api/v3/repos/owner/repo/pulls/1":
+					json.NewEncoder(w).Encode(map[string]any{
+						"state": "open", "merged": false,
+						"head": map[string]any{"sha": "abc123"},
+					})
+				case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+					json.NewEncoder(w).Encode(githubCheckRunsPayload(tc.run))
+				case "/api/v3/repos/owner/repo/commits/abc123/status":
+					json.NewEncoder(w).Encode(map[string]any{"state": "pending", "statuses": []map[string]any{}})
+				case "/api/v3/repos/owner/repo/pulls/1/reviews":
+					json.NewEncoder(w).Encode([]map[string]any{})
+				}
+			}))
+			defer srv.Close()
+
+			host := NewGitHubHost(srv.URL, "owner/repo", "token")
+			status, err := host.GetMergeRequestStatus(t.Context(), "1")
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, status.CiStatus)
+		})
+	}
+}
+
+func TestGitHubHost_CiStatus_CanceledAmongGreen(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v3/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "abc123"},
+			})
+		case "/api/v3/repos/owner/repo/commits/abc123/check-runs":
+			json.NewEncoder(w).Encode(githubCheckRunsPayload(
+				map[string]any{"name": "build", "status": "completed", "conclusion": "success"},
+				map[string]any{"name": "e2e", "status": "completed", "conclusion": "cancelled"},
+				map[string]any{"name": "docs", "status": "completed", "conclusion": "skipped"},
+			))
+		case "/api/v3/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.Equal(t, constants.CiStatusCanceled, status.CiStatus)
 }
 
 func TestGitHubHost_GetMergeRequestUrl(t *testing.T) {
@@ -243,8 +420,10 @@ func TestGitHubHost_RetryAfter429(t *testing.T) {
 			})
 			return
 		}
-		if r.URL.Path == "/api/v3/repos/owner/repo/commits/abc/status" {
-			json.NewEncoder(w).Encode(map[string]any{"state": "pending"})
+		if r.URL.Path == "/api/v3/repos/owner/repo/commits/abc/check-runs" {
+			json.NewEncoder(w).Encode(githubCheckRunsPayload(
+				map[string]any{"name": "build", "status": "in_progress"},
+			))
 			return
 		}
 		if r.URL.Path == "/api/v3/repos/owner/repo/pulls/1/reviews" {
