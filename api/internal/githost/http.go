@@ -29,6 +29,26 @@ func postJSON(ctx context.Context, client *http.Client, url string, body any, se
 	return client.Do(req)
 }
 
+func getJSON(ctx context.Context, client *http.Client, url string, setAuth func(*http.Request), out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("building request: %w", err)
+	}
+	setAuth(req)
+	resp, err := doWithRetry(ctx, client, req)
+	if err != nil {
+		return fmt.Errorf("fetching %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("fetching %s: unexpected status %d: %s", url, resp.StatusCode, readBody(resp))
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("decoding %s: %w", url, err)
+	}
+	return nil
+}
+
 // readBody returns up to 2KB of the response body as a string for error context.
 // Safe to call after a non-2xx; the caller still owns Body.Close().
 func readBody(resp *http.Response) string {
