@@ -57,6 +57,10 @@ export class MrStatusPillComponent {
                 return 'MR.CI.FAILED';
             case CiStatus.Pending:
                 return 'MR.CI.PENDING';
+            case CiStatus.Canceled:
+                return 'MR.CI.CANCELED';
+            case CiStatus.Skipped:
+                return 'MR.CI.SKIPPED';
             default:
                 return 'MR.CI.UNKNOWN';
         }

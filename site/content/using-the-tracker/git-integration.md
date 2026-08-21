@@ -29,13 +29,13 @@ tracker.
 
 <!-- stack-table -->
 
-| Field | Meaning | Example |
-| --- | --- | --- |
-| **Name** | Display label | `backend repo` |
-| **Host type** | `github` · `gitlab` · `gitea` | `github` |
-| **Base URL** | API root of the host | `https://api.github.com`, `https://gitlab.com`, or your self-hosted URL |
-| **Repo path** | `owner/repo` path on the host | `your-org/your-repo` |
-| **Access token** | Token used to open PRs/MRs and read their diffs/status | see scopes below |
+| Field            | Meaning                                                | Example                                                                 |
+| ---------------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| **Name**         | Display label                                          | `backend repo`                                                          |
+| **Host type**    | `github` · `gitlab` · `gitea`                          | `github`                                                                |
+| **Base URL**     | API root of the host                                   | `https://api.github.com`, `https://gitlab.com`, or your self-hosted URL |
+| **Repo path**    | `owner/repo` path on the host                          | `your-org/your-repo`                                                    |
+| **Access token** | Token used to open PRs/MRs and read their diffs/status | see scopes below                                                        |
 
 Fill the form and save:
 
@@ -51,13 +51,13 @@ they're listed on the project's Git integrations settings page:
 The token both **reads** PR/MR diffs & status **and opens** the PR/MR for agent
 runs, so it needs **write** access:
 
-| Host | Token | Scope |
-| --- | --- | --- |
-| GitHub | fine-grained PAT | *Pull requests: write* + *Contents: read* (or classic `repo`) |
-| GitLab | project/personal access token | `api` |
-| Gitea | access token | `write:repository` |
+| Host   | Token                         | Scope                                                         |
+| ------ | ----------------------------- | ------------------------------------------------------------- |
+| GitHub | fine-grained PAT              | _Pull requests: write_ + _Contents: read_ (or classic `repo`) |
+| GitLab | project/personal access token | `api`                                                         |
+| Gitea  | access token                  | `write:repository`                                            |
 
-> Read-only tokens (`read_api`, *Pull requests: read*, `read:repository`) are
+> Read-only tokens (`read_api`, _Pull requests: read_, `read:repository`) are
 > not enough: diffs and status will load, but opening a PR/MR fails and the
 > agent run is marked failed with the host's error message.
 
@@ -78,18 +78,53 @@ runs, so it needs **write** access:
 
 ![MR diff inline](../../site/assets/img/mr-diff.png)
 
+### CI status
+
+Next to the PR/MR state the tracker shows the CI result for the **head commit**
+of the change request. All the jobs of that commit are reduced to one label:
+
+<!-- stack-table -->
+
+| Label           | When                                                                 |
+| --------------- | -------------------------------------------------------------------- |
+| **CI failed**   | at least one job failed, timed out, errored, or needs manual action  |
+| **CI pending**  | nothing failed and at least one job is still running or queued       |
+| **CI canceled** | nothing failed or running, and at least one job was canceled         |
+| **CI passed**   | nothing failed, running, or canceled, and at least one job succeeded |
+| **CI skipped**  | every job was skipped                                                |
+| _no label_      | the host reported no CI for this commit                              |
+
+A failure always wins, so a long-running matrix can never hide a job that has
+already failed. If the repository has no CI at all, **no label is shown** — the
+tracker doesn't claim a status it doesn't have.
+
+Where the result is read from:
+
+| Host   | Source                                                                       |
+| ------ | ---------------------------------------------------------------------------- |
+| GitHub | check runs (GitHub Actions), falling back to commit statuses for external CI |
+| GitLab | the merge request's latest pipeline                                          |
+| Gitea  | commit statuses (where Gitea Actions reports)                                |
+
+### Approvals
+
+The **Approved** tag appears when a review has approved the change request. It
+is read per host: GitHub and Gitea from the PR's reviews, GitLab from the merge
+request's approvals endpoint (available on **all GitLab tiers including Free** —
+only approval _rules_ are Premium).
+
 ## Permissions
 
-| Action | Required role |
-| --- | --- |
-| View integrations, diffs, status | project **member** |
-| Create / update / delete integrations | project **owner** |
+| Action                                | Required role      |
+| ------------------------------------- | ------------------ |
+| View integrations, diffs, status      | project **member** |
+| Create / update / delete integrations | project **owner**  |
 
 ## Troubleshooting
 
-| Symptom | Likely cause |
-| --- | --- |
-| Diff/status returns an error | Token expired or missing scope; base URL wrong (self-hosted hosts need the full API root) |
-| Agent run fails at "open PR" | Token lacks **write** scope, or `repoPath`/`baseUrl` is wrong — the host rejected the create call |
-| `403` on the settings page | You're a member, not an owner |
+| Symptom                                | Likely cause                                                                                                                 |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Diff/status returns an error           | Token expired or missing scope; base URL wrong (self-hosted hosts need the full API root)                                    |
+| Agent run fails at "open PR"           | Token lacks **write** scope, or `repoPath`/`baseUrl` is wrong — the host rejected the create call                            |
+| `403` on the settings page             | You're a member, not an owner                                                                                                |
 | Agent pushed a branch but no PR opened | No git integration on the project whose `repoPath` matches the pushed repo (the tracker can't tell which integration to use) |

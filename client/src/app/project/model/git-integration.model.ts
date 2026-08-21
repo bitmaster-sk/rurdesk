@@ -14,6 +14,8 @@ export enum CiStatus {
     Pending = 'pending',
     Success = 'success',
     Failed = 'failed',
+    Canceled = 'canceled',
+    Skipped = 'skipped',
     Unknown = 'unknown'
 }
 

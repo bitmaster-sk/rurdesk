@@ -7,8 +7,10 @@ const (
 )
 
 const (
-	CiStatusPending = "pending"
-	CiStatusSuccess = "success"
-	CiStatusFailed  = "failed"
-	CiStatusUnknown = "unknown"
+	CiStatusPending  = "pending"
+	CiStatusSuccess  = "success"
+	CiStatusFailed   = "failed"
+	CiStatusCanceled = "canceled"
+	CiStatusSkipped  = "skipped"
+	CiStatusUnknown  = "unknown"
 )

@@ -33,8 +33,8 @@ func NewGitLabHost(baseUrl, repoPath, token string) *GitLabHost {
 	}
 }
 
-func (h *GitLabHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*Diff, error) {
-	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s/changes", h.baseUrl, h.encodedPath, mrID)
+func (h *GitLabHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error) {
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s/changes", h.baseUrl, h.encodedPath, idMr)
 	req, err := h.newRequest(ctx, apiURL)
 	if err != nil {
 		return nil, err
@@ -73,8 +73,8 @@ func (h *GitLabHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*
 	return &Diff{HeadSHA: data.DiffRefs.HeadSHA, Files: files}, nil
 }
 
-func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*Status, error) {
-	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s", h.baseUrl, h.encodedPath, mrID)
+func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s", h.baseUrl, h.encodedPath, idMr)
 	req, err := h.newRequest(ctx, apiURL)
 	if err != nil {
 		return nil, err
@@ -89,14 +89,10 @@ func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*S
 	}
 
 	var mrData struct {
-		State      string `json:"state"`
-		ApprovedBy []any  `json:"approved_by"`
-		DiffRefs   struct {
+		State    string `json:"state"`
+		DiffRefs struct {
 			HeadSHA string `json:"head_sha"`
 		} `json:"diff_refs"`
-		HeadPipeline *struct {
-			Status string `json:"status"`
-		} `json:"head_pipeline"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&mrData); err != nil {
 		return nil, fmt.Errorf("decoding MR status: %w", err)
@@ -110,25 +106,14 @@ func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*S
 		state = constants.MrStateMerged
 	}
 
-	ciStatus := constants.CiStatusUnknown
-	if mrData.HeadPipeline != nil {
-		switch mrData.HeadPipeline.Status {
-		case "success":
-			ciStatus = constants.CiStatusSuccess
-		case "failed":
-			ciStatus = constants.CiStatusFailed
-		case "running", "pending":
-			ciStatus = constants.CiStatusPending
-		}
-	}
-
-	approved := len(mrData.ApprovedBy) > 0
+	ciStatus := h.getCiStatus(ctx, idMr, mrData.DiffRefs.HeadSHA)
+	approved := h.hasApproval(ctx, idMr)
 
 	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: mrData.DiffRefs.HeadSHA}, nil
 }
 
-func (h *GitLabHost) GetMergeRequestUrl(mrID string) string {
-	return fmt.Sprintf("%s/%s/-/merge_requests/%s", h.baseUrl, h.repoPath, mrID)
+func (h *GitLabHost) GetMergeRequestUrl(idMr string) string {
+	return fmt.Sprintf("%s/%s/-/merge_requests/%s", h.baseUrl, h.repoPath, idMr)
 }
 
 func (h *GitLabHost) newRequest(ctx context.Context, apiURL string) (*http.Request, error) {

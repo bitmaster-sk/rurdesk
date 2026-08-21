@@ -4,9 +4,9 @@ import "context"
 
 // GitHost provides access to merge/pull request data on a git hosting platform.
 type GitHost interface {
-	GetMergeRequestChanges(ctx context.Context, mrID string) (*Diff, error)
-	GetMergeRequestStatus(ctx context.Context, mrID string) (*Status, error)
-	GetMergeRequestUrl(mrID string) string
+	GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error)
+	GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error)
+	GetMergeRequestUrl(idMr string) string
 
 	// DefaultBranch returns the repository's default branch (PR base).
 	DefaultBranch(ctx context.Context) (string, error)

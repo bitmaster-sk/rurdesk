@@ -37,9 +37,23 @@ func TestGiteaHost_GetMergeRequestChanges(t *testing.T) {
 
 func TestGiteaHost_GetMergeRequestStatus_Open(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
-			"state": "open", "merged": false,
-		})
+		switch r.URL.Path {
+		case "/api/v1/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "cafebabe"},
+			})
+		case "/api/v1/repos/owner/repo/commits/cafebabe/status":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "success",
+				"statuses": []map[string]any{
+					{"context": "build", "status": "success", "state": "success"},
+					{"context": "test", "status": "success", "state": "success"},
+				},
+			})
+		case "/api/v1/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{{"state": "REQUEST_CHANGES"}})
+		}
 	}))
 	defer srv.Close()
 
@@ -47,14 +61,28 @@ func TestGiteaHost_GetMergeRequestStatus_Open(t *testing.T) {
 	status, err := host.GetMergeRequestStatus(t.Context(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateOpen, status.State)
-	assert.Equal(t, constants.CiStatusUnknown, status.CiStatus)
+	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
+	assert.False(t, status.Approved)
 }
 
 func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
-			"state": "closed", "merged": true,
-		})
+		switch r.URL.Path {
+		case "/api/v1/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "closed", "merged": true,
+				"head": map[string]any{"sha": "cafebabe"},
+			})
+		case "/api/v1/repos/owner/repo/commits/cafebabe/status":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "success",
+				"statuses": []map[string]any{
+					{"context": "build", "state": "success"},
+				},
+			})
+		case "/api/v1/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{{"state": "APPROVED"}})
+		}
 	}))
 	defer srv.Close()
 
@@ -62,6 +90,31 @@ func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	status, err := host.GetMergeRequestStatus(t.Context(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
+	assert.True(t, status.Approved)
+}
+
+func TestGiteaHost_GetMergeRequestStatus_NoCi(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/repos/owner/repo/pulls/1":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "open", "merged": false,
+				"head": map[string]any{"sha": "cafebabe"},
+			})
+		case "/api/v1/repos/owner/repo/commits/cafebabe/status":
+			json.NewEncoder(w).Encode(map[string]any{
+				"state": "pending", "statuses": []map[string]any{},
+			})
+		case "/api/v1/repos/owner/repo/pulls/1/reviews":
+			json.NewEncoder(w).Encode([]map[string]any{})
+		}
+	}))
+	defer srv.Close()
+
+	host := NewGiteaHost(srv.URL, "owner/repo", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.Equal(t, constants.CiStatusUnknown, status.CiStatus)
 }
 
 func TestGiteaHost_GetMergeRequestUrl(t *testing.T) {

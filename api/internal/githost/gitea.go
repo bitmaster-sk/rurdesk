@@ -29,8 +29,8 @@ func NewGiteaHost(baseUrl, repoPath, token string) *GiteaHost {
 	}
 }
 
-func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*Diff, error) {
-	prURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s", h.baseUrl, h.repoPath, mrID)
+func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error) {
+	prURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s", h.baseUrl, h.repoPath, idMr)
 	prReq, err := h.newRequest(ctx, prURL)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*D
 	var files []DiffFile
 	page := 1
 	for page <= 20 {
-		filesURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s/files?limit=50&page=%d", h.baseUrl, h.repoPath, mrID, page)
+		filesURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s/files?limit=50&page=%d", h.baseUrl, h.repoPath, idMr, page)
 		req, err := h.newRequest(ctx, filesURL)
 		if err != nil {
 			return nil, err
@@ -97,8 +97,8 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, mrID string) (*D
 	return &Diff{HeadSHA: prData.Head.SHA, Files: files}, nil
 }
 
-func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*Status, error) {
-	prURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s", h.baseUrl, h.repoPath, mrID)
+func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
+	prURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s", h.baseUrl, h.repoPath, idMr)
 	req, err := h.newRequest(ctx, prURL)
 	if err != nil {
 		return nil, err
@@ -130,11 +130,18 @@ func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, mrID string) (*St
 		state = constants.MrStateOpen
 	}
 
-	return &Status{State: state, Approved: false, CiStatus: constants.CiStatusUnknown, HeadSHA: prData.Head.SHA}, nil
+	ciStatus := constants.CiStatusUnknown
+	if prData.Head.SHA != "" {
+		ciStatus = h.getCiStatus(ctx, idMr, prData.Head.SHA)
+	}
+
+	approved := h.hasApproval(ctx, idMr)
+
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: prData.Head.SHA}, nil
 }
 
-func (h *GiteaHost) GetMergeRequestUrl(mrID string) string {
-	return fmt.Sprintf("%s/%s/pulls/%s", h.baseUrl, h.repoPath, mrID)
+func (h *GiteaHost) GetMergeRequestUrl(idMr string) string {
+	return fmt.Sprintf("%s/%s/pulls/%s", h.baseUrl, h.repoPath, idMr)
 }
 
 func (h *GiteaHost) newRequest(ctx context.Context, apiURL string) (*http.Request, error) {
