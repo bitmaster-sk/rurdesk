@@ -33,14 +33,27 @@ func TestGitLabHost_GetMergeRequestChanges(t *testing.T) {
 	assert.Len(t, diff.Files, 1)
 }
 
-func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
-			"state":         "opened",
-			"approved_by":   []any{},
-			"head_pipeline": map[string]any{"status": "success"},
-		})
+func gitlabStatusServer(t *testing.T, mrState string, pipelines []map[string]any, approvals map[string]any) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/approvals"):
+			json.NewEncoder(w).Encode(approvals)
+		case strings.HasSuffix(r.URL.Path, "/pipelines"):
+			json.NewEncoder(w).Encode(pipelines)
+		default:
+			json.NewEncoder(w).Encode(map[string]any{
+				"state":     mrState,
+				"diff_refs": map[string]any{"head_sha": "deadbeef"},
+			})
+		}
 	}))
+}
+
+func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
+	srv := gitlabStatusServer(t, "opened",
+		[]map[string]any{{"id": 9, "status": "success"}},
+		map[string]any{"approved": false, "approvals_required": 0, "approved_by": []any{}})
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
@@ -52,12 +65,22 @@ func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
 }
 
 func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
+	var approvalsPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(map[string]any{
-			"state":         "merged",
-			"approved_by":   []any{map[string]any{"user": map[string]any{"id": 1}}},
-			"head_pipeline": map[string]any{"status": "success"},
-		})
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/approvals"):
+			approvalsPath = r.URL.Path
+			json.NewEncoder(w).Encode(map[string]any{
+				"approved": true,
+				"approved_by": []any{
+					map[string]any{"user": map[string]any{"id": 1, "username": "reviewer"}},
+				},
+			})
+		case strings.HasSuffix(r.URL.Path, "/pipelines"):
+			json.NewEncoder(w).Encode([]map[string]any{{"status": "success"}})
+		default:
+			json.NewEncoder(w).Encode(map[string]any{"state": "merged"})
+		}
 	}))
 	defer srv.Close()
 
@@ -66,6 +89,39 @@ func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
+	assert.Equal(t, "/api/v4/projects/group/project/merge_requests/1/approvals", approvalsPath)
+}
+
+func TestGitLabHost_GetMergeRequestStatus_PipelineStates(t *testing.T) {
+	tests := []struct {
+		name      string
+		pipelines []map[string]any
+		want      string
+	}{
+		{name: "success", pipelines: []map[string]any{{"status": "success"}}, want: constants.CiStatusSuccess},
+		{name: "failed", pipelines: []map[string]any{{"status": "failed"}}, want: constants.CiStatusFailed},
+		{name: "canceled", pipelines: []map[string]any{{"status": "canceled"}}, want: constants.CiStatusCanceled},
+		{name: "canceling", pipelines: []map[string]any{{"status": "canceling"}}, want: constants.CiStatusCanceled},
+		{name: "skipped", pipelines: []map[string]any{{"status": "skipped"}}, want: constants.CiStatusSkipped},
+		{name: "running", pipelines: []map[string]any{{"status": "running"}}, want: constants.CiStatusPending},
+		{name: "created is still in flight", pipelines: []map[string]any{{"status": "created"}}, want: constants.CiStatusPending},
+		{name: "waiting for resource is still in flight", pipelines: []map[string]any{{"status": "waiting_for_resource"}}, want: constants.CiStatusPending},
+		{name: "manual is still in flight", pipelines: []map[string]any{{"status": "manual"}}, want: constants.CiStatusPending},
+		{name: "a state GitLab has not shipped yet is still in flight", pipelines: []map[string]any{{"status": "brand_new_thing"}}, want: constants.CiStatusPending},
+		{name: "only the latest pipeline counts", pipelines: []map[string]any{{"status": "success"}, {"status": "failed"}}, want: constants.CiStatusSuccess},
+		{name: "no pipeline at all", pipelines: []map[string]any{}, want: constants.CiStatusUnknown},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := gitlabStatusServer(t, "opened", tc.pipelines, map[string]any{"approved": false})
+			defer srv.Close()
+
+			host := NewGitLabHost(srv.URL, "group/project", "token")
+			status, err := host.GetMergeRequestStatus(t.Context(), "1")
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, status.CiStatus)
+		})
+	}
 }
 
 func TestGitLabHost_GetMergeRequestUrl(t *testing.T) {
