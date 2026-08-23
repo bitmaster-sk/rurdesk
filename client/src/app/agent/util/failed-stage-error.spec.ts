@@ -40,7 +40,11 @@ describe('resolveFailedStageError', () => {
 
     it('maps the turn_limit_exhausted reason to its i18n key', () => {
         const result = resolveFailedStageError([
-            stage({ stage: 'implementation_plan', status: 'failed', errorReason: 'turn_limit_exhausted' })
+            stage({
+                stage: 'implementation_plan',
+                status: 'failed',
+                errorReason: 'turn_limit_exhausted'
+            })
         ]);
         expect(result?.key).toBe('AGENT.ERROR.TURN_LIMIT_EXHAUSTED');
     });
