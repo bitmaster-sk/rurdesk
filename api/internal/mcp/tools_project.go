@@ -151,7 +151,7 @@ func handleGetProjectContext(ctx context.Context, req mcpgo.CallToolRequest, dis
 		defer wg.Done()
 		resp, err := dispatcher.Request(ctx, RequestOpts{
 			Method:   "GET",
-			Path:     fmt.Sprintf("/api/private/project/%d/member", projectID),
+			Path:     fmt.Sprintf("/api/private/project/%d/members", projectID),
 			Bearer:   bearer,
 			ToolName: "get_project_context",
 		})
