@@ -6,6 +6,7 @@ export interface IssueDraft {
     description: string;
     state: string;
     severity: string;
+    issueType?: string;
 }
 
 export abstract class Interaction {
@@ -40,6 +41,9 @@ export abstract class Interaction {
         await page.locator('input[formcontrolname="title"]').blur();
         await Interaction.pickOption(page, '#issue-state', issue.state);
         await Interaction.pickOption(page, '#issue-severity', issue.severity);
+        if (issue.issueType) {
+            await Interaction.pickOption(page, '#issue-type', issue.issueType);
+        }
 
         await page.getByRole('button', { name: 'Save', exact: true }).click();
         await page.waitForURL(/\/issue\/[1-9]\d*$/);
