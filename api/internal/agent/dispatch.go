@@ -133,12 +133,14 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	if err != nil {
 		messages = nil
 	}
+	// Must not be swallowed like the load above: without tasks the prompt would
+	// tell the agent to implement an approved plan and attach nothing.
 	priorTasks, err := d.taskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
-		priorTasks = nil
+		return nil, fmt.Errorf("loading prior tasks: %w", err)
 	}
 
-	artifacts := stageArtifactContext(task.Stage, messages)
+	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle := map[string]any{
 		"issue":             issue,
 		"project":           project,
@@ -204,10 +206,12 @@ type stageArtifacts struct {
 }
 
 // stageArtifactContext maps prior outputs to approved/rejected per stage; see
-// stageArtifacts for the rule.
-func stageArtifactContext(stage string, messages []*model.Message) stageArtifacts {
-	latestDesign := findLatestMessageOfKind(messages, constants.MessageKindDesign)
-	latestImplPlan := findLatestMessageOfKind(messages, constants.MessageKindImplementationPlan)
+// stageArtifacts for the rule. Resolve through the run's task rows, never by
+// scanning the issue for a message_kind — the issue also holds older revisions
+// and earlier runs' output.
+func stageArtifactContext(stage string, tasks []*model.AgentTask, messages []*model.Message) stageArtifacts {
+	latestDesign := latestStageOutput(constants.StageDesign, tasks, messages)
+	latestImplPlan := latestStageOutput(constants.StageImplementationPlan, tasks, messages)
 
 	switch stage {
 	case constants.StageDesign:
@@ -221,10 +225,30 @@ func stageArtifactContext(stage string, messages []*model.Message) stageArtifact
 	}
 }
 
-func findLatestMessageOfKind(messages []*model.Message, kind constants.MessageKind) *model.Message {
-	for i := len(messages) - 1; i >= 0; i-- {
-		if messages[i].MessageKind == kind {
-			return messages[i]
+// latestStageOutput returns the output message of the run's newest completed
+// attempt of stage. Picks by explicit max, not slice position — neither input
+// has a guaranteed order.
+func latestStageOutput(stage string, tasks []*model.AgentTask, messages []*model.Message) *model.Message {
+	var latest *model.AgentTask
+	for _, task := range tasks {
+		if task.Stage != stage || task.Status != constants.TaskStatusCompleted || task.IdOutputMessage == nil {
+			continue
+		}
+		if latest == nil || task.AttemptNo > latest.AttemptNo ||
+			(task.AttemptNo == latest.AttemptNo && task.CreatedAt.After(latest.CreatedAt)) {
+			latest = task
+		}
+	}
+	if latest == nil {
+		return nil
+	}
+	return findMessageById(messages, *latest.IdOutputMessage)
+}
+
+func findMessageById(messages []*model.Message, idMessage int64) *model.Message {
+	for _, message := range messages {
+		if message.IdMessage == idMessage {
+			return message
 		}
 	}
 	return nil
