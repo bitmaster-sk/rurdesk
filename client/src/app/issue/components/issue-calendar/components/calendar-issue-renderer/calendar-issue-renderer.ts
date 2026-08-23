@@ -55,7 +55,7 @@ export class CalendarIssueRenderer {
         title.innerText = evt.event.title;
         wrapper.appendChild(title);
 
-        // Footer: badges (state + severity) | spacer | name + avatar
+        // Footer: state badge | spacer | name + avatar
         const foot = document.createElement('div');
         foot.className = 'cal-event-b__foot';
 
@@ -63,9 +63,6 @@ export class CalendarIssueRenderer {
         badges.className = 'cal-event-b__badges';
         if (state) {
             badges.appendChild(this.buildStateBadge(state));
-        }
-        if (severity) {
-            badges.appendChild(this.buildSeverityBadge(severity));
         }
         foot.appendChild(badges);
 
@@ -142,14 +139,6 @@ export class CalendarIssueRenderer {
         const badge = document.createElement('span');
         badge.className = `cal-badge cal-state--${stateClass}`;
         badge.innerText = state.name;
-        return badge;
-    }
-
-    private buildSeverityBadge(severity: IssueSeverity): HTMLElement {
-        const badge = document.createElement('span');
-        badge.className = 'cal-badge';
-        badge.style.setProperty('--c', severity.color);
-        badge.innerText = severity.title;
         return badge;
     }
 

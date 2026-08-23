@@ -1275,12 +1275,6 @@ body {
             border: 1px solid color-mix(in srgb, var(--cal-state-color) 50%, transparent);
             color: var(--cal-state-color);
         }
-
-        &:not(.cal-state--start):not(.cal-state--final):not(.cal-state--in-progress) {
-            background: color-mix(in srgb, var(--c) 15%, transparent);
-            border: 1px solid color-mix(in srgb, var(--c) 50%, transparent);
-            color: var(--c);
-        }
     }
 
     // Option B — Comfortable
