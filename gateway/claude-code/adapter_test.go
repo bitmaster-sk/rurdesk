@@ -24,7 +24,7 @@ func TestMapTerminalStatus(t *testing.T) {
 	}{
 		{"success subtype", 0, "success", false, false, ""},
 		{"empty subtype zero exit", 0, "", false, false, ""},
-		{"max turns", 1, "error_max_turns", true, true, "error_max_turns"},
+		{"max turns", 1, "error_max_turns", true, true, "turn_limit_exhausted"},
 		{"execution error", 1, "error_during_execution", true, true, "error_during_execution"},
 		{"is_error no subtype", 1, "", true, true, "reported an error"},
 		{"nonzero exit only", 2, "", false, true, "exited with code 2"},
@@ -244,6 +244,7 @@ func TestRunWithStubBinary(t *testing.T) {
 			resultLine: `{"type":"result","subtype":"error_max_turns","is_error":true,"usage":{"input_tokens":10,"output_tokens":5}}`,
 			exitCode:   1,
 			wantErr:    true,
+			wantCode:   common.ErrCodeTurnLimitExhausted,
 			wantTools:  1,
 		},
 		{

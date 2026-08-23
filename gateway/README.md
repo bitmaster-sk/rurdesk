@@ -130,8 +130,8 @@ start without all five. The other adapters share this exact contract.
 | `GOOSE_MODEL`                          | provider default | Model id; unrecognised name fails on first call.                                                                                     |
 | `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the chosen provider.                                                                                             |
 | `OLLAMA_HOST`                          | unset            | For `GOOSE_PROVIDER=ollama` (keyless).                                                                                               |
-| `GOOSE_MAX_TURNS_PLAN`                 | `50`             | Hard `--max-turns` for non-implementation stages.                                                                                    |
-| `GOOSE_MAX_TURNS_IMPLEMENT`            | `100`            | Hard `--max-turns` for implementation.                                                                                               |
+| `GOOSE_MAX_TURNS_PLAN`                 | `250`            | Hard `--max-turns` for non-implementation stages.                                                                                    |
+| `GOOSE_MAX_TURNS_IMPLEMENT`            | `500`            | Hard `--max-turns` for implementation.                                                                                               |
 
 ### docker-compose snippet
 

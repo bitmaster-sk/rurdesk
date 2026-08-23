@@ -130,23 +130,23 @@ func LoadConfig(adapterType string) (*Config, error) {
 		cfg.ClaudeCode = &ClaudeCodeConfig{
 			OAuthToken:        os.Getenv("CLAUDE_CODE_OAUTH_TOKEN"),
 			Model:             os.Getenv("CLAUDE_MODEL"),
-			MaxTurnsPlan:      envInt("CLAUDE_MAX_TURNS_PLAN", 50),
-			MaxTurnsImplement: envInt("CLAUDE_MAX_TURNS_IMPLEMENT", 100),
+			MaxTurnsPlan:      envInt("CLAUDE_MAX_TURNS_PLAN", 250),
+			MaxTurnsImplement: envInt("CLAUDE_MAX_TURNS_IMPLEMENT", 500),
 		}
 	case "goose":
 		// BYOK: the API key (or OLLAMA_HOST) is passed through to the goose
-		// subprocess. Turn caps mirror claude's 50/100, deliberately generous —
-		// exhausting the cap kills the stage before the agent can call
-		// complete_stage, so a too-low ceiling loses real work while a too-high
-		// one costs nothing on runs that finish normally.
+		// subprocess. Turn caps mirror claude's 250/500 — these are safety nets
+		// against infinite loops, not budget meters. A too-low ceiling loses
+		// real work (weak models burn turns on shell greps); a too-high one
+		// costs nothing on runs that finish normally.
 		cfg.Goose = &GooseConfig{
 			Provider:          envOrDefault("GOOSE_PROVIDER", "anthropic"),
 			Model:             os.Getenv("GOOSE_MODEL"),
 			AnthropicAPIKey:   os.Getenv("ANTHROPIC_API_KEY"),
 			GoogleAPIKey:      os.Getenv("GOOGLE_API_KEY"),
 			OllamaHost:        os.Getenv("OLLAMA_HOST"),
-			MaxTurnsPlan:      envInt("GOOSE_MAX_TURNS_PLAN", 50),
-			MaxTurnsImplement: envInt("GOOSE_MAX_TURNS_IMPLEMENT", 100),
+			MaxTurnsPlan:      envInt("GOOSE_MAX_TURNS_PLAN", 250),
+			MaxTurnsImplement: envInt("GOOSE_MAX_TURNS_IMPLEMENT", 500),
 		}
 	default:
 		return nil, fmt.Errorf("unknown adapter type: %q (must be 'claude-code' or 'goose')", adapterType)

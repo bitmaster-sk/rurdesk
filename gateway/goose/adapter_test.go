@@ -172,6 +172,14 @@ func TestRunWithStubBinary(t *testing.T) {
 	const streamOutNoSubmit = `{"type":"message","message":{"role":"assistant","content":[{"type":"thinking","thinking":"planning"}]}}` + "\n" +
 		`{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"done"}]}}` + "\n" +
 		`{"type":"complete","total_tokens":15,"input_tokens":10,"output_tokens":5}`
+	// Agent hit --max-turns: emits the sentinel text, no complete_stage call.
+	const streamOutTurnLimit = `{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}]}}` + "\n" +
+		`{"type":"complete","total_tokens":15,"input_tokens":10,"output_tokens":5}`
+	// Agent hit --max-turns sentinel but still called complete_stage (finished
+	// despite the warning — should NOT be treated as a turn-limit failure).
+	const streamOutTurnLimitButSubmitted = `{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}]}}` + "\n" +
+		`{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage"}}}]}}` + "\n" +
+		`{"type":"complete","total_tokens":15,"input_tokens":10,"output_tokens":5}`
 	tests := []struct {
 		name      string
 		streamOut string
@@ -199,6 +207,23 @@ func TestRunWithStubBinary(t *testing.T) {
 			exitCode:  0,
 			wantErr:   true,
 			wantCode:  common.ErrCodeStageNotSubmitted,
+		},
+		{
+			// Turn limit exhausted, exit 0, no complete_stage → must be
+			// classified as turn_limit_exhausted, not stage_not_submitted.
+			name:      "turn limit exhausted, exit 0",
+			streamOut: streamOutTurnLimit,
+			exitCode:  0,
+			wantErr:   true,
+			wantCode:  common.ErrCodeTurnLimitExhausted,
+		},
+		{
+			// Sentinel present but complete_stage was called → the agent
+			// finished despite the warning; must NOT be a turn-limit error.
+			name:      "turn limit sentinel but complete_stage was called",
+			streamOut: streamOutTurnLimitButSubmitted,
+			exitCode:  0,
+			wantErr:   false,
 		},
 	}
 	for _, tt := range tests {

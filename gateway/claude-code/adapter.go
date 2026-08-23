@@ -225,6 +225,12 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 // The CLI exits zero on success; the `result` event's subtype refines the
 // message for soft failures (max-turns, execution error) on non-zero exit.
 func mapTerminalStatus(exitCode int, subtype string, isError bool) error {
+	if subtype == "error_max_turns" {
+		return &common.AgentError{
+			Code:   common.ErrCodeTurnLimitExhausted,
+			Detail: "agent reached --max-turns before calling complete_stage",
+		}
+	}
 	if exitCode == 0 && !isError && (subtype == "" || subtype == "success") {
 		return nil
 	}

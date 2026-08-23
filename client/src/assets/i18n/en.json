@@ -92,6 +92,7 @@
             "AGENT_ERROR": "The agent failed during this stage. Press Continue to retry or Restart to begin again.",
             "AGENT_REPORTED_ERROR": "The agent reported an error it could not recover from. Press Continue to retry or Restart.",
             "STAGE_NOT_SUBMITTED": "The agent finished without submitting its result for this stage. Press Continue to retry.",
+            "TURN_LIMIT_EXHAUSTED": "The agent reached its turn limit before finishing. Press Continue to retry with a fresh budget.",
             "WORKTREE_ERROR": "The workspace could not be prepared. Press Restart to begin a fresh run.",
             "CRASH_RECOVERY": "The agent process crashed mid-stage. Press Continue to retry.",
             "HEARTBEAT_STALE": "The agent stopped reporting progress and was timed out. Press Continue to retry.",

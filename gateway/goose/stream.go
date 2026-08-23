@@ -61,6 +61,7 @@ type streamResult struct {
 	tokens              int
 	toolCalls           int
 	provErr             *common.AgentError
+	turnLimitHit        bool
 	completeStageCalled bool
 }
 
@@ -84,6 +85,10 @@ type streamAggregator struct {
 	// Submission rides entirely on that call; without it the adapter must fail
 	// the stage rather than report a silent success that hangs the run.
 	sawCompleteStage bool
+
+	// turnLimitHit is set when the agent's answer text contains goose's
+	// turn-limit sentinel ("reached the maximum number of actions").
+	turnLimitHit bool
 }
 
 func newStreamAggregator(idRun int64, emit func(streamEvent)) *streamAggregator {
@@ -140,6 +145,9 @@ func (a *streamAggregator) handleMessage(sl streamLine) {
 		case block.Type == "text":
 			a.answer.WriteString(block.Text)
 			a.append("text", block.Text)
+			if isTurnLimitSentinel(block.Text) {
+				a.turnLimitHit = true
+			}
 		case isToolRequestType(block.Type):
 			a.flush() // close the current text/thinking group first
 			a.toolCnt++
@@ -184,7 +192,7 @@ func (a *streamAggregator) flush() {
 // classifying a provider error from the answer text if one is present.
 func (a *streamAggregator) finish() streamResult {
 	a.flush()
-	res := streamResult{tokens: a.tokens, toolCalls: a.toolCnt, completeStageCalled: a.sawCompleteStage}
+	res := streamResult{tokens: a.tokens, toolCalls: a.toolCnt, completeStageCalled: a.sawCompleteStage, turnLimitHit: a.turnLimitHit}
 	if text := a.answer.String(); isGooseErrorText(text) {
 		res.provErr = classifyProviderError(text)
 	}
@@ -206,4 +214,11 @@ func toolNameFromRaw(raw json.RawMessage) string {
 		return ""
 	}
 	return tc.Value.Name
+}
+
+// isTurnLimitSentinel returns true when text contains goose's turn-limit
+// message. Goose exits 0 on --max-turns, so this sentinel is the only signal
+// that the cap was hit. Matching a stable substring, not the full sentence.
+func isTurnLimitSentinel(text string) bool {
+	return strings.Contains(strings.ToLower(text), "reached the maximum number of actions")
 }

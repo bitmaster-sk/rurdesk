@@ -22,6 +22,11 @@ const (
 	// otherwise hang forever — a weaker model sometimes writes its output as
 	// a plain message instead of submitting it. Recoverable via Continue.
 	ErrCodeStageNotSubmitted = "stage_not_submitted"
+	// ErrCodeTurnLimitExhausted: the agent reached the --max-turns ceiling before
+	// calling complete_stage. The process exited cleanly (exit 0 for goose), so
+	// without this distinction it would be misclassified as stage_not_submitted.
+	// Recoverable — press Continue to retry with a fresh turn budget.
+	ErrCodeTurnLimitExhausted = "turn_limit_exhausted"
 )
 
 // AgentError is an adapter-level failure carrying a stable Code (used

@@ -38,6 +38,17 @@ describe('resolveFailedStageError', () => {
         expect(result?.key).toBe('AGENT.ERROR.STAGE_NOT_SUBMITTED');
     });
 
+    it('maps the turn_limit_exhausted reason to its i18n key', () => {
+        const result = resolveFailedStageError([
+            stage({
+                stage: 'implementation_plan',
+                status: 'failed',
+                errorReason: 'turn_limit_exhausted'
+            })
+        ]);
+        expect(result?.key).toBe('AGENT.ERROR.TURN_LIMIT_EXHAUSTED');
+    });
+
     it('returns null when no stage failed', () => {
         expect(resolveFailedStageError([stage({ status: 'done' })])).toBeNull();
     });
