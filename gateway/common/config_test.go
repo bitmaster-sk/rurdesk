@@ -37,11 +37,11 @@ func TestLoadConfigClaudeCodeNoAPIKeyRequired(t *testing.T) {
 	if cfg.ClaudeCode.OAuthToken != "" {
 		t.Errorf("OAuthToken = %q, want empty", cfg.ClaudeCode.OAuthToken)
 	}
-	if cfg.ClaudeCode.MaxTurnsPlan != 50 {
-		t.Errorf("MaxTurnsPlan = %d, want 50", cfg.ClaudeCode.MaxTurnsPlan)
+	if cfg.ClaudeCode.MaxTurnsPlan != 250 {
+		t.Errorf("MaxTurnsPlan = %d, want 250", cfg.ClaudeCode.MaxTurnsPlan)
 	}
-	if cfg.ClaudeCode.MaxTurnsImplement != 100 {
-		t.Errorf("MaxTurnsImplement = %d, want 100", cfg.ClaudeCode.MaxTurnsImplement)
+	if cfg.ClaudeCode.MaxTurnsImplement != 500 {
+		t.Errorf("MaxTurnsImplement = %d, want 500", cfg.ClaudeCode.MaxTurnsImplement)
 	}
 }
 
@@ -134,11 +134,11 @@ func TestLoadConfigGooseDefaults(t *testing.T) {
 	if cfg.Goose.Model != "" {
 		t.Errorf("Model = %q, want empty (provider default)", cfg.Goose.Model)
 	}
-	if cfg.Goose.MaxTurnsPlan != 50 {
-		t.Errorf("MaxTurnsPlan = %d, want 50", cfg.Goose.MaxTurnsPlan)
+	if cfg.Goose.MaxTurnsPlan != 250 {
+		t.Errorf("MaxTurnsPlan = %d, want 250", cfg.Goose.MaxTurnsPlan)
 	}
-	if cfg.Goose.MaxTurnsImplement != 100 {
-		t.Errorf("MaxTurnsImplement = %d, want 100", cfg.Goose.MaxTurnsImplement)
+	if cfg.Goose.MaxTurnsImplement != 500 {
+		t.Errorf("MaxTurnsImplement = %d, want 500", cfg.Goose.MaxTurnsImplement)
 	}
 }
 

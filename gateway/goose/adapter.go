@@ -160,6 +160,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 
 	result := agg.finish()
 	status, tokensUsed, toolCalls, provErr := result.status, result.tokens, result.toolCalls, result.provErr
+	turnLimitHit := result.turnLimitHit
 	stats.TokensUsed = tokensUsed
 	stats.ToolCallsCount = toolCalls
 	stats.DurationMs = int(time.Since(start) / time.Millisecond)
@@ -194,6 +195,14 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// the run and the user gets Continue/Restart.
 	if termErr := mapTerminalStatus(exitCode, status); termErr != nil {
 		return stats, termErr
+	}
+	if turnLimitHit && !result.completeStageCalled {
+		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
+			Msg("goose reached --max-turns before calling complete_stage")
+		return stats, &common.AgentError{
+			Code:   common.ErrCodeTurnLimitExhausted,
+			Detail: "agent reached --max-turns before calling complete_stage",
+		}
 	}
 	if !result.completeStageCalled {
 		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
