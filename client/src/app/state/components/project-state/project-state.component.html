@@ -76,7 +76,7 @@
     [(visible)]="isDeleteDialogVisible"
     [entityLabel]="'STATE.SINGULAR' | translate"
     [usageItems]="deleteUsageItems()"
-    [stateOptions]="deleteOptions()"
+    [options]="deleteOptions()"
     [hasUsage]="hasDeleteUsage()"
     [isLoading]="isDeleting()"
     (confirmed)="onConfirmDelete($event)"

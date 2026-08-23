@@ -1,17 +1,17 @@
 import { describe, beforeEach, expect, it } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { IssueState } from 'src/app/state/model/issue-state.model';
+import { DeleteMigrationOption, DeleteMigrationUsageItem } from './delete-migration-option.model';
 import { DeleteMigrationDialogComponent } from './delete-migration-dialog.component';
 
-const targetState: IssueState = {
-    idState: 2,
-    idProject: 1,
-    name: 'In progress',
-    start: false,
-    final: false,
-    protected: false,
-    orderRank: 1
+const usageItems: DeleteMigrationUsageItem[] = [
+    { key: 'STATE.DELETE_USAGE.MANY', params: { count: 3 } }
+];
+
+const targetOption: DeleteMigrationOption = {
+    id: 2,
+    label: 'In progress',
+    color: 'var(--ui-color-state-in-progress)'
 };
 
 describe('DeleteMigrationDialogComponent', () => {
@@ -27,8 +27,8 @@ describe('DeleteMigrationDialogComponent', () => {
     function create() {
         const fixture = TestBed.createComponent(DeleteMigrationDialogComponent);
         fixture.componentRef.setInput('entityLabel', 'State');
-        fixture.componentRef.setInput('usageItems', ['3 tasks still use this state']);
-        fixture.componentRef.setInput('stateOptions', [targetState]);
+        fixture.componentRef.setInput('usageItems', usageItems);
+        fixture.componentRef.setInput('options', [targetOption]);
         fixture.componentRef.setInput('hasUsage', true);
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();
@@ -69,7 +69,7 @@ describe('DeleteMigrationDialogComponent', () => {
         const fixture = TestBed.createComponent(DeleteMigrationDialogComponent);
         fixture.componentRef.setInput('entityLabel', 'State');
         fixture.componentRef.setInput('usageItems', []);
-        fixture.componentRef.setInput('stateOptions', []);
+        fixture.componentRef.setInput('options', []);
         fixture.componentRef.setInput('hasUsage', true);
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();
@@ -80,7 +80,7 @@ describe('DeleteMigrationDialogComponent', () => {
         const fixture = TestBed.createComponent(DeleteMigrationDialogComponent);
         fixture.componentRef.setInput('entityLabel', 'State');
         fixture.componentRef.setInput('usageItems', []);
-        fixture.componentRef.setInput('stateOptions', [targetState]);
+        fixture.componentRef.setInput('options', [targetOption]);
         fixture.componentRef.setInput('hasUsage', false);
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();

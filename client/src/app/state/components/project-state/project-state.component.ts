@@ -23,6 +23,10 @@ import { StateStore } from '../../store/state.store';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
 import { StateFormWindowComponent } from '../state-form-window/state-form-window.component';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
+import {
+    DeleteMigrationOption,
+    DeleteMigrationUsageItem
+} from 'src/app/shared/components/delete-migration-dialog/delete-migration-option.model';
 
 @Component({
     selector: 'app-project-state',
@@ -116,36 +120,49 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
     protected readonly deleteTarget = signal<IssueState | null>(null);
     protected readonly deleteUsage = signal<StateUsage | null>(null);
 
-    protected readonly deleteOptions = computed<IssueState[]>(() => {
+    protected readonly deleteOptions = computed<DeleteMigrationOption[]>(() => {
         const target = this.deleteTarget();
-        return this.states().filter(s => s.idState !== target?.idState);
+        return this.states()
+            .filter(s => s.idState !== target?.idState)
+            .map(s => ({ id: s.idState, label: s.name, color: this.stateAccentVar(s) }));
     });
+
+    private stateAccentVar(state: IssueState): string {
+        if (state.start) {
+            return 'var(--ui-color-state-start)';
+        }
+        if (state.final) {
+            return 'var(--ui-color-state-final)';
+        }
+        return 'var(--ui-color-state-in-progress)';
+    }
 
     protected readonly hasDeleteUsage = computed(() => {
         const usage = this.deleteUsage();
         return !!usage && (usage.issues > 0 || usage.isProjectDefault || usage.agentPhases > 0);
     });
 
-    protected readonly deleteUsageItems = computed(() => {
+    protected readonly deleteUsageItems = computed<DeleteMigrationUsageItem[]>(() => {
         const usage = this.deleteUsage();
         if (!usage) {
             return [];
         }
-        const parts: string[] = [];
+        const parts: DeleteMigrationUsageItem[] = [];
         if (usage.issues === 1) {
-            parts.push(this.i18n.instant('STATE.DELETE_USAGE.ONE'));
+            parts.push({ key: 'STATE.DELETE_USAGE.ONE' });
         } else if (usage.issues > 1) {
-            parts.push(this.i18n.instant('STATE.DELETE_USAGE.MANY', { count: usage.issues }));
+            parts.push({ key: 'STATE.DELETE_USAGE.MANY', params: { count: usage.issues } });
         }
         if (usage.isProjectDefault) {
-            parts.push(this.i18n.instant('STATE.DELETE_USAGE.DEFAULT'));
+            parts.push({ key: 'STATE.DELETE_USAGE.DEFAULT' });
         }
         if (usage.agentPhases === 1) {
-            parts.push(this.i18n.instant('STATE.DELETE_USAGE.PHASES_ONE'));
+            parts.push({ key: 'STATE.DELETE_USAGE.PHASES_ONE' });
         } else if (usage.agentPhases > 1) {
-            parts.push(
-                this.i18n.instant('STATE.DELETE_USAGE.PHASES_MANY', { count: usage.agentPhases })
-            );
+            parts.push({
+                key: 'STATE.DELETE_USAGE.PHASES_MANY',
+                params: { count: usage.agentPhases }
+            });
         }
         return parts;
     });
