@@ -113,7 +113,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public isAskLag = signal(localStorage.getItem('issue-relation-ask-lag') !== 'false');
 
-    public colCount = computed(() => (this.isRelationMode() ? 9 : 7));
+    public colCount = computed(() => (this.isRelationMode() ? 10 : 8));
 
     public isSplitDialogOpen = signal(false);
     public splitIssue = signal<Issue | null>(null);
@@ -457,6 +457,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
                     idsState: states.filter(s => !s.final).map(s => s.idState),
                     idsSeverity: [],
                     severityUnset: true,
+                    idsIssueType: [],
+                    issueTypeUnset: true,
                     assignedToUnset: true,
                     idsAssignedTo: [],
                     orderColumn: this.defaultSortColumn,

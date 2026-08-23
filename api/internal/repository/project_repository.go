@@ -34,9 +34,9 @@ func (r *ProjectRepository) UpdateProject(ctx context.Context, p *model.Project)
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
 		UPDATE projects.project
-		SET name = $1, color = $2, id_state_default = $3, id_severity_default = $4
-		WHERE id_project = $5
-	`, p.Name, p.Color, p.IdStateDefault, p.IdSeverityDefault, p.IdProject)
+		SET name = $1, color = $2, id_state_default = $3, id_severity_default = $4, id_issue_type_default = $5
+		WHERE id_project = $6
+	`, p.Name, p.Color, p.IdStateDefault, p.IdSeverityDefault, p.IdIssueTypeDefault, p.IdProject)
 	if err != nil {
 		return fmt.Errorf("updating project: %w", err)
 	}
@@ -55,7 +55,7 @@ func (r *ProjectRepository) DeleteProject(ctx context.Context, idProject int64) 
 func (r *ProjectRepository) LoadProjects(ctx context.Context, idUser int64) ([]*model.Project, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default
+		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default, prj.id_issue_type_default
 		FROM 
 			projects.project prj
 		WHERE prj.id_project IN (
@@ -87,7 +87,7 @@ func (r *ProjectRepository) LoadProjects(ctx context.Context, idUser int64) ([]*
 func (r *ProjectRepository) LoadAllProjects(ctx context.Context) ([]*model.Project, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default
+		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default, prj.id_issue_type_default
 		FROM projects.project prj
 		ORDER BY prj.name
 	`)
@@ -150,7 +150,7 @@ func (r *ProjectRepository) LoadProjectsMembers(ctx context.Context, idsProject 
 func (r *ProjectRepository) LoadProject(ctx context.Context, idProject int64) (*model.Project, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default
+		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default, prj.id_issue_type_default
 		FROM projects.project prj
 		WHERE prj.id_project = $1
 	`, idProject)
@@ -167,7 +167,7 @@ func (r *ProjectRepository) LoadProject(ctx context.Context, idProject int64) (*
 func (r *ProjectRepository) LoadProjectByIssue(ctx context.Context, idIssue int64) (*model.Project, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default
+		SELECT prj.id_project, prj.name, prj.color, prj.id_state_default, prj.id_severity_default, prj.id_issue_type_default
 		FROM projects.project prj
 		INNER JOIN issues.issue iss ON iss.id_project = prj.id_project
 		WHERE iss.id_issue = $1

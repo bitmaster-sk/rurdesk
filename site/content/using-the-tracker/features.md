@@ -26,7 +26,7 @@ summary of where the project stands:
 ## Tasks
 
 Tasks are the core unit of work. Create, edit, assign, and move them through
-states. Each task has a state, severity, tags, and a tracker, and can carry
+states. Each task has a state, severity, type, tags, and a tracker, and can carry
 relations to other tasks.
 
 ![Task detail panel](../../site/assets/img/issue-detail.png)
@@ -83,7 +83,7 @@ Right-clicking a task opens the same **quick-actions menu** in every view — ta
 Kanban, Calendar, and Gantt — so you can edit without leaving the view or opening
 the task:
 
-- **State**, **severity**, and **assignee** — inline selectors
+- **State**, **severity**, **type**, and **assignee** — inline selectors
 - **Reschedule** — previous/next day, today, remove the date, or pick one from a
   calendar
 - **Split** the task with AI (see [Task Split](#task-split))
@@ -138,21 +138,42 @@ A full project timeline:
 
 ![Gantt timeline with dependency arrows](../../site/assets/img/view-gantt.png)
 
-### States & severities
+### States, severities & task types
 
-Project settings let you add, rename, and delete the states and severities
-tasks move through. Deleting one that's still in use doesn't silently orphan
-data:
+Project settings let you add, rename, reorder, and delete the states,
+severities, and task types tasks move through. Deleting one that's still in use
+doesn't silently orphan data:
 
-- If the state or severity is **unused** — no tasks reference it, it isn't
-  the project default, and (for states) no agent phase points at it — it's
-  removed immediately after a plain confirmation.
+- If the state, severity, or type is **unused** — no tasks reference it, it
+  isn't the project default, and (for states) no agent phase points at it —
+  it's removed immediately after a plain confirmation.
 - If it's **in use**, a dialog shows how many tasks are affected (plus
   whether it's the project default or mapped to an agent phase) and asks you
-  to either **migrate** everything to another state/severity or explicitly
+  to either **migrate** everything to another state/severity/type or explicitly
   **unassign** it. Nothing is deleted until you choose.
-- If it's the **last** state or severity in the project, there's nothing to
+- If it's the **last** one of its kind in the project, there's nothing to
   migrate to, so the dialog only offers unassign.
+
+#### Task types
+
+A task's **type** says what kind of work it is — new projects start with
+**Bug**, **Feature**, and **Task**, and you can add your own (Spike, Chore,
+Support, whatever fits). The type is **optional**: a new project has no default
+type, so tasks stay untyped until you pick one. Set a default in project
+settings if you'd rather every new task start with one.
+
+Types are deliberately monochrome. Colour on a task already means two things —
+the state badge and the severity dot — so a third colour would make all three
+harder to read at a glance. The type renders as a plain outlined label instead.
+
+You'll see the type in the **task table** (its own sortable column, ordered the
+way you arranged the types in settings), on **Kanban cards**, in the **task
+detail**, and in the **quick-actions** popover. It is deliberately left out of
+the Calendar and Gantt views, where an event or a short bar has no room for it
+without pushing the task title out.
+
+Filter by type in the filter panel — including a **"tasks with unset types"**
+toggle — and save that filter into a view like any other.
 
 ## Relations & scheduling
 

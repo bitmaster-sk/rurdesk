@@ -9,6 +9,7 @@ import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SprintStore } from '../../../store/sprint.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { Issue } from '../../../model/issue.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
@@ -115,6 +116,10 @@ function buildService(issues: Issue[], states: IssueState[], usersArr: User[]): 
                 }
             },
             { provide: SeverityStore, useValue: { severitiesMapByProject$: () => of(sevsMap) } },
+            {
+                provide: IssueTypeStore,
+                useValue: { issueTypesMapByProject$: () => of(new Map()) }
+            },
             { provide: StateStore, useValue: { statesMapByProject$: () => of(statesMap) } },
             { provide: ProjectMemberStore, useValue: { usersMap$: of(usersMap) } },
             { provide: SprintStore, useValue: { sprints$: of([]) } }
@@ -357,6 +362,10 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
                 {
                     provide: SeverityStore,
                     useValue: { severitiesMapByProject$: () => of(sevsMap) }
+                },
+                {
+                    provide: IssueTypeStore,
+                    useValue: { issueTypesMapByProject$: () => of(new Map()) }
                 },
                 { provide: StateStore, useValue: { statesMapByProject$: () => of(statesMap) } },
                 { provide: ProjectMemberStore, useValue: { usersMap$: of(usersMap) } },

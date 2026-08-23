@@ -8,24 +8,22 @@ import {
     output,
     signal
 } from '@angular/core';
-import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
-import { IssueState } from 'src/app/state/model/issue-state.model';
+import { DeleteMigrationOption, DeleteMigrationUsageItem } from './delete-migration-option.model';
 
 /** Generic "delete X that is still in use" dialog — the host supplies labels and options. */
 @Component({
     selector: 'app-delete-migration-dialog',
     templateUrl: './delete-migration-dialog.component.html',
+    styleUrls: ['./delete-migration-dialog.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeleteMigrationDialogComponent {
     public readonly visible = model<boolean>(false);
     public readonly entityLabel = input.required<string>();
-    /** Pre-formatted usage lines ("3 tasks still use this state.") — rendered as a list. */
-    public readonly usageItems = input<string[]>([]);
-    /** Migration targets — exactly one of the two is non-empty per host (state vs severity). */
-    public readonly stateOptions = input<IssueState[]>([]);
-    public readonly severityOptions = input<IssueSeverity[]>([]);
+    /** Usage lines as translation keys — the dialog translates them in its template. */
+    public readonly usageItems = input<DeleteMigrationUsageItem[]>([]);
+    public readonly options = input<DeleteMigrationOption[]>([]);
     public readonly isLoading = input<boolean>(false);
 
     /** False = nothing references the row → plain confirm, no picker/radios. */
@@ -36,9 +34,7 @@ export class DeleteMigrationDialogComponent {
     public readonly mode = signal<'migrate' | 'unassign'>('migrate');
     public readonly selectedId = signal<number | null>(null);
 
-    public readonly hasTargets = computed(
-        () => this.stateOptions().length > 0 || this.severityOptions().length > 0
-    );
+    public readonly hasTargets = computed(() => this.options().length > 0);
 
     public readonly isConfirmDisabled = computed(
         () => this.hasUsage() && this.mode() === 'migrate' && this.selectedId() === null

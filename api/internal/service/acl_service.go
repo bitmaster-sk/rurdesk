@@ -229,6 +229,18 @@ func (acl *AclService) CanDeleteSeverity(ctx context.Context, idUser, idProject 
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
 }
 
+func (acl *AclService) CanCreateIssueType(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
+}
+
+func (acl *AclService) CanUpdateIssueType(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
+}
+
+func (acl *AclService) CanDeleteIssueType(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
+}
+
 func (acl *AclService) CanCreateState(ctx context.Context, idUser, idProject int64) bool {
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
 }

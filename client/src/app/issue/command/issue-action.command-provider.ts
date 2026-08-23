@@ -77,6 +77,7 @@ export class IssueActionCommandProvider implements CommandProvider {
                 description: src.description,
                 idState: src.idState,
                 idSeverity: src.idSeverity,
+                idIssueType: src.idIssueType,
                 assignedTo: src.assignedTo,
                 tracked: 0,
                 estimated: src.estimated,

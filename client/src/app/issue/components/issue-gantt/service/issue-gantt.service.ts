@@ -10,6 +10,8 @@ import { Issue } from '../../../model/issue.model';
 import { ExtendedIssue } from '../../../model/extended-issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { User } from 'src/app/auth/model/user.model';
@@ -24,6 +26,7 @@ export class IssueGanttService {
     private readonly issueService = inject(IssueService);
     private readonly issueRelationApi = inject(IssueRelationApi);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly memberStore = inject(ProjectMemberStore);
     private readonly stateStore = inject(StateStore);
     private readonly settings = inject(SettingsStore);
@@ -168,6 +171,7 @@ export class IssueGanttService {
         switchMap(filter =>
             combineLatest([
                 this.severityStore.severitiesMapByProject$(filter.idProject),
+                this.issueTypeStore.issueTypesMapByProject$(filter.idProject),
                 this.stateStore.statesMapByProject$(filter.idProject),
                 this.memberStore.usersMap$
             ])
@@ -182,7 +186,7 @@ export class IssueGanttService {
         this.relations$,
         this.metadata$
     ]).pipe(
-        map(([scheduled, backlog, relations, [severities, states, users]]) => {
+        map(([scheduled, backlog, relations, [severities, issueTypes, states, users]]) => {
             const scheduleRelations = relations.filter(
                 r => r.relationType === IssueRelationType.Schedule
             );
@@ -192,10 +196,10 @@ export class IssueGanttService {
             const sortedScheduled = orderScheduled(scheduledOnly, scheduleRelations);
             return {
                 scheduledTasks: sortedScheduled.map(issue =>
-                    this.buildExtendedIssue(issue, severities, states, users)
+                    this.buildExtendedIssue(issue, severities, issueTypes, states, users)
                 ),
                 backlogTasks: backlog.map(issue =>
-                    this.buildExtendedIssue(issue, severities, states, users)
+                    this.buildExtendedIssue(issue, severities, issueTypes, states, users)
                 ),
                 relations: scheduleRelations
             };
@@ -206,6 +210,7 @@ export class IssueGanttService {
     private buildExtendedIssue<T extends Issue>(
         issue: T,
         severities: Map<number, IssueSeverity>,
+        issueTypes: Map<number, IssueType>,
         states: Map<number, IssueState>,
         users: Map<number, User>
     ): ExtendedIssue & T {
@@ -213,6 +218,7 @@ export class IssueGanttService {
             ...issue,
             state: issue.idState != null ? states.get(issue.idState) : undefined,
             severity: issue.idSeverity != null ? severities.get(issue.idSeverity) : undefined,
+            issueType: issue.idIssueType != null ? issueTypes.get(issue.idIssueType) : undefined,
             assignedToUser: issue.assignedTo != null ? users.get(issue.assignedTo) : undefined
         };
     }

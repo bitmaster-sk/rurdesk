@@ -37,9 +37,12 @@
         {{ tile().title }}
     </a>
 
-    <!-- Row 3: state badge + assignee avatar -->
+    <!-- Row 3: type + state badges + assignee avatar -->
     <div class="flex items-center justify-between">
-        <app-state-badge [state]="tile().state" size="s"></app-state-badge>
+        <span class="flex items-center gap-1">
+            <app-issue-type-badge [issueType]="tile().issueType" size="s" />
+            <app-state-badge [state]="tile().state" size="s"></app-state-badge>
+        </span>
         @if (tile().assignedToUser; as assignedToUser) {
             <app-avatar
                 [name]="assignedToUser.name"

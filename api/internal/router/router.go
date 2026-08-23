@@ -28,6 +28,7 @@ func New(
 	wsCtrl *controller.WebsocketController,
 	issueCtrl *controller.IssueController,
 	sevCtrl *controller.SeverityController,
+	itCtrl *controller.IssueTypeController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
 	savedViewCtrl *controller.SavedViewController,
@@ -199,6 +200,12 @@ func New(
 	pri.PATCH("/severity/:idSeverity", sevCtrl.EditSeverity)
 	pri.DELETE("/severity/:idSeverity/project/:idProject", sevCtrl.DeleteSeverity)
 	pri.GET("/severity/:idSeverity/project/:idProject/usage", sevCtrl.GetSeverityUsage)
+
+	pri.GET("/issue-type", itCtrl.GetIssueTypes)
+	pri.POST("/issue-type", itCtrl.CreateIssueType)
+	pri.PATCH("/issue-type/:idIssueType", itCtrl.EditIssueType)
+	pri.DELETE("/issue-type/:idIssueType/project/:idProject", itCtrl.DeleteIssueType)
+	pri.GET("/issue-type/:idIssueType/project/:idProject/usage", itCtrl.GetIssueTypeUsage)
 
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)

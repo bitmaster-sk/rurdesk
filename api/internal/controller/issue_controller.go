@@ -29,6 +29,7 @@ type IssueController struct {
 	userRepo        *repository.UserRepository
 	stateRepo       *repository.StateRepository
 	severityRepo    *repository.SeverityRepository
+	issueTypeRepo   *repository.IssueTypeRepository
 	gitIntRepo      *repository.GitIntegrationRepository
 	agentRunRepo    *repository.AgentRunRepository
 	agentTaskRepo   *repository.AgentTaskRepository
@@ -47,6 +48,7 @@ func NewIssueController(
 	ur *repository.UserRepository,
 	stateRepo *repository.StateRepository,
 	severityRepo *repository.SeverityRepository,
+	issueTypeRepo *repository.IssueTypeRepository,
 	participantRepo *repository.IssueParticipantRepository,
 	acl *service.AclService,
 	notifSvc *service.NotificationService,
@@ -58,6 +60,7 @@ func NewIssueController(
 		userRepo:        ur,
 		stateRepo:       stateRepo,
 		severityRepo:    severityRepo,
+		issueTypeRepo:   issueTypeRepo,
 		participantRepo: participantRepo,
 		acl:             acl,
 		notifSvc:        notifSvc,
@@ -189,11 +192,7 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 	c.JSON(http.StatusOK, issue)
 }
 
-// validateStateSeverityInProject rejects an id_state/id_severity not mapped to
-// idProject. The DB FK references the global state/severity tables, so this
-// project-scope check is what prevents attaching another project's state or
-// severity. nil ids are skipped.
-func (ic *IssueController) validateStateSeverityInProject(ctx context.Context, idProject int64, idState, idSeverity *int64) error {
+func (ic *IssueController) validateIssueRefsInProject(ctx context.Context, idProject int64, idState, idSeverity, idIssueType *int64) error {
 	if idState != nil {
 		if _, err := ic.stateRepo.LoadState(ctx, idProject, *idState); err != nil {
 			return errStateNotInProject
@@ -202,6 +201,11 @@ func (ic *IssueController) validateStateSeverityInProject(ctx context.Context, i
 	if idSeverity != nil {
 		if _, err := ic.severityRepo.LoadSeverity(ctx, idProject, *idSeverity); err != nil {
 			return errSeverityNotInProject
+		}
+	}
+	if idIssueType != nil {
+		if _, err := ic.issueTypeRepo.LoadIssueType(ctx, idProject, *idIssueType); err != nil {
+			return errIssueTypeNotInProject
 		}
 	}
 	return nil
@@ -256,7 +260,7 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 				return errForbidden
 			}
 		}
-		if err := ic.validateStateSeverityInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity); err != nil {
+		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity, dto.IdIssueType); err != nil {
 			return err
 		}
 		var insertErr error
@@ -264,6 +268,7 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 			IdProject:      dto.IdProject,
 			IdState:        dto.IdState,
 			IdSeverity:     dto.IdSeverity,
+			IdIssueType:    dto.IdIssueType,
 			Title:          dto.Title,
 			Description:    dto.Description,
 			CreateBy:       user.IdUser,
@@ -293,7 +298,7 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject {
+	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -370,7 +375,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return errForbidden
 			}
 		}
-		if err := ic.validateStateSeverityInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value); err != nil {
+		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value, dto.IdIssueType.Value); err != nil {
 			return err
 		}
 		issue, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &dto.IdProject, IdIssuePublic: &dto.IdIssuePublic})
@@ -411,6 +416,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		issue.UpdateBy = user.IdUser
 		issue.IdState = dto.IdState.PtrOrElse(issue.IdState)
 		issue.IdSeverity = dto.IdSeverity.PtrOrElse(issue.IdSeverity)
+		issue.IdIssueType = dto.IdIssueType.PtrOrElse(issue.IdIssueType)
 		issue.Title = dto.Title.OrElse(issue.Title)
 		issue.Description = dto.Description.OrElse(issue.Description)
 		issue.AssignedTo = dto.AssignedTo.PtrOrElse(issue.AssignedTo)
@@ -441,7 +447,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject {
+	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -636,7 +642,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		}
 
 		for _, entry := range dto.Issues {
-			if err := ic.validateStateSeverityInProject(ctx, idProject, entry.IdState, entry.IdSeverity); err != nil {
+			if err := ic.validateIssueRefsInProject(ctx, idProject, entry.IdState, entry.IdSeverity, entry.IdIssueType); err != nil {
 				return err
 			}
 			if entry.IdUserAssigned != nil {
@@ -697,7 +703,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject {
+	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -744,6 +750,8 @@ func buildIssueFilter(c *gin.Context, idProject int64) (*model.LoadIssuesFilter,
 	f.Title = c.Query("title")
 	f.IdsSeverity = urlutil.ParseInt64Array(c, "idsSeverity")
 	f.SeverityUnset = c.Query("severityUnset") == "true"
+	f.IdsIssueType = urlutil.ParseInt64Array(c, "idsIssueType")
+	f.IssueTypeUnset = c.Query("issueTypeUnset") == "true"
 	f.IdsState = urlutil.ParseInt64Array(c, "idsState")
 	f.StateUnset = c.Query("stateUnset") == "true"
 	f.IdsAssignedTo = urlutil.ParseInt64Array(c, "idsAssignedTo")

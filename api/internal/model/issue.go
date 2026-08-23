@@ -8,6 +8,7 @@ type Issue struct {
 	IdProject        int64      `json:"idProject" db:"id_project"`
 	IdState          *int64     `json:"idState" db:"id_state"`
 	IdSeverity       *int64     `json:"idSeverity" db:"id_severity"`
+	IdIssueType      *int64     `json:"idIssueType" db:"id_issue_type"`
 	Title            string     `json:"title" db:"title"`
 	Description      string     `json:"description" db:"description"`
 	CreateAt         time.Time  `json:"createAt" db:"create_at"`
@@ -35,6 +36,8 @@ type LoadIssuesFilter struct {
 	IdsIssuePublic     []int64
 	IdsSeverity        []int64
 	SeverityUnset      bool
+	IdsIssueType       []int64
+	IssueTypeUnset     bool
 	IdsState           []int64
 	StateUnset         bool
 	IdsAssignedTo      []int64

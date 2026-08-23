@@ -23,6 +23,9 @@ export class IssueService {
         if (filter.idsSeverity?.length) {
             params = params.set('idsSeverity', filter.idsSeverity.join(','));
         }
+        if (filter.idsIssueType?.length) {
+            params = params.set('idsIssueType', filter.idsIssueType.join(','));
+        }
         if (filter.idsState?.length) {
             params = params.set('idsState', filter.idsState.join(','));
         }
@@ -75,6 +78,7 @@ export class IssueService {
         }
         params = params.set('stateUnset', filter.stateUnset ? 'true' : 'false');
         params = params.set('severityUnset', filter.severityUnset ? 'true' : 'false');
+        params = params.set('issueTypeUnset', filter.issueTypeUnset ? 'true' : 'false');
         params = params.set('assignedToUnset', filter.assignedToUnset ? 'true' : 'false');
         return params;
     }

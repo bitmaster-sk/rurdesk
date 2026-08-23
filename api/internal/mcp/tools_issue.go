@@ -18,6 +18,8 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithString("title_search", mcpgo.Description("Filter by title substring (ILIKE)")),
 			mcpgo.WithArray("state_ids", mcpgo.Description("Filter by state IDs"), mcpgo.WithNumberItems()),
 			mcpgo.WithArray("severity_ids", mcpgo.Description("Filter by severity IDs"), mcpgo.WithNumberItems()),
+			mcpgo.WithArray("issue_type_ids", mcpgo.Description("Filter by issue type IDs"), mcpgo.WithNumberItems()),
+			mcpgo.WithBoolean("issue_type_unset", mcpgo.Description("Also include issues with no type set (widens issue_type_ids)")),
 			mcpgo.WithArray("assigned_to_ids", mcpgo.Description("Filter by assigned user IDs"), mcpgo.WithNumberItems()),
 			mcpgo.WithBoolean("exclude_final_states", mcpgo.Description("Exclude issues in final/terminal states")),
 			mcpgo.WithString("updated_within", mcpgo.Description(`Only issues updated within this rolling window, e.g. "2h", "30d", "1d8h6m". Units: d (24h), h, m, s. Not calendar-aligned. Prefer this over computing dates yourself.`)),
@@ -76,6 +78,7 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithString("description", mcpgo.Description("Issue description")),
 			mcpgo.WithNumber("state_id", mcpgo.Description("State ID")),
 			mcpgo.WithNumber("severity_id", mcpgo.Description("Severity ID")),
+			mcpgo.WithNumber("issue_type_id", mcpgo.Description("Issue type ID")),
 			mcpgo.WithNumber("assigned_to_id", mcpgo.Description("User ID to assign")),
 			mcpgo.WithNumber("estimated", mcpgo.Description("Estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("Story points")),
@@ -95,6 +98,7 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithString("description", mcpgo.Description("New description")),
 			mcpgo.WithNumber("state_id", mcpgo.Description("New state ID")),
 			mcpgo.WithNumber("severity_id", mcpgo.Description("New severity ID")),
+			mcpgo.WithNumber("issue_type_id", mcpgo.Description("New issue type ID")),
 			mcpgo.WithNumber("assigned_to_id", mcpgo.Description("New assignee user ID")),
 			mcpgo.WithNumber("estimated", mcpgo.Description("New estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("New story points")),
@@ -106,11 +110,12 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 	)
 	server.AddTool(
 		mcpgo.NewTool("bulk_update_issues",
-			mcpgo.WithDescription("Update state, severity, or assignee on multiple issues atomically"),
+			mcpgo.WithDescription("Update state, severity, issue type, or assignee on multiple issues atomically"),
 			mcpgo.WithNumber("project_id", mcpgo.Required(), mcpgo.Description("Project ID")),
 			mcpgo.WithArray("issue_ids", mcpgo.Required(), mcpgo.Description("Public issue IDs to update"), mcpgo.WithNumberItems()),
 			mcpgo.WithNumber("state_id", mcpgo.Description("State ID to apply to all")),
 			mcpgo.WithNumber("severity_id", mcpgo.Description("Severity ID to apply to all")),
+			mcpgo.WithNumber("issue_type_id", mcpgo.Description("Issue type ID to apply to all")),
 			mcpgo.WithNumber("assigned_to_id", mcpgo.Description("Assignee user ID to apply to all")),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
@@ -135,6 +140,12 @@ func handleListIssues(ctx context.Context, req mcpgo.CallToolRequest, dispatcher
 	}
 	for _, id := range req.GetIntSlice("severity_ids", nil) {
 		query.Add("idsSeverity", strconv.Itoa(id))
+	}
+	for _, id := range req.GetIntSlice("issue_type_ids", nil) {
+		query.Add("idsIssueType", strconv.Itoa(id))
+	}
+	if req.GetBool("issue_type_unset", false) {
+		query.Set("issueTypeUnset", "true")
 	}
 	for _, id := range req.GetIntSlice("assigned_to_ids", nil) {
 		query.Add("idsAssignedTo", strconv.Itoa(id))
@@ -291,6 +302,9 @@ func handleCreateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 	if sevID := req.GetInt("severity_id", 0); sevID > 0 {
 		body["idSeverity"] = sevID
 	}
+	if typeID := req.GetInt("issue_type_id", 0); typeID > 0 {
+		body["idIssueType"] = typeID
+	}
 	if assignedTo := req.GetInt("assigned_to_id", 0); assignedTo > 0 {
 		body["assignedTo"] = assignedTo
 	}
@@ -354,6 +368,7 @@ func handleUpdateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 	numericMap := map[string]string{
 		"state_id":       "idState",
 		"severity_id":    "idSeverity",
+		"issue_type_id":  "idIssueType",
 		"assigned_to_id": "assignedTo",
 		"estimated":      "estimated",
 		"points":         "points",
@@ -397,11 +412,13 @@ func handleBulkUpdateIssues(ctx context.Context, req mcpgo.CallToolRequest, disp
 		IdIssuePublic  int  `json:"idIssuePublic"`
 		IdState        *int `json:"idState,omitempty"`
 		IdSeverity     *int `json:"idSeverity,omitempty"`
+		IdIssueType    *int `json:"idIssueType,omitempty"`
 		IdUserAssigned *int `json:"idUserAssigned,omitempty"`
 	}
 
 	stateID := req.GetInt("state_id", 0)
 	sevID := req.GetInt("severity_id", 0)
+	typeID := req.GetInt("issue_type_id", 0)
 	assignedTo := req.GetInt("assigned_to_id", 0)
 
 	entries := make([]entry, len(issueIDs))
@@ -412,6 +429,9 @@ func handleBulkUpdateIssues(ctx context.Context, req mcpgo.CallToolRequest, disp
 		}
 		if _, ok := args["severity_id"]; ok && sevID > 0 {
 			e.IdSeverity = &sevID
+		}
+		if _, ok := args["issue_type_id"]; ok && typeID > 0 {
+			e.IdIssueType = &typeID
 		}
 		if _, ok := args["assigned_to_id"]; ok && assignedTo > 0 {
 			e.IdUserAssigned = &assignedTo

@@ -15,6 +15,9 @@ import { StateBadgeComponent } from './state-badge/state-badge.component';
 import { StateBadgeSelectorComponent } from './state-badge-selector/state-badge-selector.component';
 import { SeverityBadgeComponent } from './severity-badge/severity-badge.component';
 import { SeverityBadgeSelectorComponent } from './severity-badge-selector/severity-badge-selector.component';
+import { IssueTypeBadgeComponent } from './issue-type-badge/issue-type-badge.component';
+import { IssueTypeBadgeSelectorComponent } from './issue-type-badge-selector/issue-type-badge-selector.component';
+import { IssueTypeDropdownComponent } from './issue-type-dropdown/issue-type-dropdown.component';
 import { TeammateSelectorComponent } from './teammate-selector/teammate-selector.component';
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
@@ -41,6 +44,9 @@ import {
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
         SeverityBadgeSelectorComponent,
+        IssueTypeBadgeComponent,
+        IssueTypeBadgeSelectorComponent,
+        IssueTypeDropdownComponent,
         UserDropdownComponent,
         SeverityDropdownComponent,
         StateDropdownComponent,
@@ -76,6 +82,9 @@ import {
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
         SeverityBadgeSelectorComponent,
+        IssueTypeBadgeComponent,
+        IssueTypeBadgeSelectorComponent,
+        IssueTypeDropdownComponent,
         UserDropdownComponent,
         SeverityDropdownComponent,
         StateDropdownComponent,

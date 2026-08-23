@@ -83,6 +83,7 @@ export class IssueSearchCommandProvider implements CommandProvider {
                 description: title,
                 idState: defaultState?.idState ?? null,
                 idSeverity: null,
+                idIssueType: null,
                 tracked: 0
             })
             .subscribe(created => {

@@ -1,0 +1,13 @@
+<div class="badge-selector">
+    @for (type of issueTypes(); track type.idIssueType) {
+        <button
+            type="button"
+            class="badge-selector__btn"
+            [class.badge-selector__btn--active]="value() === type.idIssueType"
+            [style.--sel-color]="'var(--ui-color-primary)'"
+            (click)="onSelect(type)"
+        >
+            <app-issue-type-badge [issueType]="type" size="xs"></app-issue-type-badge>
+        </button>
+    }
+</div>

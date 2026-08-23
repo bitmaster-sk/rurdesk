@@ -33,6 +33,15 @@
 
         <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0">
             <div class="ui-field col-span-4">
+                <label for="issue-type">{{ 'ISSUE_TYPE.SINGULAR' | translate }}</label>
+                <app-issue-type-dropdown
+                    [issueTypes]="issueTypes()"
+                    [formControl]="idIssueTypeControl"
+                    inputId="issue-type"
+                ></app-issue-type-dropdown>
+            </div>
+
+            <div class="ui-field col-span-4">
                 <label for="issue-state">{{ 'STATE.SINGULAR' | translate }}</label>
                 <app-state-dropdown
                     [states]="states()"
@@ -49,7 +58,9 @@
                     inputId="issue-severity"
                 ></app-severity-dropdown>
             </div>
+        </div>
 
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
             <div class="ui-field col-span-4">
                 <label>{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
                 <app-user-dropdown
@@ -57,9 +68,7 @@
                     [formControl]="assignedToControl"
                 ></app-user-dropdown>
             </div>
-        </div>
 
-        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
             <div class="ui-field col-span-4 flex flex-col">
                 <label for="issue-estimated">{{ 'ISSUE.TIME.ESTIMATED' | translate }}</label>
                 <input id="issue-estimated" formControlName="estimated" type="text" uiInput />
@@ -69,7 +78,9 @@
                 <label for="issue-points">{{ 'ISSUE.POINTS' | translate }}</label>
                 <input id="issue-points" formControlName="points" type="number" min="0" uiInput />
             </div>
+        </div>
 
+        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
             <div class="ui-field col-span-4 flex flex-col">
                 <label for="issue-scheduled-at">{{ 'ISSUE.SCHEDULED.AT' | translate }}</label>
                 <input
@@ -80,9 +91,7 @@
                     class="w-full"
                 />
             </div>
-        </div>
 
-        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
             @if (!isNewIssue()) {
                 <div class="ui-field col-span-4 tracked-field">
                     <label for="issue-tracked">{{ 'ISSUE.TIME.TRACKED' | translate }}</label>

@@ -27,6 +27,15 @@ func registerMetaTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 			return handleListSeverities(ctx, req, dispatcher)
 		},
 	)
+	server.AddTool(
+		mcpgo.NewTool("list_issue_types",
+			mcpgo.WithDescription("List all issue types (bug, feature, task, ...) across accessible projects"),
+			mcpgo.WithReadOnlyHintAnnotation(true),
+		),
+		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+			return handleListIssueTypes(ctx, req, dispatcher)
+		},
+	)
 }
 
 func handleListStates(ctx context.Context, req mcpgo.CallToolRequest, dispatcher *Dispatcher) (*mcpgo.CallToolResult, error) {
@@ -53,6 +62,23 @@ func handleListSeverities(ctx context.Context, req mcpgo.CallToolRequest, dispat
 		Path:     "/api/private/severity",
 		Bearer:   bearer,
 		ToolName: "list_severities",
+	})
+	if err != nil {
+		return mcpgo.NewToolResultError(err.Error()), nil
+	}
+	if resp.IsError {
+		return mcpgo.NewToolResultError(resp.ErrorMessage), nil
+	}
+	return mcpgo.NewToolResultText(string(resp.Body)), nil
+}
+
+func handleListIssueTypes(ctx context.Context, req mcpgo.CallToolRequest, dispatcher *Dispatcher) (*mcpgo.CallToolResult, error) {
+	bearer := req.Header.Get("Authorization")
+	resp, err := dispatcher.Request(ctx, RequestOpts{
+		Method:   "GET",
+		Path:     "/api/private/issue-type",
+		Bearer:   bearer,
+		ToolName: "list_issue_types",
 	})
 	if err != nil {
 		return mcpgo.NewToolResultError(err.Error()), nil

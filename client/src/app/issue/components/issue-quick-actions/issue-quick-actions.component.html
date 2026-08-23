@@ -37,6 +37,20 @@
                         </div>
                     }
 
+                    <!-- Issue type -->
+                    @if (showIssueType()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.ISSUE_TYPE' | translate }}
+                            </div>
+                            <app-issue-type-badge-selector
+                                [issueTypes]="issueTypes()"
+                                [ngModel]="issue()!.idIssueType"
+                                (ngModelChange)="onIssueTypeChange($event)"
+                            ></app-issue-type-badge-selector>
+                        </div>
+                    }
+
                     <!-- Assignee -->
                     @if (showAssignee()) {
                         <div class="qap--section">

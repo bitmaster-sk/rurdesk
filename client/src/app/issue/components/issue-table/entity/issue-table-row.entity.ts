@@ -1,5 +1,6 @@
 import { User } from 'src/app/auth/model/user.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Issue } from '../../../model/issue.model';
 import { IssueRelationRef } from '../../../model/issue-relation.model';
@@ -17,6 +18,7 @@ export interface IssueTableRow {
     issue: Issue;
     state: IssueState | undefined;
     severity: IssueSeverity | undefined;
+    issueType: IssueType | undefined;
     assigned: User | undefined;
     relations: IssueRelationRow[];
 }

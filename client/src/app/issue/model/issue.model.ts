@@ -6,6 +6,7 @@ export interface Issue {
     idProject: number;
     idState: number | null;
     idSeverity: number | null;
+    idIssueType: number | null;
     title: string;
     description: string;
     createAt?: Date;

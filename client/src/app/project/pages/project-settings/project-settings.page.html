@@ -69,6 +69,30 @@
                     ></app-project-severity>
                 </div>
             </section>
+            } @if (aclStore.canManageIssueType()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="category" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'ISSUE_TYPE.PLURAL' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'ISSUE_TYPE.NEW' | translate"
+                            (click)="projectIssueType.onNewIssueType()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-project-issue-type
+                        #projectIssueType
+                        [project]="project"
+                    ></app-project-issue-type>
+                </div>
+            </section>
             } @if (aclStore.canReadMembers()) {
             <section class="panel">
                 <header class="panel-head">

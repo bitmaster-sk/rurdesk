@@ -108,13 +108,17 @@ describe('CalendarIssueRenderer', () => {
             expect(badge?.textContent).toBe('Todo');
         });
 
-        it('renders severity badge when severity is provided', () => {
+        it('renders no severity badge — severity shows as the event colour only', () => {
             const { domNodes } = renderer.render({
-                evt: makeEvt({ severity: { title: 'Critical', color: '#dc2626' } }),
+                evt: makeEvt({
+                    state: { name: 'Todo', start: true },
+                    severity: { title: 'Critical', color: '#dc2626' }
+                }),
                 cardMode: mode
             });
-            const badge = domNodes[0].querySelector('.cal-badge:not([class*="cal-state"])');
-            expect(badge?.textContent?.trim()).toBe('Critical');
+            const badges = domNodes[0].querySelectorAll('.cal-badge');
+            expect(badges.length).toBe(1);
+            expect(badges[0].classList.contains('cal-state--start')).toBe(true);
         });
 
         it('renders progress bar fill reflecting tracked/estimated ratio', () => {

@@ -1,0 +1,21 @@
+<div class="form w-full" [formGroup]="form">
+    <div class="form-body">
+        <div class="ui-field">
+            <label class="required" for="issue-type-name">{{ 'NAME' | translate }}:</label>
+            <input id="issue-type-name" uiInput formControlName="name" type="text" class="w-full" />
+        </div>
+    </div>
+    <div class="form-footer">
+        <ui-button
+            [disabled]="!form.valid"
+            severity="primary"
+            [label]="'SAVE' | translate"
+            (click)="onSave()"
+        >
+            <tabler-icon icon="device-floppy" [size]="16" />
+        </ui-button>
+        <ui-button severity="secondary" [label]="'CANCEL' | translate" (click)="onCancel()">
+            <tabler-icon icon="cancel" [size]="16" />
+        </ui-button>
+    </div>
+</div>

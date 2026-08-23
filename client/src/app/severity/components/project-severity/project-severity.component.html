@@ -70,7 +70,7 @@
     [(visible)]="isDeleteDialogVisible"
     [entityLabel]="'SEVERITY.SINGULAR' | translate"
     [usageItems]="deleteUsageItems()"
-    [severityOptions]="deleteOptions()"
+    [options]="deleteOptions()"
     [hasUsage]="hasDeleteUsage()"
     [isLoading]="isDeleting()"
     (confirmed)="onConfirmDelete($event)"

@@ -6,6 +6,7 @@ import { IssueService } from '../../../issue.service';
 import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
@@ -62,6 +63,13 @@ function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): 
                 useValue: {
                     severitiesMapByProject$: () =>
                         of(new Map([[1, { idSeverity: 1, title: 'Low' }]]))
+                }
+            },
+            {
+                provide: IssueTypeStore,
+                useValue: {
+                    issueTypesMapByProject$: () =>
+                        of(new Map([[1, { idIssueType: 1, name: 'Bug' }]]))
                 }
             },
             {
@@ -176,6 +184,13 @@ describe('IssueTableService — refresh keeps loaded pages', () => {
                     useValue: {
                         severitiesMapByProject$: () =>
                             of(new Map([[1, { idSeverity: 1, title: 'Low' }]]))
+                    }
+                },
+                {
+                    provide: IssueTypeStore,
+                    useValue: {
+                        issueTypesMapByProject$: () =>
+                            of(new Map([[1, { idIssueType: 1, name: 'Bug' }]]))
                     }
                 },
                 { provide: IssueFilterStore, useValue: store },

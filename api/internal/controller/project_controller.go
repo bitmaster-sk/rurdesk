@@ -14,12 +14,13 @@ import (
 )
 
 type ProjectController struct {
-	projectRepo  *repository.ProjectRepository
-	teamRepo     *repository.TeamRepository
-	severityRepo *repository.SeverityRepository
-	stateRepo    *repository.StateRepository
-	acl          *service.AclService
-	pool         *pgxpool.Pool
+	projectRepo   *repository.ProjectRepository
+	teamRepo      *repository.TeamRepository
+	severityRepo  *repository.SeverityRepository
+	stateRepo     *repository.StateRepository
+	issueTypeRepo *repository.IssueTypeRepository
+	acl           *service.AclService
+	pool          *pgxpool.Pool
 }
 
 func NewProjectController(
@@ -27,16 +28,18 @@ func NewProjectController(
 	tr *repository.TeamRepository,
 	sr *repository.SeverityRepository,
 	str *repository.StateRepository,
+	itr *repository.IssueTypeRepository,
 	acl *service.AclService,
 	pool *pgxpool.Pool,
 ) *ProjectController {
 	return &ProjectController{
-		projectRepo:  pr,
-		teamRepo:     tr,
-		severityRepo: sr,
-		stateRepo:    str,
-		acl:          acl,
-		pool:         pool,
+		projectRepo:   pr,
+		teamRepo:      tr,
+		severityRepo:  sr,
+		stateRepo:     str,
+		issueTypeRepo: itr,
+		acl:           acl,
+		pool:          pool,
 	}
 }
 
@@ -63,6 +66,9 @@ func (pc *ProjectController) CreateProject(c *gin.Context) {
 			return err
 		}
 		if err = pc.stateRepo.InsertDefaultStates(ctx, project.IdProject); err != nil {
+			return err
+		}
+		if err = pc.issueTypeRepo.InsertDefaultIssueTypes(ctx, project.IdProject); err != nil {
 			return err
 		}
 		// Creator is always added as owner, even when a team is also added.
@@ -114,10 +120,17 @@ func (pc *ProjectController) UpdateProject(c *gin.Context) {
 		return
 	}
 
+	if err := pc.validateDefaultsInProject(ctx, &dto); err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
 	project.Name = dto.Name
 	project.Color = dto.Color
 	project.IdStateDefault = dto.IdStateDefault
 	project.IdSeverityDefault = dto.IdSeverityDefault
+	project.IdIssueTypeDefault = dto.IdIssueTypeDefault
 
 	if err := pc.projectRepo.UpdateProject(ctx, project); err != nil {
 		_ = c.Error(err)
@@ -125,6 +138,25 @@ func (pc *ProjectController) UpdateProject(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, project)
+}
+
+func (pc *ProjectController) validateDefaultsInProject(ctx context.Context, dto *model.EditProjectReq) error {
+	if dto.IdStateDefault != nil {
+		if _, err := pc.stateRepo.LoadState(ctx, dto.IdProject, *dto.IdStateDefault); err != nil {
+			return errStateNotInProject
+		}
+	}
+	if dto.IdSeverityDefault != nil {
+		if _, err := pc.severityRepo.LoadSeverity(ctx, dto.IdProject, *dto.IdSeverityDefault); err != nil {
+			return errSeverityNotInProject
+		}
+	}
+	if dto.IdIssueTypeDefault != nil {
+		if _, err := pc.issueTypeRepo.LoadIssueType(ctx, dto.IdProject, *dto.IdIssueTypeDefault); err != nil {
+			return errIssueTypeNotInProject
+		}
+	}
+	return nil
 }
 
 func (pc *ProjectController) DeleteProject(c *gin.Context) {

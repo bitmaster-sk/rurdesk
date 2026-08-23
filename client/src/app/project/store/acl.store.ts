@@ -19,6 +19,7 @@ export class AclStore {
     public readonly canDeleteProject = computed(() => this.atLeast(Role.Owner));
     public readonly canManageSeverity = computed(() => this.atLeast(Role.Owner));
     public readonly canManageState = computed(() => this.atLeast(Role.Owner));
+    public readonly canManageIssueType = computed(() => this.atLeast(Role.Owner));
     public readonly canReadMembers = computed(() => this.atLeast(Role.Owner));
     public readonly canCreateMembers = computed(() => this.atLeast(Role.Owner));
     public readonly canUpdateMembers = computed(() => this.atLeast(Role.Owner));
