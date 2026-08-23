@@ -7,6 +7,8 @@ export interface SavedViewConfig {
     title?: string;
     idsSeverity?: number[];
     severityUnset?: boolean;
+    idsIssueType?: number[];
+    issueTypeUnset?: boolean;
     idsState?: number[];
     stateUnset?: boolean;
     idsAssignedTo?: number[];

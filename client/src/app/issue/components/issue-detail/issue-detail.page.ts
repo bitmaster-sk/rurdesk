@@ -147,6 +147,7 @@ export class IssueDetailPage implements OnDestroy {
             idProject: params.idProject,
             idState: null,
             idSeverity: null,
+            idIssueType: null,
             title: '',
             description: '',
             tracked: 0

@@ -9,6 +9,7 @@ import { ProjectFormWindowComponent } from './components/project-form-window/pro
 import { ProjectSettingsPage } from './pages/project-settings/project-settings.page';
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
+import { IssueTypeModule } from '../issue-type/issue-type.module';
 import { BaseChartDirective } from 'ng2-charts';
 import { PinModule } from '../pin/pin.module';
 import { RouterModule } from '@angular/router';
@@ -52,7 +53,8 @@ import {
     IconList,
     IconCircleCheck,
     IconHistory,
-    IconInfoCircle
+    IconInfoCircle,
+    IconCategory
 } from '@tabler/icons-angular';
 import { AgentPhaseStateMapComponent } from './components/agent-phase-state-map/agent-phase-state-map.component';
 import { AgentModule } from '../agent/agent.module';
@@ -91,6 +93,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
         ReactiveFormsModule,
         StateModule,
         SeverityModule,
+        IssueTypeModule,
         BaseChartDirective,
         PinModule,
         UiModule,
@@ -122,7 +125,8 @@ import { PeopleCommandProvider } from './command/people.command-provider';
             IconList,
             IconCircleCheck,
             IconHistory,
-            IconInfoCircle
+            IconInfoCircle,
+            IconCategory
         })
     ]
 })

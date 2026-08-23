@@ -463,6 +463,7 @@
         "QUICK_ACTIONS": {
             "STATE": "State",
             "SEVERITY": "Severity",
+            "ISSUE_TYPE": "Type",
             "ASSIGNEE": "Assignee",
             "RESCHEDULE": "Reschedule",
             "PREVIOUS_DAY": "Previous day",
@@ -488,6 +489,7 @@
         "TIME.TRACKED": "Tracked time",
         "TIME.ESTIMATED": "Estimated time",
         "DISPLAY.UNSET.SEVERITIES": "Display tasks with unset severities",
+        "DISPLAY.UNSET.ISSUE_TYPES": "Display tasks with unset types",
         "DISPLAY.UNSET.STATES": "Display tasks with unset states",
         "DISPLAY.UNSET.ASSIGNED.TO": "Display tasks with unassigned user",
         "PINNED": "Pinned tasks",
@@ -692,8 +694,11 @@
         "conflict": "Conflict",
         "state_in_use": "This state is still in use — choose where to move its references",
         "severity_in_use": "This severity is still in use — choose where to move its references",
+        "issue_type_in_use": "This type is still in use — choose where to move its references",
         "invalid_state_migration_target": "The target must be a different state of the same project",
         "invalid_severity_migration_target": "The target must be a different severity of the same project",
+        "invalid_issue_type_migration_target": "The target must be a different type of the same project",
+        "issue_type_protected": "This type is protected and cannot be deleted",
         "sprint_closed": "That cycle is already closed."
     },
     "NOTIFICATION": {
@@ -959,5 +964,15 @@
     "DIFF": {
         "LOADING": "Loading diff…",
         "OPEN_ON_HOST": "Open on host"
+    },
+    "ISSUE_TYPE": {
+        "SINGULAR": "Type",
+        "PLURAL": "Types",
+        "NEW": "New type",
+        "EDIT": "Edit type",
+        "DEFAULT.FOR.NEW.ISSUE": "Default type for new tasks",
+        "DELETE_USAGE.ONE": "1 task still uses this type.",
+        "DELETE_USAGE.MANY": "{{count}} tasks still use this type.",
+        "DELETE_USAGE.DEFAULT": "It is the project's default type."
     }
 }

@@ -1,0 +1,15 @@
+@use '../badge/badge.shared' as badge;
+
+:host {
+    display: contents;
+}
+
+.issue-type-badge {
+    @include badge.badge-base;
+    @include badge.badge-sizes;
+
+    white-space: nowrap;
+    border-color: var(--ui-color-border);
+    background: transparent;
+    color: var(--ui-color-text-muted);
+}

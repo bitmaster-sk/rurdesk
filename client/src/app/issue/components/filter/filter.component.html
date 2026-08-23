@@ -70,6 +70,27 @@
         </div>
 
         <div class="ui-field col-span-3">
+            <label for="issue-type-filter">{{ 'ISSUE_TYPE.SINGULAR' | translate }}</label>
+            <app-issue-type-dropdown
+                inputId="issue-type-filter"
+                [issueTypes]="(issueTypes$ | async) ?? []"
+                [multi]="true"
+                formControlName="idsIssueType"
+            ></app-issue-type-dropdown>
+            <div class="ui-field-checkbox mt-1 mb-0">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="issue-type-unset-filter"
+                    [formControl]="issueTypeUnsetControl"
+                />
+                <label for="issue-type-unset-filter">
+                    {{ 'ISSUE.DISPLAY.UNSET.ISSUE_TYPES' | translate }}
+                </label>
+            </div>
+        </div>
+
+        <div class="ui-field col-span-3">
             <label for="assigned-to-filter">{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
             <app-user-dropdown
                 inputId="assigned-to-filter"

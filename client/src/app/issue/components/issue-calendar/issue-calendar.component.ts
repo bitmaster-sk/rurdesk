@@ -469,6 +469,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                 idsState: [],
                 idsSeverity: [],
                 severityUnset: true,
+                idsIssueType: [],
+                issueTypeUnset: true,
                 assignedToUnset: true,
                 idsAssignedTo: [],
                 orderColumn: this.defaultSortColumn,

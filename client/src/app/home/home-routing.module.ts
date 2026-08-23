@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { SeverityResolver } from '../severity/severity.resolver';
 import { StateResolver } from '../state/state.resolver';
+import { IssueTypeResolver } from '../issue-type/issue-type.resolver';
 import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
 import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
 import { firstProjectGuard } from '../onboarding/first-project.guard';
@@ -14,7 +15,8 @@ const routes: Routes = [
         canMatch: [projectLayoutGuard],
         resolve: {
             severities: SeverityResolver,
-            state: StateResolver
+            state: StateResolver,
+            issueTypes: IssueTypeResolver
         },
         children: [
             {

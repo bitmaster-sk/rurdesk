@@ -3,6 +3,33 @@ import { IssuesFilter } from '../../issue/components/filter/issue-filter.entity'
 import { SavedViewConfigConverter } from './saved-view.converter';
 
 describe('SavedViewConfigConverter', () => {
+    it('round-trips the issue-type filter so a saved view restores it', () => {
+        const filter: IssuesFilter = {
+            idProject: 5,
+            idsIssueType: [3, 4],
+            issueTypeUnset: true,
+            orderColumn: 'issueType',
+            orderDirection: 'asc'
+        };
+
+        const config = SavedViewConfigConverter.toConfig(filter);
+        expect(config.idsIssueType).toEqual([3, 4]);
+        expect(config.issueTypeUnset).toBe(true);
+
+        const params = SavedViewConfigConverter.toFilter(config);
+        expect(params.idsIssueType).toEqual([3, 4]);
+        expect(params.issueTypeUnset).toBe(true);
+        expect(params.orderColumn).toBe('issueType');
+    });
+
+    it('drops a malformed idsIssueType instead of forwarding it', () => {
+        const params = SavedViewConfigConverter.toFilter({
+            v: 1,
+            idsIssueType: 7 as unknown as number[]
+        });
+        expect('idsIssueType' in params).toBe(false);
+    });
+
     it('round-trips filter → config → filter with date revival', () => {
         const filter: IssuesFilter = {
             idProject: 5,

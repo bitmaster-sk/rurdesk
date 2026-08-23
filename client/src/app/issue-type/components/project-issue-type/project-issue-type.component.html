@@ -1,0 +1,77 @@
+<div class="flex flex-col">
+    <div class="col-span-12 p-0">
+        <table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 2rem"></th>
+                    <th scope="col">{{ 'NAME' | translate }}</th>
+                    <th scope="col" class="action-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (issueType of issueTypes(); track issueType.idIssueType) {
+                    <tr
+                        data-testid="issue-type-row"
+                        cdkDrag
+                        (pointerdown)="onRowPointerDown($event)"
+                        (pointerup)="onRowPointerUp($event)"
+                        (cdkDragEnded)="onDragEnded($event)"
+                    >
+                        <td>
+                            <tabler-icon
+                                icon="grip-vertical"
+                                [size]="16"
+                                cdkDragHandle
+                                class="drag-handle"
+                            />
+                        </td>
+                        <td>
+                            <app-issue-type-badge [issueType]="issueType" size="s" />
+                        </td>
+                        <td class="action-column">
+                            <ui-button
+                                variant="text"
+                                severity="info"
+                                size="small"
+                                (click)="onEditIssueType(issueType)"
+                            >
+                                <tabler-icon icon="pencil" [size]="16" />
+                            </ui-button>
+                            <ui-button
+                                variant="text"
+                                severity="danger"
+                                size="small"
+                                data-testid="issue-type-delete"
+                                (click)="onDeleteIssueType(issueType)"
+                            >
+                                <tabler-icon icon="trash" [size]="16" />
+                            </ui-button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="col-span-12 w-full p-2 border-top" [formGroup]="form">
+        <div class="ui-field w-1/4 p-0">
+            <label for="project-issue-type">
+                {{ 'ISSUE_TYPE.DEFAULT.FOR.NEW.ISSUE' | translate }}:
+            </label>
+            <app-issue-type-dropdown
+                [issueTypes]="issueTypes()"
+                [formControl]="idIssueTypeDefaultControl"
+                [saveStatus]="defaultSaveStatus()"
+                inputId="project-issue-type"
+            ></app-issue-type-dropdown>
+        </div>
+    </div>
+</div>
+<app-delete-migration-dialog
+    [(visible)]="isDeleteDialogVisible"
+    [entityLabel]="'ISSUE_TYPE.SINGULAR' | translate"
+    [usageItems]="deleteUsageItems()"
+    [options]="deleteOptions()"
+    [hasUsage]="hasDeleteUsage()"
+    [isLoading]="isDeleting()"
+    (confirmed)="onConfirmDelete($event)"
+/>

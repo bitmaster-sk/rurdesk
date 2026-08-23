@@ -6,4 +6,5 @@ export interface Project {
     color: string;
     idStateDefault?: number | null;
     idSeverityDefault?: number | null;
+    idIssueTypeDefault?: number | null;
 }

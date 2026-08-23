@@ -3,6 +3,8 @@ export interface IssuesFilterParams {
     title?: string | null;
     idsSeverity?: number[];
     severityUnset?: boolean;
+    idsIssueType?: number[];
+    issueTypeUnset?: boolean;
     idsState?: number[];
     stateUnset?: boolean;
     idsAssignedTo?: number[];

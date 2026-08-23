@@ -7,6 +7,7 @@ import { IssuesPage } from '../../../model/issues-page.model';
 import { IssueService } from '../../../issue.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
@@ -45,6 +46,10 @@ function buildService(): IssueGanttService {
             },
             { provide: IssueRelationApi, useValue: { load$: () => of([]) } },
             { provide: SeverityStore, useValue: { severitiesMapByProject$: () => of(new Map()) } },
+            {
+                provide: IssueTypeStore,
+                useValue: { issueTypesMapByProject$: () => of(new Map()) }
+            },
             { provide: ProjectMemberStore, useValue: { usersMap$: of(new Map()) } },
             { provide: StateStore, useValue: { statesMapByProject$: () => of(new Map()) } }
         ]
@@ -181,6 +186,10 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
                 {
                     provide: SeverityStore,
                     useValue: { severitiesMapByProject$: () => of(new Map()) }
+                },
+                {
+                    provide: IssueTypeStore,
+                    useValue: { issueTypesMapByProject$: () => of(new Map()) }
                 },
                 { provide: ProjectMemberStore, useValue: { usersMap$: of(new Map()) } },
                 { provide: StateStore, useValue: { statesMapByProject$: () => of(new Map()) } }

@@ -5,7 +5,7 @@ import {
 import { SavedViewConfig, SavedViewKanbanLayout } from './saved-view.model';
 
 const DATE_KEYS = ['createAtFrom', 'createAtTo', 'updateAtFrom', 'updateAtTo'] as const;
-const ID_KEYS = ['idsSeverity', 'idsState', 'idsAssignedTo'] as const;
+const ID_KEYS = ['idsSeverity', 'idsIssueType', 'idsState', 'idsAssignedTo'] as const;
 
 export const SAVED_VIEW_DEFAULT_ORDER = {
     orderColumn: 'updateAt',

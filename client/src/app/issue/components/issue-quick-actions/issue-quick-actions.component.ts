@@ -21,6 +21,8 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
@@ -43,6 +45,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     private readonly projectStore = inject(ProjectStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly memberStore = inject(ProjectMemberStore);
     private readonly issueService = inject(IssueService);
     private readonly toast = inject(ToastNotificationService);
@@ -59,6 +62,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
 
     public readonly showState = input(true);
     public readonly showSeverity = input(true);
+    public readonly showIssueType = input(true);
     public readonly showAssignee = input(true);
     public readonly showReschedule = input(true);
 
@@ -67,6 +71,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     protected readonly issue = signal<Issue | null>(null);
     protected readonly states = signal<IssueState[]>([]);
     protected readonly severities = signal<IssueSeverity[]>([]);
+    protected readonly issueTypes = signal<IssueType[]>([]);
     protected readonly users = signal<User[]>([]);
 
     protected readonly currentSeverity = computed(
@@ -90,12 +95,14 @@ export class IssueQuickActionsComponent implements OnDestroy {
             this.projectStore.project$,
             this.stateStore.states$,
             this.severityStore.severities$,
+            this.issueTypeStore.issueTypes$,
             this.memberStore.users$
         ])
             .pipe(takeUntilDestroyed())
-            .subscribe(([project, states, severities, users]) => {
+            .subscribe(([project, states, severities, issueTypes, users]) => {
                 this.states.set(states.filter(s => s.idProject === project.idProject));
                 this.severities.set(severities.filter(s => s.idProject === project.idProject));
+                this.issueTypes.set(issueTypes.filter(t => t.idProject === project.idProject));
                 this.users.set(users);
             });
     }
@@ -179,6 +186,10 @@ export class IssueQuickActionsComponent implements OnDestroy {
 
     protected onSeverityChange(idSeverity: number): void {
         this.patch({ idSeverity });
+    }
+
+    protected onIssueTypeChange(idIssueType: number): void {
+        this.patch({ idIssueType });
     }
 
     protected onAssigneeChange(userId: number | null): void {

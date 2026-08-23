@@ -80,6 +80,8 @@ export class ProjectStatStore {
                                 idProject: project.idProject,
                                 idsSeverity: [],
                                 severityUnset: true,
+                                idsIssueType: [],
+                                issueTypeUnset: true,
                                 idsState: [],
                                 stateUnset: true,
                                 idsAssignedTo: [],

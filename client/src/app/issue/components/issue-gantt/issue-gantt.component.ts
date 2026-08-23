@@ -888,6 +888,8 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 idsState: [],
                 idsSeverity: [],
                 severityUnset: true,
+                idsIssueType: [],
+                issueTypeUnset: true,
                 assignedToUnset: true,
                 idsAssignedTo: [],
                 orderColumn: 'scheduledAt',

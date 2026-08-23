@@ -1,0 +1,24 @@
+@if (!multi()) {
+    <ui-select
+        [inputId]="inputId()"
+        class="issue-type-dropdown"
+        [options]="options()"
+        [ngModel]="value()"
+        (ngModelChange)="onValueChange($event)"
+        [showClear]="true"
+        [placeholder]="placeholder()"
+        [uiSaveStatus]="saveStatus()"
+        optionLabel="name"
+        optionValue="idIssueType"
+    ></ui-select>
+} @else {
+    <ui-multiselect
+        [inputId]="inputId()"
+        [options]="options()"
+        class="issue-type-dropdown"
+        optionLabel="name"
+        [uiSaveStatus]="saveStatus()"
+        [ngModel]="multiValue()"
+        (ngModelChange)="onMultiValueChange($event)"
+    ></ui-multiselect>
+}

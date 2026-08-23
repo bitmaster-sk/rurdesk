@@ -15,6 +15,8 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
@@ -25,6 +27,20 @@ import {
 import { IssuesFilterParams } from './issue-filter.entity';
 import { IssueFilterStore } from './issue-filter.store';
 
+interface IssueFilterForm {
+    idsState: FormControl<number[] | null>;
+    stateUnset: FormControl<boolean | null>;
+    idsSeverity: FormControl<number[] | null>;
+    severityUnset: FormControl<boolean | null>;
+    idsIssueType: FormControl<number[] | null>;
+    issueTypeUnset: FormControl<boolean | null>;
+    idsAssignedTo: FormControl<number[] | null>;
+    assignedToUnset: FormControl<boolean | null>;
+    createAt: FormControl<UiDateRangeValue | null>;
+    updateAt: FormControl<UiDateRangeValue | null>;
+    title: FormControl<string | null>;
+}
+
 @Component({
     selector: 'app-filter',
     templateUrl: './filter.component.html',
@@ -34,6 +50,7 @@ import { IssueFilterStore } from './issue-filter.store';
 export class FilterComponent implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly stateStore = inject(StateStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
@@ -45,22 +62,28 @@ export class FilterComponent implements OnInit {
         switchMap(project => this.severityStore.severitiesByProject$(project.idProject))
     );
 
+    public readonly issueTypes$: Observable<IssueType[]> = this.projectStore.project$.pipe(
+        switchMap(project => this.issueTypeStore.issueTypesByProject$(project.idProject))
+    );
+
     public readonly states$: Observable<IssueState[]> = this.projectStore.project$.pipe(
         switchMap(project => this.stateStore.statesByProject$(project.idProject))
     );
 
     public readonly users$: Observable<User[]> = this.projectMemberStore.users$;
 
-    public form: FormGroup = this.fb.group({
-        idsState: this.fb.control(null),
-        stateUnset: this.fb.control(null),
-        idsSeverity: this.fb.control(null),
-        severityUnset: this.fb.control(null),
-        idsAssignedTo: this.fb.control(null),
-        assignedToUnset: this.fb.control(null),
-        createAt: this.fb.control(null),
-        updateAt: this.fb.control(null),
-        title: this.fb.control(null)
+    public form: FormGroup<IssueFilterForm> = this.fb.group<IssueFilterForm>({
+        idsState: this.fb.control<number[] | null>(null),
+        stateUnset: this.fb.control<boolean | null>(null),
+        idsSeverity: this.fb.control<number[] | null>(null),
+        severityUnset: this.fb.control<boolean | null>(null),
+        idsIssueType: this.fb.control<number[] | null>(null),
+        issueTypeUnset: this.fb.control<boolean | null>(null),
+        idsAssignedTo: this.fb.control<number[] | null>(null),
+        assignedToUnset: this.fb.control<boolean | null>(null),
+        createAt: this.fb.control<UiDateRangeValue | null>(null),
+        updateAt: this.fb.control<UiDateRangeValue | null>(null),
+        title: this.fb.control<string | null>(null)
     });
 
     /** Values ARE the API's duration grammar; 'Custom range' comes from the control. */
@@ -74,16 +97,20 @@ export class FilterComponent implements OnInit {
     protected readonly createAtPresets = signal<UiDateRangePreset[]>([...this.datePresets]);
     protected readonly updateAtPresets = signal<UiDateRangePreset[]>([...this.datePresets]);
 
-    public get stateUnsetControl(): FormControl {
-        return this.form.get('stateUnset') as FormControl;
+    public get stateUnsetControl(): FormControl<boolean | null> {
+        return this.form.controls.stateUnset;
     }
 
-    public get severityUnsetControl(): FormControl {
-        return this.form.get('severityUnset') as FormControl;
+    public get severityUnsetControl(): FormControl<boolean | null> {
+        return this.form.controls.severityUnset;
     }
 
-    public get assignedToUnsetControl(): FormControl {
-        return this.form.get('assignedToUnset') as FormControl;
+    public get issueTypeUnsetControl(): FormControl<boolean | null> {
+        return this.form.controls.issueTypeUnset;
+    }
+
+    public get assignedToUnsetControl(): FormControl<boolean | null> {
+        return this.form.controls.assignedToUnset;
     }
 
     public ngOnInit(): void {
@@ -93,19 +120,21 @@ export class FilterComponent implements OnInit {
 
     private onFormChange(): void {
         this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-            const values = this.form.value;
+            const values = this.form.getRawValue();
             const createAt = this.dateFilterFor(values.createAt);
             const updateAt = this.dateFilterFor(values.updateAt);
             // No idProject on purpose: the panel never edits it, and pushing its own copy
             // overwrote the store's with null whenever the panel mounted late.
             this.issueFilterStore.setFilter({
                 title: values.title,
-                idsSeverity: values.idsSeverity,
-                severityUnset: values.severityUnset,
-                idsState: values.idsState,
-                stateUnset: values.stateUnset,
-                idsAssignedTo: values.idsAssignedTo,
-                assignedToUnset: values.assignedToUnset,
+                idsSeverity: values.idsSeverity ?? undefined,
+                severityUnset: values.severityUnset ?? undefined,
+                idsIssueType: values.idsIssueType ?? undefined,
+                issueTypeUnset: values.issueTypeUnset ?? undefined,
+                idsState: values.idsState ?? undefined,
+                stateUnset: values.stateUnset ?? undefined,
+                idsAssignedTo: values.idsAssignedTo ?? undefined,
+                assignedToUnset: values.assignedToUnset ?? undefined,
                 createAtFrom: createAt.from,
                 createAtTo: createAt.to,
                 createAtWithin: createAt.within,
@@ -139,6 +168,8 @@ export class FilterComponent implements OnInit {
                 title: filter.title,
                 idsSeverity: filter.idsSeverity,
                 severityUnset: filter.severityUnset,
+                idsIssueType: filter.idsIssueType,
+                issueTypeUnset: filter.issueTypeUnset,
                 idsState: filter.idsState,
                 stateUnset: filter.stateUnset,
                 idsAssignedTo: filter.idsAssignedTo,

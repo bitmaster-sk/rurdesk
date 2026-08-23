@@ -7,6 +7,8 @@ import { User } from 'src/app/auth/model/user.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
@@ -41,6 +43,7 @@ export class IssueTableService {
     private readonly stateStore = inject(StateStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly relationApi = inject(IssueRelationApi);
     private readonly settings = inject(SettingsStore);
@@ -52,6 +55,7 @@ export class IssueTableService {
 
     // Store snapshots captured per reset (project-scoped maps).
     private readonly severities = signal<Map<number, IssueSeverity>>(new Map());
+    private readonly issueTypes = signal<Map<number, IssueType>>(new Map());
     private readonly states = signal<Map<number, IssueState>>(new Map());
     private readonly users = signal<Map<number, User>>(new Map());
 
@@ -71,12 +75,14 @@ export class IssueTableService {
 
     public readonly rows = computed<IssueTableRow[]>(() => {
         const severities = this.severities();
+        const issueTypes = this.issueTypes();
         const states = this.states();
         const users = this.users();
         const relations = this.relationsMap();
         return this.pager.items().map(issue => ({
             issue,
             severity: issue.idSeverity != null ? severities.get(issue.idSeverity) : undefined,
+            issueType: issue.idIssueType != null ? issueTypes.get(issue.idIssueType) : undefined,
             state: issue.idState != null ? states.get(issue.idState) : undefined,
             assigned: issue.assignedTo != null ? users.get(issue.assignedTo) : undefined,
             relations: relations.get(issue.idIssuePublic) ?? []
@@ -104,15 +110,17 @@ export class IssueTableService {
                 switchMap(({ filter, preserve }) =>
                     forkJoin([
                         this.severityStore.severitiesMapByProject$(filter.idProject).pipe(first()),
+                        this.issueTypeStore.issueTypesMapByProject$(filter.idProject).pipe(first()),
                         this.stateStore.statesMapByProject$(filter.idProject).pipe(first()),
                         this.projectMemberStore.usersMap$.pipe(first())
-                    ]).pipe(map(([sev, st, us]) => ({ filter, preserve, sev, st, us })))
+                    ]).pipe(map(([sev, ity, st, us]) => ({ filter, preserve, sev, ity, st, us })))
                 ),
                 takeUntilDestroyed(this.destroyRef)
             )
-            .subscribe(({ filter, preserve, sev, st, us }) => {
+            .subscribe(({ filter, preserve, sev, ity, st, us }) => {
                 this.currentFilter = filter;
                 this.severities.set(sev);
+                this.issueTypes.set(ity);
                 this.states.set(st);
                 this.users.set(us);
                 this.relationsMap.set(new Map());

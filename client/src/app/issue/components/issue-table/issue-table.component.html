@@ -70,6 +70,10 @@
                             {{ 'TITLE' | translate }}
                             <tabler-icon [icon]="titleSort.icon()" [size]="14" />
                         </th>
+                        <th scope="col" uiSortColumn="issueType" #typeSort="uiSortColumn">
+                            {{ 'ISSUE_TYPE.SINGULAR' | translate }}
+                            <tabler-icon [icon]="typeSort.icon()" [size]="14" />
+                        </th>
                         <th scope="col" uiSortColumn="severity" #sevSort="uiSortColumn">
                             {{ 'SEVERITY.SINGULAR' | translate }}
                             <tabler-icon [icon]="sevSort.icon()" [size]="14" />
@@ -155,6 +159,18 @@
                                         </span>
                                     }
                                 </span>
+                            </td>
+                            <td data-testid="issue-type-cell">
+                                @if (row.issueType) {
+                                    <app-issue-type-badge
+                                        [issueType]="row.issueType"
+                                        size="s"
+                                    ></app-issue-type-badge>
+                                } @else {
+                                    <span class="ui-color-text-muted">
+                                        {{ 'NONE' | translate }}
+                                    </span>
+                                }
                             </td>
                             <td>
                                 <div class="flex items-center gap-1">
@@ -243,6 +259,7 @@
                                             {{ rel.ref.title }}
                                         </a>
                                     </td>
+                                    <td></td>
                                     <td>
                                         <div class="flex items-center gap-1">
                                             @if (rel.severity) {

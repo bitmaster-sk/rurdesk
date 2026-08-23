@@ -123,6 +123,28 @@ describe('IssueService.toIssue', () => {
     });
 });
 
+describe('IssueService issue-type params', () => {
+    const call = (filter: Partial<IssuesFilter>) => {
+        const { service, get } = build(page([]));
+        service.loadIssues({ ...baseFilter, ...filter }).subscribe();
+        const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
+        return options.params;
+    };
+
+    it('serializes the selected type ids as a comma list', () => {
+        expect(call({ idsIssueType: [3, 7] }).get('idsIssueType')).toBe('3,7');
+    });
+
+    it('omits the list entirely when nothing is selected', () => {
+        expect(call({ idsIssueType: [] }).has('idsIssueType')).toBe(false);
+    });
+
+    it('always sends the unset flag', () => {
+        expect(call({}).get('issueTypeUnset')).toBe('false');
+        expect(call({ issueTypeUnset: true }).get('issueTypeUnset')).toBe('true');
+    });
+});
+
 describe('IssueService date params', () => {
     const call = (filter: Partial<IssuesFilter>) => {
         const { service, get } = build(page([]));

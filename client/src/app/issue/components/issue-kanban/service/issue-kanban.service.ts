@@ -5,6 +5,8 @@ import { User } from 'src/app/auth/model/user.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
@@ -20,6 +22,7 @@ import { SwimlaneRow } from '../entity/swimlane-row.entity';
 
 interface StoreMaps {
     severities: Map<number, IssueSeverity>;
+    issueTypes: Map<number, IssueType>;
     states: Map<number, IssueState>;
     users: Map<number, User>;
 }
@@ -30,6 +33,7 @@ export class IssueKanbanService {
     private readonly stateStore = inject(StateStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly settings = inject(SettingsStore);
 
@@ -50,9 +54,17 @@ export class IssueKanbanService {
     private maps$(filter: IssuesFilter): Observable<StoreMaps> {
         return forkJoin([
             this.severityStore.severitiesMapByProject$(filter.idProject).pipe(first()),
+            this.issueTypeStore.issueTypesMapByProject$(filter.idProject).pipe(first()),
             this.stateStore.statesMapByProject$(filter.idProject).pipe(first()),
             this.projectMemberStore.usersMap$.pipe(first())
-        ]).pipe(map(([severities, states, users]) => ({ severities, states, users })));
+        ]).pipe(
+            map(([severities, issueTypes, states, users]) => ({
+                severities,
+                issueTypes,
+                states,
+                users
+            }))
+        );
     }
 
     // Plain mode: one grouped request per state (top-N + total + cursor), then stream the subject
@@ -444,6 +456,8 @@ export class IssueKanbanService {
             ...issue,
             state: issue.idState != null ? maps.states.get(issue.idState) : undefined,
             severity: issue.idSeverity != null ? maps.severities.get(issue.idSeverity) : undefined,
+            issueType:
+                issue.idIssueType != null ? maps.issueTypes.get(issue.idIssueType) : undefined,
             createUser: issue.createBy != null ? maps.users.get(issue.createBy) : undefined,
             updateUser: issue.updateBy != null ? maps.users.get(issue.updateBy) : undefined,
             assignedToUser: issue.assignedTo != null ? maps.users.get(issue.assignedTo) : undefined

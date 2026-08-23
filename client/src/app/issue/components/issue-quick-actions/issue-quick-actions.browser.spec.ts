@@ -11,6 +11,8 @@ import { IssueQuickActionsComponent } from './issue-quick-actions.component';
 import { ProjectStore } from 'src/app/project/project.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { IssueService } from '../../issue.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
@@ -70,6 +72,7 @@ function makeIssue(over: Partial<Issue> = {}): Issue {
         tracked: 0,
         idState: 1,
         idSeverity: 1,
+        idIssueType: null,
         scheduledAt: new Date('2025-01-15T00:00:00Z'),
         estimated: 3600,
         assignedTo: 10,
@@ -87,6 +90,13 @@ class StateBadgeSelectorStub {
 @Component({ selector: 'app-severity-badge-selector', template: '', standalone: true })
 class SeverityBadgeSelectorStub {
     public readonly severities = input<any[]>([]);
+    public readonly ngModel = input<any>(null);
+    public readonly ngModelChange = output<any>();
+}
+
+@Component({ selector: 'app-issue-type-badge-selector', template: '', standalone: true })
+class IssueTypeBadgeSelectorStub {
+    public readonly issueTypes = input<any[]>([]);
     public readonly ngModel = input<any>(null);
     public readonly ngModelChange = output<any>();
 }
@@ -136,7 +146,9 @@ async function createFixture(
             UiModule,
             StateBadgeSelectorStub,
             SeverityBadgeSelectorStub,
-            UserDropdownStub
+            IssueTypeBadgeSelectorStub,
+            UserDropdownStub,
+            TablerIconStub
         ],
         declarations: [IssueQuickActionsComponent],
         providers: [
@@ -150,6 +162,13 @@ async function createFixture(
                 useValue: {
                     severities$: of(severities),
                     severitiesByProject$: vi.fn(() => of(severities))
+                }
+            },
+            {
+                provide: IssueTypeStore,
+                useValue: {
+                    issueTypes$: of([]),
+                    issueTypesByProject$: vi.fn(() => of([]))
                 }
             },
             {

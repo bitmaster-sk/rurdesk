@@ -28,6 +28,7 @@ import { DurationParser } from 'src/app/shared/duration/duration.parser';
 import { DurationValidator } from 'src/app/shared/duration/duration.validator';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { PinService } from 'src/app/pin/pin.service';
@@ -77,6 +78,7 @@ export class IssueInfoComponent {
     private readonly authStore = inject(AuthStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly projectStore = inject(ProjectStore);
     private readonly mrDiffApi = inject(MrDiffApi);
@@ -145,6 +147,13 @@ export class IssueInfoComponent {
     public readonly severities = toSignal(
         this.projectStore.project$.pipe(
             switchMap(project => this.severityStore.severitiesByProject$(project.idProject))
+        ),
+        { initialValue: [] }
+    );
+
+    public readonly issueTypes = toSignal(
+        this.projectStore.project$.pipe(
+            switchMap(project => this.issueTypeStore.issueTypesByProject$(project.idProject))
         ),
         { initialValue: [] }
     );
@@ -361,6 +370,10 @@ export class IssueInfoComponent {
         return this.form.get('idSeverity') as FormControl;
     }
 
+    public get idIssueTypeControl(): FormControl {
+        return this.form.get('idIssueType') as FormControl;
+    }
+
     private listenFormChange(): void {
         this.formReset$.next();
         this.form.valueChanges
@@ -393,6 +406,9 @@ export class IssueInfoComponent {
             idState: this.fb.control(this.isNewIssue() ? project?.idStateDefault : issue?.idState),
             idSeverity: this.fb.control(
                 this.isNewIssue() ? project?.idSeverityDefault : issue?.idSeverity
+            ),
+            idIssueType: this.fb.control(
+                this.isNewIssue() ? project?.idIssueTypeDefault : issue?.idIssueType
             ),
             title: this.fb.control(issue?.title, {
                 validators: [Validators.required, Validators.maxLength(100)],
