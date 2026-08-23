@@ -113,6 +113,7 @@ var issueSortColumns = map[string]sortColumn{
 	"estimated":      {expr: "iss.estimated", nullable: false, toArg: argInt},
 	"severity":       {expr: "pis.order_rank", nullable: true, toArg: argInt},
 	"state":          {expr: "pit.order_rank", nullable: true, toArg: argInt},
+	"issueType":      {expr: "ity.order_rank", nullable: true, toArg: argInt},
 	"qualityScore":   {expr: "iq.score", nullable: true, toArg: argInt},
 	"assignedToName": {expr: "ass.name", nullable: true, toArg: argString},
 }

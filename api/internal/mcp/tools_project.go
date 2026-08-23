@@ -23,7 +23,7 @@ func registerProjectTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stag
 	)
 	server.AddTool(
 		mcpgo.NewTool("get_project_context",
-			mcpgo.WithDescription("Get project details with states, severities, and members in a single call — use this as an agent startup shortcut"),
+			mcpgo.WithDescription("Get project details with states, severities, issue types, and members in a single call — use this as an agent startup shortcut"),
 			mcpgo.WithNumber("project_id", mcpgo.Required(), mcpgo.Description("Project ID")),
 			mcpgo.WithReadOnlyHintAnnotation(true),
 		),
@@ -65,10 +65,11 @@ func handleGetProjectContext(ctx context.Context, req mcpgo.CallToolRequest, dis
 	projectCh := make(chan parallelResult, 1)
 	statesCh := make(chan parallelResult, 1)
 	sevsCh := make(chan parallelResult, 1)
+	typesCh := make(chan parallelResult, 1)
 	membersCh := make(chan parallelResult, 1)
 
 	var wg sync.WaitGroup
-	wg.Add(4)
+	wg.Add(5)
 
 	go func() {
 		defer wg.Done()
@@ -131,6 +132,25 @@ func handleGetProjectContext(ctx context.Context, req mcpgo.CallToolRequest, dis
 		defer wg.Done()
 		resp, err := dispatcher.Request(ctx, RequestOpts{
 			Method:   "GET",
+			Path:     "/api/private/issue-type",
+			Bearer:   bearer,
+			ToolName: "get_project_context",
+		})
+		if err != nil {
+			typesCh <- parallelResult{err: err}
+			return
+		}
+		if resp.IsError {
+			typesCh <- parallelResult{err: fmt.Errorf("%s", resp.ErrorMessage)}
+			return
+		}
+		typesCh <- parallelResult{body: resp.Body}
+	}()
+
+	go func() {
+		defer wg.Done()
+		resp, err := dispatcher.Request(ctx, RequestOpts{
+			Method:   "GET",
 			Path:     fmt.Sprintf("/api/private/project/%d/member", projectID),
 			Bearer:   bearer,
 			ToolName: "get_project_context",
@@ -151,9 +171,10 @@ func handleGetProjectContext(ctx context.Context, req mcpgo.CallToolRequest, dis
 	projectResult := <-projectCh
 	statesResult := <-statesCh
 	sevsResult := <-sevsCh
+	typesResult := <-typesCh
 	membersResult := <-membersCh
 
-	for _, result := range []parallelResult{projectResult, statesResult, sevsResult, membersResult} {
+	for _, result := range []parallelResult{projectResult, statesResult, sevsResult, typesResult, membersResult} {
 		if result.err != nil {
 			return mcpgo.NewToolResultError(result.err.Error()), nil
 		}
@@ -161,11 +182,13 @@ func handleGetProjectContext(ctx context.Context, req mcpgo.CallToolRequest, dis
 
 	filteredStates := filterByProject(statesResult.body, int64(projectID))
 	filteredSevs := filterByProject(sevsResult.body, int64(projectID))
+	filteredTypes := filterByProject(typesResult.body, int64(projectID))
 
 	combined := map[string]json.RawMessage{
 		"project":    projectResult.body,
 		"states":     filteredStates,
 		"severities": filteredSevs,
+		"issueTypes": filteredTypes,
 		"members":    membersResult.body,
 	}
 	combinedJSON, err := json.Marshal(combined)

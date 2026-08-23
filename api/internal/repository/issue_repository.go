@@ -23,6 +23,7 @@ var issueSortMap = map[string]string{
 	"scheduledAt":    "iss.scheduled_at",
 	"severity":       "pis.order_rank",
 	"state":          "pit.order_rank",
+	"issueType":      "ity.order_rank",
 	"assignedToName": "ass.name",
 	"qualityScore":   "iq.score",
 }
@@ -60,7 +61,7 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 	sb.WriteString(`
 		SELECT
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
-			iss.id_severity, iss.title, iss.description, iss.create_at, iss.update_at,
+			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
 			(SELECT count(*) FROM issues.issue_relation r
@@ -68,6 +69,7 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 		FROM issues.issue iss
 		LEFT JOIN projects.project_issue_severity pis ON pis.id_project = iss.id_project AND pis.id_severity = iss.id_severity
 		LEFT JOIN projects.project_issue_state pit ON pit.id_project = iss.id_project AND pit.id_state = iss.id_state
+		LEFT JOIN issues.issue_type ity ON ity.id_issue_type = iss.id_issue_type
 		LEFT JOIN users.user ass ON ass.id_user = iss.assigned_to
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 	`)
@@ -136,6 +138,16 @@ func (r *IssueRepository) appendIssueFilters(sb *strings.Builder, args *[]any, i
 			fmt.Fprintf(sb, "AND iss.id_severity = ANY($%d) ", *idx)
 		}
 		*args = append(*args, f.IdsSeverity)
+		(*idx)++
+	}
+
+	if len(f.IdsIssueType) > 0 {
+		if f.IssueTypeUnset {
+			fmt.Fprintf(sb, "AND (iss.id_issue_type = ANY($%d) OR iss.id_issue_type IS NULL) ", *idx)
+		} else {
+			fmt.Fprintf(sb, "AND iss.id_issue_type = ANY($%d) ", *idx)
+		}
+		*args = append(*args, f.IdsIssueType)
 		(*idx)++
 	}
 
@@ -300,7 +312,7 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 	idx := 1
 	fmt.Fprintf(&sb, `
 		SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
-			iss.id_severity, iss.title, iss.description, iss.create_at, iss.update_at,
+			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
 			(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
@@ -308,6 +320,7 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 		FROM issues.issue iss
 		LEFT JOIN projects.project_issue_severity pis ON pis.id_project = iss.id_project AND pis.id_severity = iss.id_severity
 		LEFT JOIN projects.project_issue_state pit ON pit.id_project = iss.id_project AND pit.id_state = iss.id_state
+		LEFT JOIN issues.issue_type ity ON ity.id_issue_type = iss.id_issue_type
 		LEFT JOIN users.user ass ON ass.id_user = iss.assigned_to
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue `, sc.expr)
 
@@ -444,7 +457,7 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 	fmt.Fprintf(&sb, `
 		SELECT * FROM (
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
-				iss.id_severity, iss.title, iss.description, iss.create_at, iss.update_at,
+				iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 				iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
 				(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
@@ -454,6 +467,7 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 			FROM issues.issue iss
 			LEFT JOIN projects.project_issue_severity pis ON pis.id_project = iss.id_project AND pis.id_severity = iss.id_severity
 			LEFT JOIN projects.project_issue_state pit ON pit.id_project = iss.id_project AND pit.id_state = iss.id_state
+			LEFT JOIN issues.issue_type ity ON ity.id_issue_type = iss.id_issue_type
 			LEFT JOIN users.user ass ON ass.id_user = iss.assigned_to
 			LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 			WHERE iss.id_project = $%d `, sc.expr, partition, windowOrder, partition, idx)
@@ -519,7 +533,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 	if filter.IdIssuePublic != nil && filter.IdProject != nil {
 		rows, err = db.Query(ctx, `
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
-				iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
+				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
 			FROM issues.issue iss
@@ -529,7 +543,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 	} else {
 		rows, err = db.Query(ctx, `
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
-				iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
+				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
 			FROM issues.issue iss
@@ -550,13 +564,14 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 func (r *IssueRepository) InsertIssue(ctx context.Context, issue *model.Issue) (*model.Issue, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
-		INSERT INTO issues.issue (id_project, id_state, title, description, create_by, update_by, assigned_to, id_severity, estimated, scheduled_at, idempotency_key, points)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO issues.issue (id_project, id_state, title, description, create_by, update_by, assigned_to, id_severity, estimated, scheduled_at, idempotency_key, points, id_issue_type)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id_issue, id_issue_public, create_at, update_at
 	`,
 		issue.IdProject, issue.IdState, issue.Title, issue.Description,
 		issue.CreateBy, issue.UpdateBy, issue.AssignedTo, issue.IdSeverity,
 		issue.Estimated, issue.ScheduledAt, issue.IdempotencyKey, issue.Points,
+		issue.IdIssueType,
 	).Scan(&issue.IdIssue, &issue.IdIssuePublic, &issue.CreateAt, &issue.UpdateAt)
 	if err != nil {
 		return nil, fmt.Errorf("inserting issue: %w", err)
@@ -569,7 +584,7 @@ func (r *IssueRepository) FindByIdempotencyKey(ctx context.Context, idUser int64
 	rows, err := db.Query(ctx, `
 		SELECT
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
-			iss.id_severity, iss.title, iss.description, iss.create_at, iss.update_at,
+			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 			iq.score AS quality_score, iss.id_sprint, iss.points, iss.carryover_count
 		FROM issues.issue iss
@@ -606,13 +621,14 @@ func (r *IssueRepository) UpdateIssue(ctx context.Context, issue *model.Issue) (
 			gantt_rank        = CASE WHEN $8::timestamp IS NULL THEN NULL ELSE gantt_rank END,
 			id_git_integration = $9,
 			mr_id             = $10,
-			points            = $11
-		WHERE id_issue = $12
+			points            = $11,
+			id_issue_type     = $12
+		WHERE id_issue = $13
 		RETURNING update_at
 	`,
 		issue.IdState, issue.Title, issue.Description, issue.UpdateBy,
 		issue.AssignedTo, issue.IdSeverity, issue.Estimated, issue.ScheduledAt,
-		issue.IdGitIntegration, issue.MrId, issue.Points,
+		issue.IdGitIntegration, issue.MrId, issue.Points, issue.IdIssueType,
 		issue.IdIssue,
 	).Scan(&issue.UpdateAt)
 	if err != nil {
@@ -708,7 +724,7 @@ func (r *IssueRepository) LoadIssuesByIds(ctx context.Context, f *model.LoadIssu
 	rows, err := db.Query(ctx, `
 		SELECT
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
-			iss.id_severity, iss.title, iss.description, iss.create_at, iss.update_at,
+			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
 			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
 		FROM issues.issue iss
@@ -733,13 +749,13 @@ func (r *IssueRepository) BulkInsertIssues(ctx context.Context, issues []model.I
 	for i, iss := range issues {
 		row := db.QueryRow(ctx, `
 			INSERT INTO issues.issue
-				(id_project, id_state, title, description, create_by, update_by, assigned_to, id_severity, estimated, scheduled_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+				(id_project, id_state, title, description, create_by, update_by, assigned_to, id_severity, estimated, scheduled_at, id_issue_type)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 			RETURNING id_issue, id_issue_public, create_at, update_at
 		`,
 			iss.IdProject, iss.IdState, iss.Title, iss.Description,
 			iss.CreateBy, iss.UpdateBy, iss.AssignedTo, iss.IdSeverity,
-			iss.Estimated, iss.ScheduledAt,
+			iss.Estimated, iss.ScheduledAt, iss.IdIssueType,
 		)
 		inserted := iss
 		if err := row.Scan(&inserted.IdIssue, &inserted.IdIssuePublic, &inserted.CreateAt, &inserted.UpdateAt); err != nil {
@@ -789,6 +805,7 @@ func (r *IssueRepository) BulkUpdateIssues(
 	scheduledAtValues := make([]*time.Time, 0, len(entries))
 	stateValues := make([]*int64, 0, len(entries))
 	severityValues := make([]*int64, 0, len(entries))
+	issueTypeValues := make([]*int64, 0, len(entries))
 	assignedToValues := make([]*int64, 0, len(entries))
 
 	for _, entry := range entries {
@@ -819,6 +836,12 @@ func (r *IssueRepository) BulkUpdateIssues(
 			severityValues = append(severityValues, issue.IdSeverity)
 		}
 
+		if entry.IdIssueType != nil {
+			issueTypeValues = append(issueTypeValues, entry.IdIssueType)
+		} else {
+			issueTypeValues = append(issueTypeValues, issue.IdIssueType)
+		}
+
 		if entry.IdUserAssigned != nil {
 			assignedToValues = append(assignedToValues, entry.IdUserAssigned)
 		} else {
@@ -832,13 +855,14 @@ func (r *IssueRepository) BulkUpdateIssues(
 			scheduled_at = batch.scheduled_at,
 			id_state     = batch.id_state,
 			id_severity  = batch.id_severity,
+			id_issue_type = batch.id_issue_type,
 			assigned_to  = batch.assigned_to,
 			update_at    = now() at time zone 'utc',
-			update_by    = $7
-		FROM UNNEST($1::bigint[], $2::bigint[], $3::timestamptz[], $4::bigint[], $5::bigint[], $6::bigint[])
-			AS batch(id_issue, estimated, scheduled_at, id_state, id_severity, assigned_to)
+			update_by    = $8
+		FROM UNNEST($1::bigint[], $2::bigint[], $3::timestamptz[], $4::bigint[], $5::bigint[], $6::bigint[], $7::bigint[])
+			AS batch(id_issue, estimated, scheduled_at, id_state, id_severity, id_issue_type, assigned_to)
 		WHERE iss.id_issue = batch.id_issue
-	`, idIssues, estimatedValues, scheduledAtValues, stateValues, severityValues, assignedToValues, idUser)
+	`, idIssues, estimatedValues, scheduledAtValues, stateValues, severityValues, issueTypeValues, assignedToValues, idUser)
 	if err != nil {
 		return nil, fmt.Errorf("bulk updating issues: %w", err)
 	}

@@ -28,6 +28,7 @@ var (
 	errBotNoGateway            = errs.NewErr("BOT_NO_GATEWAY", "bot user has no configured gateway", "error.bot_no_gateway")
 	errStateNotInProject       = errs.NewErr("STATE_NOT_IN_PROJECT", "state does not belong to this project", "error.state_not_in_project")
 	errSeverityNotInProject    = errs.NewErr("SEVERITY_NOT_IN_PROJECT", "severity does not belong to this project", "error.severity_not_in_project")
+	errIssueTypeNotInProject   = errs.NewErr("ISSUE_TYPE_NOT_IN_PROJECT", "issue type does not belong to this project", "error.issue_type_not_in_project")
 	errGatewayExists           = errs.NewErr("GATEWAY_EXISTS", "bot already has a gateway", "error.gateway_exists")
 
 	errInvalidWithin = errs.NewErr("INVALID_WITHIN", `createAtWithin/updateAtWithin must be a positive duration, e.g. "30d", "2h" or "1d8h6m"`, "error.invalid_within")

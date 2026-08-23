@@ -17,6 +17,7 @@ type CreateIssueReq struct {
 	IdProject      int64      `json:"idProject"`
 	IdState        *int64     `json:"idState"      binding:"omitempty"`
 	IdSeverity     *int64     `json:"idSeverity"   binding:"omitempty"`
+	IdIssueType    *int64     `json:"idIssueType"  binding:"omitempty"`
 	Title          string     `json:"title"        binding:"required,max=100"`
 	Description    string     `json:"description"  binding:"required"`
 	AssignedTo     *int64     `json:"assignedTo"   binding:"omitempty"`
@@ -31,6 +32,7 @@ type EditIssueReq struct {
 	IdIssuePublic    int64               `json:"idIssuePublic"`
 	IdState          Optional[int64]     `json:"idState,omitzero"`
 	IdSeverity       Optional[int64]     `json:"idSeverity,omitzero"`
+	IdIssueType      Optional[int64]     `json:"idIssueType,omitzero"`
 	Title            Optional[string]    `json:"title,omitzero"`
 	Description      Optional[string]    `json:"description,omitzero"`
 	AssignedTo       Optional[int64]     `json:"assignedTo,omitzero"`
@@ -69,6 +71,7 @@ type BulkEditIssueEntryReq struct {
 	Estimated      *int64     `json:"estimated"`
 	IdState        *int64     `json:"idState"`
 	IdSeverity     *int64     `json:"idSeverity"`
+	IdIssueType    *int64     `json:"idIssueType"`
 	IdUserAssigned *int64     `json:"idUserAssigned"` // explicit null clears assignment
 }
 
@@ -82,6 +85,8 @@ type LoadIssuesReq struct {
 	OrderDirection  string    `json:"orderDirection"`
 	IdsSeverity     []int64   `json:"idsSeverity"`
 	SeverityUnset   bool      `json:"severityUnset"`
+	IdsIssueType    []int64   `json:"idsIssueType"`
+	IssueTypeUnset  bool      `json:"issueTypeUnset"`
 	IdsState        []int64   `json:"idsState"`
 	StateUnset      bool      `json:"stateUnset"`
 	IdsAssignedTo   []int64   `json:"idsAssignedTo"`
@@ -107,6 +112,8 @@ func NewLoadIssuesFilter(dto *LoadIssuesReq) *LoadIssuesFilter {
 		IdProject:       dto.IdProject,
 		IdsSeverity:     dto.IdsSeverity,
 		SeverityUnset:   dto.SeverityUnset,
+		IdsIssueType:    dto.IdsIssueType,
+		IssueTypeUnset:  dto.IssueTypeUnset,
 		IdsState:        dto.IdsState,
 		StateUnset:      dto.StateUnset,
 		IdsAssignedTo:   dto.IdsAssignedTo,

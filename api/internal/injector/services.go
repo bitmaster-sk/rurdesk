@@ -184,6 +184,14 @@ func GetSeverityRepository() *repository.SeverityRepository {
 	return instance.(*repository.SeverityRepository)
 }
 
+func GetIssueTypeRepository() *repository.IssueTypeRepository {
+	instance, _ := di.GetWithNew("issue-type-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewIssueTypeRepository(pool), nil
+	})
+	return instance.(*repository.IssueTypeRepository)
+}
+
 func GetStateRepository() *repository.StateRepository {
 	instance, _ := di.GetWithNew("state-repository", func() (any, error) {
 		pool := mustDb()
@@ -230,6 +238,14 @@ func GetSeverityService() *service.SeverityService {
 		return service.NewSeverityService(pool, GetSeverityRepository()), nil
 	})
 	return instance.(*service.SeverityService)
+}
+
+func GetIssueTypeService() *service.IssueTypeService {
+	instance, _ := di.GetWithNew("issue-type-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewIssueTypeService(pool, GetIssueTypeRepository()), nil
+	})
+	return instance.(*service.IssueTypeService)
 }
 
 func GetSprintController() (*controller.SprintController, error) {
@@ -378,6 +394,7 @@ func GetProjectController() *controller.ProjectController {
 			GetTeamRepository(),
 			GetSeverityRepository(),
 			GetStateRepository(),
+			GetIssueTypeRepository(),
 			GetAclService(),
 			pool,
 		), nil
@@ -562,6 +579,7 @@ func GetIssueController() *controller.IssueController {
 			GetUserRepository(),
 			GetStateRepository(),
 			GetSeverityRepository(),
+			GetIssueTypeRepository(),
 			GetIssueParticipantRepository(),
 			GetAclService(),
 			GetNotificationService(),
@@ -578,6 +596,14 @@ func GetSeverityController() *controller.SeverityController {
 		return controller.NewSeverityController(GetSeverityRepository(), GetSeverityService(), GetAclService(), GetProjectRepository(), pool), nil
 	})
 	return instance.(*controller.SeverityController)
+}
+
+func GetIssueTypeController() *controller.IssueTypeController {
+	instance, _ := di.GetWithNew("issue-type-controller", func() (any, error) {
+		pool := mustDb()
+		return controller.NewIssueTypeController(GetIssueTypeRepository(), GetIssueTypeService(), GetAclService(), pool), nil
+	})
+	return instance.(*controller.IssueTypeController)
 }
 
 func GetStateController() *controller.StateController {
@@ -892,6 +918,7 @@ func GetRouter() (*router.Router, error) {
 			GetWebsocketController(),
 			GetIssueController(),
 			GetSeverityController(),
+			GetIssueTypeController(),
 			GetStateController(),
 			sprintController,
 			GetSavedViewController(),
