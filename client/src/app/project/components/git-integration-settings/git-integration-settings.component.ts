@@ -7,7 +7,7 @@ import {
     output,
     signal
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import {
     CreateGitIntegrationReq,
     GitIntegrationRes,
@@ -37,19 +37,37 @@ export class GitIntegrationSettingsComponent implements OnInit {
     protected readonly isVisible = signal(true);
     protected readonly hostTypeOptions = GIT_PROVIDERS;
 
-    protected form!: FormGroup;
+    protected form!: FormGroup<{
+        name: FormControl<string>;
+        hostType: FormControl<HostType>;
+        baseUrl: FormControl<string>;
+        repoPath: FormControl<string>;
+        accessToken: FormControl<string>;
+    }>;
 
     public ngOnInit(): void {
         const integration = this.integration();
         this.form = this.fb.group({
-            name: [integration?.name ?? '', [Validators.required, Validators.maxLength(100)]],
-            hostType: [integration?.hostType ?? HostType.GitHub, Validators.required],
-            baseUrl: [integration?.baseUrl ?? '', [Validators.required, Validators.maxLength(255)]],
-            repoPath: [
-                integration?.repoPath ?? '',
-                [Validators.required, Validators.maxLength(255)]
-            ],
-            accessToken: ['', integration ? [] : [Validators.required]]
+            name: this.fb.nonNullable.control(integration?.name ?? '', [
+                Validators.required,
+                Validators.maxLength(100)
+            ]),
+            hostType: this.fb.nonNullable.control(
+                integration?.hostType ?? HostType.GitHub,
+                Validators.required
+            ),
+            baseUrl: this.fb.nonNullable.control(integration?.baseUrl ?? '', [
+                Validators.required,
+                Validators.maxLength(255)
+            ]),
+            repoPath: this.fb.nonNullable.control(integration?.repoPath ?? '', [
+                Validators.required,
+                Validators.maxLength(255)
+            ]),
+            accessToken: this.fb.nonNullable.control(
+                '',
+                integration ? [] : [Validators.required]
+            )
         });
     }
 
@@ -61,25 +79,23 @@ export class GitIntegrationSettingsComponent implements OnInit {
         if (this.form.invalid) return;
         const integration = this.integration();
         if (integration) {
+            const formValue = this.form.getRawValue();
             const req: UpdateGitIntegrationReq = {
-                name: this.form.value.name,
-                hostType: this.form.value.hostType,
-                baseUrl: this.form.value.baseUrl,
-                repoPath: this.form.value.repoPath
+                name: formValue.name,
+                hostType: formValue.hostType,
+                baseUrl: formValue.baseUrl,
+                repoPath: formValue.repoPath
             };
-            if (this.form.value.accessToken) {
-                req.accessToken = this.form.value.accessToken;
+            if (formValue.accessToken) {
+                req.accessToken = formValue.accessToken;
             }
             this.gitIntegrationApi
                 .update$(this.project().idProject, integration.idGitIntegration, req)
                 .subscribe(result => this.saved.emit(result));
         } else {
+            const formValue = this.form.getRawValue();
             const req: CreateGitIntegrationReq = {
-                name: this.form.value.name,
-                hostType: this.form.value.hostType,
-                baseUrl: this.form.value.baseUrl,
-                repoPath: this.form.value.repoPath,
-                accessToken: this.form.value.accessToken
+                ...formValue
             };
             this.gitIntegrationApi
                 .create$(this.project().idProject, req)
