@@ -25,22 +25,22 @@ func isUniqueViolation(err error) bool {
 var ErrRunNotFound = errors.New("agent run not found")
 var ErrPhaseMismatch = errors.New("run phase does not match expected phase")
 
-// PhaseMirror applies issue-state side effects when a run transitions phase.
-type PhaseMirror interface {
+// EventMirror applies issue-state side effects when a run transitions phase.
+type EventMirror interface {
 	ApplyMirror(ctx context.Context, idProject, idIssue int64, toPhase string)
 }
 
 type AgentRunRepository struct {
 	pool        *pgxpool.Pool
-	phaseMirror PhaseMirror
+	eventMirror EventMirror
 }
 
 func NewAgentRunRepository(pool *pgxpool.Pool) *AgentRunRepository {
 	return &AgentRunRepository{pool: pool}
 }
 
-func (r *AgentRunRepository) WithPhaseMirror(m PhaseMirror) *AgentRunRepository {
-	r.phaseMirror = m
+func (r *AgentRunRepository) WithEventMirror(m EventMirror) *AgentRunRepository {
+	r.eventMirror = m
 	return r
 }
 
@@ -375,8 +375,8 @@ func (r *AgentRunRepository) TransitionPhase(
 		return run, fmt.Errorf("inserting run event: %w", err)
 	}
 
-	if r.phaseMirror != nil {
-		r.phaseMirror.ApplyMirror(ctx, run.IdProject, run.IdIssue, toPhase)
+	if r.eventMirror != nil {
+		r.eventMirror.ApplyMirror(ctx, run.IdProject, run.IdIssue, toPhase)
 	}
 
 	return run, nil
