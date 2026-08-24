@@ -75,6 +75,12 @@ runs, so it needs **write** access:
 - **MR/PR status** — open / merged / closed state next to the link.
 - **Agent run cards** link the PR and show its diff inline, so the
   review-and-approve loop stays in one place.
+- **Manual linking** — on any task, the PR panel lets you **link an existing
+  pull/merge request** yourself (no agent run required). Once linked, the
+  panel shows the same status pill, diff, and a **View PR** link as it would
+  for an agent-opened PR — task detail no longer distinguishes the two once a
+  PR is linked. See [Automatic state changes](./features.md#automatic-state-changes)
+  for what happens to the task's state when a manually linked PR is merged.
 
 ![MR diff inline](../../site/assets/img/mr-diff.png)
 
