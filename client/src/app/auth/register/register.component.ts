@@ -1,10 +1,21 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, ValidationErrors, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 import { AuthApi } from '../api/auth.api.service';
 import { SessionService } from '../service/session.service';
+
+interface CredentialsForm {
+    password: FormControl<string | null>;
+    password2: FormControl<string | null>;
+}
+
+interface RegisterForm {
+    name: FormControl<string | null>;
+    email: FormControl<string | null>;
+    credentials: FormGroup<CredentialsForm>;
+}
 
 @Component({
     selector: 'app-register',
@@ -19,7 +30,7 @@ export class RegisterComponent implements OnInit {
     private readonly authApi = inject(AuthApi);
     private readonly session = inject(SessionService);
 
-    public readonly form: FormGroup = this.buildForm();
+    public readonly form: FormGroup<RegisterForm> = this.buildForm();
     public readonly errorKey = signal<string | null>(null);
 
     public ngOnInit(): void {
@@ -31,21 +42,24 @@ export class RegisterComponent implements OnInit {
         this.errorKey.set(null);
         if (this.form.invalid) {
             this.errorKey.set(
-                this.form.get('credentials')?.hasError('differentPasswords')
+                this.form.controls.credentials.hasError('differentPasswords')
                     ? 'REGISTER.PASSWORD.MISMATCH'
                     : 'REGISTER.INVALID'
             );
             return;
         }
 
-        const values = this.form.value;
+        const name = this.form.controls.name.value;
+        const email = this.form.controls.email.value;
+        const password = this.form.controls.credentials.controls.password.value;
+
         this.authApi
             .register$({
-                name: values.name,
-                email: values.email,
-                password: values.credentials.password
+                name: name!,
+                email: email!,
+                password: password!
             })
-            .pipe(switchMap(() => this.authApi.login$(values.email, values.credentials.password)))
+            .pipe(switchMap(() => this.authApi.login$(email!, password!)))
             .subscribe({
                 next: token => this.session.start(token),
                 error: err => this.onRegisterError(err)
@@ -67,22 +81,22 @@ export class RegisterComponent implements OnInit {
         this.errorKey.set('REGISTER.FAILED');
     }
 
-    private buildForm(): FormGroup {
+    private buildForm(): FormGroup<RegisterForm> {
         return this.fb.group({
-            name: this.fb.control(null, [Validators.required, Validators.maxLength(250)]),
-            email: this.fb.control(null, [
+            name: this.fb.control<string | null>(null, [Validators.required, Validators.maxLength(250)]),
+            email: this.fb.control<string | null>(null, [
                 Validators.required,
                 Validators.email,
                 Validators.maxLength(250)
             ]),
-            credentials: this.fb.group(
+            credentials: this.fb.group<CredentialsForm>(
                 {
-                    password: this.fb.control(null, [
+                    password: this.fb.control<string | null>(null, [
                         Validators.required,
                         Validators.minLength(5),
                         Validators.maxLength(100)
                     ]),
-                    password2: this.fb.control(null, [
+                    password2: this.fb.control<string | null>(null, [
                         Validators.required,
                         Validators.minLength(5),
                         Validators.maxLength(100)
@@ -93,9 +107,9 @@ export class RegisterComponent implements OnInit {
         });
     }
 
-    private static confirmPasswordCheck(group: FormGroup): ValidationErrors | null {
-        const password = group.get('password')?.value;
-        const password2 = group.get('password2')?.value;
+    private static confirmPasswordCheck(group: AbstractControl<CredentialsForm>): ValidationErrors | null {
+        const password = group.value.password;
+        const password2 = group.value.password2;
 
         return password === password2 ? null : { differentPasswords: true };
     }
