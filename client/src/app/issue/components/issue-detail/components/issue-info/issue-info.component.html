@@ -222,9 +222,9 @@
                             <app-mr-status-pill [status]="mrStatus()" />
                         }
                         <span class="pr-panel__actions">
-                            @if (hasLinkedMr && agentRun()?.prUrl; as prUrl) {
+                            @if (hasLinkedMr && mrLink(); as mrUrl) {
                                 <a
-                                    [href]="prUrl"
+                                    [href]="mrUrl"
                                     target="_blank"
                                     rel="noopener"
                                     class="pr-panel__view-link"

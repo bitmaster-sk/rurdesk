@@ -61,4 +61,5 @@ export interface MrStatus {
     state: MrState;
     approved: boolean;
     ciStatus: CiStatus;
+    webUrl: string;
 }
