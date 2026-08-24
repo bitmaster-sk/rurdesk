@@ -33,6 +33,7 @@ type Status struct {
 	State    string `json:"state"`
 	Approved bool   `json:"approved"`
 	CiStatus string `json:"ciStatus"`
+	WebUrl   string `json:"webUrl"`
 	// HeadSHA is the current head commit of the MR/PR. It lets the diff cache
 	// (keyed by head SHA) be read without an extra host call, and it always
 	// matches the SHA GetMergeRequestChanges keys its diff under.

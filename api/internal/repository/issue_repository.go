@@ -619,8 +619,11 @@ func (r *IssueRepository) UpdateIssue(ctx context.Context, issue *model.Issue) (
 			estimated         = $7,
 			scheduled_at      = $8,
 			gantt_rank        = CASE WHEN $8::timestamp IS NULL THEN NULL ELSE gantt_rank END,
-			id_git_integration = $9,
-			mr_id             = $10,
+			id_git_integration = $9::bigint,
+			mr_id             = $10::varchar(50),
+			mr_state          = CASE WHEN mr_id IS DISTINCT FROM $10::varchar(50)
+			                          OR id_git_integration IS DISTINCT FROM $9::bigint
+			                     THEN NULL ELSE mr_state END,
 			points            = $11,
 			id_issue_type     = $12
 		WHERE id_issue = $13
@@ -699,11 +702,78 @@ func (r *IssueRepository) LinkMr(
 ) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx,
-		`UPDATE issues.issue SET id_git_integration = $1, mr_id = $2 WHERE id_issue = $3`,
+		`UPDATE issues.issue SET id_git_integration = $1, mr_id = $2, mr_state = NULL WHERE id_issue = $3`,
 		idGitIntegration, mrId, idIssue,
 	)
 	if err != nil {
 		return fmt.Errorf("linking mr for issue %d: %w", idIssue, err)
+	}
+	return nil
+}
+
+// LoadIssuesWithOpenMr returns issues with a linked, unresolved manual MR — one the
+// merge poller hasn't yet stamped a terminal mr_state for and that isn't an
+// agent-managed PR still owned by a pr_open run. Keyset-paginated on id_issue so
+// callers can page through more than one batch without ever re-fetching a row.
+func (r *IssueRepository) LoadIssuesWithOpenMr(ctx context.Context, limit int, afterId int64) ([]*model.Issue, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
+			iss.id_git_integration, iss.mr_id
+		FROM issues.issue iss
+		WHERE iss.mr_id IS NOT NULL
+		  AND iss.id_git_integration IS NOT NULL
+		  AND iss.mr_state IS NULL
+		  AND iss.id_issue > $2
+		  AND NOT EXISTS (
+			SELECT 1 FROM agent.run ar
+			WHERE ar.id_issue = iss.id_issue AND ar.phase = 'pr_open'
+		  )
+		ORDER BY iss.id_issue
+		LIMIT $1
+	`, limit, afterId)
+	if err != nil {
+		return nil, fmt.Errorf("querying issues with open mr: %w", err)
+	}
+	issues, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[model.Issue])
+	if err != nil {
+		return nil, fmt.Errorf("collecting issues with open mr: %w", err)
+	}
+	return issues, nil
+}
+
+// CountIssuesWithOpenMr counts issues matching LoadIssuesWithOpenMr's filter
+// beyond afterId, used to report how many issues a poll cycle's hard cap left
+// unpolled instead of silently truncating the backlog.
+func (r *IssueRepository) CountIssuesWithOpenMr(ctx context.Context, afterId int64) (int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var count int64
+	err := db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM issues.issue iss
+		WHERE iss.mr_id IS NOT NULL
+		  AND iss.id_git_integration IS NOT NULL
+		  AND iss.mr_state IS NULL
+		  AND iss.id_issue > $1
+		  AND NOT EXISTS (
+			SELECT 1 FROM agent.run ar
+			WHERE ar.id_issue = iss.id_issue AND ar.phase = 'pr_open'
+		  )
+	`, afterId).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting issues with open mr: %w", err)
+	}
+	return count, nil
+}
+
+// SetMrState stamps the terminal outcome of a manually linked MR so the poller
+// never re-processes it (see LoadIssuesWithOpenMr's mr_state IS NULL filter).
+func (r *IssueRepository) SetMrState(ctx context.Context, idIssue int64, mrState string) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx,
+		`UPDATE issues.issue SET mr_state = $1 WHERE id_issue = $2`, mrState, idIssue)
+	if err != nil {
+		return fmt.Errorf("setting mr state for issue %d: %w", idIssue, err)
 	}
 	return nil
 }

@@ -62,6 +62,7 @@ func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
 	assert.False(t, status.Approved)
+	assert.Equal(t, srv.URL+"/group/project/-/merge_requests/1", status.WebUrl)
 }
 
 func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
@@ -90,6 +91,7 @@ func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
 	assert.Equal(t, "/api/v4/projects/group/project/merge_requests/1/approvals", approvalsPath)
+	assert.Equal(t, srv.URL+"/group/project/-/merge_requests/1", status.WebUrl)
 }
 
 func TestGitLabHost_GetMergeRequestStatus_PipelineStates(t *testing.T) {

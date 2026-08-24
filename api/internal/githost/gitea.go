@@ -137,7 +137,7 @@ func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*St
 
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: prData.Head.SHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
 }
 
 func (h *GiteaHost) GetMergeRequestUrl(idMr string) string {

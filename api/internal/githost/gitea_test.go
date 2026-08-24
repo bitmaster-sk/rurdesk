@@ -63,6 +63,7 @@ func TestGiteaHost_GetMergeRequestStatus_Open(t *testing.T) {
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
 	assert.False(t, status.Approved)
+	assert.Equal(t, srv.URL+"/owner/repo/pulls/1", status.WebUrl)
 }
 
 func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
@@ -91,6 +92,7 @@ func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
+	assert.Equal(t, srv.URL+"/owner/repo/pulls/1", status.WebUrl)
 }
 
 func TestGiteaHost_GetMergeRequestStatus_NoCi(t *testing.T) {

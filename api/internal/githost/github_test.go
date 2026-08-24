@@ -105,6 +105,7 @@ func TestGitHubHost_GetMergeRequestStatus_Open(t *testing.T) {
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
 	assert.False(t, status.Approved)
+	assert.Equal(t, srv.URL+"/owner/repo/pull/1", status.WebUrl)
 }
 
 func TestGitHubHost_GetMergeRequestStatus_Merged(t *testing.T) {
@@ -130,6 +131,7 @@ func TestGitHubHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
+	assert.Equal(t, srv.URL+"/owner/repo/pull/1", status.WebUrl)
 }
 
 func TestGitHubHost_CiStatus_FailureOnSecondCheckRunsPage(t *testing.T) {
