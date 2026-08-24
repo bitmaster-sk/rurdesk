@@ -64,10 +64,7 @@ export class GitIntegrationSettingsComponent implements OnInit {
                 Validators.required,
                 Validators.maxLength(255)
             ]),
-            accessToken: this.fb.nonNullable.control(
-                '',
-                integration ? [] : [Validators.required]
-            )
+            accessToken: this.fb.nonNullable.control('', integration ? [] : [Validators.required])
         });
     }
 
