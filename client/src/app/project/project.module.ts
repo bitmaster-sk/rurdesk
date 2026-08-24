@@ -41,7 +41,7 @@ import {
     IconPlus,
     IconGitBranch,
     IconPencil,
-    IconRobot,
+    IconSettingsAutomation,
     IconBolt,
     IconPin,
     IconChartBar,
@@ -56,7 +56,7 @@ import {
     IconInfoCircle,
     IconCategory
 } from '@tabler/icons-angular';
-import { AgentPhaseStateMapComponent } from './components/agent-phase-state-map/agent-phase-state-map.component';
+import { WorkflowEventStateMapComponent } from './components/workflow-event-state-map/workflow-event-state-map.component';
 import { AgentModule } from '../agent/agent.module';
 import { CommandRegistryService } from '../core/command/command-registry.service';
 import { NavigationCommandProvider } from './command/navigation.command-provider';
@@ -82,7 +82,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
         WorkloadBarListComponent,
         GitIntegrationListComponent,
         GitIntegrationSettingsComponent,
-        AgentPhaseStateMapComponent
+        WorkflowEventStateMapComponent
     ],
     imports: [
         CoreModule,
@@ -113,7 +113,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
             IconPlus,
             IconGitBranch,
             IconPencil,
-            IconRobot,
+            IconSettingsAutomation,
             IconBolt,
             IconPin,
             IconChartBar,
