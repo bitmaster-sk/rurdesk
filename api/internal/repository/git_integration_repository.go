@@ -114,7 +114,7 @@ func (r *GitIntegrationRepository) Delete(ctx context.Context, idGitIntegration,
 
 		tag, err := db.Exec(ctx, `
 			UPDATE issues.issue
-			SET id_git_integration = NULL, mr_id = NULL
+			SET id_git_integration = NULL, mr_id = NULL, mr_state = NULL
 			WHERE id_git_integration = $1
 		`, idGitIntegration)
 		if err != nil {

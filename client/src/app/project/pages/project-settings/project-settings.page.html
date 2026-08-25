@@ -150,14 +150,12 @@
             <section class="panel">
                 <header class="panel-head">
                     <div class="panel-head-l">
-                        <tabler-icon icon="robot" [size]="16" class="panel-icon" />
-                        <div class="panel-title">
-                            {{ 'AGENT.PHASE_STATE_MAP.TITLE' | translate }}
-                        </div>
+                        <tabler-icon icon="settings-automation" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'WORKFLOW.STATE_MAP.TITLE' | translate }}</div>
                     </div>
                 </header>
                 <div class="panel-body panel-body--flush">
-                    <app-agent-phase-state-map [project]="project" />
+                    <app-workflow-event-state-map [project]="project" />
                 </div>
             </section>
             }

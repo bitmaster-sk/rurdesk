@@ -145,10 +145,10 @@ severities, and task types tasks move through. Deleting one that's still in use
 doesn't silently orphan data:
 
 - If the state, severity, or type is **unused** — no tasks reference it, it
-  isn't the project default, and (for states) no agent phase points at it —
+  isn't the project default, and (for states) no workflow event maps to it —
   it's removed immediately after a plain confirmation.
 - If it's **in use**, a dialog shows how many tasks are affected (plus
-  whether it's the project default or mapped to an agent phase) and asks you
+  whether it's the project default or mapped to a workflow event) and asks you
   to either **migrate** everything to another state/severity/type or explicitly
   **unassign** it. Nothing is deleted until you choose.
 - If it's the **last** one of its kind in the project, there's nothing to
@@ -174,6 +174,28 @@ without pushing the task title out.
 
 Filter by type in the filter panel — including a **"tasks with unset types"**
 toggle — and save that filter into a view like any other.
+
+### Automatic state changes
+
+**Project settings → Automatic state changes** (project owner only) maps
+**workflow events** to task states: when an event fires, the task's state
+updates to whatever you mapped it to; leave an event unmapped to skip it. The
+events are grouped by what can trigger them:
+
+- **Any linked pull request** — only the `done` event ("the pull request is
+  merged"), because it fires for **both** an agent-opened PR and a **manually
+  linked** one. A background check runs roughly every **60 seconds**: once a
+  linked PR/MR is merged, the mapped task picks up the `done` mapping's state.
+  For **manually linked PRs**, a task already in a **final** state is left
+  alone — the PR status pill still shows **Merged**, but the task's state does
+  not change. **Agent runs apply the mapping regardless of the task's current
+  state.** A PR/MR that is **closed without merging** changes nothing.
+- **Agent runs only** — the other seven events (`queued`, `in_progress`,
+  `awaiting_input`, `awaiting_approval`, `pr_open`, `failed`, `cancelled`) fire
+  **only** for [agent runs](../agentic-workflow/agents.md). Linking an
+  already-open PR to a task does **not** fire `pr_open` — that stays an
+  agent-only signal, so manually linking a PR never jumps the state to
+  whatever you mapped `pr_open` to.
 
 ## Relations & scheduling
 

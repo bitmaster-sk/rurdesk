@@ -1,0 +1,50 @@
+<div class="flex flex-col">
+    <p class="m-0 p-4 ui-color-text-muted border-bottom">
+        {{ 'WORKFLOW.STATE_MAP.DESCRIPTION' | translate }}
+    </p>
+
+    @if (isLoading()) {
+        <div class="p-4"><ui-loader [size]="40" [ariaLabel]="'UI.LOADING' | translate" /></div>
+    } @else {
+        <table class="ui-table" style="min-width: 30rem">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'WORKFLOW.STATE_MAP.EVENT' | translate }}</th>
+                    <th scope="col">{{ 'WORKFLOW.STATE_MAP.STATE' | translate }}</th>
+                </tr>
+            </thead>
+            @for (group of eventGroups; track group.headingKey) {
+                <tbody>
+                    <tr>
+                        <th scope="colgroup" colspan="2" class="font-semibold">
+                            {{ group.headingKey | translate }}
+                        </th>
+                    </tr>
+                    @for (event of group.events; track event) {
+                        <tr>
+                            <td>
+                                <span class="font-semibold" [title]="event">
+                                    {{ eventLabels[event] | translate }}
+                                </span>
+                                <span class="block text-sm ui-color-text-muted">
+                                    {{
+                                        'WORKFLOW.STATE_MAP.EVENT_DESC.' + event.toUpperCase()
+                                            | translate
+                                    }}
+                                </span>
+                            </td>
+                            <td>
+                                <app-state-dropdown
+                                    [states]="states()"
+                                    [formControl]="getMappingControl(eventRowIndex(event))"
+                                    [saveStatus]="rowSaveStatus(eventRowIndex(event))"
+                                    [placeholder]="'WORKFLOW.STATE_MAP.NO_MAPPING' | translate"
+                                />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            }
+        </table>
+    }
+</div>

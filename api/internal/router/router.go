@@ -46,7 +46,7 @@ func New(
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
 	botGwCtrl *controller.BotGatewayController,
-	phaseStateMapCtrl *controller.PhaseStateMapController,
+	workflowEventMapCtrl *controller.WorkflowEventMapController,
 	appSettingsCtrl *controller.AppSettingsController,
 	healthCtrl *controller.HealthController,
 	versionCtrl *controller.VersionController,
@@ -265,9 +265,9 @@ func New(
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)
 	pri.POST("/agent/gateway/recovered", agentRunCtrl.GatewayRecovered)
 
-	// Agent phase→state map (project owner only)
-	pri.GET("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.GetMappings)
-	pri.PUT("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.ReplaceMappings)
+	// Workflow event→state map (project owner only)
+	pri.GET("/project/:idProject/workflow-event-state-map", workflowEventMapCtrl.GetMappings)
+	pri.PUT("/project/:idProject/workflow-event-state-map", workflowEventMapCtrl.ReplaceMappings)
 
 	// In production the Go binary serves the Angular build itself (single
 	// container, no nginx). Gated by SERVE_STATIC so dev — which serves the

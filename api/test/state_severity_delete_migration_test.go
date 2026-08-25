@@ -187,7 +187,7 @@ func TestDeleteState_UnassignZeroIssueDefault_NullsDefault(t *testing.T) {
 	require.Nil(t, idDefault)
 }
 
-// zero issues but an agent phase maps to the state (no API path — insert directly)
+// zero issues but a workflow event maps to the state (no API path — insert directly)
 func TestDeleteState_AgentPhaseOnlyUsage_Conflicts(t *testing.T) {
 	app := Setup(t)
 	token := Token(t, app)
@@ -197,7 +197,7 @@ func TestDeleteState_AgentPhaseOnlyUsage_Conflicts(t *testing.T) {
 	pool, err := injector.GetDb()
 	require.Nil(t, err)
 	_, err = pool.Exec(context.Background(),
-		`INSERT INTO projects.agent_phase_state_map (id_project, phase, id_state) VALUES ($1, 'implementing', $2)`,
+		`INSERT INTO projects.workflow_event_state_map (id_project, event, id_state) VALUES ($1, 'implementing', $2)`,
 		idProject, idLocal)
 	require.Nil(t, err)
 

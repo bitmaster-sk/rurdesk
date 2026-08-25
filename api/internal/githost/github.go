@@ -149,7 +149,7 @@ func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: prData.Head.SHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
 }
 
 func (h *GitHubHost) GetMergeRequestUrl(idMr string) string {
