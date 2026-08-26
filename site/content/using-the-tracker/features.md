@@ -210,6 +210,14 @@ the feed to the **🕐 Time** chip to see just the tracked time, per contributor
 > key — or a local **Ollama** for no cloud keys. They are independent of the
 > [agent gateway](./gateway.md).
 
+### Agent skills
+
+Named Markdown instructions injected into an agent run's prompt, per stage —
+how your project runs its tests, what conventions bind, what "done" means. An
+admin manages the catalog, each project picks which skills apply to which stage,
+and either can be overridden for a single run. See
+[Agent skills](./agent-skills.md).
+
 ### Quality Check
 
 When creating or editing a task, the AI scores its quality inline and suggests
