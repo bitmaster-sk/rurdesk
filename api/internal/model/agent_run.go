@@ -84,9 +84,10 @@ type StagePlan struct {
 }
 
 type StagePlanEntry struct {
-	Name      string `json:"name"`
-	Skippable bool   `json:"skippable"`
-	Skip      bool   `json:"skip"`
+	Name      string  `json:"name"`
+	Skippable bool    `json:"skippable"`
+	Skip      bool    `json:"skip"`
+	IdsSkill  []int64 `json:"idsSkill,omitempty"`
 }
 
 // CompleteStageReq is the body of POST /private/agent/task/:idTask/complete,

@@ -528,6 +528,7 @@ func GetAgentRunController() *controller.AgentRunController {
 			GetMessageRepository(),
 			GetGitIntegrationRepository(),
 			GetAclService(),
+			GetStagePlanService(),
 			GetDispatcher(),
 			GetNotifier(),
 			pool,
@@ -588,7 +589,8 @@ func GetIssueController() *controller.IssueController {
 			GetNotificationService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).
-			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(), GetDispatcher(), GetNotifier()), nil
+			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(),
+				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.IssueController)
 }
