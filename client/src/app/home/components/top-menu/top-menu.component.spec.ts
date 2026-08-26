@@ -65,7 +65,7 @@ describe('TopMenuComponent — userMenuItems', () => {
         // followed by a separator
         expect(items[3].separator).toBe(true);
 
-        // then the two admin links
-        expect(links(items.slice(4))).toEqual(['/admin/users', '/admin/settings']);
+        // then the admin links
+        expect(links(items.slice(4))).toEqual(['/admin/users', '/admin/skills', '/admin/settings']);
     });
 });

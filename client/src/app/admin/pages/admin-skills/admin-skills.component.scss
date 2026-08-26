@@ -1,0 +1,24 @@
+.skill-row {
+    width: 100%;
+    background: none;
+    border: none;
+    border-radius: var(--ui-input-radius);
+    cursor: pointer;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+}
+
+.skill-row:hover {
+    background: var(--ui-select-option-hover-bg);
+}
+
+.skill-row--active {
+    background: var(--ui-select-option-selected-bg);
+    color: var(--ui-select-option-selected-fg);
+}
+
+.skill-content {
+    width: 100%;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}

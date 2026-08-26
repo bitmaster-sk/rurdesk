@@ -91,6 +91,11 @@ export class TopMenuComponent implements OnInit, OnDestroy {
                     routerLink: ['/admin/users']
                 },
                 {
+                    label: this.i18n.instant('SKILL.TITLE'),
+                    tablerIcon: 'sparkles',
+                    routerLink: ['/admin/skills']
+                },
+                {
                     label: this.i18n.instant('ADMIN.SETTINGS'),
                     tablerIcon: 'settings',
                     routerLink: ['/admin/settings']
