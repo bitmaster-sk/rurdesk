@@ -162,6 +162,8 @@ func TestSkillApiRestoreRejectsCustomSkill(t *testing.T) {
 	var created model.Skill
 	require.Nil(t, json.NewDecoder(res.Body).Decode(&created))
 
+	defer Request(t, app, "DELETE", "/api/private/admin/skills/"+itoa(created.IdSkill), "", token)
+
 	restore := Request(t, app, "POST", "/api/private/admin/skills/"+itoa(created.IdSkill)+"/restore", "", token)
 	assert.Equal(t, http.StatusConflict, restore.StatusCode)
 }
