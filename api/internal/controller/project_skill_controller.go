@@ -64,7 +64,7 @@ func (ctrl *ProjectSkillController) Replace(c *gin.Context) {
 
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
-	if !ctrl.acl.CanManageAgentPhaseStateMap(ctx, user.IdUser, idProject) {
+	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
 		_ = c.Error(errForbidden)
 		c.Status(http.StatusForbidden)
 		return

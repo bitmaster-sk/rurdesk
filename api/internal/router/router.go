@@ -46,7 +46,7 @@ func New(
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
 	botGwCtrl *controller.BotGatewayController,
-	phaseStateMapCtrl *controller.PhaseStateMapController,
+	workflowEventMapCtrl *controller.WorkflowEventMapController,
 	skillCtrl *controller.SkillController,
 	projectSkillCtrl *controller.ProjectSkillController,
 	agentOverviewCtrl *controller.AgentOverviewController,
@@ -278,9 +278,9 @@ func New(
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)
 	pri.POST("/agent/gateway/recovered", agentRunCtrl.GatewayRecovered)
 
-	// Agent phase→state map (project owner only)
-	pri.GET("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.GetMappings)
-	pri.PUT("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.ReplaceMappings)
+	// Workflow event→state map (project owner only)
+	pri.GET("/project/:idProject/workflow-event-state-map", workflowEventMapCtrl.GetMappings)
+	pri.PUT("/project/:idProject/workflow-event-state-map", workflowEventMapCtrl.ReplaceMappings)
 	pri.POST("/project/:idProject/issue/:idIssuePublic/assign-agent", issueCtrl.AssignAgent)
 	pri.GET("/project/:idProject/skills", projectSkillCtrl.Get)
 	pri.PUT("/project/:idProject/skills", projectSkillCtrl.Replace)

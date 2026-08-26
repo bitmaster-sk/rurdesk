@@ -137,6 +137,8 @@ func (s *MergePollerSuite) SetupSuite() {
 		injector.GetProjectRepository(),
 		injector.GetGitIntegrationRepository(),
 		injector.GetIssueRepository(),
+		injector.GetStateRepository(),
+		injector.GetWorkflowEventMirror(),
 		injector.GetNotifier(),
 	)
 }

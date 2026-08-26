@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type PhaseStateMapSuite struct {
+type WorkflowEventMapSuite struct {
 	suite.Suite
 	App           *issue.Application
 	OwnerToken    string
@@ -25,7 +25,7 @@ type PhaseStateMapSuite struct {
 	IdStateDone   int64
 }
 
-func (s *PhaseStateMapSuite) SetupSuite() {
+func (s *WorkflowEventMapSuite) SetupSuite() {
 	s.App = Setup(s.T())
 	s.OwnerToken = Token(s.T(), s.App)
 
@@ -43,7 +43,6 @@ func (s *PhaseStateMapSuite) SetupSuite() {
 	memberRes := Request(s.T(), s.App, "GET", "/api/private/user", "", s.MemberToken)
 	json.NewDecoder(memberRes.Body).Decode(&memberUser)
 
-	// Create project
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"ps-map-test-project","color":"#112233"}`, s.OwnerToken)
 	s.Require().Equal(http.StatusOK, prjRes.StatusCode)
@@ -53,7 +52,6 @@ func (s *PhaseStateMapSuite) SetupSuite() {
 	json.NewDecoder(prjRes.Body).Decode(&prj)
 	s.IdProject = prj.IdProject
 
-	// Add member user to project
 	addRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.OwnerToken)
@@ -75,13 +73,12 @@ func (s *PhaseStateMapSuite) SetupSuite() {
 		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
 	s.Require().NoError(err)
 
-	// Create states
 	s.IdStateToDo = s.createState("To Do", false, false)
 	s.IdStateInProg = s.createState("In Progress", false, false)
 	s.IdStateDone = s.createState("Done", false, true)
 }
 
-func (s *PhaseStateMapSuite) createState(name string, start, final bool) int64 {
+func (s *WorkflowEventMapSuite) createState(name string, start, final bool) int64 {
 	body := fmt.Sprintf(`{"idProject":%d,"name":%q,"start":%v,"final":%v}`,
 		s.IdProject, name, start, final)
 	res := Request(s.T(), s.App, "POST", "/api/private/state", body, s.OwnerToken)
@@ -91,73 +88,72 @@ func (s *PhaseStateMapSuite) createState(name string, start, final bool) int64 {
 	return st.IdState
 }
 
-func (s *PhaseStateMapSuite) url() string {
-	return fmt.Sprintf("/api/private/project/%d/agent-phase-state-map", s.IdProject)
+func (s *WorkflowEventMapSuite) url() string {
+	return fmt.Sprintf("/api/private/project/%d/workflow-event-state-map", s.IdProject)
 }
 
-func (s *PhaseStateMapSuite) Test_GetMappings_Empty() {
+func (s *WorkflowEventMapSuite) Test_GetMappings_Empty() {
 	res := Request(s.T(), s.App, "GET", s.url(), "", s.OwnerToken)
 	s.Equal(http.StatusOK, res.StatusCode)
-	var mappings []model.PhaseStateMapping
+	var mappings []model.WorkflowEventMapping
 	json.NewDecoder(res.Body).Decode(&mappings)
 	s.Empty(mappings)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_CreatesRows() {
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d},{"phase":"done","idState":%d}]}`,
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_CreatesRows() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d},{"event":"done","idState":%d}]}`,
 		s.IdStateInProg, s.IdStateDone)
 	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Equal(http.StatusOK, putRes.StatusCode)
 
 	getRes := Request(s.T(), s.App, "GET", s.url(), "", s.OwnerToken)
 	s.Equal(http.StatusOK, getRes.StatusCode)
-	var mappings []model.PhaseStateMapping
+	var mappings []model.WorkflowEventMapping
 	json.NewDecoder(getRes.Body).Decode(&mappings)
 	s.Len(mappings, 2)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_OverwritesPrevious() {
-	body1 := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_OverwritesPrevious() {
+	body1 := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, s.IdStateInProg)
 	Request(s.T(), s.App, "PUT", s.url(), body1, s.OwnerToken)
 
-	body2 := fmt.Sprintf(`{"mappings":[{"phase":"done","idState":%d}]}`, s.IdStateDone)
+	body2 := fmt.Sprintf(`{"mappings":[{"event":"done","idState":%d}]}`, s.IdStateDone)
 	Request(s.T(), s.App, "PUT", s.url(), body2, s.OwnerToken)
 
 	getRes := Request(s.T(), s.App, "GET", s.url(), "", s.OwnerToken)
-	var mappings []model.PhaseStateMapping
+	var mappings []model.WorkflowEventMapping
 	json.NewDecoder(getRes.Body).Decode(&mappings)
 	s.Len(mappings, 1)
-	s.Equal("done", mappings[0].Phase)
+	s.Equal("done", mappings[0].Event)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_EmptyArray_ClearsAll() {
-	body1 := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_EmptyArray_ClearsAll() {
+	body1 := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, s.IdStateInProg)
 	Request(s.T(), s.App, "PUT", s.url(), body1, s.OwnerToken)
 
 	clearRes := Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 	s.Equal(http.StatusOK, clearRes.StatusCode)
 
 	getRes := Request(s.T(), s.App, "GET", s.url(), "", s.OwnerToken)
-	var mappings []model.PhaseStateMapping
+	var mappings []model.WorkflowEventMapping
 	json.NewDecoder(getRes.Body).Decode(&mappings)
 	s.Empty(mappings)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_InvalidPhase_Returns400() {
-	body := fmt.Sprintf(`{"mappings":[{"phase":"nonexistent","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_InvalidEvent_Returns400() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"nonexistent","idState":%d}]}`, s.IdStateInProg)
 	res := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Equal(http.StatusBadRequest, res.StatusCode)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_DuplicatePhase_Returns400() {
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d},{"phase":"in_progress","idState":%d}]}`,
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_DuplicatePhase_Returns400() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d},{"event":"in_progress","idState":%d}]}`,
 		s.IdStateInProg, s.IdStateDone)
 	res := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Equal(http.StatusBadRequest, res.StatusCode)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_StateFromOtherProject_Returns400() {
-	// Create a second project with its own state
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_StateFromOtherProject_Returns400() {
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"ps-map-other-project","color":"#999999"}`, s.OwnerToken)
 	s.Require().Equal(http.StatusOK, prjRes.StatusCode)
@@ -172,40 +168,38 @@ func (s *PhaseStateMapSuite) Test_ReplaceMappings_StateFromOtherProject_Returns4
 	var otherState model.State
 	json.NewDecoder(stateRes.Body).Decode(&otherState)
 
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, otherState.IdState)
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, otherState.IdState)
 	res := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Equal(http.StatusBadRequest, res.StatusCode)
 }
 
-func (s *PhaseStateMapSuite) Test_ReplaceMappings_NilIdState_SkipsRow() {
-	body := `{"mappings":[{"phase":"in_progress","idState":null}]}`
+func (s *WorkflowEventMapSuite) Test_ReplaceMappings_NilIdState_SkipsRow() {
+	body := `{"mappings":[{"event":"in_progress","idState":null}]}`
 	res := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 
 	getRes := Request(s.T(), s.App, "GET", s.url(), "", s.OwnerToken)
-	var mappings []model.PhaseStateMapping
+	var mappings []model.WorkflowEventMapping
 	json.NewDecoder(getRes.Body).Decode(&mappings)
 	s.Empty(mappings)
 }
 
-func (s *PhaseStateMapSuite) Test_ACL_MemberCannot_Replace() {
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_ACL_MemberCannot_Replace() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, s.IdStateInProg)
 	res := Request(s.T(), s.App, "PUT", s.url(), body, s.MemberToken)
 	s.Equal(http.StatusForbidden, res.StatusCode)
 }
 
-func (s *PhaseStateMapSuite) Test_ACL_MemberCannot_Get() {
+func (s *WorkflowEventMapSuite) Test_ACL_MemberCannot_Get() {
 	res := Request(s.T(), s.App, "GET", s.url(), "", s.MemberToken)
 	s.Equal(http.StatusForbidden, res.StatusCode)
 }
 
-func (s *PhaseStateMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
-	// Configure mapping: in_progress → InProgress
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, s.IdStateInProg)
 	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Require().Equal(http.StatusOK, putRes.StatusCode)
 
-	// Create an issue and a bot user
 	issueRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
 		`{"title":"mirror test issue","description":"phase state map test issue body","estimated":0}`, s.OwnerToken)
@@ -213,7 +207,6 @@ func (s *PhaseStateMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 	var iss model.Issue
 	json.NewDecoder(issueRes.Body).Decode(&iss)
 
-	// Insert an agent.run in queued phase directly
 	ctx := context.Background()
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
@@ -223,12 +216,11 @@ func (s *PhaseStateMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
-	// Call TransitionPhase via the injected repository (mirror is wired in)
+	// Goes through the injected repository so the mirror is wired in, unlike a bare TransitionPhase call.
 	agentRunRepo := injector.GetAgentRunRepository()
 	_, err = agentRunRepo.TransitionPhase(ctx, idRun, "queued", "in_progress", "system", nil, "test")
 	s.Require().NoError(err)
 
-	// Verify the issue state was updated to InProgress
 	var idState *int64
 	err = s.App.Pool.QueryRow(ctx,
 		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, iss.IdIssue).Scan(&idState)
@@ -236,13 +228,11 @@ func (s *PhaseStateMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 	s.Require().NotNil(idState)
 	s.Equal(s.IdStateInProg, *idState)
 
-	// Cleanup
 	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 }
 
-func (s *PhaseStateMapSuite) Test_Mirror_NoMapping_NoStateChange() {
-	// Ensure no mappings
+func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 
 	ctx := context.Background()
@@ -280,16 +270,15 @@ func (s *PhaseStateMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 }
 
-func (s *PhaseStateMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
-	// Create a temporary state, map in_progress to it, then delete it
+func (s *WorkflowEventMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 	tempStateID := s.createState("TempMirrorState", false, false)
 
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, tempStateID)
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, tempStateID)
 	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 	s.Require().Equal(http.StatusOK, putRes.StatusCode)
 
-	// Delete the state — ON DELETE SET NULL in agent_phase_state_map. The state
-	// is only referenced by the phase map (no issues), so under the new
+	// Delete the state — ON DELETE SET NULL in workflow_event_state_map. The state
+	// is only referenced by the event map (no issues), so under the new
 	// migrateTo contract the delete must explicitly say "unassign".
 	deleteRes := Request(s.T(), s.App, "DELETE",
 		fmt.Sprintf("/api/private/state/%d/project/%d?migrateTo=null", tempStateID, s.IdProject),
@@ -312,7 +301,6 @@ func (s *PhaseStateMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
-	// This should not panic and run.phase must still transition
 	agentRunRepo := injector.GetAgentRunRepository()
 	run, err := agentRunRepo.TransitionPhase(ctx, idRun, "queued", "in_progress", "system", nil, "test")
 	s.Require().NoError(err)
@@ -322,9 +310,8 @@ func (s *PhaseStateMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 }
 
-func (s *PhaseStateMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition() {
-	// Map in_progress → a valid state
-	body := fmt.Sprintf(`{"mappings":[{"phase":"in_progress","idState":%d}]}`, s.IdStateInProg)
+func (s *WorkflowEventMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition() {
+	body := fmt.Sprintf(`{"mappings":[{"event":"in_progress","idState":%d}]}`, s.IdStateInProg)
 	Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
 
 	ctx := context.Background()
@@ -343,7 +330,6 @@ func (s *PhaseStateMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition() {
 	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
-	// Transition should succeed even if mirror is configured
 	agentRunRepo := injector.GetAgentRunRepository()
 	run, err := agentRunRepo.TransitionPhase(ctx, idRun, "queued", "in_progress", "system", nil, "test")
 	s.Require().NoError(err)
@@ -353,6 +339,6 @@ func (s *PhaseStateMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition() {
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 }
 
-func TestPhaseStateMapSuite(t *testing.T) {
-	suite.Run(t, new(PhaseStateMapSuite))
+func TestWorkflowEventMapSuite(t *testing.T) {
+	suite.Run(t, new(WorkflowEventMapSuite))
 }

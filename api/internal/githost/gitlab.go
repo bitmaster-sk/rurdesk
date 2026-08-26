@@ -109,7 +109,7 @@ func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 	ciStatus := h.getCiStatus(ctx, idMr, mrData.DiffRefs.HeadSHA)
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, HeadSHA: mrData.DiffRefs.HeadSHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: mrData.DiffRefs.HeadSHA}, nil
 }
 
 func (h *GitLabHost) GetMergeRequestUrl(idMr string) string {

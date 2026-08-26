@@ -179,15 +179,29 @@
         },
         "CLARIFICATION": {
             "BADGE": "Question from bot"
-        },
-        "PHASE_STATE_MAP": {
-            "TITLE": "Agent Phase → State Mapping",
-            "DESCRIPTION": "Optionally map agent phases to task states. When a bot run transitions to a phase, the task state will be automatically updated. Leave unmapped to skip.",
-            "PHASE": "Agent Phase",
-            "STATE": "Task State",
+        }
+    },
+    "WORKFLOW": {
+        "STATE_MAP": {
+            "TITLE": "Automatic state changes",
+            "DESCRIPTION": "Map workflow events to task states. When an event fires, the task state updates automatically. Leave unmapped to skip.",
+            "GROUP_PR": "Any linked pull request",
+            "GROUP_AGENT": "Agent runs only",
+            "EVENT": "Event",
+            "STATE": "Task state",
             "NO_MAPPING": "No mapping",
-            "LOAD_ERROR": "Failed to load phase-state mappings.",
-            "SAVE_ERROR": "Failed to save phase-state mappings."
+            "LOAD_ERROR": "Failed to load state mappings.",
+            "SAVE_ERROR": "Failed to save state mappings.",
+            "EVENT_DESC": {
+                "QUEUED": "An agent run is queued",
+                "IN_PROGRESS": "The agent starts working",
+                "AWAITING_INPUT": "The agent asks a question",
+                "AWAITING_APPROVAL": "Agent output waits for your review",
+                "PR_OPEN": "The agent opens a pull request",
+                "DONE": "The pull request is merged (agent or manually linked)",
+                "FAILED": "The run fails or its pull request is closed without merging",
+                "CANCELLED": "The run is cancelled"
+            }
         },
         "SKILLS": {
             "TITLE": "Agent skills",

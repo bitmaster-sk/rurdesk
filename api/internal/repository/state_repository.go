@@ -215,7 +215,7 @@ func (r *StateRepository) LoadStateUsage(ctx context.Context, idProject, idState
 		SELECT
 			(SELECT count(*) FROM issues.issue WHERE id_project = $1 AND id_state = $2),
 			EXISTS (SELECT 1 FROM projects.project WHERE id_project = $1 AND id_state_default = $2),
-			(SELECT count(*) FROM projects.agent_phase_state_map WHERE id_project = $1 AND id_state = $2),
+			(SELECT count(*) FROM projects.workflow_event_state_map WHERE id_project = $1 AND id_state = $2),
 			(SELECT count(*) FROM projects.project_issue_state WHERE id_state = $2)
 	`, idProject, idState).Scan(&u.Issues, &u.IsProjectDefault, &u.AgentPhases, &u.Mappings)
 	if err != nil {
@@ -241,7 +241,7 @@ func (r *StateRepository) RepointProjectDefaultState(ctx context.Context, idProj
 func (r *StateRepository) RepointAgentPhaseState(ctx context.Context, idProject, oldIdState int64, newIdState *int64) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		UPDATE projects.agent_phase_state_map SET id_state = $3
+		UPDATE projects.workflow_event_state_map SET id_state = $3
 		WHERE id_project = $1 AND id_state = $2
 	`, idProject, oldIdState, newIdState)
 	if err != nil {

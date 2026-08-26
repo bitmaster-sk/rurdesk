@@ -115,6 +115,9 @@ export class IssueInfoComponent {
     protected readonly mrLinkTitleKey = computed(() =>
         prMrLinkTitleKey(this.gitIntegration()?.hostType ?? null)
     );
+    protected readonly mrLink = computed(
+        () => this.agentRun()?.prUrl ?? (this.mrStatus()?.webUrl || null)
+    );
 
     /**
      * Per-file deep-link generator handed to the diff viewer so each file

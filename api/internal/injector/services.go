@@ -420,7 +420,7 @@ func GetProjectMemberController() *controller.ProjectMemberController {
 func GetAgentRunRepository() *repository.AgentRunRepository {
 	instance, _ := di.GetWithNew("agent-run-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewAgentRunRepository(pool).WithPhaseMirror(GetPhaseStateMirror()), nil
+		return repository.NewAgentRunRepository(pool).WithEventMirror(GetWorkflowEventMirror()), nil
 	})
 	return instance.(*repository.AgentRunRepository)
 }
@@ -833,18 +833,20 @@ func GetMergePoller() *agent.MergePoller {
 			GetProjectRepository(),
 			GetGitIntegrationRepository(),
 			GetIssueRepository(),
+			GetStateRepository(),
+			GetWorkflowEventMirror(),
 			GetNotifier(),
 		), nil
 	})
 	return instance.(*agent.MergePoller)
 }
 
-func GetPhaseStateMapRepository() *repository.PhaseStateMapRepository {
-	instance, _ := di.GetWithNew("phase-state-map-repository", func() (any, error) {
+func GetWorkflowEventMapRepository() *repository.WorkflowEventMapRepository {
+	instance, _ := di.GetWithNew("workflow-event-map-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewPhaseStateMapRepository(pool), nil
+		return repository.NewWorkflowEventMapRepository(pool), nil
 	})
-	return instance.(*repository.PhaseStateMapRepository)
+	return instance.(*repository.WorkflowEventMapRepository)
 }
 
 func GetSkillRepository() *repository.SkillRepository {
@@ -921,26 +923,26 @@ func GetSkillController() *controller.SkillController {
 	return instance.(*controller.SkillController)
 }
 
-func GetPhaseStateMirror() *agent.PhaseStateMirror {
-	instance, _ := di.GetWithNew("phase-state-mirror", func() (any, error) {
-		return agent.NewPhaseStateMirror(
-			GetPhaseStateMapRepository(),
+func GetWorkflowEventMirror() *agent.WorkflowEventMirror {
+	instance, _ := di.GetWithNew("workflow-event-mirror", func() (any, error) {
+		return agent.NewWorkflowEventMirror(
+			GetWorkflowEventMapRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
 		), nil
 	})
-	return instance.(*agent.PhaseStateMirror)
+	return instance.(*agent.WorkflowEventMirror)
 }
 
-func GetPhaseStateMapController() *controller.PhaseStateMapController {
-	instance, _ := di.GetWithNew("phase-state-map-controller", func() (any, error) {
-		return controller.NewPhaseStateMapController(
-			GetPhaseStateMapRepository(),
+func GetWorkflowEventMapController() *controller.WorkflowEventMapController {
+	instance, _ := di.GetWithNew("workflow-event-map-controller", func() (any, error) {
+		return controller.NewWorkflowEventMapController(
+			GetWorkflowEventMapRepository(),
 			GetStateRepository(),
 			GetAclService(),
 		), nil
 	})
-	return instance.(*controller.PhaseStateMapController)
+	return instance.(*controller.WorkflowEventMapController)
 }
 
 func GetHealthController() *controller.HealthController {
@@ -1015,7 +1017,7 @@ func GetRouter() (*router.Router, error) {
 			GetGitIntegrationController(),
 			GetAgentRunController(),
 			GetBotGatewayController(),
-			GetPhaseStateMapController(),
+			GetWorkflowEventMapController(),
 			GetSkillController(),
 			GetProjectSkillController(),
 			GetAgentOverviewController(),

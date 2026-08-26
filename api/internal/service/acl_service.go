@@ -282,7 +282,7 @@ func (acl *AclService) CanManageGitIntegration(ctx context.Context, idUser, idPr
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
 }
 
-func (acl *AclService) CanManageAgentPhaseStateMap(ctx context.Context, idUser, idProject int64) bool {
+func (acl *AclService) CanManageWorkflowEventMap(ctx context.Context, idUser, idProject int64) bool {
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
 }
 
