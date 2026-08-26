@@ -1,0 +1,57 @@
+<ul
+    class="ui-select-panel__list"
+    [attr.role]="listRole()"
+    [attr.aria-multiselectable]="multiselectable() ? true : null"
+    [id]="listId()"
+>
+    @for (option of visibleOptions(); track $index; let i = $index) {
+        <li
+            #optionEl
+            class="ui-select-panel__option"
+            role="option"
+            [id]="optionIdPrefix() + '_opt_' + i"
+            [class.ui-select-panel__option--highlighted]="i === highlightedIndex()"
+            [class.ui-select-panel__option--selected]="isOptionSelected()(option)"
+            [attr.aria-selected]="isOptionSelected()(option)"
+            (mousedown)="$event.preventDefault()"
+            (click)="pick.emit(option)"
+            (mouseenter)="highlightRequest.emit(i)"
+        >
+            @if (showCheckbox()) {
+                <span
+                    class="ui-select-panel__checkbox"
+                    [class.ui-select-panel__checkbox--checked]="isOptionSelected()(option)"
+                    aria-hidden="true"
+                ></span>
+            }
+            @if (itemTemplate()) {
+                <ng-container
+                    [ngTemplateOutlet]="itemTemplate()!"
+                    [ngTemplateOutletContext]="{ $implicit: option }"
+                />
+            } @else {
+                {{ getOptionLabel()(option) }}
+            }
+            @if (actionsTemplate()) {
+                <!-- An action must never read as picking the row it sits on. -->
+                <span
+                    class="ui-select-panel__actions"
+                    (click)="$event.stopPropagation()"
+                    (mousedown)="$event.stopPropagation()"
+                >
+                    <ng-container
+                        [ngTemplateOutlet]="actionsTemplate()!"
+                        [ngTemplateOutletContext]="{
+                            $implicit: option,
+                            openDock: bindOpenDock(option)
+                        }"
+                    />
+                </span>
+            }
+        </li>
+    } @empty {
+        <li class="ui-select-panel__empty">
+            {{ (isFiltered() ? emptyFilterMessage() : emptyMessage()) || '' }}
+        </li>
+    }
+</ul>

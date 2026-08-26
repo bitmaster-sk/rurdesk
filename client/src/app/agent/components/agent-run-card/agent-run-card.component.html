@@ -98,6 +98,68 @@
                     </div>
                 }
 
+                @if (canEditSkills()) {
+                    <div class="section">
+                        <button
+                            type="button"
+                            class="skills-chip"
+                            data-testid="run-skills-chip"
+                            (click)="onToggleSkillsPopover(skillsPopover, $event)"
+                        >
+                            <tabler-icon icon="sparkles" [size]="14" />
+                            {{ 'AGENT.RUN_SKILLS.CHIP' | translate }}
+                        </button>
+                        <ui-popover
+                            #skillsPopover
+                            panelClass="run-skills-panel"
+                            (closed)="onSkillsPopoverClosed()"
+                        >
+                            <div class="run-skills flex flex-col gap-3 p-3">
+                                <div class="font-semibold">
+                                    {{ 'AGENT.RUN_SKILLS.TITLE' | translate }}
+                                </div>
+                                @for (stage of runSkills(); track stage.name) {
+                                    <div
+                                        class="flex flex-col gap-1"
+                                        [uiSaveStatus]="stageSaveStatus(stage.name)"
+                                    >
+                                        <div class="ui-color-text-muted">
+                                            {{ skillStageLabel(stage.name) | translate }}
+                                            @if (stage.dispatched) {
+                                                · {{ 'AGENT.RUN_SKILLS.DISPATCHED' | translate }}
+                                            }
+                                        </div>
+                                        <div class="flex flex-wrap gap-1">
+                                            @for (skill of skillCatalog(); track skill.idSkill) {
+                                                <button
+                                                    type="button"
+                                                    class="skills-chip"
+                                                    [class.skills-chip--on]="
+                                                        isSkillOn(stage, skill.idSkill)
+                                                    "
+                                                    [disabled]="stage.dispatched"
+                                                    [attr.aria-pressed]="
+                                                        isSkillOn(stage, skill.idSkill)
+                                                    "
+                                                    [attr.data-testid]="
+                                                        'run-chip-' +
+                                                        skill.idSkill +
+                                                        '-' +
+                                                        stage.name
+                                                    "
+                                                    (click)="onToggleSkill(stage, skill.idSkill)"
+                                                >
+                                                    {{ skill.name }}
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </ui-popover>
+                    </div>
+                }
+
                 @if (run.errorMessage) {
                     <div class="section">
                         <div class="error-banner">{{ run.errorMessage }}</div>

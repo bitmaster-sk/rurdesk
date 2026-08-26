@@ -64,6 +64,13 @@ var (
 	ErrIssueTypeProtected              = newErr("ISSUE_TYPE_PROTECTED", "issue type is protected and cannot be deleted", "error.issue_type_protected", http.StatusConflict)
 	ErrSprintWindow                    = newErr("SPRINT_WINDOW", "sprint must end after it starts", "error.sprint_window", http.StatusUnprocessableEntity)
 	ErrSprintClosed                    = newErr("SPRINT_CLOSED", "sprint is already closed", "error.sprint_closed", http.StatusConflict)
+	ErrSkillNotFound                   = newErr("SKILL_NOT_FOUND", "skill not found", "error.skill_not_found", http.StatusNotFound)
+	ErrSkillNameTaken                  = newErr("SKILL_NAME_TAKEN", "a skill with this name already exists", "error.skill_name_taken", http.StatusConflict)
+	ErrSkillBuiltin                    = newErr("SKILL_BUILTIN", "builtin skills cannot be deleted", "error.skill_builtin", http.StatusConflict)
+	ErrSkillNotBuiltin                 = newErr("SKILL_NOT_BUILTIN", "custom skills have no shipped original to restore", "error.skill_not_builtin", http.StatusConflict)
+	ErrSkillStageDispatched            = newErr("SKILL_STAGE_DISPATCHED", "stage already started; its skills can no longer be changed", "error.skill_stage_dispatched", http.StatusConflict)
+	ErrUnknownSkill                    = newErr("UNKNOWN_SKILL", "the request references a skill that does not exist", "error.unknown_skill", http.StatusBadRequest)
+	ErrStageNotInPlan                  = newErr("STAGE_NOT_IN_PLAN", "stage is not in the run's stage plan", "error.stage_not_in_plan", http.StatusBadRequest)
 )
 
 // As reports whether err is (or wraps) an *Error, storing it in target. It

@@ -22,7 +22,8 @@ import {
     IconLayoutColumns,
     IconCalendar,
     IconChartColumn,
-    IconDeviceDesktop
+    IconDeviceDesktop,
+    IconSparkles
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -49,7 +50,8 @@ import {
             IconTable,
             IconLayoutColumns,
             IconCalendar,
-            IconChartColumn
+            IconChartColumn,
+            IconSparkles
         })
     ]
 })

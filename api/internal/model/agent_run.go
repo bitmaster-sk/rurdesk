@@ -84,9 +84,10 @@ type StagePlan struct {
 }
 
 type StagePlanEntry struct {
-	Name      string `json:"name"`
-	Skippable bool   `json:"skippable"`
-	Skip      bool   `json:"skip"`
+	Name      string  `json:"name"`
+	Skippable bool    `json:"skippable"`
+	Skip      bool    `json:"skip"`
+	IdsSkill  []int64 `json:"idsSkill,omitempty"`
 }
 
 // CompleteStageReq is the body of POST /private/agent/task/:idTask/complete,
@@ -132,6 +133,11 @@ type RunStatsRes struct {
 type AgentStatsNotice struct {
 	IdRun int64        `json:"idRun"`
 	Stats *RunStatsRes `json:"stats"`
+}
+
+type CreateAgentRunReq struct {
+	IdUserBot       int64              `json:"idUserBot"       binding:"required"`
+	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
 }
 
 // SetRunPrReq is consumed by AgentRunRepository.SetPrInfo, populated from the

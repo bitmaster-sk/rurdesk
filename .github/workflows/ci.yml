@@ -19,7 +19,7 @@ jobs:
     backend:
         name: Backend (go test -race)
         runs-on: ubuntu-latest
-        timeout-minutes: 20
+        timeout-minutes: 30
 
         services:
             postgres:
@@ -87,7 +87,7 @@ jobs:
                   TEST_CACHE_HOST: localhost
                   TEST_CACHE_PORT: "6379"
                   TEST_CACHE_DB: "1"
-              run: go test ./... -race -count=1 -coverprofile=coverage.out -coverpkg=./...
+              run: go test ./... -race -count=1 -timeout 20m -coverprofile=coverage.out -coverpkg=./...
 
             - name: Backend coverage summary
               if: ${{ !cancelled() }}

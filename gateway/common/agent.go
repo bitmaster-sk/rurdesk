@@ -52,6 +52,10 @@ type Task struct {
 	// none was chosen.
 	ApprovedMockupRef string
 
+	// Empty means the section is omitted entirely — which is also what an older
+	// tracker (one that never sends the field) produces.
+	Skills []Skill
+
 	// Stage selects which instruction block the prompt template uses.
 	Stage string
 
@@ -70,6 +74,11 @@ type Task struct {
 	// its own vocab before RenderPrompt. Zero value falls back to
 	// ToolVocabClaudeCode.
 	Vocab ToolVocab
+}
+
+type Skill struct {
+	Name    string
+	Content string
 }
 
 type TaskComment struct {

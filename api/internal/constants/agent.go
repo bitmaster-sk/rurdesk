@@ -57,6 +57,19 @@ var StageDefinitions = []StageDef{
 	{Name: StageImplementation, Skippable: false},
 }
 
+// Pickup is absent: no prompt is rendered for it, so a skill attached there
+// would never reach an agent.
+var SkillStages = []string{StageBrainstorming, StageDesign, StageImplementationPlan, StageImplementation}
+
+func IsSkillStage(stage string) bool {
+	for _, skillStage := range SkillStages {
+		if skillStage == stage {
+			return true
+		}
+	}
+	return false
+}
+
 var TerminalPhases = map[string]bool{
 	PhaseDone:      true,
 	PhaseFailed:    true,

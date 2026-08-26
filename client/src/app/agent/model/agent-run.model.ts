@@ -45,6 +45,7 @@ export interface StagePlanEntry {
     name: string;
     skippable: boolean;
     skip: boolean;
+    idsSkill?: number[];
 }
 
 export interface AgentRunEvent {
@@ -64,4 +65,9 @@ export interface RunStats {
     totalToolCallsCount: number;
     attemptsPerStage: Record<string, number>;
     failedAttempts: number;
+}
+
+export interface CreateAgentRunReq {
+    idUserBot: number;
+    idsSkillByStage: Record<string, number[]>;
 }

@@ -66,33 +66,36 @@ func scanAgentRun(row pgx.Row) (*model.AgentRun, error) {
 	return run, nil
 }
 
-// Insert creates a new agent run, materializing stage_plan from
-// constants.StageDefinitions with every stage's skip flag false.
-func (r *AgentRunRepository) Insert(ctx context.Context, idIssue, idUserBot, idProject int64) (*model.AgentRun, error) {
-	db := extctx.GetDb(ctx, r.pool)
-
-	stagePlan := model.StagePlan{
-		Stages: make([]model.StagePlanEntry, len(constants.StageDefinitions)),
-	}
-	for i, def := range constants.StageDefinitions {
-		stagePlan.Stages[i] = model.StagePlanEntry{
-			Name:      def.Name,
-			Skippable: def.Skippable,
-			Skip:      false,
-		}
-	}
-	planJSON, err := json.Marshal(stagePlan)
-	if err != nil {
-		return nil, fmt.Errorf("marshalling stage plan: %w", err)
-	}
-
-	row := db.QueryRow(ctx, fmt.Sprintf(`
+func (r *AgentRunRepository) Insert(ctx context.Context, idIssue, idUserBot, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING %s`, agentRunColumns),
-		idIssue, idUserBot, idProject, constants.PhaseQueued, planJSON,
+		idIssue, idUserBot, idProject, constants.PhaseQueued, stagePlan,
 	)
 	return scanAgentRun(row)
+}
+
+func (r *AgentRunRepository) UpdateStagePlan(ctx context.Context, idRun int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
+		UPDATE agent.run SET stage_plan = $2 WHERE id_run = $1
+		RETURNING %s`, agentRunColumns),
+		idRun, stagePlan,
+	)
+	return scanAgentRun(row)
+}
+
+// Locks the row for the rest of the transaction; use before a read-modify-write.
+func (r *AgentRunRepository) LoadByIdForUpdate(ctx context.Context, idRun int64) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
+		SELECT %s FROM agent.run WHERE id_run = $1 FOR UPDATE`, agentRunColumns),
+		idRun,
+	)
+	run, err := scanAgentRun(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrRunNotFound
+	}
+	return run, err
 }
 
 func (r *AgentRunRepository) LoadById(ctx context.Context, idRun int64) (*model.AgentRun, error) {

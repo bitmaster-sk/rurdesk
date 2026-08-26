@@ -17,7 +17,8 @@ import {
     IconCircleCheck,
     IconClock,
     IconAlertCircle,
-    IconCircleMinus
+    IconCircleMinus,
+    IconSparkles
 } from '@tabler/icons-angular';
 import { AgentRunCardComponent } from './components/agent-run-card/agent-run-card.component';
 import { PlanActionsComponent } from './components/plan-actions/plan-actions.component';
@@ -45,7 +46,8 @@ import { RunStatsPanelComponent } from './components/run-stats-panel/run-stats-p
             IconCircleCheck,
             IconClock,
             IconAlertCircle,
-            IconCircleMinus
+            IconCircleMinus,
+            IconSparkles
         })
     ],
     exports: [

@@ -1,14 +1,15 @@
-@if (!multi) {
+@if (!multi()) {
     <ui-select
         class="user-dropdown"
-        [options]="users"
+        [options]="sortedUsers()"
         [(ngModel)]="selected"
         optionLabel="name"
         optionValue="idUser"
         [showClear]="true"
-        [filter]="filter"
-        [uiSaveStatus]="saveStatus"
+        [filter]="filter()"
+        [uiSaveStatus]="saveStatus()"
         [filterPlaceholder]="'UI.SEARCH' | translate"
+        (opened)="onOpened()"
     >
         <ng-template #selectedItem let-user>
             <div class="dropdown-item selected flex flex-row items-center">
@@ -36,17 +37,76 @@
                         [radius]="0.75"
                     ></app-avatar>
                 </div>
-                <div class="ml-2">{{ member.name }}</div>
+                <div class="ml-2 flex flex-col">
+                    <span>{{ member.name }}</span>
+                    @if (hasAgentFeatures() && member.isBot) {
+                        <span class="user-dropdown__status ui-color-text-muted">
+                            @if (overviewOf(member.idUser); as workload) {
+                                <span
+                                    class="user-dropdown__dot"
+                                    [class.user-dropdown__dot--busy]="workload.isBusy"
+                                ></span>
+                                @if (workload.isBusy) {
+                                    {{
+                                        'USER_DROPDOWN.AGENT_BUSY'
+                                            | translate: { queue: workload.queueCount }
+                                    }}
+                                } @else {
+                                    {{ 'USER_DROPDOWN.AGENT_IDLE' | translate }}
+                                }
+                            }
+                        </span>
+                    }
+                </div>
             </div>
         </ng-template>
+
+        @if (hasAgentFeatures() && idProject() !== null && idIssuePublic() !== null) {
+            <ng-template #optionActions let-member let-openDock="openDock">
+                @if (member.isBot) {
+                    <button
+                        type="button"
+                        class="user-dropdown__action"
+                        data-testid="agent-skills-action"
+                        [attr.aria-label]="'AGENT.SKILLS.TITLE' | translate"
+                        (click)="openDock('skills')"
+                    >
+                        <tabler-icon icon="adjustments-horizontal" [size]="14" />
+                    </button>
+                    <button
+                        type="button"
+                        class="user-dropdown__action"
+                        data-testid="agent-info-action"
+                        [attr.aria-label]="
+                            'AGENT_DOCK.INFO_TITLE' | translate: { name: member.name }
+                        "
+                        (click)="openDock('info')"
+                    >
+                        <tabler-icon icon="info-circle" [size]="14" />
+                    </button>
+                }
+            </ng-template>
+
+            <ng-template #dock let-member let-kind="kind" let-close="close">
+                <app-agent-dock
+                    [agent]="member"
+                    [kind]="kind"
+                    [idProject]="idProject()!"
+                    [idIssuePublic]="idIssuePublic()!"
+                    [overview]="overviewOf(member.idUser)"
+                    [close]="close"
+                    (assigned)="onAgentRunCreated($event)"
+                />
+            </ng-template>
+        }
     </ui-select>
 } @else {
     <ui-multiselect
-        [options]="users"
+        [options]="users()"
         class="user-dropdown"
         optionLabel="name"
         optionValue="idUser"
-        [uiSaveStatus]="saveStatus"
+        [uiSaveStatus]="saveStatus()"
         [(ngModel)]="selected"
     >
         <ng-template #item let-member>

@@ -128,7 +128,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 	taskRepo := repository.NewAgentTaskRepository(s.App.Pool)
 	projectRepo := repository.NewProjectRepository(s.App.Pool)
 
-	run, err := runRepo.Insert(ctx, s.IdIssue, s.BotUserID, s.IdProject)
+	run, err := runRepo.Insert(ctx, s.IdIssue, s.BotUserID, s.IdProject, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
 
 	// Move the run to in_progress and mark the first stage (pickup) completed, so

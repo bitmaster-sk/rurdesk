@@ -50,9 +50,7 @@ The user reviewed the version below and REJECTED it. Revise it according to the 
 {{end}}{{if .ApprovedMockupRef}}
 ## Chosen mockup (user picked this variant)
 The user reviewed the mockups in the approved design and chose: **{{.ApprovedMockupRef}}**. Implement that variant. Do NOT regenerate or re-post mockups — proceed with the implementation of the chosen design.
-{{end}}
-## Instructions
-`
+{{end}}`
 
 // completeStageReminder is appended to every prompt so the agent always ends
 // by calling complete_stage, letting the server advance the run.
@@ -197,7 +195,19 @@ If the user comments on the PR later, you'll be re-invoked for another Implement
 
 If something goes wrong (build error you can't fix, conflicting comments, push rejected), call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
 
+// No skills means no section at all.
+const skillsSection = `
+{{if .Skills}}## Skills
+The following instructions are mandatory for this stage. Where they conflict with your general habits, the skill wins.
+{{range .Skills}}
+### {{.Name}}
+{{.Content}}
+{{end}}
+{{end}}## Instructions
+`
+
 var compiledHeader = template.Must(template.New("header").Parse(promptHeader))
+var compiledSkills = template.Must(template.New("skills").Parse(skillsSection))
 var compiledReminder = template.Must(template.New("reminder").Parse(completeStageReminder))
 var compiledImpl = template.Must(template.New("impl").Parse(implementationInstructions))
 var compiledBrainstorming = template.Must(template.New("brainstorming").Parse(brainstormingBody))
@@ -215,6 +225,10 @@ func RenderPrompt(task Task) (string, error) {
 	var buf bytes.Buffer
 	if err := compiledHeader.Execute(&buf, task); err != nil {
 		return "", fmt.Errorf("rendering header: %w", err)
+	}
+
+	if err := compiledSkills.Execute(&buf, task); err != nil {
+		return "", fmt.Errorf("rendering skills section: %w", err)
 	}
 
 	var body *template.Template

@@ -1,0 +1,102 @@
+<div class="flex gap-4 p-4 items-start">
+    <section class="panel shrink-0 w-80" data-testid="skill-list">
+        <header class="panel-head">
+            <div class="panel-head-l">
+                <tabler-icon icon="sparkles" [size]="16" class="panel-icon" />
+                <div class="panel-title">{{ 'SKILL.TITLE' | translate }}</div>
+            </div>
+            <ui-button variant="text" size="small" (click)="onCreate()" data-testid="skill-new">
+                <tabler-icon icon="plus" [size]="14" />
+                {{ 'SKILL.NEW' | translate }}
+            </ui-button>
+        </header>
+        <div class="panel-body flex flex-col gap-1 p-2">
+            @if (isLoading()) {
+                <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />
+            } @else {
+                @for (skill of skills(); track skill.idSkill) {
+                    <button
+                        type="button"
+                        class="skill-row flex flex-col items-start gap-1 p-2"
+                        [class.skill-row--active]="skill.idSkill === selected()?.idSkill"
+                        data-testid="skill-row"
+                        (click)="onSelect(skill)"
+                    >
+                        <span class="flex items-center gap-2">
+                            <span class="font-semibold">{{ skill.name }}</span>
+                            <ui-badge [value]="badgeKey(skill) | translate" />
+                        </span>
+                        @if (skill.description) {
+                            <span class="ui-color-text-muted text-left">
+                                {{ skill.description }}
+                            </span>
+                        }
+                    </button>
+                }
+            }
+        </div>
+    </section>
+
+    @if (selected(); as skill) {
+        <section class="panel grow" [formGroup]="form" data-testid="skill-editor">
+            <header class="panel-head">
+                <div class="panel-head-l">
+                    <div class="panel-title">{{ skill.name }}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                    @if (skill.isBuiltin) {
+                        <ui-button
+                            variant="text"
+                            size="small"
+                            uiConfirm
+                            [confirmText]="'SKILL.RESTORE_CONFIRM' | translate"
+                            (confirmed)="onRestore()"
+                            data-testid="skill-restore"
+                        >
+                            <tabler-icon icon="restore" [size]="14" />
+                            {{ 'SKILL.RESTORE' | translate }}
+                        </ui-button>
+                    } @else {
+                        <ui-button
+                            variant="text"
+                            severity="danger"
+                            size="small"
+                            uiConfirm
+                            [confirmText]="'SKILL.DELETE_CONFIRM' | translate"
+                            (confirmed)="onDelete()"
+                            data-testid="skill-delete"
+                        >
+                            <tabler-icon icon="trash" [size]="14" />
+                            {{ 'SKILL.DELETE' | translate }}
+                        </ui-button>
+                    }
+                </div>
+            </header>
+            <div class="panel-body flex flex-col gap-4">
+                <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('name')">
+                    <label for="skillName">{{ 'SKILL.NAME' | translate }}</label>
+                    <input id="skillName" uiInput type="text" formControlName="name" />
+                </div>
+                <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('description')">
+                    <label for="skillDescription">{{ 'SKILL.DESCRIPTION' | translate }}</label>
+                    <input
+                        id="skillDescription"
+                        uiInput
+                        type="text"
+                        formControlName="description"
+                    />
+                </div>
+                <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('content')">
+                    <label for="skillContent">{{ 'SKILL.CONTENT' | translate }}</label>
+                    <textarea
+                        id="skillContent"
+                        uiTextarea
+                        rows="18"
+                        class="skill-content"
+                        formControlName="content"
+                    ></textarea>
+                </div>
+            </div>
+        </section>
+    }
+</div>

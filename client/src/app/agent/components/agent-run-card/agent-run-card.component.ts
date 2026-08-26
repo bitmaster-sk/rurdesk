@@ -1,4 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    computed,
+    inject,
+    input,
+    output,
+    signal
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { SkillApi } from 'src/app/shared/api/skill.api.service';
+import { Skill } from 'src/app/shared/model/skill.model';
+import { AgentRunStageSkills } from '../../model/agent-run-skills.model';
+import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
+import { UiPopoverComponent } from 'src/app/ui/components/popover/popover.component';
+import { AgentRunApi } from '../../api/agent-run.api.service';
 import { AgentRun, AgentStageProgress, AgentStageStatus } from '../../model/agent-run.model';
 import {
     AgentPhase,
@@ -6,7 +23,7 @@ import {
     PHASE_LABELS,
     PhaseBadgeSeverity
 } from '../../model/agent-phase.enum';
-import { STAGE_LABELS } from '../../model/agent-stage.enum';
+import { AgentStage, STAGE_LABELS } from '../../model/agent-stage.enum';
 import { User } from 'src/app/auth/model/user.model';
 import { HostType } from 'src/app/project/model/git-integration.model';
 import { prMrTermKey } from 'src/app/issue/util/pr-mr-term';
@@ -62,6 +79,26 @@ export class AgentRunCardComponent {
     public readonly cancelRun = output<void>();
     public readonly continueRun = output<void>();
     public readonly restartRun = output<void>();
+
+    private readonly agentRunApi = inject(AgentRunApi);
+    private readonly skillApi = inject(SkillApi);
+    private readonly toast = inject(ToastNotificationService);
+    private readonly destroyRef = inject(DestroyRef);
+
+    protected readonly isSkillsPopoverOpen = signal(false);
+    protected readonly runSkills = signal<AgentRunStageSkills[]>([]);
+    protected readonly skillCatalog = signal<Skill[]>([]);
+    private readonly stageStatus = signal<Record<string, UiSaveState>>({});
+
+    protected readonly canEditSkills = computed(() => {
+        const phase = this.run()?.phase;
+        return (
+            phase !== undefined &&
+            phase !== AgentPhase.Done &&
+            phase !== AgentPhase.Failed &&
+            phase !== AgentPhase.Cancelled
+        );
+    });
 
     protected readonly AgentPhase = AgentPhase;
     protected readonly phaseSeverity = PHASE_BADGE_SEVERITY;
@@ -175,5 +212,90 @@ export class AgentRunCardComponent {
     protected onRestartClick(event: Event): void {
         event.stopPropagation();
         this.restartRun.emit();
+    }
+
+    protected onSkillsPopoverClosed(): void {
+        this.isSkillsPopoverOpen.set(false);
+    }
+
+    protected onToggleSkillsPopover(popover: UiPopoverComponent, event: Event): void {
+        const willOpen = !this.isSkillsPopoverOpen();
+        this.isSkillsPopoverOpen.set(willOpen);
+        popover.toggle(event);
+        if (willOpen) {
+            this.onOpenSkills();
+        }
+    }
+
+    protected onOpenSkills(): void {
+        const idRun = this.run()?.idRun;
+        if (idRun === undefined) {
+            return;
+        }
+        this.skillApi
+            .load$()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: catalog => this.skillCatalog.set(catalog),
+                error: () => this.toast.showError('AGENT.SKILLS.LOAD_ERROR')
+            });
+        this.loadRunSkills(idRun);
+    }
+
+    protected skillStageLabel(stage: AgentStage): string {
+        return STAGE_LABELS[stage] ?? stage;
+    }
+
+    protected stageSaveStatus(stage: string): UiSaveState {
+        return this.stageStatus()[stage] ?? UiSaveState.Idle;
+    }
+
+    protected isSkillOn(stage: AgentRunStageSkills, idSkill: number): boolean {
+        return stage.idsSkill.includes(idSkill);
+    }
+
+    protected onToggleSkill(stage: AgentRunStageSkills, idSkill: number): void {
+        const idRun = this.run()?.idRun;
+        if (idRun === undefined || stage.dispatched) {
+            return;
+        }
+        const next = stage.idsSkill.includes(idSkill)
+            ? stage.idsSkill.filter(idPlanned => idPlanned !== idSkill)
+            : [...stage.idsSkill, idSkill];
+
+        this.setStageStatus(stage.name, UiSaveState.Saving);
+        this.agentRunApi
+            .patchAgentRunSkills$(idRun, stage.name, next)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: payload => {
+                    this.runSkills.set(payload);
+                    this.setStageStatus(stage.name, UiSaveState.Saved);
+                },
+                error: (err: { status?: number }) => {
+                    this.setStageStatus(stage.name, UiSaveState.Error);
+                    if (err?.status === 409) {
+                        // The scheduler dispatched the stage between render and click.
+                        this.loadRunSkills(idRun);
+                        this.toast.showError('AGENT.RUN_SKILLS.RACE_ERROR');
+                        return;
+                    }
+                    this.toast.showError('AGENT.RUN_SKILLS.SAVE_ERROR');
+                }
+            });
+    }
+
+    private loadRunSkills(idRun: number): void {
+        this.agentRunApi
+            .getAgentRunSkills$(idRun)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: payload => this.runSkills.set(payload),
+                error: () => this.toast.showError('AGENT.RUN_SKILLS.LOAD_ERROR')
+            });
+    }
+
+    private setStageStatus(stage: string, status: UiSaveState): void {
+        this.stageStatus.update(all => ({ ...all, [stage]: status }));
     }
 }

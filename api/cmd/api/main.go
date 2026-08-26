@@ -30,6 +30,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := injector.GetSkillService().SyncBuiltins(ctx); err != nil {
+		log.Fatal(err)
+	}
+
 	injector.GetIssueService().StartIdempotencyCleanup(ctx)
 	// MCP is no longer a separate listener — it is mounted on the same engine
 	// (/mcp) and served by app.Start below.

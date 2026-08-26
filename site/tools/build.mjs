@@ -45,6 +45,7 @@ export const SIDEBAR = [
         section: 'Agentic workflow',
         pages: [
             { src: 'agentic-workflow/agents.md', out: 'agents.html', nav: 'Bots & agent runs' },
+            { src: 'using-the-tracker/agent-skills.md', out: 'agent-skills.html', nav: 'Agent skills' },
             { src: 'agentic-workflow/gateway.md', out: 'gateway.html', nav: 'Agent gateway' }
         ]
     }

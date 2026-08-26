@@ -1,0 +1,19 @@
+:host {
+    display: block;
+}
+
+.agent-dock__chip {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--ui-surface-300);
+    border-radius: 999px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.agent-dock__chip--on {
+    border-color: var(--ui-brand-500);
+    background: var(--ui-select-option-selected-bg);
+    color: var(--ui-select-option-selected-fg);
+}

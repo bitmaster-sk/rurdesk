@@ -57,6 +57,7 @@ import {
     IconCategory
 } from '@tabler/icons-angular';
 import { WorkflowEventStateMapComponent } from './components/workflow-event-state-map/workflow-event-state-map.component';
+import { AgentSkillMatrixComponent } from './components/agent-skill-matrix/agent-skill-matrix.component';
 import { AgentModule } from '../agent/agent.module';
 import { CommandRegistryService } from '../core/command/command-registry.service';
 import { NavigationCommandProvider } from './command/navigation.command-provider';
@@ -82,7 +83,8 @@ import { PeopleCommandProvider } from './command/people.command-provider';
         WorkloadBarListComponent,
         GitIntegrationListComponent,
         GitIntegrationSettingsComponent,
-        WorkflowEventStateMapComponent
+        WorkflowEventStateMapComponent,
+        AgentSkillMatrixComponent
     ],
     imports: [
         CoreModule,

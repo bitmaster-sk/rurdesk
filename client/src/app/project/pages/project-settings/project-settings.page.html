@@ -158,6 +158,17 @@
                     <app-workflow-event-state-map [project]="project" />
                 </div>
             </section>
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="sparkles" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'AGENT.SKILLS.TITLE' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-agent-skill-matrix [project]="project" />
+                </div>
+            </section>
             }
         </div>
     </div>

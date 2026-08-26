@@ -317,6 +317,20 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 			if ref, ok := ctx["approvedMockupRef"].(string); ok {
 				task.ApprovedMockupRef = ref
 			}
+			if rawSkills, ok := ctx["skills"].([]any); ok {
+				for _, raw := range rawSkills {
+					m, ok := raw.(map[string]any)
+					if !ok {
+						continue
+					}
+					name := stringField(m, "name")
+					content := stringField(m, "content")
+					if name == "" || content == "" {
+						continue
+					}
+					task.Skills = append(task.Skills, Skill{Name: name, Content: content})
+				}
+			}
 			if comments, ok := ctx["pendingComments"].([]any); ok {
 				for _, raw := range comments {
 					m, ok := raw.(map[string]any)

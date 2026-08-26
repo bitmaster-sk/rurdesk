@@ -65,6 +65,13 @@ describe('UiSelectComponent (browser)', () => {
         expect(triggerText(fixture.nativeElement)).toContain('Pick one');
     });
 
+    it('renders nothing beyond the trigger', () => {
+        const fixture = setup();
+        const host = fixture.nativeElement.querySelector('ui-select') as HTMLElement;
+
+        expect(host.textContent?.trim()).toBe('Pick one');
+    });
+
     it('resolves the label reactively even when the value is set before options load', () => {
         const fixture = TestBed.createComponent(HostComponent);
         // value first, options empty
