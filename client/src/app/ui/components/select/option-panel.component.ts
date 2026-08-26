@@ -24,49 +24,7 @@ import {
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,
-    template: `
-        <ul
-            class="ui-select-panel__list"
-            [attr.role]="listRole()"
-            [attr.aria-multiselectable]="multiselectable() ? true : null"
-            [id]="listId()"
-        >
-            @for (option of visibleOptions(); track $index; let i = $index) {
-                <li
-                    #optionEl
-                    class="ui-select-panel__option"
-                    role="option"
-                    [id]="optionIdPrefix() + '_opt_' + i"
-                    [class.ui-select-panel__option--highlighted]="i === highlightedIndex()"
-                    [class.ui-select-panel__option--selected]="isOptionSelected()(option)"
-                    [attr.aria-selected]="isOptionSelected()(option)"
-                    (mousedown)="$event.preventDefault()"
-                    (click)="pick.emit(option)"
-                    (mouseenter)="highlightRequest.emit(i)"
-                >
-                    @if (showCheckbox()) {
-                        <span
-                            class="ui-select-panel__checkbox"
-                            [class.ui-select-panel__checkbox--checked]="isOptionSelected()(option)"
-                            aria-hidden="true"
-                        ></span>
-                    }
-                    @if (itemTemplate()) {
-                        <ng-container
-                            [ngTemplateOutlet]="itemTemplate()!"
-                            [ngTemplateOutletContext]="{ $implicit: option }"
-                        />
-                    } @else {
-                        {{ getOptionLabel()(option) }}
-                    }
-                </li>
-            } @empty {
-                <li class="ui-select-panel__empty">
-                    {{ (isFiltered() ? emptyFilterMessage() : emptyMessage()) || '' }}
-                </li>
-            }
-        </ul>
-    `
+    templateUrl: './option-panel.component.html'
 })
 export class UiOptionPanelComponent<T> {
     public readonly visibleOptions = input.required<readonly T[]>();
@@ -74,6 +32,10 @@ export class UiOptionPanelComponent<T> {
     public readonly isOptionSelected = input<(option: T) => boolean>(() => false);
     public readonly highlightedIndex = input<number>(-1);
     public readonly itemTemplate = input<TemplateRef<{ $implicit: T }> | undefined>();
+    public readonly actionsTemplate = input<
+        TemplateRef<{ $implicit: T; openDock: (kind: string) => void }> | undefined
+    >();
+    public readonly openDock = input<(option: T, kind: string) => void>(() => {});
     public readonly emptyMessage = input<string>();
     public readonly emptyFilterMessage = input<string>();
     public readonly isFiltered = input<boolean>(false);
@@ -90,6 +52,10 @@ export class UiOptionPanelComponent<T> {
     public readonly highlightRequest = output<number>();
 
     private readonly optionEls = viewChildren<ElementRef<HTMLLIElement>>('optionEl');
+
+    protected bindOpenDock(option: T): (kind: string) => void {
+        return (kind: string) => this.openDock()(option, kind);
+    }
 
     public constructor() {
         // Scroll the highlighted row into view whenever the index changes.

@@ -1,0 +1,102 @@
+<div
+    #trigger
+    class="ui-select-trigger"
+    role="combobox"
+    aria-haspopup="listbox"
+    [id]="inputId()"
+    [class.ui-select-trigger--sm]="size() === 'small'"
+    [class.ui-select-trigger--lg]="size() === 'large'"
+    [class.ui-select-trigger--disabled]="isDisabled()"
+    [class.ui-select-trigger--open]="isOpen()"
+    [attr.tabindex]="isDisabled() ? -1 : 0"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="isOpen() ? baseId + '_list' : null"
+    [attr.aria-activedescendant]="activeDescendantId()"
+    [attr.aria-disabled]="isDisabled()"
+    (click)="onTriggerClick()"
+    (keydown)="onKeydown($event, false)"
+    (blur)="onTouched()"
+>
+    <span class="ui-select-trigger__value">
+        @if (selectedOption(); as option) {
+            @if (selectedItemTpl()) {
+                <ng-container
+                    [ngTemplateOutlet]="selectedItemTpl()!"
+                    [ngTemplateOutletContext]="{ $implicit: option }"
+                />
+            } @else {
+                {{ getOptionLabel(option) }}
+            }
+        } @else {
+            <span class="ui-select-trigger__placeholder">{{ placeholder() }}</span>
+        }
+    </span>
+
+    @if (showClear() && selectedOption()) {
+        <button
+            type="button"
+            class="ui-select-trigger__clear"
+            [attr.aria-label]="'UI.CLEAR' | translate"
+            (click)="onClear($event)"
+        >
+            <tabler-icon icon="x" [size]="14" />
+        </button>
+    }
+    <tabler-icon class="ui-select-trigger__chevron" icon="chevron-down" [size]="chevronSize()" />
+</div>
+
+<ng-template #panelTpl>
+    <!-- The panel renders in a body-level overlay, so without this a pointerdown
+         on an option counts as an outside click for a surrounding ui-popover. -->
+    <div
+        class="ui-select-panel"
+        [class.ui-select-panel--docked]="dockState()"
+        [class.ui-select-panel--dock-below]="isDockBelow()"
+        (pointerdown)="$event.stopPropagation()"
+    >
+        <div class="ui-select-panel__main">
+            @if (filter()) {
+                <div class="ui-select-panel__filter-wrap">
+                    <input
+                        #filterInput
+                        class="ui-input ui-select-panel__filter"
+                        type="text"
+                        [placeholder]="filterPlaceholder() || ''"
+                        [attr.aria-controls]="baseId + '_list'"
+                        [attr.aria-activedescendant]="activeDescendantId()"
+                        (input)="nav.setFilter(filterInput.value)"
+                        (keydown)="onKeydown($event, true)"
+                    />
+                </div>
+            }
+            <ui-option-panel
+                [visibleOptions]="nav.visibleOptions()"
+                [getOptionLabel]="boundGetOptionLabel"
+                [isOptionSelected]="boundIsOptionSelected"
+                [highlightedIndex]="nav.highlightedIndex()"
+                [itemTemplate]="itemTpl()"
+                [actionsTemplate]="optionActionsTpl()"
+                [openDock]="boundOpenDock"
+                [emptyMessage]="emptyMessage()"
+                [emptyFilterMessage]="emptyFilterMessage()"
+                [isFiltered]="!!nav.filterText()"
+                [listId]="baseId + '_list'"
+                [optionIdPrefix]="baseId"
+                (pick)="selectOption($event)"
+                (highlightRequest)="nav.setHighlight($event)"
+            />
+        </div>
+        @if (dockState(); as dock) {
+            <div class="ui-select-panel__dock">
+                <ng-container
+                    [ngTemplateOutlet]="dockTpl()!"
+                    [ngTemplateOutletContext]="{
+                        $implicit: dock.option,
+                        kind: dock.kind,
+                        close: boundCloseDock
+                    }"
+                />
+            </div>
+        }
+    </div>
+</ng-template>

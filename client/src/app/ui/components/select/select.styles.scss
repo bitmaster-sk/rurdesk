@@ -116,6 +116,68 @@ ui-multiselect {
     overflow: hidden;
 }
 
+// ─── Option-action icons + side dock ───────────────────────────────────────
+.ui-select-panel--docked {
+    display: flex;
+}
+
+.ui-select-panel__main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.ui-select-panel__dock {
+    flex: 1 1 auto;
+    min-width: 15rem;
+    max-width: 20rem;
+    border-left: 1px solid var(--ui-select-panel-border);
+    background: var(--ui-select-panel-bg);
+    overflow-y: auto;
+    max-height: 20rem;
+}
+
+.ui-select-panel--dock-below {
+    flex-direction: column;
+}
+
+.ui-select-panel--dock-below .ui-select-panel__dock {
+    border-left: none;
+    border-top: 1px solid var(--ui-select-panel-border);
+    max-width: none;
+}
+
+// The row must be flex for the icons to reach its right edge.
+.ui-select-panel__option:has(.ui-select-panel__actions) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ui-select-panel__option:has(.ui-select-panel__actions) > *:not(.ui-select-panel__actions) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ui-select-panel__actions {
+    display: none;
+    flex: 0 0 auto;
+    margin-left: auto;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.ui-select-panel__option:hover .ui-select-panel__actions,
+.ui-select-panel__option--highlighted .ui-select-panel__actions {
+    display: inline-flex;
+}
+
+@media (pointer: coarse) {
+    .ui-select-panel__actions {
+        display: inline-flex;
+    }
+}
+
 .ui-select-panel__filter-wrap {
     padding: 0.5rem;
 }

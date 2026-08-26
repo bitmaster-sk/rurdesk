@@ -46,96 +46,7 @@ type OptionRecord = Record<string, unknown>;
             multi: true
         }
     ],
-    template: `
-        <div
-            #trigger
-            class="ui-select-trigger"
-            role="combobox"
-            aria-haspopup="listbox"
-            [id]="inputId()"
-            [class.ui-select-trigger--sm]="size() === 'small'"
-            [class.ui-select-trigger--lg]="size() === 'large'"
-            [class.ui-select-trigger--disabled]="isDisabled()"
-            [class.ui-select-trigger--open]="isOpen()"
-            [attr.tabindex]="isDisabled() ? -1 : 0"
-            [attr.aria-expanded]="isOpen()"
-            [attr.aria-controls]="isOpen() ? baseId + '_list' : null"
-            [attr.aria-activedescendant]="activeDescendantId()"
-            [attr.aria-disabled]="isDisabled()"
-            (click)="onTriggerClick()"
-            (keydown)="onKeydown($event, false)"
-            (blur)="onTouched()"
-        >
-            <span class="ui-select-trigger__value">
-                @if (selectedOption(); as option) {
-                    @if (selectedItemTpl()) {
-                        <ng-container
-                            [ngTemplateOutlet]="selectedItemTpl()!"
-                            [ngTemplateOutletContext]="{ $implicit: option }"
-                        />
-                    } @else {
-                        {{ getOptionLabel(option) }}
-                    }
-                } @else {
-                    <span class="ui-select-trigger__placeholder">{{ placeholder() }}</span>
-                }
-            </span>
-
-            @if (showClear() && selectedOption()) {
-                <button
-                    type="button"
-                    class="ui-select-trigger__clear"
-                    [attr.aria-label]="'UI.CLEAR' | translate"
-                    (click)="onClear($event)"
-                >
-                    <tabler-icon icon="x" [size]="14" />
-                </button>
-            }
-            <tabler-icon
-                class="ui-select-trigger__chevron"
-                icon="chevron-down"
-                [size]="chevronSize()"
-            />
-        </div>
-
-        <ng-template #panelTpl>
-            <!-- stopPropagation: the panel renders in a body-level CDK overlay,
-                 physically outside any surrounding <ui-popover>. Without this,
-                 a pointerdown on an option counts as an "outside" click for that
-                 popover and closes it before the pick registers (z-index ≠ dismissal).
-                 Harmless for non-nested selects (CDK's own outside detection is unaffected). -->
-            <div class="ui-select-panel" (pointerdown)="$event.stopPropagation()">
-                @if (filter()) {
-                    <div class="ui-select-panel__filter-wrap">
-                        <input
-                            #filterInput
-                            class="ui-input ui-select-panel__filter"
-                            type="text"
-                            [placeholder]="filterPlaceholder() || ''"
-                            [attr.aria-controls]="baseId + '_list'"
-                            [attr.aria-activedescendant]="activeDescendantId()"
-                            (input)="nav.setFilter(filterInput.value)"
-                            (keydown)="onKeydown($event, true)"
-                        />
-                    </div>
-                }
-                <ui-option-panel
-                    [visibleOptions]="nav.visibleOptions()"
-                    [getOptionLabel]="boundGetOptionLabel"
-                    [isOptionSelected]="boundIsOptionSelected"
-                    [highlightedIndex]="nav.highlightedIndex()"
-                    [itemTemplate]="itemTpl()"
-                    [emptyMessage]="emptyMessage()"
-                    [emptyFilterMessage]="emptyFilterMessage()"
-                    [isFiltered]="!!nav.filterText()"
-                    [listId]="baseId + '_list'"
-                    [optionIdPrefix]="baseId"
-                    (pick)="selectOption($event)"
-                    (highlightRequest)="nav.setHighlight($event)"
-                />
-            </div>
-        </ng-template>
-    `
+    templateUrl: './select.component.html'
 })
 export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     public readonly options = input.required<readonly T[], readonly T[] | null | undefined>({
@@ -166,6 +77,8 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
      *  dynamic — hence `unknown` (consumers narrow). */
     public readonly valueChanged = output<{ originalEvent?: Event; value: unknown }>();
 
+    public readonly opened = output<void>();
+
     private readonly overlay = inject(Overlay);
     private readonly vcr = inject(ViewContainerRef);
 
@@ -174,12 +87,20 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     protected readonly selectedItemTpl =
         contentChild<TemplateRef<{ $implicit: T }>>('selectedItem');
     protected readonly itemTpl = contentChild<TemplateRef<{ $implicit: T }>>('item');
+    protected readonly optionActionsTpl =
+        contentChild<TemplateRef<{ $implicit: T; openDock: (kind: string) => void }>>(
+            'optionActions'
+        );
+    protected readonly dockTpl =
+        contentChild<TemplateRef<{ $implicit: T; kind: string; close: () => void }>>('dock');
 
     /** CVA model value (resolved option value, i.e. optionValue or whole option). */
     private readonly value = signal<unknown>(null);
     private readonly disabledFromForm = signal(false);
     protected readonly isDisabled = computed(() => this.disabled() || this.disabledFromForm());
     protected readonly isOpen = signal(false);
+    protected readonly dockState = signal<{ option: T; kind: string } | null>(null);
+    protected readonly isDockBelow = signal(false);
 
     /** Stable per-instance id base for ARIA wiring across the overlay boundary. */
     protected readonly baseId = `ui-select-${nextId()}`;
@@ -204,6 +125,9 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     protected readonly boundGetOptionLabel = (option: T): string => this.getOptionLabel(option);
     protected readonly boundIsOptionSelected = (option: T): boolean =>
         isEqual(this.getOptionValue(option), this.value());
+    protected readonly boundOpenDock = (option: T, kind: string): void =>
+        this.openDock(option, kind);
+    protected readonly boundCloseDock = (): void => this.closeDock();
 
     private overlayRef: OverlayRef | null = null;
     private onChangeFn: (value: unknown) => void = () => {};
@@ -240,6 +164,26 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
             return;
         }
         this.isOpen() ? this.close() : this.open();
+    }
+
+    protected openDock(option: T, kind: string): void {
+        // Measured per call, not a media query: in the right sidebar a side dock
+        // overflows off-screen at widths no media query would catch.
+        const pane = this.overlayRef?.overlayElement;
+        if (pane) {
+            const room = document.documentElement.clientWidth - pane.getBoundingClientRect().right;
+            this.isDockBelow.set(room < DOCK_MIN_SIDE_WIDTH);
+        }
+        this.dockState.set({ option, kind });
+    }
+
+    protected closeDock(): void {
+        this.dockState.set(null);
+        this.isDockBelow.set(false);
+    }
+
+    public closePanel(): void {
+        this.close();
     }
 
     protected selectOption(option: T, originalEvent?: Event): void {
@@ -294,7 +238,12 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
                 }
                 break;
             case 'Escape':
-                if (this.isOpen()) {
+                // The dock is the innermost layer and closes first, so Escape never
+                // dismisses the panel out from under an open dock.
+                if (this.dockState()) {
+                    event.preventDefault();
+                    this.closeDock();
+                } else if (this.isOpen()) {
                     event.preventDefault();
                     this.close();
                 }
@@ -375,6 +324,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
 
         this.isOpen.set(true);
         this.nav.initHighlight();
+        this.opened.emit();
 
         if (this.filter()) {
             setTimeout(() => {
@@ -392,6 +342,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         this.overlayRef.dispose();
         this.overlayRef = null;
         this.isOpen.set(false);
+        this.closeDock();
         this.nav.reset();
         this.onTouched();
         if (restoreFocus) {
@@ -422,6 +373,9 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         return this.nav.visibleOptions().indexOf(selected);
     }
 }
+
+/** Below this much free space to the right of the panel, the dock stacks under it. */
+const DOCK_MIN_SIDE_WIDTH = 260;
 
 let idCounter = 0;
 function nextId(): number {
