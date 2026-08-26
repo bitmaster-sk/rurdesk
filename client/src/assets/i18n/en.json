@@ -1,4 +1,43 @@
 {
+    "SKILL": {
+        "TITLE": "Agent skills",
+        "NEW": "New skill",
+        "NAME": "Name",
+        "DESCRIPTION": "Description",
+        "CONTENT": "Content (Markdown)",
+        "RESTORE": "Restore original",
+        "RESTORE_CONFIRM": "Restore the shipped content? Your edits will be discarded.",
+        "DELETE": "Delete",
+        "DELETE_CONFIRM": "Delete this skill? Projects using it will lose it.",
+        "BADGE": {
+            "BUILTIN": "builtin",
+            "EDITED": "edited",
+            "CUSTOM": "custom"
+        },
+        "DEFAULT_NAME": "New skill",
+        "DEFAULT_CONTENT": "# New skill\n\nDescribe the instructions for the agent here.",
+        "LOAD_ERROR": "Failed to load skills",
+        "SAVE_ERROR": "Failed to save skill"
+    },
+    "USER_DROPDOWN": {
+        "AGENT_IDLE": "idle",
+        "AGENT_BUSY": "working · {{queue}} queued"
+    },
+    "AGENT_DOCK": {
+        "SKILLS_TITLE": "{{name}} — skills for this run",
+        "PREFILLED": "prefilled from project",
+        "ASSIGN": "Assign",
+        "CANCEL": "Cancel",
+        "INFO_TITLE": "{{name}} — workload",
+        "RUNNING": "Now running",
+        "QUEUE": "Queued",
+        "COMPLETED_TODAY": "Completed today",
+        "TOKENS_7D": "Tokens (7 days)",
+        "AVG_DURATION": "Avg run duration",
+        "FAILED_7D": "Failed attempts (7 days)",
+        "ASSIGN_ERROR": "Failed to assign the agent",
+        "NONE": "none"
+    },
     "ONBOARDING": {
         "WELCOME": "Welcome",
         "TITLE": "Let's create your first project",
@@ -149,6 +188,21 @@
             "NO_MAPPING": "No mapping",
             "LOAD_ERROR": "Failed to load phase-state mappings.",
             "SAVE_ERROR": "Failed to save phase-state mappings."
+        },
+        "SKILLS": {
+            "TITLE": "Agent skills",
+            "DESCRIPTION": "Pick which instructions each stage of an agent run gets. Skills are injected into the agent's prompt; the catalog is managed by an instance admin.",
+            "SKILL": "Skill",
+            "LOAD_ERROR": "Failed to load skills",
+            "SAVE_ERROR": "Failed to save skills"
+        },
+        "RUN_SKILLS": {
+            "CHIP": "Skills",
+            "TITLE": "Skills for this run",
+            "DISPATCHED": "Stage already started — skills locked",
+            "RACE_ERROR": "This stage just started; skills were not changed",
+            "LOAD_ERROR": "Failed to load run skills",
+            "SAVE_ERROR": "Failed to save run skills"
         }
     },
     "QUALITY": {
