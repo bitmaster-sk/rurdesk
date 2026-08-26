@@ -1,10 +1,27 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import {
+    AbstractControl,
+    FormBuilder,
+    FormControl,
+    FormGroup,
+    ValidationErrors,
+    ValidatorFn,
+    Validators
+} from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
 import { AuthApi } from '../api/auth.api.service';
 import { SessionService } from '../service/session.service';
+
+interface RegisterForm {
+    name: FormControl<string>;
+    email: FormControl<string>;
+    credentials: FormGroup<{
+        password: FormControl<string>;
+        password2: FormControl<string>;
+    }>;
+}
 
 @Component({
     selector: 'app-register',
@@ -19,7 +36,7 @@ export class RegisterComponent implements OnInit {
     private readonly authApi = inject(AuthApi);
     private readonly session = inject(SessionService);
 
-    public readonly form: FormGroup = this.buildForm();
+    public readonly form: FormGroup<RegisterForm> = this.buildForm();
     public readonly errorKey = signal<string | null>(null);
 
     public ngOnInit(): void {
@@ -38,13 +55,15 @@ export class RegisterComponent implements OnInit {
             return;
         }
 
-        const values = this.form.value;
+        const values = this.form.getRawValue();
         this.authApi
-            .register$({
-                name: values.name,
-                email: values.email,
-                password: values.credentials.password
-            })
+            .register$(
+                {
+                    name: values.name,
+                    email: values.email,
+                    password: values.credentials.password
+                }
+            )
             .pipe(switchMap(() => this.authApi.login$(values.email, values.credentials.password)))
             .subscribe({
                 next: token => this.session.start(token),
@@ -67,36 +86,42 @@ export class RegisterComponent implements OnInit {
         this.errorKey.set('REGISTER.FAILED');
     }
 
-    private buildForm(): FormGroup {
+    private buildForm(): FormGroup<RegisterForm> {
+        const credentials = this.fb.group(
+            {
+                password: this.fb.nonNullable.control('', [
+                    Validators.required,
+                    Validators.minLength(5),
+                    Validators.maxLength(100)
+                ]),
+                password2: this.fb.nonNullable.control('', [
+                    Validators.required,
+                    Validators.minLength(5),
+                    Validators.maxLength(100)
+                ])
+            },
+            { validators: [RegisterComponent.confirmPasswordCheck] }
+        );
+
         return this.fb.group({
-            name: this.fb.control(null, [Validators.required, Validators.maxLength(250)]),
-            email: this.fb.control(null, [
+            name: this.fb.nonNullable.control('', [
+                Validators.required,
+                Validators.maxLength(250)
+            ]),
+            email: this.fb.nonNullable.control('', [
                 Validators.required,
                 Validators.email,
                 Validators.maxLength(250)
             ]),
-            credentials: this.fb.group(
-                {
-                    password: this.fb.control(null, [
-                        Validators.required,
-                        Validators.minLength(5),
-                        Validators.maxLength(100)
-                    ]),
-                    password2: this.fb.control(null, [
-                        Validators.required,
-                        Validators.minLength(5),
-                        Validators.maxLength(100)
-                    ])
-                },
-                { validators: [RegisterComponent.confirmPasswordCheck] }
-            )
+            credentials
         });
     }
 
-    private static confirmPasswordCheck(group: FormGroup): ValidationErrors | null {
-        const password = group.get('password')?.value;
-        const password2 = group.get('password2')?.value;
+    private static confirmPasswordCheck: ValidatorFn = (
+        group: AbstractControl
+    ): ValidationErrors | null => {
+        const credentials = group.value as { password: string; password2: string };
 
-        return password === password2 ? null : { differentPasswords: true };
-    }
+        return credentials.password === credentials.password2 ? null : { differentPasswords: true };
+    };
 }

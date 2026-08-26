@@ -1,5 +1,5 @@
 import { Component, inject, input, OnDestroy, OnInit, output } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
@@ -24,7 +24,10 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
 
     public readonly cancelled = output<void>();
 
-    public form: FormGroup = new FormGroup({});
+    public form!: FormGroup<{
+        idProject: FormControl<number | null>;
+        name: FormControl<string>;
+    }>;
 
     private subscription = new Subscription();
 
@@ -32,8 +35,8 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
 
     public ngOnInit(): void {
         this.form = this.fb.group({
-            idProject: this.fb.control(this.project().idProject),
-            name: this.fb.control(this.project().name, {
+            idProject: this.fb.control<number | null>(this.project().idProject),
+            name: this.fb.nonNullable.control(this.project().name, {
                 validators: [Validators.required, Validators.maxLength(250)],
                 updateOn: this.saveOnBlur() ? 'blur' : 'change'
             })
@@ -46,7 +49,9 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
                     // must not fire a redundant PUT (and flash the save chip).
                     .pipe(
                         filter(
-                            () => this.form.valid && this.form.value.name !== this.project().name
+                            () =>
+                                this.form.valid &&
+                                this.form.controls.name.value !== this.project().name
                         )
                     )
                     .subscribe(() => this.onSave())
@@ -71,6 +76,6 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     }
 
     private editedProject(): Project {
-        return { ...this.project(), name: this.form.value.name };
+        return { ...this.project(), name: this.form.controls.name.value };
     }
 }

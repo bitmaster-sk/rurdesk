@@ -7,7 +7,7 @@ import {
     signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, filter } from 'rxjs/operators';
 import { AuthApi } from 'src/app/auth/api/auth.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
@@ -38,34 +38,43 @@ export class UserSettingsPage implements OnInit {
     /** Live avatar background — reflects the colour control so the preview updates as you pick/shuffle. */
     public readonly avatarColor = signal<string>('');
 
-    public profileForm!: FormGroup;
-    public passwordForm!: FormGroup;
+    public profileForm!: FormGroup<{
+        name: FormControl<string>;
+        email: FormControl<string | null>;
+        colorAvatarBg: FormControl<string | null>;
+    }>;
+    public passwordForm!: FormGroup<{
+        currentPassword: FormControl<string>;
+        newPassword: FormControl<string>;
+    }>;
 
     public ngOnInit(): void {
         const user = this.currentUser();
         this.avatarColor.set(user?.colorAvatarBg ?? '');
         this.profileForm = this.fb.group({
-            name: [
-                user?.name,
-                { validators: [Validators.required, Validators.maxLength(250)], updateOn: 'blur' }
-            ],
+            name: this.fb.nonNullable.control(user?.name ?? '', {
+                validators: [Validators.required, Validators.maxLength(250)],
+                updateOn: 'blur'
+            }),
             // Display only — the email is the login identifier, so changing it
             // needs its own flow (uniqueness, confirmation, session impact) and
             // updateUser deliberately has no email parameter. The input is
             // readonly rather than disabled so it stays selectable and copyable;
             // validators would be theatre on a value the user cannot edit.
-            email: [user?.email],
-            colorAvatarBg: [user?.colorAvatarBg]
+            email: this.fb.control<string | null>(user?.email ?? null),
+            colorAvatarBg: this.fb.control<string | null>(user?.colorAvatarBg ?? null)
         });
         this.passwordForm = this.fb.group({
-            currentPassword: [
-                '',
-                [Validators.required, Validators.minLength(5), Validators.maxLength(100)]
-            ],
-            newPassword: [
-                '',
-                [Validators.required, Validators.minLength(5), Validators.maxLength(100)]
-            ]
+            currentPassword: this.fb.nonNullable.control('', [
+                Validators.required,
+                Validators.minLength(5),
+                Validators.maxLength(100)
+            ]),
+            newPassword: this.fb.nonNullable.control('', [
+                Validators.required,
+                Validators.minLength(5),
+                Validators.maxLength(100)
+            ])
         });
 
         // Auto-save the name on blur — only when it's valid and actually changed.
@@ -82,7 +91,7 @@ export class UserSettingsPage implements OnInit {
         const colorControl = this.profileForm.get('colorAvatarBg')!;
         colorControl.valueChanges
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((value: string) => this.avatarColor.set(value));
+            .subscribe(value => this.avatarColor.set(value ?? ''));
         colorControl.valueChanges
             .pipe(
                 debounceTime(300),
@@ -99,8 +108,9 @@ export class UserSettingsPage implements OnInit {
     public onSaveUser(source: 'name' | 'color' = 'name'): void {
         const status = source === 'color' ? this.colorSaveStatus : this.nameSaveStatus;
         status.set(UiSaveState.Saving);
+        const formValue = this.profileForm.getRawValue();
         this.authStore
-            .updateUser$(this.profileForm.value.name, this.profileForm.value.colorAvatarBg)
+            .updateUser$(formValue.name, formValue.colorAvatarBg ?? undefined)
             .subscribe({
                 next: user => {
                     this.profileForm.patchValue(
@@ -118,7 +128,7 @@ export class UserSettingsPage implements OnInit {
     }
 
     public onChangePassword(): void {
-        const { currentPassword, newPassword } = this.passwordForm.value;
+        const { currentPassword, newPassword } = this.passwordForm.getRawValue();
         this.authApi.changePassword$(currentPassword, newPassword).subscribe({
             next: () => {
                 this.passwordForm.reset();

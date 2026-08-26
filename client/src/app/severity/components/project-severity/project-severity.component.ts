@@ -43,7 +43,9 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
 
     protected readonly severities = signal<IssueSeverity[]>([]);
     protected readonly defaultSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
-    protected form: FormGroup = new FormGroup({});
+    protected form!: FormGroup<{
+        idSeverityDefault: FormControl<number | null>;
+    }>;
 
     private readonly subscription = new Subscription();
 
@@ -56,7 +58,9 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
             .subscribe(severities => this.severities.set(severities));
 
         this.form = this.fb.group({
-            idSeverityDefault: this.fb.control(this.project().idSeverityDefault)
+            idSeverityDefault: this.fb.control<number | null>(
+                this.project().idSeverityDefault ?? null
+            )
         });
 
         this.subscription.add(
@@ -70,13 +74,13 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
         this.subscription.unsubscribe();
     }
 
-    protected get idSeverityDefaultControl(): FormControl {
-        return this.form.get('idSeverityDefault') as FormControl;
+    protected get idSeverityDefaultControl(): FormControl<number | null> {
+        return this.form.controls.idSeverityDefault;
     }
 
     protected onProjectSave(): void {
         const project: Project = cloneDeep(this.project());
-        project.idSeverityDefault = this.form.value.idSeverityDefault;
+        project.idSeverityDefault = this.form.value.idSeverityDefault ?? null;
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
             next: savedProject => {

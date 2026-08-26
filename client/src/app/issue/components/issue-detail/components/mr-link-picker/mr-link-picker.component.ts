@@ -8,7 +8,7 @@ import {
     output,
     signal
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { GitIntegrationRes } from 'src/app/project/model/git-integration.model';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { prMrLinkTitleKey } from 'src/app/issue/util/pr-mr-term';
@@ -42,14 +42,23 @@ export class MrLinkPickerComponent implements OnInit {
                 : (this.integrations().find(i => i.idGitIntegration === id)?.hostType ?? null);
         return prMrLinkTitleKey(host);
     });
-    protected form!: FormGroup;
+    protected form!: FormGroup<{
+        idGitIntegration: FormControl<number | null>;
+        mrId: FormControl<string>;
+    }>;
 
     public ngOnInit(): void {
         const initialId = this.idGitIntegration() ?? null;
         this.form = this.fb.group({
-            idGitIntegration: [initialId, Validators.required],
-            mrId: [this.mrId() ?? '', [Validators.required, Validators.maxLength(50)]]
-        });
+            idGitIntegration: this.fb.control<number | null>(initialId, Validators.required),
+            mrId: this.fb.control(
+                this.mrId() ?? '',
+                [Validators.required, Validators.maxLength(50)]
+            )
+        }) as FormGroup<{
+            idGitIntegration: FormControl<number | null>;
+            mrId: FormControl<string>;
+        }>;
         this.selectedIntegrationId.set(initialId);
         this.form
             .get('idGitIntegration')
@@ -68,9 +77,10 @@ export class MrLinkPickerComponent implements OnInit {
 
     protected onSave(): void {
         if (this.form.invalid) return;
+        const formValue = this.form.getRawValue();
         this.linked.emit({
-            idGitIntegration: this.form.value.idGitIntegration,
-            mrId: this.form.value.mrId
+            idGitIntegration: formValue.idGitIntegration!,
+            mrId: formValue.mrId
         });
     }
 

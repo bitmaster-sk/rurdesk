@@ -49,6 +49,20 @@ import { DiffFileLinkBuilder } from 'src/app/shared/components/diff-viewer/diff-
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 
+interface IssueInfoForm {
+    idIssue: FormControl<number | null>;
+    idIssuePublic: FormControl<number | null>;
+    idProject: FormControl<number | null>;
+    idState: FormControl<number | null>;
+    idSeverity: FormControl<number | null>;
+    title: FormControl<string>;
+    description: FormControl<string>;
+    assignedTo: FormControl<number | null>;
+    estimated: FormControl<string>;
+    points: FormControl<number | null>;
+    scheduledAt: FormControl<Date | null>;
+}
+
 @Component({
     selector: 'app-issue-info',
     templateUrl: './issue-info.component.html',
@@ -185,7 +199,11 @@ export class IssueInfoComponent {
         }
     ];
 
-    public form: FormGroup = new FormGroup({});
+    public form!: FormGroup<IssueInfoForm>;
+
+    protected readonly idProjectControlValue = computed(
+        () => this.form.getRawValue().idProject ?? 0
+    );
 
     private readonly formReset$ = new Subject<void>();
 
@@ -353,12 +371,12 @@ export class IssueInfoComponent {
             .subscribe(status => this.mrStatus.set(status));
     }
 
-    public get assignedToControl(): FormControl {
-        return this.form.get('assignedTo') as FormControl;
+    public get assignedToControl(): FormControl<number | null> {
+        return this.form.controls.assignedTo;
     }
 
-    public get idSeverityControl(): FormControl {
-        return this.form.get('idSeverity') as FormControl;
+    public get idSeverityControl(): FormControl<number | null> {
+        return this.form.controls.idSeverity;
     }
 
     private listenFormChange(): void {
@@ -372,59 +390,63 @@ export class IssueInfoComponent {
     }
 
     private refreshFormValues(issue: Issue): void {
-        this.form.patchValue(
-            {
-                estimated: DurationFormatter.durationToString(
-                    DurationConverter.secondsToDuration(issue.estimated ?? 0)
-                ),
-                points: issue.points ?? null
-            },
-            { emitEvent: false }
-        );
+        const patch: Partial<{
+            estimated: string;
+            points: number | null;
+        }> = {
+            estimated: DurationFormatter.durationToString(
+                DurationConverter.secondsToDuration(issue.estimated ?? 0)
+            ),
+            points: issue.points ?? null
+        };
+        this.form.patchValue(patch, { emitEvent: false });
     }
 
-    private issueToForm(): FormGroup {
+    private issueToForm(): FormGroup<IssueInfoForm> {
         const issue = this.currentIssue();
         const project = this.project();
         return this.fb.group({
-            idIssue: this.fb.control(issue?.idIssue),
-            idIssuePublic: this.fb.control(issue?.idIssuePublic),
-            idProject: this.fb.control(issue?.idProject),
-            idState: this.fb.control(this.isNewIssue() ? project?.idStateDefault : issue?.idState),
-            idSeverity: this.fb.control(
-                this.isNewIssue() ? project?.idSeverityDefault : issue?.idSeverity
+            idIssue: this.fb.control<number | null>(issue?.idIssue ?? null),
+            idIssuePublic: this.fb.control<number | null>(issue?.idIssuePublic ?? null),
+            idProject: this.fb.control<number | null>(issue?.idProject ?? null),
+            idState: this.fb.control<number | null>(
+                this.isNewIssue() ? project?.idStateDefault ?? null : issue?.idState ?? null
             ),
-            title: this.fb.control(issue?.title, {
-                validators: [Validators.required, Validators.maxLength(100)],
-                updateOn: 'blur'
-            }),
-            description: this.fb.control(issue?.description, {
-                validators: [Validators.required],
-                updateOn: 'blur'
-            }),
-            assignedTo: this.fb.control(issue?.assignedTo),
-            estimated: this.fb.control(
+            idSeverity: this.fb.control<number | null>(
+                this.isNewIssue() ? project?.idSeverityDefault ?? null : issue?.idSeverity ?? null
+            ),
+            title: this.fb.nonNullable.control(
+                issue?.title ?? '',
+                { validators: [Validators.required, Validators.maxLength(100)], updateOn: 'blur' }
+            ),
+            description: this.fb.nonNullable.control(
+                issue?.description ?? '',
+                { validators: [Validators.required], updateOn: 'blur' }
+            ),
+            assignedTo: this.fb.control<number | null>(issue?.assignedTo ?? null),
+            estimated: this.fb.nonNullable.control(
                 DurationFormatter.durationToString(
                     DurationConverter.secondsToDuration(issue?.estimated ?? 0)
                 ),
                 { validators: [DurationValidator.duration], updateOn: 'blur' }
             ),
-            points: this.fb.control(issue?.points ?? null, {
+            points: this.fb.control<number | null>(issue?.points ?? null, {
                 validators: [Validators.min(0)],
                 updateOn: 'blur'
             }),
-            scheduledAt: [issue?.scheduledAt]
+            scheduledAt: this.fb.control<Date | null>(issue?.scheduledAt ?? null)
         });
     }
 
     private formToIssue(): Issue {
-        const issue: Issue = { ...(this.form.value as Issue) };
+        const formValue = this.form.getRawValue();
+        const issue: Issue = { ...(formValue as unknown as Issue) };
         issue.estimated = DurationConverter.durationToSeconds(
-            DurationParser.stringToDuration(this.form.value.estimated)
+            DurationParser.stringToDuration(formValue.estimated)
         );
-        const points = this.form.value.points;
+        const points = formValue.points;
         issue.points =
-            points === null || points === undefined || points === '' ? null : Number(points);
+            points === null || points === undefined ? null : Number(points);
         return issue;
     }
 }

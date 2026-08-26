@@ -161,12 +161,12 @@
         <div class="col-span-12 mt-2">
             <app-quality-panel
                 #qualityPanel
-                [idProject]="form.get('idProject')?.value"
+                [idProject]="idProjectControlValue()"
                 [idIssue]="isNewIssue() ? null : (currentIssue()?.idIssuePublic ?? null)"
-                [title]="form.get('title')?.value ?? ''"
-                [description]="form.get('description')?.value ?? ''"
-                (titleChanged)="form.get('title')?.setValue($event)"
-                (descriptionChanged)="form.get('description')?.setValue($event)"
+                [title]="form.controls.title.value"
+                [description]="form.controls.description.value"
+                (titleChanged)="form.controls.title.setValue($event)"
+                (descriptionChanged)="form.controls.description.setValue($event)"
             ></app-quality-panel>
         </div>
 

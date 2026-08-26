@@ -1,7 +1,15 @@
 import { Component, OnInit, inject, input, output } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { randomSeverityColor } from '../../constants/severity-colors';
 import { IssueSeverity } from '../../model/issue-severity.model';
+
+interface SeverityForm {
+    idSeverity: FormControl<number | null>;
+    idProject: FormControl<number | null>;
+    title: FormControl<string>;
+    color: FormControl<string>;
+    orderRank: FormControl<number | null>;
+}
 
 @Component({
     selector: 'app-severity-form',
@@ -16,29 +24,29 @@ export class SeverityFormComponent implements OnInit {
 
     public readonly cancelled = output<void>();
 
-    public form: FormGroup = new FormGroup({});
+    public form!: FormGroup<SeverityForm>;
 
-    private fb = inject(FormBuilder);
+    private readonly fb = inject(FormBuilder);
 
     public ngOnInit(): void {
         this.form = this.fb.group({
-            idSeverity: this.fb.control(this.severity().idSeverity),
-            idProject: this.fb.control(this.severity().idProject),
-            title: this.fb.control(this.severity().title, [
+            idSeverity: this.fb.control<number | null>(this.severity().idSeverity ?? null),
+            idProject: this.fb.control<number | null>(this.severity().idProject ?? null),
+            title: this.fb.nonNullable.control(this.severity().title ?? '', [
                 Validators.required,
                 Validators.maxLength(20)
             ]),
             // A new severity starts on a palette colour: an empty <input type="color">
             // renders black and blocks the required validator.
-            color: this.fb.control(this.severity().color ?? randomSeverityColor(), [
+            color: this.fb.nonNullable.control(this.severity().color ?? randomSeverityColor(), [
                 Validators.required
             ]),
-            orderRank: this.fb.control(this.severity().orderRank)
+            orderRank: this.fb.control<number | null>(this.severity().orderRank ?? null)
         });
     }
 
     public onSave(): void {
-        this.save.emit(this.form.value);
+        this.save.emit(this.form.getRawValue() as IssueSeverity);
     }
 
     public onCancel(): void {

@@ -8,7 +8,7 @@ import {
     OnInit,
     signal
 } from '@angular/core';
-import { FormBuilder, FormGroup } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Project } from 'src/app/project/model/project.model';
@@ -43,7 +43,9 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
 
     protected readonly states = signal<IssueState[]>([]);
     protected readonly defaultSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
-    protected form: FormGroup = new FormGroup({});
+    protected form!: FormGroup<{
+        idStateDefault: FormControl<number | null>;
+    }>;
 
     private readonly subscription = new Subscription();
 
@@ -54,7 +56,7 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
             .subscribe(states => this.states.set(states));
 
         this.form = this.fb.group({
-            idStateDefault: this.fb.control(this.project().idStateDefault)
+            idStateDefault: this.fb.control<number | null>(this.project().idStateDefault ?? null)
         });
 
         this.subscription.add(
@@ -70,7 +72,7 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
 
     protected onProjectSave(): void {
         const project: Project = cloneDeep(this.project());
-        project.idStateDefault = this.form.value.idStateDefault;
+        project.idStateDefault = this.form.value.idStateDefault ?? null;
         this.defaultSaveStatus.set(UiSaveState.Saving);
         this.sProject.updateProject(project).subscribe({
             next: savedProject => {
