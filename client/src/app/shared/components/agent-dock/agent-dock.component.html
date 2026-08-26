@@ -1,0 +1,102 @@
+@if (kind() === 'skills') {
+    <div class="agent-dock flex flex-col gap-3 p-3" data-testid="agent-dock-skills">
+        <div class="font-semibold">
+            {{ 'AGENT_DOCK.SKILLS_TITLE' | translate: { name: agent().name } }}
+        </div>
+        <div class="ui-color-text-muted">{{ 'AGENT_DOCK.PREFILLED' | translate }}</div>
+
+        @if (isLoading()) {
+            <ui-loader [size]="28" [ariaLabel]="'UI.LOADING' | translate" />
+        } @else {
+            @for (stage of stages; track stage) {
+                <div class="flex flex-col gap-1">
+                    <div class="ui-color-text-muted">{{ stageLabel(stage) | translate }}</div>
+                    <div class="flex flex-wrap gap-1">
+                        @for (skill of skills(); track skill.idSkill) {
+                            <button
+                                type="button"
+                                class="agent-dock__chip"
+                                [class.agent-dock__chip--on]="isChosen(skill.idSkill, stage)"
+                                [attr.aria-pressed]="isChosen(skill.idSkill, stage)"
+                                [attr.data-testid]="'chip-' + skill.idSkill + '-' + stage"
+                                (click)="onToggle(skill.idSkill, stage)"
+                            >
+                                {{ skill.name }}
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        }
+
+        <div class="flex justify-end gap-2">
+            <ui-button variant="text" size="small" (click)="onCancel()">
+                {{ 'AGENT_DOCK.CANCEL' | translate }}
+            </ui-button>
+            <ui-button
+                size="small"
+                [disabled]="isAssigning()"
+                data-testid="agent-dock-assign"
+                (click)="onAssign()"
+            >
+                {{ 'AGENT_DOCK.ASSIGN' | translate }}
+            </ui-button>
+        </div>
+    </div>
+} @else {
+    <div class="agent-dock flex flex-col gap-2 p-3" data-testid="agent-dock-info">
+        <div class="font-semibold">
+            {{ 'AGENT_DOCK.INFO_TITLE' | translate: { name: agent().name } }}
+        </div>
+
+        @if (overview(); as workload) {
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">{{ 'AGENT_DOCK.RUNNING' | translate }}</span>
+                <span data-testid="agent-dock-running">
+                    @if (workload.current; as current) {
+                        #{{ current.idIssuePublic }} · {{ current.stage }}
+                    } @else {
+                        {{ 'AGENT_DOCK.NONE' | translate }}
+                    }
+                </span>
+            </div>
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">{{ 'AGENT_DOCK.QUEUE' | translate }}</span>
+                <span data-testid="agent-dock-queue">
+                    {{ workload.queueCount }}
+                    @if (workload.queuedIdsIssuePublic.length) {
+                        <span class="ui-color-text-muted">
+                            (
+                            @for (
+                                idIssuePublic of workload.queuedIdsIssuePublic;
+                                track idIssuePublic;
+                                let isLast = $last
+                            ) {
+                                #{{ idIssuePublic }}{{ isLast ? '' : ', ' }}
+                            }
+                            )
+                        </span>
+                    }
+                </span>
+            </div>
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">
+                    {{ 'AGENT_DOCK.COMPLETED_TODAY' | translate }}
+                </span>
+                <span>{{ workload.completedToday }}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">{{ 'AGENT_DOCK.TOKENS_7D' | translate }}</span>
+                <span data-testid="agent-dock-tokens">{{ formatTokens(workload.tokens7d) }}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">{{ 'AGENT_DOCK.AVG_DURATION' | translate }}</span>
+                <span>{{ formatDuration(workload.avgRunDurationMs7d) }}</span>
+            </div>
+            <div class="flex justify-between gap-2">
+                <span class="ui-color-text-muted">{{ 'AGENT_DOCK.FAILED_7D' | translate }}</span>
+                <span>{{ workload.failedAttempts7d }}</span>
+            </div>
+        }
+    </div>
+}

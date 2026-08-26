@@ -25,6 +25,7 @@ import { MentionChipComponent } from './mention/mention-chip/mention-chip.compon
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
 import { DeleteMigrationDialogComponent } from './components/delete-migration-dialog/delete-migration-dialog.component';
+import { AgentDockComponent } from './components/agent-dock/agent-dock.component';
 import { MarkdownModule } from 'ngx-markdown';
 import { UiModule } from '../ui/ui.module';
 import {
@@ -34,7 +35,10 @@ import {
     IconCheck,
     IconClock,
     IconCircleFilled,
-    IconDeviceImac
+    IconDeviceImac,
+    IconRobot,
+    IconAdjustmentsHorizontal,
+    IconInfoCircle
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -60,7 +64,8 @@ import {
         MentionChipComponent,
         MessageBodyComponent,
         DiffViewerComponent,
-        DeleteMigrationDialogComponent
+        DeleteMigrationDialogComponent,
+        AgentDockComponent
     ],
     imports: [
         CoreModule,
@@ -72,7 +77,16 @@ import {
         TablerIconComponent
     ],
     providers: [
-        provideTablerIcons({ IconX, IconCheck, IconClock, IconCircleFilled, IconDeviceImac })
+        provideTablerIcons({
+            IconX,
+            IconCheck,
+            IconClock,
+            IconCircleFilled,
+            IconDeviceImac,
+            IconRobot,
+            IconAdjustmentsHorizontal,
+            IconInfoCircle
+        })
     ],
     exports: [
         UiModule,
@@ -98,7 +112,8 @@ import {
         MentionChipComponent,
         MessageBodyComponent,
         DiffViewerComponent,
-        DeleteMigrationDialogComponent
+        DeleteMigrationDialogComponent,
+        AgentDockComponent
     ]
 })
 export class SharedModule {}
