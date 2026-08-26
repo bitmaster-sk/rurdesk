@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
