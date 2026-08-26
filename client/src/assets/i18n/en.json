@@ -179,6 +179,21 @@
         },
         "CLARIFICATION": {
             "BADGE": "Question from bot"
+        },
+        "SKILLS": {
+            "TITLE": "Agent skills",
+            "DESCRIPTION": "Pick which instructions each stage of an agent run gets. Skills are injected into the agent's prompt; the catalog is managed by an instance admin.",
+            "SKILL": "Skill",
+            "LOAD_ERROR": "Failed to load skills",
+            "SAVE_ERROR": "Failed to save skills"
+        },
+        "RUN_SKILLS": {
+            "CHIP": "Skills",
+            "TITLE": "Skills for this run",
+            "DISPATCHED": "Stage already started — skills locked",
+            "RACE_ERROR": "This stage just started; skills were not changed",
+            "LOAD_ERROR": "Failed to load run skills",
+            "SAVE_ERROR": "Failed to save run skills"
         }
     },
     "WORKFLOW": {
@@ -202,21 +217,6 @@
                 "FAILED": "The run fails or its pull request is closed without merging",
                 "CANCELLED": "The run is cancelled"
             }
-        },
-        "SKILLS": {
-            "TITLE": "Agent skills",
-            "DESCRIPTION": "Pick which instructions each stage of an agent run gets. Skills are injected into the agent's prompt; the catalog is managed by an instance admin.",
-            "SKILL": "Skill",
-            "LOAD_ERROR": "Failed to load skills",
-            "SAVE_ERROR": "Failed to save skills"
-        },
-        "RUN_SKILLS": {
-            "CHIP": "Skills",
-            "TITLE": "Skills for this run",
-            "DISPATCHED": "Stage already started — skills locked",
-            "RACE_ERROR": "This stage just started; skills were not changed",
-            "LOAD_ERROR": "Failed to load run skills",
-            "SAVE_ERROR": "Failed to save run skills"
         }
     },
     "QUALITY": {
