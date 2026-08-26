@@ -3,15 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/go-redis/redis/v8"
 )
 
-const aclCacheTTL = 24 * time.Hour // matches session lifetime
+const aclCacheTTL = constants.SessionLifetime // matches session lifetime
 
 type AclService struct {
 	aclRepo     *repository.AclRepository

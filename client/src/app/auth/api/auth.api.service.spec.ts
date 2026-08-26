@@ -21,7 +21,7 @@ describe('AuthApi', () => {
         const { api } = build();
         let token: string | undefined;
 
-        api.login$('a@a.com', 'pw').subscribe(t => (token = t));
+        api.login$('a@a.com', 'pw', false).subscribe(t => (token = t));
 
         expect(token).toBe('jwt-123');
     });
@@ -29,11 +29,24 @@ describe('AuthApi', () => {
     it('posts the credentials to the public login endpoint', () => {
         const { api, http } = build();
 
-        api.login$('a@a.com', 'pw').subscribe();
+        api.login$('a@a.com', 'pw', false).subscribe();
 
         expect(http.post).toHaveBeenCalledWith('/api/public/login', {
             email: 'a@a.com',
-            password: 'pw'
+            password: 'pw',
+            hasExtendedSessionLifetime: false
+        });
+    });
+
+    it('forwards the extended session lifetime request', () => {
+        const { api, http } = build();
+
+        api.login$('a@a.com', 'pw', true).subscribe();
+
+        expect(http.post).toHaveBeenCalledWith('/api/public/login', {
+            email: 'a@a.com',
+            password: 'pw',
+            hasExtendedSessionLifetime: true
         });
     });
 

@@ -21,8 +21,14 @@ admin**, and the endpoint closes permanently afterwards. Every further account
 already-bootstrapped instance shows a "Registration is closed" notice — ask
 your admin for an account instead.
 
-Users log in at **`/login`**. Avatars are generated from the user's initials on
-a colour they pick in their profile — nothing is fetched from a third party.
+Users log in at **`/login`**. A session lasts **24 hours** by default; ticking
+**Stay signed in for 30 days** on the login form issues a session that lasts
+**30 days** instead. Either way the session ends immediately on logout, on a
+password change (all other sessions), and on an admin-flag change or account
+deletion.
+
+Avatars are generated from the user's initials on a colour they pick in their
+profile — nothing is fetched from a third party.
 
 ![Login screen](../../site/assets/img/login.png)
 

@@ -21,8 +21,9 @@ func (u *User) UnmarshalBinary(data []byte) error {
 }
 
 type LoginReq struct {
-	Email    string `json:"email" binding:"required,email,max=250"`
-	Password string `json:"password" binding:"required,min=5,max=100"`
+	Email                      string `json:"email" binding:"required,email,max=250"`
+	Password                   string `json:"password" binding:"required,min=5,max=100"`
+	HasExtendedSessionLifetime bool   `json:"hasExtendedSessionLifetime"`
 }
 
 type RegisterReq struct {

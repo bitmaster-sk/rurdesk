@@ -10,9 +10,17 @@ import { User } from '../model/user.model';
 export class AuthApi {
     private readonly http = inject(HttpClient);
 
-    public login$(email: string, password: string): Observable<string> {
+    public login$(
+        email: string,
+        password: string,
+        hasExtendedSessionLifetime: boolean
+    ): Observable<string> {
         return this.http
-            .post<{ token: string }>('/api/public/login', { email, password })
+            .post<{ token: string }>('/api/public/login', {
+                email,
+                password,
+                hasExtendedSessionLifetime
+            })
             .pipe(map(res => res.token));
     }
 
