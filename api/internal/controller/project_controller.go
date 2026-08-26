@@ -14,13 +14,14 @@ import (
 )
 
 type ProjectController struct {
-	projectRepo   *repository.ProjectRepository
-	teamRepo      *repository.TeamRepository
-	severityRepo  *repository.SeverityRepository
-	stateRepo     *repository.StateRepository
-	issueTypeRepo *repository.IssueTypeRepository
-	acl           *service.AclService
-	pool          *pgxpool.Pool
+	projectRepo         *repository.ProjectRepository
+	teamRepo            *repository.TeamRepository
+	severityRepo        *repository.SeverityRepository
+	stateRepo           *repository.StateRepository
+	issueTypeRepo       *repository.IssueTypeRepository
+	projectSkillService *service.ProjectSkillService
+	acl                 *service.AclService
+	pool                *pgxpool.Pool
 }
 
 func NewProjectController(
@@ -29,17 +30,19 @@ func NewProjectController(
 	sr *repository.SeverityRepository,
 	str *repository.StateRepository,
 	itr *repository.IssueTypeRepository,
+	pss *service.ProjectSkillService,
 	acl *service.AclService,
 	pool *pgxpool.Pool,
 ) *ProjectController {
 	return &ProjectController{
-		projectRepo:   pr,
-		teamRepo:      tr,
-		severityRepo:  sr,
-		stateRepo:     str,
-		issueTypeRepo: itr,
-		acl:           acl,
-		pool:          pool,
+		projectRepo:         pr,
+		teamRepo:            tr,
+		severityRepo:        sr,
+		stateRepo:           str,
+		issueTypeRepo:       itr,
+		projectSkillService: pss,
+		acl:                 acl,
+		pool:                pool,
 	}
 }
 
@@ -69,6 +72,9 @@ func (pc *ProjectController) CreateProject(c *gin.Context) {
 			return err
 		}
 		if err = pc.issueTypeRepo.InsertDefaultIssueTypes(ctx, project.IdProject); err != nil {
+			return err
+		}
+		if err = pc.projectSkillService.SeedDefaults(ctx, project.IdProject); err != nil {
 			return err
 		}
 		// Creator is always added as owner, even when a team is also added.

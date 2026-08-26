@@ -395,6 +395,7 @@ func GetProjectController() *controller.ProjectController {
 			GetSeverityRepository(),
 			GetStateRepository(),
 			GetIssueTypeRepository(),
+			GetProjectSkillService(),
 			GetAclService(),
 			pool,
 		), nil
@@ -465,6 +466,8 @@ func GetDispatcher() *agent.Dispatcher {
 			GetMessageRepository(),
 			GetProjectRepository(),
 			GetUserRepository(),
+			GetSkillService(),
+			GetStagePlanService(),
 			GetGatewayClient(),
 			GetNotifier(),
 		), nil
@@ -842,6 +845,80 @@ func GetPhaseStateMapRepository() *repository.PhaseStateMapRepository {
 	return instance.(*repository.PhaseStateMapRepository)
 }
 
+func GetSkillRepository() *repository.SkillRepository {
+	instance, _ := di.GetWithNew("skill-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewSkillRepository(pool), nil
+	})
+	return instance.(*repository.SkillRepository)
+}
+
+func GetProjectSkillRepository() *repository.ProjectSkillRepository {
+	instance, _ := di.GetWithNew("project-skill-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewProjectSkillRepository(pool), nil
+	})
+	return instance.(*repository.ProjectSkillRepository)
+}
+
+func GetSkillService() *service.SkillService {
+	instance, _ := di.GetWithNew("skill-service", func() (any, error) {
+		return service.NewSkillService(GetSkillRepository(), GetProjectSkillRepository()), nil
+	})
+	return instance.(*service.SkillService)
+}
+
+func GetProjectSkillService() *service.ProjectSkillService {
+	instance, _ := di.GetWithNew("project-skill-service", func() (any, error) {
+		return service.NewProjectSkillService(GetProjectSkillRepository(), GetSkillRepository()), nil
+	})
+	return instance.(*service.ProjectSkillService)
+}
+
+func GetStagePlanService() *service.StagePlanService {
+	instance, _ := di.GetWithNew("stage-plan-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewStagePlanService(pool, GetAgentRunRepository()), nil
+	})
+	return instance.(*service.StagePlanService)
+}
+
+func GetProjectSkillController() *controller.ProjectSkillController {
+	instance, _ := di.GetWithNew("project-skill-controller", func() (any, error) {
+		return controller.NewProjectSkillController(
+			GetProjectSkillRepository(),
+			GetProjectSkillService(),
+			GetAclService(),
+		), nil
+	})
+	return instance.(*controller.ProjectSkillController)
+}
+
+func GetAgentOverviewRepository() *repository.AgentOverviewRepository {
+	instance, _ := di.GetWithNew("agent-overview-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewAgentOverviewRepository(pool), nil
+	})
+	return instance.(*repository.AgentOverviewRepository)
+}
+
+func GetAgentOverviewController() *controller.AgentOverviewController {
+	instance, _ := di.GetWithNew("agent-overview-controller", func() (any, error) {
+		return controller.NewAgentOverviewController(
+			GetAgentOverviewRepository(),
+			GetAclService(),
+		), nil
+	})
+	return instance.(*controller.AgentOverviewController)
+}
+
+func GetSkillController() *controller.SkillController {
+	instance, _ := di.GetWithNew("skill-controller", func() (any, error) {
+		return controller.NewSkillController(GetSkillService()), nil
+	})
+	return instance.(*controller.SkillController)
+}
+
 func GetPhaseStateMirror() *agent.PhaseStateMirror {
 	instance, _ := di.GetWithNew("phase-state-mirror", func() (any, error) {
 		return agent.NewPhaseStateMirror(
@@ -937,6 +1014,9 @@ func GetRouter() (*router.Router, error) {
 			GetAgentRunController(),
 			GetBotGatewayController(),
 			GetPhaseStateMapController(),
+			GetSkillController(),
+			GetProjectSkillController(),
+			GetAgentOverviewController(),
 			appSettingsController,
 			GetHealthController(),
 			GetVersionController(),

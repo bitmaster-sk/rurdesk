@@ -47,6 +47,9 @@ func New(
 	agentRunCtrl *controller.AgentRunController,
 	botGwCtrl *controller.BotGatewayController,
 	phaseStateMapCtrl *controller.PhaseStateMapController,
+	skillCtrl *controller.SkillController,
+	projectSkillCtrl *controller.ProjectSkillController,
+	agentOverviewCtrl *controller.AgentOverviewController,
 	appSettingsCtrl *controller.AppSettingsController,
 	healthCtrl *controller.HealthController,
 	versionCtrl *controller.VersionController,
@@ -84,6 +87,8 @@ func New(
 	// App settings — readable by any authenticated user (clients need page sizes)
 	pri.GET("/settings", appSettingsCtrl.Get)
 
+	pri.GET("/skills", skillCtrl.List)
+
 	// Admin (global instance admin only)
 	admin := pri.Group("/admin", middleware.AdminOnly())
 	admin.PATCH("/settings", appSettingsCtrl.Update)
@@ -96,6 +101,12 @@ func New(
 	admin.POST("/user/:idUser/api-key", adminCtrl.CreateBotKey)
 	admin.POST("/user/:idUser/api-key/token", adminCtrl.RegenerateBotKey)
 	admin.DELETE("/user/:idUser/api-key", adminCtrl.RevokeBotKey)
+
+	admin.GET("/skills/:idSkill", skillCtrl.Get)
+	admin.POST("/skills", skillCtrl.Create)
+	admin.PATCH("/skills/:idSkill", skillCtrl.Update)
+	admin.DELETE("/skills/:idSkill", skillCtrl.Delete)
+	admin.POST("/skills/:idSkill/restore", skillCtrl.Restore)
 
 	// Bot gateway (1:1 with bot user)
 	admin.GET("/user/:idUser/gateway", botGwCtrl.GetBotGateway)
@@ -268,6 +279,10 @@ func New(
 	// Agent phase→state map (project owner only)
 	pri.GET("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.GetMappings)
 	pri.PUT("/project/:idProject/agent-phase-state-map", phaseStateMapCtrl.ReplaceMappings)
+	pri.POST("/project/:idProject/issue/:idIssuePublic/assign-agent", issueCtrl.AssignAgent)
+	pri.GET("/project/:idProject/skills", projectSkillCtrl.Get)
+	pri.PUT("/project/:idProject/skills", projectSkillCtrl.Replace)
+	pri.GET("/project/:idProject/agents/overview", agentOverviewCtrl.Get)
 
 	// In production the Go binary serves the Angular build itself (single
 	// container, no nginx). Gated by SERVE_STATIC so dev — which serves the
