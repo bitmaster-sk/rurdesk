@@ -24,22 +24,24 @@ import (
 )
 
 type IssueController struct {
-	issueRepo       *repository.IssueRepository
-	projectRepo     *repository.ProjectRepository
-	userRepo        *repository.UserRepository
-	stateRepo       *repository.StateRepository
-	severityRepo    *repository.SeverityRepository
-	issueTypeRepo   *repository.IssueTypeRepository
-	gitIntRepo      *repository.GitIntegrationRepository
-	agentRunRepo    *repository.AgentRunRepository
-	agentTaskRepo   *repository.AgentTaskRepository
-	botGwRepo       *repository.BotGatewayRepository
-	participantRepo *repository.IssueParticipantRepository
-	dispatcher      *agent.Dispatcher
-	notifier        *notify.Notifier
-	acl             *service.AclService
-	notifSvc        *service.NotificationService
-	pool            *pgxpool.Pool
+	issueRepo           *repository.IssueRepository
+	projectRepo         *repository.ProjectRepository
+	userRepo            *repository.UserRepository
+	stateRepo           *repository.StateRepository
+	severityRepo        *repository.SeverityRepository
+	issueTypeRepo       *repository.IssueTypeRepository
+	gitIntRepo          *repository.GitIntegrationRepository
+	agentRunRepo        *repository.AgentRunRepository
+	agentTaskRepo       *repository.AgentTaskRepository
+	botGwRepo           *repository.BotGatewayRepository
+	projectSkillService *service.ProjectSkillService
+	participantRepo     *repository.IssueParticipantRepository
+	dispatcher          *agent.Dispatcher
+	notifier            *notify.Notifier
+	acl                 *service.AclService
+	stagePlan           *service.StagePlanService
+	notifSvc            *service.NotificationService
+	pool                *pgxpool.Pool
 }
 
 func NewIssueController(
@@ -77,12 +79,16 @@ func (ic *IssueController) WithAgentRun(
 	agentRunRepo *repository.AgentRunRepository,
 	agentTaskRepo *repository.AgentTaskRepository,
 	botGwRepo *repository.BotGatewayRepository,
+	projectSkillService *service.ProjectSkillService,
+	stagePlan *service.StagePlanService,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
 ) *IssueController {
 	ic.agentRunRepo = agentRunRepo
 	ic.agentTaskRepo = agentTaskRepo
 	ic.botGwRepo = botGwRepo
+	ic.projectSkillService = projectSkillService
+	ic.stagePlan = stagePlan
 	ic.dispatcher = dispatcher
 	ic.notifier = notifier
 	return ic
@@ -491,6 +497,138 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// Creates the run directly rather than through EditIssue, whose assignee hook
+// would create a second run carrying the project defaults.
+func (ic *IssueController) AssignAgent(c *gin.Context) {
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	idIssuePublic, err := strconv.ParseInt(c.Param("idIssuePublic"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	var dto model.CreateAgentRunReq
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	for stage := range dto.IdsSkillByStage {
+		if !constants.IsSkillStage(stage) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown stage: " + stage})
+			return
+		}
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+	if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
+		_ = c.Error(errForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	issue, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if issue == nil {
+		_ = c.Error(errNotFound)
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	bot, err := ic.userRepo.LoadUser(ctx, dto.IdUserBot)
+	if err != nil || bot == nil {
+		_ = c.Error(errNotFound)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if !bot.IsBot {
+		_ = c.Error(errNotABot)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	// Same gate as the EditIssue assignee path: without it this endpoint could
+	// hand a project's issue to an agent that cannot even read the project.
+	if !ic.acl.CanReadProject(ctx, bot.IdUser, idProject) {
+		_ = c.Error(errForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+	gateway, gwErr := ic.botGwRepo.LoadByBotUser(ctx, bot.IdUser)
+	if gwErr != nil || gateway == nil {
+		_ = c.Error(errBotNoGateway)
+		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
+
+	existing, err := ic.agentRunRepo.LoadActiveByIssue(ctx, issue.IdIssue)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	if existing != nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run; hand it over by changing the assignee instead"})
+		return
+	}
+
+	oldIssue := *issue
+
+	// The assignee write and the run insert must commit together: on the 23505 race
+	// the endpoint answers 409 and the issue must not stay re-pointed.
+	var updated *model.Issue
+	var run *model.AgentRun
+	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
+		issue.AssignedTo = &bot.IdUser
+		issue.UpdateBy = user.IdUser
+
+		var txErr error
+		updated, txErr = ic.issueRepo.UpdateIssue(ctx, issue)
+		if txErr != nil {
+			return txErr
+		}
+		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, bot.IdUser, "assignee", &user.IdUser); txErr != nil {
+			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
+		}
+		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage)
+		if txErr != nil {
+			return txErr
+		}
+		run, txErr = ic.agentRunRepo.Insert(ctx, issue.IdIssue, bot.IdUser, idProject, stagePlan)
+		return txErr
+	})
+	if err != nil {
+		// The partial unique index backstops a race with the EditIssue path.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run"})
+			return
+		}
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	if project, projErr := ic.projectRepo.LoadProject(ctx, idProject); projErr == nil {
+		ic.sendIssueNotifications(ctx, user, &oldIssue, updated, project)
+	}
+
+	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
+	broadcastParticipants(ctx, ic.notifier, ic.projectRepo, ic.participantRepo, idProject, updated.IdIssue)
+	agent.BroadcastIssueUpdate(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, updated.IdIssue)
+
+	c.JSON(http.StatusOK, run)
+}
+
 func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, newIssue *model.Issue) {
 	if int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) {
 		return
@@ -553,8 +691,19 @@ func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, ne
 		return
 	}
 
-	// First assignment for this issue — create a fresh run.
-	run, err := ic.agentRunRepo.Insert(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject)
+	// A failing matrix read must not block the run: skills are an enhancement.
+	idsSkillByStage, skillErr := ic.projectSkillService.LoadDefaultIdsSkillByStage(ctx, newIssue.IdProject)
+	if skillErr != nil {
+		log.Warn().Err(skillErr).Int64("idProject", newIssue.IdProject).
+			Msg("loading project skill defaults — creating run without skills")
+		idsSkillByStage = nil
+	}
+	stagePlan, err := ic.stagePlan.Build(idsSkillByStage)
+	if err != nil {
+		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("building stage plan — run not created")
+		return
+	}
+	run, err := ic.agentRunRepo.Insert(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject, stagePlan)
 	if err != nil {
 		return
 	}

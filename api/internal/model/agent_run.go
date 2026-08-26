@@ -135,6 +135,11 @@ type AgentStatsNotice struct {
 	Stats *RunStatsRes `json:"stats"`
 }
 
+type CreateAgentRunReq struct {
+	IdUserBot       int64              `json:"idUserBot"       binding:"required"`
+	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
+}
+
 // SetRunPrReq is consumed by AgentRunRepository.SetPrInfo, populated from the
 // PR the backend opened or reused on the git host at complete_stage time.
 type SetRunPrReq struct {
