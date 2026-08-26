@@ -66,6 +66,10 @@
                 <app-user-dropdown
                     [users]="users()"
                     [formControl]="assignedToControl"
+                    [hasAgentFeatures]="true"
+                    [idProject]="issue()?.idProject ?? null"
+                    [idIssuePublic]="issue()?.idIssuePublic ?? null"
+                    (agentRunCreated)="onAgentRunCreated($event)"
                 ></app-user-dropdown>
             </div>
 

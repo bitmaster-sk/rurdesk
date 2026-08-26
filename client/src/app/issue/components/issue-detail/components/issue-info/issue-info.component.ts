@@ -331,6 +331,20 @@ export class IssueInfoComponent {
         });
     }
 
+    /**
+     * The dock already assigned the bot and created its run server-side. Both
+     * the control and the local issue must be synced WITHOUT emitting: the form
+     * autosaves on every change, so a stale `assignedTo` would be PATCHed back
+     * on the next edit — un-assigning the bot and re-entering the assignee hook.
+     */
+    protected onAgentRunCreated(run: AgentRun): void {
+        this.assignedToControl.setValue(run.idUserBot, { emitEvent: false });
+        const issue = this.currentIssue();
+        if (issue) {
+            this.currentIssue.set({ ...issue, assignedTo: run.idUserBot });
+        }
+    }
+
     protected onMrLinkCancelled(): void {
         this.isMrLinkPickerOpen.set(false);
     }
