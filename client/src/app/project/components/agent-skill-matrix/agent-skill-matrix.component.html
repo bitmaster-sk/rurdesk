@@ -1,0 +1,51 @@
+<div class="flex flex-col">
+    <p class="m-0 p-4 ui-color-text-muted border-bottom">
+        {{ 'AGENT.SKILLS.DESCRIPTION' | translate }}
+    </p>
+
+    @if (isLoading()) {
+        <div class="p-4"><ui-loader [size]="40" [ariaLabel]="'UI.LOADING' | translate" /></div>
+    } @else {
+        <table class="ui-table min-w-[34rem]" data-testid="skill-matrix">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'AGENT.SKILLS.SKILL' | translate }}</th>
+                    @for (stage of stages; track stage) {
+                        <th scope="col">{{ stageLabel(stage) | translate }}</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @for (skill of skills(); track skill.idSkill) {
+                    <tr data-testid="skill-matrix-row">
+                        <td>
+                            <span class="font-semibold">{{ skill.name }}</span>
+                            @if (skill.description) {
+                                <span class="ui-color-text-muted ml-2">
+                                    {{ skill.description }}
+                                </span>
+                            }
+                        </td>
+                        @for (stage of stages; track stage; let isLast = $last) {
+                            <td>
+                                <span
+                                    class="inline-flex"
+                                    [uiSaveStatus]="cellSaveStatus(skill.idSkill, isLast)"
+                                >
+                                    <input
+                                        uiCheckbox
+                                        type="checkbox"
+                                        [checked]="isEnabled(skill.idSkill, stage)"
+                                        [attr.aria-label]="skill.name + ' ' + stage"
+                                        [attr.data-testid]="'cell-' + skill.idSkill + '-' + stage"
+                                        (change)="onToggle(skill.idSkill, stage)"
+                                    />
+                                </span>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
