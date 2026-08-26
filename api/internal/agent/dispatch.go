@@ -10,6 +10,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/rs/zerolog/log"
 )
 
@@ -23,6 +24,8 @@ type Dispatcher struct {
 	messageRepo  *repository.MessageRepository
 	projectRepo  *repository.ProjectRepository
 	userRepo     *repository.UserRepository
+	skillService *service.SkillService
+	stagePlan    *service.StagePlanService
 	gwClient     *GatewayClient
 	notifier     *notify.Notifier
 }
@@ -35,6 +38,8 @@ func NewDispatcher(
 	messageRepo *repository.MessageRepository,
 	projectRepo *repository.ProjectRepository,
 	userRepo *repository.UserRepository,
+	skillService *service.SkillService,
+	stagePlan *service.StagePlanService,
 	gwClient *GatewayClient,
 	notifier *notify.Notifier,
 ) *Dispatcher {
@@ -46,6 +51,8 @@ func NewDispatcher(
 		messageRepo:  messageRepo,
 		projectRepo:  projectRepo,
 		userRepo:     userRepo,
+		skillService: skillService,
+		stagePlan:    stagePlan,
 		gwClient:     gwClient,
 		notifier:     notifier,
 	}
@@ -140,6 +147,17 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		return nil, fmt.Errorf("loading prior tasks: %w", err)
 	}
 
+	// A skill deleted between planning and dispatch is simply absent: a missing
+	// skill must never fail a run.
+	var stageSkills []*model.Skill
+	if ids := d.stagePlan.IdsSkillForStage(run.StagePlan, task.Stage); len(ids) > 0 {
+		loaded, skillErr := d.skillService.LoadByIds(ctx, ids)
+		if skillErr != nil {
+			log.Warn().Err(skillErr).Int64("idRun", run.IdRun).Msg("loading stage skills — dispatching without them")
+		}
+		stageSkills = loaded
+	}
+
 	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle := map[string]any{
 		"issue":             issue,
@@ -150,6 +168,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"approvedImplPlan":  artifacts.ApprovedImplPlan,
 		"rejectedOutput":    artifacts.RejectedOutput,
 		"approvedMockupRef": derefStringOrNil(run.ApprovedMockupRef),
+		"skills":            stageSkills,
 	}
 	if task.AttemptNo > 1 {
 		for _, t := range priorTasks {
