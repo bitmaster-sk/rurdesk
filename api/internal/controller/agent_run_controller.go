@@ -32,6 +32,7 @@ type AgentRunController struct {
 	messageRepo   *repository.MessageRepository
 	gitIntRepo    *repository.GitIntegrationRepository
 	acl           *service.AclService
+	stagePlan     *service.StagePlanService
 	dispatcher    *agent.Dispatcher
 	notifier      *notify.Notifier
 	pool          *pgxpool.Pool
@@ -46,6 +47,7 @@ func NewAgentRunController(
 	messageRepo *repository.MessageRepository,
 	gitIntRepo *repository.GitIntegrationRepository,
 	acl *service.AclService,
+	stagePlan *service.StagePlanService,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
 	pool *pgxpool.Pool,
@@ -59,6 +61,7 @@ func NewAgentRunController(
 		messageRepo:   messageRepo,
 		gitIntRepo:    gitIntRepo,
 		acl:           acl,
+		stagePlan:     stagePlan,
 		dispatcher:    dispatcher,
 		notifier:      notifier,
 		pool:          pool,
@@ -419,7 +422,13 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		log.Warn().Err(err).Int64("idRun", idRun).Msg("restart: failed to cancel non-terminal tasks")
 	}
 
-	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserBot, oldRun.IdProject)
+	stagePlan, err := ctrl.stagePlan.Build(ctrl.stagePlan.IdsSkillByStage(oldRun.StagePlan))
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserBot, oldRun.IdProject, stagePlan)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -427,6 +436,133 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	}
 	ctrl.notifyRunUpdate(newRun)
 	c.JSON(http.StatusOK, gin.H{"oldIdRun": idRun, "newIdRun": newRun.IdRun})
+}
+
+func (ctrl *AgentRunController) GetSkills(c *gin.Context) {
+	run, ok := ctrl.loadRunForSkills(c, false)
+	if !ok {
+		return
+	}
+	ctrl.respondRunSkills(c, run)
+}
+
+func (ctrl *AgentRunController) PatchSkills(c *gin.Context) {
+	ctx := c.Request.Context()
+	run, ok := ctrl.loadRunForSkills(c, true)
+	if !ok {
+		return
+	}
+
+	var dto model.UpdateAgentRunStageSkillsReq
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	dispatched, err := ctrl.dispatchedStages(ctx, run.IdRun)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	// The stage's prompt was already built and sent, so its skills are settled.
+	if dispatched[dto.Stage] {
+		_ = c.Error(errs.ErrSkillStageDispatched)
+		c.Status(http.StatusConflict)
+		return
+	}
+
+	updated, err := ctrl.stagePlan.SetStageSkills(ctx, run.IdRun, dto.Stage, dto.IdsSkill)
+	if errors.Is(err, errs.ErrStageNotInPlan) {
+		_ = c.Error(errs.ErrStageNotInPlan)
+		c.Status(errs.ErrStageNotInPlan.HttpStatus())
+		return
+	}
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	ctrl.respondRunSkills(c, updated)
+}
+
+func (ctrl *AgentRunController) respondRunSkills(c *gin.Context, run *model.AgentRun) {
+	dispatched, err := ctrl.dispatchedStages(c.Request.Context(), run.IdRun)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	plan, err := ctrl.stagePlan.Parse(run.StagePlan)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	stages := make([]model.AgentRunStageSkills, 0, len(plan.Stages))
+	for _, entry := range plan.Stages {
+		if !constants.IsSkillStage(entry.Name) {
+			continue
+		}
+		idsSkill := entry.IdsSkill
+		if idsSkill == nil {
+			idsSkill = []int64{}
+		}
+		stages = append(stages, model.AgentRunStageSkills{
+			Name:       entry.Name,
+			IdsSkill:   idsSkill,
+			Dispatched: dispatched[entry.Name],
+		})
+	}
+	c.JSON(http.StatusOK, stages)
+}
+
+func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (*model.AgentRun, bool) {
+	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return nil, false
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+
+	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	if err == repository.ErrRunNotFound {
+		c.Status(http.StatusNotFound)
+		return nil, false
+	}
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return nil, false
+	}
+
+	hasAccess := ctrl.acl.CanReadProject(ctx, user.IdUser, run.IdProject)
+	if isWrite {
+		hasAccess = ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject)
+	}
+	if !hasAccess {
+		_ = c.Error(errForbidden)
+		c.Status(http.StatusForbidden)
+		return nil, false
+	}
+	return run, true
+}
+
+func (ctrl *AgentRunController) dispatchedStages(ctx context.Context, idRun int64) (map[string]bool, error) {
+	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, idRun)
+	if err != nil {
+		return nil, fmt.Errorf("loading run tasks: %w", err)
+	}
+	dispatched := make(map[string]bool, len(tasks))
+	for _, task := range tasks {
+		dispatched[task.Stage] = true
+	}
+	return dispatched, nil
 }
 
 // Stats returns aggregate counters across all agent_task rows for the run.

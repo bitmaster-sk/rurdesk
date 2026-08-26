@@ -263,6 +263,8 @@ func New(
 	pri.POST("/agent/run/:idRun/continue", agentRunCtrl.Continue)
 	pri.POST("/agent/run/:idRun/restart", agentRunCtrl.Restart)
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
+	pri.GET("/agent/run/:idRun/skills", agentRunCtrl.GetSkills)
+	pri.PATCH("/agent/run/:idRun/skills", agentRunCtrl.PatchSkills)
 	pri.GET("/project/:idProject/agent/runs", agentRunCtrl.GetRunsByProject)
 	pri.GET("/project/:idProject/issue/:idIssuePublic/agent/run", agentRunCtrl.GetRunByIssue)
 
