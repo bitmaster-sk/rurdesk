@@ -267,6 +267,7 @@
     "LOGIN.WELCOME": "Welcome back",
     "LOGIN.SUBTITLE": "Sign in to continue",
     "LOGIN.FAILED": "Incorrect email or password",
+    "LOGIN.EXTENDED_SESSION": "Stay signed in for 30 days",
     "LOGOUT": "Log out",
     "REGISTER": "Register",
     "REGISTER.WELCOME": "Welcome to Rurdesk",

@@ -22,6 +22,17 @@
             />
         </div>
 
+        <div class="ui-field-checkbox">
+            <input
+                id="extended-session"
+                data-testid="login-extended-session"
+                type="checkbox"
+                uiCheckbox
+                formControlName="hasExtendedSessionLifetime"
+            />
+            <label for="extended-session">{{ 'LOGIN.EXTENDED_SESSION' | translate }}</label>
+        </div>
+
         @if (hasFailed()) {
             <p class="login__error" role="alert">{{ 'LOGIN.FAILED' | translate }}</p>
         }

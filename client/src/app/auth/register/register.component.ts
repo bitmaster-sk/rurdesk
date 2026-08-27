@@ -45,7 +45,11 @@ export class RegisterComponent implements OnInit {
                 email: values.email,
                 password: values.credentials.password
             })
-            .pipe(switchMap(() => this.authApi.login$(values.email, values.credentials.password)))
+            .pipe(
+                switchMap(() =>
+                    this.authApi.login$(values.email, values.credentials.password, false)
+                )
+            )
             .subscribe({
                 next: token => this.session.start(token),
                 error: err => this.onRegisterError(err)

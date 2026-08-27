@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/password"
@@ -14,8 +15,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-const sessionIndexPrefix = "sessions:user:"
 
 // ErrInvalidPassword is returned when the current password does not match
 // (or the user cannot use password auth at all, e.g. bots).
@@ -75,7 +74,7 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*model.User, error) {
 	return s.userRepo.ListUsers(ctx)
 }
 
-func (s *UserService) Login(ctx context.Context, email, plainPassword string) (string, error) {
+func (s *UserService) Login(ctx context.Context, email, plainPassword string, hasExtendedSessionLifetime bool) (string, error) {
 	user, err := s.userRepo.LoadUserByEmail(ctx, email)
 	if err != nil {
 		// Hashing anyway keeps this path as slow as a real account's; returning
@@ -86,8 +85,12 @@ func (s *UserService) Login(ctx context.Context, email, plainPassword string) (s
 	if err := password.Compare(user.Password, plainPassword); err != nil {
 		return "", ErrInvalidPassword
 	}
+	lifetime := constants.SessionLifetime
+	if hasExtendedSessionLifetime {
+		lifetime = constants.SessionLifetimeExtended
+	}
 	token := uuid.New().String()
-	if err := s.cache.Set(ctx, token, user, 24*time.Hour).Err(); err != nil {
+	if err := s.cache.Set(ctx, token, user, lifetime).Err(); err != nil {
 		return "", err
 	}
 	// Index the session under the user so demote/delete can invalidate it. Stale
@@ -96,10 +99,21 @@ func (s *UserService) Login(ctx context.Context, email, plainPassword string) (s
 	if err := s.cache.SAdd(ctx, idxKey, token).Err(); err != nil {
 		return "", err
 	}
-	if err := s.cache.Expire(ctx, idxKey, 24*time.Hour).Err(); err != nil {
+	if err := s.extendSessionIndexExpiry(ctx, idxKey, lifetime); err != nil {
 		return "", err
 	}
 	return token, nil
+}
+
+func (s *UserService) extendSessionIndexExpiry(ctx context.Context, idxKey string, lifetime time.Duration) error {
+	currentTTL, err := s.cache.TTL(ctx, idxKey).Result()
+	if err != nil {
+		return err
+	}
+	if currentTTL > lifetime {
+		return nil
+	}
+	return s.cache.Expire(ctx, idxKey, lifetime).Err()
 }
 
 func (s *UserService) Logout(ctx context.Context, token string) error {
@@ -115,7 +129,7 @@ func (s *UserService) Update(ctx context.Context, token string, user model.User,
 	}
 	user.Name = name
 	user.ColorAvatarBg = colorAvatarBg
-	return s.cache.Set(ctx, token, &user, 24*time.Hour).Err()
+	return s.cache.Set(ctx, token, &user, redis.KeepTTL).Err()
 }
 
 // ChangePassword verifies the current password and replaces it, then invalidates every
@@ -187,5 +201,5 @@ func (s *UserService) InvalidateUserSessionsExcept(ctx context.Context, idUser i
 }
 
 func sessionIndexKey(idUser int64) string {
-	return fmt.Sprintf("%s%d", sessionIndexPrefix, idUser)
+	return fmt.Sprintf("%s%d", constants.SessionIndexPrefix, idUser)
 }

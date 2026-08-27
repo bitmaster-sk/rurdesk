@@ -28,7 +28,7 @@ func (uc *UserController) Login(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	token, err := uc.userService.Login(c.Request.Context(), dto.Email, dto.Password)
+	token, err := uc.userService.Login(c.Request.Context(), dto.Email, dto.Password, dto.HasExtendedSessionLifetime)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusUnauthorized)

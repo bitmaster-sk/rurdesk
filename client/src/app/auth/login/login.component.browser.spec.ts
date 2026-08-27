@@ -69,6 +69,35 @@ describe('LoginComponent (browser)', () => {
         expect(session.start).toHaveBeenCalledWith('a-token');
     });
 
+    it('asks for a default session lifetime when the checkbox is untouched', () => {
+        authApi.login$.mockReturnValue(of('a-token'));
+        const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: false
+        });
+
+        fixture.componentInstance.onLogin();
+
+        expect(authApi.login$).toHaveBeenCalledWith('a@b.sk', 'secret', false);
+    });
+
+    it('asks for an extended session lifetime when the checkbox is ticked', () => {
+        authApi.login$.mockReturnValue(of('a-token'));
+        const fixture = setup();
+        const checkbox = fixture.nativeElement.querySelector(
+            '[data-testid="login-extended-session"]'
+        ) as HTMLInputElement;
+
+        checkbox.click();
+        fixture.detectChanges();
+        fixture.componentInstance.form.patchValue({ email: 'a@b.sk', password: 'secret' });
+        fixture.componentInstance.onLogin();
+
+        expect(authApi.login$).toHaveBeenCalledWith('a@b.sk', 'secret', true);
+    });
+
     it('clears the error once the user edits the form', () => {
         authApi.login$.mockReturnValue(throwError(() => new Error('401')));
         const fixture = setup();
