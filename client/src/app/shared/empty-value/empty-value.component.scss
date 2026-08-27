@@ -1,0 +1,17 @@
+:host {
+    display: contents;
+}
+
+.empty-value {
+    display: inline-block;
+    color: var(--ui-color-text-muted);
+
+    &--badge {
+        padding-left: calc(1px + var(--ui-space-s));
+    }
+
+    // Mirrors the severity value's own indent: severity-circle's default 1rem plus the gap-1 next to it.
+    &--dot {
+        padding-left: calc(1rem + 0.25rem);
+    }
+}

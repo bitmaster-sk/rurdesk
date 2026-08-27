@@ -11,6 +11,7 @@ import { DurationPipe } from './duration/duration.pipe';
 import { RouterModule } from '@angular/router';
 import { EmojiPipe } from './emoji/emoji.pipe';
 import { SecDurationPipe } from './duration/sec-duration.pipe';
+import { EmptyValueComponent } from './empty-value/empty-value.component';
 import { StateBadgeComponent } from './state-badge/state-badge.component';
 import { StateBadgeSelectorComponent } from './state-badge-selector/state-badge-selector.component';
 import { SeverityBadgeComponent } from './severity-badge/severity-badge.component';
@@ -44,6 +45,7 @@ import {
 @NgModule({
     declarations: [
         AvatarComponent,
+        EmptyValueComponent,
         StateBadgeComponent,
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
@@ -92,6 +94,7 @@ import {
         UiModule,
         WindowModule,
         AvatarComponent,
+        EmptyValueComponent,
         StateBadgeComponent,
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
