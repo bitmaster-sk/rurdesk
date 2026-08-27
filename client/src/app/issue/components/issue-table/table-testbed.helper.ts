@@ -3,7 +3,7 @@ import { of, EMPTY } from 'rxjs';
 import { Component, input, output } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
-import { provideRouter } from '@angular/router';
+import { provideRouter, RouterLink } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { IssueTableComponent } from './issue-table.component';
@@ -19,6 +19,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { Issue } from '../../model/issue.model';
 import { UiModule } from 'src/app/ui/ui.module';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
+import { EmptyValueComponent } from 'src/app/shared/empty-value/empty-value.component';
 
 import { signal } from '@angular/core';
 
@@ -69,6 +70,12 @@ export class SeverityCircleStub {
 @Component({ selector: 'app-state-badge', template: '', standalone: true })
 export class StateBadgeStub {
     public readonly state = input<any>(undefined);
+    public readonly size = input<string>('s');
+}
+
+@Component({ selector: 'app-issue-type-badge', template: '', standalone: true })
+export class IssueTypeBadgeStub {
+    public readonly issueType = input<any>(undefined);
     public readonly size = input<string>('s');
 }
 
@@ -152,17 +159,19 @@ export function configureTableTestBed(): TableMocks {
             TranslateModule.forRoot(),
             FormsModule,
             UiModule,
+            RouterLink,
             TablerIconStub,
             FilterStub,
             QuickActionsStub,
             SeverityCircleStub,
             StateBadgeStub,
+            IssueTypeBadgeStub,
             AvatarStub,
             QualityBadgeStub,
             DropZoneStub,
             SplitDialogStub
         ],
-        declarations: [IssueTableComponent],
+        declarations: [IssueTableComponent, EmptyValueComponent],
         providers: [
             { provide: IssueTableService, useValue: issueTableServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },

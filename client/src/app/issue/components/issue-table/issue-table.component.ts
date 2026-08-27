@@ -38,6 +38,7 @@ import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
 import { resolveHighlightIndex } from './highlight.util';
+import { EmptyValueAlign } from 'src/app/shared/empty-value/constant/empty-value-align.enum';
 
 @Component({
     selector: 'app-issue-table',
@@ -89,6 +90,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     // the row, unlike updateAt which bumped the edited row to the top).
     protected readonly sortField = signal<string>('idIssue');
     protected readonly sortOrder = signal<1 | -1>(-1);
+
+    protected readonly EmptyValueAlign = EmptyValueAlign;
 
     public readonly defaultSortColumn = 'idIssue';
 

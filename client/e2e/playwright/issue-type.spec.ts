@@ -152,7 +152,7 @@ test('deleting a type in use can leave the tasks untyped', async ({ page, reques
     const row = page.locator('tbody tr', {
         has: page.getByRole('link', { name: BUG_TITLE, exact: true })
     });
-    await expect(row.locator('[data-testid="issue-type-cell"]')).toHaveText('None');
+    await expect(row.locator('[data-testid="issue-type-cell"]')).toContainText('—');
 });
 
 // Scenario:

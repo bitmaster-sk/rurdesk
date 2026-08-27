@@ -167,21 +167,27 @@
                                         size="s"
                                     ></app-issue-type-badge>
                                 } @else {
-                                    <span class="ui-color-text-muted">
-                                        {{ 'NONE' | translate }}
-                                    </span>
+                                    <app-empty-value [align]="EmptyValueAlign.Badge" />
                                 }
                             </td>
                             <td>
-                                <div class="flex items-center gap-1">
-                                    <app-severity-circle
-                                        [color]="row.severity?.color"
-                                    ></app-severity-circle>
-                                    <span>{{ row.severity?.title ?? ('NONE' | translate) }}</span>
-                                </div>
+                                @if (row.severity; as severity) {
+                                    <div class="flex items-center gap-1">
+                                        <app-severity-circle
+                                            [color]="severity.color"
+                                        ></app-severity-circle>
+                                        <span>{{ severity.title }}</span>
+                                    </div>
+                                } @else {
+                                    <app-empty-value [align]="EmptyValueAlign.Dot" />
+                                }
                             </td>
                             <td>
-                                <app-state-badge [state]="row.state" size="s"></app-state-badge>
+                                @if (row.state) {
+                                    <app-state-badge [state]="row.state" size="s"></app-state-badge>
+                                } @else {
+                                    <app-empty-value [align]="EmptyValueAlign.Badge" />
+                                }
                             </td>
                             <td>
                                 <span class="flex items-center gap-1">
@@ -261,23 +267,26 @@
                                     </td>
                                     <td></td>
                                     <td>
-                                        <div class="flex items-center gap-1">
-                                            @if (rel.severity) {
+                                        @if (rel.severity; as severity) {
+                                            <div class="flex items-center gap-1">
                                                 <app-severity-circle
-                                                    [color]="rel.severity.color"
+                                                    [color]="severity.color"
                                                 ></app-severity-circle>
-                                                <span>{{ rel.severity.title }}</span>
-                                            } @else {
-                                                <app-severity-circle></app-severity-circle>
-                                                <span>{{ 'NONE' | translate }}</span>
-                                            }
-                                        </div>
+                                                <span>{{ severity.title }}</span>
+                                            </div>
+                                        } @else {
+                                            <app-empty-value [align]="EmptyValueAlign.Dot" />
+                                        }
                                     </td>
                                     <td>
-                                        <app-state-badge
-                                            [state]="rel.state"
-                                            size="s"
-                                        ></app-state-badge>
+                                        @if (rel.state) {
+                                            <app-state-badge
+                                                [state]="rel.state"
+                                                size="s"
+                                            ></app-state-badge>
+                                        } @else {
+                                            <app-empty-value [align]="EmptyValueAlign.Badge" />
+                                        }
                                     </td>
                                     <td>
                                         <span class="flex items-center gap-1">
