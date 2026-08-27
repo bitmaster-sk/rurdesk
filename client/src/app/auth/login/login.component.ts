@@ -33,17 +33,24 @@ export class LoginComponent implements OnInit {
 
     public onLogin(): void {
         this.hasFailed.set(false);
-        const credentials = this.form.value as { email: string; password: string };
-        this.authApi.login$(credentials.email, credentials.password).subscribe({
-            next: token => this.session.start(token),
-            error: () => this.hasFailed.set(true)
-        });
+        const credentials = this.form.value as {
+            email: string;
+            password: string;
+            hasExtendedSessionLifetime: boolean;
+        };
+        this.authApi
+            .login$(credentials.email, credentials.password, credentials.hasExtendedSessionLifetime)
+            .subscribe({
+                next: token => this.session.start(token),
+                error: () => this.hasFailed.set(true)
+            });
     }
 
     private buildForm(): FormGroup {
         return this.fb.group({
             email: this.fb.control(null, [Validators.email, Validators.maxLength(250)]),
-            password: this.fb.control(null, [Validators.minLength(5), Validators.maxLength(100)])
+            password: this.fb.control(null, [Validators.minLength(5), Validators.maxLength(100)]),
+            hasExtendedSessionLifetime: this.fb.control(false)
         });
     }
 }
