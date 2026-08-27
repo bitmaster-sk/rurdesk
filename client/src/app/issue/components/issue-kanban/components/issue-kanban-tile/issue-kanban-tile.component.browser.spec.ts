@@ -19,6 +19,12 @@ class StateBadgeStub {
     public readonly size = input<string>('');
 }
 
+@Component({ selector: 'app-issue-type-badge', template: '', standalone: true })
+class IssueTypeBadgeStub {
+    public readonly issueType = input<unknown>(undefined);
+    public readonly size = input<string>('');
+}
+
 function tile(over: Partial<KanbanTile>): KanbanTile {
     return {
         idIssue: 1,
@@ -46,7 +52,8 @@ describe('KanbanTileComponent points badge', () => {
                 AvatarStub,
                 TablerIconStub,
                 SeverityCircleStub,
-                StateBadgeStub
+                StateBadgeStub,
+                IssueTypeBadgeStub
             ]
         }).compileComponents();
         fixture = TestBed.createComponent(KanbanTileComponent);
@@ -64,5 +71,32 @@ describe('KanbanTileComponent points badge', () => {
         fixture.componentRef.setInput('tile', tile({ points: null }));
         fixture.detectChanges();
         expect(fixture.debugElement.query(By.css('[data-testid="tile-points"]'))).toBeNull();
+    });
+
+    it('shows the severity when the issue has one', () => {
+        fixture.componentRef.setInput(
+            'tile',
+            tile({
+                severity: {
+                    idSeverity: 1,
+                    idProject: 1,
+                    title: 'High',
+                    color: '#f00',
+                    protected: false,
+                    orderRank: 1
+                }
+            })
+        );
+        fixture.detectChanges();
+
+        const severity = fixture.debugElement.query(By.css('.tile-card--severity'));
+        expect(severity.nativeElement.textContent).toContain('High');
+    });
+
+    it('omits the severity entirely when the issue has none', () => {
+        fixture.componentRef.setInput('tile', tile({ severity: undefined }));
+        fixture.detectChanges();
+
+        expect(fixture.debugElement.query(By.css('.tile-card--severity'))).toBeNull();
     });
 });
