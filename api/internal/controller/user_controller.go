@@ -7,10 +7,10 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/password"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
 	colorful "github.com/lucasb-eyer/go-colorful"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type UserController struct {
@@ -57,7 +57,7 @@ func (uc *UserController) Register(c *gin.Context) {
 
 	// Public registration is a one-time bootstrap: the first ever user becomes the instance
 	// admin, after which the endpoint is closed and all user creation is admin-gated.
-	bHash, err := bcrypt.GenerateFromPassword([]byte(dto.Password), bcrypt.DefaultCost)
+	hash, err := password.Hash(dto.Password)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -67,7 +67,7 @@ func (uc *UserController) Register(c *gin.Context) {
 	user := &model.User{
 		Email:         dto.Email,
 		Name:          dto.Name,
-		Password:      string(bHash),
+		Password:      hash,
 		ColorAvatarBg: randomAvatarColor(),
 		IsAdmin:       true, // first ever user bootstraps as instance admin
 	}

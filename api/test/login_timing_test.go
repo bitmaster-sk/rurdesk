@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"testing"
 	"time"
@@ -9,18 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// A failed login must cost the same whether or not the account exists.
+// A failed login must cost the same whether or not the account exists —
+// returning early on an unknown email told an attacker who has an account here.
 //
-// Returning early on an unknown email skipped bcrypt entirely. bcrypt at
-// DefaultCost takes tens of milliseconds while the early return took
-// microseconds, so the response time told an attacker which addresses have an
-// account here — on a self-hosted company tracker, that is the staff list.
-//
-// The assertion is a floor rather than a comparison of the two timings: the
-// no-such-user path simply has to do real hashing work. The margin between
-// "bcrypt ran" and "we returned immediately" is three orders of magnitude, so a
-// 10ms floor is far below anything bcrypt produces and far above the early
-// return, and does not turn into a flaky benchmark on a loaded CI box.
+// The two paths are compared against each other rather than an absolute floor,
+// because the hashing cost is configurable and any fixed threshold would be
+// flaky or meaningless depending on it.
 func TestLogin_UnknownEmailStillHashes(t *testing.T) {
 	app := Setup(t)
 	token := Token(t, app)
@@ -31,20 +26,26 @@ func TestLogin_UnknownEmailStillHashes(t *testing.T) {
 		fmt.Sprintf(`{"name":"timing","email":%q,"password":%q}`, email, password), token)
 	require.Equal(t, http.StatusOK, res.StatusCode)
 
-	timeLogin := func(loginEmail string) (int, time.Duration) {
-		start := time.Now()
-		res := Request(t, app, "POST", "/api/public/login",
-			fmt.Sprintf(`{"email":%q,"password":"definitely-wrong"}`, loginEmail), "")
-		return res.StatusCode, time.Since(start)
+	fastestLogin := func(loginEmail string) time.Duration {
+		fastest := time.Duration(math.MaxInt64)
+		for i := 0; i < 5; i++ {
+			start := time.Now()
+			res := Request(t, app, "POST", "/api/public/login",
+				fmt.Sprintf(`{"email":%q,"password":"definitely-wrong"}`, loginEmail), "")
+			took := time.Since(start)
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode,
+				"a wrong password must be rejected identically for %q", loginEmail)
+			if took < fastest {
+				fastest = took
+			}
+		}
+		return fastest
 	}
 
-	existingStatus, existingTook := timeLogin(email)
-	unknownStatus, unknownTook := timeLogin("no-such-user@test.sk")
+	existingTook := fastestLogin(email)
+	unknownTook := fastestLogin("no-such-user@test.sk")
 
-	require.Equal(t, http.StatusUnauthorized, existingStatus, "wrong password must be rejected")
-	require.Equal(t, http.StatusUnauthorized, unknownStatus, "unknown email must look identical")
-
-	require.Greater(t, unknownTook, 10*time.Millisecond,
-		"unknown email returned in %v (existing account took %v) — bcrypt was skipped, "+
-			"which leaks whether the account exists", unknownTook, existingTook)
+	require.Greater(t, unknownTook*8, existingTook,
+		"unknown email returned in %v while an existing account took %v — hashing was "+
+			"skipped, which leaks whether the account exists", unknownTook, existingTook)
 }

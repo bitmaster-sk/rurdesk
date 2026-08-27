@@ -9,11 +9,11 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/password"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // ErrInvalidPassword is returned when the current password does not match
@@ -74,20 +74,15 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*model.User, error) {
 	return s.userRepo.ListUsers(ctx)
 }
 
-// dummyPasswordHash is compared against when the email is unknown, so a failed
-// login costs the same bcrypt work whether or not the account exists. Returning
-// early instead leaked account existence: bcrypt takes tens of milliseconds, so
-// the timing difference is measurable over the network and lets anyone probe a
-// list of addresses for who has an account here.
-var dummyPasswordHash = []byte("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy")
-
-func (s *UserService) Login(ctx context.Context, email, password string, hasExtendedSessionLifetime bool) (string, error) {
+func (s *UserService) Login(ctx context.Context, email, plainPassword string, hasExtendedSessionLifetime bool) (string, error) {
 	user, err := s.userRepo.LoadUserByEmail(ctx, email)
 	if err != nil {
-		_ = bcrypt.CompareHashAndPassword(dummyPasswordHash, []byte(password))
+		// Hashing anyway keeps this path as slow as a real account's; returning
+		// early instead leaked whether the address exists.
+		_ = password.Compare(password.Dummy(), plainPassword)
 		return "", ErrInvalidPassword
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := password.Compare(user.Password, plainPassword); err != nil {
 		return "", ErrInvalidPassword
 	}
 	lifetime := constants.SessionLifetime
@@ -148,14 +143,14 @@ func (s *UserService) ChangePassword(ctx context.Context, idUser int64, currentP
 	if user.IsBot {
 		return ErrInvalidPassword
 	}
-	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)) != nil {
+	if password.Compare(user.Password, currentPassword) != nil {
 		return ErrInvalidPassword
 	}
-	bHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hash, err := password.Hash(newPassword)
 	if err != nil {
 		return fmt.Errorf("hashing password: %w", err)
 	}
-	if err := s.userRepo.UpdatePassword(ctx, idUser, string(bHash)); err != nil {
+	if err := s.userRepo.UpdatePassword(ctx, idUser, hash); err != nil {
 		return err
 	}
 	return s.InvalidateUserSessionsExcept(ctx, idUser, keepToken)
