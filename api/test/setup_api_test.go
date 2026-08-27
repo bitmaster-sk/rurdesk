@@ -17,6 +17,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/password"
 	"github.com/bitmaster-sk/rurdesk/api/migrations"
 	"github.com/go-redis/redis/v8"
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver for goose
@@ -243,6 +244,10 @@ func Setup(t *testing.T) *issue.Application {
 	// Production sets this; without it viper.GetInt returns 0 and the project
 	// builder's "description too long" guard rejects every non-empty description.
 	viper.Set("PROJECT_BUILDER_DESCRIPTION_MAX_LENGTH", 10000)
+
+	// One cost-10 hash costs ~0.6s under -race and this suite does hundreds of
+	// them; MinCost keeps every code path and cuts that to ~10ms.
+	viper.Set("BCRYPT_COST", password.MinCost)
 
 	// The AI features no longer fall back to a hardcoded model — with no model
 	// configured they return errs.ErrAiNotConfigured (503) before the injected

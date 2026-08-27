@@ -97,6 +97,18 @@ docker exec \
 > session cache invalidates tokens immediately. The only auth-adjacent variables
 > are `ALLOWED_WS_ORIGINS` (above) and `GIT_INTEGRATION_ENCRYPTION_KEY`.
 
+### Password hashing cost
+
+Passwords and bot secrets are hashed with bcrypt at cost 10. `BCRYPT_COST`
+overrides that, and values outside bcrypt's accepted range (4–31) are ignored in
+favour of the default.
+
+**Leave it unset.** It exists so the test suite can hash at cost 4 — bcrypt is a
+tight CPU loop that the Go race detector slows roughly 12x, which turned the
+integration suite into a seven-minute bcrypt benchmark. Lowering it on a real
+deployment weakens every password hashed while it is in effect, and raising it
+makes each login proportionally slower (each `+1` doubles the work).
+
 ## AI provider (Quality Check, Kickstarter, Task Split)
 
 These features run **inside the API** and call the provider you select here.

@@ -14,12 +14,12 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/password"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/spf13/viper"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AdminController struct {
@@ -103,7 +103,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		c.Status(http.StatusConflict)
 		return
 	}
-	bHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	hash, err := password.Hash(req.Password)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -112,7 +112,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 	user := &model.User{
 		Email:         req.Email,
 		Name:          req.Name,
-		Password:      string(bHash),
+		Password:      hash,
 		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
 		IsAdmin:       req.IsAdmin,
 	}
@@ -218,7 +218,7 @@ func (ac *AdminController) createBot(c *gin.Context, req *model.AdminCreateUserR
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	bHash, err := bcrypt.GenerateFromPassword([]byte(secret), bcrypt.DefaultCost)
+	hash, err := password.Hash(secret)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -227,7 +227,7 @@ func (ac *AdminController) createBot(c *gin.Context, req *model.AdminCreateUserR
 	user := &model.User{
 		Email:         email,
 		Name:          req.Name,
-		Password:      string(bHash),
+		Password:      hash,
 		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
 		IsBot:         true,
 	}
