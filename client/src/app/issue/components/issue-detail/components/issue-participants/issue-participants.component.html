@@ -1,5 +1,11 @@
 <div class="participants-panel" [class.participants-panel--collapsed]="isCollapsed()">
-    <div class="participants-panel__header" (click)="onToggleCollapse()">
+    <div
+        uiActivatable
+        class="participants-panel__header"
+        [attr.aria-expanded]="!isCollapsed()"
+        [attr.aria-label]="'ISSUE.PARTICIPANTS.TITLE' | translate"
+        (click)="onToggleCollapse()"
+    >
         <span
             class="participants-panel__chevron"
             [class.participants-panel__chevron--collapsed]="isCollapsed()"
@@ -62,7 +68,8 @@
             </div>
             <div class="participants-popover__list">
                 @for (member of availableMembers(); track member.idUser) {
-                    <div
+                    <button
+                        type="button"
                         class="participants-popover__item"
                         (click)="onAddParticipant(member, addPopover)"
                     >
@@ -74,7 +81,7 @@
                             [radius]="0.75"
                         ></app-avatar>
                         <span class="participants-popover__name">{{ member.name }}</span>
-                    </div>
+                    </button>
                 } @empty {
                     <div class="participants-popover__empty">
                         <span class="ui-color-text-muted text-sm">
