@@ -20,6 +20,8 @@ import { CommandGroup, CommandMode, RankedCommand } from '../../../core/command/
     standalone: false
 })
 export class UiCommandPaletteComponent {
+    private static idCounter = 0;
+
     public readonly groups = input<CommandGroup[]>([]);
     public readonly mode = input<CommandMode>('all');
     public readonly query = input('');
@@ -40,6 +42,21 @@ export class UiCommandPaletteComponent {
         return items.length === 0 && create ? [create] : items;
     });
     protected readonly selected = signal(0);
+    protected readonly baseId = `ui-command-palette-${++UiCommandPaletteComponent.idCounter}`;
+
+    /** DOM ids for `aria-activedescendant`: `RankedCommand.id` is arbitrary text
+     *  (issue titles, user names) and would not survive as an HTML id. */
+    private readonly optionDomIds = computed<Map<string, string>>(() => {
+        const map = new Map<string, string>();
+        this.flat().forEach((item, index) => map.set(item.id, `${this.baseId}_opt_${index}`));
+        return map;
+    });
+
+    protected readonly activeDescendantId = computed(() => {
+        const current = this.flat()[this.selected()];
+        return current ? (this.optionDomIds().get(current.id) ?? null) : null;
+    });
+
     /** Translation KEYS (chrome is translated at render time via `| translate`, unlike command
      *  titles which are pre-translated by the builders to stay searchable). */
     protected readonly labelKeys: Record<CommandMode, string> = {
@@ -64,6 +81,10 @@ export class UiCommandPaletteComponent {
 
     protected isSelected(item: RankedCommand): boolean {
         return this.flat()[this.selected()]?.id === item.id;
+    }
+
+    protected optionId(item: RankedCommand): string | null {
+        return this.optionDomIds().get(item.id) ?? null;
     }
 
     protected onInput(event: Event): void {

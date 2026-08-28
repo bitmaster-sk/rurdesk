@@ -70,6 +70,27 @@ describe('UiCommandPaletteComponent', () => {
         expect(got!.id).toBe('a');
     });
 
+    it('points aria-activedescendant at the selected option and follows ArrowDown', () => {
+        const f = mount();
+        const input = f.nativeElement.querySelector('input');
+        const idOf = (dataItem: string) =>
+            f.nativeElement.querySelector(`[data-item="${dataItem}"]`).getAttribute('id');
+
+        expect(input.getAttribute('role')).toBe('combobox');
+        expect(input.getAttribute('aria-controls')).toBe(
+            f.nativeElement.querySelector('[role="listbox"]').getAttribute('id')
+        );
+        expect(input.getAttribute('aria-activedescendant')).toBe(idOf('a'));
+
+        press(f, 'ArrowDown');
+        expect(input.getAttribute('aria-activedescendant')).toBe(idOf('b'));
+    });
+
+    it('reports aria-expanded=false when nothing matches', () => {
+        const f = mount([]);
+        expect(f.nativeElement.querySelector('input').getAttribute('aria-expanded')).toBe('false');
+    });
+
     it('Escape clears a non-empty query, then closes when empty', () => {
         const f = mount();
         let cleared: string | null = null;
