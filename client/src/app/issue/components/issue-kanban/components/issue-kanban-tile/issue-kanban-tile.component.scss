@@ -75,6 +75,10 @@
         padding-block: var(--ui-space-s);
         text-decoration: none;
 
+        padding-inline: var(--ui-space-s);
+        margin-inline: calc(-1 * var(--ui-space-s));
+        --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
+
         &:hover {
             text-decoration: underline;
         }

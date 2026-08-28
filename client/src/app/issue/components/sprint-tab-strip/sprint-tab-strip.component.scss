@@ -22,6 +22,7 @@
     align-items: center;
     gap: var(--ui-space-s);
     overflow-x: auto;
+    --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
     scrollbar-width: none; // arrows drive scrolling; hide the native bar
     &::-webkit-scrollbar {
         display: none;
