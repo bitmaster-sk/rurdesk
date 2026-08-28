@@ -1,0 +1,76 @@
+<div
+    class="ui-split-pane__panel ui-split-pane__panel--start"
+    [style.flex-basis.%]="startBasis()"
+    [attr.inert]="isStartCollapsed() ? '' : null"
+    data-testid="split-pane-start"
+>
+    <ng-content select="[uiSplitStart]"></ng-content>
+</div>
+
+<div
+    class="ui-split-pane__splitter"
+    role="separator"
+    tabindex="0"
+    aria-orientation="vertical"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    [attr.aria-label]="label()"
+    [attr.aria-valuenow]="ariaValueNow()"
+    [class.ui-split-pane__splitter--at-limit]="isAtLimit()"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp()"
+    (pointercancel)="onPointerUp()"
+    (dblclick)="onDoubleClick($event)"
+    (keydown)="onKeydown($event)"
+    data-testid="split-pane-splitter"
+>
+    <span class="ui-split-pane__grip"></span>
+
+    <span class="ui-split-pane__controls">
+        <button
+            type="button"
+            class="ui-split-pane__btn"
+            [attr.aria-disabled]="isStartCollapsed()"
+            [attr.aria-label]="startLabel()"
+            [uiTooltip]="startLabel()"
+            uiTooltipPosition="left"
+            (click)="onStep(-1)"
+            data-testid="split-pane-collapse-start"
+        >
+            <tabler-icon icon="chevron-left" [size]="12" />
+        </button>
+        <button
+            type="button"
+            class="ui-split-pane__btn"
+            [attr.aria-disabled]="isDefault()"
+            [attr.aria-label]="resetTooltip()"
+            [uiTooltip]="resetTooltip()"
+            uiTooltipPosition="left"
+            (click)="onReset()"
+            data-testid="split-pane-reset"
+        >
+            <tabler-icon icon="separator-vertical" [size]="12" />
+        </button>
+        <button
+            type="button"
+            class="ui-split-pane__btn"
+            [attr.aria-disabled]="isEndCollapsed()"
+            [attr.aria-label]="endLabel()"
+            [uiTooltip]="endLabel()"
+            uiTooltipPosition="left"
+            (click)="onStep(1)"
+            data-testid="split-pane-collapse-end"
+        >
+            <tabler-icon icon="chevron-right" [size]="12" />
+        </button>
+    </span>
+</div>
+
+<div
+    class="ui-split-pane__panel ui-split-pane__panel--end"
+    [attr.inert]="isEndCollapsed() ? '' : null"
+    data-testid="split-pane-end"
+>
+    <ng-content select="[uiSplitEnd]"></ng-content>
+</div>

@@ -12,6 +12,8 @@ import {
     IconChartBar,
     IconChartColumn,
     IconChevronDown,
+    IconChevronLeft,
+    IconChevronRight,
     IconCircleCheck,
     IconCommand,
     IconCopy,
@@ -27,6 +29,7 @@ import {
     IconLogout,
     IconPlus,
     IconSearch,
+    IconSeparatorVertical,
     IconSettings,
     IconTable,
     IconUser,
@@ -49,6 +52,7 @@ import { UiLoaderComponent } from './components/loader/loader.component';
 import { UiMessageComponent } from './components/message/message.component';
 import { UiPopoverComponent } from './components/popover/popover.component';
 import { UiSaveStatusChipComponent } from './components/save-status/save-status-chip.component';
+import { UiSplitPaneComponent } from './components/split-pane/split-pane.component';
 import { UiSaveStatusDirective } from './directives/save-status.directive';
 import { UiFlipListDirective } from './directives/flip-list.directive';
 import { UiListboxComponent } from './components/select/listbox.component';
@@ -94,6 +98,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiTooltipComponent,
         UiDialogComponent,
         UiSaveStatusChipComponent,
+        UiSplitPaneComponent,
         UiTableSortDirective,
         UiSortColumnDirective,
         UiConfirmDirective,
@@ -135,6 +140,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiPopoverComponent,
         UiMenuComponent,
         UiDialogComponent,
+        UiSplitPaneComponent,
         UiTableSortDirective,
         UiSortColumnDirective,
         UiSaveStatusDirective,
@@ -150,6 +156,8 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
     providers: [
         provideTablerIcons({
             IconChevronDown,
+            IconChevronLeft,
+            IconChevronRight,
             IconLoader2,
             IconX,
             IconInfoCircle,
@@ -165,6 +173,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
             IconSettings,
             IconPlus,
             IconSearch,
+            IconSeparatorVertical,
             IconList,
             IconTable,
             IconLayoutBoard,
