@@ -391,6 +391,14 @@
     },
     "ISSUE": {
         "POINTS": "Points",
+        "SPLIT_PANE": {
+            "LABEL": "Issue detail panel width",
+            "COLLAPSE_INFO": "Collapse issue info",
+            "COLLAPSE_ACTIVITY": "Collapse activity",
+            "RESTORE": "Restore split",
+            "RESET": "Reset to an even split",
+            "ALREADY_DEFAULT": "Already at the even split"
+        },
         "VIEWS": {
             "TITLE": "Views",
             "SAVE_CURRENT": "Save current view…",

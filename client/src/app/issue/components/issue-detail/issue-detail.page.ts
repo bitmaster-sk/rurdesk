@@ -40,6 +40,8 @@ export class IssueDetailPage implements OnDestroy {
     public readonly agentRunStore = inject(AgentRunStore);
     public readonly project = toSignal(this.projectStore.project$);
 
+    public readonly splitPaneStorageKey = 'rurdesk.issueDetail.split';
+
     public readonly isSplitDialogOpen = signal(false);
     public readonly splitIssue = signal<Issue | null>(null);
     public readonly pendingTrack = signal<Track | null>(null);
