@@ -113,6 +113,31 @@ describe('UiMultiSelectComponent (browser)', () => {
         expect(fixture.componentInstance.ctrl.value).toEqual([]);
     });
 
+    it('select-all is reachable by keyboard: Ctrl+A toggles all, then clears', () => {
+        const fixture = setup();
+        const el = trigger(fixture.nativeElement);
+        el.click();
+        fixture.detectChanges();
+
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        expect(fixture.componentInstance.ctrl.value).toEqual(['a', 'b', 'c']);
+
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+        expect(fixture.componentInstance.ctrl.value).toEqual([]);
+    });
+
+    it('Ctrl+A does nothing while the panel is closed', () => {
+        const fixture = setup();
+        const el = trigger(fixture.nativeElement);
+
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', ctrlKey: true, bubbles: true }));
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.ctrl.value).toEqual([]);
+    });
+
     it('survives null options, as an async pipe hands over before its first emission', () => {
         const fixture = setup();
 
