@@ -61,6 +61,7 @@ import { UiToggleButtonComponent } from './components/toggle-button/toggle-butto
 import { UiTooltipComponent } from './components/tooltip/tooltip.component';
 import { UiTableSortDirective } from './components/table/table-sort.directive';
 import { UiSortColumnDirective } from './components/table/sort-column.directive';
+import { UiActivatableDirective } from './directives/activatable.directive';
 import { UiCheckboxDirective } from './directives/checkbox.directive';
 import { UiColorDirective } from './directives/color.directive';
 import { UiConfirmDirective } from './directives/confirm.directive';
@@ -101,6 +102,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiFlipListDirective,
         UiInputDirective,
         UiTextareaDirective,
+        UiActivatableDirective,
         UiCheckboxDirective,
         UiColorDirective,
         UiToggleDirective,
@@ -141,6 +143,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiFlipListDirective,
         UiInputDirective,
         UiTextareaDirective,
+        UiActivatableDirective,
         UiCheckboxDirective,
         UiColorDirective,
         UiToggleDirective,
