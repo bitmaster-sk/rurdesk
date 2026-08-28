@@ -36,6 +36,7 @@
                 <!-- An action must never read as picking the row it sits on. -->
                 <span
                     class="ui-select-panel__actions"
+                    [attr.inert]="i === highlightedIndex() ? null : ''"
                     (click)="$event.stopPropagation()"
                     (mousedown)="$event.stopPropagation()"
                 >
