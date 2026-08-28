@@ -30,9 +30,9 @@
     <div #scroller class="sprint-tabs__scroll" (scroll)="onScroll()">
         @for (tab of cycleTabs(); track tab.listId) {
             <div
-                role="button"
-                tabindex="0"
+                uiActivatable
                 class="sprint-tab"
+                [attr.aria-pressed]="tab.idSprint === selectedIdSprint()"
                 [class.sprint-tab--active]="tab.idSprint === selectedIdSprint()"
                 [class.sprint-tab--current]="tab.isCurrent"
                 [class.sprint-tab--closed]="tab.isClosed"
