@@ -14,8 +14,10 @@
         <div class="team-list w-80 shrink-0 overflow-y-auto py-1">
             @for (team of teams(); track team.idTeam) {
                 <div
+                    uiActivatable
                     class="flex items-center gap-2 p-2 cursor-pointer"
                     [class.ui-bg-surface-100]="selectedTeam()?.idTeam === team.idTeam"
+                    [attr.aria-pressed]="selectedTeam()?.idTeam === team.idTeam"
                     (dragover)="onDragOver($event)"
                     (drop)="onDropOnTeam($event, team)"
                     (click)="onSelectTeam(team)"
