@@ -31,8 +31,8 @@
             }
         </div>
 
-        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0">
-            <div class="ui-field col-span-4">
+        <div class="col-span-12 field-grid">
+            <div class="ui-field">
                 <label for="issue-type">{{ 'ISSUE_TYPE.SINGULAR' | translate }}</label>
                 <app-issue-type-dropdown
                     [issueTypes]="issueTypes()"
@@ -41,7 +41,7 @@
                 ></app-issue-type-dropdown>
             </div>
 
-            <div class="ui-field col-span-4">
+            <div class="ui-field">
                 <label for="issue-state">{{ 'STATE.SINGULAR' | translate }}</label>
                 <app-state-dropdown
                     [states]="states()"
@@ -50,7 +50,7 @@
                 ></app-state-dropdown>
             </div>
 
-            <div class="ui-field col-span-4">
+            <div class="ui-field">
                 <label for="issue-severity">{{ 'SEVERITY.SINGULAR' | translate }}</label>
                 <app-severity-dropdown
                     [severities]="severities()"
@@ -58,10 +58,8 @@
                     inputId="issue-severity"
                 ></app-severity-dropdown>
             </div>
-        </div>
 
-        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
-            <div class="ui-field col-span-4">
+            <div class="ui-field">
                 <label>{{ 'ISSUE.ASSIGNED.TO' | translate }}</label>
                 <app-user-dropdown
                     [users]="users()"
@@ -73,19 +71,17 @@
                 ></app-user-dropdown>
             </div>
 
-            <div class="ui-field col-span-4 flex flex-col">
+            <div class="ui-field flex flex-col">
                 <label for="issue-estimated">{{ 'ISSUE.TIME.ESTIMATED' | translate }}</label>
                 <input id="issue-estimated" formControlName="estimated" type="text" uiInput />
             </div>
 
-            <div class="ui-field col-span-4 flex flex-col">
+            <div class="ui-field flex flex-col">
                 <label for="issue-points">{{ 'ISSUE.POINTS' | translate }}</label>
                 <input id="issue-points" formControlName="points" type="number" min="0" uiInput />
             </div>
-        </div>
 
-        <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0 w-full">
-            <div class="ui-field col-span-4 flex flex-col">
+            <div class="ui-field flex flex-col">
                 <label for="issue-scheduled-at">{{ 'ISSUE.SCHEDULED.AT' | translate }}</label>
                 <input
                     uiDatepicker
@@ -97,14 +93,14 @@
             </div>
 
             @if (!isNewIssue()) {
-                <div class="ui-field col-span-4 tracked-field">
+                <div class="ui-field tracked-field">
                     <label for="issue-tracked">{{ 'ISSUE.TIME.TRACKED' | translate }}</label>
                     <div id="issue-tracked" class="tracked-value">
                         {{ currentIssue()?.tracked ?? 0 | secDuration }}
                     </div>
                 </div>
 
-                <div class="ui-field col-span-4">
+                <div class="ui-field">
                     <label for="issue-tracker">{{ 'ISSUE.TIME.TRACKER' | translate }}</label>
                     <app-tracker
                         [issue]="currentIssue()"

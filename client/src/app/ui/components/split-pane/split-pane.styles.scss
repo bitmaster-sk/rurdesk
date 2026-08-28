@@ -1,0 +1,159 @@
+// Global styles for ui-split-pane (aggregated into ../../ui.styles.scss and
+// loaded eagerly via src/styles.scss). Uses element/class selectors (not :host)
+// as it is compiled globally, not scoped.
+
+ui-split-pane {
+    display: flex;
+    flex-direction: row;
+    min-width: 0;
+    min-height: 0;
+}
+
+.ui-split-pane__panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    // The percentage cap keeps both panes inside a viewport too narrow to give
+    // each one the pixel floor, which would otherwise overflow the page.
+    min-width: min(var(--ui-split-pane-min, 280px), 45%);
+    overflow: hidden;
+    container-type: inline-size;
+}
+
+.ui-split-pane__panel--start {
+    flex: 0 0 50%;
+}
+
+.ui-split-pane__panel--end {
+    flex: 1 1 auto;
+}
+
+.ui-split-pane__splitter {
+    flex: 0 0 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: col-resize;
+    touch-action: none;
+    user-select: none;
+}
+
+.ui-split-pane__splitter::before {
+    content: '';
+    width: 1px;
+    height: 100%;
+    background: var(--ui-color-border);
+    transition:
+        background 0.12s,
+        width 0.12s;
+}
+
+.ui-split-pane__splitter:hover::before,
+.ui-split-pane__splitter:focus-visible::before,
+.ui-split-pane--dragging .ui-split-pane__splitter::before {
+    width: 3px;
+    background: var(--ui-color-primary);
+}
+
+.ui-split-pane__splitter:focus-visible {
+    outline: 2px solid var(--ui-color-primary-accent);
+    outline-offset: -2px;
+}
+
+.ui-split-pane__splitter--at-limit::before {
+    background: var(--ui-color-danger);
+}
+
+.ui-split-pane__grip {
+    position: absolute;
+    width: 4px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--ui-surface-400);
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.ui-split-pane__splitter:hover .ui-split-pane__grip,
+.ui-split-pane--dragging .ui-split-pane__grip {
+    opacity: 1;
+    background: var(--ui-color-primary);
+}
+
+// Near the top, not centred: the middle of the separator is where people grab
+// it to drag, and a control there would swallow the drag.
+.ui-split-pane__controls {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    // The buttons are wider than the splitter and overhang into both panes, so
+    // an opacity-0 control would still swallow clicks meant for the pane.
+    // pointer-events (not visibility) because Tab must still reach them.
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.ui-split-pane__splitter:hover .ui-split-pane__controls,
+.ui-split-pane__splitter:focus-within .ui-split-pane__controls,
+.ui-split-pane--collapsed-start .ui-split-pane__controls,
+.ui-split-pane--collapsed-end .ui-split-pane__controls {
+    pointer-events: auto;
+    opacity: 1;
+}
+
+.ui-split-pane--dragging .ui-split-pane__controls {
+    pointer-events: none;
+    opacity: 0;
+}
+
+.ui-split-pane__btn {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-color-surface);
+    color: var(--ui-color-text-muted);
+    box-shadow: 0 1px 2px rgb(26 16 8 / 12%);
+}
+
+.ui-split-pane__btn:hover:not([aria-disabled='true']) {
+    background: var(--ui-color-primary);
+    border-color: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+}
+
+// aria-disabled, not the native attribute: these stay hoverable and focusable
+// so their tooltip still explains why they are inactive.
+.ui-split-pane__btn[aria-disabled='true'] {
+    opacity: 0.35;
+    cursor: default;
+    box-shadow: none;
+}
+
+// A collapsed panel goes to zero — this has to beat min-width, otherwise the
+// 280px floor would hold it open.
+.ui-split-pane--collapsed-start .ui-split-pane__panel--start,
+.ui-split-pane--collapsed-end .ui-split-pane__panel--end {
+    flex: 0 0 0;
+    min-width: 0;
+    opacity: 0;
+}
+
+.ui-split-pane--collapsed-end .ui-split-pane__panel--start {
+    flex: 1 1 auto;
+}
+
+.ui-split-pane--collapsed-start .ui-split-pane__splitter,
+.ui-split-pane--collapsed-end .ui-split-pane__splitter {
+    flex-basis: 14px;
+}

@@ -1,7 +1,19 @@
-<div class="h-full w-full flex flex-row">
-    @if (project(); as project) { @if (issue$ | async; as issue) {
+@if (project(); as project) { @if (issue$ | async; as issue) {
 
-    <div class="info-section pt-2 pb-2 pl-2 pr-1 min-h-0 overflow-hidden flex flex-col">
+<ui-split-pane
+    class="h-full w-full"
+    [storageKey]="splitPaneStorageKey"
+    [label]="'ISSUE.SPLIT_PANE.LABEL' | translate"
+    [collapseStartLabel]="'ISSUE.SPLIT_PANE.COLLAPSE_INFO' | translate"
+    [collapseEndLabel]="'ISSUE.SPLIT_PANE.COLLAPSE_ACTIVITY' | translate"
+    [restoreLabel]="'ISSUE.SPLIT_PANE.RESTORE' | translate"
+    [resetLabel]="'ISSUE.SPLIT_PANE.RESET' | translate"
+    [alreadyDefaultLabel]="'ISSUE.SPLIT_PANE.ALREADY_DEFAULT' | translate"
+>
+    <div
+        uiSplitStart
+        class="info-section flex-1 min-h-0 overflow-hidden pt-2 pb-2 pl-2 pr-1 flex flex-col"
+    >
         <app-issue-info
             [issue]="issue"
             [project]="project"
@@ -14,8 +26,11 @@
         ></app-issue-info>
     </div>
 
-    @if (issue.idIssue) {
-    <div class="comment-section pt-2 pb-2 pl-1 pr-2 min-h-0 overflow-hidden flex flex-col">
+    <div
+        uiSplitEnd
+        class="comment-section flex-1 min-h-0 pt-2 pb-2 pl-1 pr-2 overflow-hidden flex flex-col"
+    >
+        @if (issue.idIssue) {
         <app-issue-activity-feed
             [idIssue]="issue.idIssue"
             [idProject]="project.idProject"
@@ -24,13 +39,15 @@
             (approveAgentRun)="agentRunStore.approve()"
             (approveAgentRunMockup)="agentRunStore.approve($event)"
         ></app-issue-activity-feed>
+        }
     </div>
-    } @if (isSplitDialogOpen() && splitIssue(); as issue) {
-    <app-split-dialog
-        [idProject]="project.idProject"
-        [issue]="issue"
-        (accepted)="onSplitAccepted($event)"
-        (cancelled)="onSplitCancelled()"
-    ></app-split-dialog>
-    } } }
-</div>
+</ui-split-pane>
+
+@if (isSplitDialogOpen() && splitIssue(); as issue) {
+<app-split-dialog
+    [idProject]="project.idProject"
+    [issue]="issue"
+    (accepted)="onSplitAccepted($event)"
+    (cancelled)="onSplitCancelled()"
+></app-split-dialog>
+} } }

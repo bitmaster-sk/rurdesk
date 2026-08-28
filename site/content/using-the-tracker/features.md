@@ -31,6 +31,26 @@ relations to other tasks.
 
 ![Task detail panel](../../site/assets/img/issue-detail.png)
 
+### Resizing the detail panes
+
+The task detail is split into task info on the left and activity on the right.
+Drag the separator between them to give one side more room — the form reflows to
+fewer columns as its pane narrows, and neither side can be dragged below a
+readable minimum.
+
+Hovering the separator reveals three controls. The two arrows collapse a pane
+entirely, so you can read a long description or a long discussion full width;
+the opposite arrow brings it back. The button between them resets to the even
+50/50 split and dims once you are already there — so there is always a visible
+way back, whatever you dragged or collapsed. Hovering any of the three explains
+what it does, including why it is currently inactive.
+
+Double-clicking the separator resets it too. With the separator focused, the
+arrow keys move it (hold Shift for a finer step), Home/End collapse a side, and
+Enter resets.
+
+Your split is remembered in the browser and applies to every task you open.
+
 ### Participants & notifications
 
 Every task keeps a list of **participants**. You become one automatically when
