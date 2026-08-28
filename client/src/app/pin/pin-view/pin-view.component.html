@@ -1,4 +1,4 @@
-<div
+<a
     class="pin-card flex flex-col justify-between"
     [routerLink]="['/project', pin().idProject, 'issue', pin().idIssuePublic]"
 >
@@ -15,9 +15,14 @@
                     {{ pin().severityName ?? ('NONE' | translate) }}
                 </span>
             </span>
-            <span class="pin-card--delete" (click)="$event.stopPropagation(); onDeletePin()">
+            <button
+                type="button"
+                class="pin-card--delete"
+                [attr.aria-label]="'ISSUE.PIN.DELETE' | translate"
+                (click)="$event.stopPropagation(); $event.preventDefault(); onDeletePin()"
+            >
                 <tabler-icon icon="x" [size]="12" />
-            </span>
+            </button>
         </span>
     </div>
 
@@ -41,4 +46,4 @@
             <span class="pin-card--avatar-unassigned">?</span>
         }
     </div>
-</div>
+</a>
