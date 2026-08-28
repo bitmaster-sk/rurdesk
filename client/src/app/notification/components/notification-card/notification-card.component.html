@@ -1,6 +1,8 @@
 <div
+    uiActivatable
     class="flex flex-col p-2 gap-4 cursor-pointer ui-bg-surface-50 ui-box relative ui-border-hover-primary"
     [class.notif-card--unread]="!notification().isRead"
+    [attr.aria-label]="'NOTIFICATION.MARK_READ' | translate"
     (click)="onMarkRead()"
 >
     <div class="flex items-start gap-2">

@@ -150,13 +150,21 @@
                                         {{ row.issue.title }}
                                     </a>
                                     @if (isRelationMode() && (row.issue.relationCount ?? 0) > 0) {
-                                        <span
+                                        <button
+                                            type="button"
                                             class="relation-badge"
+                                            [attr.aria-expanded]="
+                                                isRelationsExpanded(row.issue.idIssuePublic)
+                                            "
+                                            [attr.aria-label]="
+                                                'RELATION.TOGGLE'
+                                                    | translate: { count: row.issue.relationCount }
+                                            "
                                             (click)="onToggleRelations(row.issue.idIssuePublic)"
                                         >
                                             <tabler-icon icon="link" [size]="12" />
                                             {{ row.issue.relationCount }}
-                                        </span>
+                                        </button>
                                     }
                                 </span>
                             </td>

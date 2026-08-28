@@ -1,21 +1,35 @@
 <div class="feed-container">
     <div class="feed-header">
         <span class="feed-title">Activity</span>
-        <span class="chip" [class.active]="activeFilters().size === 0" (click)="setFilter('all')">
+        <button
+            type="button"
+            class="chip"
+            [class.active]="activeFilters().size === 0"
+            [attr.aria-pressed]="activeFilters().size === 0"
+            (click)="setFilter('all')"
+        >
             All
-        </span>
-        <span
+        </button>
+        <button
+            type="button"
             class="chip"
             [class.active]="activeFilters().has('comment')"
+            [attr.aria-pressed]="activeFilters().has('comment')"
             (click)="setFilter('comment')"
         >
             <tabler-icon icon="message" [size]="14" />
             Comments
-        </span>
-        <span class="chip" [class.active]="activeFilters().has('time')" (click)="setFilter('time')">
+        </button>
+        <button
+            type="button"
+            class="chip"
+            [class.active]="activeFilters().has('time')"
+            [attr.aria-pressed]="activeFilters().has('time')"
+            (click)="setFilter('time')"
+        >
             <tabler-icon icon="clock" [size]="14" />
             Time
-        </span>
+        </button>
     </div>
 
     <div class="feed-scroll" #scrollContainer>

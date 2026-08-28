@@ -49,6 +49,8 @@
     display: inline-flex;
     align-items: center;
     gap: var(--ui-space-xs);
+    border: 0;
+    font: inherit;
     padding: var(--ui-space-xs) var(--ui-space);
     border-radius: 999px;
     font-size: var(--font-size-s);

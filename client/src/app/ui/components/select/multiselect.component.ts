@@ -44,92 +44,7 @@ type OptionRecord = Record<string, unknown>;
             multi: true
         }
     ],
-    template: `
-        <div
-            #trigger
-            class="ui-select-trigger"
-            role="combobox"
-            aria-haspopup="listbox"
-            [id]="inputId()"
-            [class.ui-select-trigger--sm]="size() === 'small'"
-            [class.ui-select-trigger--lg]="size() === 'large'"
-            [class.ui-select-trigger--disabled]="isDisabled()"
-            [class.ui-select-trigger--open]="isOpen()"
-            [attr.tabindex]="isDisabled() ? -1 : 0"
-            [attr.aria-expanded]="isOpen()"
-            [attr.aria-controls]="isOpen() ? baseId + '_list' : null"
-            [attr.aria-activedescendant]="activeDescendantId()"
-            [attr.aria-disabled]="isDisabled()"
-            (click)="onTriggerClick()"
-            (keydown)="onKeydown($event)"
-            (blur)="onTouched()"
-        >
-            <span class="ui-select-trigger__value">
-                @if (selectedOptions().length) {
-                    @if (selectedItemsTpl()) {
-                        <ng-container
-                            [ngTemplateOutlet]="selectedItemsTpl()!"
-                            [ngTemplateOutletContext]="{ $implicit: selectedOptions() }"
-                        />
-                    } @else {
-                        {{ commaLabel() }}
-                    }
-                } @else {
-                    <span class="ui-select-trigger__placeholder">{{ placeholder() }}</span>
-                }
-            </span>
-            <tabler-icon
-                class="ui-select-trigger__chevron"
-                icon="chevron-down"
-                [size]="chevronSize()"
-            />
-        </div>
-
-        <ng-template #panelTpl>
-            <!-- stopPropagation: keep a surrounding <ui-popover> open when
-                 clicking options in this body-level CDK overlay. See ui-select. -->
-            <div class="ui-select-panel" (pointerdown)="$event.stopPropagation()">
-                @if (showToggleAll()) {
-                    <div class="ui-select-panel__header">
-                        <span
-                            class="ui-select-panel__checkbox"
-                            [class.ui-select-panel__checkbox--checked]="toggleAllState() === 'all'"
-                            [class.ui-select-panel__checkbox--indeterminate]="
-                                toggleAllState() === 'some'
-                            "
-                            role="checkbox"
-                            [attr.aria-checked]="
-                                toggleAllState() === 'all'
-                                    ? 'true'
-                                    : toggleAllState() === 'some'
-                                      ? 'mixed'
-                                      : 'false'
-                            "
-                            tabindex="-1"
-                            (mousedown)="$event.preventDefault()"
-                            (click)="toggleAll()"
-                        ></span>
-                    </div>
-                }
-                <ui-option-panel
-                    [visibleOptions]="nav.visibleOptions()"
-                    [getOptionLabel]="boundGetOptionLabel"
-                    [isOptionSelected]="boundIsOptionSelected"
-                    [showCheckbox]="true"
-                    [multiselectable]="true"
-                    [highlightedIndex]="nav.highlightedIndex()"
-                    [itemTemplate]="itemTpl()"
-                    [emptyMessage]="emptyMessage()"
-                    [emptyFilterMessage]="emptyFilterMessage()"
-                    [isFiltered]="!!nav.filterText()"
-                    [listId]="baseId + '_list'"
-                    [optionIdPrefix]="baseId"
-                    (pick)="toggleOption($event)"
-                    (highlightRequest)="nav.setHighlight($event)"
-                />
-            </div>
-        </ng-template>
-    `
+    templateUrl: './multiselect.component.html'
 })
 export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     public readonly options = input.required<readonly T[], readonly T[] | null | undefined>({
@@ -308,6 +223,18 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
                 }
                 break;
             default:
+                if (
+                    this.isOpen() &&
+                    this.showToggleAll() &&
+                    (event.ctrlKey || event.metaKey) &&
+                    event.key === 'a'
+                ) {
+                    // Only keyboard route to the toggle-all header: it lives in a
+                    // body-level overlay and focus must stay on the combobox trigger.
+                    event.preventDefault();
+                    this.toggleAll();
+                    return;
+                }
                 if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
                     this.nav.typeAhead(event.key);
                 }

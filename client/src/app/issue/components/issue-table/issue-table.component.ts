@@ -294,6 +294,10 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     // --- Row expansion ---
 
+    public isRelationsExpanded(idIssuePublic: number): boolean {
+        return this.idsExtendedIssue().has(idIssuePublic);
+    }
+
     public onToggleRelations(idIssuePublic: number): void {
         const willExpand = !this.idsExtendedIssue().has(idIssuePublic);
         this.idsExtendedIssue.update(s => {

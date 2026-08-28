@@ -176,13 +176,30 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
 
     private wireCollapse(header: HTMLElement, body: HTMLElement): void {
         header.classList.add('diff-viewer__header--clickable');
+        header.setAttribute('role', 'button');
+        header.setAttribute('tabindex', '0');
+        header.setAttribute('aria-expanded', 'true');
+        header.setAttribute('aria-label', this.i18n.instant('DIFF.TOGGLE_FILE'));
+
+        const toggle = (): void => {
+            const collapsed = body.classList.toggle('d2h-d-none');
+            header.classList.toggle('diff-viewer__header--collapsed', collapsed);
+            header.setAttribute('aria-expanded', String(!collapsed));
+        };
+
         header.addEventListener('click', event => {
             // Let the host-link icon (and any future header buttons) keep
             // their own click semantics instead of also toggling collapse.
             const target = event.target as HTMLElement | null;
             if (target?.closest('.diff-viewer__file-link')) return;
-            const collapsed = body.classList.toggle('d2h-d-none');
-            header.classList.toggle('diff-viewer__header--collapsed', collapsed);
+            toggle();
+        });
+        header.addEventListener('keydown', event => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            const target = event.target as HTMLElement | null;
+            if (target?.closest('.diff-viewer__file-link')) return;
+            event.preventDefault();
+            toggle();
         });
     }
 

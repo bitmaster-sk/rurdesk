@@ -137,7 +137,9 @@
                     </div>
                 } @else {
                     <div
+                        uiActivatable
                         class="description-preview col-span-12 p-0"
+                        [attr.aria-label]="'DESCRIPTION_EDIT' | translate"
                         (click)="onToggleInputDescription()"
                     >
                         <div
@@ -207,7 +209,13 @@
             @let hasLinkedMr = !!currentIssue()?.idGitIntegration;
             <div class="col-span-12 mt-2">
                 <div class="pr-panel" [class.pr-panel--collapsed]="isPrPanelCollapsed()">
-                    <div class="pr-panel__header" (click)="onTogglePrPanel()">
+                    <div
+                        uiActivatable
+                        class="pr-panel__header"
+                        [attr.aria-expanded]="!isPrPanelCollapsed()"
+                        [attr.aria-label]="mrTermKey() | translate"
+                        (click)="onTogglePrPanel()"
+                    >
                         <span
                             class="pr-panel__chevron"
                             [class.pr-panel__chevron--collapsed]="isPrPanelCollapsed()"

@@ -77,6 +77,9 @@
             "CLOSE": "Close"
         },
         "SEARCH": "Search…",
+        "SELECT": {
+            "TOGGLE_ALL": "Select all options"
+        },
         "DATE_RANGE": {
             "CUSTOM": "Custom range"
         }
@@ -285,6 +288,7 @@
     "DIRECT.CHATS": "Direct messages",
     "TITLE": "Title",
     "DESCRIPTION": "Description",
+    "DESCRIPTION_EDIT": "Edit description",
     "SAVE": "Save",
     "LOAD_MORE": "Load more",
     "SETTINGS.TABLE_PAGE_SIZE": "Table page size",
@@ -575,7 +579,8 @@
         "PIN": {
             "SINGULAR": "Pin",
             "TO.PROJECT.PAGE": "To project page",
-            "TO.MY.PAGE": "To my page"
+            "TO.MY.PAGE": "To my page",
+            "DELETE": "Remove pin"
         },
         "GANTT": {
             "TODAY": "Today",
@@ -627,6 +632,7 @@
     },
     "CONFIRM": "Confirm",
     "RELATION": {
+        "TOGGLE": "Show or hide {{count}} related issues",
         "MODE": "Relation mode",
         "ASK_LAG": "Ask for lag on schedule",
         "SCHEDULE": "Scheduling",
@@ -783,6 +789,7 @@
         "TITLE": "Notifications",
         "UNREAD": "{{count}} unread",
         "EMPTY": "No notifications",
+        "MARK_READ": "Mark as read",
         "SECTION": {
             "OVERVIEW": "Overview",
             "PROJECTS": "Projects"
@@ -1041,7 +1048,8 @@
     },
     "DIFF": {
         "LOADING": "Loading diff…",
-        "OPEN_ON_HOST": "Open on host"
+        "OPEN_ON_HOST": "Open on host",
+        "TOGGLE_FILE": "Show or hide this file's changes"
     },
     "ISSUE_TYPE": {
         "SINGULAR": "Type",

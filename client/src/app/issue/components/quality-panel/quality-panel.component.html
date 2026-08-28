@@ -1,6 +1,12 @@
 <div class="quality-panel" [class.quality-panel--collapsed]="collapsed()">
     <!-- Header bar -->
-    <div class="quality-panel__header" (click)="onToggle()">
+    <div
+        uiActivatable
+        class="quality-panel__header"
+        [attr.aria-expanded]="!collapsed()"
+        [attr.aria-label]="'QUALITY.TITLE' | translate"
+        (click)="onToggle()"
+    >
         <span class="quality-panel__chevron">
             <tabler-icon icon="chevron-down" [size]="14" />
         </span>
