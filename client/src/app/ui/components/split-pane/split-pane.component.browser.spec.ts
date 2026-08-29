@@ -45,6 +45,10 @@ describe('UiSplitPaneComponent (browser)', () => {
         return el.querySelector('[data-testid="split-pane-reset"]')!;
     }
 
+    function controlsGroup(el: HTMLElement): HTMLElement {
+        return el.querySelector('.ui-split-pane__controls')!;
+    }
+
     function drag(el: HTMLElement, clientX: number): void {
         const handle = splitter(el);
         handle.setPointerCapture = () => undefined;
@@ -306,5 +310,23 @@ describe('UiSplitPaneComponent (browser)', () => {
         localStorage.setItem(STORAGE_KEY, 'not json');
         const fixture = setup();
         expect(startPanel(fixture.nativeElement).style.flexBasis).toBe('50%');
+    });
+
+    it('centres the control group vertically on the splitter', () => {
+        const fixture = setup();
+        // Make the controls visible so the bounding rect is meaningful.
+        splitter(fixture.nativeElement).dispatchEvent(
+            new Event('mouseenter', { bubbles: true })
+        );
+        fixture.detectChanges();
+
+        const splitterRect = splitter(fixture.nativeElement).getBoundingClientRect();
+        const controlsRect = controlsGroup(fixture.nativeElement).getBoundingClientRect();
+
+        const splitterCentreY = splitterRect.top + splitterRect.height / 2;
+        const controlsCentreY = controlsRect.top + controlsRect.height / 2;
+
+        // Allow half-pixel rounding from fractional device-pixel ratios.
+        expect(Math.abs(controlsCentreY - splitterCentreY)).toBeLessThanOrEqual(1);
     });
 });
