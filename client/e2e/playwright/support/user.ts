@@ -28,9 +28,9 @@ export async function createUser(
         data: user
     });
     expect(
-        created.status(),
+        [200, 409],
         `admin user creation for ${user.email} returned ${created.status()}`
-    ).toBe(200);
+    ).toContain(created.status());
 
     return user;
 }

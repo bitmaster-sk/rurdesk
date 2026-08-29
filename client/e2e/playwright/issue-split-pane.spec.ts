@@ -28,6 +28,7 @@ async function openDetail(page: Page): Promise<{ idProject: number; idIssuePubli
         severity: 'Medium'
     });
     await expect(page.getByTestId('split-pane-splitter')).toBeVisible();
+    await Interaction.waitForStableBox(page.getByTestId('split-pane-splitter'));
     return { idProject, idIssuePublic };
 }
 
@@ -50,17 +51,12 @@ test('dragging the separator resizes both panes and the ratio survives a reload'
     const activityBefore = await widthOf(activityPane(page));
     const totalBefore = infoBefore + activityBefore;
 
-    const splitter = page.getByTestId('split-pane-splitter');
-    const box = (await splitter.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 200, box.y + box.height / 2, { steps: 10 });
-    await page.mouse.up();
+    await Interaction.dragBy(page, page.getByTestId('split-pane-splitter'), 200);
 
+    await expect.poll(() => widthOf(infoPane(page))).toBeGreaterThan(infoBefore + 100);
     const infoAfter = await widthOf(infoPane(page));
     const activityAfter = await widthOf(activityPane(page));
 
-    expect(infoAfter).toBeGreaterThan(infoBefore + 100);
     expect(activityAfter).toBeLessThan(activityBefore - 100);
     expect(infoAfter + activityAfter).toBeCloseTo(totalBefore, 0);
 
@@ -122,12 +118,10 @@ test('the separator refuses to drag a pane below its minimum width', async ({
     await openDetail(page);
 
     const splitter = page.getByTestId('split-pane-splitter');
-    const box = (await splitter.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(0, box.y + box.height / 2, { steps: 10 });
-    await page.mouse.up();
+    const infoBefore = await widthOf(infoPane(page));
+    await Interaction.dragBy(page, splitter, -2000);
 
+    await expect.poll(() => widthOf(infoPane(page))).toBeLessThan(infoBefore - 100);
     expect(await widthOf(infoPane(page))).toBeGreaterThanOrEqual(279);
 
     await splitter.dblclick();
