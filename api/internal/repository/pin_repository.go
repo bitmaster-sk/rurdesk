@@ -9,18 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PinRepository struct {
-	pool *pgxpool.Pool
-}
-
-func NewPinRepository(pool *pgxpool.Pool) *PinRepository {
-	return &PinRepository{pool: pool}
-}
-
-func (r *PinRepository) LoadPinedIssues(ctx context.Context, idPinDestination int64, idPinDestinationType int) ([]*model.Pin, error) {
-	db := extctx.GetDb(ctx, r.pool)
-	rows, err := db.Query(ctx, `
-		SELECT
+// pinIssueSelectSQL is the shared SELECT … FROM … JOIN fragment used by both
+// LoadPinnedIssues and LoadPinnedIssue.  Only the WHERE clause differs.
+const pinIssueSelectSQL = `SELECT
 			pin.id_pin,
 			pin.id_pin_destination_type,
 			pin.id_issue,
@@ -40,6 +31,37 @@ func (r *PinRepository) LoadPinedIssues(ctx context.Context, idPinDestination in
 			INNER JOIN issues.issue iss ON pin.id_issue    = iss.id_issue
 			LEFT  JOIN issues.state  st ON iss.id_state    = st.id_state
 			LEFT  JOIN users.user     u ON iss.assigned_to = u.id_user
+`
+
+// scanPin scans a single pin row (columns ordered as in pinIssueSelectSQL)
+// into p and its embedded PinIssueView.  Both LoadPinnedIssues and
+// LoadPinnedIssue share this logic so the column list lives in one place.
+func scanPin(row interface{ Scan(dest ...any) error }, p *model.Pin) error {
+	i := &model.PinIssueView{}
+	if err := row.Scan(
+		&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
+		&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
+		&i.Title,
+		&i.StateName, &i.StateIsStart, &i.StateIsFinal,
+		&i.AssignedToName, &i.AssignedToColorAvatarBg,
+	); err != nil {
+		return fmt.Errorf("scanning pinned issue: %w", err)
+	}
+	p.Issue = i
+	return nil
+}
+
+type PinRepository struct {
+	pool *pgxpool.Pool
+}
+
+func NewPinRepository(pool *pgxpool.Pool) *PinRepository {
+	return &PinRepository{pool: pool}
+}
+
+func (r *PinRepository) LoadPinnedIssues(ctx context.Context, idPinDestination int64, idPinDestinationType int) ([]*model.Pin, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, pinIssueSelectSQL+`
 		WHERE
 			pin.id_pin_destination_type = $1 AND
 			pin.id_pin_destination = $2
@@ -53,17 +75,9 @@ func (r *PinRepository) LoadPinedIssues(ctx context.Context, idPinDestination in
 	var pins []*model.Pin
 	for rows.Next() {
 		p := &model.Pin{}
-		i := &model.PinIssueView{}
-		if err := rows.Scan(
-			&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
-			&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
-			&i.Title,
-			&i.StateName, &i.StateIsStart, &i.StateIsFinal,
-			&i.AssignedToName, &i.AssignedToColorAvatarBg,
-		); err != nil {
-			return nil, fmt.Errorf("scanning pinned issue: %w", err)
+		if err := scanPin(rows, p); err != nil {
+			return nil, err
 		}
-		p.Issue = i
 		pins = append(pins, p)
 	}
 	if err := rows.Err(); err != nil {
@@ -72,45 +86,17 @@ func (r *PinRepository) LoadPinedIssues(ctx context.Context, idPinDestination in
 	return pins, nil
 }
 
-func (r *PinRepository) LoadPinedIssue(ctx context.Context, idPin int64) (*model.Pin, error) {
+func (r *PinRepository) LoadPinnedIssue(ctx context.Context, idPin int64) (*model.Pin, error) {
 	db := extctx.GetDb(ctx, r.pool)
-	row := db.QueryRow(ctx, `
-		SELECT
-			pin.id_pin,
-			pin.id_pin_destination_type,
-			pin.id_issue,
-			pin.id_pin_destination,
-			iss.id_issue,
-			iss.id_issue_public,
-			iss.id_project,
-			iss.id_severity,
-			iss.title,
-			st.name             AS state_name,
-			st.start            AS state_is_start,
-			st.final            AS state_is_final,
-			u.name              AS assigned_to_name,
-			u.color_avatar_bg   AS assigned_to_color_avatar_bg
-		FROM
-			issues.pin
-			INNER JOIN issues.issue iss ON pin.id_issue    = iss.id_issue
-			LEFT  JOIN issues.state  st ON iss.id_state    = st.id_state
-			LEFT  JOIN users.user     u ON iss.assigned_to = u.id_user
+	row := db.QueryRow(ctx, pinIssueSelectSQL+`
 		WHERE
 			pin.id_pin = $1
 	`, idPin)
 
 	p := &model.Pin{}
-	i := &model.PinIssueView{}
-	if err := row.Scan(
-		&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
-		&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
-		&i.Title,
-		&i.StateName, &i.StateIsStart, &i.StateIsFinal,
-		&i.AssignedToName, &i.AssignedToColorAvatarBg,
-	); err != nil {
-		return nil, fmt.Errorf("scanning pinned issue: %w", err)
+	if err := scanPin(row, p); err != nil {
+		return nil, err
 	}
-	p.Issue = i
 	return p, nil
 }
 
@@ -128,7 +114,7 @@ func (r *PinRepository) ProjectOfIssue(ctx context.Context, idIssue int64) (int6
 	return idProject, nil
 }
 
-func (r *PinRepository) InsertPinedIssue(ctx context.Context, pin *model.Pin) error {
+func (r *PinRepository) InsertPinnedIssue(ctx context.Context, pin *model.Pin) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
 		INSERT INTO issues.pin (id_issue, id_pin_destination_type, id_pin_destination)
@@ -140,7 +126,7 @@ func (r *PinRepository) InsertPinedIssue(ctx context.Context, pin *model.Pin) er
 	return nil
 }
 
-func (r *PinRepository) DeletePinedIssue(ctx context.Context, idPin int64) error {
+func (r *PinRepository) DeletePinnedIssue(ctx context.Context, idPin int64) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `DELETE FROM issues.pin WHERE id_pin = $1`, idPin)
 	if err != nil {
