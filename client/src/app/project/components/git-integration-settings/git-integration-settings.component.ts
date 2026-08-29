@@ -7,7 +7,7 @@ import {
     output,
     signal
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormControl, FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
 import {
     CreateGitIntegrationReq,
     GitIntegrationRes,
@@ -17,6 +17,14 @@ import {
 import { GitIntegrationApi } from '../../api/git-integration.api.service';
 import { Project } from '../../model/project.model';
 import { GIT_PROVIDERS } from '../../constants/git-provider.constants';
+
+interface GitIntegrationSettingsForm {
+    name: FormControl<string>;
+    hostType: FormControl<HostType>;
+    baseUrl: FormControl<string>;
+    repoPath: FormControl<string>;
+    accessToken: FormControl<string>;
+}
 
 @Component({
     selector: 'app-git-integration-settings',
@@ -31,25 +39,34 @@ export class GitIntegrationSettingsComponent implements OnInit {
     public readonly saved = output<GitIntegrationRes>();
     public readonly cancelled = output<void>();
 
-    private readonly fb = inject(FormBuilder);
+    private readonly fb = inject(NonNullableFormBuilder);
     private readonly gitIntegrationApi = inject(GitIntegrationApi);
 
     protected readonly isVisible = signal(true);
     protected readonly hostTypeOptions = GIT_PROVIDERS;
 
-    protected form!: FormGroup;
+    protected form!: FormGroup<GitIntegrationSettingsForm>;
 
     public ngOnInit(): void {
         const integration = this.integration();
-        this.form = this.fb.group({
-            name: [integration?.name ?? '', [Validators.required, Validators.maxLength(100)]],
-            hostType: [integration?.hostType ?? HostType.GitHub, Validators.required],
-            baseUrl: [integration?.baseUrl ?? '', [Validators.required, Validators.maxLength(255)]],
-            repoPath: [
-                integration?.repoPath ?? '',
-                [Validators.required, Validators.maxLength(255)]
-            ],
-            accessToken: ['', integration ? [] : [Validators.required]]
+        this.form = this.fb.group<GitIntegrationSettingsForm>({
+            name: this.fb.control(integration?.name ?? '', [
+                Validators.required,
+                Validators.maxLength(100)
+            ]),
+            hostType: this.fb.control(
+                integration?.hostType ?? HostType.GitHub,
+                Validators.required
+            ),
+            baseUrl: this.fb.control(integration?.baseUrl ?? '', [
+                Validators.required,
+                Validators.maxLength(255)
+            ]),
+            repoPath: this.fb.control(integration?.repoPath ?? '', [
+                Validators.required,
+                Validators.maxLength(255)
+            ]),
+            accessToken: this.fb.control('', integration ? [] : [Validators.required])
         });
     }
 
@@ -60,26 +77,28 @@ export class GitIntegrationSettingsComponent implements OnInit {
     protected onSave(): void {
         if (this.form.invalid) return;
         const integration = this.integration();
+        const value = this.form.getRawValue();
         if (integration) {
             const req: UpdateGitIntegrationReq = {
-                name: this.form.value.name,
-                hostType: this.form.value.hostType,
-                baseUrl: this.form.value.baseUrl,
-                repoPath: this.form.value.repoPath
+                name: value.name,
+                hostType: value.hostType,
+                baseUrl: value.baseUrl,
+                repoPath: value.repoPath
             };
-            if (this.form.value.accessToken) {
-                req.accessToken = this.form.value.accessToken;
+            // Empty string = user didn't enter a new token → omit → backend keeps stored token.
+            if (value.accessToken) {
+                req.accessToken = value.accessToken;
             }
             this.gitIntegrationApi
                 .update$(this.project().idProject, integration.idGitIntegration, req)
                 .subscribe(result => this.saved.emit(result));
         } else {
             const req: CreateGitIntegrationReq = {
-                name: this.form.value.name,
-                hostType: this.form.value.hostType,
-                baseUrl: this.form.value.baseUrl,
-                repoPath: this.form.value.repoPath,
-                accessToken: this.form.value.accessToken
+                name: value.name,
+                hostType: value.hostType,
+                baseUrl: value.baseUrl,
+                repoPath: value.repoPath,
+                accessToken: value.accessToken
             };
             this.gitIntegrationApi
                 .create$(this.project().idProject, req)
