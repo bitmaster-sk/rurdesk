@@ -1,10 +1,18 @@
 import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { DurationParser } from 'src/app/shared/duration/duration.parser';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
 import { TrackForm } from 'src/app/shared/tracker/model/track.model';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
+
+interface TrackEditForm {
+    idTrack: FormControl<number | null>;
+    idIssue: FormControl<number | null>;
+    idUser: FormControl<number | null>;
+    tracked: FormControl<string | null>;
+    endAt: FormControl<Date | null>;
+}
 
 @Component({
     selector: 'app-track-form',
@@ -17,12 +25,12 @@ export class TrackFormComponent implements OnInit, OnChanges {
 
     @Input() public track: TrackForm | null = null;
 
-    public form: FormGroup = this.fb.group({
-        idTrack: [null],
-        idIssue: [null, [Validators.required]],
-        idUser: [null, [Validators.required]],
-        tracked: [null, [Validators.min(0)]],
-        endAt: [null, [Validators.required]]
+    public form: FormGroup<TrackEditForm> = this.fb.group<TrackEditForm>({
+        idTrack: this.fb.control<number | null>(null),
+        idIssue: this.fb.control<number | null>(null, [Validators.required]),
+        idUser: this.fb.control<number | null>(null, [Validators.required]),
+        tracked: this.fb.control<string | null>(null, [Validators.min(0)]),
+        endAt: this.fb.control<Date | null>(null, [Validators.required])
     });
 
     public ngOnInit(): void {
@@ -38,23 +46,20 @@ export class TrackFormComponent implements OnInit, OnChanges {
     }
 
     public onSaveTrack(): void {
-        const value = this.form.value as {
-            idTrack: number | null;
-            idIssue: number;
-            tracked: string | null;
-            endAt: Date | null;
-        };
+        const value = this.form.value;
+        const idIssue = value.idIssue ?? 0;
         const tracked = DurationConverter.durationToSeconds(
-            DurationParser.stringToDuration(`${value.tracked}`)
+            DurationParser.stringToDuration(`${value.tracked ?? ''}`)
         );
+        const idTrack = value.idTrack ?? 0;
         const saver =
             value.idTrack === null
-                ? this.sTracker.insertTrack({ idIssue: value.idIssue, tracked, endAt: value.endAt })
+                ? this.sTracker.insertTrack({ idIssue, tracked, endAt: value.endAt ?? null })
                 : this.sTracker.updateTrack({
-                      idTrack: value.idTrack,
-                      idIssue: value.idIssue,
+                      idTrack,
+                      idIssue,
                       tracked,
-                      endAt: value.endAt
+                      endAt: value.endAt ?? null
                   });
         saver.subscribe(() => {
             this.onResetTrack();

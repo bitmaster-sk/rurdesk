@@ -108,10 +108,10 @@ export default tseslint.config(
             // Counts and the paydown plan live in docs/development/code-quality.roadmap.md
             // (findings 17, 18, 19). Promote to 'error' once a count reaches zero —
             // do not delete the entry and do not silence it with eslint-disable.
-            '@typescript-eslint/no-unsafe-assignment': 'warn',
-            '@typescript-eslint/no-unsafe-member-access': 'warn',
-            '@typescript-eslint/no-unsafe-argument': 'warn',
-            '@typescript-eslint/no-unsafe-return': 'warn'
+            '@typescript-eslint/no-unsafe-assignment': 'error',
+            '@typescript-eslint/no-unsafe-member-access': 'error',
+            '@typescript-eslint/no-unsafe-argument': 'error',
+            '@typescript-eslint/no-unsafe-return': 'error'
         }
     },
     {
