@@ -62,7 +62,7 @@ func (pc *PinController) GetPins(c *gin.Context) {
 		return
 	}
 
-	pins, err := pc.pinRepo.LoadPinedIssues(ctx, idPinDestination, idPinDestinationType)
+	pins, err := pc.pinRepo.LoadPinnedIssues(ctx, idPinDestination, idPinDestinationType)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -143,7 +143,7 @@ func (pc *PinController) CreatePin(c *gin.Context) {
 		IdPinDestination:     dto.IdPinDestination,
 		IdPinDestinationType: dto.IdPinDestinationType,
 	}
-	if err := pc.pinRepo.InsertPinedIssue(ctx, pin); err != nil {
+	if err := pc.pinRepo.InsertPinnedIssue(ctx, pin); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
@@ -162,7 +162,7 @@ func (pc *PinController) DeletePin(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	pin, err := pc.pinRepo.LoadPinedIssue(ctx, idPin)
+	pin, err := pc.pinRepo.LoadPinnedIssue(ctx, idPin)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -189,7 +189,7 @@ func (pc *PinController) DeletePin(c *gin.Context) {
 		return
 	}
 
-	if err := pc.pinRepo.DeletePinedIssue(ctx, pin.IdPin); err != nil {
+	if err := pc.pinRepo.DeletePinnedIssue(ctx, pin.IdPin); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
