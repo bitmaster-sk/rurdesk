@@ -14,6 +14,22 @@ import {
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
+
+interface IssueInfoForm {
+    idIssue: FormControl<number | null>;
+    idIssuePublic: FormControl<number | null>;
+    idProject: FormControl<number | null>;
+    idState: FormControl<number | null>;
+    idSeverity: FormControl<number | null>;
+    idIssueType: FormControl<number | null>;
+    title: FormControl<string | null>;
+    description: FormControl<string | null>;
+    assignedTo: FormControl<number | null>;
+    estimated: FormControl<string | null>;
+    points: FormControl<number | null>;
+    scheduledAt: FormControl<Date | null>;
+}
+
 import { filter, switchMap, takeUntil } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ElementRef } from '@angular/core';
@@ -197,7 +213,7 @@ export class IssueInfoComponent {
         }
     ];
 
-    public form: FormGroup = new FormGroup({});
+    public form: FormGroup<IssueInfoForm> = this.issueToForm();
 
     private readonly formReset$ = new Subject<void>();
 
@@ -379,16 +395,16 @@ export class IssueInfoComponent {
             .subscribe(status => this.mrStatus.set(status));
     }
 
-    public get assignedToControl(): FormControl {
-        return this.form.get('assignedTo') as FormControl;
+    public get assignedToControl(): FormControl<number | null> {
+        return this.form.controls.assignedTo;
     }
 
-    public get idSeverityControl(): FormControl {
-        return this.form.get('idSeverity') as FormControl;
+    public get idSeverityControl(): FormControl<number | null> {
+        return this.form.controls.idSeverity;
     }
 
-    public get idIssueTypeControl(): FormControl {
-        return this.form.get('idIssueType') as FormControl;
+    public get idIssueTypeControl(): FormControl<number | null> {
+        return this.form.controls.idIssueType;
     }
 
     private listenFormChange(): void {
@@ -413,51 +429,68 @@ export class IssueInfoComponent {
         );
     }
 
-    private issueToForm(): FormGroup {
+    private issueToForm(): FormGroup<IssueInfoForm> {
         const issue = this.currentIssue();
         const project = this.project();
-        return this.fb.group({
-            idIssue: this.fb.control(issue?.idIssue),
-            idIssuePublic: this.fb.control(issue?.idIssuePublic),
-            idProject: this.fb.control(issue?.idProject),
-            idState: this.fb.control(this.isNewIssue() ? project?.idStateDefault : issue?.idState),
-            idSeverity: this.fb.control(
-                this.isNewIssue() ? project?.idSeverityDefault : issue?.idSeverity
+        return this.fb.group<IssueInfoForm>({
+            idIssue: this.fb.control<number | null>(issue?.idIssue ?? null),
+            idIssuePublic: this.fb.control<number | null>(issue?.idIssuePublic ?? null),
+            idProject: this.fb.control<number | null>(issue?.idProject ?? null),
+            idState: this.fb.control<number | null>(
+                this.isNewIssue() ? (project?.idStateDefault ?? null) : (issue?.idState ?? null)
             ),
-            idIssueType: this.fb.control(
-                this.isNewIssue() ? project?.idIssueTypeDefault : issue?.idIssueType
+            idSeverity: this.fb.control<number | null>(
+                this.isNewIssue()
+                    ? (project?.idSeverityDefault ?? null)
+                    : (issue?.idSeverity ?? null)
             ),
-            title: this.fb.control(issue?.title, {
+            idIssueType: this.fb.control<number | null>(
+                this.isNewIssue()
+                    ? (project?.idIssueTypeDefault ?? null)
+                    : (issue?.idIssueType ?? null)
+            ),
+            title: this.fb.control<string | null>(issue?.title ?? null, {
                 validators: [Validators.required, Validators.maxLength(100)],
                 updateOn: 'blur'
             }),
-            description: this.fb.control(issue?.description, {
+            description: this.fb.control<string | null>(issue?.description ?? null, {
                 validators: [Validators.required],
                 updateOn: 'blur'
             }),
-            assignedTo: this.fb.control(issue?.assignedTo),
-            estimated: this.fb.control(
+            assignedTo: this.fb.control<number | null>(issue?.assignedTo ?? null),
+            estimated: this.fb.control<string | null>(
                 DurationFormatter.durationToString(
                     DurationConverter.secondsToDuration(issue?.estimated ?? 0)
                 ),
                 { validators: [DurationValidator.duration], updateOn: 'blur' }
             ),
-            points: this.fb.control(issue?.points ?? null, {
+            points: this.fb.control<number | null>(issue?.points ?? null, {
                 validators: [Validators.min(0)],
                 updateOn: 'blur'
             }),
-            scheduledAt: [issue?.scheduledAt]
+            scheduledAt: this.fb.control<Date | null>(issue?.scheduledAt ?? null)
         });
     }
 
     private formToIssue(): Issue {
-        const issue: Issue = { ...(this.form.value as Issue) };
-        issue.estimated = DurationConverter.durationToSeconds(
-            DurationParser.stringToDuration(this.form.value.estimated)
-        );
-        const points = this.form.value.points;
-        issue.points =
-            points === null || points === undefined || points === '' ? null : Number(points);
-        return issue;
+        const v = this.form.getRawValue();
+        const current = this.currentIssue();
+        return {
+            idIssue: v.idIssue ?? 0,
+            idIssuePublic: v.idIssuePublic ?? 0,
+            idProject: v.idProject ?? 0,
+            idState: v.idState,
+            idSeverity: v.idSeverity,
+            idIssueType: v.idIssueType,
+            title: v.title ?? '',
+            description: v.description ?? '',
+            assignedTo: v.assignedTo,
+            estimated: DurationConverter.durationToSeconds(
+                DurationParser.stringToDuration(v.estimated ?? '')
+            ),
+            points: v.points ?? null,
+            scheduledAt: v.scheduledAt,
+            tracked: current?.tracked ?? 0
+        };
     }
 }

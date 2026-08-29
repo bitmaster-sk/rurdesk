@@ -8,10 +8,21 @@ import {
     output,
     signal
 } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import {
+    FormBuilder,
+    FormControl,
+    FormGroup,
+    NonNullableFormBuilder,
+    Validators
+} from '@angular/forms';
 import { GitIntegrationRes } from 'src/app/project/model/git-integration.model';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { prMrLinkTitleKey } from 'src/app/issue/util/pr-mr-term';
+
+interface MrLinkPickerForm {
+    idGitIntegration: FormControl<number | null>;
+    mrId: FormControl<string>;
+}
 
 @Component({
     selector: 'app-mr-link-picker',
@@ -27,6 +38,7 @@ export class MrLinkPickerComponent implements OnInit {
     public readonly cancelled = output<void>();
 
     private readonly fb = inject(FormBuilder);
+    private readonly nfb = inject(NonNullableFormBuilder);
     private readonly gitIntegrationApi = inject(GitIntegrationApi);
 
     protected readonly integrations = signal<GitIntegrationRes[]>([]);
@@ -42,20 +54,21 @@ export class MrLinkPickerComponent implements OnInit {
                 : (this.integrations().find(i => i.idGitIntegration === id)?.hostType ?? null);
         return prMrLinkTitleKey(host);
     });
-    protected form!: FormGroup;
+    protected form!: FormGroup<MrLinkPickerForm>;
 
     public ngOnInit(): void {
         const initialId = this.idGitIntegration() ?? null;
-        this.form = this.fb.group({
-            idGitIntegration: [initialId, Validators.required],
-            mrId: [this.mrId() ?? '', [Validators.required, Validators.maxLength(50)]]
+        this.form = this.fb.group<MrLinkPickerForm>({
+            idGitIntegration: this.fb.control<number | null>(initialId, Validators.required),
+            mrId: this.nfb.control(this.mrId() ?? '', [
+                Validators.required,
+                Validators.maxLength(50)
+            ])
         });
         this.selectedIntegrationId.set(initialId);
-        this.form
-            .get('idGitIntegration')
-            ?.valueChanges.subscribe(value =>
-                this.selectedIntegrationId.set(typeof value === 'number' ? value : null)
-            );
+        this.form.controls.idGitIntegration.valueChanges.subscribe(value =>
+            this.selectedIntegrationId.set(typeof value === 'number' ? value : null)
+        );
 
         this.gitIntegrationApi
             .list$(this.idProject())
@@ -68,9 +81,11 @@ export class MrLinkPickerComponent implements OnInit {
 
     protected onSave(): void {
         if (this.form.invalid) return;
+        const v = this.form.getRawValue();
+        if (v.idGitIntegration == null) return;
         this.linked.emit({
-            idGitIntegration: this.form.value.idGitIntegration,
-            mrId: this.form.value.mrId
+            idGitIntegration: v.idGitIntegration,
+            mrId: v.mrId
         });
     }
 
