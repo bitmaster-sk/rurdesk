@@ -34,24 +34,6 @@ const pinIssueSelectSQL = `SELECT
 			LEFT  JOIN users.user     u ON iss.assigned_to = u.id_user
 `
 
-// scanPin scans a single pin row (columns ordered as in pinIssueSelectSQL)
-// into p and its embedded PinIssueView.  Both LoadPinnedIssues and
-// LoadPinnedIssue share this logic so the column list lives in one place.
-func (r *PinRepository) scanPin(row pgx.Row, p *model.Pin) error {
-	i := &model.PinIssueView{}
-	if err := row.Scan(
-		&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
-		&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
-		&i.Title,
-		&i.StateName, &i.StateIsStart, &i.StateIsFinal,
-		&i.AssignedToName, &i.AssignedToColorAvatarBg,
-	); err != nil {
-		return fmt.Errorf("scanning pinned issue: %w", err)
-	}
-	p.Issue = i
-	return nil
-}
-
 type PinRepository struct {
 	pool *pgxpool.Pool
 }
@@ -76,7 +58,7 @@ func (r *PinRepository) LoadPinnedIssues(ctx context.Context, idPinDestination i
 	var pins []*model.Pin
 	for rows.Next() {
 		p := &model.Pin{}
-		if err := r.scanPin(rows, p); err != nil {
+		if err := scanPin(rows, p); err != nil {
 			return nil, err
 		}
 		pins = append(pins, p)
@@ -95,7 +77,7 @@ func (r *PinRepository) LoadPinnedIssue(ctx context.Context, idPin int64) (*mode
 	`, idPin)
 
 	p := &model.Pin{}
-	if err := r.scanPin(row, p); err != nil {
+	if err := scanPin(row, p); err != nil {
 		return nil, err
 	}
 	return p, nil
@@ -172,4 +154,22 @@ func (r *PinRepository) LoadPinDestinationTypes(ctx context.Context) ([]*model.P
 		return nil, fmt.Errorf("iterating pin destination types: %w", err)
 	}
 	return pdts, nil
+}
+
+// scanPin scans a single pin row (columns ordered as in pinIssueSelectSQL)
+// into p and its embedded PinIssueView.  Both LoadPinnedIssues and
+// LoadPinnedIssue share this logic so the column list lives in one place.
+func scanPin(row pgx.Row, p *model.Pin) error {
+	i := &model.PinIssueView{}
+	if err := row.Scan(
+		&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
+		&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
+		&i.Title,
+		&i.StateName, &i.StateIsStart, &i.StateIsFinal,
+		&i.AssignedToName, &i.AssignedToColorAvatarBg,
+	); err != nil {
+		return fmt.Errorf("scanning pinned issue: %w", err)
+	}
+	p.Issue = i
+	return nil
 }
