@@ -5,6 +5,128 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-08-29
+
+Task types, agent skills and real CI status from every git host — plus a pass over the
+whole app so it can be driven from the keyboard.
+
+### Highlights
+
+- **Task types** — Bug, Feature and Task out of the box, editable per project like states
+  and severities. Filter by them in every view, set them in bulk, pick a default for new
+  tasks, and find the tasks that have none.
+- **Agent skills** — reusable instruction blocks you curate once and attach to a project
+  and a workflow stage. The agent gets them in its prompt. Four skills ship with the app
+  and stay up to date on upgrade unless you have edited them; you can also change which
+  skills a run uses right up until its stage starts.
+- **Real CI status on pull requests** — GitHub, GitLab and Gitea now show what the
+  pipeline actually did, including canceled and skipped runs, and read approvals from the
+  host. Previously these were placeholder values.
+- **Link an existing pull request yourself** — no agent run needed. A manually linked PR
+  gets the same status pill, diff, merge tracking and automatic state change as one the
+  agent opened.
+
+### Added
+
+- Task type as a per-project field: manage the list in project settings, choose a default
+  for new tasks, filter by type (including "no type set"), change it on many tasks at
+  once, and use it from the agent tools.
+- Skill catalog under admin, a per-project skill matrix in project settings, and the
+  skills of a running task shown and editable on its run card.
+- Skills and workload dock in the assignee dropdown, so you can see what each agent is
+  already working on before you assign.
+- Assign an agent directly from a task, choosing its skills as you do.
+- Resizable split on the task detail: drag the divider, collapse either side, and the
+  position is remembered. The task info fields reflow to fit the width you leave them.
+- "Stay logged in" on the login form — the session lasts 30 days instead of a day.
+- The whole app is now operable from the keyboard, with a visible focus ring that follows
+  the brand colour: notification cards, team rows, sprint tabs, pins, activity filters,
+  relation badges, diff file headers, participants and panel headers all respond to Enter
+  and Space. The command palette announces itself properly to screen readers, and the
+  multiselect selects everything with Ctrl+A.
+- The browser tab shows the open task, and quick actions can open a task in a new tab.
+- Documentation for agent skills, task types, automatic state changes, manual PR linking
+  and what each CI status label means.
+
+### Changed
+
+- **"Agent phase → state map" is now "Workflow event → state map"** in the UI and in the
+  API. See [Breaking changes](#breaking-changes-1).
+- **Editing a task through the API no longer clears the fields you did not send.** See
+  [Breaking changes](#breaking-changes-1).
+- Agents get a far higher turn limit (250 for planning, 500 for implementation, up from
+  50/100), and running out of turns now says so and offers Continue instead of looking
+  like the agent simply never submitted its work.
+- Descriptions and comments render better: line breaks behave the way they do on GitHub,
+  and headings, inline code, code blocks, quotes and tables match the rest of the app.
+- When an agent retries a stage, the task shows the result of the newest attempt.
+
+### Fixed
+
+- Agents and project members got "access denied" when reading project context.
+- The command palette found no tasks when opened before the project had finished loading.
+- On the gantt chart the date tooltip could be hidden behind task bars while dragging,
+  dependency arrows stole keyboard focus and wore the browser's own focus ring, arrow
+  colours drifted apart during highlighting, and clicking elsewhere did not deselect.
+- Enter did nothing on a select's clear button, and row actions could not be reached from
+  the keyboard.
+- The focus ring was cut off inside panels and cards.
+- Copying a freshly revealed bot token failed over plain HTTP; the dialog is now wider and
+  the token can be selected by hand.
+- Text with accented characters could be cut mid-character in notifications and agent
+  error messages.
+- Filtering out closed tasks failed on the server.
+- A failed instance-settings save could leave some values written and others not.
+- Table group headings were styled wrong, and a few labels sat in the wrong section.
+
+### Security
+
+- The app no longer sends your session token anywhere but its own backend. It used to
+  attach the `Authorization` header to any request, including ones to third-party URLs,
+  and sent an empty header when you were logged out.
+
+### Breaking changes
+
+**The agent phase → state map was renamed.**
+
+`GET`/`PUT` on `/project/:idProject/agent-phase-state-map` are now
+`/project/:idProject/workflow-event-state-map`, and each mapping's `phase` field is now
+`event`. Existing configuration is migrated for you. Only direct API callers are
+affected; the UI is updated.
+
+**Editing a task through the API is now a partial update.**
+
+A `PATCH` used to be applied as a full replacement: any field left out of the body was
+written back as empty, so a small edit could silently wipe the title, description or
+assignee. Only the fields you send now change, and sending an explicit `null` clears one.
+If you relied on omission to clear a field, send it explicitly.
+
+**`mrID` is now `idMr`.** Update any direct API calls that pass the old name.
+
+### Database
+
+Three migrations, applied automatically on startup:
+
+| Migration | Purpose |
+| --- | --- |
+| `20260821120000_issue_type.sql` | task types, with Bug/Feature/Task seeded for every project |
+| `20260823120000_workflow_event_state_map.sql` | renames the phase→state map to the workflow event→state map and records a PR's merge state |
+| `20260824120000_agent_skill.sql` | skill catalog and its per-project, per-stage mapping |
+
+Rolling back to 1.1.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. Before upgrading, check whether you call the phase→state map
+endpoints or edit tasks over the API directly — see [Breaking changes](#breaking-changes-1).
+
+[1.2.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.1.0...v1.2.0
+
 ## [1.1.0] - 2026-08-18
 
 Saved views, cycle analytics, and relative date filters — plus TypeScript `strict`
