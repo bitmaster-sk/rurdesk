@@ -34,7 +34,11 @@ export class CommandPaletteService {
     public readonly isOverlayOpen = computed(() => this.open$() || this.helpOpen$());
 
     public setContext(ctx: CommandContext): void {
+        const previous = this.context;
         this.context = ctx;
+        if (!this.open$()) return;
+        if (ctx.idProject !== previous.idProject) this.prime();
+        this.recompute();
     }
 
     public open(prefill = ''): void {
@@ -63,7 +67,7 @@ export class CommandPaletteService {
         this.subs.add(inst.closed.subscribe(() => this.close()));
         this.subs.add(this.overlayRef.backdropClick().subscribe(() => this.close()));
 
-        this.registry.prime(this.context).subscribe(() => this.recompute());
+        this.prime();
         this.recompute();
         queueMicrotask(() => this.ref?.instance.focusInput());
     }
@@ -100,6 +104,10 @@ export class CommandPaletteService {
         this.helpRef.keydownEvents().subscribe(e => {
             if (e.key === 'Escape') closeHelp();
         });
+    }
+
+    private prime(): void {
+        this.subs.add(this.registry.prime(this.context).subscribe(() => this.recompute()));
     }
 
     private recompute(): void {
