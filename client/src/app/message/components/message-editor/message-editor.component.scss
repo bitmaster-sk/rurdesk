@@ -7,7 +7,8 @@
     transition: border-color 0.15s;
 
     &:focus-within {
-        border-color: var(--ui-color-primary);
+        border-color: var(--ui-input-border-focus);
+        box-shadow: var(--ui-focus-ring-halo);
     }
 }
 
@@ -98,6 +99,7 @@
     padding: 0 var(--ui-space-s);
     border-top: 1px solid var(--ui-surface-300);
     border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md);
+    --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
 }
 
 .code-block-selector {

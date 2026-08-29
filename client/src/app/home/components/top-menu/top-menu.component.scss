@@ -5,13 +5,15 @@
 }
 
 // Avatar toggle is a <button> (keyboard-openable menu trigger) — strip native chrome.
-// Left padding matches the icon buttons' --ui-button-padding-x so the gap from the
+// Left margin matches the icon buttons' --ui-button-padding-x so the gap from the
 // bell glyph to the avatar equals the gap between the message and bell glyphs (which
 // each carry that padding on both sides); avatar has none, so it was short by one padding.
 .avatar-trigger {
     display: inline-flex;
-    padding: 0 0 0 var(--ui-button-padding-x);
+    margin-left: var(--ui-button-padding-x);
+    padding: 0;
     border: 0;
+    border-radius: 999px;
     background: transparent;
 }
 

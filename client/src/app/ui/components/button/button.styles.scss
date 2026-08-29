@@ -57,8 +57,8 @@ ui-button.ui-button--fluid > .ui-button {
 }
 
 .ui-button:focus-visible {
-    outline: var(--ui-button-focus-ring-width) solid var(--_focus);
-    outline-offset: var(--ui-button-focus-ring-offset);
+    outline: var(--ui-focus-ring-width) solid var(--ui-focus-ring-color);
+    outline-offset: var(--ui-focus-ring-offset);
 }
 
 .ui-button:disabled,
@@ -101,7 +101,6 @@ ui-button.ui-button--fluid > .ui-button {
         --_border: var(--ui-button-#{$s}-border);
         --_border-hover: var(--ui-button-#{$s}-border-hover);
         --_border-active: var(--ui-button-#{$s}-border-active);
-        --_focus: var(--ui-button-#{$s}-focus);
     }
 
     .ui-button--outlined.ui-button--#{$s} {

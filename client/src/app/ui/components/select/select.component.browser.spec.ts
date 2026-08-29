@@ -29,6 +29,53 @@ class HostComponent {
     public onChangeCount = 0;
 }
 
+@Component({
+    standalone: false,
+    template: `
+        <ui-select
+            [options]="options()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Pick one"
+            [showClear]="true"
+            [formControl]="ctrl"
+        />
+    `
+})
+class ClearHostComponent {
+    public readonly options = signal<Opt[]>([
+        { label: 'Alpha', value: 'a' },
+        { label: 'Beta', value: 'b' }
+    ]);
+    public readonly ctrl = new FormControl<string | null>('a');
+}
+
+@Component({
+    standalone: false,
+    template: `
+        <ui-select
+            [options]="options()"
+            optionLabel="label"
+            optionValue="value"
+            [formControl]="ctrl"
+        >
+            <ng-template #optionActions let-openDock="openDock">
+                <button type="button" class="row-action" (click)="openDock('info')">i</button>
+            </ng-template>
+            <ng-template #dock let-opt>
+                <p class="row-dock">dock for {{ opt.label }}</p>
+            </ng-template>
+        </ui-select>
+    `
+})
+class ActionsHostComponent {
+    public readonly options = signal<Opt[]>([
+        { label: 'Alpha', value: 'a' },
+        { label: 'Beta', value: 'b' }
+    ]);
+    public readonly ctrl = new FormControl<string | null>(null);
+}
+
 describe('UiSelectComponent (browser)', () => {
     function trigger(el: HTMLElement): HTMLElement {
         return el.querySelector('.ui-select-trigger') as HTMLElement;
@@ -42,7 +89,7 @@ describe('UiSelectComponent (browser)', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [HostComponent],
+            declarations: [HostComponent, ClearHostComponent, ActionsHostComponent],
             imports: [UiModule, ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations()]
         }).compileComponents();
@@ -134,6 +181,72 @@ describe('UiSelectComponent (browser)', () => {
         fixture.detectChanges();
         expect(fixture.componentInstance.ctrl.value).toBe('a'); // first option highlighted on open
         expect(fixture.componentInstance.onChangeCount).toBe(1);
+    });
+
+    it('keyboard: Enter on the clear button clears instead of opening the panel', () => {
+        const fixture = TestBed.createComponent(ClearHostComponent);
+        fixture.detectChanges();
+
+        const clear = fixture.nativeElement.querySelector(
+            '.ui-select-trigger__clear'
+        ) as HTMLButtonElement;
+        expect(clear).toBeTruthy();
+
+        clear.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+        expect(panelOptions().length).toBe(0);
+
+        clear.click();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.ctrl.value).toBeNull();
+    });
+
+    it('keyboard: Tab moves into the highlighted row actions instead of closing', () => {
+        const fixture = TestBed.createComponent(ActionsHostComponent);
+        fixture.detectChanges();
+        const t = trigger(fixture.nativeElement);
+
+        t.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        fixture.detectChanges();
+        expect(panelOptions().length).toBe(2);
+
+        t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(panelOptions().length).toBe(2);
+        expect(document.activeElement?.classList.contains('row-action')).toBe(true);
+    });
+
+    it('only the highlighted row exposes its actions to the tab order', () => {
+        const fixture = TestBed.createComponent(ActionsHostComponent);
+        fixture.detectChanges();
+        const t = trigger(fixture.nativeElement);
+
+        t.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        fixture.detectChanges();
+
+        const actions = Array.from(
+            document.querySelectorAll<HTMLElement>('.ui-select-panel__actions')
+        );
+        expect(actions.length).toBe(2);
+        expect(actions[0].hasAttribute('inert')).toBe(false);
+        expect(actions[1].hasAttribute('inert')).toBe(true);
+    });
+
+    it('Escape from inside the panel closes it once focus has left the trigger', () => {
+        const fixture = TestBed.createComponent(ActionsHostComponent);
+        fixture.detectChanges();
+        const t = trigger(fixture.nativeElement);
+
+        t.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        fixture.detectChanges();
+        t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+        fixture.detectChanges();
+
+        const action = document.activeElement as HTMLElement;
+        action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+        expect(panelOptions().length).toBe(0);
     });
 
     it('survives null options, as an async pipe hands over before its first emission', () => {

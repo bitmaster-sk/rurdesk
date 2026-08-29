@@ -18,6 +18,12 @@
         background: var(--ui-color-canvas);
         cursor: pointer;
         user-select: none;
+        border-radius: var(--ui-radius-md) var(--ui-radius-md) 0 0;
+        --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
+    }
+
+    &--collapsed &__header {
+        border-radius: var(--ui-radius-md);
     }
 
     &__chevron {

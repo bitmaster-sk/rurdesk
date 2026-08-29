@@ -32,7 +32,7 @@ export class UiButtonComponent {
     public readonly ariaLabel = input<string>();
     /** Square icon-only shape. */
     public readonly isIconOnly = input<boolean>(false);
-    /** Fully rounded shape (one call site: global top-menu "+"). */
+    /** Fully rounded shape. */
     public readonly isRounded = input<boolean>(false);
     /** Stretch the button to the full width of its container. */
     public readonly fluid = input(false, { transform: booleanAttribute });

@@ -6,6 +6,7 @@
             @if (aclStore.canCreateIssue()) {
             <ui-button
                 type="button"
+                tabindex="-1"
                 [routerLink]="['/project', project?.idProject, 'issue', 0]"
                 severity="secondary"
                 variant="outlined"

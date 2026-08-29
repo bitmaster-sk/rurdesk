@@ -38,6 +38,7 @@
             class="ui-select-trigger__clear"
             [attr.aria-label]="'UI.CLEAR' | translate"
             (click)="onClear($event)"
+            (keydown)="onClearKeydown($event)"
         >
             <tabler-icon icon="x" [size]="14" />
         </button>
@@ -53,6 +54,7 @@
         [class.ui-select-panel--docked]="dockState()"
         [class.ui-select-panel--dock-below]="isDockBelow()"
         (pointerdown)="$event.stopPropagation()"
+        (keydown)="onPanelKeydown($event)"
     >
         <div class="ui-select-panel__main">
             @if (filter()) {

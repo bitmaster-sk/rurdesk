@@ -13,6 +13,8 @@
     width: 100%;
     background: transparent;
     border: none;
+    border-radius: var(--ui-radius-md);
+    --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
     padding: var(--ui-space) var(--ui-space-m);
     display: flex;
     align-items: center;
@@ -82,6 +84,7 @@
 
 .agent-run-card.is-open .card-summary {
     border-bottom: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md) var(--ui-radius-md) 0 0;
 }
 
 @keyframes agent-avatar-pulse {

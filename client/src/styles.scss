@@ -503,6 +503,14 @@ tabler-icon {
     --ui-radius-md: 6px;
 
     //####################################################
+    //## FOCUS
+    //####################################################
+    --ui-focus-ring-color: var(--ui-brand-500);
+    --ui-focus-ring-width: 2px;
+    --ui-focus-ring-offset: 2px;
+    --ui-focus-ring-halo: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+
+    //####################################################
     //## BUTTON
     //####################################################
     --ui-button-radius: 8px;
@@ -522,8 +530,6 @@ tabler-icon {
     --ui-button-sm-padding-x: 0.5rem;
     --ui-button-sm-padding-y: 0.5rem;
     --ui-button-sm-icon-only-width: 2rem;
-    --ui-button-focus-ring-width: 1px;
-    --ui-button-focus-ring-offset: 2px;
 
     // Coloured severities → primitive palette scale (filled bg=500/hover=600/
     // active=700, border=same; outlined fg=500 border=200 hover-bg=50 active=100;
@@ -544,7 +550,6 @@ tabler-icon {
         --ui-button-#{$s}-border-hover: var(--ui-#{$c}-600);
         --ui-button-#{$s}-border-active: var(--ui-#{$c}-700);
         --ui-button-#{$s}-fg: #ffffff;
-        --ui-button-#{$s}-focus: var(--ui-#{$c}-500);
         --ui-button-outlined-#{$s}-fg: var(--ui-#{$c}-500);
         --ui-button-outlined-#{$s}-border: var(--ui-#{$c}-200);
         --ui-button-outlined-#{$s}-bg-hover: var(--ui-#{$c}-50);
@@ -562,7 +567,6 @@ tabler-icon {
     --ui-button-secondary-border-hover: var(--ui-surface-200);
     --ui-button-secondary-border-active: var(--ui-surface-300);
     --ui-button-secondary-fg: var(--ui-surface-600);
-    --ui-button-secondary-focus: var(--ui-surface-600);
     --ui-button-outlined-secondary-fg: var(--ui-surface-500);
     --ui-button-outlined-secondary-border: var(--ui-surface-200);
     --ui-button-outlined-secondary-bg-hover: var(--ui-surface-50);
@@ -609,7 +613,7 @@ tabler-icon {
     // let that content grow while the min-height keeps the control at the 32px
     // default. Opt-in via `--ui-input-padding-y: var(--ui-input-rich-padding-y)`.
     --ui-input-rich-padding-y: 0.2rem;
-    --ui-input-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+    --ui-input-focus-ring: var(--ui-focus-ring-halo);
 
     //####################################################
     //## DATEPICKER
@@ -755,7 +759,7 @@ tabler-icon {
     --ui-checkbox-checked-bg: var(--ui-brand-500);
     --ui-checkbox-checked-border: var(--ui-brand-500);
     --ui-checkbox-check-fg: #ffffff;
-    --ui-checkbox-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+    --ui-checkbox-focus-ring: var(--ui-focus-ring-halo);
     --ui-checkbox-disabled-bg: var(--ui-surface-200);
 
     //####################################################
@@ -767,7 +771,7 @@ tabler-icon {
     --ui-toggle-track-off: var(--ui-surface-300);
     --ui-toggle-track-on: var(--ui-brand-500);
     --ui-toggle-knob-fg: #ffffff;
-    --ui-toggle-focus-ring: 0 0 0 3px color-mix(in srgb, var(--ui-brand-500) 12%, transparent);
+    --ui-toggle-focus-ring: var(--ui-focus-ring-halo);
     --ui-toggle-disabled-bg: var(--ui-surface-200);
 
     //####################################################
@@ -864,6 +868,23 @@ body {
     font-family: var(--font-family);
     font-size: 14px;
     color: var(--ui-color-text);
+}
+
+//####################################################
+//## GLOBAL FOCUS RING
+//####################################################
+:where(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    iframe,
+    [contenteditable]:not([contenteditable='false']),
+    [tabindex]:not([tabindex^='-'])
+):focus-visible {
+    outline: var(--ui-focus-ring-width) solid var(--ui-focus-ring-color);
+    outline-offset: var(--ui-focus-ring-offset);
 }
 body {
     .text-2xs {

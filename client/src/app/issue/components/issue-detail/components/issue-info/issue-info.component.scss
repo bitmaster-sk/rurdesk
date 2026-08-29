@@ -31,6 +31,12 @@
             &:hover {
                 border-color: var(--ui-input-border-hover);
             }
+
+            &:focus-visible {
+                outline: none;
+                border-color: var(--ui-input-border-focus);
+                box-shadow: var(--ui-focus-ring-halo);
+            }
         }
 
         .edit ::ng-deep.editor-input-wrapper {
@@ -63,6 +69,12 @@
             background: var(--ui-color-canvas);
             cursor: pointer;
             user-select: none;
+            border-radius: var(--ui-radius-md) var(--ui-radius-md) 0 0;
+            --ui-focus-ring-offset: calc(-1 * var(--ui-focus-ring-width));
+        }
+
+        &--collapsed &__header {
+            border-radius: var(--ui-radius-md);
         }
 
         &__chevron {

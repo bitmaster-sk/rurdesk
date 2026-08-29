@@ -201,6 +201,12 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         this.valueChanged.emit({ originalEvent: event, value: null });
     }
 
+    protected onClearKeydown(event: KeyboardEvent): void {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.stopPropagation();
+        }
+    }
+
     protected onKeydown(event: KeyboardEvent, fromFilter: boolean): void {
         switch (event.key) {
             case 'ArrowDown':
@@ -249,9 +255,14 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
                 }
                 break;
             case 'Tab':
-                if (this.isOpen()) {
-                    this.close();
+                if (!this.isOpen()) {
+                    break;
                 }
+                if (!event.shiftKey && this.focusHighlightedActions()) {
+                    event.preventDefault();
+                    break;
+                }
+                this.close();
                 break;
             default:
                 if (
@@ -263,6 +274,34 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
                 ) {
                     this.nav.typeAhead(event.key);
                 }
+        }
+    }
+
+    private focusHighlightedActions(): boolean {
+        const index = this.nav.highlightedIndex();
+        if (index < 0) {
+            return false;
+        }
+        const action = this.overlayRef?.overlayElement.querySelector<HTMLElement>(
+            `#${this.baseId}_opt_${index} .ui-select-panel__actions button:not([disabled])`
+        );
+        if (!action) {
+            return false;
+        }
+        action.focus();
+        return true;
+    }
+
+    protected onPanelKeydown(event: KeyboardEvent): void {
+        if (event.defaultPrevented || event.key !== 'Escape') {
+            return;
+        }
+        event.preventDefault();
+        if (this.dockState()) {
+            this.closeDock();
+            this.focusHighlightedActions();
+        } else {
+            this.close();
         }
     }
 
