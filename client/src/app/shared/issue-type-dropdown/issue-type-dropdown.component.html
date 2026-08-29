@@ -10,7 +10,15 @@
         [uiSaveStatus]="saveStatus()"
         optionLabel="name"
         optionValue="idIssueType"
-    ></ui-select>
+    >
+        <ng-template #selectedItem let-type>
+            <app-issue-type-badge [issueType]="type" size="s"></app-issue-type-badge>
+        </ng-template>
+
+        <ng-template #item let-type>
+            <app-issue-type-badge [issueType]="type" size="s"></app-issue-type-badge>
+        </ng-template>
+    </ui-select>
 } @else {
     <ui-multiselect
         [inputId]="inputId()"
@@ -20,5 +28,20 @@
         [uiSaveStatus]="saveStatus()"
         [ngModel]="multiValue()"
         (ngModelChange)="onMultiValueChange($event)"
-    ></ui-multiselect>
+    >
+        <ng-template #selectedItems let-types>
+            <div class="flex items-center gap-1">
+                @for (type of types; track type.idIssueType) {
+                    <app-issue-type-badge [issueType]="type" size="s"></app-issue-type-badge>
+                    @if (!$last) {
+                        ,
+                    }
+                }
+            </div>
+        </ng-template>
+
+        <ng-template #item let-type>
+            <app-issue-type-badge [issueType]="type" size="s"></app-issue-type-badge>
+        </ng-template>
+    </ui-multiselect>
 }

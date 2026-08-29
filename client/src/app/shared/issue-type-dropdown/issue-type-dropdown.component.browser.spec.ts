@@ -1,6 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
+import { provideNoopAnimations } from '@angular/platform-browser/animations';
+import { TranslateModule } from '@ngx-translate/core';
 import { IssueTypeDropdownComponent } from './issue-type-dropdown.component';
+import { IssueTypeBadgeComponent } from '../issue-type-badge/issue-type-badge.component';
+import { UiModule } from 'src/app/ui/ui.module';
 import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 
 const bug: IssueType = {
@@ -17,6 +21,34 @@ const feature: IssueType = {
     protected: false,
     orderRank: 2
 };
+
+describe('IssueTypeDropdownComponent badges (browser)', () => {
+    function create(multi: boolean, types: IssueType[] = [bug, feature]) {
+        TestBed.configureTestingModule({
+            declarations: [IssueTypeDropdownComponent, IssueTypeBadgeComponent],
+            imports: [FormsModule, UiModule, TranslateModule.forRoot()],
+            providers: [provideNoopAnimations()]
+        });
+
+        const fixture = TestBed.createComponent(IssueTypeDropdownComponent);
+        fixture.componentRef.setInput('multi', multi);
+        fixture.componentRef.setInput('issueTypes', types);
+        fixture.detectChanges();
+        return fixture;
+    }
+
+    it('renders the selected issue type as a badge in single mode', async () => {
+        const fixture = create(false);
+        fixture.componentInstance.writeValue(1);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const badge = fixture.nativeElement.querySelector('app-issue-type-badge');
+        expect(badge).not.toBeNull();
+        expect(badge.textContent.trim()).toContain('Bug');
+    });
+});
 
 describe('IssueTypeDropdownComponent (browser)', () => {
     function create(multi: boolean, types: IssueType[] | null = [bug, feature]) {
