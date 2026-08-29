@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { UiModule } from '../../ui/ui.module';
 import { CommandPaletteService } from './command-palette.service';
 import { CommandRegistryService } from './command-registry.service';
@@ -83,6 +84,53 @@ describe('CommandPaletteService', () => {
         svc.open('/zzz');
         tick(); // navigation mode, no hit
         expect(document.querySelector('[data-item="issue.create"]')).toBeNull();
+        svc.close();
+    });
+    it('primes again when the project context arrives after the palette opened', () => {
+        let primed: number | null = null;
+        TestBed.inject(CommandRegistryService).register({
+            prime: ctx => {
+                primed = ctx.idProject;
+                return of(null);
+            },
+            getCommands: ctx =>
+                primed !== null && primed === ctx.idProject
+                    ? [cmd('jump', 'Jump', () => ran.push('jump'))]
+                    : []
+        });
+        const svc = TestBed.inject(CommandPaletteService);
+        svc.setContext({ idProject: null, issue: null });
+        svc.open();
+        tick();
+        expect(document.querySelector('[data-item="jump"]')).toBeNull();
+
+        svc.setContext({ idProject: 1, issue: null });
+        tick();
+        expect(document.querySelector('[data-item="jump"]')).not.toBeNull();
+        svc.close();
+    });
+    it('primes once per project while the palette stays open', () => {
+        let primes = 0;
+        TestBed.inject(CommandRegistryService).register({
+            prime: () => {
+                primes++;
+                return of(null);
+            },
+            getCommands: () => []
+        });
+        const svc = TestBed.inject(CommandPaletteService);
+        svc.setContext({ idProject: 1, issue: null });
+        svc.open();
+        tick();
+        expect(primes).toBe(1);
+
+        svc.setContext({ idProject: 1, issue: null });
+        tick();
+        expect(primes).toBe(1);
+
+        svc.setContext({ idProject: 2, issue: null });
+        tick();
+        expect(primes).toBe(2);
         svc.close();
     });
 });
