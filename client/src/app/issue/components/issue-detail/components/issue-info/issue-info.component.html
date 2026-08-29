@@ -172,7 +172,7 @@
         <div class="col-span-12 mt-2">
             <app-quality-panel
                 #qualityPanel
-                [idProject]="form.get('idProject')?.value"
+                [idProject]="form.get('idProject')?.value ?? 0"
                 [idIssue]="isNewIssue() ? null : (currentIssue()?.idIssuePublic ?? null)"
                 [title]="form.get('title')?.value ?? ''"
                 [description]="form.get('description')?.value ?? ''"
