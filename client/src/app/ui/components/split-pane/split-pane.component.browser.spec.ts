@@ -315,9 +315,7 @@ describe('UiSplitPaneComponent (browser)', () => {
     it('centres the control group vertically on the splitter', () => {
         const fixture = setup();
         // Make the controls visible so the bounding rect is meaningful.
-        splitter(fixture.nativeElement).dispatchEvent(
-            new Event('mouseenter', { bubbles: true })
-        );
+        splitter(fixture.nativeElement).dispatchEvent(new Event('mouseenter', { bubbles: true }));
         fixture.detectChanges();
 
         const splitterRect = splitter(fixture.nativeElement).getBoundingClientRect();
