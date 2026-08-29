@@ -81,16 +81,17 @@ ui-split-pane {
     background: var(--ui-color-primary);
 }
 
-// Near the top, not centred: the middle of the separator is where people grab
-// it to drag, and a control there would swallow the drag.
+// Vertically centred on the separator. The container toggles pointer-events,
+// and a small gap between buttons keeps the centre of the splitter usable as a
+// drag handle.
 .ui-split-pane__controls {
     position: absolute;
-    top: 16px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 6px;
     // The buttons are wider than the splitter and overhang into both panes, so
     // an opacity-0 control would still swallow clicks meant for the pane.
     // pointer-events (not visibility) because Tab must still reach them.
