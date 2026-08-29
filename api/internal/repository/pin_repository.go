@@ -6,6 +6,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -36,7 +37,7 @@ const pinIssueSelectSQL = `SELECT
 // scanPin scans a single pin row (columns ordered as in pinIssueSelectSQL)
 // into p and its embedded PinIssueView.  Both LoadPinnedIssues and
 // LoadPinnedIssue share this logic so the column list lives in one place.
-func scanPin(row interface{ Scan(dest ...any) error }, p *model.Pin) error {
+func (r *PinRepository) scanPin(row pgx.Row, p *model.Pin) error {
 	i := &model.PinIssueView{}
 	if err := row.Scan(
 		&p.IdPin, &p.IdPinDestinationType, &p.IdIssue, &p.IdPinDestination,
@@ -75,7 +76,7 @@ func (r *PinRepository) LoadPinnedIssues(ctx context.Context, idPinDestination i
 	var pins []*model.Pin
 	for rows.Next() {
 		p := &model.Pin{}
-		if err := scanPin(rows, p); err != nil {
+		if err := r.scanPin(rows, p); err != nil {
 			return nil, err
 		}
 		pins = append(pins, p)
@@ -94,7 +95,7 @@ func (r *PinRepository) LoadPinnedIssue(ctx context.Context, idPin int64) (*mode
 	`, idPin)
 
 	p := &model.Pin{}
-	if err := scanPin(row, p); err != nil {
+	if err := r.scanPin(row, p); err != nil {
 		return nil, err
 	}
 	return p, nil
