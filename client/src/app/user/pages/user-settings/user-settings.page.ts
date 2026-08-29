@@ -7,13 +7,24 @@ import {
     signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { debounceTime, filter } from 'rxjs/operators';
 import { AuthApi } from 'src/app/auth/api/auth.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
+
+interface ProfileFormValue {
+    name: FormControl<string>;
+    email: FormControl<string>;
+    colorAvatarBg: FormControl<string>;
+}
+
+interface PasswordFormValue {
+    currentPassword: FormControl<string>;
+    newPassword: FormControl<string>;
+}
 
 @Component({
     selector: 'app-user-settings',
@@ -38,15 +49,15 @@ export class UserSettingsPage implements OnInit {
     /** Live avatar background — reflects the colour control so the preview updates as you pick/shuffle. */
     public readonly avatarColor = signal<string>('');
 
-    public profileForm!: FormGroup;
-    public passwordForm!: FormGroup;
+    public profileForm!: FormGroup<ProfileFormValue>;
+    public passwordForm!: FormGroup<PasswordFormValue>;
 
     public ngOnInit(): void {
         const user = this.currentUser();
         this.avatarColor.set(user?.colorAvatarBg ?? '');
-        this.profileForm = this.fb.group({
+        this.profileForm = this.fb.nonNullable.group({
             name: [
-                user?.name,
+                user?.name ?? '',
                 { validators: [Validators.required, Validators.maxLength(250)], updateOn: 'blur' }
             ],
             // Display only — the email is the login identifier, so changing it
@@ -54,10 +65,10 @@ export class UserSettingsPage implements OnInit {
             // updateUser deliberately has no email parameter. The input is
             // readonly rather than disabled so it stays selectable and copyable;
             // validators would be theatre on a value the user cannot edit.
-            email: [user?.email],
-            colorAvatarBg: [user?.colorAvatarBg]
+            email: [user?.email ?? ''],
+            colorAvatarBg: [user?.colorAvatarBg ?? '']
         });
-        this.passwordForm = this.fb.group({
+        this.passwordForm = this.fb.nonNullable.group({
             currentPassword: [
                 '',
                 [Validators.required, Validators.minLength(5), Validators.maxLength(100)]
@@ -99,27 +110,26 @@ export class UserSettingsPage implements OnInit {
     public onSaveUser(source: 'name' | 'color' = 'name'): void {
         const status = source === 'color' ? this.colorSaveStatus : this.nameSaveStatus;
         status.set(UiSaveState.Saving);
-        this.authStore
-            .updateUser$(this.profileForm.value.name, this.profileForm.value.colorAvatarBg)
-            .subscribe({
-                next: user => {
-                    this.profileForm.patchValue(
-                        { name: user.name, email: user.email, colorAvatarBg: user.colorAvatarBg },
-                        { emitEvent: false }
-                    );
-                    this.avatarColor.set(user.colorAvatarBg);
-                    status.set(UiSaveState.Saved);
-                },
-                error: () => {
-                    status.set(UiSaveState.Error);
-                    this.sToast.showError('USER.PROFILE_SAVE_FAILED');
-                }
-            });
+        const { name, colorAvatarBg } = this.profileForm.value;
+        this.authStore.updateUser$(name!, colorAvatarBg).subscribe({
+            next: user => {
+                this.profileForm.patchValue(
+                    { name: user.name, email: user.email, colorAvatarBg: user.colorAvatarBg },
+                    { emitEvent: false }
+                );
+                this.avatarColor.set(user.colorAvatarBg);
+                status.set(UiSaveState.Saved);
+            },
+            error: () => {
+                status.set(UiSaveState.Error);
+                this.sToast.showError('USER.PROFILE_SAVE_FAILED');
+            }
+        });
     }
 
     public onChangePassword(): void {
         const { currentPassword, newPassword } = this.passwordForm.value;
-        this.authApi.changePassword$(currentPassword, newPassword).subscribe({
+        this.authApi.changePassword$(currentPassword!, newPassword!).subscribe({
             next: () => {
                 this.passwordForm.reset();
                 this.sToast.showSuccess('USER.PASSWORD_CHANGED');
