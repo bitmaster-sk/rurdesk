@@ -42,6 +42,18 @@
                     formControlName="sprintVelocityLimit"
                 />
             </div>
+            <div class="flex flex-col gap-1">
+                <label for="userApiKeyLimit">
+                    {{ 'SETTINGS.USER_API_KEY_LIMIT' | translate }}
+                </label>
+                <input
+                    id="userApiKeyLimit"
+                    uiInput
+                    type="number"
+                    formControlName="userApiKeyLimit"
+                    data-testid="settings-user-token-limit"
+                />
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

@@ -291,10 +291,13 @@
     "DESCRIPTION_EDIT": "Edit description",
     "SAVE": "Save",
     "LOAD_MORE": "Load more",
-    "SETTINGS.TABLE_PAGE_SIZE": "Table page size",
-    "SETTINGS.KANBAN_PAGE_SIZE": "Kanban page size",
-    "SETTINGS.GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
-    "SETTINGS.SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
+    "SETTINGS": {
+        "TABLE_PAGE_SIZE": "Table page size",
+        "KANBAN_PAGE_SIZE": "Kanban page size",
+        "GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
+        "SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
+        "USER_API_KEY_LIMIT": "API keys per user"
+    },
     "CANCEL": "Cancel",
     "BACK": "Back",
     "RESET": "Reset",
@@ -1060,5 +1063,7 @@
         "DELETE_USAGE.ONE": "1 task still uses this type.",
         "DELETE_USAGE.MANY": "{{count}} tasks still use this type.",
         "DELETE_USAGE.DEFAULT": "It is the project's default type."
+    },
+    "SETTINGS.USER_TOKEN_LIMIT": "Personal access tokens per user",
     }
 }

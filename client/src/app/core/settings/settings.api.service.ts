@@ -6,6 +6,7 @@ export interface AppSettings {
     tablePageSize: number;
     kanbanPageSize: number;
     ganttBacklogPageSize: number;
+    userApiKeyLimit: number;
 }
 
 @Injectable({ providedIn: 'root' })

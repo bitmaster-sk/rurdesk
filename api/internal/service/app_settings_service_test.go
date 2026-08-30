@@ -72,6 +72,30 @@ func TestAppSettings_UpdateValidatesAndSwaps(t *testing.T) {
 	}
 }
 
+func TestAppSettings_UserApiKeyLimit(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.UserApiKeyLimit(); got != 10 {
+		t.Fatalf("want default 10, got %d", got)
+	}
+
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 25}); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.UserApiKeyLimit(); got != 25 {
+		t.Fatalf("want 25 after update, got %d", got)
+	}
+
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 0}); err == nil {
+		t.Fatal("expected out-of-range error for 0")
+	}
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 101}); err == nil {
+		t.Fatal("expected out-of-range error for 101")
+	}
+}
+
 func TestAppSettings_UpdateRejectsUnknownKey(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
 	if err := svc.Update(context.Background(), map[string]int{"pagination.bogus": 10}); err == nil {
