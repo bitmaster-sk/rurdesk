@@ -15,6 +15,7 @@ export abstract class Interaction {
         await page.locator('input[formcontrolname="email"]').fill(user.email);
         await page.locator('input[formcontrolname="password"]').fill(user.password);
         await page.getByRole('button', { name: /login/i }).click();
+        await page.waitForURL(url => !url.pathname.endsWith('/login'));
     }
 
     public static async createBlankProject(page: Page, name: string): Promise<number> {
@@ -59,6 +60,19 @@ export abstract class Interaction {
         await page.getByRole('option', { name: optionName, exact: true }).click();
     }
 
+    public static async createUserApiKey(page: Page, name: string): Promise<string> {
+        await page.getByTestId('user-api-key-name').fill(name);
+        await page.getByTestId('user-api-key-create').click();
+
+        const revealed = page.getByTestId('user-api-key-revealed');
+        await expect(revealed).toBeVisible();
+        return (await revealed.locator('code').innerText()).trim();
+    }
+
+    public static async acceptConfirm(page: Page): Promise<void> {
+        await page.locator('.ui-confirm-panel').getByRole('button', { name: 'Yes' }).click();
+    }
+
     public static async waitForStableBox(target: Locator): Promise<void> {
         let previous = '';
         await expect
@@ -71,16 +85,21 @@ export abstract class Interaction {
             .toBe(true);
     }
 
-    public static async dragBy(page: Page, handle: Locator, deltaX: number): Promise<void> {
+    // grabOffsetY moves the grab point away from the handle's vertical centre, for
+    // handles whose centre holds a button that would take the pointerdown instead.
+    public static async dragBy(
+        page: Page,
+        handle: Locator,
+        deltaX: number,
+        grabOffsetY?: number
+    ): Promise<void> {
         await Interaction.waitForStableBox(handle);
         const box = (await handle.boundingBox())!;
         const startX = box.x + box.width / 2;
-        const y = box.y + box.height / 2;
+        const y = box.y + (grabOffsetY ?? box.height / 2);
 
         await page.mouse.move(startX, y);
         await page.mouse.down();
-        // A first small move before the real one: the handle starts dragging on a
-        // pointermove, and a single jump can be delivered before capture is set up.
         await page.mouse.move(startX + Math.sign(deltaX), y);
         await page.mouse.move(Math.max(0, startX + deltaX), y, { steps: 10 });
         await page.mouse.up();

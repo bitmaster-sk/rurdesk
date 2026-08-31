@@ -6,6 +6,7 @@ type AppSettingsRes struct {
 	KanbanPageSize       int `json:"kanbanPageSize"`
 	GanttBacklogPageSize int `json:"ganttBacklogPageSize"`
 	SprintVelocityLimit  int `json:"sprintVelocityLimit"`
+	UserApiKeyLimit      int `json:"userApiKeyLimit"`
 }
 
 // UpdateAppSettingsReq is a partial update — nil fields are left unchanged.
@@ -14,4 +15,5 @@ type UpdateAppSettingsReq struct {
 	KanbanPageSize       *int `json:"kanbanPageSize"`
 	GanttBacklogPageSize *int `json:"ganttBacklogPageSize"`
 	SprintVelocityLimit  *int `json:"sprintVelocityLimit"`
+	UserApiKeyLimit      *int `json:"userApiKeyLimit"`
 }

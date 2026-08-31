@@ -8,6 +8,7 @@ import { SharedModule } from '../shared/shared.module';
 import { UserPage } from './pages/user/user.page';
 import { BaseChartDirective } from 'ng2-charts';
 import { TrackedTimeChartComponent } from './components/tracked-time-chart/tracked-time-chart.component';
+import { UserApiKeysComponent } from './components/user-api-keys/user-api-keys.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { PinModule } from '../pin/pin.module';
 import {
@@ -31,11 +32,12 @@ import {
     IconChartBar,
     IconChevronLeft,
     IconChevronRight,
-    IconRefresh
+    IconRefresh,
+    IconAlertTriangle
 } from '@tabler/icons-angular';
 
 @NgModule({
-    declarations: [UserSettingsPage, UserPage, TrackedTimeChartComponent],
+    declarations: [UserSettingsPage, UserPage, TrackedTimeChartComponent, UserApiKeysComponent],
     imports: [
         TranslateModule,
         CoreModule,
@@ -68,7 +70,8 @@ import {
             IconChartBar,
             IconChevronLeft,
             IconChevronRight,
-            IconRefresh
+            IconRefresh,
+            IconAlertTriangle
         })
     ]
 })

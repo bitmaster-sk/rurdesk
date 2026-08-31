@@ -4,7 +4,8 @@ import { AppSettings, SettingsApi } from './settings.api.service';
 const FALLBACK: AppSettings = {
     tablePageSize: 50,
     kanbanPageSize: 20,
-    ganttBacklogPageSize: 30
+    ganttBacklogPageSize: 30,
+    userApiKeyLimit: 10
 };
 
 @Injectable({ providedIn: 'root' })
@@ -17,6 +18,7 @@ export class SettingsStore {
     public readonly tablePageSize = (): number => this.settings().tablePageSize;
     public readonly kanbanPageSize = (): number => this.settings().kanbanPageSize;
     public readonly ganttBacklogPageSize = (): number => this.settings().ganttBacklogPageSize;
+    public readonly userApiKeyLimit = (): number => this.settings().userApiKeyLimit;
 
     public load(): void {
         this.api.getSettings$().subscribe(settings => this.settings.set(settings));

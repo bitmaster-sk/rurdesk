@@ -13,9 +13,9 @@ import (
 )
 
 const defaultHumanRateLimit = 120
-const defaultBotRateLimit = 600
+const defaultAgentRateLimit = 600
 
-// ErrApiKeyNotFound is returned when a bot has no API key to regenerate or revoke.
+// ErrApiKeyNotFound is returned when the targeted API key does not exist.
 var ErrApiKeyNotFound = errors.New("api key not found")
 
 type ApiKeyRepository struct {
@@ -32,13 +32,14 @@ func (r *ApiKeyRepository) Insert(
 	name, keyHash string,
 	expiresAt *time.Time,
 	rateLimitOverride *int,
+	isAgent bool,
 ) (*model.ApiKey, error) {
 	key := &model.ApiKey{}
 	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
-		INSERT INTO users.api_key (id_user, name, key_hash, expires_at, rate_limit_override)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO users.api_key (id_user, name, key_hash, expires_at, rate_limit_override, is_agent)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id_api_key, id_user, name, rate_limit_override, created_at, expires_at, last_used_at`,
-		idUser, name, keyHash, expiresAt, rateLimitOverride,
+		idUser, name, keyHash, expiresAt, rateLimitOverride, isAgent,
 	).Scan(
 		&key.IdApiKey, &key.IdUser, &key.Name, &key.RateLimitOverride,
 		&key.CreatedAt, &key.ExpiresAt, &key.LastUsedAt,
@@ -49,14 +50,14 @@ func (r *ApiKeyRepository) Insert(
 	return key, nil
 }
 
-// LoadOneByUser returns the user's single API key, or nil, nil when none exists.
-// The unique index on id_user guarantees at most one row.
-func (r *ApiKeyRepository) LoadOneByUser(ctx context.Context, idUser int64) (*model.ApiKey, error) {
+// LoadAgentApiKey returns the agent's single API key, or nil, nil when none
+// exists. The partial unique index on id_user guarantees at most one row.
+func (r *ApiKeyRepository) LoadAgentApiKey(ctx context.Context, idUser int64) (*model.ApiKey, error) {
 	key := &model.ApiKey{}
 	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
 		SELECT id_api_key, id_user, name, rate_limit_override, created_at, expires_at, last_used_at
 		FROM users.api_key
-		WHERE id_user = $1`,
+		WHERE id_user = $1 AND is_agent`,
 		idUser,
 	).Scan(
 		&key.IdApiKey, &key.IdUser, &key.Name, &key.RateLimitOverride,
@@ -66,26 +67,76 @@ func (r *ApiKeyRepository) LoadOneByUser(ctx context.Context, idUser int64) (*mo
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("loading api key by user: %w", err)
+		return nil, fmt.Errorf("loading agent api key: %w", err)
 	}
 	return key, nil
 }
 
-// UpdateHashByUser rotates a bot's key in place: swaps the stored hash,
-// resets last_used_at, keeps id/name/created_at. Returns the previous
-// key_hash so the caller can purge the old cached session. ErrApiKeyNotFound
-// if the bot has none.
-func (r *ApiKeyRepository) UpdateHashByUser(ctx context.Context, idUser int64, keyHash string) (string, *model.ApiKey, error) {
+func (r *ApiKeyRepository) LoadUserApiKeys(ctx context.Context, idUser int64) ([]model.ApiKey, error) {
+	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
+		SELECT id_api_key, id_user, name, rate_limit_override, created_at, expires_at, last_used_at
+		FROM users.api_key
+		WHERE id_user = $1 AND NOT is_agent
+		ORDER BY created_at DESC, id_api_key DESC`,
+		idUser)
+	if err != nil {
+		return nil, fmt.Errorf("querying user api keys: %w", err)
+	}
+	defer rows.Close()
+
+	keys := make([]model.ApiKey, 0)
+	for rows.Next() {
+		var key model.ApiKey
+		if err := rows.Scan(
+			&key.IdApiKey, &key.IdUser, &key.Name, &key.RateLimitOverride,
+			&key.CreatedAt, &key.ExpiresAt, &key.LastUsedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning user api key: %w", err)
+		}
+		keys = append(keys, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating user api keys: %w", err)
+	}
+	return keys, nil
+}
+
+func (r *ApiKeyRepository) CountUserApiKeys(ctx context.Context, idUser int64) (int, error) {
+	var count int
+	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx,
+		`SELECT count(*) FROM users.api_key WHERE id_user = $1 AND NOT is_agent`, idUser,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting user api keys: %w", err)
+	}
+	return count, nil
+}
+
+// UpdateApiKeyHash rotates a key in place: swaps the stored hash, resets
+// last_used_at, keeps id/name/created_at. Returns the previous key_hash so the
+// caller can purge the old cached session. ErrApiKeyNotFound when no row matches.
+//
+// Ownership and is_agent are both part of the WHERE clause: dropping either would
+// let a user rotate another user's key, or reach an agent key from a user route.
+func (r *ApiKeyRepository) UpdateApiKeyHash(
+	ctx context.Context,
+	idUser, idApiKey int64,
+	isAgent bool,
+	keyHash string,
+) (string, *model.ApiKey, error) {
 	key := &model.ApiKey{}
 	var oldHash string
 	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
-		WITH old AS (SELECT key_hash FROM users.api_key WHERE id_user = $1)
+		WITH old AS (
+			SELECT key_hash FROM users.api_key
+			WHERE id_api_key = $1 AND id_user = $2 AND is_agent = $3
+		)
 		UPDATE users.api_key
-		SET key_hash = $2, last_used_at = NULL
-		WHERE id_user = $1
+		SET key_hash = $4, last_used_at = NULL
+		WHERE id_api_key = $1 AND id_user = $2 AND is_agent = $3
 		RETURNING id_api_key, id_user, name, rate_limit_override, created_at, expires_at, last_used_at,
 		          (SELECT key_hash FROM old)`,
-		idUser, keyHash,
+		idApiKey, idUser, isAgent, keyHash,
 	).Scan(
 		&key.IdApiKey, &key.IdUser, &key.Name, &key.RateLimitOverride,
 		&key.CreatedAt, &key.ExpiresAt, &key.LastUsedAt, &oldHash,
@@ -99,8 +150,34 @@ func (r *ApiKeyRepository) UpdateHashByUser(ctx context.Context, idUser int64, k
 	return oldHash, key, nil
 }
 
+// DeleteApiKey removes a key and returns its key_hash for cache invalidation.
+// ErrApiKeyNotFound when no row matches.
+//
+// Ownership and is_agent are both part of the WHERE clause: dropping either would
+// let a user revoke another user's key, or reach an agent key from a user route.
+func (r *ApiKeyRepository) DeleteApiKey(ctx context.Context, idUser, idApiKey int64, isAgent bool) (string, error) {
+	var keyHash string
+	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx,
+		`DELETE FROM users.api_key
+		 WHERE id_api_key = $1 AND id_user = $2 AND is_agent = $3
+		 RETURNING key_hash`,
+		idApiKey, idUser, isAgent,
+	).Scan(&keyHash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrApiKeyNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("deleting api key: %w", err)
+	}
+	return keyHash, nil
+}
+
 // LoadByHash joins users.user so a single DB round-trip populates the auth session.
 // Returns nil, nil when no active key matches (not found or expired).
+//
+// is_admin is deliberately not selected, so a key never carries admin rights.
+// Selecting it would let a leaked admin token mint an agent and its key, defeating
+// the rule that a token cannot create tokens.
 func (r *ApiKeyRepository) LoadByHash(ctx context.Context, hash string) (*model.ApiKeySession, error) {
 	var session model.ApiKeySession
 	var rateLimitOverride *int
@@ -126,28 +203,11 @@ func (r *ApiKeyRepository) LoadByHash(ctx context.Context, hash string) (*model.
 	if rateLimitOverride != nil {
 		session.RateLimitPerMin = *rateLimitOverride
 	} else if session.User.IsBot {
-		session.RateLimitPerMin = defaultBotRateLimit
+		session.RateLimitPerMin = defaultAgentRateLimit
 	} else {
 		session.RateLimitPerMin = defaultHumanRateLimit
 	}
 	return &session, nil
-}
-
-// DeleteByUser removes a bot's single key and returns its key_hash for cache
-// invalidation. Returns ("", nil) when the bot has no key.
-func (r *ApiKeyRepository) DeleteByUser(ctx context.Context, idUser int64) (string, error) {
-	var keyHash string
-	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx,
-		`DELETE FROM users.api_key WHERE id_user = $1 RETURNING key_hash`,
-		idUser,
-	).Scan(&keyHash)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("deleting api key by user: %w", err)
-	}
-	return keyHash, nil
 }
 
 func (r *ApiKeyRepository) UpdateLastUsedByHash(ctx context.Context, hash string) error {

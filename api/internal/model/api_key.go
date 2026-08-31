@@ -15,12 +15,20 @@ type ApiKey struct {
 	LastUsedAt        *time.Time `json:"lastUsedAt"        db:"last_used_at"`
 }
 
-type CreateApiKeyReq struct {
+type CreateAgentApiKeyReq struct {
 	Name string `json:"name" binding:"required,max=100"`
 	// ExpiresAt nil = never expires.
 	ExpiresAt *time.Time `json:"expiresAt"`
 	// RateLimitOverride nil = default per-user limit; if set, must be >= 1 req/min.
 	RateLimitOverride *int `json:"rateLimitOverride" binding:"omitempty,min=1"`
+}
+
+// Deliberately has no RateLimitOverride: a user must not be able to raise their
+// own rate ceiling.
+type CreateUserApiKeyReq struct {
+	Name string `json:"name" binding:"required,max=100"`
+	// ExpiresAt nil = never expires.
+	ExpiresAt *time.Time `json:"expiresAt"`
 }
 
 // CreateApiKeyRes is returned once on creation only. RawKey is never stored.

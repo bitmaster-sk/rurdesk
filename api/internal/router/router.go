@@ -51,6 +51,7 @@ func New(
 	projectSkillCtrl *controller.ProjectSkillController,
 	agentOverviewCtrl *controller.AgentOverviewController,
 	appSettingsCtrl *controller.AppSettingsController,
+	apiKeyCtrl *controller.ApiKeyController,
 	healthCtrl *controller.HealthController,
 	versionCtrl *controller.VersionController,
 	mcpHandler http.Handler,
@@ -84,6 +85,11 @@ func New(
 	pri.PUT("/user/password", userCtrl.ChangePassword)
 	pri.DELETE("/logout", userCtrl.Logout)
 
+	pri.GET("/user/api-key", apiKeyCtrl.List)
+	pri.POST("/user/api-key", apiKeyCtrl.Create)
+	pri.POST("/user/api-key/:idApiKey/token", apiKeyCtrl.Regenerate)
+	pri.DELETE("/user/api-key/:idApiKey", apiKeyCtrl.Revoke)
+
 	// App settings — readable by any authenticated user (clients need page sizes)
 	pri.GET("/settings", appSettingsCtrl.Get)
 
@@ -97,10 +103,10 @@ func New(
 	admin.POST("/user", adminCtrl.CreateUser)
 	admin.PATCH("/user/:idUser", adminCtrl.UpdateUser)
 	admin.DELETE("/user/:idUser", adminCtrl.DeleteUser)
-	admin.GET("/user/:idUser/api-key", adminCtrl.GetBotKey)
-	admin.POST("/user/:idUser/api-key", adminCtrl.CreateBotKey)
-	admin.POST("/user/:idUser/api-key/token", adminCtrl.RegenerateBotKey)
-	admin.DELETE("/user/:idUser/api-key", adminCtrl.RevokeBotKey)
+	admin.GET("/user/:idUser/api-key", adminCtrl.GetAgentApiKey)
+	admin.POST("/user/:idUser/api-key", adminCtrl.CreateAgentApiKey)
+	admin.POST("/user/:idUser/api-key/token", adminCtrl.RegenerateAgentApiKey)
+	admin.DELETE("/user/:idUser/api-key", adminCtrl.RevokeAgentApiKey)
 
 	admin.GET("/skills/:idSkill", skillCtrl.Get)
 	admin.POST("/skills", skillCtrl.Create)

@@ -28,6 +28,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		KanbanPageSize:       sc.settings.KanbanPageSize(),
 		GanttBacklogPageSize: sc.settings.GanttBacklogPageSize(),
 		SprintVelocityLimit:  sc.settings.SprintVelocityLimit(),
+		UserApiKeyLimit:      sc.settings.UserApiKeyLimit(),
 	})
 }
 
@@ -51,6 +52,9 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.SprintVelocityLimit != nil {
 		changes[constants.SettingSprintVelocityLimit] = *req.SprintVelocityLimit
+	}
+	if req.UserApiKeyLimit != nil {
+		changes[constants.SettingUserApiKeyLimit] = *req.UserApiKeyLimit
 	}
 	ctx := c.Request.Context()
 	if err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {

@@ -5,12 +5,15 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/go-redis/redis/v8"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,19 +25,35 @@ const (
 	lastUsedChannelSize    = 1000
 )
 
+// Namespaces the per-user create lock away from other advisory lock keys.
+const userApiKeyLockKey int64 = 3 << 48
+
 var ErrRateLimited = fmt.Errorf("rate limit exceeded")
+
+// ErrApiKeyLimitReached means the user already holds the maximum number of
+// API keys allowed by the app settings.
+var ErrApiKeyLimitReached = errors.New("user api key limit reached")
 
 type ApiKeyService struct {
 	apiKeyRepo *repository.ApiKeyRepository
+	lockRepo   *repository.AdvisoryLockRepository
 	cache      *redis.Client
+	pool       *pgxpool.Pool
 	lastUsedCh chan string
 	stopCh     chan struct{}
 }
 
-func NewApiKeyService(apiKeyRepo *repository.ApiKeyRepository, cache *redis.Client) *ApiKeyService {
+func NewApiKeyService(
+	apiKeyRepo *repository.ApiKeyRepository,
+	lockRepo *repository.AdvisoryLockRepository,
+	cache *redis.Client,
+	pool *pgxpool.Pool,
+) *ApiKeyService {
 	svc := &ApiKeyService{
 		apiKeyRepo: apiKeyRepo,
+		lockRepo:   lockRepo,
 		cache:      cache,
+		pool:       pool,
 		lastUsedCh: make(chan string, lastUsedChannelSize),
 		stopCh:     make(chan struct{}),
 	}
@@ -63,32 +82,108 @@ func generateRawKey() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
-func (s *ApiKeyService) Create(ctx context.Context, idUser int64, req *model.CreateApiKeyReq) (*model.CreateApiKeyRes, error) {
+func (s *ApiKeyService) CreateAgentApiKey(ctx context.Context, idUser int64, req *model.CreateAgentApiKeyReq) (*model.CreateApiKeyRes, error) {
 	rawKey, err := generateRawKey()
 	if err != nil {
-		return nil, fmt.Errorf("generating api key: %w", err)
+		return nil, fmt.Errorf("generating agent api key: %w", err)
 	}
 	keyHash := HashApiKey(rawKey)
-	key, err := s.apiKeyRepo.Insert(ctx, idUser, req.Name, keyHash, req.ExpiresAt, req.RateLimitOverride)
+	key, err := s.apiKeyRepo.Insert(ctx, idUser, req.Name, keyHash, req.ExpiresAt, req.RateLimitOverride, true)
 	if err != nil {
-		return nil, fmt.Errorf("inserting api key: %w", err)
+		return nil, fmt.Errorf("inserting agent api key: %w", err)
 	}
 	return &model.CreateApiKeyRes{ApiKey: *key, RawKey: rawKey}, nil
 }
 
-// GetByUser returns a bot's single API key, or nil when none exists.
-func (s *ApiKeyService) GetByUser(ctx context.Context, idUser int64) (*model.ApiKey, error) {
-	return s.apiKeyRepo.LoadOneByUser(ctx, idUser)
+// GetAgentApiKey returns an agent's single API key, or nil when none exists.
+func (s *ApiKeyService) GetAgentApiKey(ctx context.Context, idUser int64) (*model.ApiKey, error) {
+	return s.apiKeyRepo.LoadAgentApiKey(ctx, idUser)
 }
 
-// Regenerate rotates a bot's key in place, invalidating the old one immediately,
-// and returns the new one-time raw key. ErrApiKeyNotFound if the bot has none yet.
-func (s *ApiKeyService) Regenerate(ctx context.Context, idUser int64) (*model.CreateApiKeyRes, error) {
+// RegenerateAgentApiKey rotates an agent's key in place, invalidating the old one
+// immediately, and returns the new one-time raw key. ErrApiKeyNotFound if the
+// agent has none yet.
+func (s *ApiKeyService) RegenerateAgentApiKey(ctx context.Context, idUser int64) (*model.CreateApiKeyRes, error) {
+	existing, err := s.apiKeyRepo.LoadAgentApiKey(ctx, idUser)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, repository.ErrApiKeyNotFound
+	}
+	return s.rotate(ctx, idUser, existing.IdApiKey, true)
+}
+
+// RevokeAgentApiKey deletes an agent's single key and purges its cached session.
+// Absent key is not an error: revoking what is already gone is a no-op.
+func (s *ApiKeyService) RevokeAgentApiKey(ctx context.Context, idUser int64) error {
+	existing, err := s.apiKeyRepo.LoadAgentApiKey(ctx, idUser)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return nil
+	}
+	return s.revoke(ctx, idUser, existing.IdApiKey, true)
+}
+
+// CreateUserApiKey mints a personal access token unless the user is already at
+// limit, in which case it returns ErrApiKeyLimitReached. The advisory lock is what
+// makes the limit hold: without it two concurrent creates both read a count below
+// the limit and both insert.
+func (s *ApiKeyService) CreateUserApiKey(
+	ctx context.Context,
+	idUser int64,
+	limit int,
+	req *model.CreateUserApiKeyReq,
+) (*model.CreateApiKeyRes, error) {
+	rawKey, err := generateRawKey()
+	if err != nil {
+		return nil, fmt.Errorf("generating user api key: %w", err)
+	}
+
+	var key *model.ApiKey
+	err = extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+		if err := s.lockRepo.Lock(ctx, userApiKeyLockKey+idUser); err != nil {
+			return err
+		}
+		count, err := s.apiKeyRepo.CountUserApiKeys(ctx, idUser)
+		if err != nil {
+			return err
+		}
+		if count >= limit {
+			return ErrApiKeyLimitReached
+		}
+		key, err = s.apiKeyRepo.Insert(ctx, idUser, req.Name, HashApiKey(rawKey), req.ExpiresAt, nil, false)
+		if err != nil {
+			return fmt.Errorf("inserting user api key: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &model.CreateApiKeyRes{ApiKey: *key, RawKey: rawKey}, nil
+}
+
+func (s *ApiKeyService) ListUserApiKeys(ctx context.Context, idUser int64) ([]model.ApiKey, error) {
+	return s.apiKeyRepo.LoadUserApiKeys(ctx, idUser)
+}
+
+func (s *ApiKeyService) RegenerateUserApiKey(ctx context.Context, idUser, idApiKey int64) (*model.CreateApiKeyRes, error) {
+	return s.rotate(ctx, idUser, idApiKey, false)
+}
+
+func (s *ApiKeyService) RevokeUserApiKey(ctx context.Context, idUser, idApiKey int64) error {
+	return s.revoke(ctx, idUser, idApiKey, false)
+}
+
+func (s *ApiKeyService) rotate(ctx context.Context, idUser, idApiKey int64, isAgent bool) (*model.CreateApiKeyRes, error) {
 	rawKey, err := generateRawKey()
 	if err != nil {
 		return nil, fmt.Errorf("generating api key: %w", err)
 	}
-	oldHash, key, err := s.apiKeyRepo.UpdateHashByUser(ctx, idUser, HashApiKey(rawKey))
+	oldHash, key, err := s.apiKeyRepo.UpdateApiKeyHash(ctx, idUser, idApiKey, isAgent, HashApiKey(rawKey))
 	if err != nil {
 		return nil, err
 	}
@@ -98,15 +193,12 @@ func (s *ApiKeyService) Regenerate(ctx context.Context, idUser int64) (*model.Cr
 	return &model.CreateApiKeyRes{ApiKey: *key, RawKey: rawKey}, nil
 }
 
-// RevokeByUser deletes a bot's single key and purges its cached session.
-func (s *ApiKeyService) RevokeByUser(ctx context.Context, idUser int64) error {
-	keyHash, err := s.apiKeyRepo.DeleteByUser(ctx, idUser)
+func (s *ApiKeyService) revoke(ctx context.Context, idUser, idApiKey int64, isAgent bool) error {
+	keyHash, err := s.apiKeyRepo.DeleteApiKey(ctx, idUser, idApiKey, isAgent)
 	if err != nil {
-		return fmt.Errorf("deleting api key: %w", err)
+		return fmt.Errorf("revoking api key: %w", err)
 	}
-	if keyHash != "" {
-		_ = s.cache.Del(ctx, apiKeyCachePrefix+keyHash).Err()
-	}
+	_ = s.cache.Del(ctx, apiKeyCachePrefix+keyHash).Err()
 	return nil
 }
 

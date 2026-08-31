@@ -72,6 +72,10 @@ func (s *AppSettingsService) SprintVelocityLimit() int {
 	return s.get(constants.SettingSprintVelocityLimit)
 }
 
+func (s *AppSettingsService) UserApiKeyLimit() int {
+	return s.get(constants.SettingUserApiKeyLimit)
+}
+
 // Update validates every key, persists, then reloads the snapshot.
 func (s *AppSettingsService) Update(ctx context.Context, changes map[string]int) error {
 	persist := make(map[string]string, len(changes))

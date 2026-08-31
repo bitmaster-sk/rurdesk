@@ -19,6 +19,10 @@ function activityPane(page: Page): Locator {
     return page.getByTestId('split-pane-end');
 }
 
+// Grabs the separator near its top edge. Its centre is occupied by the collapse and
+// reset buttons, which take the pointerdown themselves and cancel the drag.
+const GRAB_OFFSET_Y = 20;
+
 async function openDetail(page: Page): Promise<{ idProject: number; idIssuePublic: number }> {
     const idProject = await Interaction.createBlankProject(page, PROJECT_NAME);
     const idIssuePublic = await Interaction.createIssue(page, idProject, {
@@ -51,7 +55,7 @@ test('dragging the separator resizes both panes and the ratio survives a reload'
     const activityBefore = await widthOf(activityPane(page));
     const totalBefore = infoBefore + activityBefore;
 
-    await Interaction.dragBy(page, page.getByTestId('split-pane-splitter'), 200);
+    await Interaction.dragBy(page, page.getByTestId('split-pane-splitter'), 200, GRAB_OFFSET_Y);
 
     await expect.poll(() => widthOf(infoPane(page))).toBeGreaterThan(infoBefore + 100);
     const infoAfter = await widthOf(infoPane(page));
@@ -119,12 +123,13 @@ test('the separator refuses to drag a pane below its minimum width', async ({
 
     const splitter = page.getByTestId('split-pane-splitter');
     const infoBefore = await widthOf(infoPane(page));
-    await Interaction.dragBy(page, splitter, -2000);
+    await Interaction.dragBy(page, splitter, -2000, GRAB_OFFSET_Y);
 
     await expect.poll(() => widthOf(infoPane(page))).toBeLessThan(infoBefore - 100);
     expect(await widthOf(infoPane(page))).toBeGreaterThanOrEqual(279);
 
-    await splitter.dblclick();
+    const box = (await splitter.boundingBox())!;
+    await splitter.dblclick({ position: { x: box.width / 2, y: GRAB_OFFSET_Y } });
 
     const info = await widthOf(infoPane(page));
     const activity = await widthOf(activityPane(page));

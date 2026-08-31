@@ -28,56 +28,6 @@
     flex: 0 0 auto;
 }
 
-// "Shown once" warning — amber, clearly distinct from the metadata.
-.cred-notice {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    background: var(--ui-yellow-50);
-    border: 1px solid var(--ui-yellow-200);
-    color: var(--ui-yellow-700);
-    border-radius: var(--ui-radius-md);
-    padding: 0.55rem 0.7rem;
-    font-size: 0.82rem;
-    line-height: 1.4;
-    margin-bottom: 0.6rem;
-
-    .ti {
-        flex: 0 0 auto;
-        margin-top: 1px;
-    }
-
-    .env {
-        font-family: ui-monospace, Menlo, Consolas, monospace;
-        font-weight: 700;
-    }
-}
-
-.cred-code {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.cred-code code {
-    flex: 1;
-    min-width: 0;
-    font-family: ui-monospace, Menlo, Consolas, monospace;
-    font-size: 0.82rem;
-    background: var(--ui-surface-100);
-    border: 1px solid var(--ui-color-border);
-    border-radius: var(--ui-radius-md);
-    padding: 0.5rem 0.6rem;
-    // The token must stay fully reachable: one line, scrolled horizontally, and
-    // selectable in a single click for the manual-copy fallback.
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    scrollbar-gutter: stable;
-    user-select: all;
-    -webkit-user-select: all;
-}
-
 .cred-meta {
     margin-top: 0.6rem;
     display: flex;
