@@ -1,93 +1,102 @@
-<div class="h-full flex flex-col gap-4 p-4">
-    <!-- Profile -->
-    <section class="panel shrink-0">
-        <header class="panel-head">
-            <div class="panel-head-l">
-                <tabler-icon icon="user-circle" [size]="16" class="panel-icon" />
-                <div class="panel-title">{{ 'USER.PROFILE' | translate }}</div>
-            </div>
-        </header>
-        <div class="panel-body flex items-end gap-4" [formGroup]="profileForm">
-            <app-avatar
-                [name]="currentUser()?.name ?? ''"
-                [bgColor]="avatarColor()"
-                [width]="3.5"
-                [height]="3.5"
-                [radius]="1.75"
-            ></app-avatar>
-            <div class="flex flex-col gap-1 flex-1">
-                <label for="prof-name">{{ 'NAME' | translate }}</label>
-                <input
-                    uiInput
-                    id="prof-name"
-                    formControlName="name"
-                    [uiSaveStatus]="nameSaveStatus()"
-                />
-            </div>
-            <div class="flex flex-col gap-1 flex-1">
-                <label for="prof-email">{{ 'EMAIL' | translate }}</label>
-                <input
-                    uiInput
-                    id="prof-email"
-                    formControlName="email"
-                    readonly
-                    aria-describedby="prof-email-hint"
-                />
-                <small id="prof-email-hint" class="ui-color-text-muted">
-                    {{ 'USER.EMAIL_READONLY' | translate }}
-                </small>
-            </div>
-            <div class="flex flex-col gap-1">
-                <label for="prof-color">{{ 'USER.AVATAR_COLOR' | translate }}</label>
-                <div class="flex items-center gap-2">
-                    <input
-                        uiColor
-                        id="prof-color"
-                        formControlName="colorAvatarBg"
-                        [uiSaveStatus]="colorSaveStatus()"
-                    />
-                    <ui-button
-                        size="small"
-                        severity="secondary"
-                        [title]="'USER.SHUFFLE_COLOR' | translate"
-                        (click)="onShuffleColor()"
-                    >
-                        <tabler-icon icon="refresh" [size]="14" />
-                    </ui-button>
+<div class="h-full flex flex-col">
+    <div class="flex-1 overflow-y-auto">
+        <div class="flex flex-col gap-4 p-4">
+            <!-- Profile -->
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="user-circle" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'USER.PROFILE' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body flex items-end gap-4" [formGroup]="profileForm">
+                    <app-avatar
+                        [name]="currentUser()?.name ?? ''"
+                        [bgColor]="avatarColor()"
+                        [width]="3.5"
+                        [height]="3.5"
+                        [radius]="1.75"
+                    ></app-avatar>
+                    <div class="flex flex-col gap-1 flex-1">
+                        <label for="prof-name">{{ 'NAME' | translate }}</label>
+                        <input
+                            uiInput
+                            id="prof-name"
+                            formControlName="name"
+                            [uiSaveStatus]="nameSaveStatus()"
+                        />
+                    </div>
+                    <div class="flex flex-col gap-1 flex-1">
+                        <label for="prof-email">{{ 'EMAIL' | translate }}</label>
+                        <input
+                            uiInput
+                            id="prof-email"
+                            formControlName="email"
+                            readonly
+                            aria-describedby="prof-email-hint"
+                        />
+                        <small id="prof-email-hint" class="ui-color-text-muted">
+                            {{ 'USER.EMAIL_READONLY' | translate }}
+                        </small>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label for="prof-color">{{ 'USER.AVATAR_COLOR' | translate }}</label>
+                        <div class="flex items-center gap-2">
+                            <input
+                                uiColor
+                                id="prof-color"
+                                formControlName="colorAvatarBg"
+                                [uiSaveStatus]="colorSaveStatus()"
+                            />
+                            <ui-button
+                                size="small"
+                                severity="secondary"
+                                [title]="'USER.SHUFFLE_COLOR' | translate"
+                                (click)="onShuffleColor()"
+                            >
+                                <tabler-icon icon="refresh" [size]="14" />
+                            </ui-button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </section>
+            </section>
 
-    <!-- Change password -->
-    <section class="panel shrink-0">
-        <header class="panel-head">
-            <div class="panel-head-l">
-                <tabler-icon icon="lock" [size]="16" class="panel-icon" />
-                <div class="panel-title">{{ 'USER.CHANGE_PASSWORD' | translate }}</div>
-            </div>
-            <div class="panel-head-r">
-                <ui-button
-                    size="small"
-                    [label]="'SAVE' | translate"
-                    [disabled]="!passwordForm.valid"
-                    (click)="onChangePassword()"
-                >
-                    <tabler-icon icon="device-floppy" [size]="14" />
-                </ui-button>
-            </div>
-        </header>
-        <div class="panel-body flex items-end gap-4" [formGroup]="passwordForm">
-            <div class="flex flex-col gap-1 flex-1">
-                <label for="pwd-current">{{ 'USER.CURRENT_PASSWORD' | translate }}</label>
-                <input uiInput type="password" id="pwd-current" formControlName="currentPassword" />
-            </div>
-            <div class="flex flex-col gap-1 flex-1">
-                <label for="pwd-new">{{ 'USER.NEW_PASSWORD' | translate }}</label>
-                <input uiInput type="password" id="pwd-new" formControlName="newPassword" />
-            </div>
-        </div>
-    </section>
+            <!-- Change password -->
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="lock" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'USER.CHANGE_PASSWORD' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'SAVE' | translate"
+                            [disabled]="!passwordForm.valid"
+                            (click)="onChangePassword()"
+                        >
+                            <tabler-icon icon="device-floppy" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body flex items-end gap-4" [formGroup]="passwordForm">
+                    <div class="flex flex-col gap-1 flex-1">
+                        <label for="pwd-current">{{ 'USER.CURRENT_PASSWORD' | translate }}</label>
+                        <input
+                            uiInput
+                            type="password"
+                            id="pwd-current"
+                            formControlName="currentPassword"
+                        />
+                    </div>
+                    <div class="flex flex-col gap-1 flex-1">
+                        <label for="pwd-new">{{ 'USER.NEW_PASSWORD' | translate }}</label>
+                        <input uiInput type="password" id="pwd-new" formControlName="newPassword" />
+                    </div>
+                </div>
+            </section>
 
-    <app-user-api-keys />
+            <app-user-api-keys />
+        </div>
+    </div>
 </div>
