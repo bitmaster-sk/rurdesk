@@ -73,6 +73,38 @@ export abstract class Interaction {
         await page.locator('.ui-confirm-panel').getByRole('button', { name: 'Yes' }).click();
     }
 
+    public static async waitForStableBox(target: Locator): Promise<void> {
+        let previous = '';
+        await expect
+            .poll(async () => {
+                const current = JSON.stringify(await target.boundingBox());
+                const isStable = current === previous;
+                previous = current;
+                return isStable;
+            })
+            .toBe(true);
+    }
+
+    // grabOffsetY moves the grab point away from the handle's vertical centre, for
+    // handles whose centre holds a button that would take the pointerdown instead.
+    public static async dragBy(
+        page: Page,
+        handle: Locator,
+        deltaX: number,
+        grabOffsetY?: number
+    ): Promise<void> {
+        await Interaction.waitForStableBox(handle);
+        const box = (await handle.boundingBox())!;
+        const startX = box.x + box.width / 2;
+        const y = box.y + (grabOffsetY ?? box.height / 2);
+
+        await page.mouse.move(startX, y);
+        await page.mouse.down();
+        await page.mouse.move(startX + Math.sign(deltaX), y);
+        await page.mouse.move(Math.max(0, startX + deltaX), y, { steps: 10 });
+        await page.mouse.up();
+    }
+
     public static async openPalette(page: Page): Promise<Locator> {
         await page.keyboard.press('Control+k');
         const palette = page.locator('.palette');
