@@ -1,6 +1,6 @@
 import { FormControl, FormGroup } from '@angular/forms';
 import { describe, expect, it } from 'vitest';
-import { DATE_ORDER_ERROR, dateOrder } from './date-order.validator';
+import { DateOrderValidator } from './date-order.validator';
 
 function group(from: Date | null, to: Date | null): FormGroup {
     return new FormGroup(
@@ -9,11 +9,11 @@ function group(from: Date | null, to: Date | null): FormGroup {
             to: new FormControl<Date | null>(to),
             other: new FormControl<Date | null>(null)
         },
-        { validators: [dateOrder('from', 'to')] }
+        { validators: [DateOrderValidator.create('from', 'to')] }
     );
 }
 
-describe('dateOrder', () => {
+describe('DateOrderValidator', () => {
     it('accepts a range that moves forward', () => {
         expect(group(new Date(2026, 7, 1), new Date(2026, 7, 15)).valid).toBe(true);
     });
@@ -34,7 +34,7 @@ describe('dateOrder', () => {
 
     it('reports which pair of controls it was watching', () => {
         const form = group(new Date(2026, 7, 20), new Date(2026, 7, 10));
-        expect(form.errors?.[DATE_ORDER_ERROR]).toEqual({ startKey: 'from', endKey: 'to' });
+        expect(form.errors?.[DateOrderValidator.ERROR]).toEqual({ startKey: 'from', endKey: 'to' });
     });
 
     it('compares the picked days, not the instants, so a timezone cannot flip it', () => {
@@ -43,7 +43,7 @@ describe('dateOrder', () => {
                 a: new FormControl<Date | null>(new Date(2026, 7, 10, 23, 59)),
                 b: new FormControl<Date | null>(new Date(2026, 7, 11, 0, 1))
             },
-            { validators: [dateOrder('a', 'b')] }
+            { validators: [DateOrderValidator.create('a', 'b')] }
         );
         expect(form.valid).toBe(true);
     });

@@ -12,7 +12,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { Sprint } from '../../model/sprint.model';
 import { addDays } from 'date-fns';
 import { DateUtil } from 'src/app/shared/date/date.util';
-import { DATE_ORDER_ERROR, dateOrder } from 'src/app/shared/validators/date-order.validator';
+import { DateOrderValidator } from 'src/app/shared/validators/date-order.validator';
 
 export interface SprintDialogSave {
     name: string;
@@ -46,7 +46,7 @@ export class SprintDialogComponent {
             startAt: this.fb.control<Date | null>(null, { validators: [Validators.required] }),
             endAt: this.fb.control<Date | null>(null, { validators: [Validators.required] })
         },
-        { validators: [dateOrder('startAt', 'endAt')] }
+        { validators: [DateOrderValidator.create('startAt', 'endAt')] }
     );
 
     public constructor() {
@@ -62,7 +62,7 @@ export class SprintDialogComponent {
         if (this.form.valid) {
             return '';
         }
-        if (this.form.errors?.[DATE_ORDER_ERROR]) {
+        if (this.form.errors?.[DateOrderValidator.ERROR]) {
             return 'ISSUE.KANBAN.SPRINTS.WINDOW_ORDER';
         }
         if (this.form.controls.name.invalid) {
