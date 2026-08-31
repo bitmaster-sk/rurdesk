@@ -15,10 +15,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-// ApiKeySuite covers admin-on-bot API key management. A bot has at most one key
-// (mirrors the 1:1 gateway model): it is created with the bot, then rotated in place
-// via .../api-key/token or deleted via DELETE .../api-key. Keys are bot-only — there
-// is no self-service human key endpoint.
+// ApiKeySuite covers admin-on-agent API key management. An agent has at most one
+// key (mirrors the 1:1 gateway model): it is created with the agent, then rotated in
+// place via .../api-key/token or deleted via DELETE .../api-key. These admin endpoints
+// are agent-only; humans manage their own personal access tokens under
+// /api/private/user/api-key (see UserApiKeySuite).
 type ApiKeySuite struct {
 	suite.Suite
 	App        *issue.Application
@@ -208,9 +209,10 @@ func (s *ApiKeySuite) Test_Create_RejectsNonPositiveRateLimit() {
 		Request(s.T(), s.App, "GET", "/api/private/user", "", created.RawKey).StatusCode)
 }
 
-func (s *ApiKeySuite) Test_SelfServiceCreate_Removed() {
+func (s *ApiKeySuite) Test_LegacySelfServiceRoute_Gone() {
 	res := Request(s.T(), s.App, "POST", "/api/private/api-key", `{"name":"x"}`, s.AdminToken)
-	s.Equal(http.StatusNotFound, res.StatusCode, "self-service key route must be gone")
+	s.Equal(http.StatusNotFound, res.StatusCode,
+		"the old /api/private/api-key route must stay gone; self-service lives at /api/private/user/api-key")
 }
 
 func (s *ApiKeySuite) Test_KeyEndpoints_RejectHumanTarget() {

@@ -108,7 +108,7 @@ func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
 			return
 		}
 
-		ctx := extctx.WithUser(c.Request.Context(), session.User)
+		ctx := extctx.WithApiKeyAuth(extctx.WithUser(c.Request.Context(), session.User))
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}

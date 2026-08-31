@@ -277,11 +277,11 @@ func (s *AdminSuite) Test_DeleteUser_OnlyAssigned_UnassignsAndSucceeds() {
 	s.Nil(assignedTo, "deleting the assignee must unassign the issue")
 }
 
-// Test_BotKey_SecondKeyRejected pins the current key-management semantics: a bot
-// holds at most one API key (DB unique index, migration api_key_unique_per_user).
-// Bot creation mints the initial key; minting a second is rejected with 409 —
+// Test_AgentApiKey_SecondKeyRejected pins the current key-management semantics: an
+// agent holds at most one API key (partial unique index api_key_agent_one_per_user).
+// Agent creation mints the initial key; minting a second is rejected with 409 —
 // rotation happens via the regenerate endpoint, not by adding keys.
-func (s *AdminSuite) Test_BotKey_SecondKeyRejected() {
+func (s *AdminSuite) Test_AgentApiKey_SecondKeyRejected() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"keys bot","isBot":true}`, s.AdminToken)
 	var bot model.AdminCreateUserRes
@@ -300,8 +300,8 @@ func (s *AdminSuite) Test_BotKey_SecondKeyRejected() {
 		"the minted key must authenticate")
 }
 
-// Test_GetBotKey verifies the single-key GET endpoint returns the bot's one key.
-func (s *AdminSuite) Test_GetBotKey() {
+// Test_GetAgentApiKey verifies the single-key GET endpoint returns the agent's one key.
+func (s *AdminSuite) Test_GetAgentApiKey() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"list keys bot","isBot":true}`, s.AdminToken)
 	var bot model.AdminCreateUserRes
@@ -316,7 +316,7 @@ func (s *AdminSuite) Test_GetBotKey() {
 	s.Equal("default", key.Name, "the initial key is named \"default\"")
 }
 
-func (s *AdminSuite) Test_BotKeyEndpoints_RejectHumanTarget() {
+func (s *AdminSuite) Test_AgentApiKeyEndpoints_RejectHumanTarget() {
 	id := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk") // a human (admin)
 	res := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/admin/user/%d/api-key", id), `{"name":"x"}`, s.AdminToken)

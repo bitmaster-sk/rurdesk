@@ -20,6 +20,8 @@ var (
 	errMissingCredentials = errs.NewErr("MISSING_CREDENTIALS", "email and password are required for human users", "error.missing_credentials")
 	errNotABot            = errs.NewErr("NOT_A_BOT", "API keys can only be managed for bot users", "error.not_a_bot")
 	errApiKeyExists       = errs.NewErr("API_KEY_EXISTS", "bot already has an API key", "error.api_key_exists")
+	errApiKeyLimitReached = errs.NewErr("API_KEY_LIMIT_REACHED", "user api key limit reached", "error.api_key_limit_reached")
+	errApiKeySelfManage   = errs.NewErr("API_KEY_SELF_MANAGE", "api keys cannot be managed with an api key", "error.api_key_self_manage")
 
 	errGitIntegrationNotFound  = errs.NewErr("GIT_INTEGRATION_NOT_FOUND", "git integration not found", "error.git_integration_not_found")
 	errGitIntegrationDuplicate = errs.NewErr("GIT_INTEGRATION_DUPLICATE", "an integration for this repository already exists", "error.git_integration_duplicate")

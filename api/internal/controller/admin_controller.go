@@ -241,7 +241,7 @@ func (ac *AdminController) createBot(c *gin.Context, req *model.AdminCreateUserR
 		if txErr = ac.assignToProject(ctx, created.IdUser, req); txErr != nil {
 			return txErr
 		}
-		keyRes, txErr = ac.apiKeySvc.Create(ctx, created.IdUser, &model.CreateApiKeyReq{Name: "default"})
+		keyRes, txErr = ac.apiKeySvc.CreateAgentApiKey(ctx, created.IdUser, &model.CreateAgentApiKeyReq{Name: "default"})
 		return txErr
 	})
 	if err != nil {
@@ -436,8 +436,9 @@ func (ac *AdminController) guardLastAdmin(ctx context.Context) error {
 	return nil
 }
 
-// requireBot aborts with 422 unless the target user is a bot. API keys are bot-only.
-func (ac *AdminController) requireBot(c *gin.Context, idUser int64) bool {
+// requireAgent aborts with 422 unless the target user is an agent. API keys minted
+// here are agent-only; humans mint their own through the user routes.
+func (ac *AdminController) requireAgent(c *gin.Context, idUser int64) bool {
 	isBot, err := ac.userRepo.IsBotUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
@@ -452,19 +453,19 @@ func (ac *AdminController) requireBot(c *gin.Context, idUser int64) bool {
 	return true
 }
 
-// GetBotKey returns the bot's single API key, or null when none exists
+// GetAgentApiKey returns the agent's single API key, or null when none exists
 // (mirrors GetBotGateway).
-func (ac *AdminController) GetBotKey(c *gin.Context) {
+func (ac *AdminController) GetAgentApiKey(c *gin.Context) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if !ac.requireBot(c, idUser) {
+	if !ac.requireAgent(c, idUser) {
 		return
 	}
-	key, err := ac.apiKeySvc.GetByUser(c.Request.Context(), idUser)
+	key, err := ac.apiKeySvc.GetAgentApiKey(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -473,25 +474,25 @@ func (ac *AdminController) GetBotKey(c *gin.Context) {
 	c.JSON(http.StatusOK, key)
 }
 
-// CreateBotKey mints the bot's API key. A DB unique index caps a bot at one key;
-// creating when one exists returns 409 — rotate via RegenerateBotKey instead.
-func (ac *AdminController) CreateBotKey(c *gin.Context) {
+// CreateAgentApiKey mints the agent's API key. A DB unique index caps an agent at
+// one key; creating when one exists returns 409 — rotate via RegenerateAgentApiKey.
+func (ac *AdminController) CreateAgentApiKey(c *gin.Context) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if !ac.requireBot(c, idUser) {
+	if !ac.requireAgent(c, idUser) {
 		return
 	}
-	var req model.CreateApiKeyReq
+	var req model.CreateAgentApiKeyReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	res, err := ac.apiKeySvc.Create(c.Request.Context(), idUser, &req)
+	res, err := ac.apiKeySvc.CreateAgentApiKey(c.Request.Context(), idUser, &req)
 	if isConflict(err) {
 		_ = c.Error(errApiKeyExists)
 		c.Status(http.StatusConflict)
@@ -504,19 +505,19 @@ func (ac *AdminController) CreateBotKey(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// RegenerateBotKey rotates the bot's key in place, returning the new one-time raw
+// RegenerateAgentApiKey rotates the agent's key in place, returning the new one-time raw
 // key; the old key stops authenticating immediately (mirrors RegenerateGatewayToken).
-func (ac *AdminController) RegenerateBotKey(c *gin.Context) {
+func (ac *AdminController) RegenerateAgentApiKey(c *gin.Context) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if !ac.requireBot(c, idUser) {
+	if !ac.requireAgent(c, idUser) {
 		return
 	}
-	res, err := ac.apiKeySvc.Regenerate(c.Request.Context(), idUser)
+	res, err := ac.apiKeySvc.RegenerateAgentApiKey(c.Request.Context(), idUser)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
 		c.Status(http.StatusNotFound)
 		return
@@ -528,18 +529,18 @@ func (ac *AdminController) RegenerateBotKey(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-// RevokeBotKey deletes the bot's single API key.
-func (ac *AdminController) RevokeBotKey(c *gin.Context) {
+// RevokeAgentApiKey deletes the agent's single API key.
+func (ac *AdminController) RevokeAgentApiKey(c *gin.Context) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if !ac.requireBot(c, idUser) {
+	if !ac.requireAgent(c, idUser) {
 		return
 	}
-	if err := ac.apiKeySvc.RevokeByUser(c.Request.Context(), idUser); err != nil {
+	if err := ac.apiKeySvc.RevokeAgentApiKey(c.Request.Context(), idUser); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return

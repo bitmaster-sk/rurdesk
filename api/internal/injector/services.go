@@ -303,7 +303,7 @@ func GetMCPServer() *mcp.MCPServer {
 func GetApiKeyService() *service.ApiKeyService {
 	instance, _ := di.GetWithNew("api-key-service", func() (any, error) {
 		cache := mustCache()
-		return service.NewApiKeyService(GetApiKeyRepository(), cache), nil
+		return service.NewApiKeyService(GetApiKeyRepository(), GetAdvisoryLockRepository(), cache, mustDb()), nil
 	})
 	return instance.(*service.ApiKeyService)
 }
@@ -958,6 +958,20 @@ func GetHealthController() *controller.HealthController {
 	return instance.(*controller.HealthController)
 }
 
+func GetApiKeyController() (*controller.ApiKeyController, error) {
+	instance, err := di.GetWithNew("api-key-controller", func() (any, error) {
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewApiKeyController(GetApiKeyService(), settings), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.ApiKeyController), nil
+}
+
 func GetVersionController() *controller.VersionController {
 	instance, _ := di.GetWithNew("version-controller", func() (any, error) {
 		return controller.NewVersionController(), nil
@@ -982,6 +996,11 @@ func GetRouter() (*router.Router, error) {
 		}
 
 		sprintController, err := GetSprintController()
+		if err != nil {
+			return nil, err
+		}
+
+		apiKeyController, err := GetApiKeyController()
 		if err != nil {
 			return nil, err
 		}
@@ -1022,6 +1041,7 @@ func GetRouter() (*router.Router, error) {
 			GetProjectSkillController(),
 			GetAgentOverviewController(),
 			appSettingsController,
+			apiKeyController,
 			GetHealthController(),
 			GetVersionController(),
 			GetMCPServer().Handler(),
