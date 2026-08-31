@@ -36,11 +36,11 @@
         </div>
 
         @if (revealedKey(); as rk) {
-            <div class="cred-notice">
+            <div class="secret-notice">
                 <tabler-icon class="ti" icon="alert-triangle" [size]="16" />
                 <span>{{ 'API_KEY.KEY_SHOWN_ONCE' | translate }}</span>
             </div>
-            <div class="cred-code">
+            <div class="secret-code">
                 <code>{{ rk }}</code>
                 <ui-button
                     [label]="'API_KEY.COPY_KEY' | translate"
@@ -113,11 +113,11 @@
         </div>
 
         @if (revealedGatewayToken(); as rt) {
-            <div class="cred-notice">
+            <div class="secret-notice">
                 <tabler-icon class="ti" icon="alert-triangle" [size]="16" />
                 <span>{{ 'API_KEY.GATEWAY_TOKEN_SHOWN_ONCE' | translate }}</span>
             </div>
-            <div class="cred-code">
+            <div class="secret-code">
                 <code>{{ rt }}</code>
                 <ui-button
                     [label]="'API_KEY.COPY_KEY' | translate"
