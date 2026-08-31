@@ -1,0 +1,189 @@
+<section class="panel shrink-0">
+    <header class="panel-head">
+        <div class="panel-head-l">
+            <tabler-icon icon="key" [size]="16" class="panel-icon" />
+            <div class="panel-title">{{ 'USER_API_KEY.TITLE' | translate }}</div>
+        </div>
+        <div class="panel-head-r">
+            <span class="ui-color-text-muted" data-testid="user-api-key-count">
+                {{ keys().length }} / {{ limit() }}
+            </span>
+        </div>
+    </header>
+
+    <div class="panel-body panel-body--flush flex flex-col">
+        <p class="m-0 p-4 ui-color-text-muted border-bottom">
+            {{ 'USER_API_KEY.DESCRIPTION' | translate }}
+        </p>
+
+        @if (revealed(); as revealedKey) {
+            <div class="p-4 border-bottom" data-testid="user-api-key-revealed">
+                <div class="secret-notice">
+                    <tabler-icon class="ti" icon="alert-triangle" [size]="16" />
+                    <span>{{ 'USER_API_KEY.SHOWN_ONCE' | translate }}</span>
+                </div>
+                <div class="secret-code">
+                    <code>{{ revealedKey.rawKey }}</code>
+                    <ui-button
+                        [label]="'USER_API_KEY.COPY' | translate"
+                        severity="secondary"
+                        size="small"
+                        data-testid="user-api-key-copy"
+                        (click)="onCopy()"
+                    >
+                        <tabler-icon icon="copy" [size]="14" />
+                    </ui-button>
+                    <ui-button
+                        severity="secondary"
+                        variant="text"
+                        size="small"
+                        [uiTooltip]="'USER_API_KEY.DISMISS' | translate"
+                        uiTooltipPosition="top"
+                        data-testid="user-api-key-dismiss"
+                        (click)="onDismissRevealed()"
+                    >
+                        <tabler-icon icon="circle-x" [size]="14" />
+                    </ui-button>
+                </div>
+            </div>
+        }
+
+        <div class="p-4 border-bottom flex flex-col gap-2">
+            <form class="flex items-end gap-4" [formGroup]="form" (ngSubmit)="onCreate()">
+                <div class="flex flex-col gap-1 flex-1">
+                    <label for="user-api-key-name">{{ 'USER_API_KEY.NAME' | translate }}</label>
+                    <input
+                        uiInput
+                        id="user-api-key-name"
+                        formControlName="name"
+                        data-testid="user-api-key-name"
+                    />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label for="user-api-key-expires">
+                        {{ 'USER_API_KEY.EXPIRES_AT' | translate }}
+                    </label>
+                    <input
+                        uiDatepicker
+                        id="user-api-key-expires"
+                        formControlName="expiresAt"
+                        [invalid]="form.controls.expiresAt.invalid"
+                        [placeholder]="'USER_API_KEY.NEVER' | translate"
+                        data-testid="user-api-key-expires"
+                    />
+                </div>
+                <ui-button
+                    type="submit"
+                    [label]="'USER_API_KEY.CREATE' | translate"
+                    size="small"
+                    [loading]="isCreateBusy()"
+                    [disabled]="form.invalid || isAtLimit()"
+                    data-testid="user-api-key-create"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </ui-button>
+            </form>
+
+            @if (form.controls.expiresAt.invalid) {
+                <p class="m-0 ui-color-orange" data-testid="user-api-key-expiry-past">
+                    {{ 'USER_API_KEY.EXPIRY_IN_PAST' | translate }}
+                </p>
+            }
+
+            @if (isAtLimit()) {
+                <p class="m-0 ui-color-orange" data-testid="user-api-key-limit-reached">
+                    {{ 'USER_API_KEY.LIMIT_REACHED' | translate: { limit: limit() } }}
+                </p>
+            }
+        </div>
+
+        @if (isLoading()) {
+            <p class="m-0 p-4 ui-color-text-muted" data-testid="user-api-key-loading">
+                {{ 'USER_API_KEY.LOADING' | translate }}
+            </p>
+        } @else if (hasLoadFailed()) {
+            <div class="p-4 flex items-center gap-2" data-testid="user-api-key-load-failed">
+                <span class="ui-color-orange">{{ 'USER_API_KEY.LOAD_FAILED' | translate }}</span>
+                <ui-button
+                    [label]="'USER_API_KEY.RETRY' | translate"
+                    severity="secondary"
+                    size="small"
+                    (click)="onRetryLoad()"
+                >
+                    <tabler-icon icon="refresh" [size]="14" />
+                </ui-button>
+            </div>
+        } @else if (keys().length) {
+            <table class="ui-table" data-testid="user-api-key-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'USER_API_KEY.NAME' | translate }}</th>
+                        <th scope="col">{{ 'USER_API_KEY.CREATED_AT' | translate }}</th>
+                        <th scope="col">{{ 'USER_API_KEY.LAST_USED' | translate }}</th>
+                        <th scope="col">{{ 'USER_API_KEY.EXPIRES_AT' | translate }}</th>
+                        <th scope="col" class="action-column"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (key of keys(); track key.idApiKey) {
+                        <tr data-testid="user-api-key-row">
+                            <td>{{ key.name }}</td>
+                            <td>{{ key.createdAt | date: 'short' }}</td>
+                            <td>
+                                {{
+                                    key.lastUsedAt
+                                        ? (key.lastUsedAt | date: 'short')
+                                        : ('USER_API_KEY.NEVER_USED' | translate)
+                                }}
+                            </td>
+                            <td>
+                                {{
+                                    key.expiresAt
+                                        ? (key.expiresAt | date: 'short')
+                                        : ('USER_API_KEY.NEVER' | translate)
+                                }}
+                            </td>
+                            <td class="action-column">
+                                <div class="flex justify-end gap-1">
+                                    <ui-button
+                                        severity="secondary"
+                                        variant="text"
+                                        size="small"
+                                        [loading]="idRegeneratingApiKey() === key.idApiKey"
+                                        [uiTooltip]="'USER_API_KEY.REGENERATE' | translate"
+                                        uiTooltipPosition="top"
+                                        uiConfirm
+                                        [confirmText]="
+                                            'USER_API_KEY.REGENERATE_CONFIRM' | translate
+                                        "
+                                        data-testid="user-api-key-regenerate"
+                                        (confirmed)="onRegenerate(key.idApiKey)"
+                                    >
+                                        <tabler-icon icon="refresh" [size]="14" />
+                                    </ui-button>
+                                    <ui-button
+                                        severity="danger"
+                                        variant="text"
+                                        size="small"
+                                        [uiTooltip]="'USER_API_KEY.REVOKE' | translate"
+                                        uiTooltipPosition="top"
+                                        uiConfirm
+                                        [confirmText]="'USER_API_KEY.REVOKE_CONFIRM' | translate"
+                                        data-testid="user-api-key-revoke"
+                                        (confirmed)="onRevoke(key.idApiKey)"
+                                    >
+                                        <tabler-icon icon="trash" [size]="14" />
+                                    </ui-button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        } @else {
+            <p class="m-0 p-4 ui-color-text-muted" data-testid="user-api-key-empty">
+                {{ 'USER_API_KEY.EMPTY' | translate }}
+            </p>
+        }
+    </div>
+</section>

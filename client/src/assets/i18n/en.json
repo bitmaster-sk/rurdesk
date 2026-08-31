@@ -786,7 +786,9 @@
         "invalid_severity_migration_target": "The target must be a different severity of the same project",
         "invalid_issue_type_migration_target": "The target must be a different type of the same project",
         "issue_type_protected": "This type is protected and cannot be deleted",
-        "sprint_closed": "That cycle is already closed."
+        "sprint_closed": "That cycle is already closed.",
+        "api_key_limit_reached": "You have reached your API key limit. Revoke one to create another.",
+        "api_key_self_manage": "API keys cannot be managed with an API key. Sign in through the browser."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
@@ -1064,6 +1066,30 @@
         "DELETE_USAGE.MANY": "{{count}} tasks still use this type.",
         "DELETE_USAGE.DEFAULT": "It is the project's default type."
     },
-    "SETTINGS.USER_TOKEN_LIMIT": "Personal access tokens per user",
+    "USER_API_KEY": {
+        "TITLE": "API keys",
+        "DESCRIPTION": "An API key is another way to sign in. A request carrying one acts as you, with your permissions, so a key is as sensitive as your password. Create a separate key for each client, so losing one costs you a single key.",
+        "NAME": "Key name",
+        "CREATE": "Create key",
+        "CREATED_AT": "Created",
+        "LAST_USED": "Last used",
+        "EXPIRES_AT": "Expires",
+        "NEVER": "Never",
+        "NEVER_USED": "Never",
+        "EMPTY": "You have no API keys yet.",
+        "SHOWN_ONCE": "Copy this key now — it will not be shown again.",
+        "COPY": "Copy",
+        "COPIED": "API key copied to the clipboard",
+        "COPY_FAILED": "Copying to the clipboard failed — select the key and copy it manually",
+        "DISMISS": "Hide",
+        "REGENERATE": "Regenerate",
+        "REGENERATE_CONFIRM": "Regenerate this key? The current value stops working immediately.",
+        "REVOKE": "Revoke",
+        "REVOKE_CONFIRM": "Revoke this key? Any client using it stops working immediately.",
+        "LIMIT_REACHED": "You have reached the limit of {{limit}} API keys. Revoke one to create another.",
+        "LOAD_FAILED": "Loading your API keys failed.",
+        "LOADING": "Loading API keys…",
+        "RETRY": "Try again",
+        "EXPIRY_IN_PAST": "Pick a date in the future, or leave it empty for a key that never expires."
     }
 }
