@@ -19,6 +19,19 @@ function activityPane(page: Page): Locator {
     return page.getByTestId('split-pane-end');
 }
 
+// Grabs the separator near its top edge. Its centre is occupied by the collapse and
+// reset buttons, which take the pointerdown themselves and cancel the drag.
+const GRAB_OFFSET_Y = 20;
+
+async function dragSplitterTo(page: Page, targetX: number): Promise<void> {
+    const box = (await page.getByTestId('split-pane-splitter').boundingBox())!;
+    const y = box.y + GRAB_OFFSET_Y;
+    await page.mouse.move(box.x + box.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(targetX, y, { steps: 10 });
+    await page.mouse.up();
+}
+
 async function openDetail(page: Page): Promise<{ idProject: number; idIssuePublic: number }> {
     const idProject = await Interaction.createBlankProject(page, PROJECT_NAME);
     const idIssuePublic = await Interaction.createIssue(page, idProject, {
@@ -50,12 +63,8 @@ test('dragging the separator resizes both panes and the ratio survives a reload'
     const activityBefore = await widthOf(activityPane(page));
     const totalBefore = infoBefore + activityBefore;
 
-    const splitter = page.getByTestId('split-pane-splitter');
-    const box = (await splitter.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 + 200, box.y + box.height / 2, { steps: 10 });
-    await page.mouse.up();
+    const box = (await page.getByTestId('split-pane-splitter').boundingBox())!;
+    await dragSplitterTo(page, box.x + box.width / 2 + 200);
 
     const infoAfter = await widthOf(infoPane(page));
     const activityAfter = await widthOf(activityPane(page));
@@ -122,15 +131,12 @@ test('the separator refuses to drag a pane below its minimum width', async ({
     await openDetail(page);
 
     const splitter = page.getByTestId('split-pane-splitter');
-    const box = (await splitter.boundingBox())!;
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(0, box.y + box.height / 2, { steps: 10 });
-    await page.mouse.up();
+    await dragSplitterTo(page, 0);
 
     expect(await widthOf(infoPane(page))).toBeGreaterThanOrEqual(279);
 
-    await splitter.dblclick();
+    const box = (await splitter.boundingBox())!;
+    await splitter.dblclick({ position: { x: box.width / 2, y: GRAB_OFFSET_Y } });
 
     const info = await widthOf(infoPane(page));
     const activity = await widthOf(activityPane(page));
