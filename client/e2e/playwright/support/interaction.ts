@@ -15,6 +15,7 @@ export abstract class Interaction {
         await page.locator('input[formcontrolname="email"]').fill(user.email);
         await page.locator('input[formcontrolname="password"]').fill(user.password);
         await page.getByRole('button', { name: /login/i }).click();
+        await page.waitForURL(url => !url.pathname.endsWith('/login'));
     }
 
     public static async createBlankProject(page: Page, name: string): Promise<number> {
@@ -57,6 +58,19 @@ export abstract class Interaction {
     ): Promise<void> {
         await page.locator(triggerSelector).click();
         await page.getByRole('option', { name: optionName, exact: true }).click();
+    }
+
+    public static async createUserApiKey(page: Page, name: string): Promise<string> {
+        await page.getByTestId('user-api-key-name').fill(name);
+        await page.getByTestId('user-api-key-create').click();
+
+        const revealed = page.getByTestId('user-api-key-revealed');
+        await expect(revealed).toBeVisible();
+        return (await revealed.locator('code').innerText()).trim();
+    }
+
+    public static async acceptConfirm(page: Page): Promise<void> {
+        await page.locator('.ui-confirm-panel').getByRole('button', { name: 'Yes' }).click();
     }
 
     public static async openPalette(page: Page): Promise<Locator> {
