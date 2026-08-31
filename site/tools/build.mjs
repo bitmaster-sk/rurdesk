@@ -38,7 +38,8 @@ export const SIDEBAR = [
             { src: 'using-the-tracker/features.md', out: 'features.html', nav: 'Projects, tasks & AI' },
             { src: 'using-the-tracker/sprints.md', out: 'sprints.html', nav: 'Sprints' },
             { src: 'using-the-tracker/saved-views.md', out: 'saved-views.html', nav: 'Saved views' },
-            { src: 'using-the-tracker/git-integration.md', out: 'git-integration.html', nav: 'Git integration' }
+            { src: 'using-the-tracker/git-integration.md', out: 'git-integration.html', nav: 'Git integration' },
+            { src: 'using-the-tracker/api-keys.md', out: 'api-keys.html', nav: 'API keys' }
         ]
     },
     {
