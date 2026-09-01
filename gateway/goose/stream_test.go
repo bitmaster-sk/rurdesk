@@ -2,8 +2,10 @@ package goose
 
 import (
 	"bufio"
+	"context"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
@@ -254,5 +256,75 @@ func TestStreamAggregator_DetectsProviderErrorFromStream(t *testing.T) {
 	}
 	if res.provErr.Code != common.ErrCodeProviderCreditExhausted {
 		t.Errorf("code = %q, want %q", res.provErr.Code, common.ErrCodeProviderCreditExhausted)
+	}
+}
+
+// recordingSender captures the batches the thinking relay posts.
+type recordingSender struct {
+	mu     sync.Mutex
+	events []common.ThinkingEvent
+}
+
+func (r *recordingSender) SendThinking(ctx context.Context, idTask int64, seq int, events []common.ThinkingEvent) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.events = append(r.events, events...)
+	return nil
+}
+
+// Thinking and tool calls reach the relay; answer text does not, because it
+// already becomes the stage's output message.
+func TestStreamAggregator_RelaysThinkingAndToolsOnly(t *testing.T) {
+	sender := &recordingSender{}
+	batcher := common.NewThinkingBatcher(sender, 42)
+	batcher.Start(context.Background())
+
+	a := newStreamAggregator(1, func(ev streamEvent) {
+		logStreamEvent(ev, 1)
+		queueThinkingEvent(ev, batcher)
+	})
+	a.line([]byte(thinkingLine("weighing the tokenizer options")))
+	a.line([]byte(toolLine("developer__text_editor")))
+	a.line([]byte(textLine("Done — the tokenizer is in place.")))
+	a.finish()
+	batcher.Stop()
+
+	sender.mu.Lock()
+	defer sender.mu.Unlock()
+	if len(sender.events) != 2 {
+		t.Fatalf("relayed %d events, want 2: %+v", len(sender.events), sender.events)
+	}
+	if sender.events[0].Kind != "thinking" || sender.events[0].Text != "weighing the tokenizer options" {
+		t.Errorf("first relayed event = %+v", sender.events[0])
+	}
+	if sender.events[1].Kind != "tool" || sender.events[1].Tool != "developer__text_editor" {
+		t.Errorf("second relayed event = %+v", sender.events[1])
+	}
+}
+
+// toolLineWithArgs builds a toolRequest block carrying arguments, the shape
+// goose emits for a real call (MCP ToolCall is {name, arguments}).
+func toolLineWithArgs(name, args string) string {
+	return `{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":` + jsonStr(name) + `,"arguments":` + args + `}}}]}}`
+}
+
+// The queued event carries the detail alongside the name so the feed can show both.
+func TestQueueThinkingEvent_CarriesToolDetail(t *testing.T) {
+	sender := &recordingSender{}
+	batcher := common.NewThinkingBatcher(sender, 42)
+	batcher.Start(context.Background())
+
+	a := newStreamAggregator(1, func(ev streamEvent) { queueThinkingEvent(ev, batcher) })
+	a.line([]byte(toolLineWithArgs("developer__shell", `{"command":"npm test"}`)))
+	a.finish()
+	batcher.Stop()
+
+	sender.mu.Lock()
+	defer sender.mu.Unlock()
+	if len(sender.events) != 1 {
+		t.Fatalf("relayed %d events, want 1", len(sender.events))
+	}
+	if sender.events[0].Tool != "developer__shell" || sender.events[0].Text != "npm test" {
+		t.Errorf("relayed event = %+v", sender.events[0])
 	}
 }
