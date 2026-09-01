@@ -62,9 +62,13 @@ describe('FilterComponent — date modes (browser)', () => {
         return setFilter.mock.calls[setFilter.mock.calls.length - 1][0] as IssuesFilterParams;
     }
 
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
     it('sends the selected preset as a rolling window, with no absolute bounds', () => {
         const component = render();
         component.form.patchValue({ updateAt: { preset: '30d' } });
+        vi.advanceTimersByTime(300);
 
         expect(lastFilter().updateAtWithin).toBe('30d');
         expect(lastFilter().updateAtFrom).toBeNull();
@@ -76,6 +80,7 @@ describe('FilterComponent — date modes (browser)', () => {
         const from = new Date('2026-01-01T00:00:00Z');
         const to = new Date('2026-01-31T00:00:00Z');
         component.form.patchValue({ createAt: { from, to } });
+        vi.advanceTimersByTime(300);
 
         expect(lastFilter().createAtFrom).toBe(from);
         expect(lastFilter().createAtTo).toBe(to);
@@ -85,6 +90,7 @@ describe('FilterComponent — date modes (browser)', () => {
     it('sends no date filter in the default "any" mode', () => {
         const component = render();
         component.form.patchValue({ title: 'anything' });
+        vi.advanceTimersByTime(300);
 
         expect(lastFilter().updateAtWithin).toBeNull();
         expect(lastFilter().updateAtFrom).toBeNull();
@@ -93,6 +99,7 @@ describe('FilterComponent — date modes (browser)', () => {
     it('keeps the two date fields independent', () => {
         const component = render();
         component.form.patchValue({ createAt: { preset: '7d' }, updateAt: { preset: '90d' } });
+        vi.advanceTimersByTime(300);
 
         expect(lastFilter().createAtWithin).toBe('7d');
         expect(lastFilter().updateAtWithin).toBe('90d');
@@ -226,6 +233,9 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         return fixture.componentInstance;
     }
 
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
     it('follows a new initial filter set after mount', () => {
         const component = render();
         expect(component.form.get('idsState')!.value).toEqual([1]);
@@ -242,6 +252,7 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         const component = render();
 
         component.form.patchValue({ idsAssignedTo: [1] });
+        vi.advanceTimersByTime(300);
 
         expect(setFilter).toHaveBeenCalled();
         expect('idProject' in setFilter.mock.calls[0][0]).toBe(false);

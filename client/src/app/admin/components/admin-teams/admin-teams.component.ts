@@ -1,6 +1,7 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    DestroyRef,
     OnInit,
     computed,
     inject,
@@ -12,6 +13,7 @@ import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
 import { TeamService } from '../../../team/team.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 /**
  * AdminTeamsComponent manages teams and their members (admin screen, bottom panel).
@@ -33,6 +35,7 @@ export class AdminTeamsComponent implements OnInit {
 
     private readonly adminApi = inject(AdminApi);
     private readonly teamService = inject(TeamService);
+    private readonly destroyRef = inject(DestroyRef);
 
     protected readonly teams = signal<Team[]>([]);
     protected readonly selectedTeam = signal<Team | null>(null);
@@ -52,7 +55,10 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     private loadTeams(): void {
-        this.teamService.loadTeams().subscribe(teams => this.teams.set(teams));
+        this.teamService
+            .loadTeams()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(teams => this.teams.set(teams));
     }
 
     protected onSelectTeam(team: Team): void {
@@ -61,7 +67,10 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     private loadMembers(idTeam: number): void {
-        this.adminApi.listTeamMembers$(idTeam).subscribe(members => this.members.set(members));
+        this.adminApi
+            .listTeamMembers$(idTeam)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(members => this.members.set(members));
     }
 
     protected onNewTeam(): void {
@@ -80,22 +89,28 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     protected onConfirmDeleteTeam(team: Team): void {
-        this.adminApi.deleteTeam$(team.idTeam).subscribe(() => {
-            if (this.selectedTeam()?.idTeam === team.idTeam) {
-                this.selectedTeam.set(null);
-                this.members.set([]);
-            }
-            this.loadTeams();
-        });
+        this.adminApi
+            .deleteTeam$(team.idTeam)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+                if (this.selectedTeam()?.idTeam === team.idTeam) {
+                    this.selectedTeam.set(null);
+                    this.members.set([]);
+                }
+                this.loadTeams();
+            });
     }
 
     protected onAddMember(user: User | AdminUser, team: Team | null = this.selectedTeam()): void {
         if (!team) return;
-        this.adminApi.addTeamMember$(team.idTeam, user.idUser).subscribe(() => {
-            if (this.selectedTeam()?.idTeam === team.idTeam) {
-                this.loadMembers(team.idTeam);
-            }
-        });
+        this.adminApi
+            .addTeamMember$(team.idTeam, user.idUser)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+                if (this.selectedTeam()?.idTeam === team.idTeam) {
+                    this.loadMembers(team.idTeam);
+                }
+            });
     }
 
     /** Allow a drop on a team row only while a user is actually being dragged. */
@@ -124,8 +139,10 @@ export class AdminTeamsComponent implements OnInit {
         ) {
             return;
         }
+        // Set selection without loading members — onAddMember's success
+        // callback will call loadMembers once after the API completes.
+        this.selectedTeam.set(team);
         this.onAddMember(user, team);
-        this.onSelectTeam(team);
     }
 
     /** Drop target on the members table — adds the dragged user to the selected team */
@@ -143,6 +160,7 @@ export class AdminTeamsComponent implements OnInit {
         if (!team) return;
         this.adminApi
             .removeTeamMember$(team.idTeam, user.idUser)
+            .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(() => this.loadMembers(team.idTeam));
     }
 }

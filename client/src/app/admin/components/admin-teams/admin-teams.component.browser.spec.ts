@@ -24,16 +24,18 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         isAdmin: false
     };
     let addTeamMember$: ReturnType<typeof vi.fn>;
+    let listTeamMembers$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         addTeamMember$ = vi.fn(() => of(void 0));
+        listTeamMembers$ = vi.fn(() => of([]));
         await TestBed.configureTestingModule({
             declarations: [AdminTeamsComponent],
             providers: [
                 { provide: TeamService, useValue: { loadTeams: () => of([team]) } },
                 {
                     provide: AdminApi,
-                    useValue: { listTeamMembers$: () => of([]), addTeamMember$ }
+                    useValue: { listTeamMembers$, addTeamMember$ }
                 }
             ]
         })
@@ -112,5 +114,16 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
     it('dropping on the members panel with no selected team is a no-op', () => {
         drop(render(user).membersPanel);
         expect(addTeamMember$).not.toHaveBeenCalled();
+    });
+
+    it('fires listTeamMembers$ exactly once after a drop on a team row', () => {
+        const { teamRow } = render(user);
+        drop(teamRow);
+
+        // addTeamMember$ resolves synchronously (of(void 0)), so the
+        // success callback — which calls loadMembers — has already fired.
+        expect(addTeamMember$).toHaveBeenCalledWith(team.idTeam, user.idUser);
+        expect(listTeamMembers$).toHaveBeenCalledTimes(1);
+        expect(listTeamMembers$).toHaveBeenCalledWith(team.idTeam);
     });
 });
