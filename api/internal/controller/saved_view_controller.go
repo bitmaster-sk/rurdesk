@@ -43,7 +43,7 @@ func (sv *SavedViewController) List(c *gin.Context) {
 		return
 	}
 	if !sv.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -69,7 +69,7 @@ func (sv *SavedViewController) Create(c *gin.Context) {
 		return
 	}
 	if !sv.acl.CanCreateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -97,8 +97,8 @@ func (sv *SavedViewController) Create(c *gin.Context) {
 		return
 	}
 	if owned >= savedViewMaxPerAuthor {
-		_ = c.Error(errSavedViewLimit)
-		c.Status(errSavedViewLimit.HttpStatus())
+		_ = c.Error(errs.ErrSavedViewLimit)
+		c.Status(errs.ErrSavedViewLimit.HttpStatus())
 		return
 	}
 	view, err := sv.repo.Insert(ctx, &model.SavedView{
@@ -181,7 +181,7 @@ func (sv *SavedViewController) requireManageableView(c *gin.Context) (*model.Sav
 	}
 	view, err := sv.repo.LoadOne(ctx, idSavedView)
 	if errors.Is(err, pgx.ErrNoRows) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return nil, false
 	}
@@ -194,7 +194,7 @@ func (sv *SavedViewController) requireManageableView(c *gin.Context) (*model.Sav
 	}
 	allowed := view.CreateBy == user.IdUser && sv.acl.CanReadProject(ctx, user.IdUser, view.IdProject)
 	if !allowed && !sv.acl.CanUpdateProject(ctx, user.IdUser, view.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return nil, false
 	}
@@ -210,20 +210,20 @@ func (sv *SavedViewController) requireManageableView(c *gin.Context) (*model.Sav
 //     ignored and the view would quietly sort by "last update" instead.
 func (sv *SavedViewController) validateSavedViewConfig(raw json.RawMessage) *errs.Error {
 	if len(raw) > savedViewConfigMaxBytes {
-		return errSavedViewConfigTooLarge
+		return errs.ErrSavedViewConfigTooLarge
 	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
-		return errSavedViewConfigInvalid
+		return errs.ErrSavedViewConfigInvalid
 	}
 	var probe struct {
 		OrderColumn string `json:"orderColumn"`
 	}
 	if err := json.Unmarshal(raw, &probe); err != nil {
-		return errSavedViewConfigInvalid
+		return errs.ErrSavedViewConfigInvalid
 	}
 	if probe.OrderColumn != "" && !repository.IsSortColumn(probe.OrderColumn) {
-		return errSavedViewBadSort
+		return errs.ErrSavedViewBadSort
 	}
 	return nil
 }

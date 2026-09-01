@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
@@ -53,7 +54,7 @@ func (pc *IssueParticipantController) GetParticipants(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -81,7 +82,7 @@ func (pc *IssueParticipantController) AddParticipant(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -94,7 +95,7 @@ func (pc *IssueParticipantController) AddParticipant(c *gin.Context) {
 	}
 
 	if !pc.acl.CanReadProject(ctx, dto.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -123,7 +124,7 @@ func (pc *IssueParticipantController) SetMyNotifications(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -144,7 +145,7 @@ func (pc *IssueParticipantController) SetMyNotifications(c *gin.Context) {
 		return
 	}
 	if !found {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}

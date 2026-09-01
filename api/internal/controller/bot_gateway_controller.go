@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/gin-gonic/gin"
@@ -44,7 +45,7 @@ func (ctrl *BotGatewayController) requireBot(c *gin.Context) (int64, bool) {
 		return 0, false
 	}
 	if !isBot {
-		_ = c.Error(errNotABot)
+		_ = c.Error(errs.ErrNotABot)
 		c.Status(http.StatusUnprocessableEntity)
 		return 0, false
 	}
@@ -95,7 +96,7 @@ func (ctrl *BotGatewayController) CreateBotGateway(c *gin.Context) {
 
 	gw, err := ctrl.botGwRepo.Insert(c.Request.Context(), idUser, req, secret)
 	if isConflict(err) {
-		_ = c.Error(errGatewayExists)
+		_ = c.Error(errs.ErrGatewayExists)
 		c.Status(http.StatusConflict)
 		return
 	} else if err != nil {
@@ -127,7 +128,7 @@ func (ctrl *BotGatewayController) UpdateBotGateway(c *gin.Context) {
 
 	gw, err := ctrl.botGwRepo.UpdateUrl(c.Request.Context(), idUser, req.GatewayUrl)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -156,7 +157,7 @@ func (ctrl *BotGatewayController) RegenerateGatewayToken(c *gin.Context) {
 
 	gw, err := ctrl.botGwRepo.UpdateSecret(c.Request.Context(), idUser, secret)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -178,7 +179,7 @@ func (ctrl *BotGatewayController) DeleteBotGateway(c *gin.Context) {
 	}
 	err := ctrl.botGwRepo.DeleteByBotUser(c.Request.Context(), idUser)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

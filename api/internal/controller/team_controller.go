@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -161,7 +162,7 @@ func (tc *TeamController) GetMyTeamMembers(c *gin.Context) {
 		return
 	}
 	if !isMember {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

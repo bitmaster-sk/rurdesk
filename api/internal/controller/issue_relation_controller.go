@@ -52,7 +52,7 @@ func (ic *IssueRelationController) GetRelationsBulk(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -92,7 +92,7 @@ func (ic *IssueRelationController) GetRelations(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -164,7 +164,7 @@ func (ic *IssueRelationController) CreateRelation(c *gin.Context) {
 	var result *model.IssueRelation
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		issueFrom, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{
@@ -195,7 +195,7 @@ func (ic *IssueRelationController) CreateRelation(c *gin.Context) {
 				return err
 			}
 			if cycle {
-				return errCycle
+				return errs.ErrCycle
 			}
 		}
 
@@ -211,13 +211,13 @@ func (ic *IssueRelationController) CreateRelation(c *gin.Context) {
 		return err
 	})
 
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errCycle {
-		_ = c.Error(errCycle)
+	if err == errs.ErrCycle {
+		_ = c.Error(errs.ErrCycle)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -282,13 +282,13 @@ func (ic *IssueRelationController) DeleteRelation(c *gin.Context) {
 
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		return ic.relationRepo.DeleteRelation(ctx, idRelation, idProject)
 	})
 
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -319,7 +319,7 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !irc.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -340,13 +340,13 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 		return
 	}
 	if relation == nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 	if relation.IdProject != idProject {
 		// Relation belongs to another project — do not leak its existence.
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}

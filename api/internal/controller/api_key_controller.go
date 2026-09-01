@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -27,14 +28,14 @@ func NewApiKeyController(
 func (kc *ApiKeyController) List(c *gin.Context) {
 	// User authenticated via token cannot manage its own tokens.
 	if extctx.IsApiKeyAuth(c.Request.Context()) {
-		_ = c.Error(errApiKeySelfManage)
+		_ = c.Error(errs.ErrApiKeySelfManage)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
-		_ = c.Error(errUnauthorized)
+		_ = c.Error(errs.ErrUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -50,14 +51,14 @@ func (kc *ApiKeyController) List(c *gin.Context) {
 func (kc *ApiKeyController) Create(c *gin.Context) {
 	// User authenticated via token cannot manage its own tokens.
 	if extctx.IsApiKeyAuth(c.Request.Context()) {
-		_ = c.Error(errApiKeySelfManage)
+		_ = c.Error(errs.ErrApiKeySelfManage)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
-		_ = c.Error(errUnauthorized)
+		_ = c.Error(errs.ErrUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -75,7 +76,7 @@ func (kc *ApiKeyController) Create(c *gin.Context) {
 		&req,
 	)
 	if errors.Is(err, service.ErrApiKeyLimitReached) {
-		_ = c.Error(errApiKeyLimitReached)
+		_ = c.Error(errs.ErrApiKeyLimitReached)
 		c.Status(http.StatusConflict)
 		return
 	} else if err != nil {
@@ -89,14 +90,14 @@ func (kc *ApiKeyController) Create(c *gin.Context) {
 func (kc *ApiKeyController) Regenerate(c *gin.Context) {
 	// User authenticated via token cannot manage its own tokens.
 	if extctx.IsApiKeyAuth(c.Request.Context()) {
-		_ = c.Error(errApiKeySelfManage)
+		_ = c.Error(errs.ErrApiKeySelfManage)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
-		_ = c.Error(errUnauthorized)
+		_ = c.Error(errs.ErrUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -108,7 +109,7 @@ func (kc *ApiKeyController) Regenerate(c *gin.Context) {
 	}
 	res, err := kc.apiKeySvc.RegenerateUserApiKey(c.Request.Context(), user.IdUser, idApiKey)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -122,14 +123,14 @@ func (kc *ApiKeyController) Regenerate(c *gin.Context) {
 func (kc *ApiKeyController) Revoke(c *gin.Context) {
 	// User authenticated via token cannot manage its own tokens.
 	if extctx.IsApiKeyAuth(c.Request.Context()) {
-		_ = c.Error(errApiKeySelfManage)
+		_ = c.Error(errs.ErrApiKeySelfManage)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
-		_ = c.Error(errUnauthorized)
+		_ = c.Error(errs.ErrUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -141,7 +142,7 @@ func (kc *ApiKeyController) Revoke(c *gin.Context) {
 	}
 	err = kc.apiKeySvc.RevokeUserApiKey(c.Request.Context(), user.IdUser, idApiKey)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

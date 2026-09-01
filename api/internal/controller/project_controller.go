@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -83,13 +84,13 @@ func (pc *ProjectController) CreateProject(c *gin.Context) {
 		}
 		if dto.IdTeam != nil {
 			if !pc.acl.CanReadTeam(ctx, user.IdUser, *dto.IdTeam) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 			return pc.projectRepo.InsertProjectTeam(ctx, project.IdProject, *dto.IdTeam, model.RoleMember)
 		}
 		return nil
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -114,7 +115,7 @@ func (pc *ProjectController) UpdateProject(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanUpdateProject(ctx, user.IdUser, dto.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -149,17 +150,17 @@ func (pc *ProjectController) UpdateProject(c *gin.Context) {
 func (pc *ProjectController) validateDefaultsInProject(ctx context.Context, dto *model.EditProjectReq) error {
 	if dto.IdStateDefault != nil {
 		if _, err := pc.stateRepo.LoadState(ctx, dto.IdProject, *dto.IdStateDefault); err != nil {
-			return errStateNotInProject
+			return errs.ErrStateNotInProject
 		}
 	}
 	if dto.IdSeverityDefault != nil {
 		if _, err := pc.severityRepo.LoadSeverity(ctx, dto.IdProject, *dto.IdSeverityDefault); err != nil {
-			return errSeverityNotInProject
+			return errs.ErrSeverityNotInProject
 		}
 	}
 	if dto.IdIssueTypeDefault != nil {
 		if _, err := pc.issueTypeRepo.LoadIssueType(ctx, dto.IdProject, *dto.IdIssueTypeDefault); err != nil {
-			return errIssueTypeNotInProject
+			return errs.ErrIssueTypeNotInProject
 		}
 	}
 	return nil
@@ -177,7 +178,7 @@ func (pc *ProjectController) DeleteProject(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanDeleteProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -215,7 +216,7 @@ func (pc *ProjectController) GetProject(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -242,7 +243,7 @@ func (pc *ProjectController) GetUserRole(c *gin.Context) {
 
 	role, hasAccess := pc.acl.GetProjectRole(ctx, user.IdUser, idProject)
 	if !hasAccess {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -261,7 +262,7 @@ func (pc *ProjectController) GetProjectMembers(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

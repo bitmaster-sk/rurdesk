@@ -107,7 +107,7 @@ func (ic *IssueController) GetIssues(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -185,7 +185,7 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -202,17 +202,17 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 func (ic *IssueController) validateIssueRefsInProject(ctx context.Context, idProject int64, idState, idSeverity, idIssueType *int64) error {
 	if idState != nil {
 		if _, err := ic.stateRepo.LoadState(ctx, idProject, *idState); err != nil {
-			return errStateNotInProject
+			return errs.ErrStateNotInProject
 		}
 	}
 	if idSeverity != nil {
 		if _, err := ic.severityRepo.LoadSeverity(ctx, idProject, *idSeverity); err != nil {
-			return errSeverityNotInProject
+			return errs.ErrSeverityNotInProject
 		}
 	}
 	if idIssueType != nil {
 		if _, err := ic.issueTypeRepo.LoadIssueType(ctx, idProject, *idIssueType); err != nil {
-			return errIssueTypeNotInProject
+			return errs.ErrIssueTypeNotInProject
 		}
 	}
 	return nil
@@ -260,11 +260,11 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 	var result *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanCreateIssue(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if dto.AssignedTo != nil {
 			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo, dto.IdProject) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity, dto.IdIssueType); err != nil {
@@ -300,12 +300,12 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		}
 		return nil
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -375,11 +375,11 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	var oldIssue *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if dto.AssignedTo.Value != nil {
 			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value, dto.IdIssueType.Value); err != nil {
@@ -397,7 +397,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 
 		// Both-or-neither: MR link fields must move together.
 		if (idGitIntegration == nil) != (mrId == nil) {
-			return errInvalidMrLink
+			return errs.ErrInvalidMrLink
 		}
 		if dto.IdGitIntegration.IsDefined && dto.IdGitIntegration.Value != nil && ic.gitIntRepo != nil {
 			gi, loadErr := ic.gitIntRepo.LoadByID(ctx, *dto.IdGitIntegration.Value, dto.IdProject)
@@ -405,7 +405,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return loadErr
 			}
 			if gi == nil {
-				return errGitIntegrationNotFound
+				return errs.ErrGitIntegrationNotFound
 			}
 		}
 
@@ -415,7 +415,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 			if loadErr == nil && assignee.IsBot {
 				gw, gwErr := ic.botGwRepo.LoadByBotUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
-					return errBotNoGateway
+					return errs.ErrBotNoGateway
 				}
 			}
 		}
@@ -444,28 +444,28 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 		return nil
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errInvalidMrLink {
-		_ = c.Error(errInvalidMrLink)
+	if err == errs.ErrInvalidMrLink {
+		_ = c.Error(errs.ErrInvalidMrLink)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errGitIntegrationNotFound {
-		_ = c.Error(errGitIntegrationNotFound)
+	if err == errs.ErrGitIntegrationNotFound {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if err == errBotNoGateway {
-		_ = c.Error(errBotNoGateway)
+	if err == errs.ErrBotNoGateway {
+		_ = c.Error(errs.ErrBotNoGateway)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -531,7 +531,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -543,32 +543,32 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 	if issue == nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 
 	bot, err := ic.userRepo.LoadUser(ctx, dto.IdUserBot)
 	if err != nil || bot == nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 	if !bot.IsBot {
-		_ = c.Error(errNotABot)
+		_ = c.Error(errs.ErrNotABot)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	// Same gate as the EditIssue assignee path: without it this endpoint could
 	// hand a project's issue to an agent that cannot even read the project.
 	if !ic.acl.CanReadProject(ctx, bot.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 	gateway, gwErr := ic.botGwRepo.LoadByBotUser(ctx, bot.IdUser)
 	if gwErr != nil || gateway == nil {
-		_ = c.Error(errBotNoGateway)
+		_ = c.Error(errs.ErrBotNoGateway)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -580,7 +580,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 	if existing != nil {
-		_ = c.Error(errIssueHasActiveRun)
+		_ = c.Error(errs.ErrIssueHasActiveRun)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -614,7 +614,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		// The partial unique index backstops a race with the EditIssue path.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			_ = c.Error(errIssueHasActiveRun.WithMessage("issue already has an active run"))
+			_ = c.Error(errs.ErrIssueHasActiveRun.WithMessage("issue already has an active run"))
 			c.Status(http.StatusConflict)
 			return
 		}
@@ -736,7 +736,7 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 	var deletedIssue *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanDeleteIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		issue, loadErr := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
 		if loadErr == nil {
@@ -744,8 +744,8 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 		}
 		return ic.issueRepo.DeleteIssue(ctx, idProject, idIssuePublic)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -792,7 +792,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			delete(oldAssignedByPublic, k)
 		}
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		for _, entry := range dto.Issues {
@@ -852,12 +852,12 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		return nil
 	})
 
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -979,7 +979,7 @@ func parseWithinParam(c *gin.Context, key string) (time.Duration, error) {
 	}
 	within, err := urlutil.ParsePositiveDuration(raw)
 	if err != nil {
-		return 0, errInvalidWithin
+		return 0, errs.ErrInvalidWithin
 	}
 	return within, nil
 }

@@ -42,7 +42,7 @@ func (ctrl *WorkflowEventMapController) GetMappings(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -69,7 +69,7 @@ func (ctrl *WorkflowEventMapController) ReplaceMappings(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

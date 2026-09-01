@@ -36,7 +36,7 @@ func (sc *SprintController) List(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -59,7 +59,7 @@ func (sc *SprintController) Create(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -99,7 +99,7 @@ func (sc *SprintController) Close(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -132,7 +132,7 @@ func (sc *SprintController) SprintStats(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, sprint.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -162,7 +162,7 @@ func (sc *SprintController) Burndown(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, sprint.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -185,7 +185,7 @@ func (sc *SprintController) BacklogStats(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -218,7 +218,7 @@ func (sc *SprintController) Velocity(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -266,7 +266,7 @@ func (sc *SprintController) Edit(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -308,7 +308,7 @@ func (sc *SprintController) Delete(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -334,7 +334,7 @@ func (sc *SprintController) AssignIssue(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

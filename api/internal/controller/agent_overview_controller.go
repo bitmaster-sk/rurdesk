@@ -35,7 +35,7 @@ func (ctrl *AgentOverviewController) Get(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

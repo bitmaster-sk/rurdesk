@@ -81,7 +81,7 @@ func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -92,7 +92,7 @@ func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 	}
 
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -130,7 +130,7 @@ func (ctrl *AgentRunController) GetRunByIssue(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -188,7 +188,7 @@ func (ctrl *AgentRunController) GetRunsByProject(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -226,7 +226,7 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -236,12 +236,12 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 		return
 	}
 	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 	if run.Phase != constants.PhaseAwaitingApproval {
-		_ = c.Error(errRunNotAwaitingApproval)
+		_ = c.Error(errs.ErrRunNotAwaitingApproval)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -264,7 +264,7 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 		constants.ActorTypeUser, &idUser, "approved",
 	)
 	if err == repository.ErrPhaseMismatch {
-		_ = c.Error(errPhaseMismatch)
+		_ = c.Error(errs.ErrPhaseMismatch)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -292,7 +292,7 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -302,12 +302,12 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 		return
 	}
 	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 	if constants.TerminalPhases[run.Phase] {
-		_ = c.Error(errRunTerminal)
+		_ = c.Error(errs.ErrRunTerminal)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -345,7 +345,7 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -355,12 +355,12 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 		return
 	}
 	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 	if run.Phase != constants.PhaseFailed && run.Phase != constants.PhaseCancelled {
-		_ = c.Error(errRunContinueInvalid)
+		_ = c.Error(errs.ErrRunContinueInvalid)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -373,7 +373,7 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 	}
 	stage, err := agent.ResolveNextStage(run, tasks)
 	if err != nil || stage == "" {
-		_ = c.Error(errNoStageToContinue)
+		_ = c.Error(errs.ErrNoStageToContinue)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -402,7 +402,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 
 	oldRun, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -412,7 +412,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		return
 	}
 	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, oldRun.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -421,7 +421,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	// branch and open a duplicate PR while orphaning the existing one. Guard on
 	// pr_id, not phase: `phase == pr_open` alone misses edge phases.
 	if oldRun.PrId != nil && *oldRun.PrId != "" {
-		_ = c.Error(errRunHasPr)
+		_ = c.Error(errs.ErrRunHasPr)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -545,7 +545,7 @@ func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return nil, false
 	}
@@ -560,7 +560,7 @@ func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (
 		hasAccess = ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject)
 	}
 	if !hasAccess {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return nil, false
 	}
@@ -592,7 +592,7 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -602,7 +602,7 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 		return
 	}
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -631,12 +631,12 @@ var errReconcileSuperseded = errors.New("reconcile superseded by concurrent run 
 func (ctrl *AgentRunController) requireRunBot(c *gin.Context, idUserBot int64) bool {
 	caller, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusUnauthorized)
 		return false
 	}
 	if caller.IdUser != idUserBot {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return false
 	}
@@ -649,7 +649,7 @@ func (ctrl *AgentRunController) requireTaskBot(c *gin.Context, idTask int64) boo
 	idUserBot, err := ctrl.agentTaskRepo.BotForTask(c.Request.Context(), idTask)
 	if err != nil {
 		if errors.Is(err, repository.ErrTaskNotFound) {
-			_ = c.Error(errTaskNotFound)
+			_ = c.Error(errs.ErrTaskNotFound)
 			c.Status(http.StatusNotFound)
 			return false
 		}
@@ -680,13 +680,13 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 
 	task, err := ctrl.agentTaskRepo.LoadById(ctx, idTask)
 	if err != nil {
-		_ = c.Error(errTaskNotFound)
+		_ = c.Error(errs.ErrTaskNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 	run, err := ctrl.agentRunRepo.LoadById(ctx, task.IdRun)
 	if err != nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -904,7 +904,7 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 	ctx := c.Request.Context()
 	bot, ok := extctx.GetUser(ctx)
 	if !ok {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -993,7 +993,7 @@ func (ctrl *AgentRunController) ReportRunRepo(c *gin.Context) {
 	}
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err != nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -1061,7 +1061,7 @@ func (ctrl *AgentRunController) TaskHeartbeat(c *gin.Context) {
 	}
 	if err := ctrl.agentTaskRepo.RecordHeartbeat(ctx, idTask); err != nil {
 		if errors.Is(err, repository.ErrTaskStatusMismatch) {
-			_ = c.Error(errTaskNotActive)
+			_ = c.Error(errs.ErrTaskNotActive)
 			c.Status(http.StatusConflict)
 			return
 		}

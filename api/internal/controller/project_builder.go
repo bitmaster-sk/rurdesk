@@ -81,7 +81,7 @@ func (pc *ProjectBuilderController) Generate(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanCreateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -168,7 +168,7 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanCreateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -181,7 +181,7 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	}
 
 	if err := validateRefs(req.Issues); err != nil {
-		_ = c.Error(errInvalidProjectBuilderRefs.WithMessage(err.Error()))
+		_ = c.Error(errs.ErrInvalidProjectBuilderRefs.WithMessage(err.Error()))
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
