@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
 
@@ -86,6 +87,20 @@ func (s *WorkflowEventMapSuite) createState(name string, start, final bool) int6
 	var st model.State
 	json.NewDecoder(res.Body).Decode(&st)
 	return st.IdState
+}
+
+func (s *WorkflowEventMapSuite) createGitIntegration() int64 {
+	body := fmt.Sprintf(
+		`{"name":"mock-git-%d","hostType":"github","baseUrl":%q,"repoPath":"org/repo-%d","accessToken":"ghp_mock_token"}`,
+		rand.Int63(), "https://api.github.test", rand.Int63(),
+	)
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/git-integration", s.IdProject),
+		body, s.OwnerToken)
+	s.Require().Equal(http.StatusCreated, res.StatusCode)
+	var gitInt model.GitIntegrationRes
+	json.NewDecoder(res.Body).Decode(&gitInt)
+	return gitInt.IdGitIntegration
 }
 
 func (s *WorkflowEventMapSuite) url() string {
@@ -230,6 +245,97 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 
 	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+}
+
+func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnSetPrInfoFrom() {
+	inQaStateID := s.createState("In QA", false, false)
+	body := fmt.Sprintf(`{"mappings":[{"event":"pr_open","idState":%d}]}`, inQaStateID)
+	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, putRes.StatusCode)
+
+	issueRes := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
+		`{"title":"pr-open mirror issue","description":"phase state map test issue body","estimated":0}`, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, issueRes.StatusCode)
+	var iss model.Issue
+	json.NewDecoder(issueRes.Body).Decode(&iss)
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+
+	gitIntID1 := s.createGitIntegration()
+	agentRunRepo := injector.GetAgentRunRepository()
+	dto := model.SetRunPrReq{
+		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/1",
+		PrId:             "1",
+		PrHostType:       "github",
+		BranchName:       "agent/test-branch",
+		IdGitIntegration: gitIntID1,
+	}
+	run, err := agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
+	s.Require().NoError(err)
+	s.Equal("pr_open", run.Phase)
+
+	var idState *int64
+	err = s.App.Pool.QueryRow(ctx,
+		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, iss.IdIssue).Scan(&idState)
+	s.Require().NoError(err)
+	s.Require().NotNil(idState)
+	s.Equal(inQaStateID, *idState)
+
+	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+}
+
+func (s *WorkflowEventMapSuite) Test_Mirror_SetPrInfoFrom_NoMapping_NoStateChange() {
+	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+
+	issueRes := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
+		`{"title":"pr-open no mirror issue","description":"phase state map test issue body","estimated":0}`, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, issueRes.StatusCode)
+	var iss model.Issue
+	json.NewDecoder(issueRes.Body).Decode(&iss)
+	originalState := iss.IdState
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+
+	gitIntID2 := s.createGitIntegration()
+	agentRunRepo := injector.GetAgentRunRepository()
+	dto := model.SetRunPrReq{
+		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/2",
+		PrId:             "2",
+		PrHostType:       "github",
+		BranchName:       "agent/test-branch-2",
+		IdGitIntegration: gitIntID2,
+	}
+	_, err = agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
+	s.Require().NoError(err)
+
+	var idState *int64
+	err = s.App.Pool.QueryRow(ctx,
+		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, iss.IdIssue).Scan(&idState)
+	s.Require().NoError(err)
+	if originalState != nil && idState != nil {
+		s.Equal(*originalState, *idState)
+	} else {
+		s.Equal(originalState, idState)
+	}
+
+	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 }
 
 func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {

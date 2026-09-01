@@ -441,6 +441,11 @@ func (r *AgentRunRepository) SetPrInfoFrom(ctx context.Context, idRun int64, dto
 	if err != nil {
 		return run, fmt.Errorf("inserting run event: %w", err)
 	}
+
+	if r.eventMirror != nil {
+		r.eventMirror.ApplyMirror(ctx, run.IdProject, run.IdIssue, constants.PhasePrOpen)
+	}
+
 	return run, nil
 }
 
