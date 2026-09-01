@@ -24,11 +24,12 @@ func NewAppSettingsController(settings *service.AppSettingsService, pool *pgxpoo
 // Get returns the resolved settings. Readable by any authenticated user.
 func (sc *AppSettingsController) Get(c *gin.Context) {
 	c.JSON(http.StatusOK, model.AppSettingsRes{
-		TablePageSize:        sc.settings.TablePageSize(),
-		KanbanPageSize:       sc.settings.KanbanPageSize(),
-		GanttBacklogPageSize: sc.settings.GanttBacklogPageSize(),
-		SprintVelocityLimit:  sc.settings.SprintVelocityLimit(),
-		UserApiKeyLimit:      sc.settings.UserApiKeyLimit(),
+		TablePageSize:            sc.settings.TablePageSize(),
+		KanbanPageSize:           sc.settings.KanbanPageSize(),
+		GanttBacklogPageSize:     sc.settings.GanttBacklogPageSize(),
+		SprintVelocityLimit:      sc.settings.SprintVelocityLimit(),
+		UserApiKeyLimit:          sc.settings.UserApiKeyLimit(),
+		IsAgentThinkingPersisted: sc.settings.IsAgentThinkingPersisted(),
 	})
 }
 
@@ -40,25 +41,29 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	changes := map[string]int{}
+	numericChanges := map[string]int{}
 	if req.TablePageSize != nil {
-		changes[constants.SettingTablePageSize] = *req.TablePageSize
+		numericChanges[constants.SettingTablePageSize] = *req.TablePageSize
 	}
 	if req.KanbanPageSize != nil {
-		changes[constants.SettingKanbanPageSize] = *req.KanbanPageSize
+		numericChanges[constants.SettingKanbanPageSize] = *req.KanbanPageSize
 	}
 	if req.GanttBacklogPageSize != nil {
-		changes[constants.SettingGanttBacklogPageSize] = *req.GanttBacklogPageSize
+		numericChanges[constants.SettingGanttBacklogPageSize] = *req.GanttBacklogPageSize
 	}
 	if req.SprintVelocityLimit != nil {
-		changes[constants.SettingSprintVelocityLimit] = *req.SprintVelocityLimit
+		numericChanges[constants.SettingSprintVelocityLimit] = *req.SprintVelocityLimit
 	}
 	if req.UserApiKeyLimit != nil {
-		changes[constants.SettingUserApiKeyLimit] = *req.UserApiKeyLimit
+		numericChanges[constants.SettingUserApiKeyLimit] = *req.UserApiKeyLimit
+	}
+	boolChanges := map[string]bool{}
+	if req.IsAgentThinkingPersisted != nil {
+		boolChanges[constants.SettingIsAgentThinkingPersisted] = *req.IsAgentThinkingPersisted
 	}
 	ctx := c.Request.Context()
 	if err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
-		return sc.settings.Update(ctx, changes)
+		return sc.settings.Update(ctx, numericChanges, boolChanges)
 	}); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusUnprocessableEntity)

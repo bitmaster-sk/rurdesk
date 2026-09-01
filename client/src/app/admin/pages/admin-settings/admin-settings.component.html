@@ -54,6 +54,18 @@
                     data-testid="settings-user-token-limit"
                 />
             </div>
+            <div class="flex items-center justify-between gap-2">
+                <label for="isAgentThinkingPersisted">
+                    {{ 'SETTINGS.IS_AGENT_THINKING_PERSISTED' | translate }}
+                </label>
+                <input
+                    id="isAgentThinkingPersisted"
+                    type="checkbox"
+                    uiToggle
+                    formControlName="isAgentThinkingPersisted"
+                    data-testid="settings-agent-thinking-persistence"
+                />
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

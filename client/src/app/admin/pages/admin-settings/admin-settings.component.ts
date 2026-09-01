@@ -45,7 +45,8 @@ export class AdminSettingsComponent {
                 [Validators.required, Validators.min(1), Validators.max(200)]
             ],
             sprintVelocityLimit: [10, [Validators.required, Validators.min(1), Validators.max(50)]],
-            userApiKeyLimit: [10, [Validators.required, Validators.min(1), Validators.max(100)]]
+            userApiKeyLimit: [10, [Validators.required, Validators.min(1), Validators.max(100)]],
+            isAgentThinkingPersisted: this.fb.nonNullable.control(true, { updateOn: 'change' })
         },
         { updateOn: 'blur' }
     );

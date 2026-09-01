@@ -17,7 +17,8 @@ type appSettingsStorer interface {
 
 // snapshot is an immutable resolved view, swapped atomically on update.
 type snapshot struct {
-	values map[string]int
+	numericValues map[string]int
+	boolValues    map[string]bool
 }
 
 type AppSettingsService struct {
@@ -35,52 +36,73 @@ func (s *AppSettingsService) Load(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	values := make(map[string]int, len(constants.KnownAppSettings))
-	for key, spec := range constants.KnownAppSettings {
-		values[key] = spec.Default
+	numericValues := make(map[string]int, len(constants.KnownAppNumericSettings))
+	for key, spec := range constants.KnownAppNumericSettings {
+		numericValues[key] = spec.Default
 		if v, ok := raw[key]; ok {
 			if n, err := strconv.Atoi(v); err == nil && n >= spec.Min && n <= spec.Max {
-				values[key] = n
+				numericValues[key] = n
 			}
 		}
 	}
-	s.snap.Store(&snapshot{values: values})
+	boolValues := make(map[string]bool, len(constants.KnownAppBoolSettings))
+	for key, defaultValue := range constants.KnownAppBoolSettings {
+		boolValues[key] = defaultValue
+		if v, ok := raw[key]; ok {
+			if isEnabled, err := strconv.ParseBool(v); err == nil {
+				boolValues[key] = isEnabled
+			}
+		}
+	}
+	s.snap.Store(&snapshot{numericValues: numericValues, boolValues: boolValues})
 	return nil
 }
 
-func (s *AppSettingsService) get(key string) int {
+func (s *AppSettingsService) getNumeric(key string) int {
 	snap := s.snap.Load()
 	if snap == nil {
-		return constants.KnownAppSettings[key].Default
+		return constants.KnownAppNumericSettings[key].Default
 	}
-	return snap.values[key]
+	return snap.numericValues[key]
+}
+
+func (s *AppSettingsService) getBool(key string) bool {
+	snap := s.snap.Load()
+	if snap == nil {
+		return constants.KnownAppBoolSettings[key]
+	}
+	return snap.boolValues[key]
 }
 
 func (s *AppSettingsService) TablePageSize() int {
-	return s.get(constants.SettingTablePageSize)
+	return s.getNumeric(constants.SettingTablePageSize)
 }
 
 func (s *AppSettingsService) KanbanPageSize() int {
-	return s.get(constants.SettingKanbanPageSize)
+	return s.getNumeric(constants.SettingKanbanPageSize)
 }
 
 func (s *AppSettingsService) GanttBacklogPageSize() int {
-	return s.get(constants.SettingGanttBacklogPageSize)
+	return s.getNumeric(constants.SettingGanttBacklogPageSize)
 }
 
 func (s *AppSettingsService) SprintVelocityLimit() int {
-	return s.get(constants.SettingSprintVelocityLimit)
+	return s.getNumeric(constants.SettingSprintVelocityLimit)
 }
 
 func (s *AppSettingsService) UserApiKeyLimit() int {
-	return s.get(constants.SettingUserApiKeyLimit)
+	return s.getNumeric(constants.SettingUserApiKeyLimit)
+}
+
+func (s *AppSettingsService) IsAgentThinkingPersisted() bool {
+	return s.getBool(constants.SettingIsAgentThinkingPersisted)
 }
 
 // Update validates every key, persists, then reloads the snapshot.
-func (s *AppSettingsService) Update(ctx context.Context, changes map[string]int) error {
-	persist := make(map[string]string, len(changes))
-	for key, n := range changes {
-		spec, ok := constants.KnownAppSettings[key]
+func (s *AppSettingsService) Update(ctx context.Context, numericChanges map[string]int, boolChanges map[string]bool) error {
+	persist := make(map[string]string, len(numericChanges)+len(boolChanges))
+	for key, n := range numericChanges {
+		spec, ok := constants.KnownAppNumericSettings[key]
 		if !ok {
 			return fmt.Errorf("unknown setting %q", key)
 		}
@@ -88,6 +110,12 @@ func (s *AppSettingsService) Update(ctx context.Context, changes map[string]int)
 			return fmt.Errorf("setting %q out of range [%d,%d]: %d", key, spec.Min, spec.Max, n)
 		}
 		persist[key] = strconv.Itoa(n)
+	}
+	for key, isEnabled := range boolChanges {
+		if _, ok := constants.KnownAppBoolSettings[key]; !ok {
+			return fmt.Errorf("unknown setting %q", key)
+		}
+		persist[key] = strconv.FormatBool(isEnabled)
 	}
 	if err := s.store.Upsert(ctx, persist); err != nil {
 		return err

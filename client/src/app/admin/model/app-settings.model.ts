@@ -4,6 +4,7 @@ export interface AppSettings {
     ganttBacklogPageSize: number;
     sprintVelocityLimit: number;
     userApiKeyLimit: number;
+    isAgentThinkingPersisted: boolean;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;
