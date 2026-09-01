@@ -161,6 +161,7 @@ func (tc *TeamController) GetMyTeamMembers(c *gin.Context) {
 		return
 	}
 	if !isMember {
+		_ = c.Error(errForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

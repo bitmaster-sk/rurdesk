@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
@@ -515,12 +516,14 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 
 	var dto model.CreateAgentRunReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	for stage := range dto.IdsSkillByStage {
 		if !constants.IsSkillStage(stage) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown stage: " + stage})
+			_ = c.Error(errs.ErrBadRequest.WithMessage("unknown stage: " + stage))
+			c.Status(http.StatusBadRequest)
 			return
 		}
 	}
@@ -577,7 +580,8 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 	if existing != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run; hand it over by changing the assignee instead"})
+		_ = c.Error(errIssueHasActiveRun)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -610,7 +614,8 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		// The partial unique index backstops a race with the EditIssue path.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run"})
+			_ = c.Error(errIssueHasActiveRun.WithMessage("issue already has an active run"))
+			c.Status(http.StatusConflict)
 			return
 		}
 		_ = c.Error(err)

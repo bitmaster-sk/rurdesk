@@ -144,6 +144,7 @@ func (pc *IssueParticipantController) SetMyNotifications(c *gin.Context) {
 		return
 	}
 	if !found {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}

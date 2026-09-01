@@ -519,6 +519,7 @@ func (ac *AdminController) RegenerateAgentApiKey(c *gin.Context) {
 	}
 	res, err := ac.apiKeySvc.RegenerateAgentApiKey(c.Request.Context(), idUser)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

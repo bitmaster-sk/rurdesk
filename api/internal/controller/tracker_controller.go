@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -124,6 +125,7 @@ func (tc *TrackerController) CreateTracker(c *gin.Context) {
 		return
 	}
 	if err == nil {
+		_ = c.Error(errs.ErrConflict)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -162,6 +164,7 @@ func (tc *TrackerController) DeleteTracker(c *gin.Context) {
 		return
 	}
 	if tracker.IdTracker != idTracker {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}

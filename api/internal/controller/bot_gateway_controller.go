@@ -127,6 +127,7 @@ func (ctrl *BotGatewayController) UpdateBotGateway(c *gin.Context) {
 
 	gw, err := ctrl.botGwRepo.UpdateUrl(c.Request.Context(), idUser, req.GatewayUrl)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -155,6 +156,7 @@ func (ctrl *BotGatewayController) RegenerateGatewayToken(c *gin.Context) {
 
 	gw, err := ctrl.botGwRepo.UpdateSecret(c.Request.Context(), idUser, secret)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -176,6 +178,7 @@ func (ctrl *BotGatewayController) DeleteBotGateway(c *gin.Context) {
 	}
 	err := ctrl.botGwRepo.DeleteByBotUser(c.Request.Context(), idUser)
 	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

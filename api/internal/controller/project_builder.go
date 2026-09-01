@@ -72,6 +72,7 @@ func (pc *ProjectBuilderController) Generate(c *gin.Context) {
 	}
 
 	if len(req.Description) > viper.GetInt("PROJECT_BUILDER_DESCRIPTION_MAX_LENGTH") {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -180,8 +181,8 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	}
 
 	if err := validateRefs(req.Issues); err != nil {
-		_ = c.Error(err)
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		_ = c.Error(errInvalidProjectBuilderRefs.WithMessage(err.Error()))
+		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 

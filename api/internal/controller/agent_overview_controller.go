@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -26,6 +27,7 @@ func NewAgentOverviewController(
 func (ctrl *AgentOverviewController) Get(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}

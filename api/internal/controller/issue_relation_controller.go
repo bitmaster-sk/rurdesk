@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
@@ -140,15 +141,18 @@ func (ic *IssueRelationController) CreateRelation(c *gin.Context) {
 		return
 	}
 	if idIssuePublic == dto.IdIssuePublicTo {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if dto.RelationType == model.RelationTypeSchedule && dto.RelationSubType == nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if dto.RelationType != model.RelationTypeSchedule {
 		if dto.RelationSubType != nil || dto.LagMinutes != nil {
+			_ = c.Error(errs.ErrBadRequest)
 			c.Status(http.StatusBadRequest)
 			return
 		}
@@ -336,11 +340,13 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 		return
 	}
 	if relation == nil {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 	if relation.IdProject != idProject {
 		// Relation belongs to another project — do not leak its existence.
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}

@@ -34,6 +34,7 @@ func (kc *ApiKeyController) List(c *gin.Context) {
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
+		_ = c.Error(errUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -56,6 +57,7 @@ func (kc *ApiKeyController) Create(c *gin.Context) {
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
+		_ = c.Error(errUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -94,6 +96,7 @@ func (kc *ApiKeyController) Regenerate(c *gin.Context) {
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
+		_ = c.Error(errUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -105,6 +108,7 @@ func (kc *ApiKeyController) Regenerate(c *gin.Context) {
 	}
 	res, err := kc.apiKeySvc.RegenerateUserApiKey(c.Request.Context(), user.IdUser, idApiKey)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -125,6 +129,7 @@ func (kc *ApiKeyController) Revoke(c *gin.Context) {
 
 	user, ok := extctx.GetUser(c.Request.Context())
 	if !ok {
+		_ = c.Error(errUnauthorized)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
@@ -136,6 +141,7 @@ func (kc *ApiKeyController) Revoke(c *gin.Context) {
 	}
 	err = kc.apiKeySvc.RevokeUserApiKey(c.Request.Context(), user.IdUser, idApiKey)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

@@ -5,12 +5,13 @@ import "github.com/bitmaster-sk/rurdesk/api/internal/errs"
 // Controller-level error catalog: aliases of shared sentinels plus handler-specific
 // domain errors. Grouped by concern (roles/users, git integration, project scoping).
 var (
-	errForbidden   = errs.ErrForbidden
-	errCycle       = errs.ErrCycle
-	errNotFound    = errs.ErrNotFound
-	errLastOwner   = errs.NewErr("LAST_OWNER", "cannot remove last project owner", "error.last_owner")
-	errInvalidRole = errs.NewErr("INVALID_ROLE", "invalid role value: must be viewer, member, or owner", "error.invalid_role")
-	errBotOwner    = errs.NewErr("BOT_OWNER", "bot users cannot be assigned the owner role", "error.bot_owner")
+	errForbidden    = errs.ErrForbidden
+	errCycle        = errs.ErrCycle
+	errNotFound     = errs.ErrNotFound
+	errUnauthorized = errs.ErrUnauthorized
+	errLastOwner    = errs.NewErr("LAST_OWNER", "cannot remove last project owner", "error.last_owner")
+	errInvalidRole  = errs.NewErr("INVALID_ROLE", "invalid role value: must be viewer, member, or owner", "error.invalid_role")
+	errBotOwner     = errs.NewErr("BOT_OWNER", "bot users cannot be assigned the owner role", "error.bot_owner")
 
 	errLastAdmin          = errs.NewErr("LAST_ADMIN", "cannot remove the last instance admin", "error.last_admin")
 	errBotAdmin           = errs.NewErr("BOT_ADMIN", "bot users cannot be admins", "error.bot_admin")
@@ -39,4 +40,21 @@ var (
 	errSavedViewConfigInvalid  = errs.NewErr("SAVED_VIEW_CONFIG_INVALID", "saved view config is not a JSON object", "error.saved_view_config_invalid")
 	errSavedViewBadSort        = errs.NewErr("SAVED_VIEW_BAD_SORT", "saved view config has an unknown orderColumn", "error.saved_view_bad_sort")
 	errSavedViewLimit          = errs.NewErr("SAVED_VIEW_LIMIT", "too many saved views in this project", "error.saved_view_limit")
+
+	// Agent run lifecycle
+	errRunNotAwaitingApproval = errs.NewErr("RUN_NOT_AWAITING_APPROVAL", "run is not awaiting approval", "error.run_not_awaiting_approval")
+	errPhaseMismatch          = errs.NewErr("PHASE_MISMATCH", "phase mismatch", "error.phase_mismatch")
+	errRunTerminal            = errs.NewErr("RUN_TERMINAL", "run is already in a terminal phase", "error.run_terminal")
+	errRunContinueInvalid     = errs.NewErr("RUN_CONTINUE_INVALID", "continue only valid on failed or cancelled runs", "error.run_continue_invalid")
+	errNoStageToContinue      = errs.NewErr("NO_STAGE_TO_CONTINUE", "no stage to continue", "error.no_stage_to_continue")
+	errRunHasPr               = errs.NewErr("RUN_HAS_PR", "cannot restart a run that already has a pull request; continue or close it instead", "error.run_has_pr")
+	errTaskNotActive          = errs.NewErr("TASK_NOT_ACTIVE", "task is not active", "error.task_not_active")
+	errTaskNotFound           = errs.NewErr("TASK_NOT_FOUND", "task not found", "error.task_not_found")
+
+	// Issue / message conflicts
+	errIssueHasActiveRun     = errs.NewErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run; hand it over by changing the assignee instead", "error.issue_has_active_run")
+	errBotPostWhileRunPaused = errs.NewErr("BOT_POST_WHILE_RUN_PAUSED", "bot cannot post while run is paused", "error.bot_post_while_run_paused")
+
+	// Project builder
+	errInvalidProjectBuilderRefs = errs.NewErr("INVALID_PROJECT_BUILDER_REFS", "invalid cross-references in project builder payload", "error.invalid_project_builder_refs")
 )

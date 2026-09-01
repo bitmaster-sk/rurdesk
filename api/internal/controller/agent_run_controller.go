@@ -81,6 +81,7 @@ func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -225,6 +226,7 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -239,7 +241,8 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 		return
 	}
 	if run.Phase != constants.PhaseAwaitingApproval {
-		c.JSON(http.StatusConflict, gin.H{"error": "run is not awaiting approval"})
+		_ = c.Error(errRunNotAwaitingApproval)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -261,7 +264,8 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 		constants.ActorTypeUser, &idUser, "approved",
 	)
 	if err == repository.ErrPhaseMismatch {
-		c.JSON(http.StatusConflict, gin.H{"error": "phase mismatch"})
+		_ = c.Error(errPhaseMismatch)
+		c.Status(http.StatusConflict)
 		return
 	}
 	if err != nil {
@@ -288,6 +292,7 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -302,7 +307,8 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 		return
 	}
 	if constants.TerminalPhases[run.Phase] {
-		c.JSON(http.StatusConflict, gin.H{"error": "run is already in a terminal phase"})
+		_ = c.Error(errRunTerminal)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -339,6 +345,7 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -353,7 +360,8 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 		return
 	}
 	if run.Phase != constants.PhaseFailed && run.Phase != constants.PhaseCancelled {
-		c.JSON(http.StatusConflict, gin.H{"error": "continue only valid on failed or cancelled runs"})
+		_ = c.Error(errRunContinueInvalid)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -365,13 +373,15 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 	}
 	stage, err := agent.ResolveNextStage(run, tasks)
 	if err != nil || stage == "" {
-		c.JSON(http.StatusConflict, gin.H{"error": "no stage to continue"})
+		_ = c.Error(errNoStageToContinue)
+		c.Status(http.StatusConflict)
 		return
 	}
 	idUser := user.IdUser
 	updated, err := ctrl.agentRunRepo.TransitionPhase(ctx, idRun, run.Phase, constants.PhaseQueued, constants.ActorTypeUser, &idUser, "continue")
 	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrConflict.WithMessage(err.Error()))
+		c.Status(http.StatusConflict)
 		return
 	}
 	ctrl.notifyRunUpdate(updated)
@@ -392,6 +402,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 
 	oldRun, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -410,7 +421,8 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	// branch and open a duplicate PR while orphaning the existing one. Guard on
 	// pr_id, not phase: `phase == pr_open` alone misses edge phases.
 	if oldRun.PrId != nil && *oldRun.PrId != "" {
-		c.JSON(http.StatusConflict, gin.H{"error": "cannot restart a run that already has a pull request; continue or close it instead"})
+		_ = c.Error(errRunHasPr)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -455,7 +467,8 @@ func (ctrl *AgentRunController) PatchSkills(c *gin.Context) {
 
 	var dto model.UpdateAgentRunStageSkillsReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -532,6 +545,7 @@ func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return nil, false
 	}
@@ -578,6 +592,7 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
+		_ = c.Error(errNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -634,7 +649,8 @@ func (ctrl *AgentRunController) requireTaskBot(c *gin.Context, idTask int64) boo
 	idUserBot, err := ctrl.agentTaskRepo.BotForTask(c.Request.Context(), idTask)
 	if err != nil {
 		if errors.Is(err, repository.ErrTaskNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+			_ = c.Error(errTaskNotFound)
+			c.Status(http.StatusNotFound)
 			return false
 		}
 		_ = c.Error(err)
@@ -650,24 +666,28 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	ctx := c.Request.Context()
 	idTask, err := strconv.ParseInt(c.Param("idTask"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid idTask"})
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	var body model.CompleteStageReq
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
 	task, err := ctrl.agentTaskRepo.LoadById(ctx, idTask)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
+		_ = c.Error(errTaskNotFound)
+		c.Status(http.StatusNotFound)
 		return
 	}
 	run, err := ctrl.agentRunRepo.LoadById(ctx, task.IdRun)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "run not found"})
+		_ = c.Error(errNotFound)
+		c.Status(http.StatusNotFound)
 		return
 	}
 	if !ctrl.requireRunBot(c, run.IdUserBot) {
@@ -675,7 +695,8 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	}
 
 	if err := validateOutcomeForStage(body.Outcome, task.Stage); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrBadRequest.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -729,7 +750,8 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 			c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": txErr.Error()})
+		_ = c.Error(errs.ErrInternal.WithMessage(txErr.Error()))
+		c.Status(http.StatusInternalServerError)
 		return
 	}
 
@@ -904,7 +926,8 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	idTask, err := strconv.ParseInt(c.Param("idTask"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid idTask"})
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	var body struct {
@@ -913,7 +936,8 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 		ToolCallsCount *int `json:"toolCallsCount"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !ctrl.requireTaskBot(c, idTask) {
@@ -957,17 +981,20 @@ func (ctrl *AgentRunController) ReportRunRepo(c *gin.Context) {
 	ctx := c.Request.Context()
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid idRun"})
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	var body model.ReportRunRepoReq
 	if err := c.ShouldBindJSON(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "run not found"})
+		_ = c.Error(errNotFound)
+		c.Status(http.StatusNotFound)
 		return
 	}
 	if !ctrl.requireRunBot(c, run.IdUserBot) {
@@ -1025,7 +1052,8 @@ func (ctrl *AgentRunController) TaskHeartbeat(c *gin.Context) {
 	ctx := c.Request.Context()
 	idTask, err := strconv.ParseInt(c.Param("idTask"), 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid idTask"})
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !ctrl.requireTaskBot(c, idTask) {
@@ -1033,7 +1061,8 @@ func (ctrl *AgentRunController) TaskHeartbeat(c *gin.Context) {
 	}
 	if err := ctrl.agentTaskRepo.RecordHeartbeat(ctx, idTask); err != nil {
 		if errors.Is(err, repository.ErrTaskStatusMismatch) {
-			c.JSON(http.StatusConflict, gin.H{"error": "task is not active"})
+			_ = c.Error(errTaskNotActive)
+			c.Status(http.StatusConflict)
 			return
 		}
 		_ = c.Error(err)

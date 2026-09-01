@@ -219,7 +219,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		return
 	}
 	if err := dto.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -234,7 +235,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, dto.IdRecipient)
 		if err == nil && activeRun != nil && activeRun.IdUserBot == user.IdUser &&
 			(activeRun.Phase == constants.PhaseAwaitingApproval || activeRun.Phase == constants.PhaseAwaitingInput) {
-			c.JSON(http.StatusConflict, gin.H{"error": "bot_post_while_run_paused"})
+			_ = c.Error(errBotPostWhileRunPaused)
+			c.Status(http.StatusConflict)
 			return
 		}
 	}
@@ -319,7 +321,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		return
 	}
 	if errors.Is(err, repository.ErrAnchorWrongThread) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrBadRequest.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	if err != nil {

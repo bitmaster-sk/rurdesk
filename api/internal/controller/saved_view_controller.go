@@ -38,6 +38,7 @@ func (sv *SavedViewController) List(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -63,6 +64,7 @@ func (sv *SavedViewController) Create(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -79,6 +81,7 @@ func (sv *SavedViewController) Create(c *gin.Context) {
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -128,6 +131,7 @@ func (sv *SavedViewController) Edit(c *gin.Context) {
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -171,6 +175,7 @@ func (sv *SavedViewController) requireManageableView(c *gin.Context) (*model.Sav
 	user, _ := extctx.GetUser(ctx)
 	idSavedView, err := strconv.ParseInt(c.Param("idSavedView"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return nil, false
 	}
