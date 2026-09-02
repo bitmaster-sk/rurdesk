@@ -32,6 +32,13 @@
     font-size: var(--font-size-s);
 }
 
+.thinking-kind-row {
+    display: flex;
+    align-items: stretch;
+    gap: var(--ui-space-s);
+    margin-bottom: var(--ui-space-s);
+}
+
 .kind-badge {
     display: inline-flex;
     align-items: center;
@@ -42,7 +49,6 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: var(--ui-space-s);
     background: var(--ui-pink-100);
     color: var(--ui-pink-800);
 }
@@ -66,9 +72,13 @@
 }
 
 .thinking-badge {
-    padding: 0 var(--ui-space-s);
+    display: inline-flex;
+    align-items: center;
+    padding: 0 8px;
     border: 1px solid var(--ui-surface-200);
-    border-radius: 10px;
+    border-radius: var(--ui-radius-sm);
+    font-size: 0.78rem;
+    color: var(--ui-color-text-muted);
 }
 
 .thinking-elapsed {

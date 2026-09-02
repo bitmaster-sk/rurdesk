@@ -10,9 +10,16 @@
         <div class="connector"></div>
     </div>
     <div class="thinking-card">
-        <div class="kind-badge">
-            <tabler-icon icon="brain" [size]="14" />
-            <span>{{ 'AGENT.THINKING.LABEL' | translate }}</span>
+        <div class="thinking-kind-row">
+            <div class="kind-badge">
+                <tabler-icon icon="brain" [size]="14" />
+                <span>{{ 'AGENT.THINKING.LABEL' | translate }}</span>
+            </div>
+            @if (isTailOnly()) {
+                <span class="thinking-badge" data-testid="agent-thinking-tail-badge">
+                    {{ 'AGENT.THINKING.TAIL_ONLY' | translate }}
+                </span>
+            }
         </div>
         <button
             type="button"
@@ -28,11 +35,6 @@
                 <span class="working-dot" data-testid="agent-thinking-working"></span>
                 <span>{{ 'AGENT.THINKING.WORKING' | translate }}</span>
                 <span class="thinking-elapsed">{{ elapsed() }}</span>
-            }
-            @if (isTailOnly()) {
-                <span class="thinking-badge" data-testid="agent-thinking-tail-badge">
-                    {{ 'AGENT.THINKING.TAIL_ONLY' | translate }}
-                </span>
             }
         </button>
         @if (isOpen()) {
