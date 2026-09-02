@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -57,7 +58,7 @@ func (pc *PinController) GetPins(c *gin.Context) {
 		canRead = pc.acl.CanReadProject(ctx, user.IdUser, idPinDestination)
 	}
 	if !canRead {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -112,7 +113,7 @@ func (pc *PinController) CreatePin(c *gin.Context) {
 		canRead = pc.acl.CanReadProject(ctx, user.IdUser, dto.IdPinDestination)
 	}
 	if !canRead {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -124,7 +125,7 @@ func (pc *PinController) CreatePin(c *gin.Context) {
 	idIssueProject, err := pc.pinRepo.ProjectOfIssue(ctx, dto.IdIssue)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -133,7 +134,7 @@ func (pc *PinController) CreatePin(c *gin.Context) {
 		return
 	}
 	if !pc.acl.CanReadProject(ctx, user.IdUser, idIssueProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -184,7 +185,7 @@ func (pc *PinController) DeletePin(c *gin.Context) {
 		canDelete = pc.acl.CanReadProject(ctx, user.IdUser, pin.IdPinDestination)
 	}
 	if !canDelete {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

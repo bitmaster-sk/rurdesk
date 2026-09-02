@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -49,7 +50,7 @@ func (mc *ProjectMemberController) GetMembers(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanReadMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -78,7 +79,7 @@ func (mc *ProjectMemberController) AddUser(c *gin.Context) {
 		return
 	}
 	if !model.IsValidRole(dto.Role) {
-		_ = c.Error(errInvalidRole)
+		_ = c.Error(errs.ErrInvalidRole)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -87,14 +88,14 @@ func (mc *ProjectMemberController) AddUser(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanCreateMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	if dto.Role == model.RoleOwner {
-		if err := mc.rejectIfBot(ctx, dto.IdUser); err == errBotOwner {
-			_ = c.Error(errBotOwner)
+		if err := mc.rejectIfBot(ctx, dto.IdUser); err == errs.ErrBotOwner {
+			_ = c.Error(errs.ErrBotOwner)
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -139,7 +140,7 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 		return
 	}
 	if !model.IsValidRole(dto.Role) {
-		_ = c.Error(errInvalidRole)
+		_ = c.Error(errs.ErrInvalidRole)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -148,14 +149,14 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanUpdateMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	if dto.Role == model.RoleOwner {
-		if err := mc.rejectIfBot(ctx, idUser); err == errBotOwner {
-			_ = c.Error(errBotOwner)
+		if err := mc.rejectIfBot(ctx, idUser); err == errs.ErrBotOwner {
+			_ = c.Error(errs.ErrBotOwner)
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -173,7 +174,7 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 			return txErr
 		}
 		if !exists {
-			return errNotFound
+			return errs.ErrNotFound
 		}
 		if currentRole == model.RoleOwner && dto.Role != model.RoleOwner {
 			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
@@ -182,12 +183,12 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 		}
 		return mc.projectRepo.UpdateProjectUserRole(ctx, idProject, idUser, dto.Role)
 	})
-	if err == errNotFound {
+	if err == errs.ErrNotFound {
 		_ = c.Error(err)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if err == errLastOwner {
+	if err == errs.ErrLastOwner {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -219,7 +220,7 @@ func (mc *ProjectMemberController) RemoveUser(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanDeleteMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -237,7 +238,7 @@ func (mc *ProjectMemberController) RemoveUser(c *gin.Context) {
 		}
 		return mc.projectRepo.DeleteProjectUser(ctx, idProject, idUser)
 	})
-	if err == errLastOwner {
+	if err == errs.ErrLastOwner {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -266,7 +267,7 @@ func (mc *ProjectMemberController) AddTeam(c *gin.Context) {
 		return
 	}
 	if !model.IsValidRole(dto.Role) {
-		_ = c.Error(errInvalidRole)
+		_ = c.Error(errs.ErrInvalidRole)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -275,7 +276,7 @@ func (mc *ProjectMemberController) AddTeam(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanCreateMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -315,7 +316,7 @@ func (mc *ProjectMemberController) UpdateTeamRole(c *gin.Context) {
 		return
 	}
 	if !model.IsValidRole(dto.Role) {
-		_ = c.Error(errInvalidRole)
+		_ = c.Error(errs.ErrInvalidRole)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -324,7 +325,7 @@ func (mc *ProjectMemberController) UpdateTeamRole(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanUpdateMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -336,7 +337,7 @@ func (mc *ProjectMemberController) UpdateTeamRole(c *gin.Context) {
 			return txErr
 		}
 		if !exists {
-			return errNotFound
+			return errs.ErrNotFound
 		}
 		if currentRole == model.RoleOwner && dto.Role != model.RoleOwner {
 			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
@@ -345,12 +346,12 @@ func (mc *ProjectMemberController) UpdateTeamRole(c *gin.Context) {
 		}
 		return mc.projectRepo.UpdateProjectTeamRole(ctx, idProject, idTeam, dto.Role)
 	})
-	if err == errNotFound {
+	if err == errs.ErrNotFound {
 		_ = c.Error(err)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if err == errLastOwner {
+	if err == errs.ErrLastOwner {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -382,7 +383,7 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !mc.acl.CanDeleteMembers(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -400,7 +401,7 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 		}
 		return mc.projectRepo.DeleteProjectTeam(ctx, idProject, idTeam)
 	})
-	if err == errLastOwner {
+	if err == errs.ErrLastOwner {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -414,7 +415,7 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// rejectIfBot returns errBotOwner if the target user is a bot; call whenever
+// rejectIfBot returns errs.ErrBotOwner if the target user is a bot; call whenever
 // role==owner is requested.
 func (mc *ProjectMemberController) rejectIfBot(ctx context.Context, idUser int64) error {
 	isBot, err := mc.userRepo.IsBotUser(ctx, idUser)
@@ -422,7 +423,7 @@ func (mc *ProjectMemberController) rejectIfBot(ctx context.Context, idUser int64
 		return err
 	}
 	if isBot {
-		return errBotOwner
+		return errs.ErrBotOwner
 	}
 	return nil
 }
@@ -437,7 +438,7 @@ func (mc *ProjectMemberController) guardLastOwner(ctx context.Context, idProject
 		return err
 	}
 	if count <= 1 {
-		return errLastOwner
+		return errs.ErrLastOwner
 	}
 	return nil
 }

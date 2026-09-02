@@ -798,7 +798,17 @@
         "issue_type_protected": "This type is protected and cannot be deleted",
         "sprint_closed": "That cycle is already closed.",
         "api_key_limit_reached": "You have reached your API key limit. Revoke one to create another.",
-        "api_key_self_manage": "API keys cannot be managed with an API key. Sign in through the browser."
+        "api_key_self_manage": "API keys cannot be managed with an API key. Sign in through the browser.",
+        "run_not_awaiting_approval": "The run is not awaiting approval.",
+        "phase_mismatch": "The run phase changed unexpectedly. Please refresh and try again.",
+        "run_terminal": "This run is already finished.",
+        "run_continue_invalid": "Continue is only valid on failed or cancelled runs.",
+        "no_stage_to_continue": "There is no next stage to continue to.",
+        "run_has_pr": "This run already has a pull request. Continue or close it instead.",
+        "task_not_found": "Task not found.",
+        "issue_has_active_run": "This issue already has an active run. Change the assignee to hand it over.",
+        "bot_post_while_run_paused": "The bot cannot post while the run is paused.",
+        "invalid_project_builder_refs": "Some cross-references in the project plan are invalid."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
