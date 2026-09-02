@@ -76,7 +76,7 @@ func (r *AgentThinkingRepository) MarkTruncated(ctx context.Context, idTask int6
 	return nil
 }
 
-func (r *AgentThinkingRepository) LoadEvents(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error) {
+func (r *AgentThinkingRepository) LoadEventsByTask(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx,
 		"SELECT kind, tool, text, event_at FROM agent.task_thinking WHERE id_task = $1 ORDER BY seq, event_index", idTask)
@@ -94,6 +94,41 @@ func (r *AgentThinkingRepository) LoadEvents(ctx context.Context, idTask int64) 
 		events = append(events, event)
 	}
 	return events, rows.Err()
+}
+
+func (r *AgentThinkingRepository) LoadEventsByStage(ctx context.Context, idRun int64, stage string) (events model.AgentThinkingEvents, idTask int64, lastSeq int, err error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT chunk.id_task, chunk.seq, chunk.kind, chunk.tool, chunk.text, chunk.event_at
+		FROM agent.task_thinking chunk
+		WHERE chunk.id_task = (
+			SELECT id_task
+			FROM agent.task
+			WHERE id_run = $1 AND stage = $2
+			ORDER BY attempt_no DESC, created_at DESC
+			LIMIT 1
+		)
+		ORDER BY chunk.seq, chunk.event_index`, idRun, stage)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("loading live thinking of run %d stage %s: %w", idRun, stage, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var event model.AgentThinkingEvent
+		var seq int
+		if err := rows.Scan(&idTask, &seq, &event.Kind, &event.Tool, &event.Text, &event.At); err != nil {
+			return nil, 0, 0, fmt.Errorf("scanning live thinking event: %w", err)
+		}
+		if seq > lastSeq {
+			lastSeq = seq
+		}
+		events = append(events, event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, 0, fmt.Errorf("loading live thinking of run %d stage %s: %w", idRun, stage, err)
+	}
+	return events, idTask, lastSeq, nil
 }
 
 // Compact stores the blob and the tail on the task and deletes its event rows.

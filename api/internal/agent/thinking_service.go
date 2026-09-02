@@ -11,7 +11,8 @@ type thinkingStore interface {
 	StoredSize(ctx context.Context, idTask int64) (storedBytes int, isTruncated bool, err error)
 	Append(ctx context.Context, idTask int64, seq int, events model.AgentThinkingEvents) error
 	MarkTruncated(ctx context.Context, idTask int64, seq int) error
-	LoadEvents(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error)
+	LoadEventsByTask(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error)
+	LoadEventsByStage(ctx context.Context, idRun int64, stage string) (events model.AgentThinkingEvents, idTask int64, lastSeq int, err error)
 	Compact(ctx context.Context, idTask int64, blob []byte, tail string) error
 	LoadCompacted(ctx context.Context, idRun int64, stage string) (blob []byte, tail string, err error)
 	OrphanedTaskIds(ctx context.Context) ([]int64, error)
@@ -146,7 +147,7 @@ func (s *ThinkingService) Compact(ctx context.Context, idsTask ...int64) {
 	for _, idTask := range idsTask {
 		tail := s.tails.Take(idTask)
 
-		events, err := s.store.LoadEvents(ctx, idTask)
+		events, err := s.store.LoadEventsByTask(ctx, idTask)
 		if err != nil {
 			log.Warn().Err(err).Int64("idTask", idTask).Msg("loading thinking events for compaction")
 			continue
@@ -178,7 +179,7 @@ func (s *ThinkingService) CompactOrphaned(ctx context.Context) (int, error) {
 	}
 	compacted := 0
 	for _, idTask := range idsTask {
-		events, err := s.store.LoadEvents(ctx, idTask)
+		events, err := s.store.LoadEventsByTask(ctx, idTask)
 		if err != nil {
 			log.Warn().Err(err).Int64("idTask", idTask).Msg("loading orphaned thinking")
 			continue
@@ -210,7 +211,22 @@ func (s *ThinkingService) LoadForStage(ctx context.Context, idRun int64, stage s
 		return model.AgentThinkingRes{}, err
 	}
 	if len(blob) == 0 {
-		return tailThinkingRes(idRun, stage, tail), nil
+		// A stage that is still running has rows instead of a blob. Replaying
+		// them is what lets a reloaded page rejoin the stream where it stands.
+		events, idTask, lastSeq, err := s.store.LoadEventsByStage(ctx, idRun, stage)
+		if err != nil {
+			return model.AgentThinkingRes{}, err
+		}
+		if len(events) == 0 {
+			return tailThinkingRes(idRun, stage, tail), nil
+		}
+		return model.AgentThinkingRes{
+			IdRun:   idRun,
+			IdTask:  idTask,
+			Stage:   stage,
+			Events:  events,
+			LastSeq: lastSeq,
+		}, nil
 	}
 	var events model.AgentThinkingEvents
 	if err := events.Gunzip(blob); err != nil {

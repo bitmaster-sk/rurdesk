@@ -212,6 +212,112 @@ describe('AgentThinkingStore', () => {
         expect(store.hasGap()).toBe(false);
     });
 
+    // A reload starts the stream mid-stage, and the thinking before it is on the
+    // server, not lost.
+    it('replays the stored thinking of a stage joined mid-stream', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        notices.next(makeNotice(5, 4, 'the batch that arrived first'));
+        store.applyStored(
+            'implementation',
+            1,
+            [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }],
+            3
+        );
+
+        expect(store.events().map(event => event.text)).toEqual([
+            'what came before',
+            'the batch that arrived first'
+        ]);
+        expect(store.hasGap()).toBe(false);
+    });
+
+    it('keeps flagging a gap the stored thinking does not close', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        notices.next(makeNotice(5, 9, 'the batch that arrived first'));
+        store.applyStored(
+            'implementation',
+            1,
+            [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }],
+            3
+        );
+
+        expect(store.hasGap()).toBe(true);
+    });
+
+    it('replays the stored thinking before any batch arrives', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        store.applyStored(
+            'implementation',
+            1,
+            [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }],
+            3
+        );
+        notices.next(makeNotice(5, 4, 'the next batch'));
+
+        expect(store.events().map(event => event.text)).toEqual([
+            'what came before',
+            'the next batch'
+        ]);
+        expect(store.hasGap()).toBe(false);
+    });
+
+    // The row that fetches is recreated with the feed, the store outlives it, so
+    // the same stored thinking can arrive twice.
+    it('ignores stored thinking it has already applied', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+        const stored = [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }];
+
+        store.applyStored('implementation', 1, stored, 3);
+        store.applyStored('implementation', 1, stored, 3);
+
+        expect(store.events().map(event => event.text)).toEqual(['what came before']);
+    });
+
+    // The fetch and the stream race, so the reply can describe an attempt the
+    // stream has already moved past.
+    it('ignores stored thinking of another stage or attempt', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        notices.next(makeNotice(5, 1, 'the retry', 'design', 2));
+        store.applyStored(
+            'design',
+            1,
+            [{ kind: AgentThinkingKind.Thinking, text: 'the attempt that failed', at: 1 }],
+            3
+        );
+
+        expect(store.events().map(event => event.text)).toEqual(['the retry']);
+    });
+
+    it('replays a batch the stream delivers again after the replay', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        store.applyStored(
+            'implementation',
+            1,
+            [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }],
+            3
+        );
+        notices.next(makeNotice(5, 3, 'the batch already stored'));
+
+        expect(store.events().map(event => event.text)).toEqual(['what came before']);
+    });
+
     it('joins fragments of one thought instead of breaking them into lines', () => {
         const notices = new Subject<{ payload: AgentThinkingNotice }>();
         const store = build(notices);

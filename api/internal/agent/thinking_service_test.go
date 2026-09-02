@@ -12,18 +12,22 @@ import (
 )
 
 type fakeStore struct {
-	storedBytes int
-	isTruncated bool
-	appended    []model.AgentThinkingEvents
-	truncated   int
-	orphans     []int64
-	events      map[int64]model.AgentThinkingEvents
-	unreadable  int64
-	compactedTo map[int64]string
-	blobs       map[int64][]byte
-	loadedBlob  []byte
-	loadedTail  string
-	loadErr     error
+	storedBytes  int
+	isTruncated  bool
+	appended     []model.AgentThinkingEvents
+	truncated    int
+	orphans      []int64
+	events       map[int64]model.AgentThinkingEvents
+	unreadable   int64
+	compactedTo  map[int64]string
+	blobs        map[int64][]byte
+	loadedBlob   []byte
+	loadedTail   string
+	loadErr      error
+	stageEvents  model.AgentThinkingEvents
+	stageIdTask  int64
+	stageLastSeq int
+	stageErr     error
 }
 
 func newFakeStore() *fakeStore {
@@ -48,7 +52,7 @@ func (f *fakeStore) MarkTruncated(ctx context.Context, idTask int64, seq int) er
 	return nil
 }
 
-func (f *fakeStore) LoadEvents(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error) {
+func (f *fakeStore) LoadEventsByTask(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error) {
 	if f.unreadable == idTask {
 		return nil, errors.New("event row is unreadable")
 	}
@@ -63,6 +67,10 @@ func (f *fakeStore) Compact(ctx context.Context, idTask int64, blob []byte, tail
 
 func (f *fakeStore) LoadCompacted(ctx context.Context, idRun int64, stage string) ([]byte, string, error) {
 	return f.loadedBlob, f.loadedTail, f.loadErr
+}
+
+func (f *fakeStore) LoadEventsByStage(ctx context.Context, idRun int64, stage string) (model.AgentThinkingEvents, int64, int, error) {
+	return f.stageEvents, f.stageIdTask, f.stageLastSeq, f.stageErr
 }
 
 func (f *fakeStore) OrphanedTaskIds(ctx context.Context) ([]int64, error) {
@@ -330,6 +338,34 @@ func TestThinkingService_LoadForStageFallsBackToTheTail(t *testing.T) {
 			assert.Equal(t, "the last thoughts", res.Events[0].Text)
 		})
 	}
+}
+
+func TestThinkingService_LoadForStageReplaysARunningStage(t *testing.T) {
+	store := newFakeStore()
+	store.loadedTail = "the last thoughts"
+	store.stageEvents = model.AgentThinkingEvents{thinkingEvent("still thinking")}
+	store.stageIdTask = 7
+	store.stageLastSeq = 4
+	svc, _, _ := newTestService(store, true)
+
+	res, err := svc.LoadForStage(context.Background(), 9, "implementation")
+
+	require.NoError(t, err)
+	assert.False(t, res.IsComplete, "a running stage has not recorded everything yet")
+	require.Len(t, res.Events, 1)
+	assert.Equal(t, "still thinking", res.Events[0].Text)
+	assert.Equal(t, int64(7), res.IdTask, "the client needs the task to match the live batches")
+	assert.Equal(t, 4, res.LastSeq, "the client needs the sequence to spot a lost batch")
+}
+
+func TestThinkingService_LoadForStageSurfacesAStageReadFailure(t *testing.T) {
+	store := newFakeStore()
+	store.stageErr = errors.New("database is down")
+	svc, _, _ := newTestService(store, true)
+
+	_, err := svc.LoadForStage(context.Background(), 9, "implementation")
+
+	require.Error(t, err)
 }
 
 func TestThinkingService_LoadForStageOfAStageWithNothing(t *testing.T) {

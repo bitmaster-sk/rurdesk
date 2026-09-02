@@ -87,8 +87,10 @@ type AgentThinkingReq struct {
 
 type AgentThinkingRes struct {
 	IdRun      int64               `json:"idRun"`
+	IdTask     int64               `json:"idTask,omitempty"`
 	Stage      string              `json:"stage"`
 	Events     AgentThinkingEvents `json:"events"`
+	LastSeq    int                 `json:"lastSeq,omitempty"`
 	IsComplete bool                `json:"isComplete"`
 }
 

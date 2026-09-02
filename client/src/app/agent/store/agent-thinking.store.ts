@@ -22,6 +22,8 @@ export class AgentThinkingStore {
 
     private idRun: number | null = null;
     private lastSeq = 0;
+    private firstSeq = 0;
+    private appliedStage: string | null = null;
 
     public constructor() {
         this.noticeService.agentThinking$
@@ -35,6 +37,38 @@ export class AgentThinkingStore {
         }
         this.idRun = idRun;
         this.reset();
+    }
+
+    // applyStored puts the thinking the server already has in front of whatever
+    // the stream has delivered so far, so a reloaded page rejoins a running stage
+    // instead of reporting everything before it as lost.
+    public applyStored(
+        stage: string,
+        idTask: number,
+        events: AgentThinkingEvent[],
+        lastSeq: number
+    ): void {
+        if (this.idRun === null || lastSeq === 0 || this.appliedStage === stage) {
+            return;
+        }
+        const streamedStage = this.stage();
+        if (streamedStage !== null && (streamedStage !== stage || this.idTask() !== idTask)) {
+            return;
+        }
+        this.appliedStage = stage;
+
+        const merged = [...events, ...this.events()];
+        const kept = this.capped(merged);
+        this.events.set(kept);
+
+        if (this.lastSeq === 0) {
+            this.idTask.set(idTask);
+            this.stage.set(stage);
+            this.lastSeq = lastSeq;
+            this.hasGap.set(kept.length < merged.length);
+            return;
+        }
+        this.hasGap.set(kept.length < merged.length || this.firstSeq > lastSeq + 1);
     }
 
     private apply(notice: AgentThinkingNotice | null): void {
@@ -58,6 +92,9 @@ export class AgentThinkingStore {
             this.hasGap.set(true);
         }
         this.lastSeq = notice.seq;
+        if (this.firstSeq === 0) {
+            this.firstSeq = notice.seq;
+        }
 
         const merged = [...this.events(), ...notice.events];
         const kept = this.capped(merged);
@@ -87,5 +124,7 @@ export class AgentThinkingStore {
         this.stage.set(null);
         this.hasGap.set(false);
         this.lastSeq = 0;
+        this.firstSeq = 0;
+        this.appliedStage = null;
     }
 }

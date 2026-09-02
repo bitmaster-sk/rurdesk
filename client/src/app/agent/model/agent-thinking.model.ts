@@ -17,7 +17,9 @@ export interface AgentThinkingNotice {
 
 export interface AgentThinkingRes {
     idRun: number;
+    idTask?: number;
     stage: string;
     events: AgentThinkingEvent[];
+    lastSeq?: number;
     isComplete: boolean;
 }

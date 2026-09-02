@@ -46,6 +46,7 @@ export class AgentThinkingRowComponent implements OnDestroy {
     private readonly storedEvents = signal<AgentThinkingEvent[]>([]);
     // Must go back to null on a failed fetch, or the row can never retry.
     private loadedAsTail: boolean | null = null;
+    private appliedStage: string | null = null;
     private readonly now = signal(Date.now());
     private ticker: ReturnType<typeof setInterval> | null = null;
 
@@ -85,6 +86,7 @@ export class AgentThinkingRowComponent implements OnDestroy {
                 this.ticker = setInterval(() => this.now.set(Date.now()), 1000);
             }
         });
+        effect(() => this.applyStoredThinking());
         effect(() => {
             this.lines();
             if (this.isLive() && this.isOpen()) {
@@ -131,6 +133,22 @@ export class AgentThinkingRowComponent implements OnDestroy {
         this.thinkingApi.loadStageThinking$(this.idRun(), this.stage().stage).subscribe({
             next: res => this.storedEvents.set(res.events),
             error: () => (this.loadedAsTail = null)
+        });
+    }
+
+    // The stream only carries what arrives from now on, so the live row asks the
+    // server for the thinking of the stage so far. Must go back to null on a
+    // failed fetch, or the row can never retry.
+    private applyStoredThinking(): void {
+        const stage = this.stage().stage;
+        if (!this.isLive() || stage === '' || this.appliedStage === stage) {
+            return;
+        }
+        this.appliedStage = stage;
+        this.thinkingApi.loadStageThinking$(this.idRun(), stage).subscribe({
+            next: res =>
+                this.store.applyStored(stage, res.idTask ?? 0, res.events, res.lastSeq ?? 0),
+            error: () => (this.appliedStage = null)
         });
     }
 

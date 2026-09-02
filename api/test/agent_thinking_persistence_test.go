@@ -148,13 +148,18 @@ func (s *AgentThinkingPersistenceSuite) chunkCount(idTask int64) int {
 	return count
 }
 
-func (s *AgentThinkingPersistenceSuite) readStageThinking(idRun int64) (events []model.AgentThinkingEvent, isComplete bool) {
+func (s *AgentThinkingPersistenceSuite) readStage(idRun int64) model.AgentThinkingRes {
 	res := Request(s.T(), s.App, "GET",
 		fmt.Sprintf("/api/private/agent/run/%d/thinking?stage=implementation", idRun), "", s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	body, _ := io.ReadAll(res.Body)
 	var readRes model.AgentThinkingRes
 	s.Require().NoError(json.Unmarshal(body, &readRes))
+	return readRes
+}
+
+func (s *AgentThinkingPersistenceSuite) readStageThinking(idRun int64) (events []model.AgentThinkingEvent, isComplete bool) {
+	readRes := s.readStage(idRun)
 	return readRes.Events, readRes.IsComplete
 }
 
@@ -235,6 +240,38 @@ func (s *AgentThinkingPersistenceSuite) Test_PersistenceOff_KeepsOnlyTail() {
 	s.Require().Len(events, 1)
 	s.Equal(model.ThinkingKindThinking, events[0].Kind)
 	s.Contains(events[0].Text, "the tail that fits in the cap")
+}
+
+// A reader who opens the issue mid-stage gets what the stage has thought so
+// far, plus what it needs to rejoin the live stream at the right batch.
+func (s *AgentThinkingPersistenceSuite) Test_PersistenceOn_ReplaysARunningStage() {
+	s.setPersistence(true)
+	idRun, idTask := s.insertRunWithActiveTask()
+
+	s.postThinking(idTask, 1, "first I read the formatter")
+	s.postThinking(idTask, 2, "then I wrote the tokenizer")
+
+	readRes := s.readStage(idRun)
+
+	s.False(readRes.IsComplete, "a running stage has not recorded everything yet")
+	s.Equal(model.AgentThinkingEvents{
+		{Kind: model.ThinkingKindThinking, Text: "first I read the formatter", At: 1},
+		{Kind: model.ThinkingKindThinking, Text: "then I wrote the tokenizer", At: 1},
+	}, readRes.Events)
+	s.Equal(idTask, readRes.IdTask)
+	s.Equal(2, readRes.LastSeq)
+}
+
+func (s *AgentThinkingPersistenceSuite) Test_PersistenceOff_RunningStageHasNothingToReplay() {
+	s.setPersistence(false)
+	idRun, idTask := s.insertRunWithActiveTask()
+
+	s.postThinking(idTask, 1, "nothing is stored while the switch is off")
+
+	readRes := s.readStage(idRun)
+
+	s.Empty(readRes.Events)
+	s.Zero(readRes.LastSeq, "with nothing stored the reader must not think it caught up")
 }
 
 func (s *AgentThinkingPersistenceSuite) Test_SwitchAppliesToNextBatch() {

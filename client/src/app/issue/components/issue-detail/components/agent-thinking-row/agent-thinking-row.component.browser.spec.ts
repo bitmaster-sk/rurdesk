@@ -245,13 +245,36 @@ describe('AgentThinkingRowComponent (browser)', () => {
         expect(loadStageThinking$).not.toHaveBeenCalled();
     });
 
+    // A reload leaves the reader mid-stage, and the stream only carries what
+    // comes next, so the row asks for what the stage has thought so far.
+    it('replays the stored thinking of a running stage it joined mid-stream', () => {
+        loadStageThinking$.mockReturnValue(
+            of({
+                idRun: 5,
+                idTask: 1,
+                stage: 'implementation',
+                events: [{ kind: AgentThinkingKind.Thinking, text: 'what came before', at: 1 }],
+                lastSeq: 3,
+                isComplete: false
+            })
+        );
+        const fixture = renderLive();
+
+        expect(loadStageThinking$).toHaveBeenCalledWith(5, 'implementation');
+        emit([{ kind: AgentThinkingKind.Thinking, text: ' and what came after', at: 2 }], 4);
+        fixture.detectChanges();
+
+        expect(body(fixture).textContent).toContain('what came before and what came after');
+        expect(fixture.nativeElement.querySelector('.thinking-gap')).toBeNull();
+    });
+
     it('opens a running stage by default and appends what streams in', () => {
         const fixture = renderLive();
 
         expect(
             fixture.nativeElement.querySelector('[data-testid="agent-thinking-working"]')
         ).not.toBeNull();
-        expect(loadStageThinking$).not.toHaveBeenCalled();
+        expect(loadStageThinking$).toHaveBeenCalledTimes(1);
 
         emit([{ kind: AgentThinkingKind.Thinking, text: 'weighing the tokenizer', at: 1 }]);
         emit([{ kind: AgentThinkingKind.Thinking, text: ' and the tests', at: 2 }], 2);
