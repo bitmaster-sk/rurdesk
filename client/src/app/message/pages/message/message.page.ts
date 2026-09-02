@@ -13,7 +13,6 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { combineLatest, Subject, Subscription } from 'rxjs';
 import { debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
@@ -49,7 +48,6 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
     private readonly sNotice = inject(NoticeService);
-    private readonly i18n = inject(I18nService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly teamMemberStore = inject(TeamMemberStore);
 
@@ -320,7 +318,7 @@ export class MessagePage implements OnInit, OnDestroy {
         const currentUserId = this.authStore.getUser().idUser;
         return [
             {
-                name: this.i18n.instant('PROJECT.CHATS'),
+                nameKey: 'PROJECT.CHATS',
                 icon: 'messages',
                 conversations: projects.map(p => ({
                     idRecipient: p.idProject,
@@ -336,7 +334,7 @@ export class MessagePage implements OnInit, OnDestroy {
                 }))
             },
             {
-                name: this.i18n.instant('TEAM.CHATS'),
+                nameKey: 'TEAM.CHATS',
                 icon: 'users',
                 conversations: teams.map(t => ({
                     idRecipient: t.idTeam,
@@ -352,7 +350,7 @@ export class MessagePage implements OnInit, OnDestroy {
                 }))
             },
             {
-                name: this.i18n.instant('DIRECT.CHATS'),
+                nameKey: 'DIRECT.CHATS',
                 icon: 'user',
                 conversations: users
                     .filter(u => !u.isBot)

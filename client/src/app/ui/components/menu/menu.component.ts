@@ -39,12 +39,12 @@ import { UiMenuItem } from './menu-item.model';
                         <!-- one-level group: header + flat sub-list; empty items = header only -->
                         <li role="presentation" class="ui-menu-group">
                             <span class="ui-menu-group-label" aria-hidden="true">
-                                {{ item.label }}
+                                {{ item.labelKey ?? item.label | translate }}
                             </span>
                             <ul
                                 class="ui-menu-group-list"
                                 role="group"
-                                [attr.aria-label]="item.label"
+                                [attr.aria-label]="item.labelKey ?? item.label | translate"
                             >
                                 @for (sub of item.items; track trackItem(sub)) {
                                     <li role="none">
@@ -104,7 +104,9 @@ import { UiMenuItem } from './menu-item.model';
                 @if (item.icon) {
                     <tabler-icon class="ui-menu-item-icon" [icon]="item.icon" [size]="16" />
                 }
-                <span class="ui-menu-item-label">{{ item.label }}</span>
+                <span class="ui-menu-item-label">
+                    {{ item.labelKey ?? item.label | translate }}
+                </span>
                 @if (item.badge) {
                     <ui-badge
                         class="ui-menu-item-badge"
