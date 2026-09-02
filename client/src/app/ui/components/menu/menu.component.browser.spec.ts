@@ -2,8 +2,15 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { provideRouter } from '@angular/router';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UiModule } from '../../ui.module';
 import { UiMenuItem } from './menu-item.model';
+
+/** Minimal static catalogue so `| translate` resolves keys in tests. */
+const TRANSLATIONS: Record<string, string> = {
+    'MENU.RENAME': 'Rename',
+    'MENU.GROUP': 'Actions'
+};
 
 interface HostMenuItem extends UiMenuItem {
     tablerIcon?: string;
@@ -49,9 +56,12 @@ describe('UiMenuComponent (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             declarations: [HostComponent],
-            imports: [UiModule],
+            imports: [UiModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations(), provideRouter([])]
         }).compileComponents();
+
+        TestBed.inject(TranslateService).setTranslation('en', TRANSLATIONS);
+        TestBed.inject(TranslateService).use('en');
     });
 
     async function open(configure?: (host: HostComponent) => void) {
@@ -192,5 +202,33 @@ describe('UiMenuComponent (browser)', () => {
         fixture.detectChanges();
         expect(fixture.componentInstance.lastCommand).toBe('Rename');
         expect(panel()).toBeNull();
+    });
+
+    it('renders labelKey items via the translate pipe', async () => {
+        await open(
+            h =>
+                (h.model = [
+                    {
+                        labelKey: 'MENU.GROUP',
+                        items: [{ labelKey: 'MENU.RENAME', command: () => {} }]
+                    }
+                ])
+        );
+        const headers = document.querySelectorAll('.ui-menu-group-label');
+        expect(headers[0]?.textContent?.trim()).toBe('Actions');
+        const labels = document.querySelectorAll('.ui-menu-item-label');
+        expect(labels[0]?.textContent?.trim()).toBe('Rename');
+    });
+
+    it('prefers labelKey over label for the track key', async () => {
+        // Two items with the same label but different labelKeys must not collide.
+        await open(
+            h =>
+                (h.model = [
+                    { labelKey: 'MENU.RENAME', label: 'x', command: () => {} },
+                    { labelKey: 'MENU.GROUP', label: 'x', command: () => {} }
+                ])
+        );
+        expect(items().length).toBe(2);
     });
 });

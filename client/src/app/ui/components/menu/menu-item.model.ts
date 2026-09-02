@@ -13,6 +13,11 @@ import { UiBadgeSeverity } from '../badge/badge.component';
  * throw NG0955 (duplicate track key). True across all current call-sites.
  */
 export interface UiMenuItem {
+    /** i18n key resolved at render time via `| translate` in the template.
+     *  When present, the menu renders `labelKey | translate` instead of
+     *  `label`, making the text reactive to language switches. Opt-in —
+     *  items without `labelKey` fall back to `label`. */
+    labelKey?: string;
     /** Visible text (also the track key for command items — must be unique). */
     label?: string;
     /** Tabler icon name, e.g. `'user'`. Rendered via `<tabler-icon>`; the icon

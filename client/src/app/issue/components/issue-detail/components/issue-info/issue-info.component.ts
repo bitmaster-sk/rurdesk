@@ -51,7 +51,6 @@ import { PinService } from 'src/app/pin/pin.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import {
@@ -88,7 +87,6 @@ export class IssueInfoComponent {
 
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly i18n = inject(I18nService);
     private readonly sIssue = inject(IssueService);
     private readonly sPin = inject(PinService);
     private readonly authStore = inject(AuthStore);
@@ -185,10 +183,10 @@ export class IssueInfoComponent {
 
     public readonly actions: UiMenuItem[] = [
         {
-            label: this.i18n.instant('AI.SINGULAR'),
+            labelKey: 'AI.SINGULAR',
             items: [
                 {
-                    label: this.i18n.instant('SPLIT.SINGULAR'),
+                    labelKey: 'SPLIT.SINGULAR',
                     command: () => {
                         const issue = this.currentIssue();
                         if (issue) {
@@ -199,14 +197,14 @@ export class IssueInfoComponent {
             ]
         },
         {
-            label: this.i18n.instant('ISSUE.PIN.SINGULAR'),
+            labelKey: 'ISSUE.PIN.SINGULAR',
             items: [
                 {
-                    label: this.i18n.instant('ISSUE.PIN.TO.PROJECT.PAGE'),
+                    labelKey: 'ISSUE.PIN.TO.PROJECT.PAGE',
                     command: () => this.onPin(PinDestinationType.PROJECT)
                 },
                 {
-                    label: this.i18n.instant('ISSUE.PIN.TO.MY.PAGE'),
+                    labelKey: 'ISSUE.PIN.TO.MY.PAGE',
                     command: () => this.onPin(PinDestinationType.USER)
                 }
             ]
