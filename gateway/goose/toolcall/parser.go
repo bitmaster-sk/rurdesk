@@ -3,9 +3,12 @@ package toolcall
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
+	"strings"
 )
 
-const detailChars = 160
+const detailChars = 400
 
 // Tried in order; anything else falls back to the compact argument JSON.
 var detailArgKeys = []string{"command", "path", "file_path", "filePath", "pattern", "query", "uri", "url"}
@@ -46,11 +49,14 @@ func detail(arguments map[string]json.RawMessage) string {
 		return ""
 	}
 	for _, key := range detailArgKeys {
-		if argument, ok := arguments[key]; ok {
-			var value string
-			if err := json.Unmarshal(argument, &value); err == nil && value != "" {
-				return truncateRunes(value, detailChars)
-			}
+		if value, ok := stringArg(arguments, key); ok {
+			return truncateRunes(value, detailChars)
+		}
+	}
+	// Keys are sorted so a tool always shows the same argument between calls.
+	for _, key := range slices.Sorted(maps.Keys(arguments)) {
+		if value, ok := stringArg(arguments, key); ok {
+			return truncateRunes(firstLine(value), detailChars)
 		}
 	}
 	compact, err := json.Marshal(arguments)
@@ -58,6 +64,26 @@ func detail(arguments map[string]json.RawMessage) string {
 		return ""
 	}
 	return truncateRunes(string(compact), detailChars)
+}
+
+func stringArg(arguments map[string]json.RawMessage, key string) (string, bool) {
+	argument, ok := arguments[key]
+	if !ok {
+		return "", false
+	}
+	var value string
+	if err := json.Unmarshal(argument, &value); err != nil || value == "" {
+		return "", false
+	}
+	return value, true
+}
+
+func firstLine(value string) string {
+	index := strings.IndexByte(value, '\n')
+	if index < 0 {
+		return value
+	}
+	return strings.TrimRight(value[:index], "\r ") + "…"
 }
 
 func truncateRunes(s string, maxChars int) string {

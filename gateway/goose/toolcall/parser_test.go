@@ -22,7 +22,14 @@ func TestParse_Detail(t *testing.T) {
 		{"file path", `{"path":"src/tools/json/logic.ts"}`, "src/tools/json/logic.ts"},
 		{"snake case path", `{"file_path":"src/a.ts"}`, "src/a.ts"},
 		{"search pattern", `{"pattern":"hexToRgb"}`, "hexToRgb"},
-		{"unknown shape falls back to compact json", `{"weird":1}`, `{"weird":1}`},
+		{"unknown key falls back to its text", `{"content":"write the readme"}`, "write the readme"},
+		{
+			"multi line fallback keeps the first line",
+			`{"content":"- [x] read the design\n- [ ] explore the repo"}`,
+			"- [x] read the design…",
+		},
+		{"lowest key wins among several", `{"zeta":"last","alpha":"first"}`, "first"},
+		{"non textual shape falls back to compact json", `{"weird":1}`, `{"weird":1}`},
 		{"no arguments", `{}`, ""},
 	}
 	for _, tc := range cases {
@@ -41,13 +48,23 @@ func TestParse_Detail(t *testing.T) {
 
 // A long argument must not turn one feed line into a paragraph.
 func TestParse_TruncatesDetail(t *testing.T) {
-	call := Parse(raw("developer__shell", `{"command":"`+strings.Repeat("x", 400)+`"}`))
+	call := Parse(raw("developer__shell", `{"command":"`+strings.Repeat("x", detailChars+50)+`"}`))
 
 	if runes := utf8.RuneCountInString(call.Detail); runes > detailChars+1 {
 		t.Errorf("detail length = %d runes, want <= %d", runes, detailChars+1)
 	}
 	if !strings.HasSuffix(call.Detail, "…") {
 		t.Errorf("a truncated detail must say so, got %q", call.Detail)
+	}
+}
+
+// A chained shell command runs past 160 runes, and cutting it hides what it did.
+func TestParse_KeepsALongCommand(t *testing.T) {
+	command := strings.Repeat("cat package.json && ", 15) + "ls"
+	call := Parse(raw("developer__shell", `{"command":"`+command+`"}`))
+
+	if call.Detail != command {
+		t.Errorf("Detail = %q, want the whole command", call.Detail)
 	}
 }
 
