@@ -14,7 +14,12 @@
             <tabler-icon icon="brain" [size]="14" />
             <span>{{ 'AGENT.THINKING.LABEL' | translate }}</span>
         </div>
-        <button type="button" class="thinking-head" (click)="onToggle()">
+        <button
+            type="button"
+            class="thinking-head"
+            data-testid="agent-thinking-toggle"
+            (click)="onToggle()"
+        >
             <tabler-icon [icon]="isOpen() ? 'chevron-down' : 'chevron-right'" [size]="14" />
             @if (stageLabel()) {
                 <span class="thinking-title">{{ stageLabel() | translate }}</span>
