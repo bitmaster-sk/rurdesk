@@ -197,6 +197,13 @@
             "RACE_ERROR": "This stage just started; skills were not changed",
             "LOAD_ERROR": "Failed to load run skills",
             "SAVE_ERROR": "Failed to save run skills"
+        },
+        "THINKING": {
+            "WORKING": "Agent is working",
+            "GAP": "Some of the thinking did not reach this view.",
+            "TRUNCATED": "The rest of the thinking was dropped at the per-stage limit.",
+            "LABEL": "Thinking",
+            "TAIL_ONLY": "last thoughts only"
         }
     },
     "WORKFLOW": {
@@ -296,7 +303,9 @@
         "KANBAN_PAGE_SIZE": "Kanban page size",
         "GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
         "SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
-        "USER_API_KEY_LIMIT": "API keys per user"
+        "USER_API_KEY_LIMIT": "API keys per user",
+        "IS_AGENT_THINKING_PERSISTED": "Keep the full agent thinking",
+        "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)"
     },
     "CANCEL": "Cancel",
     "BACK": "Back",
@@ -757,6 +766,7 @@
         "forbidden": "You don't have permission to perform this action.",
         "unauthorized": "You are not authorized. Please log in.",
         "not_found": "The requested resource was not found.",
+        "task_not_running_by_agent": "No agent is working on this task right now.",
         "relation_cycle": "This relation would create a cycle.",
         "sprint_window": "A cycle must end after it starts.",
         "bad_request": "Invalid request. Please check your input.",

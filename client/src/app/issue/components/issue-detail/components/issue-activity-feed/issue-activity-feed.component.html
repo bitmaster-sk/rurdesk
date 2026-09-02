@@ -43,6 +43,16 @@
             }
             @if (group.item.type === 'comment') {
                 @if (!group.item.data.anchor) {
+                    @for (
+                        stage of thinkingRowsByMessage().get(group.item.data.idMessage) ?? [];
+                        track stage.stage
+                    ) {
+                        <app-agent-thinking-row
+                            [idRun]="agentRun()!.idRun"
+                            [stage]="stage"
+                            [creator]="group.item.data.creator"
+                        ></app-agent-thinking-row>
+                    }
                     <app-activity-comment-item
                         [message]="group.item.data"
                         [isOwnMessage]="group.item.data.creator.idUser === currentUserId"
@@ -108,6 +118,14 @@
                     [user]="getUserForTrack(group.item.data)"
                 ></app-activity-time-item>
             }
+        }
+        @for (row of trailingThinkingRows(); track row.stage.stage) {
+            <app-agent-thinking-row
+                [idRun]="agentRun()!.idRun"
+                [stage]="row.stage"
+                [isLive]="row.isLive"
+                [creator]="agentCreator()"
+            ></app-agent-thinking-row>
         }
         @if (displayGroups().length === 0) {
             <div class="feed-empty">No activity yet.</div>

@@ -1,0 +1,66 @@
+<div class="activity-item" data-testid="agent-thinking-row">
+    <div class="activity-marker">
+        <app-avatar
+            [name]="creator()?.name ?? ''"
+            [bgColor]="creator()?.colorAvatarBg ?? ''"
+            [height]="1.875"
+            [width]="1.875"
+            [radius]="0.9375"
+        ></app-avatar>
+        <div class="connector"></div>
+    </div>
+    <div class="thinking-card">
+        <div class="kind-badge">
+            <tabler-icon icon="brain" [size]="14" />
+            <span>{{ 'AGENT.THINKING.LABEL' | translate }}</span>
+        </div>
+        <button type="button" class="thinking-head" (click)="onToggle()">
+            <tabler-icon [icon]="isOpen() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+            @if (stageLabel()) {
+                <span class="thinking-title">{{ stageLabel() | translate }}</span>
+            }
+            @if (isLive()) {
+                <span class="working-dot" data-testid="agent-thinking-working"></span>
+                <span>{{ 'AGENT.THINKING.WORKING' | translate }}</span>
+                <span class="thinking-elapsed">{{ elapsed() }}</span>
+            }
+            @if (isTailOnly()) {
+                <span class="thinking-badge" data-testid="agent-thinking-tail-badge">
+                    {{ 'AGENT.THINKING.TAIL_ONLY' | translate }}
+                </span>
+            }
+        </button>
+        @if (isOpen()) {
+            <div #body class="thinking-body" data-testid="agent-thinking-body">
+                @if (hasGap()) {
+                    <div class="thinking-gap">{{ 'AGENT.THINKING.GAP' | translate }}</div>
+                }
+                @for (line of lines(); track $index) {
+                    @switch (line.kind) {
+                        @case (thinkingKind.Tool) {
+                            <div class="thinking-act" [attr.data-kind]="line.toolKind">
+                                <span class="thinking-act-chip">
+                                    <tabler-icon [icon]="toolIcon(line.toolKind)" [size]="12" />
+                                </span>
+                                <span class="thinking-act-body">
+                                    <span class="thinking-act-name">{{ line.label }}</span>
+                                    @if (line.detail) {
+                                        <code class="thinking-act-arg">{{ line.detail }}</code>
+                                    }
+                                </span>
+                            </div>
+                        }
+                        @case (thinkingKind.Truncated) {
+                            <div class="thinking-gap" data-testid="agent-thinking-truncated">
+                                {{ 'AGENT.THINKING.TRUNCATED' | translate }}
+                            </div>
+                        }
+                        @default {
+                            <p class="thinking-thought">{{ line.label }}</p>
+                        }
+                    }
+                }
+            </div>
+        }
+    </div>
+</div>

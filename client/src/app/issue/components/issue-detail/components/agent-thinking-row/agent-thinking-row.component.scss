@@ -1,0 +1,164 @@
+.activity-item {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 14px;
+}
+
+.activity-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+
+    .connector {
+        width: 2px;
+        background: var(--ui-surface-200);
+        flex: 1;
+        margin-top: var(--ui-space-s);
+        min-height: unset;
+    }
+}
+
+.thinking-card {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    padding: 8px 10px;
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-surface-200);
+    border-left: 3px solid var(--ui-pink-500);
+    border-radius: var(--ui-radius-md);
+    font-size: var(--font-size-s);
+}
+
+.kind-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: var(--ui-radius-sm);
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--ui-space-s);
+    background: var(--ui-pink-100);
+    color: var(--ui-pink-800);
+}
+
+.thinking-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    text-align: left;
+}
+
+.thinking-title {
+    color: var(--ui-color-text);
+}
+
+.thinking-badge {
+    padding: 0 var(--ui-space-s);
+    border: 1px solid var(--ui-surface-200);
+    border-radius: 10px;
+}
+
+.thinking-elapsed {
+    margin-left: auto;
+}
+
+.working-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ui-pink-500);
+    animation: thinking-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes thinking-pulse {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+.thinking-body {
+    max-height: 12rem;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space);
+    margin-top: var(--ui-space-s);
+    padding: var(--ui-space) 0;
+    color: var(--ui-color-text);
+}
+
+.thinking-thought {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.thinking-act {
+    display: grid;
+    grid-template-columns: 1.4rem 1fr;
+    gap: var(--ui-space);
+    align-items: start;
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 1px solid var(--ui-surface-200);
+    border-radius: var(--ui-radius-md);
+}
+
+.thinking-act-chip {
+    width: 1.4rem;
+    height: 1.4rem;
+    display: grid;
+    place-items: center;
+    border-radius: var(--ui-radius-sm);
+    background: var(--ui-surface-100);
+    color: var(--ui-color-text-muted);
+}
+
+.thinking-act[data-kind='run'] .thinking-act-chip {
+    background: var(--ui-pink-100);
+    color: var(--ui-pink-700);
+}
+
+.thinking-act[data-kind='write'] .thinking-act-chip {
+    background: var(--ui-brand-100);
+    color: var(--ui-brand-600);
+}
+
+.thinking-act[data-kind='read'] .thinking-act-chip {
+    background: var(--ui-sky-100);
+    color: var(--ui-sky-700);
+}
+
+.thinking-act-body {
+    min-width: 0;
+}
+
+.thinking-act-name {
+    display: block;
+    font-weight: 700;
+    color: var(--ui-color-text);
+}
+
+.thinking-act-arg {
+    display: block;
+    font-family: var(--ui-font-mono, monospace);
+    font-size: 0.76rem;
+    color: var(--ui-color-text-muted);
+    white-space: pre-wrap;
+}
