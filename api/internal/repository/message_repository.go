@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrAnchorWrongThread = errors.New("anchor parent message belongs to a different thread")
-
 type MessageRepository struct {
 	pool *pgxpool.Pool
 }

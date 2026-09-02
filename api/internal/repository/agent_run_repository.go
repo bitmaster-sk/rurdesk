@@ -22,9 +22,6 @@ func isUniqueViolation(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-var ErrRunNotFound = errors.New("agent run not found")
-var ErrPhaseMismatch = errors.New("run phase does not match expected phase")
-
 // EventMirror applies issue-state side effects when a run transitions phase.
 type EventMirror interface {
 	ApplyMirror(ctx context.Context, idProject, idIssue int64, toPhase string)

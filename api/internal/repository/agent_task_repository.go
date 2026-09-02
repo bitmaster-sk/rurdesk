@@ -13,9 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrTaskNotFound = errors.New("agent task not found")
-var ErrTaskStatusMismatch = errors.New("agent task status does not match expected")
-
 type AgentTaskRepository struct {
 	pool *pgxpool.Pool
 }
