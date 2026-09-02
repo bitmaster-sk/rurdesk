@@ -208,8 +208,8 @@ func (s *AgentReconcileSuite) loadRun(idRun int64) *model.AgentRun {
 func (s *AgentReconcileSuite) loadTask(idTask int64) *model.AgentTask {
 	var t model.AgentTask
 	err := s.App.Pool.QueryRow(context.Background(), `
-		SELECT status, id_output_message FROM agent.task WHERE id_task = $1`, idTask,
-	).Scan(&t.Status, &t.IdOutputMessage)
+		SELECT status, id_result_message FROM agent.task WHERE id_task = $1`, idTask,
+	).Scan(&t.Status, &t.IdResultMessage)
 	s.Require().NoError(err)
 	return &t
 }
@@ -256,7 +256,7 @@ func (s *AgentReconcileSuite) Test_01_ReconcileCrashFailedWithPr() {
 	s.Equal(1, int(s.createPRCalls.Load()), "exactly one PR created/reused")
 	task := s.loadTask(idTask)
 	s.Equal("completed", task.Status)
-	s.NotNil(task.IdOutputMessage, "agent message persisted")
+	s.NotNil(task.IdResultMessage, "agent message persisted")
 }
 
 // T2: a genuinely-failed task (agent error) is NOT reconciled and creates NO PR.

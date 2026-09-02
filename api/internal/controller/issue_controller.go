@@ -646,7 +646,7 @@ func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, ne
 	if oldIssue.AssignedTo != nil && existing != nil {
 		oldUser, err := ic.userRepo.LoadUser(ctx, *oldIssue.AssignedTo)
 		if err == nil && oldUser.IsBot {
-			_ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			_, _ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
 			runForAbort := existing // still points at the old bot
 			go func() {
 				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort)

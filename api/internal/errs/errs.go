@@ -71,6 +71,7 @@ var (
 	ErrSkillStageDispatched            = newErr("SKILL_STAGE_DISPATCHED", "stage already started; its skills can no longer be changed", "error.skill_stage_dispatched", http.StatusConflict)
 	ErrUnknownSkill                    = newErr("UNKNOWN_SKILL", "the request references a skill that does not exist", "error.unknown_skill", http.StatusBadRequest)
 	ErrStageNotInPlan                  = newErr("STAGE_NOT_IN_PLAN", "stage is not in the run's stage plan", "error.stage_not_in_plan", http.StatusBadRequest)
+	ErrTaskNotRunningByAgent           = newErr("TASK_NOT_RUNNING_BY_AGENT", "agent task is not being executed by an agent", "error.task_not_running_by_agent", http.StatusConflict)
 )
 
 // As reports whether err is (or wraps) an *Error, storing it in target. It

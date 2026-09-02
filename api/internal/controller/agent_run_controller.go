@@ -26,6 +26,8 @@ import (
 type AgentRunController struct {
 	agentRunRepo  *repository.AgentRunRepository
 	agentTaskRepo *repository.AgentTaskRepository
+	tasks         *agent.TaskService
+	thinking      *agent.ThinkingService
 	botGwRepo     *repository.BotGatewayRepository
 	issueRepo     *repository.IssueRepository
 	projectRepo   *repository.ProjectRepository
@@ -41,6 +43,8 @@ type AgentRunController struct {
 func NewAgentRunController(
 	agentRunRepo *repository.AgentRunRepository,
 	agentTaskRepo *repository.AgentTaskRepository,
+	tasks *agent.TaskService,
+	thinking *agent.ThinkingService,
 	botGwRepo *repository.BotGatewayRepository,
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
@@ -55,6 +59,8 @@ func NewAgentRunController(
 	return &AgentRunController{
 		agentRunRepo:  agentRunRepo,
 		agentTaskRepo: agentTaskRepo,
+		tasks:         tasks,
+		thinking:      thinking,
 		botGwRepo:     botGwRepo,
 		issueRepo:     issueRepo,
 		projectRepo:   projectRepo,
@@ -313,8 +319,10 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
+	if idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
 		log.Warn().Err(err).Int64("idRun", idRun).Msg("cancel: failed to cancel non-terminal tasks")
+	} else {
+		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
 	go func() {
@@ -418,8 +426,10 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	if !constants.TerminalPhases[oldRun.Phase] {
 		_, _ = ctrl.agentRunRepo.TransitionPhase(ctx, idRun, oldRun.Phase, constants.PhaseCancelled, constants.ActorTypeUser, &idUser, "restart")
 	}
-	if err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
+	if idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
 		log.Warn().Err(err).Int64("idRun", idRun).Msg("restart: failed to cancel non-terminal tasks")
+	} else {
+		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
 	stagePlan, err := ctrl.stagePlan.Build(ctrl.stagePlan.IdsSkillByStage(oldRun.StagePlan))
@@ -606,42 +616,25 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 // back and the caller responds 200 no-op, not 500.
 var errReconcileSuperseded = errors.New("reconcile superseded by concurrent run transition")
 
-// requireRunBot asserts the caller is the bot executing this run, and writes the
-// response when it is not.
-//
-// The gateway callbacks sit in the ordinary authenticated group, which accepts
-// any user JWT — the API key is not a distinct principal — so this match against
-// run.IdUserBot is the whole authorization boundary. A human can never match it,
-// since IdUserBot always points at a bot account.
-func (ctrl *AgentRunController) requireRunBot(c *gin.Context, idUserBot int64) bool {
-	caller, ok := extctx.GetUser(c.Request.Context())
-	if !ok {
-		_ = c.Error(errForbidden)
-		c.Status(http.StatusUnauthorized)
-		return false
-	}
-	if caller.IdUser != idUserBot {
-		_ = c.Error(errForbidden)
-		c.Status(http.StatusForbidden)
-		return false
-	}
-	return true
-}
-
-// requireTaskBot is requireRunBot for callbacks addressed by task id, resolving
-// the owning bot in one indexed lookup rather than loading task and run.
-func (ctrl *AgentRunController) requireTaskBot(c *gin.Context, idTask int64) bool {
-	idUserBot, err := ctrl.agentTaskRepo.BotForTask(c.Request.Context(), idTask)
-	if err != nil {
-		if errors.Is(err, repository.ErrTaskNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "task not found"})
-			return false
-		}
+// requireAssignedAgent authorizes a callback addressed by task id, writing the
+// response when the caller is not the task's agent. A task that does not exist
+// is a 404, not a refusal — a typo in a task id must not read as revoked access.
+func (ctrl *AgentRunController) requireAssignedAgent(c *gin.Context, idTask, idUser int64) bool {
+	isAgent, err := ctrl.tasks.IsAgentAssignedToTask(c.Request.Context(), idUser, idTask)
+	switch {
+	case errors.Is(err, repository.ErrTaskNotFound):
+		_ = c.Error(errs.ErrNotFound)
+		c.Status(http.StatusNotFound)
+	case err != nil:
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
-		return false
+	case !isAgent:
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
+	default:
+		return true
 	}
-	return ctrl.requireRunBot(c, idUserBot)
+	return false
 }
 
 // CompleteStage is the callback endpoint both the gateway and the MCP
@@ -670,7 +663,10 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "run not found"})
 		return
 	}
-	if !ctrl.requireRunBot(c, run.IdUserBot) {
+	user, _ := extctx.GetUser(ctx)
+	if user.IdUser != run.IdUserBot {
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
@@ -732,6 +728,8 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": txErr.Error()})
 		return
 	}
+
+	ctrl.thinking.Compact(ctx, idTask)
 
 	members, _ := ctrl.projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
 	var idsUser []int64
@@ -816,7 +814,7 @@ func (ctrl *AgentRunController) applyCompleteStage(
 	if body.Outcome == constants.StageOutcomeErrored {
 		targetStatus = constants.TaskStatusFailed
 	}
-	if err := ctrl.agentTaskRepo.SetOutputAndStats(ctx, task.IdTask, *idMessageOut, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
+	if err := ctrl.agentTaskRepo.SetResultAndStats(ctx, task.IdTask, *idMessageOut, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
 		return err
 	}
 	// CompleteReconcilable accepts the task from `active` (normal completion) or
@@ -916,7 +914,8 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if !ctrl.requireTaskBot(c, idTask) {
+	user, _ := extctx.GetUser(ctx)
+	if !ctrl.requireAssignedAgent(c, idTask, user.IdUser) {
 		return
 	}
 	if err := ctrl.agentTaskRepo.UpdateStats(ctx, idTask, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
@@ -970,7 +969,10 @@ func (ctrl *AgentRunController) ReportRunRepo(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "run not found"})
 		return
 	}
-	if !ctrl.requireRunBot(c, run.IdUserBot) {
+	user, _ := extctx.GetUser(ctx)
+	if user.IdUser != run.IdUserBot {
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
 		return
 	}
 
@@ -1028,7 +1030,8 @@ func (ctrl *AgentRunController) TaskHeartbeat(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid idTask"})
 		return
 	}
-	if !ctrl.requireTaskBot(c, idTask) {
+	user, _ := extctx.GetUser(ctx)
+	if !ctrl.requireAssignedAgent(c, idTask, user.IdUser) {
 		return
 	}
 	if err := ctrl.agentTaskRepo.RecordHeartbeat(ctx, idTask); err != nil {
