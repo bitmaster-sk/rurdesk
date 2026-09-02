@@ -4,6 +4,11 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StagedIssue } from 'src/app/shared/staged-issue/staged-issue.model';
 import { ProposedIssue } from '../../../model/split.model';
 
+// Client-only list key for the split-review dialog. `crypto.randomUUID` is
+// unavailable in non-secure contexts (plain-HTTP LAN deployments), so we use
+// a session-scoped counter — matching the convention in the ui-* components.
+let nextStagedRef = 0;
+
 @Component({
     selector: 'app-split-review-step',
     templateUrl: './split-review-step.component.html',
@@ -39,7 +44,7 @@ export class SplitReviewStepComponent {
         this.issues.update(list => [
             ...list,
             {
-                ref: crypto.randomUUID(),
+                ref: `staged-${++nextStagedRef}`,
                 title: '',
                 description: '',
                 idSeverity: null,
@@ -63,7 +68,7 @@ export class SplitReviewStepComponent {
 
     private toStaged(child: ProposedIssue): StagedIssue {
         return {
-            ref: crypto.randomUUID(),
+            ref: `staged-${++nextStagedRef}`,
             title: child.title,
             description: child.description,
             idSeverity: child.idSeverity,
