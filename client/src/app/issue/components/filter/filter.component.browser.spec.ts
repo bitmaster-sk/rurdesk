@@ -68,7 +68,6 @@ describe('FilterComponent — date modes (browser)', () => {
     it('sends the selected preset as a rolling window, with no absolute bounds', () => {
         const component = render();
         component.form.patchValue({ updateAt: { preset: '30d' } });
-        vi.advanceTimersByTime(300);
 
         expect(lastFilter().updateAtWithin).toBe('30d');
         expect(lastFilter().updateAtFrom).toBeNull();
@@ -80,7 +79,6 @@ describe('FilterComponent — date modes (browser)', () => {
         const from = new Date('2026-01-01T00:00:00Z');
         const to = new Date('2026-01-31T00:00:00Z');
         component.form.patchValue({ createAt: { from, to } });
-        vi.advanceTimersByTime(300);
 
         expect(lastFilter().createAtFrom).toBe(from);
         expect(lastFilter().createAtTo).toBe(to);
@@ -99,7 +97,6 @@ describe('FilterComponent — date modes (browser)', () => {
     it('keeps the two date fields independent', () => {
         const component = render();
         component.form.patchValue({ createAt: { preset: '7d' }, updateAt: { preset: '90d' } });
-        vi.advanceTimersByTime(300);
 
         expect(lastFilter().createAtWithin).toBe('7d');
         expect(lastFilter().updateAtWithin).toBe('90d');
@@ -233,9 +230,6 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         return fixture.componentInstance;
     }
 
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
-
     it('follows a new initial filter set after mount', () => {
         const component = render();
         expect(component.form.get('idsState')!.value).toEqual([1]);
@@ -252,7 +246,6 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         const component = render();
 
         component.form.patchValue({ idsAssignedTo: [1] });
-        vi.advanceTimersByTime(300);
 
         expect(setFilter).toHaveBeenCalled();
         expect('idProject' in setFilter.mock.calls[0][0]).toBe(false);
@@ -287,5 +280,67 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         initialFilter$.next(filter({}));
 
         expect(component.form.get('updateAt')!.value).toBeNull();
+    });
+});
+
+describe('FilterComponent — title debounce (browser)', () => {
+    let setFilter: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        setFilter = vi.fn();
+
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [FilterComponent],
+            providers: [
+                {
+                    provide: IssueFilterStore,
+                    useValue: { setFilter, initialFilter$: EMPTY, getFilter: () => null }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
+                { provide: ProjectMemberStore, useValue: { users$: of([]) } },
+                { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
+                { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
+            ]
+        })
+            .overrideComponent(FilterComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    function render(): FilterComponent {
+        const fixture = TestBed.createComponent(FilterComponent);
+        fixture.detectChanges();
+        return fixture.componentInstance;
+    }
+
+    function firstFilter(): IssuesFilterParams {
+        return setFilter.mock.calls[0][0] as IssuesFilterParams;
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('sends one filter for a burst of typing in the title', () => {
+        const component = render();
+
+        for (const value of ['l', 'lo', 'log', 'logi', 'login']) {
+            component.form.patchValue({ title: value });
+        }
+        expect(setFilter).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(300);
+
+        expect(setFilter).toHaveBeenCalledTimes(1);
+        expect(firstFilter().title).toBe('login');
+    });
+
+    it('applies a state change without waiting for the debounce', () => {
+        const component = render();
+
+        component.form.patchValue({ idsState: [4] });
+
+        expect(setFilter).toHaveBeenCalledTimes(1);
+        expect(firstFilter().idsState).toEqual([4]);
     });
 });
