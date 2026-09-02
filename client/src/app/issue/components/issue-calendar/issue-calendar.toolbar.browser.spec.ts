@@ -150,4 +150,30 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
             });
         });
     });
+
+    // =========================================================================
+    // locale / i18n
+    // =========================================================================
+
+    describe('locale', () => {
+        it('initial locale derives from I18nService.currentLang', () => {
+            expect(comp.defaultCalendarOps.locale).toBe('en-gb');
+        });
+
+        it('langChange$ updates the calendar locale via setOption', () => {
+            const langChange$ = mocks.i18nMock.langChange$.source;
+            const setOption = comp.calendarRef().getApi().setOption;
+
+            langChange$.next({ lang: 'sk' });
+            expect(setOption).toHaveBeenCalledWith('locale', 'sk');
+        });
+
+        it('falls back to English when an unsupported language is selected', () => {
+            const langChange$ = mocks.i18nMock.langChange$.source;
+            const setOption = comp.calendarRef().getApi().setOption;
+
+            langChange$.next({ lang: 'unknown' });
+            expect(setOption).toHaveBeenCalledWith('locale', 'en-gb');
+        });
+    });
 });
