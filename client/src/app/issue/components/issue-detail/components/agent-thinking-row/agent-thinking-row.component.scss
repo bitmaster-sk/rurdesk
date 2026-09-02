@@ -115,6 +115,21 @@
     color: var(--ui-color-text);
 }
 
+.thinking-gap {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 1px solid var(--ui-amber-200);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-amber-50);
+    color: var(--ui-amber-800);
+
+    tabler-icon {
+        flex-shrink: 0;
+    }
+}
+
 .thinking-thought {
     margin: 0;
     white-space: pre-wrap;

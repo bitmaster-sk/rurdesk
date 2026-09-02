@@ -40,7 +40,10 @@
         @if (isOpen()) {
             <div #body class="thinking-body" data-testid="agent-thinking-body">
                 @if (hasGap()) {
-                    <div class="thinking-gap">{{ 'AGENT.THINKING.GAP' | translate }}</div>
+                    <div class="thinking-gap">
+                        <tabler-icon icon="alert-triangle" [size]="14" />
+                        <span>{{ 'AGENT.THINKING.GAP' | translate }}</span>
+                    </div>
                 }
                 @for (line of lines(); track $index) {
                     @switch (line.kind) {
@@ -59,7 +62,8 @@
                         }
                         @case (thinkingKind.Truncated) {
                             <div class="thinking-gap" data-testid="agent-thinking-truncated">
-                                {{ 'AGENT.THINKING.TRUNCATED' | translate }}
+                                <tabler-icon icon="alert-triangle" [size]="14" />
+                                <span>{{ 'AGENT.THINKING.TRUNCATED' | translate }}</span>
                             </div>
                         }
                         @default {
