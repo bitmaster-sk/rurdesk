@@ -34,6 +34,24 @@ services:
         networks:
             e2e_network:
 
+    stub-gateway:
+        build:
+            context: ../..
+            dockerfile: docker/e2e/Dockerfile.stub-gateway
+        container_name: e2e_stub_gateway
+        restart: "no"
+        # The bot does not exist when this starts, so its tokens arrive at
+        # runtime on /configure — the test posts them after creating the bot.
+        environment:
+            TRACKER_URL: http://tracker:1000
+            LISTEN_PORT: "9090"
+        ports:
+            - "9090:9090"
+        depends_on:
+            - tracker
+        networks:
+            e2e_network:
+
     db:
         image: postgres:17
         container_name: e2e_db

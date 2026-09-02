@@ -250,7 +250,7 @@ func stageArtifactContext(stage string, tasks []*model.AgentTask, messages []*mo
 func latestStageOutput(stage string, tasks []*model.AgentTask, messages []*model.Message) *model.Message {
 	var latest *model.AgentTask
 	for _, task := range tasks {
-		if task.Stage != stage || task.Status != constants.TaskStatusCompleted || task.IdOutputMessage == nil {
+		if task.Stage != stage || task.Status != constants.TaskStatusCompleted || task.IdResultMessage == nil {
 			continue
 		}
 		if latest == nil || task.AttemptNo > latest.AttemptNo ||
@@ -261,7 +261,7 @@ func latestStageOutput(stage string, tasks []*model.AgentTask, messages []*model
 	if latest == nil {
 		return nil
 	}
-	return findMessageById(messages, *latest.IdOutputMessage)
+	return findMessageById(messages, *latest.IdResultMessage)
 }
 
 func findMessageById(messages []*model.Message, idMessage int64) *model.Message {

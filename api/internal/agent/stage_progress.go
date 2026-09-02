@@ -67,6 +67,9 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 
 		prog.AttemptNo = task.AttemptNo
 		prog.IdUserBot = task.IdUserBot
+		prog.IdResultMessage = task.IdResultMessage
+		prog.ThinkingTail = task.ThinkingTail
+		prog.HasThinking = task.HasThinking
 		switch task.Status {
 		case constants.TaskStatusActive, constants.TaskStatusPending:
 			prog.Status = "active"
@@ -138,7 +141,7 @@ func isApprovable(stage string) bool {
 func completedNote(stage string, task *model.AgentTask) string {
 	switch stage {
 	case constants.StageBrainstorming:
-		if task.IdOutputMessage == nil {
+		if task.IdResultMessage == nil {
 			return stageNoteNoClarifications
 		}
 		return ""

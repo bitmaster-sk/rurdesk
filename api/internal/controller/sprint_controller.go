@@ -222,7 +222,7 @@ func (sc *SprintController) Velocity(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	spec := constants.KnownAppSettings[constants.SettingSprintVelocityLimit]
+	spec := constants.KnownAppNumericSettings[constants.SettingSprintVelocityLimit]
 	limit := 2 * sc.settings.SprintVelocityLimit()
 	if raw := c.Query("limit"); raw != "" {
 		limit, err = strconv.Atoi(raw)

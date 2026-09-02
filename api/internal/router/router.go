@@ -45,6 +45,7 @@ func New(
 	myIssuesCtrl *controller.MyIssuesController,
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
+	agentThinkingCtrl *controller.AgentThinkingController,
 	botGwCtrl *controller.BotGatewayController,
 	workflowEventMapCtrl *controller.WorkflowEventMapController,
 	skillCtrl *controller.SkillController,
@@ -269,6 +270,7 @@ func New(
 	pri.POST("/agent/run/:idRun/continue", agentRunCtrl.Continue)
 	pri.POST("/agent/run/:idRun/restart", agentRunCtrl.Restart)
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
+	pri.GET("/agent/run/:idRun/thinking", agentThinkingCtrl.Get)
 	pri.GET("/agent/run/:idRun/skills", agentRunCtrl.GetSkills)
 	pri.PATCH("/agent/run/:idRun/skills", agentRunCtrl.PatchSkills)
 	pri.GET("/project/:idProject/agent/runs", agentRunCtrl.GetRunsByProject)
@@ -276,12 +278,13 @@ func New(
 
 	// Gateway-facing callbacks. These share the ordinary authenticated group —
 	// middleware.Auth accepts user JWTs and bot API keys alike — so each handler
-	// authorizes itself against the run's own bot (requireRunBot/requireTaskBot).
+	// authorizes itself against the run's own agent (agent.TaskService).
 	// Do not add a callback here without that check.
 	pri.POST("/agent/run/:idRun/repo", agentRunCtrl.ReportRunRepo)
 	pri.POST("/agent/task/:idTask/complete", agentRunCtrl.CompleteStage)
 	pri.POST("/agent/task/:idTask/heartbeat", agentRunCtrl.TaskHeartbeat)
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)
+	pri.POST("/agent/task/:idTask/thinking", agentThinkingCtrl.Create)
 	pri.POST("/agent/gateway/recovered", agentRunCtrl.GatewayRecovered)
 
 	// Workflow event→state map (project owner only)

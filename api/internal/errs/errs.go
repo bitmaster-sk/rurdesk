@@ -141,8 +141,8 @@ var (
 	ErrRunContinueInvalid     = newErr("RUN_CONTINUE_INVALID", "continue only valid on failed or cancelled runs", "error.run_continue_invalid", http.StatusUnprocessableEntity)
 	ErrNoStageToContinue      = newErr("NO_STAGE_TO_CONTINUE", "no stage to continue", "error.no_stage_to_continue", http.StatusUnprocessableEntity)
 	ErrRunHasPr               = newErr("RUN_HAS_PR", "cannot restart a run that already has a pull request; continue or close it instead", "error.run_has_pr", http.StatusUnprocessableEntity)
-	ErrTaskNotActive          = newErr("TASK_NOT_ACTIVE", "task is not active", "error.task_not_active", http.StatusUnprocessableEntity)
 	ErrTaskNotFound           = newErr("TASK_NOT_FOUND", "task not found", "error.task_not_found", http.StatusUnprocessableEntity)
+	ErrTaskNotRunningByAgent  = newErr("TASK_NOT_RUNNING_BY_AGENT", "agent task is not being executed by an agent", "error.task_not_running_by_agent", http.StatusConflict)
 
 	// ── Issue / message conflicts ──────────────────────────────────────────
 
