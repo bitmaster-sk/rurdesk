@@ -98,6 +98,10 @@ func (s *AppSettingsService) IsAgentThinkingPersisted() bool {
 	return s.getBool(constants.SettingIsAgentThinkingPersisted)
 }
 
+func (s *AppSettingsService) AgentThinkingMaxKb() int {
+	return s.getNumeric(constants.SettingAgentThinkingMaxKb)
+}
+
 // Update validates every key, persists, then reloads the snapshot.
 func (s *AppSettingsService) Update(ctx context.Context, numericChanges map[string]int, boolChanges map[string]bool) error {
 	persist := make(map[string]string, len(numericChanges)+len(boolChanges))

@@ -65,7 +65,8 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         ganttBacklogPageSize: 30,
         sprintVelocityLimit: 10,
         userApiKeyLimit: 10,
-        isAgentThinkingPersisted: false
+        isAgentThinkingPersisted: false,
+        agentThinkingMaxKb: 1024
     };
 
     async function setup() {

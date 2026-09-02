@@ -46,7 +46,11 @@ export class AdminSettingsComponent {
             ],
             sprintVelocityLimit: [10, [Validators.required, Validators.min(1), Validators.max(50)]],
             userApiKeyLimit: [10, [Validators.required, Validators.min(1), Validators.max(100)]],
-            isAgentThinkingPersisted: this.fb.nonNullable.control(true, { updateOn: 'change' })
+            isAgentThinkingPersisted: this.fb.nonNullable.control(true, { updateOn: 'change' }),
+            agentThinkingMaxKb: [
+                1024,
+                [Validators.required, Validators.min(64), Validators.max(10240)]
+            ]
         },
         { updateOn: 'blur' }
     );

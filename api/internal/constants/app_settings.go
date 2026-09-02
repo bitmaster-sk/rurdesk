@@ -9,6 +9,7 @@ const (
 	SettingUserApiKeyLimit      = "user.api_key_limit"
 
 	SettingIsAgentThinkingPersisted = "agent.is_thinking_persisted"
+	SettingAgentThinkingMaxKb       = "agent.thinking_max_kb"
 )
 
 // AppNumericSettingsSpec describes a known numeric setting: its default and inclusive bounds.
@@ -25,6 +26,7 @@ var KnownAppNumericSettings = map[string]AppNumericSettingsSpec{
 	SettingGanttBacklogPageSize: {Default: 30, Min: 1, Max: 200},
 	SettingSprintVelocityLimit:  {Default: 10, Min: 1, Max: 50},
 	SettingUserApiKeyLimit:      {Default: 10, Min: 1, Max: 100},
+	SettingAgentThinkingMaxKb:   {Default: 1024, Min: 64, Max: 10240},
 }
 
 // KnownAppBoolSettings maps each known boolean setting to its default.

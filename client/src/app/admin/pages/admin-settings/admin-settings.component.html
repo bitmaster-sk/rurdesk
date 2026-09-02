@@ -66,6 +66,18 @@
                     data-testid="settings-agent-thinking-persistence"
                 />
             </div>
+            <div class="flex flex-col gap-1">
+                <label for="agentThinkingMaxKb">
+                    {{ 'SETTINGS.AGENT_THINKING_MAX_KB' | translate }}
+                </label>
+                <input
+                    id="agentThinkingMaxKb"
+                    uiInput
+                    type="number"
+                    formControlName="agentThinkingMaxKb"
+                    data-testid="settings-agent-thinking-max-kb"
+                />
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

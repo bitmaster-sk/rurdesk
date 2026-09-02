@@ -5,6 +5,7 @@ export interface AppSettings {
     sprintVelocityLimit: number;
     userApiKeyLimit: number;
     isAgentThinkingPersisted: boolean;
+    agentThinkingMaxKb: number;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;

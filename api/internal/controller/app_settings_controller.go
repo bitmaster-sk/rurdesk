@@ -30,6 +30,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		SprintVelocityLimit:      sc.settings.SprintVelocityLimit(),
 		UserApiKeyLimit:          sc.settings.UserApiKeyLimit(),
 		IsAgentThinkingPersisted: sc.settings.IsAgentThinkingPersisted(),
+		AgentThinkingMaxKb:       sc.settings.AgentThinkingMaxKb(),
 	})
 }
 
@@ -56,6 +57,9 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.UserApiKeyLimit != nil {
 		numericChanges[constants.SettingUserApiKeyLimit] = *req.UserApiKeyLimit
+	}
+	if req.AgentThinkingMaxKb != nil {
+		numericChanges[constants.SettingAgentThinkingMaxKb] = *req.AgentThinkingMaxKb
 	}
 	boolChanges := map[string]bool{}
 	if req.IsAgentThinkingPersisted != nil {
