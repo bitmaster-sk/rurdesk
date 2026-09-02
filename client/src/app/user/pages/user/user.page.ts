@@ -35,6 +35,7 @@ export class UserPage implements OnInit {
     private readonly sPin = inject(PinService);
     private readonly severityStore = inject(SeverityStore);
     private readonly sTracker = inject(TrackerService);
+    private readonly datePipe = inject(DatePipe);
 
     private readonly _user$ = toObservable(this.authStore.user).pipe(
         filter((u): u is User => u !== null)
@@ -90,6 +91,13 @@ export class UserPage implements OnInit {
         to.setHours(23, 59, 59);
         const from = subDays(to, 6);
         from.setHours(0, 0, 0);
+        return { from, to };
+    });
+
+    public rangeLabel = computed(() => {
+        const range = this.weekRange();
+        const from = this.datePipe.transform(range.from, 'mediumDate')!;
+        const to = this.datePipe.transform(range.to, 'mediumDate')!;
         return { from, to };
     });
 
