@@ -7,7 +7,7 @@ function notif(overrides: Partial<Notification>): Notification {
         idNotification: 1,
         type: NotificationType.Comment,
         isRead: false,
-        createdAt: new Date('2026-04-01T00:00:00Z'),
+        createdAt: '2026-04-01T00:00:00Z',
         ...overrides
     };
 }
