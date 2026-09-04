@@ -516,9 +516,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         });
         issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
             }
         });
     }
@@ -544,9 +543,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             });
         }
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
             }
         });
         this.settleDroppedEvent(issue.idIssue);

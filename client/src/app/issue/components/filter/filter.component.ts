@@ -9,7 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { Observable, merge, of } from 'rxjs';
-import { distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -119,29 +119,48 @@ export class FilterComponent implements OnInit {
     }
 
     private onFormChange(): void {
-        this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
-            const values = this.form.getRawValue();
-            const createAt = this.dateFilterFor(values.createAt);
-            const updateAt = this.dateFilterFor(values.updateAt);
-            // No idProject on purpose: the panel never edits it, and pushing its own copy
-            // overwrote the store's with null whenever the panel mounted late.
-            this.issueFilterStore.setFilter({
-                title: values.title,
-                idsSeverity: values.idsSeverity ?? undefined,
-                severityUnset: values.severityUnset ?? undefined,
-                idsIssueType: values.idsIssueType ?? undefined,
-                issueTypeUnset: values.issueTypeUnset ?? undefined,
-                idsState: values.idsState ?? undefined,
-                stateUnset: values.stateUnset ?? undefined,
-                idsAssignedTo: values.idsAssignedTo ?? undefined,
-                assignedToUnset: values.assignedToUnset ?? undefined,
-                createAtFrom: createAt.from,
-                createAtTo: createAt.to,
-                createAtWithin: createAt.within,
-                updateAtFrom: updateAt.from,
-                updateAtTo: updateAt.to,
-                updateAtWithin: updateAt.within
-            });
+        const controls = this.form.controls;
+        const title$ = controls.title.valueChanges.pipe(debounceTime(300));
+        const rest$ = merge(
+            controls.idsState.valueChanges,
+            controls.stateUnset.valueChanges,
+            controls.idsSeverity.valueChanges,
+            controls.severityUnset.valueChanges,
+            controls.idsIssueType.valueChanges,
+            controls.issueTypeUnset.valueChanges,
+            controls.idsAssignedTo.valueChanges,
+            controls.assignedToUnset.valueChanges,
+            controls.createAt.valueChanges,
+            controls.updateAt.valueChanges
+        );
+
+        merge(title$, rest$)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.applyFilter());
+    }
+
+    private applyFilter(): void {
+        const values = this.form.getRawValue();
+        const createAt = this.dateFilterFor(values.createAt);
+        const updateAt = this.dateFilterFor(values.updateAt);
+        // No idProject on purpose: the panel never edits it, and pushing its own copy
+        // overwrote the store's with null whenever the panel mounted late.
+        this.issueFilterStore.setFilter({
+            title: values.title,
+            idsSeverity: values.idsSeverity ?? undefined,
+            severityUnset: values.severityUnset ?? undefined,
+            idsIssueType: values.idsIssueType ?? undefined,
+            issueTypeUnset: values.issueTypeUnset ?? undefined,
+            idsState: values.idsState ?? undefined,
+            stateUnset: values.stateUnset ?? undefined,
+            idsAssignedTo: values.idsAssignedTo ?? undefined,
+            assignedToUnset: values.assignedToUnset ?? undefined,
+            createAtFrom: createAt.from,
+            createAtTo: createAt.to,
+            createAtWithin: createAt.within,
+            updateAtFrom: updateAt.from,
+            updateAtTo: updateAt.to,
+            updateAtWithin: updateAt.within
         });
     }
 

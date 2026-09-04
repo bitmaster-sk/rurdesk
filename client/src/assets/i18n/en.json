@@ -922,6 +922,7 @@
     "GIT_INTEGRATION": {
         "SINGULAR": "Git Integration",
         "PLURAL": "Git Integrations",
+        "CONFIRM_DELETE": "Delete this integration? Linked merge requests will stop syncing.",
         "NEW": "New integration",
         "ADD": "Add integration",
         "EDIT": "Edit integration",
