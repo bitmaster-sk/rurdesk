@@ -18,7 +18,10 @@
                     {{ c.name }}
                 </span>
                 @if (getUnreadCount(c.unreadKey); as cnt) {
-                <ui-badge [value]="formatCount(cnt)" severity="danger"></ui-badge>
+                <ui-badge
+                    [value]="MessageFormatter.formatUnreadBadgeText(cnt)"
+                    severity="danger"
+                ></ui-badge>
                 }
             </a>
         </div>
