@@ -25,7 +25,6 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamService } from 'src/app/team/team.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
 @Component({
@@ -42,7 +41,6 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly userApi = inject(UserApi);
     private readonly sProject = inject(ProjectService);
     private readonly sNotice = inject(NoticeService);
-    private readonly i18n = inject(I18nService);
 
     private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
 
@@ -117,7 +115,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     ): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('PROJECT.CHATS'),
+                labelKey: 'PROJECT.CHATS',
                 items: projects.map(p => this.toProjectChatMenuItem(p, unreadMap))
             }
         ];
@@ -142,7 +140,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private toTeamChatMenuItems(teams: Team[], unreadMap: Map<string, Message[]>): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('TEAM.CHATS'),
+                labelKey: 'TEAM.CHATS',
                 items: teams.map(t => this.toTeamChatMenuItem(t, unreadMap))
             }
         ];
@@ -167,7 +165,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     ): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('DIRECT.CHATS'),
+                labelKey: 'DIRECT.CHATS',
                 items: users.map(u => this.toTeammatesChatMenuItem(u, unreadMap, currentUserId))
             }
         ];

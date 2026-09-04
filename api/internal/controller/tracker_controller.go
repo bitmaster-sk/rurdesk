@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -112,7 +113,7 @@ func (tc *TrackerController) CreateTracker(c *gin.Context) {
 	}
 
 	if !tc.acl.CanUpdateIssue(ctx, user.IdUser, project.IdProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -124,6 +125,7 @@ func (tc *TrackerController) CreateTracker(c *gin.Context) {
 		return
 	}
 	if err == nil {
+		_ = c.Error(errs.ErrConflict)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -162,6 +164,7 @@ func (tc *TrackerController) DeleteTracker(c *gin.Context) {
 		return
 	}
 	if tracker.IdTracker != idTracker {
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -192,7 +195,7 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 			return err
 		}
 		if tracker.IdTracker != idTracker {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		track = tracker.ToTrack()
@@ -210,8 +213,8 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 		}
 		return tc.trackerRepo.DeleteTracker(ctx, tracker.IdTracker)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -247,7 +250,7 @@ func (tc *TrackerController) GetTracks(c *gin.Context) {
 
 	if len(filter.IdsProject) == 1 {
 		if !tc.acl.CanReadProject(ctx, user.IdUser, filter.IdsProject[0]) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -269,7 +272,7 @@ func (tc *TrackerController) GetTracks(c *gin.Context) {
 			return
 		}
 		if !tc.acl.CanReadProject(ctx, user.IdUser, issueProject.IdProject) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -308,7 +311,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 			return projectErr
 		}
 		if !tc.acl.CanUpdateIssue(ctx, user.IdUser, issueProject.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		t := &model.Track{
@@ -343,8 +346,8 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 		}
 		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -392,10 +395,10 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 			return err
 		}
 		if !tc.acl.CanUpdateIssue(ctx, user.IdUser, issueProject.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if !tc.canMutateTrack(ctx, user.IdUser, t, issueProject.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		t.Tracked = dto.Tracked
@@ -425,8 +428,8 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 		}
 		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -469,18 +472,18 @@ func (tc *TrackerController) DeleteTrack(c *gin.Context) {
 			return err
 		}
 		if !tc.acl.CanUpdateIssue(ctx, user.IdUser, project.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if !tc.canMutateTrack(ctx, user.IdUser, track, project.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if err := tc.trackerRepo.DeleteTrack(ctx, idTrack); err != nil {
 			return err
 		}
 		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

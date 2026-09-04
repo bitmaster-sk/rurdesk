@@ -40,6 +40,7 @@ function makeCalendarApi() {
         updateSize: vi.fn(),
         removeAllEventSources: vi.fn(),
         addEventSource: vi.fn(),
+        setOption: vi.fn(),
         on: vi.fn(),
         setOption: vi.fn(),
         el

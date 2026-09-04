@@ -16,14 +16,14 @@ func messageOfKind(id int64, kind constants.MessageKind) *model.Message {
 	return &model.Message{IdMessage: id, MessageKind: kind}
 }
 
-func completedStageTaskWithOutput(stage string, attemptNo int, idOutputMessage int64, createdOffset time.Duration) *model.AgentTask {
-	id := idOutputMessage
+func completedStageTaskWithOutput(stage string, attemptNo int, idResultMessage int64, createdOffset time.Duration) *model.AgentTask {
+	id := idResultMessage
 	return &model.AgentTask{
-		IdTask:          idOutputMessage,
+		IdTask:          idResultMessage,
 		Stage:           stage,
 		AttemptNo:       attemptNo,
 		Status:          constants.TaskStatusCompleted,
-		IdOutputMessage: &id,
+		IdResultMessage: &id,
 		CreatedAt:       baseTime.Add(createdOffset),
 	}
 }

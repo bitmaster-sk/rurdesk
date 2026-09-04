@@ -43,7 +43,8 @@
                             <tabler-icon icon="chevron-left" [size]="14" />
                         </ui-button>
                         <span class="text-sm ui-color-text-muted">
-                            {{ 'TRACK.LAST.7.DAYS' | translate }}
+                            {{ 'TRACK.RANGE_LABEL' | translate:{ from: rangeLabel().from, to:
+                            rangeLabel().to } }}
                         </span>
                         <ui-button
                             variant="text"

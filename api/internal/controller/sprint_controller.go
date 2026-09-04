@@ -31,10 +31,12 @@ func (sc *SprintController) List(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -52,10 +54,12 @@ func (sc *SprintController) Create(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -84,6 +88,7 @@ func (sc *SprintController) Close(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -94,6 +99,7 @@ func (sc *SprintController) Close(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -115,6 +121,7 @@ func (sc *SprintController) SprintStats(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -125,6 +132,7 @@ func (sc *SprintController) SprintStats(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, sprint.IdProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -143,6 +151,7 @@ func (sc *SprintController) Burndown(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -153,6 +162,7 @@ func (sc *SprintController) Burndown(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, sprint.IdProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -170,10 +180,12 @@ func (sc *SprintController) BacklogStats(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -201,18 +213,21 @@ func (sc *SprintController) Velocity(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !sc.acl.CanReadProject(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	spec := constants.KnownAppSettings[constants.SettingSprintVelocityLimit]
+	spec := constants.KnownAppNumericSettings[constants.SettingSprintVelocityLimit]
 	limit := 2 * sc.settings.SprintVelocityLimit()
 	if raw := c.Query("limit"); raw != "" {
 		limit, err = strconv.Atoi(raw)
 		if err != nil || limit < spec.Min || limit > spec.Max {
+			_ = c.Error(errs.ErrBadRequest)
 			c.Status(http.StatusBadRequest)
 			return
 		}
@@ -240,6 +255,7 @@ func (sc *SprintController) Edit(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -250,6 +266,7 @@ func (sc *SprintController) Edit(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -280,6 +297,7 @@ func (sc *SprintController) Delete(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	idSprint, err := strconv.ParseInt(c.Param("idSprint"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -290,6 +308,7 @@ func (sc *SprintController) Delete(c *gin.Context) {
 		return
 	}
 	if !sc.acl.CanManageSprint(ctx, user.IdUser, sprint.IdProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -310,10 +329,12 @@ func (sc *SprintController) AssignIssue(c *gin.Context) {
 	idProject, errP := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	idIssuePublic, errI := strconv.ParseInt(c.Param("idIssuePublic"), 10, 64)
 	if errP != nil || errI != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	if !sc.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -330,6 +351,7 @@ func (sc *SprintController) AssignIssue(c *gin.Context) {
 		return
 	}
 	if !ok {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}

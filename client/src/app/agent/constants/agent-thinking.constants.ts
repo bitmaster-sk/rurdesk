@@ -1,0 +1,1 @@
+export const THINKING_BUFFER_CHARS = 16 * 1024;

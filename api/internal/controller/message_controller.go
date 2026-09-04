@@ -106,7 +106,7 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 
 	case model.TeamRecipientType:
 		if !mc.acl.CanReadTeam(ctx, user.IdUser, idRecipient) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -114,7 +114,7 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 
 	case model.ProjectRecipientType:
 		if !mc.acl.CanReadProject(ctx, user.IdUser, idRecipient) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -128,7 +128,7 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 			return
 		}
 		if !mc.acl.CanReadProject(ctx, user.IdUser, project.IdProject) {
-			_ = c.Error(errForbidden)
+			_ = c.Error(errs.ErrForbidden)
 			c.Status(http.StatusForbidden)
 			return
 		}
@@ -219,7 +219,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		return
 	}
 	if err := dto.Validate(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -234,7 +235,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, dto.IdRecipient)
 		if err == nil && activeRun != nil && activeRun.IdUserBot == user.IdUser &&
 			(activeRun.Phase == constants.PhaseAwaitingApproval || activeRun.Phase == constants.PhaseAwaitingInput) {
-			c.JSON(http.StatusConflict, gin.H{"error": "bot_post_while_run_paused"})
+			_ = c.Error(errs.ErrBotPostWhileRunPaused)
+			c.Status(http.StatusConflict)
 			return
 		}
 	}
@@ -248,19 +250,19 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		case model.TeammateRecipientType:
 			// DMs are open to all users — only require that the recipient exists.
 			if _, lErr := mc.userRepo.LoadUser(ctx, dto.IdRecipient); lErr != nil {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 			msg, err = mc.messageRepo.InsertTeammateMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.TeamRecipientType:
 			if !mc.acl.CanReadTeam(ctx, user.IdUser, dto.IdRecipient) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 			msg, err = mc.messageRepo.InsertTeamMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.ProjectRecipientType:
 			if !mc.acl.CanReadProject(ctx, user.IdUser, dto.IdRecipient) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 			msg, err = mc.messageRepo.InsertProjectMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
@@ -270,7 +272,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 				return e
 			}
 			if !mc.acl.CanReadProject(ctx, user.IdUser, project.IdProject) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 			var anchor *model.MessageAnchor
 			if dto.IdParentMessage != nil {
@@ -313,13 +315,14 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		}
 		return err
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 	if errors.Is(err, repository.ErrAnchorWrongThread) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrBadRequest.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	if err != nil {
@@ -523,7 +526,7 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 		return
 	}
 	if updatedMsg == nil {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

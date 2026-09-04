@@ -34,6 +34,7 @@ func NewProjectSkillController(
 func (ctrl *ProjectSkillController) Get(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -41,7 +42,7 @@ func (ctrl *ProjectSkillController) Get(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -58,6 +59,7 @@ func (ctrl *ProjectSkillController) Get(c *gin.Context) {
 func (ctrl *ProjectSkillController) Replace(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -65,14 +67,15 @@ func (ctrl *ProjectSkillController) Replace(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	var entries []model.UpdateProjectSkillReq
 	if err := c.ShouldBindJSON(&entries); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 

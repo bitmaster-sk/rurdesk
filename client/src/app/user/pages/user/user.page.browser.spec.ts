@@ -69,4 +69,37 @@ describe('UserPage (browser)', () => {
 
         expect(setTrackFilter).not.toHaveBeenCalled();
     });
+
+    it('formats the range label from the current sliding week', async () => {
+        const fixture = await render();
+
+        const today = new Date();
+        const expectedTo = new Date(today);
+        expectedTo.setHours(23, 59, 59);
+        const expectedFrom = new Date(today);
+        expectedFrom.setDate(today.getDate() - 6);
+        expectedFrom.setHours(0, 0, 0);
+
+        const label = fixture.componentInstance.rangeLabel();
+        expect(label.from).toBe(
+            fixture.componentInstance.datePipe.transform(expectedFrom, 'mediumDate')
+        );
+        expect(label.to).toBe(
+            fixture.componentInstance.datePipe.transform(expectedTo, 'mediumDate')
+        );
+    });
+
+    it('shifts the formatted range label when the week offset changes', async () => {
+        const fixture = await render();
+
+        fixture.componentInstance.previousWeek();
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const label = fixture.componentInstance.rangeLabel();
+        const daysDiff = Math.round(
+            (new Date(label.to).getTime() - new Date(label.from).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        expect(daysDiff).toBe(6);
+    });
 });

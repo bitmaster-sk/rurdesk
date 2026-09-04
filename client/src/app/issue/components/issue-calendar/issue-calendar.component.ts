@@ -181,6 +181,10 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             this.showFilter();
             queueMicrotask(() => this.calendarRef()?.getApi()?.updateSize());
         });
+
+        this.i18n.langChange$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(e => {
+            this.calendarRef()?.getApi()?.setOption('locale', e.lang);
+        });
     }
 
     public readonly cardModeOptions = CALENDAR_CARD_MODE_OPTIONS;
@@ -188,9 +192,9 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     public currentView = 'dayGridMonth';
 
     public readonly viewOptions = [
-        { label: this.i18n.instant('ISSUE.CALENDAR.DAY'), value: 'timeGridDay' },
-        { label: this.i18n.instant('ISSUE.CALENDAR.WEEK'), value: 'timeGridWeek' },
-        { label: this.i18n.instant('ISSUE.CALENDAR.MONTH'), value: 'dayGridMonth' }
+        { labelKey: 'ISSUE.CALENDAR.DAY', value: 'timeGridDay' },
+        { labelKey: 'ISSUE.CALENDAR.WEEK', value: 'timeGridWeek' },
+        { labelKey: 'ISSUE.CALENDAR.MONTH', value: 'dayGridMonth' }
     ];
 
     public ngAfterViewInit(): void {
@@ -520,9 +524,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         });
         issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
             }
         });
     }
@@ -548,9 +551,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             });
         }
         this.sIssue.updateIssue(issue).subscribe({
-            error: err => {
+            error: () => {
                 evt.revert();
-                throw err;
             }
         });
         this.settleDroppedEvent(issue.idIssue);

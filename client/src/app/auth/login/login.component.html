@@ -40,6 +40,7 @@
         <ui-button
             type="submit"
             [label]="'LOGIN' | translate"
+            [disabled]="form.invalid"
             [fluid]="true"
             class="login__btn"
         ></ui-button>

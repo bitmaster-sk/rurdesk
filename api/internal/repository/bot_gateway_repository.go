@@ -11,8 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrBotGatewayNotFound = errors.New("bot gateway not found")
-
 type BotGatewayRepository struct {
 	pool *pgxpool.Pool
 }
