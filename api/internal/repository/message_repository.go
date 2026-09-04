@@ -283,8 +283,11 @@ func (r *MessageRepository) InsertIssueMessage(ctx context.Context, message stri
 			`SELECT ism.id_issue_to FROM messages.issue_message ism WHERE ism.id_message = $1`,
 			anchor.IdParentMessage,
 		).Scan(&parentIssueID)
-		if guardErr != nil || parentIssueID != idRecipient {
+		if errors.Is(guardErr, pgx.ErrNoRows) || parentIssueID != idRecipient {
 			return nil, ErrAnchorWrongThread
+		}
+		if guardErr != nil {
+			return nil, fmt.Errorf("checking anchor parent thread: %w", guardErr)
 		}
 
 		var capturedParentVersion int
