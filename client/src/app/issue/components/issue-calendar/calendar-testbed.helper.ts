@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, EMPTY } from 'rxjs';
+import { of, EMPTY, Subject } from 'rxjs';
 import { Component } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
@@ -17,6 +17,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
 export function mockSub<T = unknown>() {
     const handlers: { next?: (v: T) => void; error?: (e: unknown) => void } = {};
@@ -41,6 +42,7 @@ function makeCalendarApi() {
         addEventSource: vi.fn(),
         setOption: vi.fn(),
         on: vi.fn(),
+        setOption: vi.fn(),
         el
     };
     return api;
@@ -67,6 +69,7 @@ export interface CalendarMocks {
     sIssueMock: any;
     commandPaletteMock: any;
     noticeServiceMock: any;
+    i18nMock: any;
 }
 
 export function configureCalendarTestBed(
@@ -78,6 +81,13 @@ export function configureCalendarTestBed(
 
     const issueCalendarServiceMock = {
         events$
+    };
+
+    const langChange$ = new Subject<{ lang: string }>();
+    const i18nMock = {
+        currentLang: 'en',
+        langChange$: langChange$.asObservable(),
+        instant: vi.fn((key: string) => key)
     };
 
     const issueFilterStoreMock = {
@@ -128,6 +138,7 @@ export function configureCalendarTestBed(
             },
             { provide: StateStore, useValue: { statesByProject$: vi.fn(() => of(new Map())) } },
             { provide: ProjectMemberStore, useValue: { users$: of([]), usersMap$: of(new Map()) } },
+            { provide: I18nService, useValue: i18nMock },
             provideRouter([]),
             provideNoopAnimations()
         ]
@@ -145,7 +156,8 @@ export function configureCalendarTestBed(
         projectStoreMock,
         sIssueMock,
         commandPaletteMock,
-        noticeServiceMock
+        noticeServiceMock,
+        i18nMock
     };
 }
 

@@ -30,8 +30,6 @@ import { startOfMonth, endOfMonth, add } from 'date-fns';
 import { ProjectStore } from 'src/app/project/project.store';
 import { first } from 'rxjs/operators';
 import cloneDeep from 'lodash-es/cloneDeep';
-import enLocale from '@fullcalendar/core/locales/en-gb';
-import skLocale from '@fullcalendar/core/locales/sk';
 import { Router } from '@angular/router';
 import { Issue } from '../../model/issue.model';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
@@ -55,6 +53,7 @@ import {
     UI_SETTLE_EASING
 } from 'src/app/ui/util/motion';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { FULLCALENDAR_LOCALES, resolveFullCalendarLocale } from './fullcalendar-locales';
 
 @Component({
     selector: 'app-issue-calendar',
@@ -93,8 +92,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private readonly issueMap = new Map<number, Issue>();
 
     public readonly defaultCalendarOps: CalendarOptions = {
-        locales: [enLocale, skLocale],
-        locale: this.i18n.currentLang ?? 'en',
+        locales: FULLCALENDAR_LOCALES,
+        locale: resolveFullCalendarLocale(this.i18n.currentLang).code,
         plugins: [dayGridPlugin, interactionPlugin, timeGridPlugin],
         headerToolbar: {
             left: 'prev,today,next',
@@ -204,6 +203,10 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         this.issueCalendarService.events$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(this.onEventsChange.bind(this));
+
+        this.i18n.langChange$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ lang }) => {
+            this.calendarRef().getApi().setOption('locale', resolveFullCalendarLocale(lang).code);
+        });
 
         // Live updates (own palette edits and teammates' changes): reload the
         // events and pulse the changed one once the fresh render lands.
