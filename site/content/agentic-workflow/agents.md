@@ -197,6 +197,19 @@ PR for review.
 
 ![Run in pr_open with the PR link](../../site/assets/img/run-pr.png)
 
+### Reviewing the pull request
+
+While the run sits in `pr_open`, commenting on the task starts another implement
+attempt. Review it as a conversation rather than a form: the agent reads the whole
+thread from the beginning, its own messages included, and treats the newest
+instruction as the one that counts. Asking for something that departs from the
+approved plan is normal and the agent keeps the change — it will say when a request
+conflicts with an earlier decision instead of quietly reverting to the plan.
+
+Not every comment produces a commit. When you ask a question, or the agent objects
+to a request, it answers with a **review reply** comment and nothing is pushed.
+Your next comment picks the conversation back up.
+
 ### Surviving a restart
 
 Agent work runs in the gateway, a separate process from the tracker. If the
