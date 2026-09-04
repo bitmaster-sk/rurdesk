@@ -19,6 +19,7 @@ import { MessageRecipientType } from 'src/app/message/constant/message-recipient
 import { Message } from 'src/app/message/model/message.model';
 import { MessageService } from 'src/app/message/message.service';
 import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
+import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -71,8 +72,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     });
 
     protected readonly messageCountDisplay = computed<string>(() => {
-        const count = this.messageCount();
-        return count > 99 ? '99+' : count.toString();
+        return MessageFormatter.formatUnreadBadgeText(this.messageCount()) ?? '';
     });
 
     private readonly subscriptions = new Subscription();
@@ -133,7 +133,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: project.name,
             icon: 'messages',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', project.idProject, MessageRecipientType.project, 'view']
         };
@@ -154,7 +154,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: team.name,
             icon: 'users',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', team.idTeam, MessageRecipientType.team, 'view']
         };
@@ -187,7 +187,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: user.name,
             icon: 'user',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', user.idUser, MessageRecipientType.user, 'view']
         };

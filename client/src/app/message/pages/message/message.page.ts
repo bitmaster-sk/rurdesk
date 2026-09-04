@@ -32,6 +32,7 @@ import { MessageRecipientType } from '../../constant/message-recipient-type.enum
 import { ConversationGroup } from '../../entity/conversation-group.entity';
 import { MessageService } from '../../message.service';
 import { Message } from '../../model/message.model';
+import { MessageFormatter } from '../../formatter/message.formatter';
 import { MessageKeyConverter } from '../../converter/message-key.converter';
 
 @Component({
@@ -61,6 +62,8 @@ export class MessagePage implements OnInit, OnDestroy {
     protected readonly currentConversationName = signal<string>('');
     protected readonly idMessageEdit = signal<number | null>(null);
     protected readonly currentUserId = this.authStore.getUser().idUser;
+
+    protected readonly MessageFormatter = MessageFormatter;
 
     private readonly idActiveRecipient = signal<number>(0);
     private readonly idActiveRecipientType = signal<MessageRecipientType | null>(null);
@@ -220,10 +223,6 @@ export class MessagePage implements OnInit, OnDestroy {
 
     protected getUnreadCount(key: string): number {
         return this.unread().get(key)?.length ?? 0;
-    }
-
-    protected formatCount(cnt: number): string {
-        return cnt > 99 ? '99+' : String(cnt);
     }
 
     protected isNewDay(index: number): boolean {
