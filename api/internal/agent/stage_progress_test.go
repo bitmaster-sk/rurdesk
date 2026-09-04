@@ -79,7 +79,8 @@ func TestBuildStageProgress_FailedStageCarriesErrorCode(t *testing.T) {
 }
 
 func TestBuildStageProgress_HappyPathFullRun(t *testing.T) {
-	run := &model.AgentRun{Phase: constants.PhaseDone, StagePlan: fullStagePlan()}
+	prId := "70"
+	run := &model.AgentRun{Phase: constants.PhaseDone, StagePlan: fullStagePlan(), PrId: &prId}
 	msgID := int64(1)
 	tasks := []*model.AgentTask{
 		completedTask(constants.StagePickup, at(19), nil),
@@ -223,5 +224,17 @@ func TestBuildStageProgress_CarriesThinkingFields(t *testing.T) {
 	}
 	if !got.HasThinking {
 		t.Error("HasThinking = false, want true when the full text is stored")
+	}
+}
+
+func TestBuildStageProgress_ImplementationWithoutPrIsNotLabelledPrOpened(t *testing.T) {
+	run := &model.AgentRun{Phase: constants.PhasePrOpen, StagePlan: fullStagePlan()}
+	msgID := int64(1)
+	tasks := []*model.AgentTask{completedTask(constants.StageImplementation, at(32), &msgID)}
+
+	rows := BuildStageProgress(run, tasks, nil)
+
+	if impl := stageByName(rows, constants.StageImplementation); impl.Note != "" {
+		t.Errorf("implementation note = %q, want empty when the run has no PR", impl.Note)
 	}
 }
