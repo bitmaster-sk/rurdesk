@@ -18,6 +18,7 @@ import { SprintDragService } from '../issue-kanban/service/sprint-drag.service';
 export interface SprintTab {
     idSprint: number | null;
     label: string;
+    labelKey?: string;
     isCurrent: boolean;
     isClosed: boolean;
     listId: string;
