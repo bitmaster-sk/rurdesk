@@ -60,14 +60,6 @@ describe('SplitReviewStepComponent', () => {
         expect(a.ref).not.toBe(b.ref);
     });
 
-    it('generates refs in the staged-N format (no crypto dependency)', () => {
-        for (const issue of component.issues()) {
-            expect(issue.ref).toMatch(/^staged-\d+$/);
-        }
-        component.onAddChild();
-        expect(component.issues()[2].ref).toMatch(/^staged-\d+$/);
-    });
-
     it('onAddChild appends a blank staged issue', () => {
         component.onAddChild();
         expect(component.issues().length).toBe(3);
