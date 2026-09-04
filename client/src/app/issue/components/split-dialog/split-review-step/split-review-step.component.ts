@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, linkedSignal, output } from '@angular/core';
+import { v4 as uuidv4 } from 'uuid';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StagedIssue } from 'src/app/shared/staged-issue/staged-issue.model';
@@ -39,7 +40,7 @@ export class SplitReviewStepComponent {
         this.issues.update(list => [
             ...list,
             {
-                ref: crypto.randomUUID(),
+                ref: uuidv4(),
                 title: '',
                 description: '',
                 idSeverity: null,
@@ -63,7 +64,7 @@ export class SplitReviewStepComponent {
 
     private toStaged(child: ProposedIssue): StagedIssue {
         return {
-            ref: crypto.randomUUID(),
+            ref: uuidv4(),
             title: child.title,
             description: child.description,
             idSeverity: child.idSeverity,
