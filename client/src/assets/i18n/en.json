@@ -154,7 +154,8 @@
             "DESIGN": "Design",
             "IMPLEMENTATION_PLAN": "Implementation plan",
             "PULL_REQUEST_PUSHED": "PR push",
-            "IMPLEMENTATION_DONE": "Implementation done"
+            "IMPLEMENTATION_DONE": "Implementation done",
+            "REVIEW_REPLY": "Review reply"
         },
         "BANNER": {
             "FAILED_TITLE": "Agent run failed",
