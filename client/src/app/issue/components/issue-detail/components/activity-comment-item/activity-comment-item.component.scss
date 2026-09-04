@@ -81,6 +81,13 @@
             color: var(--ui-green-800);
         }
     }
+    &.kind-review-reply {
+        border-left: 3px solid var(--ui-blue-500);
+        .kind-badge {
+            background: var(--ui-blue-100);
+            color: var(--ui-blue-800);
+        }
+    }
 
     .kind-badge {
         display: inline-flex;

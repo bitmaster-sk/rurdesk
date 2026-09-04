@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -158,36 +159,75 @@ func TestParseStageExecutePayload_Minimal(t *testing.T) {
 	}
 }
 
-func TestParseStageExecutePayload_WithComments(t *testing.T) {
-	payload := map[string]any{
+func threadPayload(thread []any) map[string]any {
+	return map[string]any{
 		"idRun":     float64(1),
 		"idIssue":   float64(2),
 		"idUserBot": float64(3),
 		"idProject": float64(4),
 		"payload": map[string]any{
-			"idTask":    float64(5),
-			"stage":     "brainstorming",
-			"attemptNo": float64(2),
-			"contextBundle": map[string]any{
-				"pendingComments": []any{
-					map[string]any{
-						"message":   "Looks good but check edge case X.",
-						"createdAt": "2026-05-26T10:00:00Z",
-						"creator":   map[string]any{"name": "Alice"},
-					},
-				},
-			},
+			"idTask":        float64(5),
+			"stage":         "implementation",
+			"attemptNo":     float64(2),
+			"contextBundle": map[string]any{"reviewThread": thread},
 		},
 	}
-	task, err := parseStageExecutePayload(payload)
+}
+
+func TestParseStageExecutePayload_WithReviewThread(t *testing.T) {
+	task, err := parseStageExecutePayload(threadPayload([]any{
+		map[string]any{
+			"message":     "Looks good but check edge case X.",
+			"messageKind": MessageKindComment,
+			"createdAt":   "2026-05-26T10:00:00Z",
+			"creator":     map[string]any{"name": "Alice"},
+		},
+		map[string]any{
+			"message":     "Pushed the fix.",
+			"messageKind": MessageKindPullRequestPushed,
+			"createdAt":   "2026-05-26T11:00:00Z",
+			"creator":     map[string]any{"name": "Bot"},
+		},
+	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(task.Comments) != 1 {
-		t.Fatalf("expected 1 comment, got %d", len(task.Comments))
+	if len(task.Conversation) != 2 {
+		t.Fatalf("expected 2 messages, got %d", len(task.Conversation))
 	}
-	if task.Comments[0].CreatorName != "Alice" || task.Comments[0].Message == "" {
-		t.Errorf("comment fields wrong: %+v", task.Comments[0])
+	if task.Conversation[0].CreatorName != "Alice" || task.Conversation[0].Kind != MessageKindComment {
+		t.Errorf("first message wrong: %+v", task.Conversation[0])
+	}
+	if task.Conversation[1].Kind != MessageKindPullRequestPushed || task.Conversation[1].Message != "Pushed the fix." {
+		t.Errorf("agent output must stay in the thread: %+v", task.Conversation[1])
+	}
+}
+
+func TestParseStageExecutePayload_ElidesArtifactBodiesInThread(t *testing.T) {
+	task, err := parseStageExecutePayload(threadPayload([]any{
+		map[string]any{
+			"message":     "## Design\nLong document…",
+			"messageKind": MessageKindDesign,
+			"createdAt":   "2026-05-26T10:00:00Z",
+			"creator":     map[string]any{"name": "Bot"},
+		},
+		map[string]any{
+			"message":     "## Plan\nLong document…",
+			"messageKind": MessageKindImplementationPlan,
+			"createdAt":   "2026-05-26T10:30:00Z",
+			"creator":     map[string]any{"name": "Bot"},
+		},
+	}))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, message := range task.Conversation {
+		if strings.Contains(message.Message, "Long document") {
+			t.Errorf("artifact body must not be repeated in the thread: %+v", message)
+		}
+		if message.Message == "" {
+			t.Errorf("elided artifact still needs a placeholder so the order reads: %+v", message)
+		}
 	}
 }
 
@@ -202,8 +242,8 @@ func TestParseStageExecutePayload_WithApprovedArtifacts(t *testing.T) {
 			"stage":     "implementation",
 			"attemptNo": float64(1),
 			"contextBundle": map[string]any{
-				"approvedDesign":   map[string]any{"message": "DESIGN-MD", "messageKind": "design"},
-				"approvedImplPlan": map[string]any{"message": "PLAN-MD", "messageKind": "implementation_plan"},
+				"approvedDesign":   map[string]any{"message": "DESIGN-MD", "messageKind": MessageKindDesign},
+				"approvedImplPlan": map[string]any{"message": "PLAN-MD", "messageKind": MessageKindImplementationPlan},
 			},
 		},
 	}
@@ -230,7 +270,7 @@ func TestParseStageExecutePayload_WithRejectedOutput(t *testing.T) {
 			"stage":     "design",
 			"attemptNo": float64(2),
 			"contextBundle": map[string]any{
-				"rejectedOutput": map[string]any{"message": "OLD-DESIGN-MD", "messageKind": "design"},
+				"rejectedOutput": map[string]any{"message": "OLD-DESIGN-MD", "messageKind": MessageKindDesign},
 			},
 		},
 	}
@@ -304,6 +344,24 @@ func TestStageConstantsMirrorAPI(t *testing.T) {
 	for _, c := range cases {
 		if c.got != c.want {
 			t.Errorf("stage constant drift: got %q want %q", c.got, c.want)
+		}
+	}
+}
+
+func TestMessageKindConstantsMirrorAPI(t *testing.T) {
+	cases := []struct{ got, want string }{
+		{MessageKindComment, "comment"},
+		{MessageKindBrainstormingQuestion, "brainstorming_question"},
+		{MessageKindBrainstormingComplete, "brainstorming_complete"},
+		{MessageKindDesign, "design"},
+		{MessageKindImplementationPlan, "implementation_plan"},
+		{MessageKindPullRequestPushed, "pull_request_pushed"},
+		{MessageKindImplementationDone, "implementation_done"},
+		{MessageKindReviewReply, "review_reply"},
+	}
+	for _, c := range cases {
+		if c.got != c.want {
+			t.Errorf("message kind constant drift: got %q want %q", c.got, c.want)
 		}
 	}
 }

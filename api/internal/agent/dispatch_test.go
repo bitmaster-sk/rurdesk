@@ -16,6 +16,18 @@ func messageOfKind(id int64, kind constants.MessageKind) *model.Message {
 	return &model.Message{IdMessage: id, MessageKind: kind}
 }
 
+func messageAt(id int64, kind constants.MessageKind, offset time.Duration) *model.Message {
+	return &model.Message{IdMessage: id, MessageKind: kind, CreatedAt: baseTime.Add(offset)}
+}
+
+func idsOf(messages []*model.Message) []int64 {
+	out := make([]int64, 0, len(messages))
+	for _, message := range messages {
+		out = append(out, message.IdMessage)
+	}
+	return out
+}
+
 func completedStageTaskWithOutput(stage string, attemptNo int, idResultMessage int64, createdOffset time.Duration) *model.AgentTask {
 	id := idResultMessage
 	return &model.AgentTask{
@@ -166,4 +178,63 @@ func TestStageArtifactContextIgnoresUnfinishedAttempts(t *testing.T) {
 	artifacts := stageArtifactContext(constants.StageDesign, tasks, descendingFeed(design, orphan))
 	require.NotNil(t, artifacts.RejectedOutput)
 	assert.Equal(t, design.IdMessage, artifacts.RejectedOutput.IdMessage)
+}
+
+func TestReviewThreadKeepsEveryMessageInOrder(t *testing.T) {
+	firstComment := messageAt(1, constants.MessageKindComment, time.Minute)
+	design := messageAt(2, constants.MessageKindDesign, 2*time.Minute)
+	pushed := messageAt(3, constants.MessageKindPullRequestPushed, 3*time.Minute)
+	secondComment := messageAt(4, constants.MessageKindComment, 4*time.Minute)
+
+	thread := reviewThread(descendingFeed(firstComment, design, pushed, secondComment))
+
+	assert.Equal(t, []int64{1, 2, 3, 4}, idsOf(thread), "oldest first, nothing dropped")
+}
+
+func TestReviewThreadKeepsCommentsOlderThanTheLastAttempt(t *testing.T) {
+	instruction := messageAt(1, constants.MessageKindComment, time.Minute)
+	pushed := messageAt(2, constants.MessageKindPullRequestPushed, 2*time.Minute)
+	followUp := messageAt(3, constants.MessageKindComment, 3*time.Minute)
+
+	thread := reviewThread(descendingFeed(instruction, pushed, followUp))
+
+	assert.Contains(t, idsOf(thread), instruction.IdMessage)
+	assert.Contains(t, idsOf(thread), followUp.IdMessage)
+}
+
+func TestReviewThreadOrdersEqualTimestampsById(t *testing.T) {
+	first := messageAt(1, constants.MessageKindComment, time.Minute)
+	second := messageAt(2, constants.MessageKindComment, time.Minute)
+
+	assert.Equal(t, []int64{1, 2}, idsOf(reviewThread([]*model.Message{first, second})))
+	assert.Equal(t, []int64{1, 2}, idsOf(reviewThread([]*model.Message{second, first})))
+}
+
+func TestReviewThreadDropsArtifactBodiesWithoutTouchingTheOriginals(t *testing.T) {
+	design := messageAt(1, constants.MessageKindDesign, time.Minute)
+	design.Message = "DESIGN-MD"
+	plan := messageAt(2, constants.MessageKindImplementationPlan, 2*time.Minute)
+	plan.Message = "PLAN-MD"
+	comment := messageAt(3, constants.MessageKindComment, 3*time.Minute)
+	comment.Message = "use uuid"
+	feed := descendingFeed(design, plan, comment)
+
+	thread := reviewThread(feed)
+
+	assert.Empty(t, thread[0].Message, "design body is shipped as approvedDesign instead")
+	assert.Empty(t, thread[1].Message, "plan body is shipped as approvedImplPlan instead")
+	assert.Equal(t, "use uuid", thread[2].Message, "comments keep their body")
+
+	artifacts := stageArtifactContext(constants.StageImplementation, []*model.AgentTask{
+		completedStageTaskWithOutput(constants.StageDesign, 1, design.IdMessage, time.Minute),
+		completedStageTaskWithOutput(constants.StageImplementationPlan, 1, plan.IdMessage, 2*time.Minute),
+	}, feed)
+	require.NotNil(t, artifacts.ApprovedDesign)
+	assert.Equal(t, "DESIGN-MD", artifacts.ApprovedDesign.Message)
+	require.NotNil(t, artifacts.ApprovedImplPlan)
+	assert.Equal(t, "PLAN-MD", artifacts.ApprovedImplPlan.Message)
+}
+
+func TestReviewThreadOnEmptyFeed(t *testing.T) {
+	assert.Empty(t, reviewThread(nil))
 }

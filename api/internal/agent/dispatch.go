@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -163,7 +164,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"issue":             issue,
 		"project":           project,
 		"bot":               bot,
-		"pendingComments":   filterCommentsAfterLastAttempt(messages, priorTasks, task.Stage),
+		"reviewThread":      reviewThread(messages),
 		"approvedDesign":    artifacts.ApprovedDesign,
 		"approvedImplPlan":  artifacts.ApprovedImplPlan,
 		"rejectedOutput":    artifacts.RejectedOutput,
@@ -180,29 +181,35 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	return bundle, nil
 }
 
-// filterCommentsAfterLastAttempt returns comments on the issue after the most
-// recent completed attempt of `stage`, or all comments if there's no prior
-// completed attempt — the first attempt sees the full conversation.
-func filterCommentsAfterLastAttempt(messages []*model.Message, priorTasks []*model.AgentTask, stage string) []*model.Message {
-	var cutoff time.Time
-	for _, t := range priorTasks {
-		if t.Stage == stage && t.Status == constants.TaskStatusCompleted && t.FinishedAt != nil {
-			if t.FinishedAt.After(cutoff) {
-				cutoff = *t.FinishedAt
-			}
-		}
+// reviewThread returns the whole issue conversation oldest-first. Never trim it
+// to the current round: an attempt that cannot see the instruction behind the
+// code it is revising reverts that code back to the approved plan.
+func reviewThread(messages []*model.Message) []*model.Message {
+	out := make([]*model.Message, 0, len(messages))
+	for _, message := range messages {
+		out = append(out, withoutArtifactBody(message))
 	}
-	var out []*model.Message
-	for _, m := range messages {
-		if m.MessageKind != constants.MessageKindComment {
-			continue
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].IdMessage < out[j].IdMessage
 		}
-		if !cutoff.IsZero() && !m.CreatedAt.After(cutoff) {
-			continue
-		}
-		out = append(out, m)
-	}
+		return out[i].CreatedAt.Before(out[j].CreatedAt)
+	})
 	return out
+}
+
+// withoutArtifactBody drops the body of the two kinds the bundle already ships
+// whole as approvedDesign / approvedImplPlan, keeping the thread under the
+// gateway's 1 MiB webhook limit. Copies: those fields alias these messages.
+func withoutArtifactBody(message *model.Message) *model.Message {
+	switch message.MessageKind {
+	case constants.MessageKindDesign, constants.MessageKindImplementationPlan:
+		trimmed := *message
+		trimmed.Message = ""
+		return &trimmed
+	default:
+		return message
+	}
 }
 
 // derefStringOrNil returns the string or nil so it serialises as a JSON string

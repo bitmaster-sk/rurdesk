@@ -90,7 +90,7 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		case constants.TaskStatusCompleted:
 			prog.Status = "done"
 			prog.At = task.FinishedAt
-			prog.Note = completedNote(entry.Name, task)
+			prog.Note = completedNote(run, entry.Name, task)
 			if isApprovable(entry.Name) {
 				if approvalIdx < len(approvals) {
 					at := approvals[approvalIdx]
@@ -138,7 +138,7 @@ func isApprovable(stage string) bool {
 	return stage == constants.StageDesign || stage == constants.StageImplementationPlan
 }
 
-func completedNote(stage string, task *model.AgentTask) string {
+func completedNote(run *model.AgentRun, stage string, task *model.AgentTask) string {
 	switch stage {
 	case constants.StageBrainstorming:
 		if task.IdResultMessage == nil {
@@ -148,6 +148,10 @@ func completedNote(stage string, task *model.AgentTask) string {
 	case constants.StageDesign, constants.StageImplementationPlan:
 		return stageNoteSubmitted
 	case constants.StageImplementation:
+		// An attempt can end as a review reply, which pushes nothing.
+		if run.PrId == nil || *run.PrId == "" {
+			return ""
+		}
 		return stageNotePrOpened
 	default:
 		return ""

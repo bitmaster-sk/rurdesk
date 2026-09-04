@@ -331,8 +331,8 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 					task.Skills = append(task.Skills, Skill{Name: name, Content: content})
 				}
 			}
-			if comments, ok := ctx["pendingComments"].([]any); ok {
-				for _, raw := range comments {
+			if thread, ok := ctx["reviewThread"].([]any); ok {
+				for _, raw := range thread {
 					m, ok := raw.(map[string]any)
 					if !ok {
 						continue
@@ -342,10 +342,12 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 					if creator != nil {
 						name = stringField(creator, "name")
 					}
-					task.Comments = append(task.Comments, TaskComment{
+					kind := stringField(m, "messageKind")
+					task.Conversation = append(task.Conversation, TaskMessage{
 						CreatorName: name,
 						CreatedAt:   stringField(m, "createdAt"),
-						Message:     stringField(m, "message"),
+						Kind:        kind,
+						Message:     conversationBody(kind, stringField(m, "message")),
 					})
 				}
 			}
@@ -359,6 +361,19 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		return Task{}, fmt.Errorf("missing stage")
 	}
 	return task, nil
+}
+
+// conversationBody drops the body of artifacts the prompt already renders in
+// full sections of their own, keeping only their place in the thread.
+func conversationBody(kind, message string) string {
+	switch kind {
+	case MessageKindDesign:
+		return "(design document — body omitted here)"
+	case MessageKindImplementationPlan:
+		return "(implementation plan — body omitted here)"
+	default:
+		return message
+	}
 }
 
 func int64Field(m map[string]any, key string) int64 {

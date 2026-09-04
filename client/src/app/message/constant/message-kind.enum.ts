@@ -9,5 +9,6 @@ export enum MessageKind {
     Design = 'design',
     ImplementationPlan = 'implementation_plan',
     PullRequestPushed = 'pull_request_pushed',
-    ImplementationDone = 'implementation_done'
+    ImplementationDone = 'implementation_done',
+    ReviewReply = 'review_reply'
 }
