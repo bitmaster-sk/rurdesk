@@ -39,12 +39,14 @@ import { UiMenuItem } from './menu-item.model';
                         <!-- one-level group: header + flat sub-list; empty items = header only -->
                         <li role="presentation" class="ui-menu-group">
                             <span class="ui-menu-group-label" aria-hidden="true">
-                                {{ item.labelKey ?? item.label | translate }}
+                                {{ item.labelKey ? (item.labelKey | translate) : item.label }}
                             </span>
                             <ul
                                 class="ui-menu-group-list"
                                 role="group"
-                                [attr.aria-label]="item.labelKey ?? item.label | translate"
+                                [attr.aria-label]="
+                                    item.labelKey ? (item.labelKey | translate) : item.label
+                                "
                             >
                                 @for (sub of item.items; track trackItem(sub)) {
                                     <li role="none">
@@ -105,7 +107,7 @@ import { UiMenuItem } from './menu-item.model';
                     <tabler-icon class="ui-menu-item-icon" [icon]="item.icon" [size]="16" />
                 }
                 <span class="ui-menu-item-label">
-                    {{ item.labelKey ?? item.label | translate }}
+                    {{ item.labelKey ? (item.labelKey | translate) : item.label }}
                 </span>
                 @if (item.badge) {
                     <ui-badge
@@ -140,7 +142,7 @@ export class UiMenuComponent implements OnDestroy {
 
     /** Stable track key: routerLink is unique+stable; command items key by label. */
     protected readonly trackItem = (item: UiMenuItem): unknown =>
-        item.routerLink ? JSON.stringify(item.routerLink) : (item.label ?? item);
+        item.routerLink ? JSON.stringify(item.routerLink) : (item.labelKey ?? item.label ?? item);
 
     public ngOnDestroy(): void {
         this.disposeOverlay();
