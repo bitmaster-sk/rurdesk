@@ -14,11 +14,15 @@
             [options]="viewOptions"
             [ngModel]="currentView"
             (ngModelChange)="onViewModeChange($event)"
-            optionLabel="label"
+            optionLabel="labelKey"
             optionValue="value"
             size="small"
             [allowEmpty]="false"
-        ></ui-choice>
+        >
+            <ng-template #item let-item>
+                {{ item.labelKey | translate }}
+            </ng-template>
+        </ui-choice>
         <ui-choice
             [options]="cardModeOptions"
             [ngModel]="cardMode()"
