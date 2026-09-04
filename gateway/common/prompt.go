@@ -21,9 +21,11 @@ mandatory and is the LAST thing you do.
 **Description:**
 {{.IssueDesc}}
 
-## Comments
-{{range .Comments}}
-[{{.CreatorName}} at {{.CreatedAt}}]: {{.Message}}
+## Conversation (oldest first)
+This is the full thread, your own submissions included. Read it in order: when
+two messages conflict, the later one is what the user wants now.
+{{range .Conversation}}
+[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}]: {{.Message}}
 {{end}}
 
 ## Identifiers (use exactly these values when calling tools)
@@ -38,14 +40,16 @@ Note: #{{.IdIssuePublic}} is the human-readable label shown in the UI. Do NOT pa
 ## Stage
 {{.Stage}} (attempt #{{.AttemptNo}}{{if gt .AttemptNo 1}} — revision after user feedback{{end}})
 {{if .ApprovedDesign}}
-## Approved design (already accepted — build on this, do not redo it)
+## Approved design (accepted when it was written — build on it, do not redo it)
+Anything the conversation asked for after this was written overrides it. Do not undo such a change to bring the code back in line with this document.
 {{.ApprovedDesign}}
 {{end}}{{if .ApprovedImplPlan}}
-## Approved implementation plan (already accepted — implement exactly this)
+## Approved implementation plan (accepted when it was written — implement it)
+Same rule as the design: a later instruction in the conversation wins over this plan, and code that follows that instruction is correct even though it diverges from what is written here.
 {{.ApprovedImplPlan}}
 {{end}}{{if .RejectedOutput}}
 ## Your previous {{.Stage}} output (REJECTED — revise it)
-The user reviewed the version below and REJECTED it. Revise it according to the user feedback in the Comments section. Do not resubmit it unchanged and do not treat it as final.
+The user reviewed the version below and REJECTED it. Revise it according to the user feedback in the conversation above. Do not resubmit it unchanged and do not treat it as final.
 {{.RejectedOutput}}
 {{end}}{{if .ApprovedMockupRef}}
 ## Chosen mockup (user picked this variant)
@@ -176,7 +180,7 @@ FORBIDDEN: {{.Vocab.WriteFile}}, {{.Vocab.Replace}}, {{.Vocab.RunShell}}. Nothin
 3. List the tests to add, also as ` + "```diff" + ` blocks where possible.
 4. Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + `, ` + "`message=<plan markdown>`" + `, ` + "`message_kind=implementation_plan`" + `.`
 
-const implementationInstructions = `The **Approved implementation plan** above has been approved — implement exactly that; do not re-fetch it from the tracker. Implement the changes in this worktree. Commit and **push** to branch ` + "`{{.Branch}}`" + `.
+const implementationInstructions = `Implement the **Approved implementation plan** above, together with anything the conversation has asked for since it was written; do not re-fetch it from the tracker. Work in this worktree. Commit and **push** to branch ` + "`{{.Branch}}`" + `.
 
 Do **NOT** run ` + "`gh pr create`" + ` or open the PR/MR yourself — the tracker opens it for you from the pushed branch (it supports GitHub, GitLab and Gitea). You only push.
 
@@ -191,9 +195,19 @@ Once the branch is pushed, call ` + "`complete_stage`" + ` with:
 
 Do **NOT** set ` + "`pr_url`" + ` — the tracker derives the real PR/MR URL itself.
 
-If the user comments on the PR later, you'll be re-invoked for another Implementation attempt — push additional commits to the SAME branch ` + "`{{.Branch}}`" + ` and call ` + "`complete_stage`" + ` again. The tracker reuses the existing PR; do NOT try to open a second one.
+Until the PR exists there is no other valid ending, however many attempts it takes to get there: you must push code and submit ` + "`branch_name`" + `, because the tracker opens the PR from it. Submitting without a branch beforehand leaves the run with no pull request at all.
 
-If something goes wrong (build error you can't fix, conflicting comments, push rejected), call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
+## Reviewing the open PR
+Once the PR exists, every comment the user leaves re-invokes you for another attempt of this stage. The PR is already open — never open a second one; push to the SAME branch ` + "`{{.Branch}}`" + ` and the tracker reuses it. Only attempts made after the PR exists may end without code.
+
+Change what the comment points at and nothing else. If something adjacent is unavoidable, do it and say why. If the request contradicts an earlier decision, state the consequence in a sentence and carry it out anyway — refuse only when it would genuinely break the branch (code that stops compiling, a dependency left with nothing using it, a fix that reintroduces its own bug).
+
+Such an attempt does not have to produce code, so it can end two ways:
+
+- **You changed something** — push to ` + "`{{.Branch}}`" + ` and complete exactly as above, with ` + "`message_kind=pull_request_pushed`" + `.
+- **You did not** — the comment asked a question, or you are refusing it as described. Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + `, ` + "`message_kind=review_reply`" + `, ` + "`message=<your reply>`" + ` and NO ` + "`branch_name`" + `. Nothing is pushed, and the user's next comment brings you back. This ending is available only once the PR exists, never on an attempt that still has to open it.
+
+If something goes wrong (build error you can't fix, push rejected), call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
 
 // No skills means no section at all.
 const skillsSection = `
