@@ -29,7 +29,7 @@ func at(min int) *time.Time {
 func completedTask(stage string, finished *time.Time, output *int64) *model.AgentTask {
 	return &model.AgentTask{
 		Stage: stage, AttemptNo: 1, Status: constants.TaskStatusCompleted,
-		FinishedAt: finished, IdOutputMessage: output, CreatedAt: *finished,
+		FinishedAt: finished, IdResultMessage: output, CreatedAt: *finished,
 	}
 }
 
@@ -198,5 +198,30 @@ func TestBuildStageProgress_LatestAttemptWins(t *testing.T) {
 	got := stageByName(rows, constants.StageDesign)
 	if got.Status != "active" || got.AttemptNo != 2 {
 		t.Errorf("design = %+v, want active/attempt 2", got)
+	}
+}
+
+// The snapshot carries what the feed needs to render a stage's thinking row:
+// which message it hangs under, the tail, and whether full text still exists.
+func TestBuildStageProgress_CarriesThinkingFields(t *testing.T) {
+	run := &model.AgentRun{Phase: constants.PhaseInProgress, StagePlan: fullStagePlan()}
+	idMessage := int64(77)
+	tail := "the tail of the thinking"
+	task := completedTask(constants.StageDesign, at(21), nil)
+	task.IdResultMessage = &idMessage
+	task.ThinkingTail = &tail
+	task.HasThinking = true
+
+	rows := BuildStageProgress(run, []*model.AgentTask{task}, nil)
+	got := stageByName(rows, constants.StageDesign)
+
+	if got.IdResultMessage == nil || *got.IdResultMessage != idMessage {
+		t.Errorf("IdResultMessage = %v, want %d", got.IdResultMessage, idMessage)
+	}
+	if got.ThinkingTail == nil || *got.ThinkingTail != tail {
+		t.Errorf("ThinkingTail = %v, want %q", got.ThinkingTail, tail)
+	}
+	if !got.HasThinking {
+		t.Error("HasThinking = false, want true when the full text is stored")
 	}
 }

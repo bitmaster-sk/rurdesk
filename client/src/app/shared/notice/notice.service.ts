@@ -44,6 +44,9 @@ export class NoticeService {
     private agentStatsSubject = new Subject<Notice<unknown>>();
     public agentStats$: Observable<Notice<unknown>> = this.agentStatsSubject.asObservable();
 
+    private agentThinkingSubject = new Subject<Notice<unknown>>();
+    public agentThinking$: Observable<Notice<unknown>> = this.agentThinkingSubject.asObservable();
+
     private participantSubject = new Subject<
         Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
     >();
@@ -155,6 +158,9 @@ export class NoticeService {
                 break;
             case NoticeSubject.AgentStats:
                 this.agentStatsSubject.next(notice);
+                break;
+            case NoticeSubject.AgentThinking:
+                this.agentThinkingSubject.next(notice);
                 break;
             case NoticeSubject.Participant:
                 this.participantSubject.next(

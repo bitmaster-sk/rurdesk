@@ -72,6 +72,7 @@ func (pc *ProjectBuilderController) Generate(c *gin.Context) {
 	}
 
 	if len(req.Description) > viper.GetInt("PROJECT_BUILDER_DESCRIPTION_MAX_LENGTH") {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -80,7 +81,7 @@ func (pc *ProjectBuilderController) Generate(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanCreateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -167,7 +168,7 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !pc.acl.CanCreateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -180,8 +181,8 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	}
 
 	if err := validateRefs(req.Issues); err != nil {
-		_ = c.Error(err)
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrInvalidProjectBuilderRefs.WithMessage(err.Error()))
+		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 

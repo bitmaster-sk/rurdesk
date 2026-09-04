@@ -1,0 +1,23 @@
+# The stub gateway used by the e2e stack: speaks the real gateway protocol
+# (signed webhooks, complete_stage, thinking batches) with canned output instead
+# of an LLM. Build context is the repo root.
+FROM golang:1.25-alpine AS build
+
+WORKDIR /app
+
+COPY api/go.mod api/go.sum ./
+RUN go mod download
+
+COPY api ./
+RUN go build -o stub-gateway ./cmd/stub-gateway
+
+FROM alpine:3.23.2
+
+RUN addgroup -S app && adduser -S -G app app
+WORKDIR /app
+COPY --from=build /app/stub-gateway /app/stub-gateway
+USER app
+
+EXPOSE 9090
+
+CMD ["/app/stub-gateway"]

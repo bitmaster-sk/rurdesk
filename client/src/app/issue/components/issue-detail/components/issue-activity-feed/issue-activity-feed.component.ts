@@ -26,13 +26,16 @@ import { Track } from 'src/app/shared/tracker/model/track.model';
 import { isToday, isYesterday, format } from 'date-fns';
 import {
     CommentTimelineItem,
+    TimelineItemType,
     TimelineDisplayItem,
-    TimelineItem,
-    TimelineItemType
+    TimelineItem
 } from '../../entity/timeline-item.entity';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
-import { AgentRun } from 'src/app/agent/model/agent-run.model';
+import { AgentRun, AgentStageProgress } from 'src/app/agent/model/agent-run.model';
+import { AgentThinkingRow } from 'src/app/agent/entity/agent-thinking.entity';
+import { AgentThinkingStore } from 'src/app/agent/store/agent-thinking.store';
+import { ThinkingRowConverter } from './converter/thinking-row.converter';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 
@@ -41,6 +44,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
     templateUrl: './issue-activity-feed.component.html',
     styleUrls: ['./issue-activity-feed.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [AgentThinkingStore],
     standalone: false
 })
 export class IssueActivityFeedComponent implements AfterViewInit {
@@ -61,6 +65,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly authStore = inject(AuthStore);
+    private readonly thinkingStore = inject(AgentThinkingStore);
     private readonly destroyRef = inject(DestroyRef);
 
     public readonly currentUserId = this.authStore.getUser().idUser;
@@ -83,6 +88,35 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         const items = this.displayItems();
         return filters.size === 0 ? items : items.filter(i => filters.has(i.type));
     });
+
+    public readonly currentAgentStage = computed<AgentStageProgress | null>(() =>
+        ThinkingRowConverter.toCurrentStage(this.agentRun())
+    );
+
+    public readonly agentCreator = computed<User | null>(() => {
+        const idUserBot = this.agentRun()?.idUserBot;
+        if (idUserBot == null) {
+            return null;
+        }
+        const member = this.usersMap().get(idUserBot);
+        if (member) {
+            return member;
+        }
+        for (const item of [...this.displayItems()].reverse()) {
+            if (item.type === 'comment' && item.data.creator.idUser === idUserBot) {
+                return item.data.creator;
+            }
+        }
+        return null;
+    });
+
+    public readonly thinkingRowsByMessage = computed<Map<number, AgentStageProgress[]>>(() =>
+        ThinkingRowConverter.toRowsByMessage(this.agentRun())
+    );
+
+    public readonly trailingThinkingRows = computed<AgentThinkingRow[]>(() =>
+        ThinkingRowConverter.toTrailingRows(this.agentRun(), this.currentAgentStage())
+    );
 
     public readonly anchorTarget = signal<{
         idParentMessage: number;
@@ -152,6 +186,8 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private hasScrolled = false;
 
     public constructor() {
+        effect(() => this.thinkingStore.bind(this.agentRun()?.idRun ?? null));
+
         effect(() => {
             if (this.allItems().length > 0 && !this.hasScrolled) {
                 this.hasScrolled = true;

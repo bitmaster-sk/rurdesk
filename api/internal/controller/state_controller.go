@@ -76,7 +76,7 @@ func (sc *StateController) CreateState(c *gin.Context) {
 	var state *model.State
 	err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
 		if !sc.acl.CanCreateState(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		s := &model.State{
 			IdProject: dto.IdProject,
@@ -92,7 +92,7 @@ func (sc *StateController) CreateState(c *gin.Context) {
 		}
 		return sc.stateRepo.InsertProjectState(ctx, state)
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -127,7 +127,7 @@ func (sc *StateController) EditState(c *gin.Context) {
 	var state *model.State
 	err = extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
 		if !sc.acl.CanUpdateState(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		var err error
 		state, err = sc.stateRepo.LoadState(ctx, dto.IdProject, dto.IdState)
@@ -166,7 +166,7 @@ func (sc *StateController) EditState(c *gin.Context) {
 		}
 		return sc.stateRepo.UpdateProjectState(ctx, state)
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -196,7 +196,7 @@ func (sc *StateController) GetStateUsage(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !sc.acl.CanDeleteState(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -226,7 +226,7 @@ func (sc *StateController) DeleteState(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 	// was inside RunInTx; read-only Redis-cached check, so fail fast instead
 	if !sc.acl.CanDeleteState(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

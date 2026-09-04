@@ -54,11 +54,11 @@ model — ~30B total but only a few billion active per token, so it answers fast
 while staying far sharper than a dense 7B. It is the recommended starting point;
 scale up if the machine allows.
 
-| Machine | Suggested `GOOSE_MODEL` | Rough footprint |
-| --- | --- | --- |
-| 32 GB RAM / Mac with 32 GB unified memory | `qwen3-coder:30b` | ~20 GB |
-| Mac Studio / workstation, 96–128 GB | `gpt-oss:120b` | ~65 GB |
-| Mac Studio 512 GB, big GPU box | `qwen3-coder:480b` | ~270 GB |
+| Machine                                   | Suggested `GOOSE_MODEL` | Rough footprint |
+| ----------------------------------------- | ----------------------- | --------------- |
+| 32 GB RAM / Mac with 32 GB unified memory | `qwen3-coder:30b`       | ~20 GB          |
+| Mac Studio / workstation, 96–128 GB       | `gpt-oss:120b`          | ~65 GB          |
+| Mac Studio 512 GB, big GPU box            | `qwen3-coder:480b`      | ~270 GB         |
 
 Footprints are the default 4-bit quantisations and are approximate — check
 `ollama list` after pulling. Leave headroom above the model size for context.
@@ -117,18 +117,18 @@ Billing is per-token against your Google AI API key.
 
 The gateway refuses to start without all five:
 
-| Var | Purpose |
-| --- | --- |
-| `TRACKER_URL` | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status, heartbeats, recovery). |
-| `GATEWAY_TO_TRACKER_TOKEN` | The bot's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (bot credentials). |
-| `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the bot's gateway** (see [Agents](./agents.md)). |
-| `REPO_URL` | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another bot for a second repo. |
-| `GIT_ACCESS_TOKEN` | PAT/app token with read+write on `REPO_URL`; injected into the remote URL so the agent can **push branches**. See [token scopes](#gitaccesstoken-scopes). |
+| Var                        | Purpose                                                                                                                                                                                                                                                                                |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status, heartbeats, recovery). |
+| `GATEWAY_TO_TRACKER_TOKEN` | The bot's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (bot credentials).                                                                                                                           |
+| `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the bot's gateway** (see [Agents](./agents.md)).                                                                                  |
+| `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another bot for a second repo.                                                                                                                       |
+| `GIT_ACCESS_TOKEN`         | PAT/app token with read+write on `REPO_URL`; injected into the remote URL so the agent can **push branches**. See [token scopes](#gitaccesstoken-scopes).                                                                                                                              |
 
 ### `GIT_ACCESS_TOKEN` scopes
 
 The token is used for **git over HTTPS** (clone, fetch, push the run branch). It
-therefore needs *write* (contents) access on `REPO_URL`. Opening the PR/MR is
+therefore needs _write_ (contents) access on `REPO_URL`. Opening the PR/MR is
 **not** done with this token — the tracker opens it via the project's
 [git integration](../using-the-tracker/git-integration.md) token instead. The
 two can be the same PAT or different ones.
@@ -136,12 +136,12 @@ two can be the same PAT or different ones.
 Only **push** (contents write) is needed — the PR/MR is opened by the tracker's
 git-integration token, not this one.
 
-| Host | Token | Scope |
-| --- | --- | --- |
-| GitHub | fine-grained PAT (recommended) | *Contents: read & write*, limited to the `REPO_URL` repo |
-| GitHub | classic PAT | `repo` (`public_repo` is enough for public repos) |
-| GitLab | project/personal access token | `write_repository` (project token needs the **Developer** role or higher) |
-| Gitea | access token | `write:repository` |
+| Host   | Token                          | Scope                                                                     |
+| ------ | ------------------------------ | ------------------------------------------------------------------------- |
+| GitHub | fine-grained PAT (recommended) | _Contents: read & write_, limited to the `REPO_URL` repo                  |
+| GitHub | classic PAT                    | `repo` (`public_repo` is enough for public repos)                         |
+| GitLab | project/personal access token  | `write_repository` (project token needs the **Developer** role or higher) |
+| Gitea  | access token                   | `write:repository`                                                        |
 
 > Use a separate token per gateway and scope it to exactly the repositories in
 > `REPO_URL` — the token ends up in the agent's environment, so treat it as
@@ -151,17 +151,17 @@ git-integration token, not this one.
 
 <!-- stack-table -->
 
-| Var | Default | Notes |
-| --- | --- | --- |
-| `GOOSE_PROVIDER` | `anthropic` | Which provider Goose drives: `ollama` \| `openai` (Ollama Cloud) \| `anthropic` \| `google`. Set the matching credentials from [Connection options](#connection-options). |
-| `GOOSE_MODEL` | provider default | Model id (e.g. `qwen3-coder:30b`, `kimi-k2.7-code`, `claude-sonnet-4-6`, `gemini-2.0-flash`). An unrecognised name fails on the first call rather than degrading silently. |
-| `GOOSE_MAX_TURNS_PLAN` | `50` | Hard `--max-turns` for brainstorm/design/plan stages (enforced by goose). |
-| `GOOSE_MAX_TURNS_IMPLEMENT` | `100` | Hard `--max-turns` for implementation. Exhausting the cap ends the stage **before** the agent reports completion, so the run is lost — raise it rather than trimming it. |
-| `LISTEN_PORT` | `9090` | Webhook receiver (`POST /event`) and healthcheck (`GET /health`). |
-| `MAX_CONCURRENT` | `1` | Soft cap on in-flight runs per instance. Keep at `1` on free/limited quota. |
-| `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` (JSON output). |
-| `WORKSPACE_BASE` | `/worktrees` | Root for per-run worktrees; must match the workspace volume mount. |
-| `REPO_BRANCH_BASE` | `main` | Branch each per-run worktree starts from. |
+| Var                         | Default          | Notes                                                                                                                                                                      |
+| --------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOSE_PROVIDER`            | `anthropic`      | Which provider Goose drives: `ollama` \| `openai` (Ollama Cloud) \| `anthropic` \| `google`. Set the matching credentials from [Connection options](#connection-options).  |
+| `GOOSE_MODEL`               | provider default | Model id (e.g. `qwen3-coder:30b`, `kimi-k2.7-code`, `claude-sonnet-4-6`, `gemini-2.0-flash`). An unrecognised name fails on the first call rather than degrading silently. |
+| `GOOSE_MAX_TURNS_PLAN`      | `50`             | Hard `--max-turns` for brainstorm/design/plan stages (enforced by goose).                                                                                                  |
+| `GOOSE_MAX_TURNS_IMPLEMENT` | `100`            | Hard `--max-turns` for implementation. Exhausting the cap ends the stage **before** the agent reports completion, so the run is lost — raise it rather than trimming it.   |
+| `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                          |
+| `MAX_CONCURRENT`            | `1`              | Soft cap on in-flight runs per instance. Keep at `1` on free/limited quota.                                                                                                |
+| `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                      |
+| `WORKSPACE_BASE`            | `/worktrees`     | Root for per-run worktrees; must match the workspace volume mount.                                                                                                         |
+| `REPO_BRANCH_BASE`          | `main`           | Branch each per-run worktree starts from.                                                                                                                                  |
 
 ## Authentication
 
@@ -247,6 +247,15 @@ The webhook target is the gateway's `/event` endpoint, e.g.
 Register it from the bot's credentials dialog in the admin UI — see
 [Agents](./agents.md). The `TRACKER_TO_GATEWAY_TOKEN` is shown **once** at
 creation time; copy it into the gateway's env (regenerate it if lost).
+
+## Live thinking
+
+The Goose gateway send the agent's thinking and tool calls to the tracker
+while a stage runs, so the task's activity feed can show them live (see
+[Watching the agent think](./agents.md#watching-the-agent-think)). It batches
+them about once a second, and the whole channel is best-effort: if the tracker
+rejects the batches — an older tracker, for instance — the gateway logs one
+warning, stops relaying for that stage, and the run continues untouched.
 
 ## Healthcheck & verifying a deploy
 

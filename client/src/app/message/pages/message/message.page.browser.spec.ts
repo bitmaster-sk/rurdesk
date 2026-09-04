@@ -6,7 +6,7 @@ import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, NEVER, of } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 import { MessagePage } from './message.page';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
@@ -236,5 +236,40 @@ describe('MessagePage mentionCandidates', () => {
 
         const badge = fixture.debugElement.query(By.directive(UiBadgeStub));
         expect(badge.componentInstance.value()).toBe('2');
+    });
+
+    it('renders conversation group headings via translate pipe and reacts to language changes', () => {
+        const translate = TestBed.inject(TranslateService);
+
+        projects = [{ idProject: 7, name: 'Proj', color: '' }];
+        paramMapSubject.next(makeParamMap(7, MessageRecipientType.project));
+
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+
+        const headings = fixture.nativeElement.querySelectorAll(
+            '.recipients > .ui-color-text-muted'
+        );
+        expect(headings.length).toBe(3);
+        expect(headings[0].textContent.trim()).toBe(translate.instant('PROJECT.CHATS'));
+        expect(headings[1].textContent.trim()).toBe(translate.instant('TEAM.CHATS'));
+        expect(headings[2].textContent.trim()).toBe(translate.instant('DIRECT.CHATS'));
+
+        // Simulate a language switch without reloading the page
+        translate.use('en');
+        translate.setTranslation('sk', {
+            PROJECT: { CHATS: 'Projektové chaty' },
+            TEAM: { CHATS: 'Tímové chaty' },
+            DIRECT: { CHATS: 'Priame správy' }
+        });
+        translate.use('sk');
+        fixture.detectChanges();
+
+        const newHeadings = fixture.nativeElement.querySelectorAll(
+            '.recipients > .ui-color-text-muted'
+        );
+        expect(newHeadings[0].textContent.trim()).toBe('Projektové chaty');
+        expect(newHeadings[1].textContent.trim()).toBe('Tímové chaty');
+        expect(newHeadings[2].textContent.trim()).toBe('Priame správy');
     });
 });

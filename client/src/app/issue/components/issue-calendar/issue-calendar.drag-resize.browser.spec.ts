@@ -140,7 +140,6 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
         const revertSpy = vi.fn();
         const issue = makeIssue({ scheduledAt: new Date('2025-01-15T09:00:00Z'), estimated: 3600 });
 
-        vi.spyOn(console, 'error').mockImplementation(() => {});
         comp.onCalendarEventDrop(
             makeDropArg({
                 event: { extendedProps: { issue }, allDay: false },
@@ -150,7 +149,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        expect(() => sub.handlers.error?.(new Error('fail'))).toThrow('fail');
+        expect(() => sub.handlers.error?.(new Error('fail'))).not.toThrow();
         expect(revertSpy).toHaveBeenCalled();
     });
 
@@ -289,7 +288,6 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         const revertSpy = vi.fn();
         const issue = makeIssue({ estimated: 3600 });
 
-        vi.spyOn(console, 'error').mockImplementation(() => {});
         comp.onCalendarEventResize(
             makeResizeArg({
                 event: { extendedProps: { issue } },
@@ -299,7 +297,7 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
             })
         );
 
-        expect(() => sub.handlers.error?.(new Error('fail'))).toThrow('fail');
+        expect(() => sub.handlers.error?.(new Error('fail'))).not.toThrow();
         expect(revertSpy).toHaveBeenCalled();
     });
 

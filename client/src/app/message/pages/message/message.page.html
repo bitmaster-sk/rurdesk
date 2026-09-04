@@ -1,7 +1,9 @@
 <div class="h-full flex flex-row">
     <div class="recipients">
-        @for (group of conversationGroups(); track group.name) {
-        <div class="ui-color-text-muted uppercase font-bold p-2">{{ group.name }}</div>
+        @for (group of conversationGroups(); track group.nameKey ?? group.name) {
+        <div class="ui-color-text-muted uppercase font-bold p-2">
+            {{ (group.nameKey ?? group.name) | translate }}
+        </div>
         @for (c of group.conversations; track c.unreadKey) {
         <div class="recipient-item">
             <div class="recipient-item_border"></div>

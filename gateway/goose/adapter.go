@@ -35,15 +35,17 @@ type gooseSession struct {
 // header), so writeGooseConfig writes the stage-scoped URL and bearer token
 // literally into ~/.config/goose/config.yaml before each run.
 type GooseAdapter struct {
-	cfg      *common.Config
-	mu       sync.Mutex
-	sessions map[common.RunID]*gooseSession
+	cfg            *common.Config
+	thinkingSender common.ThinkingSender
+	mu             sync.Mutex
+	sessions       map[common.RunID]*gooseSession
 }
 
-func NewGooseAdapter(cfg *common.Config) *GooseAdapter {
+func NewGooseAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) *GooseAdapter {
 	return &GooseAdapter{
-		cfg:      cfg,
-		sessions: make(map[common.RunID]*gooseSession),
+		cfg:            cfg,
+		thinkingSender: thinkingSender,
+		sessions:       make(map[common.RunID]*gooseSession),
 	}
 }
 
@@ -139,7 +141,12 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// stream-json emits one NDJSON event per token/tool; scan line-by-line and
 	// feed the aggregator, which coalesces the firehose into grouped log lines
 	// and accumulates the terminal stats (tokens, tool count, provider error).
-	agg := newStreamAggregator(task.IdRun, func(ev streamEvent) { logStreamEvent(ev, task.IdRun) })
+	thinking := common.NewThinkingBatcher(a.thinkingSender, task.IdTask)
+	thinking.Start(runCtx)
+	agg := newStreamAggregator(task.IdRun, func(ev streamEvent) {
+		logStreamEvent(ev, task.IdRun)
+		queueThinkingEvent(ev, thinking)
+	})
 	done := make(chan struct{})
 	go func() {
 		scanGooseStream(stdoutPipe, agg)
@@ -158,7 +165,13 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	<-stderrDone
 	waitErr := cmd.Wait()
 
+	// finish() emits the trailing buffered event, so the batcher must still be
+	// running when it is called — stopping first drops the agent's last thought.
 	result := agg.finish()
+	thinking.Stop()
+	if dropped := thinking.DroppedCount(); dropped > 0 {
+		log.Warn().Int64("idTask", task.IdTask).Int("dropped", dropped).Msg("thinking events dropped on overflow")
+	}
 	status, tokensUsed, toolCalls, provErr := result.status, result.tokens, result.toolCalls, result.provErr
 	turnLimitHit := result.turnLimitHit
 	stats.TokensUsed = tokensUsed
@@ -285,20 +298,6 @@ func toStreamableHTTP(mcpURL string) string {
 		return strings.TrimSuffix(mcpURL, "/sse") + "/http"
 	}
 	return mcpURL
-}
-
-// isToolRequestType reports whether a stream-json content-block type marks a
-// tool call; alias names are tolerated so a goose rename doesn't zero the count.
-func isToolRequestType(v any) bool {
-	t, ok := v.(string)
-	if !ok {
-		return false
-	}
-	switch t {
-	case "toolRequest", "tool_request", "tool_use":
-		return true
-	}
-	return false
 }
 
 // tokensFromMap sums a token total, tolerating a couple of key layouts

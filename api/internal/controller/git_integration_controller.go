@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -45,7 +46,7 @@ func (gc *GitIntegrationController) List(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -74,7 +75,7 @@ func (gc *GitIntegrationController) Get(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -86,7 +87,7 @@ func (gc *GitIntegrationController) Get(c *gin.Context) {
 		return
 	}
 	if integration == nil {
-		_ = c.Error(errGitIntegrationNotFound)
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -112,7 +113,7 @@ func (gc *GitIntegrationController) Create(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -133,7 +134,7 @@ func (gc *GitIntegrationController) Create(c *gin.Context) {
 
 	integration, err := gc.gitIntRepo.Create(ctx, idProject, req.Name, req.HostType, req.BaseUrl, req.RepoPath, tokenEnc, nonce)
 	if errors.Is(err, repository.ErrGitIntegrationDuplicate) {
-		_ = c.Error(errGitIntegrationDuplicate)
+		_ = c.Error(errs.ErrGitIntegrationDuplicate)
 		c.Status(http.StatusConflict)
 		return
 	}
@@ -162,7 +163,7 @@ func (gc *GitIntegrationController) Update(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -191,7 +192,7 @@ func (gc *GitIntegrationController) Update(c *gin.Context) {
 		return
 	}
 	if integration == nil {
-		_ = c.Error(errGitIntegrationNotFound)
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -210,14 +211,14 @@ func (gc *GitIntegrationController) Delete(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	_, err := gc.gitIntRepo.Delete(ctx, idGitIntegration, idProject)
 	if errors.Is(err, pgx.ErrNoRows) {
-		_ = c.Error(errGitIntegrationNotFound)
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -242,14 +243,14 @@ func (gc *GitIntegrationController) GetDiff(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	host, err := gc.loadHostForIntegration(ctx, idGitIntegration, idProject)
-	if errors.Is(err, errGitIntegrationNotFound) {
-		_ = c.Error(errGitIntegrationNotFound)
+	if errors.Is(err, errs.ErrGitIntegrationNotFound) {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -261,7 +262,7 @@ func (gc *GitIntegrationController) GetDiff(c *gin.Context) {
 
 	diff, err := gc.fetchDiff(ctx, host, idGitIntegration, mrId)
 	if err != nil {
-		_ = c.Error(errGitHostUnavailable)
+		_ = c.Error(errs.ErrGitHostUnavailable)
 		c.Status(http.StatusBadGateway)
 		return
 	}
@@ -279,14 +280,14 @@ func (gc *GitIntegrationController) GetStatus(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
 
 	host, err := gc.loadHostForIntegration(ctx, idGitIntegration, idProject)
-	if errors.Is(err, errGitIntegrationNotFound) {
-		_ = c.Error(errGitIntegrationNotFound)
+	if errors.Is(err, errs.ErrGitIntegrationNotFound) {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
@@ -298,7 +299,7 @@ func (gc *GitIntegrationController) GetStatus(c *gin.Context) {
 
 	status, err := gc.fetchStatus(ctx, host, idGitIntegration, mrId)
 	if err != nil {
-		_ = c.Error(errGitHostUnavailable)
+		_ = c.Error(errs.ErrGitHostUnavailable)
 		c.Status(http.StatusBadGateway)
 		return
 	}
@@ -311,7 +312,7 @@ func (gc *GitIntegrationController) loadHostForIntegration(ctx context.Context, 
 		return nil, err
 	}
 	if integration == nil {
-		return nil, errGitIntegrationNotFound
+		return nil, errs.ErrGitIntegrationNotFound
 	}
 	return githost.BuildFromIntegration(integration)
 }
