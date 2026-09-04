@@ -743,7 +743,7 @@
         "RECORDS": "Track records",
         "CONFIRM.DELETE": "Do you really want to delete this track record?",
         "TIME": "Tracked time",
-        "LAST.7.DAYS": "Tracked last 7 days",
+        "RANGE_LABEL": "{{ from }} \u2013 {{ to }}",
         "SUBMIT": "Submit tracked time",
         "STOP": "Stop tracking",
         "START": "Start tracking",
