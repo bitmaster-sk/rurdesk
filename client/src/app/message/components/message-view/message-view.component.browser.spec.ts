@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ComponentRef, Pipe, PipeTransform } from '@angular/core';
+import { ComponentRef } from '@angular/core';
 import {
     AvatarStub,
     MessageBodyStub,
@@ -12,16 +12,6 @@ import { Message } from '../../model/message.model';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { MessageKind } from '../../constant/message-kind.enum';
 import { TranslateModule } from '@ngx-translate/core';
-
-// Passthrough stub for the emoji pipe — the real one depends on the joypixels
-// global (loaded via a script tag in prod), which is absent in tests. These
-// tests assert message rendering, not emoji conversion.
-@Pipe({ name: 'emoji', standalone: false })
-class EmojiPipeStub implements PipeTransform {
-    public transform(value: string): string {
-        return value;
-    }
-}
 
 const mockMessage = (overrides: Partial<Message> = {}): Message => ({
     idMessage: 1,
@@ -44,7 +34,7 @@ describe('MessageViewComponent', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [MessageViewComponent, EmojiPipeStub],
+            declarations: [MessageViewComponent],
             imports: [
                 TranslateModule.forRoot(),
                 AvatarStub,
