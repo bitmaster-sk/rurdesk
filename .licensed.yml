@@ -141,16 +141,6 @@ reviewed:
     # font must not be sold on its own and this notice must travel with it.
     - "@fontsource/lato"
 
-    # -- (a) emoji-toolkit: MIT code, proprietary artwork -------------------
-    # NOT plain MIT, whatever its package.json claims. JoyPixels licenses the
-    # emoji *artwork* under its own restrictive terms and only the JS/JSON/CSS
-    # under MIT. We ship `lib/js/joypixels.min.js` only (client/angular.json),
-    # and `EmojiPipe` calls `shortnameToUnicode` — ":smile:" becomes a unicode
-    # codepoint drawn by the reader's own system font. No JoyPixels artwork is
-    # bundled, referenced or served, so only the MIT half applies.
-    # Re-check this if we ever switch the pipe to image-based emoji.
-    - emoji-toolkit
-
     # -- (a) dual-licensed, we take the permissive option -------------------
     - dompurify # (MPL-2.0 OR Apache-2.0) -> Apache-2.0
     - abbrev # (ISC OR MIT) -> MIT
