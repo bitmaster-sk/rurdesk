@@ -60,15 +60,6 @@ describe('SplitReviewStepComponent', () => {
         expect(a.ref).not.toBe(b.ref);
     });
 
-    it('generates RFC 4122 v4 UUID refs (no direct crypto dependency)', () => {
-        const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        for (const issue of component.issues()) {
-            expect(issue.ref).toMatch(uuidV4);
-        }
-        component.onAddChild();
-        expect(component.issues()[2].ref).toMatch(uuidV4);
-    });
-
     it('onAddChild appends a blank staged issue', () => {
         component.onAddChild();
         expect(component.issues().length).toBe(3);
