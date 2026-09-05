@@ -5,11 +5,8 @@ import { TopMenuComponent } from './top-menu.component';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectService } from 'src/app/project/project.service';
 import { ProjectStore } from 'src/app/project/project.store';
-import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
-import { NotificationApi } from 'src/app/notification/api/notification.api';
-import { NotificationStore } from 'src/app/notification/store/notification.store';
 import { Router } from '@angular/router';
 import { User } from 'src/app/auth/model/user.model';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
@@ -30,11 +27,8 @@ function setup(user: User) {
             { provide: AuthStore, useValue: { user: signal(user) } },
             { provide: ProjectService, useValue: { loadProjects: () => of([]) } },
             { provide: ProjectStore, useValue: { project$: of(null) } },
-            { provide: NoticeService, useValue: { notification$: of() } },
             { provide: WindowService, useValue: { open: () => ({ onClose: of() }) } },
             { provide: TrackerService, useValue: { isTracking$: of(false) } },
-            { provide: NotificationApi, useValue: { list: () => of([]) } },
-            { provide: NotificationStore, useValue: { load: () => {}, prepend: () => {} } },
             { provide: Router, useValue: { url: '/', events: of() } }
         ]
     });

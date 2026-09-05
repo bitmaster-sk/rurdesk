@@ -1,5 +1,8 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { NotificationApi } from '../api/notification.api';
 import { Notification, NotificationGroup } from '../model/notification.model';
+import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { NotificationType } from '../model/notification-type.enum';
 
 function groupByProject(notifications: Notification[]): NotificationGroup[] {
@@ -37,7 +40,12 @@ function groupByProject(notifications: Notification[]): NotificationGroup[] {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationStore {
+    private readonly notifApi = inject(NotificationApi);
+    private readonly sNotice = inject(NoticeService);
+
     private notifications = signal<Notification[]>([]);
+    private wsSubscription: Subscription | null = null;
+    private started = false;
 
     public readonly all = this.notifications.asReadonly();
 
@@ -54,6 +62,30 @@ export class NotificationStore {
             this.notifications().filter(n => n.type === NotificationType.Mention && !n.isRead)
                 .length
     );
+
+    /** Auth-gated bootstrap: fetch the initial list and subscribe to the
+     *  websocket feed so notifications work regardless of which components
+     *  are on screen. Idempotent — safe to call from both AppComponent
+     *  (boot) and SessionService (post-login). */
+    public init(): void {
+        if (this.started) {
+            return;
+        }
+        this.started = true;
+        this.notifApi.list({ limit: 50 }).subscribe(notifications => {
+            this.load(notifications);
+        });
+        this.wsSubscription = this.sNotice.notification$.subscribe(notice => {
+            this.prepend(notice.payload);
+        });
+    }
+
+    /** Tear down the websocket feed — for test cleanup and completeness. */
+    public destroy(): void {
+        this.wsSubscription?.unsubscribe();
+        this.wsSubscription = null;
+        this.started = false;
+    }
 
     public load(notifications: Notification[]): void {
         this.notifications.set(notifications);
