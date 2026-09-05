@@ -10,7 +10,7 @@ import { NotificationStore } from '../../store/notification.store';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationMenuComponent {
-    private store = inject(NotificationStore);
+    private readonly store = inject(NotificationStore);
 
     private overlay = viewChild.required<UiPopoverComponent>('overlay');
 

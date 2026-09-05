@@ -12,7 +12,7 @@ export interface NotificationListParams {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationApi {
-    private http = inject(HttpClient);
+    private readonly http = inject(HttpClient);
 
     public list(params: NotificationListParams = {}): Observable<Notification[]> {
         const queryParams: Record<string, string> = {};
