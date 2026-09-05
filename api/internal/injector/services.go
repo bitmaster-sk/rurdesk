@@ -420,7 +420,7 @@ func GetProjectMemberController() *controller.ProjectMemberController {
 func GetAgentRunRepository() *repository.AgentRunRepository {
 	instance, _ := di.GetWithNew("agent-run-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewAgentRunRepository(pool).WithEventMirror(GetWorkflowEventMirror()), nil
+		return repository.NewAgentRunRepository(pool).WithPhaseStateTransitioner(GetPhaseStateTransitioner()), nil
 	})
 	return instance.(*repository.AgentRunRepository)
 }
@@ -914,7 +914,7 @@ func GetMergePoller() *agent.MergePoller {
 			GetGitIntegrationRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
-			GetWorkflowEventMirror(),
+			GetPhaseStateTransitioner(),
 			GetNotifier(),
 		), nil
 	})
@@ -1022,15 +1022,17 @@ func GetSkillController() *controller.SkillController {
 	return instance.(*controller.SkillController)
 }
 
-func GetWorkflowEventMirror() *agent.WorkflowEventMirror {
+func GetPhaseStateTransitioner() *agent.PhaseStateTransitioner {
 	instance, _ := di.GetWithNew("workflow-event-mirror", func() (any, error) {
-		return agent.NewWorkflowEventMirror(
+		return agent.NewPhaseStateTransitioner(
 			GetWorkflowEventMapRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
+			GetProjectRepository(),
+			GetNotifier(),
 		), nil
 	})
-	return instance.(*agent.WorkflowEventMirror)
+	return instance.(*agent.PhaseStateTransitioner)
 }
 
 func GetWorkflowEventMapController() *controller.WorkflowEventMapController {

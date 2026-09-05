@@ -22,23 +22,31 @@ func isUniqueViolation(err error) bool {
 	return errors.As(err, &pgErr) && pgErr.Code == "23505"
 }
 
-// EventMirror applies issue-state side effects when a run transitions phase.
-type EventMirror interface {
-	ApplyMirror(ctx context.Context, idProject, idIssue int64, toPhase string)
+// PhaseTransitioner applies issue-state side effects when a run transitions phase.
+type PhaseTransitioner interface {
+	Transition(ctx context.Context, idProject, idIssue int64, toPhase string)
 }
 
 type AgentRunRepository struct {
-	pool        *pgxpool.Pool
-	eventMirror EventMirror
+	pool              *pgxpool.Pool
+	phaseTransitioner PhaseTransitioner
 }
 
 func NewAgentRunRepository(pool *pgxpool.Pool) *AgentRunRepository {
 	return &AgentRunRepository{pool: pool}
 }
 
-func (r *AgentRunRepository) WithEventMirror(m EventMirror) *AgentRunRepository {
-	r.eventMirror = m
+func (r *AgentRunRepository) WithPhaseStateTransitioner(transitioner PhaseTransitioner) *AgentRunRepository {
+	r.phaseTransitioner = transitioner
 	return r
+}
+
+// transitionState must be called by every method that writes agent.run.phase, or that phase skips the project's event-to-state mapping.
+func (r *AgentRunRepository) transitionState(ctx context.Context, run *model.AgentRun, event string) {
+	if r.phaseTransitioner == nil || run == nil {
+		return
+	}
+	r.phaseTransitioner.Transition(ctx, run.IdProject, run.IdIssue, event)
 }
 
 const agentRunColumns = `
@@ -70,7 +78,12 @@ func (r *AgentRunRepository) Insert(ctx context.Context, idIssue, idUserBot, idP
 		RETURNING %s`, agentRunColumns),
 		idIssue, idUserBot, idProject, constants.PhaseQueued, stagePlan,
 	)
-	return scanAgentRun(row)
+	run, err := scanAgentRun(row)
+	if err != nil {
+		return nil, err
+	}
+	r.transitionState(ctx, run, constants.PhaseQueued)
+	return run, nil
 }
 
 func (r *AgentRunRepository) UpdateStagePlan(ctx context.Context, idRun int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
@@ -375,9 +388,7 @@ func (r *AgentRunRepository) TransitionPhase(
 		return run, fmt.Errorf("inserting run event: %w", err)
 	}
 
-	if r.eventMirror != nil {
-		r.eventMirror.ApplyMirror(ctx, run.IdProject, run.IdIssue, toPhase)
-	}
+	r.transitionState(ctx, run, toPhase)
 
 	return run, nil
 }
@@ -438,6 +449,9 @@ func (r *AgentRunRepository) SetPrInfoFrom(ctx context.Context, idRun int64, dto
 	if err != nil {
 		return run, fmt.Errorf("inserting run event: %w", err)
 	}
+
+	r.transitionState(ctx, run, constants.PhasePrOpen)
+
 	return run, nil
 }
 
@@ -476,6 +490,9 @@ func (r *AgentRunRepository) ReconcileToPhase(ctx context.Context, idRun int64, 
 	if err != nil {
 		return run, fmt.Errorf("inserting run event: %w", err)
 	}
+
+	r.transitionState(ctx, run, toPhase)
+
 	return run, nil
 }
 
