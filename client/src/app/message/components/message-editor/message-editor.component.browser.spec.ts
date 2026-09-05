@@ -408,4 +408,84 @@ describe('MessageEditorComponent (contenteditable)', () => {
         await fixture.whenStable();
         expect(host.emitted).toContain('line1\nline2');
     });
+
+    function typeAt(el: HTMLDivElement, text: string, caret: number): void {
+        el.focus();
+        el.textContent = text;
+        setLinearSelection(el, caret, caret);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    it('replaces an ascii shortcut with its emoji once the terminating space is typed', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'hi :) ', 6);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(serialize(el)).toBe('hi 😄 ');
+        expect(getLinearSelection(el).start).toBe('hi 😄 '.length);
+    });
+
+    it('replaces at the caret, leaving the rest of the line untouched', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'hi :) there', 6);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(serialize(el)).toBe('hi 😄 there');
+    });
+
+    it('leaves code-shaped colon patterns verbatim', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'const x = {a:P} ', 16);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(serialize(el)).toBe('const x = {a:P} ');
+    });
+
+    it('does not replace before the terminating space is typed', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'hi :)', 5);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(serialize(el)).toBe('hi :)');
+    });
+
+    it('undo brings the ascii shortcut back', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'hi :) ', 6);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(serialize(el)).toBe('hi 😄 ');
+
+        document.execCommand('undo');
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(serialize(el)).toBe('hi :) ');
+    });
+
+    it('sends the converted body, not the ascii shortcut', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        typeAt(el, 'ship it :D ', 11);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        el.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        expect(host.emitted).toContain('ship it 😄 ');
+    });
 });
