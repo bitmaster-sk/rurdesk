@@ -2,6 +2,7 @@ package extctx
 
 import (
 	"context"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -28,6 +29,46 @@ func GetDb(ctx context.Context, pool *pgxpool.Pool) PersistentStorage {
 	return pool
 }
 
+type afterCommitKey struct{}
+
+type afterCommitHooks struct {
+	mu  sync.Mutex
+	fns []func(context.Context)
+}
+
+func (h *afterCommitHooks) add(fn func(context.Context)) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.fns = append(h.fns, fn)
+}
+
+func (h *afterCommitHooks) run(ctx context.Context) {
+	h.mu.Lock()
+	fns := h.fns
+	h.fns = nil
+	h.mu.Unlock()
+	for _, fn := range fns {
+		fn(ctx)
+	}
+}
+
+// AfterCommit defers fn until the ambient transaction commits, or runs it immediately when there is none.
+// fn receives a detached context: the transaction and the request cancellation are gone, so it can read on the pool.
+func AfterCommit(ctx context.Context, fn func(context.Context)) {
+	hooks, ok := ctx.Value(afterCommitKey{}).(*afterCommitHooks)
+	if !ok {
+		fn(detach(ctx))
+		return
+	}
+	hooks.add(fn)
+}
+
+func detach(ctx context.Context) context.Context {
+	ctx = context.WithoutCancel(ctx)
+	ctx = context.WithValue(ctx, txKey{}, nil)
+	return context.WithValue(ctx, afterCommitKey{}, nil)
+}
+
 func RunInTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) (err error) {
 	log := GetLogger(ctx)
 
@@ -36,6 +77,7 @@ func RunInTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) e
 		log.Error().Err(err).Msg("RunInTx: failed to begin transaction")
 		return err
 	}
+	hooks := &afterCommitHooks{}
 	defer func() {
 		if p := recover(); p != nil {
 			_ = tx.Rollback(ctx)
@@ -45,13 +87,15 @@ func RunInTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) e
 			_ = tx.Rollback(ctx)
 		}
 	}()
-	err = fn(WithTx(ctx, tx))
+	err = fn(context.WithValue(WithTx(ctx, tx), afterCommitKey{}, hooks))
 	if err != nil {
 		log.Error().Err(err).Msg("RunInTx: transaction function failed")
 		return err
 	}
 	if err = tx.Commit(ctx); err != nil {
 		log.Error().Err(err).Msg("RunInTx: failed to commit transaction")
+		return err
 	}
-	return err
+	hooks.run(detach(ctx))
+	return nil
 }
