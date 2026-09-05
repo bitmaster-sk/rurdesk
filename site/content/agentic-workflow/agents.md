@@ -89,6 +89,9 @@ which bot executed each stage (provenance), and timestamps.
 
 ![Agent run card — stage timeline and phase badge](../../site/assets/img/run-card.png)
 
+Every phase change can also move the task's own state — see
+[Automatic state changes](../using-the-tracker/features.md#automatic-state-changes).
+
 ### Stage outputs in the activity feed
 
 As the agent works, it posts each stage's result as a comment in the task
