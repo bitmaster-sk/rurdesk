@@ -13,7 +13,7 @@ import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 import { User } from 'src/app/auth/model/user.model';
-import { extractMessageSegments } from 'src/app/shared/mention/extract-message-segments';
+import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 
 @Component({
     selector: 'app-activity-comment-item',
@@ -101,7 +101,7 @@ export class ActivityCommentItemComponent {
     // so a malformed/unclosed fence can never hide the global approve while
     // rendering zero cards — which would leave the run unapprovable.
     protected readonly hasMockups = computed(() =>
-        extractMessageSegments(this.message().message).some(s => s.type === 'mockup')
+        MessageSegmentParser.parse(this.message().message).some(s => s.type === 'mockup')
     );
 
     protected readonly showApproveActions = computed(

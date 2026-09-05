@@ -30,7 +30,7 @@ import {
     serializeRaw,
     setLinearSelection
 } from './editor-text-model';
-import { parseMentionParts, serializeMention } from 'src/app/shared/mention/mention-token.util';
+import { Mention } from 'src/app/shared/mention/mention';
 
 type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
 
@@ -359,7 +359,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     private render(body: string): void {
         const root = this.editorRef().nativeElement;
         root.replaceChildren();
-        for (const part of parseMentionParts(body)) {
+        for (const part of Mention.parse(body)) {
             if (part.type === 'text') {
                 if (part.text.length) {
                     root.appendChild(document.createTextNode(part.text));
@@ -374,7 +374,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const span = document.createElement('span');
         span.className = 'mention-chip';
         span.contentEditable = 'false';
-        span.dataset['token'] = serializeMention(idUser, name);
+        span.dataset['token'] = Mention.serialize(idUser, name);
         span.dataset['id'] = String(idUser);
         span.textContent = '@' + name;
         return span;
