@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"testing"
 
@@ -88,8 +89,51 @@ func (s *WorkflowEventMapSuite) createState(name string, start, final bool) int6
 	return st.IdState
 }
 
+func (s *WorkflowEventMapSuite) createGitIntegration() int64 {
+	body := fmt.Sprintf(
+		`{"name":"mock-git-%d","hostType":"github","baseUrl":%q,"repoPath":"org/repo-%d","accessToken":"ghp_mock_token"}`,
+		rand.Int63(), "https://api.github.test", rand.Int63(),
+	)
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/git-integration", s.IdProject),
+		body, s.OwnerToken)
+	s.Require().Equal(http.StatusCreated, res.StatusCode)
+	var gitInt model.GitIntegrationRes
+	json.NewDecoder(res.Body).Decode(&gitInt)
+	return gitInt.IdGitIntegration
+}
+
 func (s *WorkflowEventMapSuite) url() string {
 	return fmt.Sprintf("/api/private/project/%d/workflow-event-state-map", s.IdProject)
+}
+
+func (s *WorkflowEventMapSuite) mapEventTo(event string, idState int64) {
+	body := fmt.Sprintf(`{"mappings":[{"event":%q,"idState":%d}]}`, event, idState)
+	res := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+}
+
+func (s *WorkflowEventMapSuite) clearEventMap() {
+	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+}
+
+func (s *WorkflowEventMapSuite) createIssue(title string) model.Issue {
+	body := fmt.Sprintf(
+		`{"title":%q,"description":"phase state map test issue body","estimated":0}`, title)
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject), body, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var iss model.Issue
+	json.NewDecoder(res.Body).Decode(&iss)
+	return iss
+}
+
+func (s *WorkflowEventMapSuite) loadIssueState(idIssue int64) *int64 {
+	var idState *int64
+	err := s.App.Pool.QueryRow(context.Background(),
+		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, idIssue).Scan(&idState)
+	s.Require().NoError(err)
+	return idState
 }
 
 func (s *WorkflowEventMapSuite) Test_GetMappings_Empty() {
@@ -232,6 +276,89 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 }
 
+func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnSetPrInfoFrom() {
+	inQaStateID := s.createState("In QA", false, false)
+	body := fmt.Sprintf(`{"mappings":[{"event":"pr_open","idState":%d}]}`, inQaStateID)
+	putRes := Request(s.T(), s.App, "PUT", s.url(), body, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, putRes.StatusCode)
+
+	issueRes := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
+		`{"title":"pr-open mirror issue","description":"phase state map test issue body","estimated":0}`, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, issueRes.StatusCode)
+	var iss model.Issue
+	json.NewDecoder(issueRes.Body).Decode(&iss)
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+
+	gitIntID1 := s.createGitIntegration()
+	agentRunRepo := injector.GetAgentRunRepository()
+	dto := model.SetRunPrReq{
+		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/1",
+		PrId:             "1",
+		PrHostType:       "github",
+		BranchName:       "agent/test-branch",
+		IdGitIntegration: gitIntID1,
+	}
+	run, err := agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
+	s.Require().NoError(err)
+	s.Equal("pr_open", run.Phase)
+
+	var idState *int64
+	err = s.App.Pool.QueryRow(ctx,
+		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, iss.IdIssue).Scan(&idState)
+	s.Require().NoError(err)
+	s.Require().NotNil(idState)
+	s.Equal(inQaStateID, *idState)
+
+	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+}
+
+func (s *WorkflowEventMapSuite) Test_Mirror_SetPrInfoFrom_NoMapping_NoStateChange() {
+	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+
+	issueRes := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
+		`{"title":"pr-open no mirror issue","description":"phase state map test issue body","estimated":0}`, s.OwnerToken)
+	s.Require().Equal(http.StatusOK, issueRes.StatusCode)
+	var iss model.Issue
+	json.NewDecoder(issueRes.Body).Decode(&iss)
+	originalState := iss.IdState
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+
+	gitIntID2 := s.createGitIntegration()
+	agentRunRepo := injector.GetAgentRunRepository()
+	dto := model.SetRunPrReq{
+		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/2",
+		PrId:             "2",
+		PrHostType:       "github",
+		BranchName:       "agent/test-branch-2",
+		IdGitIntegration: gitIntID2,
+	}
+	_, err = agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
+	s.Require().NoError(err)
+
+	s.Equal(originalState, s.loadIssueState(iss.IdIssue))
+
+	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+}
+
 func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
 
@@ -256,16 +383,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 	_, err = agentRunRepo.TransitionPhase(ctx, idRun, "queued", "in_progress", "system", nil, "test")
 	s.Require().NoError(err)
 
-	var idState *int64
-	err = s.App.Pool.QueryRow(ctx,
-		`SELECT id_state FROM issues.issue WHERE id_issue = $1`, iss.IdIssue).Scan(&idState)
-	s.Require().NoError(err)
-	// State should be unchanged (either nil or the original)
-	if originalState != nil && idState != nil {
-		s.Equal(*originalState, *idState)
-	} else {
-		s.Equal(originalState, idState)
-	}
+	s.Equal(originalState, s.loadIssueState(iss.IdIssue))
 
 	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 }
@@ -337,6 +455,51 @@ func (s *WorkflowEventMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition()
 
 	s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 	Request(s.T(), s.App, "PUT", s.url(), `{"mappings":[]}`, s.OwnerToken)
+}
+
+func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnInsert() {
+	queuedStateID := s.createState("Queued Mirror", false, false)
+	s.mapEventTo("queued", queuedStateID)
+	defer s.clearEventMap()
+
+	iss := s.createIssue("insert mirror issue")
+
+	ctx := context.Background()
+	run, err := injector.GetAgentRunRepository().
+		Insert(ctx, iss.IdIssue, s.BotUserID, s.IdProject, json.RawMessage(`{"stages":[]}`))
+	s.Require().NoError(err)
+	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, run.IdRun) //nolint:errcheck
+
+	idState := s.loadIssueState(iss.IdIssue)
+	s.Require().NotNil(idState, "creating a queued run must apply the queued mapping")
+	s.Equal(queuedStateID, *idState)
+}
+
+func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnReconcileToPhase() {
+	reconciledStateID := s.createState("Reconciled Mirror", false, false)
+	s.mapEventTo("awaiting_approval", reconciledStateID)
+	defer s.clearEventMap()
+
+	iss := s.createIssue("reconcile mirror issue")
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'failed', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	run, err := injector.GetAgentRunRepository().
+		ReconcileToPhase(ctx, idRun, "failed", "awaiting_approval", "gateway", "late completion")
+	s.Require().NoError(err)
+	s.Equal("awaiting_approval", run.Phase)
+
+	idState := s.loadIssueState(iss.IdIssue)
+	s.Require().NotNil(idState, "reconciling a crash-orphaned run must apply the mapping too")
+	s.Equal(reconciledStateID, *idState)
 }
 
 func TestWorkflowEventMapSuite(t *testing.T) {

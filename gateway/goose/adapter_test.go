@@ -246,7 +246,7 @@ func TestRunWithStubBinary(t *testing.T) {
 					MaxTurnsImplement: 60,
 				},
 			}
-			adapter := NewGooseAdapter(cfg)
+			adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
 			task := common.Task{
 				IdRun:        7,
 				IdTask:       1,

@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 import { MessageService } from './message.service';
 import { MessageRecipientType } from './constant/message-recipient-type.enum';
 import { Message } from './model/message.model';
+import { MessageKeyConverter } from './converter/message-key.converter';
 
 function buildService(http: HttpClient): MessageService {
     const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: http }] });
@@ -47,7 +48,7 @@ describe('MessageService.insertMessage', () => {
 describe('MessageService unread map', () => {
     it('groups pushed messages by recipient|creator|type key', () => {
         const service = buildService({} as unknown as HttpClient);
-        const key = `5|10|${MessageRecipientType.user}`;
+        const key = MessageKeyConverter.toUnreadKey(5, 10, MessageRecipientType.user);
 
         service.unreadPush([userMessage(5, 10), userMessage(5, 10)]);
         expect(service.Unread.getValue().get(key)).toHaveLength(2);

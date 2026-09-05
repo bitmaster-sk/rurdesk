@@ -28,6 +28,7 @@ const (
 	SubjectAgentRun         NoticeSubject = "agent_run"
 	SubjectAgentTask        NoticeSubject = "agent_task"
 	SubjectAgentStats       NoticeSubject = "agent_stats"
+	SubjectAgentThinking    NoticeSubject = "agent_thinking"
 	SubjectIssueParticipant NoticeSubject = "issue_participant"
 )
 

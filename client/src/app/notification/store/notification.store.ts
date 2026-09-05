@@ -37,7 +37,7 @@ function groupByProject(notifications: Notification[]): NotificationGroup[] {
 
 @Injectable({ providedIn: 'root' })
 export class NotificationStore {
-    private notifications = signal<Notification[]>([]);
+    private readonly notifications = signal<Notification[]>([]);
 
     public readonly all = this.notifications.asReadonly();
 

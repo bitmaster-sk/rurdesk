@@ -31,7 +31,7 @@ func TestAppSettings_DefaultWhenKeyAbsent(t *testing.T) {
 	if err := svc.Load(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	want := constants.KnownAppSettings[constants.SettingTablePageSize].Default
+	want := constants.KnownAppNumericSettings[constants.SettingTablePageSize].Default
 	if got := svc.TablePageSize(); got != want {
 		t.Fatalf("want default %d, got %d", want, got)
 	}
@@ -61,10 +61,10 @@ func TestAppSettings_UpdateValidatesAndSwaps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 9999}); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 9999}, nil); err == nil {
 		t.Fatal("expected out-of-range error")
 	}
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 100}); err != nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 100}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if svc.TablePageSize() != 100 {
@@ -81,24 +81,67 @@ func TestAppSettings_UserApiKeyLimit(t *testing.T) {
 		t.Fatalf("want default 10, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 25}); err != nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 25}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := svc.UserApiKeyLimit(); got != 25 {
 		t.Fatalf("want 25 after update, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 0}); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 0}, nil); err == nil {
 		t.Fatal("expected out-of-range error for 0")
 	}
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 101}); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 101}, nil); err == nil {
 		t.Fatal("expected out-of-range error for 101")
+	}
+}
+
+// A boolean setting round-trips as a JSON boolean, so the value in the column
+// reads the way an admin would expect and no layer translates 1 into true.
+func TestAppSettings_BoolSettingRoundTripsAsBoolean(t *testing.T) {
+	store := &fakeStore{data: map[string]string{}}
+	svc := NewAppSettingsService(store)
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !svc.IsAgentThinkingPersisted() {
+		t.Fatal("want the setting on by default")
+	}
+
+	boolChanges := map[string]bool{constants.SettingIsAgentThinkingPersisted: false}
+	if err := svc.Update(context.Background(), nil, boolChanges); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := store.upserted[constants.SettingIsAgentThinkingPersisted]; got != "false" {
+		t.Fatalf("want %q persisted, got %q", "false", got)
+	}
+	if svc.IsAgentThinkingPersisted() {
+		t.Fatal("want the setting off after update")
+	}
+}
+
+func TestAppSettings_BoolSettingFallsBackToDefaultWhenStoredValueIsGarbage(t *testing.T) {
+	store := &fakeStore{data: map[string]string{constants.SettingIsAgentThinkingPersisted: "\"maybe\""}}
+	svc := NewAppSettingsService(store)
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if !svc.IsAgentThinkingPersisted() {
+		t.Fatal("want the default when the stored value does not parse")
+	}
+}
+
+func TestAppSettings_UpdateRejectsUnknownBoolSetting(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Update(context.Background(), nil, map[string]bool{"agent.bogus": true}); err == nil {
+		t.Fatal("expected unknown-key error")
 	}
 }
 
 func TestAppSettings_UpdateRejectsUnknownKey(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
-	if err := svc.Update(context.Background(), map[string]int{"pagination.bogus": 10}); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{"pagination.bogus": 10}, nil); err == nil {
 		t.Fatal("expected unknown-key error")
 	}
 }

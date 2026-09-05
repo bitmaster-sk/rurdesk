@@ -44,6 +44,7 @@ func (ctrl *SkillController) List(c *gin.Context) {
 func (ctrl *SkillController) Get(c *gin.Context) {
 	idSkill, err := strconv.ParseInt(c.Param("idSkill"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -58,7 +59,8 @@ func (ctrl *SkillController) Get(c *gin.Context) {
 func (ctrl *SkillController) Create(c *gin.Context) {
 	var dto model.CreateSkillReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	skill, err := ctrl.skillService.Create(c.Request.Context(), dto)
@@ -72,12 +74,14 @@ func (ctrl *SkillController) Create(c *gin.Context) {
 func (ctrl *SkillController) Update(c *gin.Context) {
 	idSkill, err := strconv.ParseInt(c.Param("idSkill"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	var dto model.UpdateSkillReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 
@@ -92,6 +96,7 @@ func (ctrl *SkillController) Update(c *gin.Context) {
 func (ctrl *SkillController) Delete(c *gin.Context) {
 	idSkill, err := strconv.ParseInt(c.Param("idSkill"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -105,6 +110,7 @@ func (ctrl *SkillController) Delete(c *gin.Context) {
 func (ctrl *SkillController) Restore(c *gin.Context) {
 	idSkill, err := strconv.ParseInt(c.Param("idSkill"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}

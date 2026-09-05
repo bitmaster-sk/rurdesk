@@ -202,20 +202,35 @@ toggle — and save that filter into a view like any other.
 updates to whatever you mapped it to; leave an event unmapped to skip it. The
 events are grouped by what can trigger them:
 
-- **Any linked pull request** — only the `done` event ("the pull request is
-  merged"), because it fires for **both** an agent-opened PR and a **manually
-  linked** one. A background check runs roughly every **60 seconds**: once a
-  linked PR/MR is merged, the mapped task picks up the `done` mapping's state.
-  For **manually linked PRs**, a task already in a **final** state is left
-  alone — the PR status pill still shows **Merged**, but the task's state does
+- **Any linked pull request** — **Done** and **Failed**, because they fire for
+  **both** an agent-opened PR and a **manually linked** one. A background check
+  runs every **60 seconds** (configurable with `MERGE_POLL_INTERVAL`): once a
+  linked PR/MR is merged the task picks up the state mapped to **Done**, and
+  once one is **closed without merging** it picks up the state mapped to
+  **Failed**. For **manually linked PRs**, a task already in a **final** state
+  is left alone — the PR status pill still updates, but the task's state does
   not change. **Agent runs apply the mapping regardless of the task's current
-  state.** A PR/MR that is **closed without merging** changes nothing.
-- **Agent runs only** — the other seven events (`queued`, `in_progress`,
-  `awaiting_input`, `awaiting_approval`, `pr_open`, `failed`, `cancelled`) fire
-  **only** for [agent runs](../agentic-workflow/agents.md). Linking an
-  already-open PR to a task does **not** fire `pr_open` — that stays an
-  agent-only signal, so manually linking a PR never jumps the state to
-  whatever you mapped `pr_open` to.
+  state.**
+- **Agent runs only** — the other six events fire **only** for
+  [agent runs](../agentic-workflow/agents.md). Linking an already-open PR to a
+  task does **not** fire **Waiting for merge** — that stays an agent-only
+  signal, so manually linking a PR never jumps the state to whatever you mapped
+  it to.
+
+| Event | Fires when |
+| --- | --- |
+| **Queued** | A run is queued: when it starts, when you press Continue, or when a new comment sends it back |
+| **In progress** | The agent starts working on a step, including right after you approve one |
+| **Awaiting input** | The agent asks a question and waits for your answer |
+| **Awaiting approval** | The agent's output waits for your review |
+| **Waiting for merge** | The agent opens a pull request |
+| **Done** | The pull request is merged, whether the agent opened it or you linked it |
+| **Failed** | A step errors, the run is lost, or its pull request is closed without merging |
+| **Cancelled** | The run is cancelled, including when you restart it |
+
+Mapping several events to the same state is fine — the task simply stays put.
+If a mapped state is later deleted, the mapping is dropped and the event
+becomes a no-op rather than failing the run.
 
 ## Relations & scheduling
 

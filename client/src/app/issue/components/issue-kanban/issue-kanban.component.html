@@ -56,9 +56,14 @@
         [ngModel]="viewMode()"
         (ngModelChange)="onViewModeChange($event)"
         optionValue="value"
+        optionLabel="labelKey"
         [allowEmpty]="false"
         size="small"
-    ></ui-choice>
+    >
+        <ng-template #item let-item>
+            {{ item.labelKey | translate }}
+        </ng-template>
+    </ui-choice>
 
     <ui-button
         severity="secondary"

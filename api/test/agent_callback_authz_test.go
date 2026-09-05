@@ -163,6 +163,12 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
 			body:   `{"tokensUsed":999999}`,
 		},
 		{
+			name:   "task thinking",
+			method: "POST",
+			url:    fmt.Sprintf("/api/private/agent/task/%d/thinking", idTask),
+			body:   `{"seq":1,"events":[{"kind":"thinking","text":"injected","at":1}]}`,
+		},
+		{
 			name:   "report run repo",
 			method: "POST",
 			url:    fmt.Sprintf("/api/private/agent/run/%d/repo", idRun),
@@ -177,6 +183,16 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
 				"a non-bot user must not reach %s", tt.url)
 		})
 	}
+}
+
+// A task that does not exist must read as not found, not as a permission
+// problem — otherwise a typo in a task id looks like a revoked agent.
+func (s *AgentCallbackAuthzSuite) Test_UnknownTaskIsNotFound() {
+	res := Request(s.T(), s.App, "POST",
+		"/api/private/agent/task/99999999/thinking",
+		`{"seq":1,"events":[{"kind":"thinking","text":"nowhere","at":1}]}`, s.BotApiKey)
+
+	s.Equal(http.StatusNotFound, res.StatusCode)
 }
 
 // Test_ForeignUserCannotCompleteStage_LeavesRunUntouched proves the rejection is

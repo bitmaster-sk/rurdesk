@@ -92,6 +92,15 @@ func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stat
 	})
 }
 
+// SendThinking posts one batch of the task's thinking events to the tracker.
+func (tc *TrackerClient) SendThinking(ctx context.Context, idTask int64, seq int, events []ThinkingEvent) error {
+	type body struct {
+		Seq    int             `json:"seq"`
+		Events []ThinkingEvent `json:"events"`
+	}
+	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/thinking", idTask), body{Seq: seq, Events: events})
+}
+
 func (tc *TrackerClient) post(ctx context.Context, path string, body any) error {
 	var bodyBytes []byte
 	if body != nil {

@@ -3,12 +3,17 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -238,6 +243,71 @@ func (s *MessageAnchorSuite) Test_07_ListMessagesEmbedsVersionAndAnchor() {
 	s.Equal(1, foundChild.Version)
 	s.Require().NotNil(foundChild.Anchor)
 	s.False(foundChild.Anchor.IsOutdated)
+}
+
+// errRow is a pgx.Row that always returns a fixed error from Scan.
+type errRow struct{ err error }
+
+func (r *errRow) Scan(_ ...any) error { return r.err }
+
+// guardFailingTx wraps a real pgx.Tx. It delegates every method to the
+// underlying transaction except QueryRow: when the SQL contains
+// "messages.issue_message ism" (the anchor-guard SELECT), it returns an
+// errRow with a synthetic non-ErrNoRows error so the guard path is
+// exercised without a real DB outage.
+type guardFailingTx struct{ pgx.Tx }
+
+func (t *guardFailingTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
+	if strings.Contains(sql, "messages.issue_message ism") {
+		return &errRow{err: errors.New("simulated connection lost")}
+	}
+	return t.Tx.QueryRow(ctx, sql, args...)
+}
+
+// Test_08_GuardDBErrorPropagatesAsNonWrongThread verifies that a DB error
+// during the anchor-guard query (not pgx.ErrNoRows) is propagated as a
+// wrapped error rather than collapsed into ErrAnchorWrongThread. Before the
+// fix, any DB error — connection drop, timeout — was misreported as "anchor
+// is in the wrong thread" (400). After the fix, only a missing parent row
+// (ErrNoRows) yields ErrAnchorWrongThread; everything else falls through to
+// the controller's 500 path.
+func (s *MessageAnchorSuite) Test_08_GuardDBErrorPropagatesAsNonWrongThread() {
+	// Create a valid parent message on the issue so insertMessage and the
+	// issue_message INSERT succeed; only the guard SELECT is sabotaged.
+	parentBody := fmt.Sprintf(`{"idRecipient":%d,"idMessageRecipientType":4,"message":"guard-fail parent"}`, s.IdIssue)
+	parentRes := s.postMessage(parentBody)
+	s.Require().Equal(http.StatusOK, parentRes.StatusCode)
+	var parent model.Message
+	json.NewDecoder(parentRes.Body).Decode(&parent)
+
+	// Look up the seeded user so insertMessage has a valid creator.
+	token := Token(s.T(), s.App)
+	idUser := idOfUser(s.T(), s.App, token, "test@test.sk")
+	creator := &model.User{IdUser: idUser}
+
+	repo := repository.NewMessageRepository(s.App.Pool)
+	anchor := &model.MessageAnchor{
+		IdParentMessage: parent.IdMessage,
+		AnchorLineStart: 1,
+		AnchorLineEnd:   1,
+	}
+
+	// Begin a real transaction and wrap it so the guard QueryRow fails.
+	ctx := context.Background()
+	tx, err := s.App.Pool.Begin(ctx)
+	s.Require().NoError(err)
+	defer tx.Rollback(ctx)
+
+	failingTx := &guardFailingTx{Tx: tx}
+	txCtx := extctx.WithTx(ctx, failingTx)
+
+	_, err = repo.InsertIssueMessage(txCtx, "guard-fail child", creator, s.IdIssue, anchor)
+
+	// The error must NOT be ErrAnchorWrongThread — it must propagate as a
+	// wrapped infrastructure error.
+	s.Require().Error(err, "InsertIssueMessage should return an error")
+	s.False(errors.Is(err, repository.ErrAnchorWrongThread),
+		"DB infrastructure error must not be collapsed to ErrAnchorWrongThread, got: %v", err)
 }
 
 func Test_RunMessageAnchorSuite(t *testing.T) {

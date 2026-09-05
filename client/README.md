@@ -59,6 +59,10 @@ virgin. It needs host port 1000 free. Extra args are forwarded:
 npm run e2e:stack -- --headed
 ```
 
+The `login.spec.ts` journey creates a fresh user via the admin API, logs in
+through the public login form, and asserts the authenticated app shell is
+rendered. Other specs cover onboarding, issue lifecycle, and the command palette.
+
 Bare `npm run e2e` starts only the Angular dev server (no backend); it is useful
 solely when you point `E2E_BASE_URL` at a stack you manage yourself.
 

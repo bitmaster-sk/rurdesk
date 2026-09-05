@@ -8,7 +8,6 @@ import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.servi
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { StateStore } from 'src/app/state/store/state.store';
 import { Fixtures } from 'src/testing/fixtures';
 import { PinService } from 'src/app/pin/pin.service';
@@ -57,7 +56,6 @@ describe('IssueInfoComponent — bot assigned from the dock (browser)', () => {
                     useValue: { project$: of({ idProject: 7, name: 'p' }) }
                 },
                 { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
-                { provide: I18nService, useValue: { instant: (key: string) => key } },
                 { provide: PinService, useValue: { insertPin: () => NEVER } },
                 {
                     provide: MrDiffApi,
