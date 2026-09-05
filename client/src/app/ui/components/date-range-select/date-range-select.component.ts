@@ -15,7 +15,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ControlValueAccessor, FormControl, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
-import { UI_DATE_PATTERN, uiFormatDate } from '../../util/ui-date-format';
+import { UI_DATE_PATTERN, UiDate } from '../../util/ui-date';
 import { UiPopoverComponent } from '../popover/popover.component';
 
 /** One row in the preset list. `value` is opaque here — the consumer defines it. */
@@ -97,8 +97,8 @@ export class UiDateRangeSelectComponent implements ControlValueAccessor {
                 current.preset
             );
         }
-        const from = current.from ? uiFormatDate(current.from, UI_DATE_PATTERN) : '';
-        const to = current.to ? uiFormatDate(current.to, UI_DATE_PATTERN) : '';
+        const from = current.from ? UiDate.format(current.from, UI_DATE_PATTERN) : '';
+        const to = current.to ? UiDate.format(current.to, UI_DATE_PATTERN) : '';
         return from && to ? `${from} – ${to}` : from || to;
     });
 

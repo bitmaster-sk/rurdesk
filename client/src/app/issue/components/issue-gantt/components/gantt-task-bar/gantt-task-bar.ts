@@ -22,11 +22,7 @@ import {
 } from '../../../../constants/issue-card-view-type.constant';
 import { addSeconds } from 'date-fns';
 import { HORIZONTAL_OFFSET } from '../../service/gantt-arrow-routing';
-import {
-    prefersReducedMotion,
-    UI_SETTLE_DURATION_MS,
-    UI_SETTLE_EASING
-} from 'src/app/ui/util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 
 export const MIN_BAR_WIDTH_PX = 4;
 export const SMALL_BAR_THRESHOLD_PX = 24;
@@ -101,7 +97,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
 
         const delay = this.cascadeSlideDelayMs();
         if (previous === null || delay === null || previous === left) return;
-        if (prefersReducedMotion()) return;
+        if (UiMotion.prefersReducedMotion()) return;
 
         const barEl = this.elementRef.nativeElement.querySelector('.gantt-bar');
         if (!barEl) return;

@@ -8,7 +8,7 @@ import {
     input
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { normalizeHexColor } from '../util/ui-color';
+import { UiColor } from '../util/ui-color';
 
 /**
  * `ui-color` swatch chrome on a native `<input type="color">`.
@@ -56,7 +56,7 @@ export class UiColorDirective implements ControlValueAccessor {
     }
 
     public writeValue(value: string | null | undefined): void {
-        this.el.nativeElement.value = normalizeHexColor(value, this.fallback());
+        this.el.nativeElement.value = UiColor.normalizeHex(value, this.fallback());
     }
 
     public registerOnChange(fn: (value: string) => void): void {

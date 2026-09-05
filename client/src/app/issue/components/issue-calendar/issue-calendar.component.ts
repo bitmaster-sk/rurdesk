@@ -46,12 +46,7 @@ import {
 import { CalendarIssueRenderer } from './components/calendar-issue-renderer/calendar-issue-renderer';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import {
-    prefersReducedMotion,
-    pulseElement,
-    UI_SETTLE_DURATION_MS,
-    UI_SETTLE_EASING
-} from 'src/app/ui/util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { FULLCALENDAR_LOCALES, resolveFullCalendarLocale } from './fullcalendar-locales';
 
@@ -345,7 +340,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
      * discarded by the timer.
      */
     private prepareSlideSnapshot(): void {
-        if (prefersReducedMotion() || document.hidden) return;
+        if (UiMotion.prefersReducedMotion() || document.hidden) return;
         this.discardSlideSnapshot();
 
         const harness = this.calendarRef()
@@ -402,7 +397,11 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         this.slideSnapshotTimer = null;
         this.slideSnapshot = null;
 
-        if (!previous || previous.getTime() === start.getTime() || prefersReducedMotion()) {
+        if (
+            !previous ||
+            previous.getTime() === start.getTime() ||
+            UiMotion.prefersReducedMotion()
+        ) {
             snapshot?.remove();
             return;
         }
@@ -582,7 +581,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             .el.querySelectorAll(`[data-issue-id="${idIssue}"]`)
             .forEach(el => {
                 const eventEl = el.closest<HTMLElement>('.fc-event');
-                if (eventEl) pulseElement(eventEl);
+                if (eventEl) UiMotion.pulseElement(eventEl);
             });
     }
 

@@ -21,12 +21,14 @@ export const UI_DATETIME_PATTERN = 'PPp';
 // LOCALE_ID override). When i18n arrives, map the active language here.
 const activeLocale: Locale = enUS;
 
-export function uiFormatDate(date: Date, pattern: string): string {
-    return format(date, pattern, { locale: activeLocale });
-}
+export abstract class UiDate {
+    public static format(date: Date, pattern: string): string {
+        return format(date, pattern, { locale: activeLocale });
+    }
 
-export function uiParseDate(str: string, pattern: string): Date {
-    // date-fns parse requires a reference date (3rd arg) for fields the pattern
-    // doesn't cover.
-    return parse(str, pattern, new Date(), { locale: activeLocale });
+    public static parse(str: string, pattern: string): Date {
+        // date-fns parse requires a reference date (3rd arg) for fields the pattern
+        // doesn't cover.
+        return parse(str, pattern, new Date(), { locale: activeLocale });
+    }
 }
