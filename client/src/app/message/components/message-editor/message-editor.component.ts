@@ -17,6 +17,7 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
+import { AsciiEmoji } from './ascii-emoji';
 import { CodeBlockLanguage } from './constant/code-block-language.enum';
 import { EditorCharacters } from './constant/editor-characters.enum';
 import {
@@ -176,6 +177,9 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     protected onInput(): void {
         const el = this.editorRef().nativeElement;
+        if (this.replaceAsciiEmoji(el)) {
+            return;
+        }
         const body = serialize(el);
         this.lastRendered = body; // our own edit — don't let the effect re-render
         this.text.set(body); // local override of the linkedSignal — does NOT feed
@@ -185,6 +189,25 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             this.propagateChange(body);
         }
         this.detectMentionQuery(body);
+    }
+
+    private replaceAsciiEmoji(el: HTMLDivElement): boolean {
+        const { start, end } = getLinearSelection(el);
+        if (start !== end) {
+            return false;
+        }
+        const match = AsciiEmoji.matchBeforeCaret(serializeRaw(el).slice(0, start));
+        if (!match) {
+            return false;
+        }
+        const from = start - 1 - match.shortcut.length;
+        setLinearSelection(el, from, start - 1);
+        // execCommand insertText is undoable; Range.insertNode is not.
+        el.ownerDocument.execCommand('insertText', false, match.emoji);
+        this.onInput();
+        const caret = from + match.emoji.length + 1;
+        setLinearSelection(el, caret, caret);
+        return true;
     }
 
     private detectMentionQuery(body: string): void {

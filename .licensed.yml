@@ -144,11 +144,10 @@ reviewed:
     # -- (a) emoji-toolkit: MIT code, proprietary artwork -------------------
     # NOT plain MIT, whatever its package.json claims. JoyPixels licenses the
     # emoji *artwork* under its own restrictive terms and only the JS/JSON/CSS
-    # under MIT. We ship `lib/js/joypixels.min.js` only (client/angular.json),
-    # and `EmojiPipe` calls `shortnameToUnicode` — ":smile:" becomes a unicode
-    # codepoint drawn by the reader's own system font. No JoyPixels artwork is
+    # under MIT. Since #91 we no longer depend on it at all — it only stays in
+    # the tree as an optionalDependency of `ngx-markdown`. Nothing of it is
     # bundled, referenced or served, so only the MIT half applies.
-    # Re-check this if we ever switch the pipe to image-based emoji.
+    # Re-check this if we ever load any of its files.
     - emoji-toolkit
 
     # -- (a) dual-licensed, we take the permissive option -------------------

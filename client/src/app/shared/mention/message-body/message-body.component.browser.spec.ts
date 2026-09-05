@@ -1,4 +1,4 @@
-import { Component, Pipe, PipeTransform, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
@@ -10,13 +10,6 @@ import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mocku
 import { MentionChipComponent } from 'src/app/shared/mention/mention-chip/mention-chip.component';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { User } from 'src/app/auth/model/user.model';
-
-@Pipe({ name: 'emoji', standalone: false })
-class StubEmojiPipe implements PipeTransform {
-    public transform(v: string): string {
-        return v;
-    }
-}
 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
 class DiffViewerStub {
@@ -32,12 +25,7 @@ async function setup() {
             TablerIconStub,
             DiffViewerStub
         ],
-        declarations: [
-            MessageBodyComponent,
-            MockupCardComponent,
-            MentionChipComponent,
-            StubEmojiPipe
-        ]
+        declarations: [MessageBodyComponent, MockupCardComponent, MentionChipComponent]
     }).compileComponents();
 }
 
@@ -241,5 +229,35 @@ describe('MessageBodyComponent (browser)', () => {
 
         expect(fixture.nativeElement.querySelectorAll('.mockup-card--selected').length).toBe(1);
         expect(fixture.nativeElement.querySelectorAll('.mockup-card--rejected').length).toBe(1);
+    });
+
+    it('renders code-corrupting patterns verbatim — no character substitution', async () => {
+        // Patterns that the old pipe corrupted: one-letter ascii emoticon
+        // patterns (:b, :p, :o) inside object literals, type annotations, and URLs.
+        const body = [
+            'See this code:',
+            '```ts',
+            'const x = {a:b};',
+            'let p:Promise<void>',
+            '```',
+            'And inline: {name:props.name} and https://x.com/a:b'
+        ].join('\n');
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const text = fixture.nativeElement.textContent as string;
+        // The code block content must be preserved character-for-character.
+        expect(text).toContain('const x = {a:b};');
+        expect(text).toContain('let p:Promise<void>');
+        // Inline text must also be preserved.
+        expect(text).toContain('{name:props.name}');
+        expect(text).toContain('https://x.com/a:b');
+        // No pictographic characters should have been injected.
+        expect(text).not.toContain('😜');
+        expect(text).not.toContain('😄');
+        expect(text).not.toContain('😲');
     });
 });

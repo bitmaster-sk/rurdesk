@@ -9,7 +9,6 @@ import { StateDropdownComponent } from './state-dropdown/state-dropdown.componen
 import { TrackerComponent } from './tracker/tracker.component';
 import { DurationPipe } from './duration/duration.pipe';
 import { RouterModule } from '@angular/router';
-import { EmojiPipe } from './emoji/emoji.pipe';
 import { SecDurationPipe } from './duration/sec-duration.pipe';
 import { StateBadgeComponent } from './state-badge/state-badge.component';
 import { StateBadgeSelectorComponent } from './state-badge-selector/state-badge-selector.component';
@@ -57,7 +56,6 @@ import {
         TrackerComponent,
         DurationPipe,
         SecDurationPipe,
-        EmojiPipe,
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
@@ -105,7 +103,6 @@ import {
         TrackerComponent,
         DurationPipe,
         SecDurationPipe,
-        EmojiPipe,
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
