@@ -2,6 +2,7 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { SettingsStore } from '../../core/settings/settings.store';
+import { NotificationStore } from '../../notification/store/notification.store';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 import { SessionService } from './session.service';
@@ -11,26 +12,29 @@ function build(logout$ = () => of(undefined)) {
     const load = vi.fn();
     const saveToken = vi.fn();
     const clearToken = vi.fn();
+    const init = vi.fn();
     const injector = Injector.create({
         providers: [
             { provide: Router, useValue: { navigate } },
             { provide: AuthApi, useValue: { logout$ } },
             { provide: AuthTokenStore, useValue: { saveToken, clearToken } },
-            { provide: SettingsStore, useValue: { load } }
+            { provide: SettingsStore, useValue: { load } },
+            { provide: NotificationStore, useValue: { init } }
         ]
     });
     const session = runInInjectionContext(injector, () => new SessionService());
-    return { session, navigate, load, saveToken, clearToken };
+    return { session, navigate, load, saveToken, clearToken, init };
 }
 
 describe('SessionService.start', () => {
     it('stores the token, loads the auth-gated settings and lands on the home page', () => {
-        const { session, navigate, load, saveToken } = build();
+        const { session, navigate, load, saveToken, init } = build();
 
         session.start('jwt-123');
 
         expect(saveToken).toHaveBeenCalledWith('jwt-123');
         expect(load).toHaveBeenCalled();
+        expect(init).toHaveBeenCalled();
         expect(navigate).toHaveBeenCalledWith(['/']);
     });
 });
