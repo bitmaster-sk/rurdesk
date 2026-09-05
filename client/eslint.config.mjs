@@ -111,7 +111,21 @@ export default tseslint.config(
             '@typescript-eslint/no-unsafe-assignment': 'error',
             '@typescript-eslint/no-unsafe-member-access': 'error',
             '@typescript-eslint/no-unsafe-argument': 'error',
-            '@typescript-eslint/no-unsafe-return': 'error'
+            '@typescript-eslint/no-unsafe-return': 'error',
+
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: '@ngx-translate/core',
+                            importNames: ['TranslateService'],
+                            message:
+                                'Použi I18nService zo shared/i18n — TranslateService.instant() vracia any.'
+                        }
+                    ]
+                }
+            ]
         }
     },
     {
@@ -130,6 +144,12 @@ export default tseslint.config(
             '@typescript-eslint/no-unsafe-call': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
             '@typescript-eslint/explicit-function-return-type': 'off'
+        }
+    },
+    {
+        files: ['src/app/shared/i18n/i18n.service.ts', 'src/app/app.module.ts', '**/*.spec.ts'],
+        rules: {
+            'no-restricted-imports': 'off'
         }
     },
     {
