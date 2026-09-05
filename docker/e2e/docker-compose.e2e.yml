@@ -25,7 +25,9 @@ services:
             # that need real AI are out of scope for the smoke suite.
             AI_PROVIDER: ollama
             AI_HOST: http://127.0.0.1:11434
-            GIT_INTEGRATION_ENCRYPTION_KEY: e2e-test-key-e2e-test-key-32byte
+            # Must be 32 bytes base64-encoded, not a raw 32-char string.
+            GIT_INTEGRATION_ENCRYPTION_KEY: ZTJlLXRlc3Qta2V5LWUyZS10ZXN0LWtleS0zMmJ5dGU=
+            MERGE_POLL_INTERVAL: 2s
         depends_on:
             db:
                 condition: service_healthy
