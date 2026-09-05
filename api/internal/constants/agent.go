@@ -1,5 +1,10 @@
 package constants
 
+import "time"
+
+// DefaultMergePollInterval is how often linked pull requests are checked when MERGE_POLL_INTERVAL is unset or unparseable.
+const DefaultMergePollInterval = 60 * time.Second
+
 const (
 	PhaseQueued           = "queued"
 	PhaseInProgress       = "in_progress"

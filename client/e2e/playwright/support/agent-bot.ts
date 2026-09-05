@@ -2,13 +2,28 @@ import { APIRequestContext, expect, request as playwrightRequest } from '@playwr
 
 // Where each side reaches the stub gateway: the tracker calls it over the
 // compose network, the test over the published port.
-const STUB_GATEWAY_URL_FOR_TRACKER = 'http://stub-gateway:9090';
-const STUB_GATEWAY_URL_FOR_TEST = 'http://localhost:9090';
+export const STUB_GATEWAY_URL_FOR_TRACKER = 'http://stub-gateway:9090';
+export const STUB_GATEWAY_URL_FOR_TEST = 'http://localhost:9090';
 
 export interface TestBot {
     idUser: number;
     name: string;
 }
+
+/** Per-stage override of what the stub gateway reports; an omitted stage keeps the canned default. */
+export interface StageScript {
+    outcome?: 'output_submitted' | 'question_asked' | 'no_action_needed' | 'errored';
+    message?: string;
+    messageKind?: string;
+    prUrl?: string;
+    branchName?: string;
+    errorReason?: string;
+    errorDetail?: string;
+    /** Report nothing for the stage, leaving the run in_progress. */
+    stall?: boolean;
+}
+
+export type GatewayScript = Record<string, StageScript>;
 
 /**
  * Creates a bot in the project and points it at the e2e stub gateway, then
@@ -20,7 +35,8 @@ export async function createStubGatewayBot(
     baseURL: string,
     adminToken: string,
     idProject: number,
-    label: string
+    label: string,
+    script?: GatewayScript
 ): Promise<TestBot> {
     const created = await request.post(`${baseURL}/api/private/admin/user`, {
         headers: { Authorization: adminToken },
@@ -39,7 +55,7 @@ export async function createStubGatewayBot(
     const stub = await playwrightRequest.newContext();
     try {
         const configured = await stub.post(`${STUB_GATEWAY_URL_FOR_TEST}/configure`, {
-            data: { gatewayToTrackerToken: bot.rawKey, trackerToGatewayToken }
+            data: { gatewayToTrackerToken: bot.rawKey, trackerToGatewayToken, script: script ?? {} }
         });
         expect(configured.status(), 'configuring the stub gateway').toBe(204);
     } finally {

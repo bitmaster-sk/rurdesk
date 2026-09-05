@@ -11,6 +11,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 // MergePoller polls GitHost.GetMergeRequestStatus for runs in pr_open phase,
@@ -23,7 +24,7 @@ type MergePoller struct {
 	gitIntRepo    *repository.GitIntegrationRepository
 	issueRepo     *repository.IssueRepository
 	stateRepo     *repository.StateRepository
-	mirror        *WorkflowEventMirror
+	transitioner  *PhaseStateTransitioner
 	notifier      *notify.Notifier
 }
 
@@ -34,7 +35,7 @@ func NewMergePoller(
 	gitIntRepo *repository.GitIntegrationRepository,
 	issueRepo *repository.IssueRepository,
 	stateRepo *repository.StateRepository,
-	mirror *WorkflowEventMirror,
+	transitioner *PhaseStateTransitioner,
 	notifier *notify.Notifier,
 ) *MergePoller {
 	return &MergePoller{
@@ -44,13 +45,17 @@ func NewMergePoller(
 		gitIntRepo:    gitIntRepo,
 		issueRepo:     issueRepo,
 		stateRepo:     stateRepo,
-		mirror:        mirror,
+		transitioner:  transitioner,
 		notifier:      notifier,
 	}
 }
 
 func (p *MergePoller) Start(ctx context.Context) {
-	ticker := time.NewTicker(60 * time.Second)
+	interval := viper.GetDuration("MERGE_POLL_INTERVAL")
+	if interval <= 0 {
+		interval = constants.DefaultMergePollInterval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -106,7 +111,6 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				continue
 			}
 			p.notifyRunUpdate(updated)
-			BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, run.IdIssue)
 			merged++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to done")
 
@@ -120,7 +124,6 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				log.Error().Err(setErr).Int64("idRun", run.IdRun).Msg("merge poller: failed to set error message")
 			}
 			p.notifyRunUpdate(updated)
-			BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, run.IdIssue)
 			closed++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
 
@@ -213,32 +216,33 @@ func (p *MergePoller) pollManualMrs(ctx context.Context, encKey []byte) {
 	}
 }
 
-// HandleManualMrStatus stamps a terminal PR outcome exactly once and, on merge,
-// emits the done event so the workflow mapping moves the task — unless the task
-// already sits in a final state (pre-existing merges must not reopen closed work).
+// HandleManualMrStatus stamps a terminal PR outcome once and emits done on merge or failed on a close without merge.
 func (p *MergePoller) HandleManualMrStatus(ctx context.Context, iss *model.Issue, status *githost.Status) {
+	var event string
 	switch status.State {
 	case "merged":
-		final, err := p.isFinalState(ctx, iss)
-		if err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).
-				Msg("merge poller: checking final state before stamping merge")
-			return
-		}
-		if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, "merged"); err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).Msg("merge poller: set mr_state merged")
-			return
-		}
-		if final {
-			return
-		}
-		p.mirror.ApplyMirror(ctx, iss.IdProject, iss.IdIssue, constants.PhaseDone)
-		BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, iss.IdIssue)
+		event = constants.PhaseDone
 	case "closed":
-		if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, "closed"); err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).Msg("merge poller: set mr_state closed")
-		}
+		event = constants.PhaseFailed
+	default:
+		return
 	}
+
+	final, err := p.isFinalState(ctx, iss)
+	if err != nil {
+		log.Error().Err(err).Int64("idIssue", iss.IdIssue).
+			Msg("merge poller: checking final state before stamping manual mr outcome")
+		return
+	}
+	if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, status.State); err != nil {
+		log.Error().Err(err).Int64("idIssue", iss.IdIssue).Str("mrState", status.State).
+			Msg("merge poller: set mr_state")
+		return
+	}
+	if !final {
+		p.transitioner.Transition(ctx, iss.IdProject, iss.IdIssue, event)
+	}
+	BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, iss.IdIssue)
 }
 
 // isFinalState reports whether iss currently sits in a final state. A load

@@ -19,6 +19,10 @@ function activityPane(page: Page): Locator {
     return page.getByTestId('split-pane-end');
 }
 
+async function paneWidthGap(page: Page): Promise<number> {
+    return Math.abs((await widthOf(infoPane(page))) - (await widthOf(activityPane(page))));
+}
+
 // Grabs the separator near its top edge. Its centre is occupied by the collapse and
 // reset buttons, which take the pointerdown themselves and cancel the drag.
 const GRAB_OFFSET_Y = 20;
@@ -92,17 +96,17 @@ test('the separator controls collapse either pane and bring it back', async ({
     // The controls are revealed by hovering the separator, so a real user hovers first.
     await page.getByTestId('split-pane-splitter').hover();
     await collapseStart.click();
-    expect(await widthOf(infoPane(page))).toBe(0);
+    await expect.poll(() => widthOf(infoPane(page))).toBe(0);
     expect(await widthOf(activityPane(page))).toBeGreaterThan(totalBefore - 20);
     await expect(collapseStart).toBeDisabled();
     await expect(collapseEnd).toBeEnabled();
 
     await collapseEnd.click();
-    expect(await widthOf(infoPane(page))).toBeGreaterThan(0);
+    await expect.poll(() => widthOf(infoPane(page))).toBeGreaterThan(0);
     await expect(page.locator('input[formcontrolname="title"]')).toHaveValue(ISSUE_TITLE);
 
     await collapseEnd.click();
-    expect(await widthOf(activityPane(page))).toBe(0);
+    await expect.poll(() => widthOf(activityPane(page))).toBe(0);
     expect(await widthOf(infoPane(page))).toBeGreaterThan(totalBefore - 20);
     await expect(collapseEnd).toBeDisabled();
 });
@@ -131,9 +135,7 @@ test('the separator refuses to drag a pane below its minimum width', async ({
     const box = (await splitter.boundingBox())!;
     await splitter.dblclick({ position: { x: box.width / 2, y: GRAB_OFFSET_Y } });
 
-    const info = await widthOf(infoPane(page));
-    const activity = await widthOf(activityPane(page));
-    expect(Math.abs(info - activity)).toBeLessThan(20);
+    await expect.poll(() => paneWidthGap(page)).toBeLessThan(20);
 });
 
 // Scenario:

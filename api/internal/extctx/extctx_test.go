@@ -36,3 +36,17 @@ func TestGetLogger_fallback(t *testing.T) {
 	got := extctx.GetLogger(context.Background())
 	assert.NotNil(t, got)
 }
+
+func TestAfterCommit_runsImmediatelyWithoutTransaction(t *testing.T) {
+	ran := false
+	extctx.AfterCommit(context.Background(), func(context.Context) { ran = true })
+	assert.True(t, ran)
+}
+
+func TestAfterCommit_runsImmediateCallbacksInOrder(t *testing.T) {
+	var order []string
+	ctx := context.Background()
+	extctx.AfterCommit(ctx, func(context.Context) { order = append(order, "first") })
+	extctx.AfterCommit(ctx, func(context.Context) { order = append(order, "second") })
+	assert.Equal(t, []string{"first", "second"}, order)
+}
