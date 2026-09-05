@@ -12,8 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrGitIntegrationDuplicate = errors.New("git integration duplicate")
-
 type GitIntegrationRepository struct {
 	pool *pgxpool.Pool
 }

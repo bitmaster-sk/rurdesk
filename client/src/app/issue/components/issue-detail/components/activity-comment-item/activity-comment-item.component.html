@@ -22,6 +22,7 @@
         [class.kind-implementation-plan]="message().messageKind === MessageKind.ImplementationPlan"
         [class.kind-pull-request-pushed]="message().messageKind === MessageKind.PullRequestPushed"
         [class.kind-implementation-done]="message().messageKind === MessageKind.ImplementationDone"
+        [class.kind-review-reply]="message().messageKind === MessageKind.ReviewReply"
     >
         @if (kindHeaderTitle(); as titleKey) {
             <div class="kind-badge">

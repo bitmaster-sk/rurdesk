@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/spf13/viper"
@@ -17,6 +18,7 @@ func configure() {
 	viper.AutomaticEnv()
 	viper.SetDefault("PROJECT_BUILDER_DESCRIPTION_MAX_LENGTH", 10000)
 	viper.SetDefault("WEBSOCKET_WRITE_DEADLINE", "10s")
+	viper.SetDefault("MERGE_POLL_INTERVAL", constants.DefaultMergePollInterval)
 }
 
 func main() {

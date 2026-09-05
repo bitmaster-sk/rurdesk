@@ -43,7 +43,7 @@ export class NotificationStore {
     private readonly notifApi = inject(NotificationApi);
     private readonly sNotice = inject(NoticeService);
 
-    private notifications = signal<Notification[]>([]);
+    private readonly notifications = signal<Notification[]>([]);
     private wsSubscription: Subscription | null = null;
     private started = false;
 

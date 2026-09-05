@@ -13,6 +13,6 @@
     } @else if (seg.type === 'mention') {
         <app-mention-chip [idUser]="seg.idUser" [name]="seg.name" [candidates]="candidates()" />
     } @else {
-        <div class="text-run" markdown [data]="seg.content | emoji" ngPreserveWhitespaces></div>
+        <div class="text-run" markdown [data]="seg.content" ngPreserveWhitespaces></div>
     }
 }

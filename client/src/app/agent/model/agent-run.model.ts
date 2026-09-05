@@ -35,6 +35,9 @@ export interface AgentStageProgress {
     approvedAt?: string | null;
     errorReason?: string | null; // stable code (AGENT.ERROR.*), set on a failed stage
     errorDetail?: string | null; // raw provider/agent message
+    idResultMessage?: number | null; // the message this stage produced
+    thinkingTail?: string | null; // the last thoughts of the stage
+    hasThinking?: boolean; // full thinking is stored and readable
 }
 
 export interface StagePlan {

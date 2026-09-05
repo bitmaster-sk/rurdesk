@@ -37,6 +37,18 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
     });
 
     // =========================================================================
+    // viewOptions — i18n keys instead of pre-resolved labels
+    // =========================================================================
+
+    it('viewOptions stores labelKey translation keys, not pre-resolved labels', () => {
+        expect(comp.viewOptions.every(o => 'labelKey' in o && !('label' in o))).toBe(true);
+        expect(comp.viewOptions[0]).toEqual({
+            labelKey: 'ISSUE.CALENDAR.DAY',
+            value: 'timeGridDay'
+        });
+    });
+
+    // =========================================================================
     // zoomView
     // =========================================================================
 
@@ -148,6 +160,32 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
                 scheduledAtFrom: start,
                 scheduledAtTo: end
             });
+        });
+    });
+
+    // =========================================================================
+    // locale / i18n
+    // =========================================================================
+
+    describe('locale', () => {
+        it('initial locale derives from I18nService.currentLang', () => {
+            expect(comp.defaultCalendarOps.locale).toBe('en-gb');
+        });
+
+        it('langChange$ updates the calendar locale via setOption', () => {
+            const langChange$ = mocks.i18nMock.langChange$.source;
+            const setOption = comp.calendarRef().getApi().setOption;
+
+            langChange$.next({ lang: 'sk' });
+            expect(setOption).toHaveBeenCalledWith('locale', 'sk');
+        });
+
+        it('falls back to English when an unsupported language is selected', () => {
+            const langChange$ = mocks.i18nMock.langChange$.source;
+            const setOption = comp.calendarRef().getApi().setOption;
+
+            langChange$.next({ lang: 'unknown' });
+            expect(setOption).toHaveBeenCalledWith('locale', 'en-gb');
         });
     });
 });

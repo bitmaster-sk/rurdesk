@@ -76,7 +76,7 @@ func (sc *SeverityController) CreateSeverity(c *gin.Context) {
 	var severity *model.Severity
 	err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
 		if !sc.acl.CanCreateSeverity(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		sev := &model.Severity{
 			IdProject: dto.IdProject,
@@ -91,7 +91,7 @@ func (sc *SeverityController) CreateSeverity(c *gin.Context) {
 		}
 		return sc.severityRepo.InsertProjectSeverity(ctx, severity)
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -126,7 +126,7 @@ func (sc *SeverityController) EditSeverity(c *gin.Context) {
 	var severity *model.Severity
 	err = extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
 		if !sc.acl.CanUpdateSeverity(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		var err error
 		severity, err = sc.severityRepo.LoadSeverity(ctx, dto.IdProject, dto.IdSeverity)
@@ -164,7 +164,7 @@ func (sc *SeverityController) EditSeverity(c *gin.Context) {
 		}
 		return sc.severityRepo.UpdateProjectSeverity(ctx, severity)
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -194,7 +194,7 @@ func (sc *SeverityController) GetSeverityUsage(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !sc.acl.CanDeleteSeverity(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -223,7 +223,7 @@ func (sc *SeverityController) DeleteSeverity(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !sc.acl.CanDeleteSeverity(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

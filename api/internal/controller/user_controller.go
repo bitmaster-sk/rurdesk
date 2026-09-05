@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/password"
@@ -78,7 +79,7 @@ func (uc *UserController) Register(c *gin.Context) {
 		return
 	}
 	if !created {
-		_ = c.Error(errRegistrationClosed)
+		_ = c.Error(errs.ErrRegistrationClosed)
 		c.Status(http.StatusForbidden)
 		return
 	}

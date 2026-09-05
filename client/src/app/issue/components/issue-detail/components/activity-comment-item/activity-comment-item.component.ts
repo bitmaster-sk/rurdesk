@@ -52,7 +52,8 @@ export class ActivityCommentItemComponent {
         [MessageKind.Design]: 'ruler',
         [MessageKind.ImplementationPlan]: 'list-check',
         [MessageKind.PullRequestPushed]: 'code',
-        [MessageKind.ImplementationDone]: 'flag'
+        [MessageKind.ImplementationDone]: 'flag',
+        [MessageKind.ReviewReply]: 'message-reply'
     };
 
     protected readonly kindTitleKey: Record<string, string> = {
@@ -61,7 +62,8 @@ export class ActivityCommentItemComponent {
         [MessageKind.Design]: 'AGENT.KIND.DESIGN',
         [MessageKind.ImplementationPlan]: 'AGENT.KIND.IMPLEMENTATION_PLAN',
         [MessageKind.PullRequestPushed]: 'AGENT.KIND.PULL_REQUEST_PUSHED',
-        [MessageKind.ImplementationDone]: 'AGENT.KIND.IMPLEMENTATION_DONE'
+        [MessageKind.ImplementationDone]: 'AGENT.KIND.IMPLEMENTATION_DONE',
+        [MessageKind.ReviewReply]: 'AGENT.KIND.REVIEW_REPLY'
     };
 
     protected readonly kindHeaderTitle = computed(
