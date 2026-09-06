@@ -15,7 +15,7 @@ import {
 import { Team } from '../../team/model/team.model';
 import { User } from '../../auth/model/user.model';
 import { AppSettings, UpdateAppSettingsReq } from '../model/app-settings.model';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
@@ -27,7 +27,7 @@ export class AdminApi {
 
     public createUser$(req: AdminCreateUserReq): Observable<AdminCreateUserRes> {
         return this.http.post<AdminCreateUserRes>('/api/private/admin/user', req, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 
@@ -37,7 +37,7 @@ export class AdminApi {
 
     public updateUser$(idUser: number, req: AdminUpdateUserReq): Observable<void> {
         return this.http.patch<void>(`/api/private/admin/user/${idUser}`, req, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 
@@ -47,7 +47,7 @@ export class AdminApi {
 
     public getBotKey$(idUser: number): Observable<BotApiKey | null> {
         return this.http.get<BotApiKey | null>(`/api/private/admin/user/${idUser}/api-key`, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 
@@ -57,7 +57,7 @@ export class AdminApi {
             {
                 name
             },
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
@@ -65,19 +65,19 @@ export class AdminApi {
         return this.http.post<CreateBotKeyRes>(
             `/api/private/admin/user/${idUser}/api-key/token`,
             {},
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
     public deleteBotKey$(idUser: number): Observable<void> {
         return this.http.delete<void>(`/api/private/admin/user/${idUser}/api-key`, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 
     public getBotGateway$(idUser: number): Observable<BotGateway | null> {
         return this.http.get<BotGateway | null>(`/api/private/admin/user/${idUser}/gateway`, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 
@@ -88,7 +88,7 @@ export class AdminApi {
         return this.http.post<CreateBotGatewayRes>(
             `/api/private/admin/user/${idUser}/gateway`,
             req,
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
@@ -100,13 +100,13 @@ export class AdminApi {
         return this.http.post<CreateBotGatewayRes>(
             `/api/private/admin/user/${idUser}/gateway/token`,
             {},
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
     public deleteBotGateway$(idUser: number): Observable<void> {
         return this.http.delete<void>(`/api/private/admin/user/${idUser}/gateway`, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 

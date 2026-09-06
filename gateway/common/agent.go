@@ -21,6 +21,18 @@ const (
 	OutcomeErrored         = "errored"
 )
 
+// Message kinds, mirroring api/internal/constants/message_kind.go.
+const (
+	MessageKindComment               = "comment"
+	MessageKindBrainstormingQuestion = "brainstorming_question"
+	MessageKindBrainstormingComplete = "brainstorming_complete"
+	MessageKindDesign                = "design"
+	MessageKindImplementationPlan    = "implementation_plan"
+	MessageKindPullRequestPushed     = "pull_request_pushed"
+	MessageKindImplementationDone    = "implementation_done"
+	MessageKindReviewReply           = "review_reply"
+)
+
 type Task struct {
 	IdTask        int64
 	IdRun         int64
@@ -32,7 +44,10 @@ type Task struct {
 	WorktreePath  string
 	IssueTitle    string
 	IssueDesc     string
-	Comments      []TaskComment
+
+	// Conversation is the whole issue thread oldest-first, the agent's own output
+	// included. Never trim it to the current review round.
+	Conversation []TaskMessage
 
 	// ApprovedDesign / ApprovedImplPlan are the markdown bodies of the latest
 	// approved design/implementation-plan messages, shipped in the
@@ -81,9 +96,10 @@ type Skill struct {
 	Content string
 }
 
-type TaskComment struct {
+type TaskMessage struct {
 	CreatorName string
 	CreatedAt   string
+	Kind        string
 	Message     string
 }
 

@@ -39,7 +39,7 @@ func (s *UserApiKeySuite) SetupTest() {
 }
 
 func (s *UserApiKeySuite) TearDownSuite() {
-	s.setApiKeyLimit(constants.KnownAppSettings[constants.SettingUserApiKeyLimit].Default)
+	s.setApiKeyLimit(constants.KnownAppNumericSettings[constants.SettingUserApiKeyLimit].Default)
 }
 
 func (s *UserApiKeySuite) setApiKeyLimit(limit int) {

@@ -94,6 +94,23 @@ export default tseslint.config(
             '@typescript-eslint/no-inferrable-types': 'off',
             '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
             '@typescript-eslint/prefer-optional-chain': 'error',
+            // ANGULAR.instructions.md: every function is a class member. typescript-eslint
+            // has no rule for this, so it is expressed as AST selectors. Scoped to exported
+            // declarations — a module-private helper does not leak into the module's API.
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'Program > ExportNamedDeclaration > FunctionDeclaration',
+                    message:
+                        'No standalone functions — use an export abstract class with a public static method.'
+                },
+                {
+                    selector:
+                        'Program > ExportNamedDeclaration > VariableDeclaration > VariableDeclarator[init.type=/^(ArrowFunctionExpression|FunctionExpression)$/]',
+                    message:
+                        'No standalone functions — use an export abstract class with a public static method.'
+                }
+            ],
             '@typescript-eslint/explicit-member-accessibility': 'error',
             '@typescript-eslint/explicit-function-return-type': [
                 'error',
@@ -111,12 +128,27 @@ export default tseslint.config(
             '@typescript-eslint/no-unsafe-assignment': 'error',
             '@typescript-eslint/no-unsafe-member-access': 'error',
             '@typescript-eslint/no-unsafe-argument': 'error',
-            '@typescript-eslint/no-unsafe-return': 'error'
+            '@typescript-eslint/no-unsafe-return': 'error',
+
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: '@ngx-translate/core',
+                            importNames: ['TranslateService'],
+                            message:
+                                'Použi I18nService zo shared/i18n — TranslateService.instant() vracia any.'
+                        }
+                    ]
+                }
+            ]
         }
     },
     {
         files: ['**/*.spec.ts', '**/*testbed.helper.ts', 'e2e/**/*.ts', 'src/testing/**/*.ts'],
         rules: {
+            'no-restricted-syntax': 'off',
             '@angular-eslint/component-selector': 'off',
             '@angular-eslint/directive-selector': 'off',
             '@typescript-eslint/require-await': 'off',
@@ -130,6 +162,12 @@ export default tseslint.config(
             '@typescript-eslint/no-unsafe-call': 'off',
             '@typescript-eslint/no-unsafe-return': 'off',
             '@typescript-eslint/explicit-function-return-type': 'off'
+        }
+    },
+    {
+        files: ['src/app/shared/i18n/i18n.service.ts', 'src/app/app.module.ts', '**/*.spec.ts'],
+        rules: {
+            'no-restricted-imports': 'off'
         }
     },
     {

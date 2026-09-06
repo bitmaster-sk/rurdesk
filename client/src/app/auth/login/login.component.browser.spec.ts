@@ -50,6 +50,11 @@ describe('LoginComponent (browser)', () => {
     it('shows an error message when login fails', () => {
         authApi.login$.mockReturnValue(throwError(() => new Error('401')));
         const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: false
+        });
         expect(error()).toBeNull();
 
         fixture.componentInstance.onLogin();
@@ -58,9 +63,23 @@ describe('LoginComponent (browser)', () => {
         expect(error()).not.toBeNull();
     });
 
+    it('does not call login$ when the form is empty', () => {
+        authApi.login$.mockReturnValue(of('a-token'));
+        const fixture = setup();
+
+        fixture.componentInstance.onLogin();
+
+        expect(authApi.login$).not.toHaveBeenCalled();
+    });
+
     it('does not show an error message on a successful login', () => {
         authApi.login$.mockReturnValue(of('a-token'));
         const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: false
+        });
 
         fixture.componentInstance.onLogin();
         fixture.detectChanges();
@@ -101,6 +120,11 @@ describe('LoginComponent (browser)', () => {
     it('clears the error once the user edits the form', () => {
         authApi.login$.mockReturnValue(throwError(() => new Error('401')));
         const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: false
+        });
         fixture.componentInstance.onLogin();
         fixture.detectChanges();
         expect(error()).not.toBeNull();

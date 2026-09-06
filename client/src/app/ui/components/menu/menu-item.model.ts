@@ -15,6 +15,8 @@ import { UiBadgeSeverity } from '../badge/badge.component';
 export interface UiMenuItem {
     /** Visible text (also the track key for command items — must be unique). */
     label?: string;
+    /** Translation key that is resolved in the template via `| translate`. */
+    labelKey?: string;
     /** Tabler icon name, e.g. `'user'`. Rendered via `<tabler-icon>`; the icon
      *  must be registered with `provideTablerIcons` in the consuming module. */
     icon?: string;

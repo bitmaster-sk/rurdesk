@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ProposedIssue, SplitAcceptRes, SplitPreviewRes } from '../model/split.model';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 
 @Injectable({ providedIn: 'root' })
 export class SplitApi {
@@ -17,7 +17,7 @@ export class SplitApi {
             `/api/private/project/${idProject}/issue/${idIssuePublic}/split`,
             { hint: hint ?? '' },
 
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
@@ -30,7 +30,7 @@ export class SplitApi {
             `/api/private/project/${idProject}/issue/${idIssuePublic}/split/accept`,
             { children },
 
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 }

@@ -45,8 +45,11 @@ type AgentStageProgress struct {
 	ApprovedAt *time.Time `json:"approvedAt,omitempty"` // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
 	// i18n; ErrorDetail is the raw provider/agent message. Set only on failure.
-	ErrorReason *string `json:"errorReason,omitempty"`
-	ErrorDetail *string `json:"errorDetail,omitempty"`
+	ErrorReason     *string `json:"errorReason,omitempty"`
+	ErrorDetail     *string `json:"errorDetail,omitempty"`
+	IdResultMessage *int64  `json:"idResultMessage,omitempty"`
+	ThinkingTail    *string `json:"thinkingTail,omitempty"`
+	HasThinking     bool    `json:"hasThinking,omitempty"`
 }
 
 type AgentRunEvent struct {
@@ -67,7 +70,7 @@ type AgentTask struct {
 	Stage           string     `json:"stage"           db:"stage"`
 	AttemptNo       int        `json:"attemptNo"       db:"attempt_no"`
 	Status          string     `json:"status"          db:"status"`
-	IdOutputMessage *int64     `json:"idOutputMessage" db:"id_output_message"`
+	IdResultMessage *int64     `json:"idResultMessage" db:"id_result_message"`
 	ErrorReason     *string    `json:"errorReason"     db:"error_reason"`
 	ErrorDetail     *string    `json:"errorDetail"     db:"error_detail"`
 	TokensUsed      *int       `json:"tokensUsed"      db:"tokens_used"`
@@ -77,6 +80,8 @@ type AgentTask struct {
 	FinishedAt      *time.Time `json:"finishedAt"      db:"finished_at"`
 	LastHeartbeatAt *time.Time `json:"lastHeartbeatAt" db:"last_heartbeat_at"`
 	CreatedAt       time.Time  `json:"createdAt"       db:"created_at"`
+	ThinkingTail    *string    `json:"thinkingTail"  db:"thinking_tail"`
+	HasThinking     bool       `json:"hasThinking"     db:"-"`
 }
 
 type StagePlan struct {

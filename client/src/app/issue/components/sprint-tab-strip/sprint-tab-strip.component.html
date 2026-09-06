@@ -12,7 +12,7 @@
             (cdkDropListExited)="dragSvc.hoveredName.set(null)"
             (click)="selected.emit(backlog.idSprint)"
         >
-            {{ backlog.label }}
+            {{ backlog.labelKey ? (backlog.labelKey | translate) : backlog.label }}
         </button>
     }
 
@@ -55,7 +55,9 @@
                 @if (tab.isCurrent) {
                     <span class="sprint-tab--dot" aria-hidden="true"></span>
                 }
-                <span class="sprint-tab--label">{{ tab.label }}</span>
+                <span class="sprint-tab--label">
+                    {{ tab.labelKey ? (tab.labelKey | translate) : tab.label }}
+                </span>
                 @if (!tab.isClosed) {
                     <button
                         type="button"

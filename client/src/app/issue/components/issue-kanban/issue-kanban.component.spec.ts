@@ -159,6 +159,7 @@ interface Harness {
     stats: ReturnType<typeof vi.fn>;
     backlogStats: ReturnType<typeof vi.fn>;
     velocity: ReturnType<typeof vi.fn>;
+    langChange$: Subject<LangChangeEvent>;
     injector: Injector;
 }
 
@@ -191,6 +192,8 @@ function setup(
     const stats = vi.fn().mockReturnValue(of(makeStats()));
     const backlogStats = vi.fn().mockReturnValue(of(makeStats()));
     const velocity = vi.fn().mockReturnValue(of([]));
+
+    const langChange$ = new Subject<LangChangeEvent>();
 
     const injector = Injector.create({
         providers: [
@@ -235,7 +238,10 @@ function setup(
             },
             { provide: ToastNotificationService, useValue: { showError } },
             { provide: NoticeService, useValue: { issue$: issueNotices } },
-            { provide: I18nService, useValue: { instant: (k: string) => k } },
+            {
+                provide: I18nService,
+                useValue: { instant: (k: string) => k, langChange$: langChange$.asObservable() }
+            },
             {
                 provide: ProjectStore,
                 useValue: { project$: project === null ? NEVER : of(project) }
@@ -262,6 +268,7 @@ function setup(
         stats,
         backlogStats,
         velocity,
+        langChange$,
         injector
     };
 }
@@ -273,6 +280,7 @@ interface Handlers {
     sprintTabs(): {
         idSprint: number | null;
         label: string;
+        labelKey?: string;
         isCurrent: boolean;
         isClosed: boolean;
         listId: string;
@@ -359,6 +367,39 @@ describe('IssueKanbanComponent — tab order', () => {
 
         expect(tabs.map(t => t.idSprint)).toEqual([null, 3, 1]);
         expect(tabs.find(t => t.isCurrent)?.idSprint).toBe(openSprint.idSprint);
+    });
+});
+
+describe('IssueKanbanComponent — i18n reactivity', () => {
+    beforeEach(() => storage.clear());
+
+    it('uses labelKey for view mode options', () => {
+        const h = setup();
+        expect(h.component.viewModeOptions).toEqual([
+            { labelKey: 'ISSUE.KANBAN.LAYOUT.COLUMNS', value: 'columns' },
+            { labelKey: 'ISSUE.KANBAN.LAYOUT.SWIMLANE', value: 'swimlane' }
+        ]);
+    });
+
+    it('keeps the backlog tab as a labelKey and real sprints as labels', () => {
+        const tabs = handlers(setup([openSprint]).component).sprintTabs();
+        expect(tabs[0]).toMatchObject({ idSprint: null, labelKey: 'ISSUE.KANBAN.SPRINTS.BACKLOG' });
+        expect(tabs[1]).toMatchObject({ idSprint: openSprint.idSprint, label: openSprint.name });
+    });
+
+    it('re-resolves the sort button label and menu items on langChange$', () => {
+        const h = setup();
+        expect(handlers(h.component).currentSortLabel()).toBe('TITLE');
+        h.langChange$.next({ lang: 'sk', translations: {} } satisfies LangChangeEvent);
+        expect(handlers(h.component).currentSortLabel()).toBe('TITLE');
+        const items = handlers(h.component).sortMenuItems();
+        expect(items.map(i => i.label)).toEqual([
+            'TITLE',
+            'STATE.SINGULAR',
+            'SEVERITY.SINGULAR',
+            'UPDATED.AT',
+            'CREATED.AT'
+        ]);
     });
 });
 

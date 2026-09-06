@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 import { Register } from '../model/register.model';
 import { User } from '../model/user.model';
 
@@ -36,7 +36,7 @@ export class AuthApi {
         return this.http.put<void>(
             '/api/private/user/password',
             { currentPassword, newPassword },
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 
@@ -48,7 +48,7 @@ export class AuthApi {
         return this.http.patch<User>(
             '/api/private/user',
             { name, colorAvatarBg },
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 }

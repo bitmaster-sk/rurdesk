@@ -18,7 +18,7 @@ import { User } from 'src/app/auth/model/user.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
-import { orderScheduled } from './gantt-order.util';
+import { GanttOrderUtil } from './gantt-order.util';
 
 @Injectable()
 export class IssueGanttService {
@@ -191,7 +191,8 @@ export class IssueGanttService {
                 r => r.relationType === IssueRelationType.Schedule
             );
             const scheduledOnly = scheduled.filter(IssueGuard.isScheduled);
-            const sortedScheduled = orderScheduled(scheduledOnly, scheduleRelations);
+            const sortedScheduled = GanttOrderUtil.orderScheduled(scheduledOnly, scheduleRelations);
+
             return {
                 scheduledTasks: sortedScheduled.map(issue =>
                     this.buildExtendedIssue(issue, severities, issueTypes, states, users)

@@ -15,9 +15,6 @@ import (
 const defaultHumanRateLimit = 120
 const defaultAgentRateLimit = 600
 
-// ErrApiKeyNotFound is returned when the targeted API key does not exist.
-var ErrApiKeyNotFound = errors.New("api key not found")
-
 type ApiKeyRepository struct {
 	pool *pgxpool.Pool
 }

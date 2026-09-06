@@ -45,6 +45,7 @@ These must match the credentials your Postgres service is configured with.
 | `ALLOWED_ORIGINS` | _(empty)_ | Comma-separated origins allowed to call the API from a browser. Empty means `*` — safe here because authentication is a bearer token, never a cookie, so a wildcard grants no ambient authority. Set it to have the browser enforce a narrower set. |
 | `MCP_PUBLIC_BASE_URL` | _(empty)_ | Pins the origin advertised to MCP clients in the `/mcp` endpoint URL. Empty by default — derived from each request's `Host`. Set it only when your proxy cannot preserve `Host` |
 | `GIT_INTEGRATION_ENCRYPTION_KEY` | `<32-byte-key>` | Encrypts stored git integration tokens at rest |
+| `MERGE_POLL_INTERVAL` | `60s` | How often linked pull requests are checked for a merge. Lower it for snappier `done` state changes at the cost of more git-host API calls |
 
 > **WebSocket origin & your reverse proxy.** Real-time updates use a WebSocket
 > that is accepted only when the request's `Origin` matches its `Host` (a

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderScheduled, applyPendingOrder } from './gantt-order.util';
+import { GanttOrderUtil } from './gantt-order.util';
 import type { Issue } from '../../../model/issue.model';
 
 const iss = (id: number, rank: string | null, scheduledAt: string, title: string): Issue => ({
@@ -15,9 +15,9 @@ const iss = (id: number, rank: string | null, scheduledAt: string, title: string
     ganttRank: rank
 });
 
-describe('orderScheduled', () => {
+describe('GanttOrderUtil.orderScheduled', () => {
     it('sorts by ganttRank ascending when ranks are present', () => {
-        const out = orderScheduled(
+        const out = GanttOrderUtil.orderScheduled(
             [iss(1, 't', '2026-01-02', 'A'), iss(2, 'm', '2026-01-01', 'B')],
             []
         );
@@ -25,7 +25,7 @@ describe('orderScheduled', () => {
     });
 
     it('places null-rank issues last, tie-broken by scheduledAt', () => {
-        const out = orderScheduled(
+        const out = GanttOrderUtil.orderScheduled(
             [
                 iss(1, null, '2026-01-05', 'A'),
                 iss(2, 'm', '2026-01-01', 'B'),
@@ -37,7 +37,7 @@ describe('orderScheduled', () => {
     });
 
     it('falls back to topological (scheduledAt) order when no rank is set', () => {
-        const out = orderScheduled(
+        const out = GanttOrderUtil.orderScheduled(
             [iss(1, null, '2026-01-05', 'A'), iss(2, null, '2026-01-01', 'B')],
             []
         );
@@ -45,22 +45,22 @@ describe('orderScheduled', () => {
     });
 });
 
-describe('applyPendingOrder', () => {
+describe('GanttOrderUtil.applyPendingOrder', () => {
     const t = (id: number) => ({ idIssuePublic: id });
 
     it('reorders tasks to match the pending order when the id set matches', () => {
-        const out = applyPendingOrder([t(1), t(2), t(3)], [3, 1, 2]);
+        const out = GanttOrderUtil.applyPendingOrder([t(1), t(2), t(3)], [3, 1, 2]);
         expect(out.map(x => x.idIssuePublic)).toEqual([3, 1, 2]);
     });
 
     it('returns tasks unchanged when there is no pending order', () => {
         const tasks = [t(1), t(2)];
-        expect(applyPendingOrder(tasks, null)).toBe(tasks);
+        expect(GanttOrderUtil.applyPendingOrder(tasks, null)).toBe(tasks);
     });
 
     it('falls back to server order when the id set differs (row added/removed)', () => {
         const tasks = [t(1), t(2), t(4)]; // 4 appeared; overlay still references 3
-        const out = applyPendingOrder(tasks, [3, 1, 2]);
+        const out = GanttOrderUtil.applyPendingOrder(tasks, [3, 1, 2]);
         expect(out.map(x => x.idIssuePublic)).toEqual([1, 2, 4]);
     });
 });

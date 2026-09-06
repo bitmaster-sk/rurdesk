@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
-import { extractMessageSegments } from 'src/app/shared/mention/extract-message-segments';
-import { parseMentionParts } from 'src/app/shared/mention/mention-token.util';
+import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
+import { Mention } from 'src/app/shared/mention/mention';
 
 export type RenderSegment =
     | { type: 'diff'; content: string }
@@ -14,61 +14,6 @@ export type RenderSegment =
 interface TextSpan {
     isCode: boolean;
     text: string;
-}
-
-/**
- * Split raw markdown text into alternating code / non-code spans so that
- * mention tokens inside fenced blocks (``` … ```) or inline code (` … `) are
- * never parsed as mentions — they must render literally.
- *
- * Handles:
- *  - Fenced blocks opened with three (or more) backticks, closed by a matching
- *    fence (same length). Multi-line.
- *  - Inline code enclosed by one or more backticks (not newline-crossing by
- *    the CommonMark spec, but we're lenient here).
- */
-export function splitCodeSpans(text: string): TextSpan[] {
-    const spans: TextSpan[] = [];
-    let i = 0;
-
-    while (i < text.length) {
-        if (text[i] !== '`') {
-            const next = text.indexOf('`', i);
-            if (next === -1) {
-                spans.push({ isCode: false, text: text.slice(i) });
-                break;
-            }
-            spans.push({ isCode: false, text: text.slice(i, next) });
-            i = next;
-            continue;
-        }
-
-        let fenceLen = 0;
-        while (i + fenceLen < text.length && text[i + fenceLen] === '`') {
-            fenceLen++;
-        }
-        const opener = text.slice(i, i + fenceLen);
-        const closerStart = text.indexOf(opener, i + fenceLen);
-        if (closerStart === -1) {
-            // No closer — treat the rest as plain text (no code).
-            spans.push({ isCode: false, text: text.slice(i) });
-            break;
-        }
-        // Ensure the closer is not immediately followed by another backtick
-        // (which would make it a longer fence, not a match).
-        const afterCloser = closerStart + fenceLen;
-        if (afterCloser < text.length && text[afterCloser] === '`') {
-            // Not a proper close — skip past opener and keep scanning.
-            spans.push({ isCode: false, text: opener });
-            i = i + fenceLen;
-            continue;
-        }
-        const codeContent = text.slice(i, afterCloser);
-        spans.push({ isCode: true, text: codeContent });
-        i = afterCloser;
-    }
-
-    return spans;
 }
 
 const AGENT_KINDS = new Set<MessageKind>([
@@ -100,10 +45,10 @@ export class MessageBodyComponent {
         const kind = this.messageKind();
         const isAgentKind = kind !== undefined && AGENT_KINDS.has(kind);
 
-        // For agent messages: split into text/diff/mockup via extractMessageSegments.
+        // For agent messages: split into text/diff/mockup via MessageSegmentParser.parse.
         // For user messages: a single text segment (no diff/mockup splitting).
         const base = isAgentKind
-            ? extractMessageSegments(this.body())
+            ? MessageSegmentParser.parse(this.body())
             : [{ type: 'text' as const, content: this.body() }];
 
         const out: RenderSegment[] = [];
@@ -127,7 +72,7 @@ export class MessageBodyComponent {
                 // Agent text segments: parse mention tokens directly (no code-fence guard
                 // needed — agent messages aren't user-typed fenced code, and their
                 // diff/mockup blocks were already split off above).
-                for (const p of parseMentionParts(seg.content)) {
+                for (const p of Mention.parse(seg.content)) {
                     if (p.type === 'text') {
                         if (p.text) out.push({ type: 'text', content: p.text });
                     } else {
@@ -136,14 +81,14 @@ export class MessageBodyComponent {
                 }
             } else {
                 // User-typed message: guard against mentions inside code fences / inline code.
-                const codeSpans = splitCodeSpans(seg.content);
+                const codeSpans = MessageBodyComponent.splitCodeSpans(seg.content);
                 for (const span of codeSpans) {
                     if (span.isCode) {
                         // Emit the raw code text as-is (literal, no chip).
                         if (span.text) out.push({ type: 'text', content: span.text });
                     } else {
                         // Non-code span: parse mentions.
-                        for (const p of parseMentionParts(span.text)) {
+                        for (const p of Mention.parse(span.text)) {
                             if (p.type === 'text') {
                                 if (p.text) out.push({ type: 'text', content: p.text });
                             } else {
@@ -157,4 +102,59 @@ export class MessageBodyComponent {
 
         return out;
     });
+
+    /**
+     * Split raw markdown text into alternating code / non-code spans so that
+     * mention tokens inside fenced blocks (``` … ```) or inline code (` … `) are
+     * never parsed as mentions — they must render literally.
+     *
+     * Handles:
+     *  - Fenced blocks opened with three (or more) backticks, closed by a matching
+     *    fence (same length). Multi-line.
+     *  - Inline code enclosed by one or more backticks (not newline-crossing by
+     *    the CommonMark spec, but we're lenient here).
+     */
+    private static splitCodeSpans(text: string): TextSpan[] {
+        const spans: TextSpan[] = [];
+        let i = 0;
+
+        while (i < text.length) {
+            if (text[i] !== '`') {
+                const next = text.indexOf('`', i);
+                if (next === -1) {
+                    spans.push({ isCode: false, text: text.slice(i) });
+                    break;
+                }
+                spans.push({ isCode: false, text: text.slice(i, next) });
+                i = next;
+                continue;
+            }
+
+            let fenceLen = 0;
+            while (i + fenceLen < text.length && text[i + fenceLen] === '`') {
+                fenceLen++;
+            }
+            const opener = text.slice(i, i + fenceLen);
+            const closerStart = text.indexOf(opener, i + fenceLen);
+            if (closerStart === -1) {
+                // No closer — treat the rest as plain text (no code).
+                spans.push({ isCode: false, text: text.slice(i) });
+                break;
+            }
+            // Ensure the closer is not immediately followed by another backtick
+            // (which would make it a longer fence, not a match).
+            const afterCloser = closerStart + fenceLen;
+            if (afterCloser < text.length && text[afterCloser] === '`') {
+                // Not a proper close — skip past opener and keep scanning.
+                spans.push({ isCode: false, text: opener });
+                i = i + fenceLen;
+                continue;
+            }
+            const codeContent = text.slice(i, afterCloser);
+            spans.push({ isCode: true, text: codeContent });
+            i = afterCloser;
+        }
+
+        return spans;
+    }
 }

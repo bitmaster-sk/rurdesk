@@ -15,14 +15,14 @@ import { Issue } from '../../../model/issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
 import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
-import { topologicalSort } from './gantt-order.util';
+import { GanttOrderUtil } from './gantt-order.util';
 
 function initialFilter(): IssuesFilter {
     return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
 }
 
 // IssueGanttService uses inject() for 6 deps; only actualFilter$ is touched at
-// construction (the rest stay lazy inside switchMap). topologicalSort is pure, so we
+// construction (the rest stay lazy inside switchMap). GanttOrderUtil.topologicalSort is pure, so we
 // build the service with stub deps and call the private method directly.
 function buildService(): IssueGanttService {
     const injector = Injector.create({
@@ -103,16 +103,16 @@ function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
     };
 }
 
-// topologicalSort now lives in the pure util; test it directly.
+// GanttOrderUtil.topologicalSort now lives in the pure util; test it directly.
 function topoSort(
     _svc: IssueGanttService,
     issues: Issue[],
     relations: ReadIssueRelationDto[]
 ): Issue[] {
-    return topologicalSort(issues, relations);
+    return GanttOrderUtil.topologicalSort(issues, relations);
 }
 
-describe('IssueGanttService — topologicalSort', () => {
+describe('IssueGanttService — GanttOrderUtil.topologicalSort', () => {
     it('orders A → B → C in dependency order (not date order)', () => {
         const svc = buildService();
         // Dates intentionally out of dependency order.

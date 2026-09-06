@@ -62,6 +62,9 @@ describe('FilterComponent — date modes (browser)', () => {
         return setFilter.mock.calls[setFilter.mock.calls.length - 1][0] as IssuesFilterParams;
     }
 
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
     it('sends the selected preset as a rolling window, with no absolute bounds', () => {
         const component = render();
         component.form.patchValue({ updateAt: { preset: '30d' } });
@@ -85,6 +88,7 @@ describe('FilterComponent — date modes (browser)', () => {
     it('sends no date filter in the default "any" mode', () => {
         const component = render();
         component.form.patchValue({ title: 'anything' });
+        vi.advanceTimersByTime(300);
 
         expect(lastFilter().updateAtWithin).toBeNull();
         expect(lastFilter().updateAtFrom).toBeNull();
@@ -276,5 +280,67 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
         initialFilter$.next(filter({}));
 
         expect(component.form.get('updateAt')!.value).toBeNull();
+    });
+});
+
+describe('FilterComponent — title debounce (browser)', () => {
+    let setFilter: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        setFilter = vi.fn();
+
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [FilterComponent],
+            providers: [
+                {
+                    provide: IssueFilterStore,
+                    useValue: { setFilter, initialFilter$: EMPTY, getFilter: () => null }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
+                { provide: ProjectMemberStore, useValue: { users$: of([]) } },
+                { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
+                { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: I18nService, useValue: { instant: (key: string) => key } }
+            ]
+        })
+            .overrideComponent(FilterComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    function render(): FilterComponent {
+        const fixture = TestBed.createComponent(FilterComponent);
+        fixture.detectChanges();
+        return fixture.componentInstance;
+    }
+
+    function firstFilter(): IssuesFilterParams {
+        return setFilter.mock.calls[0][0] as IssuesFilterParams;
+    }
+
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('sends one filter for a burst of typing in the title', () => {
+        const component = render();
+
+        for (const value of ['l', 'lo', 'log', 'logi', 'login']) {
+            component.form.patchValue({ title: value });
+        }
+        expect(setFilter).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(300);
+
+        expect(setFilter).toHaveBeenCalledTimes(1);
+        expect(firstFilter().title).toBe('login');
+    });
+
+    it('applies a state change without waiting for the debounce', () => {
+        const component = render();
+
+        component.form.patchValue({ idsState: [4] });
+
+        expect(setFilter).toHaveBeenCalledTimes(1);
+        expect(firstFilter().idsState).toEqual([4]);
     });
 });
