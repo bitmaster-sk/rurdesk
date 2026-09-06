@@ -18,7 +18,7 @@ import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import {
     IssueCardViewType,
-    isComfortableMode
+    IssueCardViewMode
 } from '../../../../constants/issue-card-view-type.constant';
 import { addSeconds } from 'date-fns';
 import { HORIZONTAL_OFFSET } from '../../service/gantt-arrow-routing';
@@ -136,7 +136,9 @@ export class GanttTaskBarComponent implements AfterViewChecked {
 
     public readonly isSmallBar = computed(() => this.barWidth() < SMALL_BAR_THRESHOLD_PX);
 
-    public readonly isComfortable = computed(() => isComfortableMode(this.cardMode()));
+    public readonly isComfortable = computed(() =>
+        IssueCardViewMode.isComfortable(this.cardMode())
+    );
 
     public readonly progress = computed(() => {
         const issue = this.task();
@@ -148,14 +150,14 @@ export class GanttTaskBarComponent implements AfterViewChecked {
     public readonly showProgress = computed(() => this.isComfortable() && this.progress() > 0);
 
     public readonly overflowLabelLeft = computed(() => {
-        const minWidth = isComfortableMode(this.cardMode())
+        const minWidth = IssueCardViewMode.isComfortable(this.cardMode())
             ? 2 * BAR_BORDER + 2 * BAR_PADDING_COMFORTABLE
             : 2 * BAR_BORDER + 2 * BAR_PADDING_COMPACT;
         return this.barLeft() + Math.max(this.barWidth(), minWidth) + OVERFLOW_LABEL_GAP;
     });
 
     public readonly overflowLabel = computed(() => {
-        const padding = isComfortableMode(this.cardMode())
+        const padding = IssueCardViewMode.isComfortable(this.cardMode())
             ? BAR_PADDING_COMFORTABLE
             : BAR_PADDING_COMPACT;
         const contentWidth = this.barWidth() - 2 * BAR_BORDER - 2 * padding;

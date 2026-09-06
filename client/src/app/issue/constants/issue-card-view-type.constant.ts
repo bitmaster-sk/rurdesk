@@ -11,6 +11,8 @@ export const GANTT_CARD_MODE_OPTIONS: { labelKey: string; value: IssueCardViewTy
     { labelKey: 'ISSUE.CARD_MODE.COMPACT', value: 'GanttCompact' }
 ];
 
-export function isComfortableMode(type: IssueCardViewType): boolean {
-    return type === 'CalendarComfort' || type === 'GanttComfort';
+export abstract class IssueCardViewMode {
+    public static isComfortable(type: IssueCardViewType): boolean {
+        return type === 'CalendarComfort' || type === 'GanttComfort';
+    }
 }

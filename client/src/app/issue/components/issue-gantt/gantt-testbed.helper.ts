@@ -10,7 +10,7 @@ import { IssueGanttService } from './service/issue-gantt.service';
 import { GanttTimelineService } from './service/gantt-timeline.service';
 import { GanttDragService, DragMode } from './service/gantt-drag.service';
 import { GanttCascadeService } from './service/gantt-cascade.service';
-import { GanttCriticalPathService, emptyCriticalPath } from './service/gantt-critical-path.service';
+import { GanttCriticalPathService } from './service/gantt-critical-path.service';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -216,7 +216,7 @@ export function configureGanttTestBed(
     };
 
     const criticalPathServiceMock = {
-        computeCriticalPath: vi.fn(() => emptyCriticalPath())
+        computeCriticalPath: vi.fn(() => GanttCriticalPathService.emptyCriticalPath())
     };
 
     const issueFilterStoreMock = {
