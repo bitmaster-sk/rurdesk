@@ -148,6 +148,14 @@ export default tseslint.config(
     {
         files: ['**/*.spec.ts', '**/*testbed.helper.ts', 'e2e/**/*.ts', 'src/testing/**/*.ts'],
         rules: {
+            '@typescript-eslint/dot-notation': [
+                'error',
+                {
+                    allowIndexSignaturePropertyAccess: true,
+                    allowPrivateClassPropertyAccess: true,
+                    allowProtectedClassPropertyAccess: true
+                }
+            ],
             'no-restricted-syntax': 'off',
             '@angular-eslint/component-selector': 'off',
             '@angular-eslint/directive-selector': 'off',

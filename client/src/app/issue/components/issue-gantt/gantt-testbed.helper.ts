@@ -26,25 +26,17 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ExtendedIssue } from '../../model/extended-issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../model/issue-relation.model';
 
 export function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
+    return Fixtures.extendedIssue({
         idProject: 10,
         title: 'Task',
-        description: '',
-        tracked: 0,
-        idState: null,
-        idSeverity: null,
         scheduledAt: new Date('2025-01-15T00:00:00Z'),
         estimated: 3600,
-        state: undefined,
-        severity: undefined,
-        assignedToUser: undefined,
         ...over
-    };
+    });
 }
 
 export function mockSub<T = unknown>() {

@@ -3,17 +3,14 @@ import { Subject, of, throwError } from 'rxjs';
 import { CursorPager } from './cursor-pager';
 import { IssuesPage } from '../model/issues-page.model';
 import { Issue } from '../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const issue = (idIssuePublic: number): Issue => ({
-    idIssue: idIssuePublic,
-    idIssuePublic,
-    idProject: 1,
-    idState: null,
-    idSeverity: null,
-    title: `Issue ${idIssuePublic}`,
-    description: '',
-    tracked: 0
-});
+const issue = (idIssuePublic: number): Issue =>
+    Fixtures.issue({
+        idIssue: idIssuePublic,
+        idIssuePublic,
+        title: `Issue ${idIssuePublic}`
+    });
 
 const page = (ids: number[], next: string | null, total: number): IssuesPage => ({
     items: ids.map(issue),

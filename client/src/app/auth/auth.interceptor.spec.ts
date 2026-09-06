@@ -213,7 +213,7 @@ describe('AuthInterceptor', () => {
         } as unknown as HttpHandler;
 
         interceptor
-            .intercept(new HttpRequest('POST', '/api/public/login'), next)
+            .intercept(new HttpRequest('POST', '/api/public/login', {}), next)
             .subscribe({ error: () => {} });
 
         await Promise.resolve();

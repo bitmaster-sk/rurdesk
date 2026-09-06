@@ -64,7 +64,7 @@ describe('GitIntegrationSettingsComponent', () => {
 
     it('create mode: calls create$ with all five fields including accessToken', () => {
         const component = createComponent({ gitIntegrationApi });
-        component.form.setValue({
+        component['form'].setValue({
             name: 'New',
             hostType: HostType.GitHub,
             baseUrl: 'https://github.com',
@@ -72,7 +72,7 @@ describe('GitIntegrationSettingsComponent', () => {
             accessToken: 'tok123'
         });
 
-        component.onSave();
+        component['onSave']();
 
         expect(gitIntegrationApi.create$).toHaveBeenCalledWith(1, {
             name: 'New',
@@ -85,7 +85,7 @@ describe('GitIntegrationSettingsComponent', () => {
 
     it('update mode with empty token: omits accessToken from update$ payload', () => {
         const component = createComponent({ gitIntegrationApi, integration: INTEGRATION });
-        component.form.setValue({
+        component['form'].setValue({
             name: 'Updated',
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
@@ -93,7 +93,7 @@ describe('GitIntegrationSettingsComponent', () => {
             accessToken: ''
         });
 
-        component.onSave();
+        component['onSave']();
 
         expect(gitIntegrationApi.update$).toHaveBeenCalledWith(1, 42, {
             name: 'Updated',
@@ -108,7 +108,7 @@ describe('GitIntegrationSettingsComponent', () => {
 
     it('update mode with new token: includes accessToken in update$ payload', () => {
         const component = createComponent({ gitIntegrationApi, integration: INTEGRATION });
-        component.form.setValue({
+        component['form'].setValue({
             name: 'Updated',
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
@@ -116,7 +116,7 @@ describe('GitIntegrationSettingsComponent', () => {
             accessToken: 'newtoken'
         });
 
-        component.onSave();
+        component['onSave']();
 
         expect(gitIntegrationApi.update$).toHaveBeenCalledWith(1, 42, {
             name: 'Updated',
@@ -130,7 +130,7 @@ describe('GitIntegrationSettingsComponent', () => {
     it('invalid form: does not call the API', () => {
         const component = createComponent({ gitIntegrationApi });
         // Form is invalid: name and baseUrl are empty (required validators not satisfied).
-        component.form.setValue({
+        component['form'].setValue({
             name: '',
             hostType: HostType.GitHub,
             baseUrl: '',
@@ -138,7 +138,7 @@ describe('GitIntegrationSettingsComponent', () => {
             accessToken: ''
         });
 
-        component.onSave();
+        component['onSave']();
 
         expect(gitIntegrationApi.create$).not.toHaveBeenCalled();
         expect(gitIntegrationApi.update$).not.toHaveBeenCalled();

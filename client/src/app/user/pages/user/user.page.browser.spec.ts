@@ -82,10 +82,10 @@ describe('UserPage (browser)', () => {
 
         const label = fixture.componentInstance.rangeLabel();
         expect(label.from).toBe(
-            fixture.componentInstance.datePipe.transform(expectedFrom, 'mediumDate')
+            fixture.componentInstance['datePipe'].transform(expectedFrom, 'mediumDate')
         );
         expect(label.to).toBe(
-            fixture.componentInstance.datePipe.transform(expectedTo, 'mediumDate')
+            fixture.componentInstance['datePipe'].transform(expectedTo, 'mediumDate')
         );
     });
 

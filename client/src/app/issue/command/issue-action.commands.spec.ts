@@ -1,17 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 import { IssueActionCommands } from './issue-action.commands';
 import { Issue } from '../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const issue: Issue = {
+const issue: Issue = Fixtures.issue({
     idIssue: 15,
     idIssuePublic: 5,
-    idProject: 1,
     idState: 10,
-    idSeverity: null,
-    title: 'X',
-    description: '',
-    tracked: 0
-};
+    title: 'X'
+});
 const data = {
     states: [{ idState: 11, idProject: 1, name: 'Done' }] as any,
     severities: [{ idSeverity: 2, idProject: 1, title: 'High', color: '#f00' }] as any,

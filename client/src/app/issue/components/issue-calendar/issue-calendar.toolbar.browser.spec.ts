@@ -41,7 +41,9 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
     // =========================================================================
 
     it('viewOptions stores labelKey translation keys, not pre-resolved labels', () => {
-        expect(comp.viewOptions.every(o => 'labelKey' in o && !('label' in o))).toBe(true);
+        expect(comp.viewOptions.every((o: object) => 'labelKey' in o && !('label' in o))).toBe(
+            true
+        );
         expect(comp.viewOptions[0]).toEqual({
             labelKey: 'ISSUE.CALENDAR.DAY',
             value: 'timeGridDay'

@@ -271,7 +271,9 @@ describe('UiDateRangeSelectComponent (browser)', () => {
     it('keys the trigger consumes never reach the document', () => {
         const page = render();
         const seen: string[] = [];
-        const listener = (e: Event): void => seen.push((e as KeyboardEvent).key);
+        const listener = (e: Event): void => {
+            seen.push((e as KeyboardEvent).key);
+        };
         document.addEventListener('keydown', listener);
 
         page.trigger().focus();

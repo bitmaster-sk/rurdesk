@@ -12,6 +12,7 @@ import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
@@ -21,19 +22,14 @@ function initialFilter(): IssuesFilter {
 }
 
 function makeIssue(over: Partial<Issue>): Issue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 1,
+    return Fixtures.issue({
         idState: 1,
         idSeverity: 1,
         title: 'T',
-        description: '',
-        tracked: 0,
         assignedTo: 10,
         relationCount: 0,
         ...over
-    };
+    });
 }
 
 function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): IssueTableService {

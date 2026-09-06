@@ -6,6 +6,7 @@ import { ProjectStore } from './project.store';
 import { StateStore } from '../state/store/state.store';
 import { SeverityStore } from '../severity/store/severity.store';
 import { Issue } from '../issue/model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 const states = [
     { idState: 1, idProject: 1, name: 'Todo', final: false },
@@ -14,19 +15,14 @@ const states = [
 const severities = [{ idSeverity: 1, idProject: 1, title: 'Low' }];
 
 function issue(over: Partial<Issue>): Issue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 1,
+    return Fixtures.issue({
         title: 'T',
-        description: '',
         idState: 1,
         idSeverity: 1,
         estimated: 0,
-        tracked: 0,
         assignedTo: null,
         ...over
-    };
+    });
 }
 
 function buildStore(
