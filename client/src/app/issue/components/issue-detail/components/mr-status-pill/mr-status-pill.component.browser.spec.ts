@@ -35,7 +35,13 @@ describe('MrStatusPillComponent', () => {
     });
 
     function renderWithCiStatus(ciStatus: CiStatus): string {
-        const status: MrStatus = { state: MrState.Open, approved: false, ciStatus, webUrl: '' };
+        const status: MrStatus = {
+            state: MrState.Open,
+            approved: false,
+            ciStatus,
+            webUrl: '',
+            headSha: ''
+        };
         fixture.componentRef.setInput('status', status);
         fixture.detectChanges();
         return (fixture.nativeElement as HTMLElement).textContent ?? '';
