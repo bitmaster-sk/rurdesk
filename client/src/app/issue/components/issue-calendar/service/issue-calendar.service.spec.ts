@@ -72,4 +72,11 @@ describe('IssueCalendarService — events$', () => {
         expect(events[0].allDay).toBe(true);
         expect(events[0].end).toBeUndefined();
     });
+
+    it('excludes issues with an Invalid Date scheduledAt', () => {
+        const events = firstEmit(
+            buildService([makeIssue({ idIssue: 9, scheduledAt: new Date('not-a-date') })])
+        );
+        expect(events).toHaveLength(0);
+    });
 });

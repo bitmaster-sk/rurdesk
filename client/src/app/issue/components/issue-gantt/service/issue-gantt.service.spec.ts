@@ -140,6 +140,70 @@ describe('IssueGanttService — GanttOrderUtil.topologicalSort', () => {
     });
 });
 
+describe('IssueGanttService — Invalid Date filtering', () => {
+    function buildWithIssues(issues: Issue[]): IssueGanttService {
+        const injector = Injector.create({
+            providers: [
+                { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
+                { provide: SettingsStore, useValue: { ganttBacklogPageSize: () => 30 } },
+                {
+                    provide: IssueFilterStore,
+                    useValue: {
+                        clear: () => {},
+                        actualFilter$: of({ idProject: 1 }),
+                        actualFilterChange$: of({ filter: { idProject: 1 }, refresh: false })
+                    }
+                },
+                {
+                    provide: IssueService,
+                    useValue: {
+                        loadIssues: () => of(issues),
+                        loadIssuesPage$: () => of({ items: [], nextCursor: null, total: 0 })
+                    }
+                },
+                { provide: IssueRelationApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: SeverityStore,
+                    useValue: { severitiesMapByProject$: () => of(new Map()) }
+                },
+                {
+                    provide: IssueTypeStore,
+                    useValue: { issueTypesMapByProject$: () => of(new Map()) }
+                },
+                { provide: ProjectMemberStore, useValue: { usersMap$: of(new Map()) } },
+                { provide: StateStore, useValue: { statesMapByProject$: () => of(new Map()) } }
+            ]
+        });
+        return runInInjectionContext(injector, () => new IssueGanttService());
+    }
+
+    it('excludes issues with an Invalid Date scheduledAt from scheduledTasks', () => {
+        const svc = buildWithIssues([makeIssue(1, 'not-a-date')]);
+        let scheduledTasks: unknown[] = [];
+        (
+            svc as unknown as {
+                data$: { subscribe: (fn: (v: unknown) => void) => void };
+            }
+        ).data$.subscribe(
+            v => (scheduledTasks = (v as { scheduledTasks: unknown[] }).scheduledTasks)
+        );
+        expect(scheduledTasks).toHaveLength(0);
+    });
+
+    it('keeps issues with a valid scheduledAt in scheduledTasks', () => {
+        const svc = buildWithIssues([makeIssue(1, '2026-04-01T00:00:00Z')]);
+        let scheduledTasks: unknown[] = [];
+        (
+            svc as unknown as {
+                data$: { subscribe: (fn: (v: unknown) => void) => void };
+            }
+        ).data$.subscribe(
+            v => (scheduledTasks = (v as { scheduledTasks: unknown[] }).scheduledTasks)
+        );
+        expect(scheduledTasks).toHaveLength(1);
+    });
+});
+
 // Backlog pagination survives a refresh() (e.g. after a backlog task is scheduled).
 // Regression: refresh() used to re-emit the filter and snap the backlog back to page 1,
 // unloading every "Load more" page the user had fetched.

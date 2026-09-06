@@ -11,6 +11,7 @@ import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssueService } from '../../../issue.service';
 import { Issue } from '../../../model/issue.model';
+import { IssueGuard } from '../../../model/extended-issue.model';
 
 @Injectable()
 export class IssueCalendarService {
@@ -49,24 +50,22 @@ export class IssueCalendarService {
         users: Map<number, User>,
         states: Map<number, IssueState>
     ): EventInput[] {
-        return issues
-            .filter((issue): issue is Issue & { scheduledAt: Date } => !!issue.scheduledAt)
-            .map(issue => {
-                const severity =
-                    issue.idSeverity !== null ? severities.get(issue.idSeverity) : undefined;
-                const assigned = issue.assignedTo != null ? users.get(issue.assignedTo) : undefined;
-                const state = issue.idState !== null ? states.get(issue.idState) : undefined;
-                const isAllDay = !issue.estimated;
-                return {
-                    id: `${issue.idIssue}`,
-                    allDay: isAllDay,
-                    title: issue.title,
-                    start: issue.scheduledAt.toISOString(),
-                    end: isAllDay
-                        ? undefined
-                        : add(issue.scheduledAt, { seconds: issue.estimated ?? 0 }).toISOString(),
-                    extendedProps: { severity, assigned, state, issue }
-                };
-            });
+        return issues.filter(IssueGuard.isScheduled).map(issue => {
+            const severity =
+                issue.idSeverity !== null ? severities.get(issue.idSeverity) : undefined;
+            const assigned = issue.assignedTo != null ? users.get(issue.assignedTo) : undefined;
+            const state = issue.idState !== null ? states.get(issue.idState) : undefined;
+            const isAllDay = !issue.estimated;
+            return {
+                id: `${issue.idIssue}`,
+                allDay: isAllDay,
+                title: issue.title,
+                start: issue.scheduledAt.toISOString(),
+                end: isAllDay
+                    ? undefined
+                    : add(issue.scheduledAt, { seconds: issue.estimated ?? 0 }).toISOString(),
+                extendedProps: { severity, assigned, state, issue }
+            };
+        });
     }
 }

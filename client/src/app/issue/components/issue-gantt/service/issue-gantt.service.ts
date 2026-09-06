@@ -7,7 +7,7 @@ import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueService } from '../../../issue.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { Issue } from '../../../model/issue.model';
-import { ExtendedIssue } from '../../../model/extended-issue.model';
+import { ExtendedIssue, IssueGuard } from '../../../model/extended-issue.model';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueType } from 'src/app/issue-type/model/issue-type.model';
@@ -190,10 +190,9 @@ export class IssueGanttService {
             const scheduleRelations = relations.filter(
                 r => r.relationType === IssueRelationType.Schedule
             );
-            const scheduledOnly = scheduled.filter(
-                (i): i is Issue & { scheduledAt: Date } => i.scheduledAt != null
-            );
+            const scheduledOnly = scheduled.filter(IssueGuard.isScheduled);
             const sortedScheduled = GanttOrderUtil.orderScheduled(scheduledOnly, scheduleRelations);
+
             return {
                 scheduledTasks: sortedScheduled.map(issue =>
                     this.buildExtendedIssue(issue, severities, issueTypes, states, users)
