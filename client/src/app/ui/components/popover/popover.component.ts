@@ -45,6 +45,9 @@ export class UiPopoverComponent implements OnDestroy {
     /** When false, outside clicks / Escape do NOT close (parity with a pinned popover). */
     public readonly dismissable = input(true);
 
+    public readonly maxHeight = input<number | string | null>(null);
+    public readonly growAfterOpen = input(false);
+
     /** Fires on every close (outside click, Escape, `.hide()`, re-`.toggle()`). */
     public readonly closed = output<void>();
 
@@ -97,7 +100,7 @@ export class UiPopoverComponent implements OnDestroy {
             .flexibleConnectedTo(origin)
             .withViewportMargin(8)
             .withFlexibleDimensions(false)
-            .withGrowAfterOpen(false)
+            .withGrowAfterOpen(this.growAfterOpen())
             .withPush(true)
             .withPositions([
                 {
@@ -122,6 +125,7 @@ export class UiPopoverComponent implements OnDestroy {
             positionStrategy,
             scrollStrategy: this.overlay.scrollStrategies.reposition(),
             hasBackdrop: false,
+            maxHeight: this.maxHeight() ?? undefined,
             panelClass: this.panelClass() ? this.panelClass() : undefined
         });
         this.overlayRef.attach(new TemplatePortal(this.tpl(), this.vcr));

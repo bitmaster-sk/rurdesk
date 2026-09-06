@@ -88,6 +88,7 @@ export class AgentRunCardComponent {
     protected readonly isSkillsPopoverOpen = signal(false);
     protected readonly runSkills = signal<AgentRunStageSkills[]>([]);
     protected readonly skillCatalog = signal<Skill[]>([]);
+    private skillsPopover: UiPopoverComponent | null = null;
     private readonly stageStatus = signal<Record<string, UiSaveState>>({});
 
     protected readonly canEditSkills = computed(() => {
@@ -221,6 +222,7 @@ export class AgentRunCardComponent {
     protected onToggleSkillsPopover(popover: UiPopoverComponent, event: Event): void {
         const willOpen = !this.isSkillsPopoverOpen();
         this.isSkillsPopoverOpen.set(willOpen);
+        this.skillsPopover = willOpen ? popover : null;
         popover.toggle(event);
         if (willOpen) {
             this.onOpenSkills();
@@ -236,7 +238,10 @@ export class AgentRunCardComponent {
             .load$()
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: catalog => this.skillCatalog.set(catalog),
+                next: catalog => {
+                    this.skillCatalog.set(catalog);
+                    this.repositionSkillsPopover();
+                },
                 error: () => this.toast.showError('AGENT.SKILLS.LOAD_ERROR')
             });
         this.loadRunSkills(idRun);
@@ -290,9 +295,16 @@ export class AgentRunCardComponent {
             .getAgentRunSkills$(idRun)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: payload => this.runSkills.set(payload),
+                next: payload => {
+                    this.runSkills.set(payload);
+                    this.repositionSkillsPopover();
+                },
                 error: () => this.toast.showError('AGENT.RUN_SKILLS.LOAD_ERROR')
             });
+    }
+
+    private repositionSkillsPopover(): void {
+        this.skillsPopover?.reposition();
     }
 
     private setStageStatus(stage: string, status: UiSaveState): void {
