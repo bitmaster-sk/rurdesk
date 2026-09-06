@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -18,14 +19,16 @@ import (
 // advancing them to merged or failed based on PR state. Runs as a background
 // goroutine on a 60s interval.
 type MergePoller struct {
-	agentRunRepo  *repository.AgentRunRepository
-	agentTaskRepo *repository.AgentTaskRepository
-	projectRepo   *repository.ProjectRepository
-	gitIntRepo    *repository.GitIntegrationRepository
-	issueRepo     *repository.IssueRepository
-	stateRepo     *repository.StateRepository
-	transitioner  *PhaseStateTransitioner
-	notifier      *notify.Notifier
+	agentRunRepo     *repository.AgentRunRepository
+	agentTaskRepo    *repository.AgentTaskRepository
+	projectRepo      *repository.ProjectRepository
+	gitIntRepo       *repository.GitIntegrationRepository
+	issueRepo        *repository.IssueRepository
+	stateRepo        *repository.StateRepository
+	transitioner     *PhaseStateTransitioner
+	notifier         *notify.Notifier
+	lastMrStatus     map[int64]*githost.Status
+	lastMrStatusLock sync.Mutex
 }
 
 func NewMergePoller(
@@ -39,14 +42,16 @@ func NewMergePoller(
 	notifier *notify.Notifier,
 ) *MergePoller {
 	return &MergePoller{
-		agentRunRepo:  agentRunRepo,
-		agentTaskRepo: agentTaskRepo,
-		projectRepo:   projectRepo,
-		gitIntRepo:    gitIntRepo,
-		issueRepo:     issueRepo,
-		stateRepo:     stateRepo,
-		transitioner:  transitioner,
-		notifier:      notifier,
+		agentRunRepo:     agentRunRepo,
+		agentTaskRepo:    agentTaskRepo,
+		projectRepo:      projectRepo,
+		gitIntRepo:       gitIntRepo,
+		issueRepo:        issueRepo,
+		stateRepo:        stateRepo,
+		transitioner:     transitioner,
+		notifier:         notifier,
+		lastMrStatus:     make(map[int64]*githost.Status),
+		lastMrStatusLock: sync.Mutex{},
 	}
 }
 
@@ -194,7 +199,15 @@ func (p *MergePoller) pollManualMrs(ctx context.Context, encKey []byte) {
 					Msg("merge poller: manual mr status")
 				continue
 			}
-			p.HandleManualMrStatus(ctx, iss, status)
+			if status.State != constants.MrStateOpen {
+				p.lastMrStatusLock.Lock()
+				delete(p.lastMrStatus, iss.IdIssue)
+				p.lastMrStatusLock.Unlock()
+
+				p.HandleManualMrStatus(ctx, iss, status)
+				continue
+			}
+			p.broadcastMrStatusIfChanged(ctx, iss, status)
 		}
 
 		processed += len(issues)
@@ -214,6 +227,32 @@ func (p *MergePoller) pollManualMrs(ctx context.Context, encKey []byte) {
 			return
 		}
 	}
+}
+
+// broadcastMrStatusIfChanged emits a SubjectMrStatus notice only when the
+// latest host status differs from the last one we broadcast for this issue.
+// A process restart loses the cache, so the next poll that sees a status simply
+// rebroadcasts once. Memory-only caching is enough: no database write is
+// needed and the poller is already the authoritative reader.
+func (p *MergePoller) broadcastMrStatusIfChanged(ctx context.Context, iss *model.Issue, status *githost.Status) {
+	p.lastMrStatusLock.Lock()
+
+	last := p.lastMrStatus[iss.IdIssue]
+	if last != nil && last.CiStatus == status.CiStatus && last.Approved == status.Approved && last.HeadSHA == status.HeadSHA {
+		p.lastMrStatusLock.Unlock()
+		return
+	}
+
+	p.lastMrStatus[iss.IdIssue] = &githost.Status{
+		State:    status.State,
+		Approved: status.Approved,
+		CiStatus: status.CiStatus,
+		WebUrl:   status.WebUrl,
+		HeadSHA:  status.HeadSHA,
+	}
+	p.lastMrStatusLock.Unlock()
+
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, iss, status)
 }
 
 // HandleManualMrStatus stamps a terminal PR outcome once and emits done on merge or failed on a close without merge.

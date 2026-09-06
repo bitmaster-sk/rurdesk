@@ -30,6 +30,7 @@ const (
 	SubjectAgentStats       NoticeSubject = "agent_stats"
 	SubjectAgentThinking    NoticeSubject = "agent_thinking"
 	SubjectIssueParticipant NoticeSubject = "issue_participant"
+	SubjectMrStatus         NoticeSubject = "mr_status"
 )
 
 const (

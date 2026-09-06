@@ -74,6 +74,7 @@ func (s *MergePollerManualSuite) SetupSuite() {
 		injector.GetPhaseStateTransitioner(),
 		injector.GetNotifier(),
 	)
+	s.Require().NotNil(s.poller)
 }
 
 func (s *MergePollerManualSuite) TearDownSuite() {

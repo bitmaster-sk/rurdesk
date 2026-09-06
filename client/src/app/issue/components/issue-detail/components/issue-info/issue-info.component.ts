@@ -31,10 +31,11 @@ interface IssueInfoForm {
 }
 
 import { filter, switchMap, takeUntil } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ElementRef } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
+import { ElementRef, OnInit } from '@angular/core';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Project } from 'src/app/project/model/project.model';
+import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { IssueService } from '../../../../issue.service';
 import { Issue } from '../../../../model/issue.model';
 import { Track } from 'src/app/shared/tracker/model/track.model';
@@ -72,7 +73,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false
 })
-export class IssueInfoComponent {
+export class IssueInfoComponent implements OnInit {
     private readonly inputTitle = viewChild<ElementRef<HTMLInputElement>>('inputTitle');
     private readonly inputDescription = viewChild<MessageEditorComponent>('inputDescription');
 
@@ -98,6 +99,7 @@ export class IssueInfoComponent {
     private readonly mrDiffApi = inject(MrDiffApi);
     private readonly gitIntegrationApi = inject(GitIntegrationApi);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly notice = inject(NoticeService);
 
     public readonly currentIssue = signal<Issue | null>(null);
     public readonly isNewIssue = computed(() => !this.currentIssue()?.idIssue);
@@ -236,6 +238,38 @@ export class IssueInfoComponent {
                 }
             });
         });
+    }
+
+    public ngOnInit(): void {
+        this.listenMrStatusChange();
+    }
+
+    private listenMrStatusChange(): void {
+        this.notice.mrStatus$
+            .pipe(
+                filter(n => n.payload.idIssue === this.currentIssue()?.idIssue),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe(n => {
+                const issue = this.currentIssue();
+                if (!issue?.idGitIntegration || !issue.mrId) {
+                    return;
+                }
+                if (
+                    n.payload.idGitIntegration !== issue.idGitIntegration ||
+                    n.payload.idMr !== issue.mrId
+                ) {
+                    return;
+                }
+                const status: MrStatus = {
+                    state: n.payload.state as MrStatus['state'],
+                    approved: n.payload.approved,
+                    ciStatus: n.payload.ciStatus as MrStatus['ciStatus'],
+                    webUrl: n.payload.webUrl,
+                    headSha: n.payload.headSha
+                };
+                this.mrStatus.set(status);
+            });
     }
 
     private loadGitIntegration(idProject: number, idGitIntegration: number): void {
