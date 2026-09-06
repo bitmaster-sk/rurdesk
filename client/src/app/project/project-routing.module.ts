@@ -6,7 +6,7 @@ import { ProjectPage } from './pages/project/project.page';
 import { ProjectMemberResolver } from './project-member.resolver';
 import { ProjectBuilderComponent } from './pages/project-builder/project-builder.component';
 import { ProjectLayoutComponent } from './pages/project-layout/project-layout.component';
-import { projectOwnerGuard } from './project-owner.guard';
+import { ProjectOwnerGuard } from './project-owner.guard';
 
 const routes: Routes = [
     {
@@ -18,7 +18,11 @@ const routes: Routes = [
         },
         children: [
             { path: 'view', component: ProjectPage },
-            { path: 'settings', component: ProjectSettingsPage, canActivate: [projectOwnerGuard] },
+            {
+                path: 'settings',
+                component: ProjectSettingsPage,
+                canActivate: [ProjectOwnerGuard.canActivate]
+            },
             { path: 'project-builder', component: ProjectBuilderComponent },
             {
                 path: 'issue',

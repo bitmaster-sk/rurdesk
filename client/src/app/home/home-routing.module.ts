@@ -5,14 +5,14 @@ import { StateResolver } from '../state/state.resolver';
 import { IssueTypeResolver } from '../issue-type/issue-type.resolver';
 import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
 import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
-import { firstProjectGuard } from '../onboarding/first-project.guard';
-import { projectLayoutGuard } from './project-layout.guard';
+import { FirstProjectGuard } from '../onboarding/first-project.guard';
+import { ProjectLayoutGuard } from './project-layout.guard';
 
 const routes: Routes = [
     {
         path: '',
         component: ProjectLayoutComponent,
-        canMatch: [projectLayoutGuard],
+        canMatch: [ProjectLayoutGuard.canMatch],
         resolve: {
             severities: SeverityResolver,
             state: StateResolver,
@@ -43,7 +43,7 @@ const routes: Routes = [
             },
             {
                 path: '',
-                canMatch: [firstProjectGuard],
+                canMatch: [FirstProjectGuard.canMatch],
                 loadChildren: () =>
                     import('../onboarding/onboarding.module').then(m => m.OnboardingModule)
             },

@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, UrlTree } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
-import { projectOwnerGuard } from './project-owner.guard';
+import { ProjectOwnerGuard } from './project-owner.guard';
 import { ProjectMemberApi } from './api/project-member.api.service';
 import { Role } from '../shared/constants/role.enum';
 
-describe('projectOwnerGuard', () => {
+describe('ProjectOwnerGuard.canActivate', () => {
     const redirectTree = { toString: () => '/project/5/view' } as unknown as UrlTree;
 
     function run(role$: Observable<{ role: Role }>): boolean | UrlTree {
@@ -21,7 +21,7 @@ describe('projectOwnerGuard', () => {
         } as unknown as ActivatedRouteSnapshot;
 
         const result = TestBed.runInInjectionContext(() =>
-            projectOwnerGuard(route, undefined as never)
+            ProjectOwnerGuard.canActivate(route, undefined as never)
         ) as Observable<boolean | UrlTree>;
 
         let value = undefined as unknown as boolean | UrlTree;
