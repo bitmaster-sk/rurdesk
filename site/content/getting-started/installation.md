@@ -99,7 +99,7 @@ services:
     #     environment:
     #         LISTEN_PORT: "9090"
     #         TRACKER_URL: http://rurdesk:1000
-    #         GATEWAY_TO_TRACKER_TOKEN: ""  # CHANGE ME (Admin → bot user → Bot credentials)
+    #         GATEWAY_TO_TRACKER_TOKEN: ""  # CHANGE ME (Admin → agent user → Agent credentials)
     #         TRACKER_TO_GATEWAY_TOKEN: ""  # CHANGE ME (… → Register gateway)
     #         REPO_URL: https://github.com/your-org/your-repo.git
     #         GIT_ACCESS_TOKEN: ""          # CHANGE ME (GitHub/GitLab PAT)
@@ -185,7 +185,7 @@ Public registration is a **one-time bootstrap**:
 1. Open `http://localhost/register` and create your account (name, e-mail,
    password). As the **first ever user you automatically become the instance
    admin** — and the registration endpoint **closes permanently**.
-2. From then on, every user, bot, and admin is created from
+2. From then on, every user, agent, and admin is created from
    **Administration → Users** in the UI. See
    [User management](./user-management.md).
 3. **Create your first project**, then add members or jump straight to the

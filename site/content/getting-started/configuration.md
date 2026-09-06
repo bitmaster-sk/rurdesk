@@ -100,7 +100,7 @@ docker exec \
 
 ### Password hashing cost
 
-Passwords and bot secrets are hashed with bcrypt at cost 10. `BCRYPT_COST`
+Passwords and agent secrets are hashed with bcrypt at cost 10. `BCRYPT_COST`
 overrides that, and values outside bcrypt's accepted range (4–31) are ignored in
 favour of the default.
 

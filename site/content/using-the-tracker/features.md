@@ -54,7 +54,7 @@ Your split is remembered in the browser and applies to every task you open.
 ### Participants & notifications
 
 Every task keeps a list of **participants**. You become one automatically when
-you create the task, are assigned to it (bots included), comment on it, or are
+you create the task, are assigned to it (agents included), comment on it, or are
 @mentioned. You can also add any project member manually. Participants are never
 removed.
 
@@ -335,7 +335,7 @@ today's date. A value that cannot be parsed is rejected with **422**.
 
 - Full endpoint: `http://<host>/mcp/sse`
 - Restricted planning subset: `http://<host>/mcp/plan/sse`
-- Authenticate with a bot/user API key (Bearer)
+- Authenticate with an agent/user API key (Bearer)
 
 ## Command palette & keyboard shortcuts
 

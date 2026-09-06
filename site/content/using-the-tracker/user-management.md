@@ -1,6 +1,6 @@
 ---
 title: User Management
-description: Accounts, the global admin role, bots, bot credentials, teams, and project roles.
+description: Accounts, the global admin role, agents, agent credentials, teams, and project roles.
 ---
 
 # User Management
@@ -17,7 +17,7 @@ Two permission layers exist side by side:
 Public registration at **`/register`** is a **one-time bootstrap**: the first
 ever account created on the instance **automatically becomes the global
 admin**, and the endpoint closes permanently afterwards. Every further account
-— human or bot — is created by an admin from the UI. Opening `/register` on an
+— human or agent — is created by an admin from the UI. Opening `/register` on an
 already-bootstrapped instance shows a "Registration is closed" notice — ask
 your admin for an account instead.
 
@@ -36,7 +36,7 @@ profile — nothing is fetched from a third party.
 
 Admins get an **Administration** page (the **Users** entry in the top menu,
 `/admin/users`) with two panels: a **Users** list of every account on the
-instance — humans and bots — and a **Teams** panel (see [Teams](#teams)).
+instance — humans and agents — and a **Teams** panel (see [Teams](#teams)).
 
 ![Admin user list](../../site/assets/img/admin-users.png)
 
@@ -44,9 +44,9 @@ From the Users panel an admin can:
 
 - **Create human users** — name, e-mail, password, optional **admin** flag,
   and optionally assign them straight to a project with a role.
-- **Create bots** — see below.
+- **Create agents** — see below.
 - **Promote / demote admins** — the **last admin can never be demoted or
-  deleted** (guarded server-side), and **bots can never be admins**.
+  deleted** (guarded server-side), and **agents can never be admins**.
 - **Delete users** — refused while the user has agent activity (runs,
   provenance records), so history stays attributable.
 
@@ -55,13 +55,13 @@ From the Users panel an admin can:
 
 ![Create user dialog](../../site/assets/img/create-user-dialog.png)
 
-## Bots
+## Agents
 
-A **bot** is a non-human account that an [agent gateway](./gateway.md) acts as.
-Bots are created from the same dialog with the **Bot** toggle:
+An **agent** is a non-human account that an [agent gateway](./gateway.md) acts
+as. Agents are created from the same dialog with the **Agent** toggle:
 
 - The e-mail is synthesized (`bot-<name>@bots.local`, domain configurable via
-  `BOT_EMAIL_DOMAIN`) and the password is random and discarded — **a bot can
+  `BOT_EMAIL_DOMAIN`) and the password is random and discarded — **an agent can
   never log in interactively**.
 - A **default API token is minted on creation** and shown **once** — copy it
   right away; it becomes the gateway's `GATEWAY_TO_TRACKER_TOKEN`.
@@ -69,13 +69,13 @@ Bots are created from the same dialog with the **Bot** toggle:
   tracker presents when it calls the gateway) is likewise displayed **only at
   the moment it is created or regenerated** — copy it then; it can never be read
   back, only replaced.
-- Bots can be project members or viewers, but **never project owners** and
+- Agents can be project members or viewers, but **never project owners** and
   never admins.
 
-### Bot credentials
+### Agent credentials
 
-API tokens are **bot-only**. The admin user list has a credentials dialog per
-bot (Gateway → Tracker tokens and the Tracker → Gateway token):
+API tokens are **agent-only**. The admin user list has a credentials dialog per
+agent (Gateway → Tracker tokens and the Tracker → Gateway token):
 
 - **List** keys (name, created date — never the raw key)
 - **Create** additional named keys — raw value shown once
@@ -94,7 +94,7 @@ Rotation:
   the gateway's `TRACKER_TO_GATEWAY_TOKEN` and restart it right after —
   webhook calls fail signature verification in between.
 
-![Bot credentials dialog](../../site/assets/img/bot-keys.png)
+![Agent credentials dialog](../../site/assets/img/bot-keys.png)
 
 ## Teams
 
@@ -128,7 +128,7 @@ themselves; that stays in the [admin Teams panel](#teams).
 | Read git integrations, MR diffs | | ✔ | ✔ |
 | Manage project members & team access | | | ✔ |
 | Manage git integrations | | | ✔ |
-| Manage bot gateways & agent settings | | | ✔ |
+| Manage agent gateways & agent settings | | | ✔ |
 
 > **Time entries.** A time entry can be edited or removed only by its author, or
 > by a project **owner** (who may correct or clean up any member's entries). A
@@ -139,5 +139,5 @@ themselves; that stays in the [admin Teams panel](#teams).
 
 ## Next steps
 
-- [Agents](./agents.md) — wire a bot to a gateway and run the agent workflow
+- [Agents](./agents.md) — wire an agent to a gateway and run the agent workflow
 - [Git integration](./git-integration.md) — connect repositories to a project
