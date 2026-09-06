@@ -15,6 +15,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { UiModule } from '../../../ui/ui.module';
 import { TablerIconStub } from 'src/testing/stubs';
 import { Fixtures } from 'src/testing/fixtures';
+import { Skill } from 'src/app/shared/model/skill.model';
 
 @Component({ selector: 'app-run-recovery-banner', template: '', standalone: true })
 class RunRecoveryBannerStub {
@@ -41,7 +42,7 @@ const STAGE_SKILLS: AgentRunStageSkills[] = [
 describe('AgentRunCardComponent — skills popover positioning (browser)', () => {
     let fixture: ComponentFixture<AgentRunCardComponent>;
     let skillsSubject: Subject<AgentRunStageSkills[]>;
-    let catalogSubject: Subject<Fixtures['skill'][]>;
+    let catalogSubject: Subject<Skill[]>;
 
     beforeEach(async () => {
         skillsSubject = new Subject();
