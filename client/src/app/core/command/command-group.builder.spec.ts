@@ -54,7 +54,7 @@ describe('CommandGroupBuilder.buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))[0]).toBe('a');
     });
     it('prefers an exact-token match (id via keywords) over a scattered fuzzy match', () => {
-        // Mirrors real IssueSearchCommands.buildJump output: title '#428 Login' + keywords '428' (Task 8).
+        // Mirrors real IssueSearchCommands.build output: title '#428 Login' + keywords '428' (Task 8).
         const groups = CommandGroupBuilder.buildGroups(
             [
                 cmd({ id: 'fuzzy', title: '4 apples 2 pears 8 plums', modes: ['issues'] }),

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildCreateFromQuery } from './create-issue.commands';
+import { IssueCreateCommands } from './issue-create.commands';
 
 const t = (k: string, p?: Record<string, unknown>) => (p ? `${k}:${JSON.stringify(p)}` : k);
 
-describe('buildCreateFromQuery', () => {
+describe('IssueCreateCommands.build', () => {
     it('returns a create command carrying the typed title (interpolated into the translated frame)', () => {
         const create = vi.fn();
-        const cmd = buildCreateFromQuery(
+        const cmd = IssueCreateCommands.build(
             'login bug',
             { idProject: 4, issue: null },
             true,
@@ -20,13 +20,13 @@ describe('buildCreateFromQuery', () => {
     });
     it('returns null without a query, project, or create permission', () => {
         expect(
-            buildCreateFromQuery('', { idProject: 4, issue: null }, true, () => {}, t)
+            IssueCreateCommands.build('', { idProject: 4, issue: null }, true, () => {}, t)
         ).toBeNull();
         expect(
-            buildCreateFromQuery('x', { idProject: null, issue: null }, true, () => {}, t)
+            IssueCreateCommands.build('x', { idProject: null, issue: null }, true, () => {}, t)
         ).toBeNull();
         expect(
-            buildCreateFromQuery('x', { idProject: 4, issue: null }, false, () => {}, t)
+            IssueCreateCommands.build('x', { idProject: 4, issue: null }, false, () => {}, t)
         ).toBeNull();
     });
 });
