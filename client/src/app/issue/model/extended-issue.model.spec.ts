@@ -1,18 +1,9 @@
 import { IssueGuard } from './extended-issue.model';
 import { Issue } from './issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 function makeIssue(scheduledAt: Date | null | undefined): Issue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 1,
-        idState: null,
-        idSeverity: null,
-        title: 'T',
-        description: '',
-        tracked: 0,
-        scheduledAt
-    };
+    return Fixtures.issue({ title: 'T', scheduledAt });
 }
 
 describe('IssueGuard.isScheduled', () => {
