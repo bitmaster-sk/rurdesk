@@ -8,6 +8,7 @@ import { AvatarStub, TablerIconStub, UiButtonStub, UiOdometerStub } from 'src/te
 import { SwimlaneRow } from '../../entity/swimlane-row.entity';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { By } from '@angular/platform-browser';
+import { Fixtures } from 'src/testing/fixtures';
 
 @Component({ selector: 'app-issue-kanban-tile', template: '', standalone: true })
 class KanbanTileStub {
@@ -39,16 +40,13 @@ const userAlice = { idUser: 1, name: 'Alice', colorAvatarBg: '#aaa', email: 'a@a
 const rows: SwimlaneRow[] = [
     {
         user: undefined,
-        cells: [
-            { state: stateA, user: undefined, tiles: [] },
-            { state: stateB, user: undefined, tiles: [] }
-        ]
+        cells: [Fixtures.swimlaneCell({ state: stateA }), Fixtures.swimlaneCell({ state: stateB })]
     },
     {
         user: userAlice,
         cells: [
-            { state: stateA, user: userAlice, tiles: [] },
-            { state: stateB, user: userAlice, tiles: [] }
+            Fixtures.swimlaneCell({ state: stateA, user: userAlice }),
+            Fixtures.swimlaneCell({ state: stateB, user: userAlice })
         ]
     }
 ];

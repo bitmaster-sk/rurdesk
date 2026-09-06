@@ -2,18 +2,10 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { BrowserTitleService, DEFAULT_TITLE } from './browser-title.service';
 import { Issue } from 'src/app/issue/model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const makeIssue = (overrides: Partial<Issue> = {}): Issue => ({
-    idProject: 1,
-    idIssue: 10,
-    idIssuePublic: 5,
-    title: 'X',
-    idState: 1,
-    idSeverity: null,
-    description: '',
-    tracked: 0,
-    ...overrides
-});
+const makeIssue = (overrides: Partial<Issue> = {}): Issue =>
+    Fixtures.issue({ idIssue: 10, idIssuePublic: 5, title: 'X', idState: 1, ...overrides });
 
 describe('BrowserTitleService', () => {
     beforeEach(() => {

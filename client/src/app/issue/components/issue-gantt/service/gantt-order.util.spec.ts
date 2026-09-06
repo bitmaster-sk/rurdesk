@@ -1,19 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { GanttOrderUtil } from './gantt-order.util';
 import type { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const iss = (id: number, rank: string | null, scheduledAt: string, title: string): Issue => ({
-    idIssue: id,
-    idIssuePublic: id,
-    idProject: 1,
-    idState: null,
-    idSeverity: null,
-    title,
-    description: '',
-    tracked: 0,
-    scheduledAt: new Date(scheduledAt),
-    ganttRank: rank
-});
+const iss = (id: number, rank: string | null, scheduledAt: string, title: string): Issue =>
+    Fixtures.issue({
+        idIssue: id,
+        idIssuePublic: id,
+        title,
+        scheduledAt: new Date(scheduledAt),
+        ganttRank: rank
+    });
 
 describe('GanttOrderUtil.orderScheduled', () => {
     it('sorts by ganttRank ascending when ranks are present', () => {

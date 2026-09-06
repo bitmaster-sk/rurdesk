@@ -12,6 +12,7 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
 import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
@@ -58,17 +59,12 @@ function buildService(): IssueGanttService {
 }
 
 function makeIssue(id: number, scheduledAt: string): Issue {
-    return {
+    return Fixtures.issue({
         idIssue: id,
         idIssuePublic: id,
-        idProject: 1,
-        idState: null,
-        idSeverity: null,
         title: `Issue ${id}`,
-        description: '',
-        tracked: 0,
         scheduledAt: new Date(scheduledAt)
-    };
+    });
 }
 
 function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
@@ -149,17 +145,14 @@ describe('IssueGanttService — GanttOrderUtil.topologicalSort', () => {
 // unloading every "Load more" page the user had fetched.
 describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
     function backlogItems(n: number): Issue[] {
-        return Array.from({ length: n }, (_, i): Issue => ({
-            idIssue: i + 1,
-            idIssuePublic: i + 1,
-            idProject: 1,
-            idState: null,
-            idSeverity: null,
-            title: `Backlog ${i + 1}`,
-            description: '',
-            tracked: 0,
-            scheduledAt: null
-        }));
+        return Array.from({ length: n }, (_, i): Issue =>
+            Fixtures.issue({
+                idIssue: i + 1,
+                idIssuePublic: i + 1,
+                title: `Backlog ${i + 1}`,
+                scheduledAt: null
+            })
+        );
     }
 
     function buildWithStore(

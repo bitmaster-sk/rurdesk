@@ -4,6 +4,7 @@ import { Issue } from '../../../../model/issue.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { User } from 'src/app/auth/model/user.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 function makeEvt(overrides: {
     issue?: Partial<Issue>;
@@ -14,18 +15,11 @@ function makeEvt(overrides: {
     isEnd?: boolean;
     title?: string;
 }): any {
-    const issue: Issue = {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 1,
+    const issue: Issue = Fixtures.issue({
         title: overrides.title ?? 'Test Issue',
-        description: '',
-        tracked: 0,
         estimated: 3600,
-        idState: null,
-        idSeverity: null,
         ...overrides.issue
-    };
+    });
     return {
         isStart: overrides.isStart ?? true,
         isEnd: overrides.isEnd ?? true,

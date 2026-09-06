@@ -179,7 +179,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
         ]);
         fixture.detectChanges();
 
-        const acts = [...body(fixture).querySelectorAll('.thinking-act')];
+        const acts = Array.from(body(fixture).querySelectorAll('.thinking-act'));
         expect(acts.map(act => act.getAttribute('data-kind'))).toEqual(['other', 'read']);
         acts.forEach(act =>
             expect(act.querySelector('.thinking-act-chip tabler-icon')).not.toBeNull()

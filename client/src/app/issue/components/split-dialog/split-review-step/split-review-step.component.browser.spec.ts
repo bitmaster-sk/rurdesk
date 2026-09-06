@@ -94,7 +94,7 @@ describe('SplitReviewStepComponent', () => {
         expect(emitted?.length).toBe(2);
         expect(emitted?.[0].title).toBe('Edited');
         expect(emitted?.[0].estimatedMinutes).toBe(15);
-        expect((emitted?.[0] as Record<string, unknown>)['ref']).toBeUndefined();
+        expect((emitted?.[0] as unknown as Record<string, unknown>)['ref']).toBeUndefined();
     });
 
     it('onCancel emits cancelled', () => {

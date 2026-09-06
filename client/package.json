@@ -9,6 +9,7 @@
         "lint:fix": "eslint . --fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
+        "type-check:spec": "tsc --noEmit -p tsconfig.spec.json",
         "test": "npm run test:unit && npm run test:ct",
         "test:unit": "vitest run --config vitest.config.ts",
         "test:unit:watch": "vitest --config vitest.config.ts",

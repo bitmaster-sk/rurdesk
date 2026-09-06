@@ -106,7 +106,9 @@ describe('IssueParticipantsComponent — notification toggle', () => {
     it('clicking the toggle calls setMyNotifications$ with the negated value', async () => {
         const { fixture, serviceStub } = await setup({ currentUserId: 1 });
         const rows = fixture.nativeElement.querySelectorAll('.participant-row');
-        const toggleBtn = rows[0].querySelector<HTMLButtonElement>('.participant-row__notify-btn');
+        const toggleBtn: HTMLButtonElement | null = rows[0].querySelector(
+            '.participant-row__notify-btn'
+        );
         expect(toggleBtn).not.toBeNull();
 
         toggleBtn!.click();

@@ -14,24 +14,16 @@ import { IssueRelationType } from '../../../../constants/issue-relation-type.enu
 import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
+import { Fixtures } from 'src/testing/fixtures';
 
 function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
+    return Fixtures.extendedIssue({
         idProject: 10,
         title: 'Task',
-        description: '',
-        tracked: 0,
-        idState: null,
-        idSeverity: null,
         scheduledAt: new Date('2025-01-15T00:00:00Z'),
         estimated: 3600,
-        state: undefined,
-        severity: undefined,
-        assignedToUser: undefined,
         ...over
-    };
+    });
 }
 
 const rowHeightSignal = Object.assign(() => 72, { set: vi.fn() });
