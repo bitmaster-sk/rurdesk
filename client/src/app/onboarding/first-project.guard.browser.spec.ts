@@ -2,17 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { UrlSegment } from '@angular/router';
 import { of, Observable } from 'rxjs';
-import { firstProjectGuard } from './first-project.guard';
+import { FirstProjectGuard } from './first-project.guard';
 import { ProjectService } from '../project/project.service';
 import { Project } from '../project/model/project.model';
 
-describe('firstProjectGuard', () => {
+describe('FirstProjectGuard.canMatch', () => {
     function run(projects: Project[]): boolean {
         TestBed.configureTestingModule({
             providers: [{ provide: ProjectService, useValue: { loadProjects: () => of(projects) } }]
         });
         const result = TestBed.runInInjectionContext(() =>
-            firstProjectGuard({}, [] as UrlSegment[])
+            FirstProjectGuard.canMatch({}, [] as UrlSegment[])
         ) as Observable<boolean>;
         let value = undefined as unknown as boolean;
         result.subscribe(v => (value = v));

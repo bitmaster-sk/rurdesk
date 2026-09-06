@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildPeopleCommands } from './people.commands';
+import { PeopleCommands } from './people.commands';
 
 const t = (k: string) => k;
 
-describe('buildPeopleCommands', () => {
+describe('PeopleCommands.build', () => {
     it('one command per member in people mode (name is data)', () => {
         const pick = vi.fn();
-        const cmds = buildPeopleCommands(
+        const cmds = PeopleCommands.build(
             { idProject: 4, issue: null },
             [{ idUser: 1, name: 'Petra', email: 'p@x' }] as any,
             pick,
@@ -19,7 +19,7 @@ describe('buildPeopleCommands', () => {
     });
     it('empty without a project', () => {
         expect(
-            buildPeopleCommands({ idProject: null, issue: null }, [] as any, () => {}, t)
+            PeopleCommands.build({ idProject: null, issue: null }, [] as any, () => {}, t)
         ).toEqual([]);
     });
 });

@@ -14,12 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SavedViewKanbanLayout } from 'src/app/project/model/saved-view.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import {
-    prefersReducedMotion,
-    pulseElement,
-    UI_SETTLE_DURATION_MS,
-    UI_SETTLE_EASING
-} from 'src/app/ui/util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -286,13 +281,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private pulseTile(idIssue: number): void {
         requestAnimationFrame(() => {
             const el = document.querySelector<HTMLElement>(`[data-tile-id="${idIssue}"]`);
-            if (el) pulseElement(el);
+            if (el) UiMotion.pulseElement(el);
         });
     }
 
     /** Cross-column FLIP: the re-rendered tile glides from its old rect. */
     private flyTile(idIssue: number, from: DOMRect): void {
-        if (prefersReducedMotion()) return;
+        if (UiMotion.prefersReducedMotion()) return;
         // In a hidden tab rAF stalls until the tab is shown again — the flight
         // would replay on return, long after the change. Just land the tile.
         if (document.hidden) return;

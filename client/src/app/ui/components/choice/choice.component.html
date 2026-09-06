@@ -1,0 +1,19 @@
+@for (option of options(); track $index) {
+    <button
+        type="button"
+        class="ui-button ui-choice__option"
+        [class]="optionClasses(option)"
+        [attr.aria-pressed]="isSelected(option)"
+        [disabled]="isDisabled()"
+        (click)="onSelect(option)"
+    >
+        @if (itemTpl()) {
+            <ng-container
+                [ngTemplateOutlet]="itemTpl()!"
+                [ngTemplateOutletContext]="{ $implicit: option }"
+            ></ng-container>
+        } @else {
+            {{ getOptionLabel(option) }}
+        }
+    </button>
+}

@@ -13,7 +13,9 @@ import { HttpContext, HttpContextToken } from '@angular/common/http';
  */
 export const SILENCE_ERROR_TOAST = new HttpContextToken<boolean>(() => false);
 
-/** Shorthand for `{ context: silentErrors() }` on an HttpClient call. */
-export function silentErrors(): HttpContext {
-    return new HttpContext().set(SILENCE_ERROR_TOAST, true);
+export abstract class RequestContext {
+    /** Shorthand for `{ context: RequestContext.disableErrorToast() }` on an HttpClient call. */
+    public static disableErrorToast(): HttpContext {
+        return new HttpContext().set(SILENCE_ERROR_TOAST, true);
+    }
 }

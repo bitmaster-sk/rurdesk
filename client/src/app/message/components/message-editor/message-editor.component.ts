@@ -20,17 +20,10 @@ import { User } from 'src/app/auth/model/user.model';
 import { AsciiEmoji } from './ascii-emoji';
 import { CodeBlockLanguage } from './constant/code-block-language.enum';
 import { EditorCharacters } from './constant/editor-characters.enum';
-import {
-    applyMarker,
-    atMentionBoundary,
-    getLinearSelection,
-    insertChipAtCaret,
-    installPasteSanitizer,
-    serialize,
-    serializeRaw,
-    setLinearSelection
-} from './editor-text-model';
-import { parseMentionParts, serializeMention } from 'src/app/shared/mention/mention-token.util';
+import { EditorChip } from './editor-chip';
+import { EditorSelection } from './editor-selection';
+import { EditorText } from './editor-text';
+import { Mention } from 'src/app/shared/mention/mention';
 
 type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
 
@@ -111,7 +104,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         effect(() => {
             const body = this.text();
             const el = this.editorRef().nativeElement;
-            if (serialize(el) === body) {
+            if (EditorText.serialize(el) === body) {
                 this.lastRendered = body;
                 return;
             }
@@ -169,7 +162,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
 
         // Shift+Enter sends; plain Enter falls through so the browser inserts a
-        // newline/<div>, which serialize() normalizes.
+        // newline/<div>, which EditorText.serialize() normalizes.
         if (evt.key === 'Enter' && evt.shiftKey) {
             this.onShiftEnter(evt);
         }
@@ -180,7 +173,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         if (this.replaceAsciiEmoji(el)) {
             return;
         }
-        const body = serialize(el);
+        const body = EditorText.serialize(el);
         this.lastRendered = body; // our own edit — don't let the effect re-render
         this.text.set(body); // local override of the linkedSignal — does NOT feed
         // back into message(), so onaction/onblur consumers get no per-keystroke
@@ -192,27 +185,27 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     private replaceAsciiEmoji(el: HTMLDivElement): boolean {
-        const { start, end } = getLinearSelection(el);
+        const { start, end } = EditorSelection.getLinearSelection(el);
         if (start !== end) {
             return false;
         }
-        const match = AsciiEmoji.matchBeforeCaret(serializeRaw(el).slice(0, start));
+        const match = AsciiEmoji.matchBeforeCaret(EditorText.serializeRaw(el).slice(0, start));
         if (!match) {
             return false;
         }
         const from = start - 1 - match.shortcut.length;
-        setLinearSelection(el, from, start - 1);
+        EditorSelection.setLinearSelection(el, from, start - 1);
         // execCommand insertText is undoable; Range.insertNode is not.
         el.ownerDocument.execCommand('insertText', false, match.emoji);
         this.onInput();
         const caret = from + match.emoji.length + 1;
-        setLinearSelection(el, caret, caret);
+        EditorSelection.setLinearSelection(el, caret, caret);
         return true;
     }
 
     private detectMentionQuery(body: string): void {
         const root = this.editorRef().nativeElement;
-        const { start: caret } = getLinearSelection(root);
+        const { start: caret } = EditorSelection.getLinearSelection(root);
         const upto = body.slice(0, caret);
         // Extract the '@query' run at end of the text before the caret.
         const m = /@([^\s@]*)$/.exec(upto);
@@ -224,15 +217,15 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         // the character immediately before '@' is whitespace, BOF, or the '@' directly
         // follows a chip token in the serialized body (chip tokens end with ')').
         // A plain ')' in normal prose does NOT qualify — only chip-emitted ')' does,
-        // and we distinguish these by inspecting the DOM via atMentionBoundary, which
+        // and we distinguish these by inspecting the DOM via EditorChip.atMentionBoundary, which
         // walks the DOM's previous-sibling at the caret's position inside the '@query'
         // text node.
         const atIdx = caret - m[1].length - 1;
-        // Temporarily move the caret to the '@' position so atMentionBoundary can
+        // Temporarily move the caret to the '@' position so EditorChip.atMentionBoundary can
         // inspect the DOM previous-sibling at that exact point, then restore.
-        setLinearSelection(root, atIdx, atIdx);
-        const boundary = atMentionBoundary(root);
-        setLinearSelection(root, caret, caret);
+        EditorSelection.setLinearSelection(root, atIdx, atIdx);
+        const boundary = EditorChip.atMentionBoundary(root);
+        EditorSelection.setLinearSelection(root, caret, caret);
         if (boundary) {
             this.mentionQuery.set({ start: atIdx, query: m[1] });
             this.activeIndex.set(0);
@@ -245,20 +238,20 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const q = this.mentionQuery();
         if (!q) return;
         const root = this.editorRef().nativeElement;
-        const { start: caret } = getLinearSelection(root);
+        const { start: caret } = EditorSelection.getLinearSelection(root);
         // Select the "@query" run (from the '@' to the current caret position),
-        // then insert the chip via insertChipAtCaret. This lets deleteContents()
+        // then insert the chip via EditorChip.insertChipAtCaret. This lets deleteContents()
         // remove only the query text, then inserts the atomic chip span + trailing
         // space using Range.insertNode — which does NOT wipe the browser undo stack,
         // unlike replaceChildren/render() which does.
-        setLinearSelection(root, q.start, caret);
-        insertChipAtCaret(root, user.idUser, user.name);
+        EditorSelection.setLinearSelection(root, q.start, caret);
+        EditorChip.insertChipAtCaret(root, user.idUser, user.name);
         // Sync model from the updated DOM (no render() call). Inserting a chip is an
         // EDIT, not a send — mirror onInput: update local text and only propagate in
         // 'onchange' mode. Propagating unconditionally made consumers wired to
         // messageChange/onaction treat a mention pick as a send (auto-sent the chat
         // message / saved the comment).
-        const next = serialize(root);
+        const next = EditorText.serialize(root);
         this.lastRendered = next;
         this.text.set(next);
         if (this.change() === 'onchange') {
@@ -329,10 +322,20 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     // Wrap the current selection in before/after markers (undoable via execCommand).
+    // With a collapsed selection, the caret is repositioned between the markers
+    // so it sits at `before|after` rather than `beforeafter|`.
     private wrapSelection(before: string, after: string): void {
         const el = this.editorRef().nativeElement;
         el.focus();
-        applyMarker(el, before, after);
+        const sel = el.ownerDocument.getSelection();
+        const collapsed = !sel?.rangeCount || sel.getRangeAt(0).collapsed;
+        const text = sel?.rangeCount ? sel.getRangeAt(0).toString() : '';
+        el.ownerDocument.execCommand('insertText', false, before + text + after);
+        if (collapsed && after.length > 0) {
+            const { start } = EditorSelection.getLinearSelection(el);
+            const target = start - after.length;
+            EditorSelection.setLinearSelection(el, target, target);
+        }
         this.onInput();
     }
 
@@ -340,44 +343,34 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     private insertAtLineStart(marker: string): void {
         const el = this.editorRef().nativeElement;
         el.focus();
-        // Untrimmed: getLinearSelection's caret (start) is in buildAtoms coordinates,
-        // which include trailing empty lines. serialize() strips those, which would
+        // Untrimmed: EditorSelection.getLinearSelection's caret (start) is in EditorText.buildAtoms coordinates,
+        // which include trailing empty lines. EditorText.serialize() strips those, which would
         // shift the computed line start onto the last non-empty line when the caret
-        // sits on a trailing empty line. serializeRaw shares the caret's coordinates.
-        const body = serializeRaw(el);
-        const { start } = getLinearSelection(el);
+        // sits on a trailing empty line. EditorText.serializeRaw shares the caret's coordinates.
+        const body = EditorText.serializeRaw(el);
+        const { start } = EditorSelection.getLinearSelection(el);
         const lineStart = body.lastIndexOf('\n', start - 1) + 1;
         // Move caret to line start, insert the marker, then restore caret past it.
-        setLinearSelection(el, lineStart, lineStart);
+        EditorSelection.setLinearSelection(el, lineStart, lineStart);
         el.ownerDocument.execCommand('insertText', false, marker);
         this.onInput();
         const caret = start + marker.length;
-        setLinearSelection(el, caret, caret);
+        EditorSelection.setLinearSelection(el, caret, caret);
     }
 
     // Render a serialized body string into the contenteditable as text + chips.
     private render(body: string): void {
         const root = this.editorRef().nativeElement;
         root.replaceChildren();
-        for (const part of parseMentionParts(body)) {
+        for (const part of Mention.parse(body)) {
             if (part.type === 'text') {
                 if (part.text.length) {
                     root.appendChild(document.createTextNode(part.text));
                 }
             } else {
-                root.appendChild(this.buildChip(part.idUser, part.name));
+                root.appendChild(EditorChip.buildChip(part.idUser, part.name));
             }
         }
-    }
-
-    private buildChip(idUser: number, name: string): HTMLElement {
-        const span = document.createElement('span');
-        span.className = 'mention-chip';
-        span.contentEditable = 'false';
-        span.dataset['token'] = serializeMention(idUser, name);
-        span.dataset['id'] = String(idUser);
-        span.textContent = '@' + name;
-        return span;
     }
 
     public writeValue(value: string): void {
@@ -394,7 +387,20 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     public ngAfterViewInit(): void {
-        const cleanup = installPasteSanitizer(this.editorRef().nativeElement);
-        this.destroyRef.onDestroy(cleanup);
+        this.destroyRef.onDestroy(this.installPasteSanitizer(this.editorRef().nativeElement));
+    }
+
+    // Sanitize paste to plain text (undoable via execCommand).
+    // Returns a cleanup function that removes the listener.
+    private installPasteSanitizer(root: HTMLElement): () => void {
+        const handler = (e: ClipboardEvent): void => {
+            e.preventDefault();
+            const text = e.clipboardData?.getData('text/plain') ?? '';
+            root.ownerDocument.execCommand('insertText', false, text);
+        };
+        root.addEventListener('paste', handler);
+        return (): void => {
+            root.removeEventListener('paste', handler);
+        };
     }
 }

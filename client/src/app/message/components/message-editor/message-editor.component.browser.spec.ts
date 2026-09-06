@@ -5,7 +5,8 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { TranslateModule } from '@ngx-translate/core';
 import { MessageEditorComponent } from './message-editor.component';
-import { getLinearSelection, serialize, setLinearSelection } from './editor-text-model';
+import { EditorSelection } from './editor-selection';
+import { EditorText } from './editor-text';
 import { MessageModule } from '../../message.module';
 import { User } from 'src/app/auth/model/user.model';
 
@@ -122,7 +123,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         const chips = el.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(1);
         expect(chips[0].textContent).toBe('@Jan');
-        expect(serialize(el)).toBe('hello @[Jan](user:1)');
+        expect(EditorText.serialize(el)).toBe('hello @[Jan](user:1)');
     });
 
     it('Bold toolbar wraps the current selection in **; model/emit only on send (onaction)', async () => {
@@ -139,7 +140,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         await fixture.whenStable();
 
         // The toolbar edit wraps the selection in the DOM…
-        expect(serialize(el)).toBe('**abc**');
+        expect(EditorText.serialize(el)).toBe('**abc**');
         // …but in onaction mode a content edit must NOT emit messageChange (else a
         // comment editor would post to the server on every keystroke/toolbar click).
         expect(host.emitted).toEqual([]);
@@ -159,7 +160,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         await initFixture();
         const el = editorEl(fixture);
         // "AAA" followed by an empty trailing line (browser's <div><br></div>).
-        // serialize() trims the trailing newlines; the caret sits past that trimmed
+        // EditorText.serialize() trims the trailing newlines; the caret sits past that trimmed
         // length. The marker must still land on the empty line the caret is on.
         el.innerHTML = 'AAA<div><br></div>';
         el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -170,7 +171,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        const out = serialize(el);
+        const out = EditorText.serialize(el);
         // Bug behavior would prepend the marker onto the "AAA" line ("- AAA…").
         expect(out.startsWith('- ')).toBe(false);
         expect(out.split('\n')[0]).toBe('AAA');
@@ -201,7 +202,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
 
         // Caret must still be at linear offset 5.
-        const { start, end } = getLinearSelection(el);
+        const { start, end } = EditorSelection.getLinearSelection(el);
         expect(start).toBe(midOffset);
         expect(end).toBe(midOffset);
     });
@@ -213,7 +214,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
 
     // Helper: place caret at a given linear offset inside the contenteditable.
     function placeCaretAtLinear(el: HTMLElement, offset: number): void {
-        setLinearSelection(el, offset, offset);
+        EditorSelection.setLinearSelection(el, offset, offset);
     }
 
     it('typing "@ja" filters candidates and selecting via Enter inserts a chip token', async () => {
@@ -249,7 +250,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         // default 'onaction' mode a mention pick is an edit, not a send, so it does
         // NOT propagate to message()/messageChange — the token lives in the editor's
         // serialized DOM until the user actually sends.
-        expect(serialize(el)).toBe('@[Jan](user:1) ');
+        expect(EditorText.serialize(el)).toBe('@[Jan](user:1) ');
     });
 
     it('Enter is NOT swallowed when @query has zero matching candidates (picker hidden)', async () => {
@@ -350,14 +351,14 @@ describe('MessageEditorComponent (contenteditable)', () => {
 
         // Serialized editor content carries the picked user's token (a mention pick
         // does not propagate to message() in the default 'onaction' mode).
-        const msg = serialize(el);
+        const msg = EditorText.serialize(el);
         expect(msg).toContain('user:2');
         expect(msg).not.toContain('user:1');
     });
 
     it('@-picker does NOT open when @ follows a literal ) in plain text', async () => {
         // "foo)@jan" — the ')' immediately precedes '@' but is plain text, not a chip.
-        // atMentionBoundary() must reject this position so the picker stays closed.
+        // EditorChip.atMentionBoundary() must reject this position so the picker stays closed.
         host.mentionCandidates = [makeUser(1, 'Jan')];
         await initFixture();
 
@@ -389,12 +390,12 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         expect(host.emitted.length).toBe(before);
 
-        // Simulate the browser-inserted newline + typed text and serialize.
+        // Simulate the browser-inserted newline + typed text and EditorText.serialize.
         el.appendChild(document.createElement('br'));
         el.appendChild(document.createTextNode('line2'));
         el.dispatchEvent(new Event('input', { bubbles: true }));
         fixture.detectChanges();
-        expect(serialize(el)).toBe('line1\nline2');
+        expect(EditorText.serialize(el)).toBe('line1\nline2');
 
         // Shift+Enter sends the multi-line value.
         el.dispatchEvent(
@@ -412,7 +413,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
     function typeAt(el: HTMLDivElement, text: string, caret: number): void {
         el.focus();
         el.textContent = text;
-        setLinearSelection(el, caret, caret);
+        EditorSelection.setLinearSelection(el, caret, caret);
         el.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
@@ -423,8 +424,8 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(serialize(el)).toBe('hi 😄 ');
-        expect(getLinearSelection(el).start).toBe('hi 😄 '.length);
+        expect(EditorText.serialize(el)).toBe('hi 😄 ');
+        expect(EditorSelection.getLinearSelection(el).start).toBe('hi 😄 '.length);
     });
 
     it('replaces at the caret, leaving the rest of the line untouched', async () => {
@@ -434,7 +435,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(serialize(el)).toBe('hi 😄 there');
+        expect(EditorText.serialize(el)).toBe('hi 😄 there');
     });
 
     it('leaves code-shaped colon patterns verbatim', async () => {
@@ -444,7 +445,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(serialize(el)).toBe('const x = {a:P} ');
+        expect(EditorText.serialize(el)).toBe('const x = {a:P} ');
     });
 
     it('does not replace before the terminating space is typed', async () => {
@@ -454,7 +455,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(serialize(el)).toBe('hi :)');
+        expect(EditorText.serialize(el)).toBe('hi :)');
     });
 
     it('undo brings the ascii shortcut back', async () => {
@@ -463,14 +464,14 @@ describe('MessageEditorComponent (contenteditable)', () => {
         typeAt(el, 'hi :) ', 6);
         fixture.detectChanges();
         await fixture.whenStable();
-        expect(serialize(el)).toBe('hi 😄 ');
+        expect(EditorText.serialize(el)).toBe('hi 😄 ');
 
         document.execCommand('undo');
         el.dispatchEvent(new Event('input', { bubbles: true }));
         fixture.detectChanges();
         await fixture.whenStable();
 
-        expect(serialize(el)).toBe('hi :) ');
+        expect(EditorText.serialize(el)).toBe('hi :) ');
     });
 
     it('sends the converted body, not the ascii shortcut', async () => {

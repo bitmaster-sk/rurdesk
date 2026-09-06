@@ -5,7 +5,7 @@ import {
     WorkflowEventMapping,
     WorkflowEventMappingEntry
 } from '../model/workflow-event-mapping.model';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 
 @Injectable({ providedIn: 'root' })
 export class WorkflowEventMapApi {
@@ -24,7 +24,7 @@ export class WorkflowEventMapApi {
         return this.http.put<WorkflowEventMapping[]>(
             `/api/private/project/${idProject}/workflow-event-state-map`,
             { mappings },
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 }

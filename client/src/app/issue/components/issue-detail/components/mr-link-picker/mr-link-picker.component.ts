@@ -17,7 +17,7 @@ import {
 } from '@angular/forms';
 import { GitIntegrationRes } from 'src/app/project/model/git-integration.model';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
-import { prMrLinkTitleKey } from 'src/app/issue/util/pr-mr-term';
+import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
 
 interface MrLinkPickerForm {
     idGitIntegration: FormControl<number | null>;
@@ -52,7 +52,7 @@ export class MrLinkPickerComponent implements OnInit {
             id == null
                 ? null
                 : (this.integrations().find(i => i.idGitIntegration === id)?.hostType ?? null);
-        return prMrLinkTitleKey(host);
+        return GitHostTerminology.linkTitleKey(host);
     });
     protected form!: FormGroup<MrLinkPickerForm>;
 

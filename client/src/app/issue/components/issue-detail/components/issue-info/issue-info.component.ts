@@ -59,8 +59,8 @@ import {
     MrDiffFile,
     MrStatus
 } from 'src/app/project/model/git-integration.model';
-import { prMrLinkTitleKey, prMrTermKey } from 'src/app/issue/util/pr-mr-term';
-import { buildGitHostMrFilesUrl } from 'src/app/issue/util/git-host-file-url';
+import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
+import { GitHostUrl } from 'src/app/issue/util/git-host-file-url';
 import { DiffFileLinkBuilder } from 'src/app/shared/components/diff-viewer/diff-viewer.component';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
@@ -124,10 +124,10 @@ export class IssueInfoComponent {
     // "Merge request") and the link picker / unlink action match.
     protected readonly gitIntegration = signal<GitIntegrationRes | null>(null);
     protected readonly mrTermKey = computed(() =>
-        prMrTermKey(this.gitIntegration()?.hostType ?? null)
+        GitHostTerminology.termKey(this.gitIntegration()?.hostType ?? null)
     );
     protected readonly mrLinkTitleKey = computed(() =>
-        prMrLinkTitleKey(this.gitIntegration()?.hostType ?? null)
+        GitHostTerminology.linkTitleKey(this.gitIntegration()?.hostType ?? null)
     );
     protected readonly mrLink = computed(
         () => this.agentRun()?.prUrl ?? (this.mrStatus()?.webUrl || null)
@@ -145,7 +145,7 @@ export class IssueInfoComponent {
         const integration = this.gitIntegration();
         const mrId = this.currentIssue()?.mrId;
         if (!integration || !mrId) return null;
-        const url = buildGitHostMrFilesUrl(
+        const url = GitHostUrl.buildMrFilesUrl(
             integration.hostType,
             integration.baseUrl,
             integration.repoPath,

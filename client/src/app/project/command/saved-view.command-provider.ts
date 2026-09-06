@@ -9,7 +9,7 @@ import {
     Translator
 } from '../../core/command/command.model';
 import { SavedViewStore } from '../store/saved-view.store';
-import { buildSavedViewCommands } from './saved-view.commands';
+import { SavedViewCommands } from './saved-view.commands';
 
 @Injectable({ providedIn: 'root' })
 export class SavedViewCommandProvider implements CommandProvider {
@@ -27,7 +27,7 @@ export class SavedViewCommandProvider implements CommandProvider {
     }
 
     public getCommands(ctx: CommandContext): Command[] {
-        return buildSavedViewCommands(
+        return SavedViewCommands.build(
             ctx,
             this.store.views(),
             (path, queryParams) => {

@@ -25,7 +25,7 @@ import { IssueGanttService } from './service/issue-gantt.service';
 import { GanttTimelineService } from './service/gantt-timeline.service';
 import { GanttDragService, DragMode } from './service/gantt-drag.service';
 import { GanttCascadeService, CascadeResult } from './service/gantt-cascade.service';
-import { GanttCriticalPathService, emptyCriticalPath } from './service/gantt-critical-path.service';
+import { GanttCriticalPathService } from './service/gantt-critical-path.service';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { HandleSide } from './constants/gantt-handle-side.enum';
 import { IssueToolbarService } from '../../issue-toolbar.service';
@@ -50,16 +50,16 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { GanttOrderApi } from '../../api/gantt-order.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { applyPendingOrder } from './service/gantt-order.util';
+import { GanttOrderUtil } from './service/gantt-order.util';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import {
     IssueCardViewType,
     GANTT_CARD_MODE_OPTIONS,
-    isComfortableMode
+    IssueCardViewMode
 } from '../../constants/issue-card-view-type.constant';
 import { ZOOM_LEVELS, ZOOM_OPTIONS } from './constants/gantt-zoom-options';
 import { STORAGE_KEY_CARD_MODE, STORAGE_KEY_MINIMAP } from './constants/gantt-storage-keys';
-import { pulseElement } from 'src/app/ui/util/motion';
+import { UiMotion } from 'src/app/ui/util/ui-motion';
 
 const ROW_HEIGHT_COMFORTABLE = 72;
 const ROW_HEIGHT_COMPACT = 38;
@@ -121,7 +121,10 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public readonly ganttData = toSignal(this.ganttService.data$);
 
     public readonly scheduledTasks = computed(() =>
-        applyPendingOrder(this.ganttData()?.scheduledTasks ?? [], this.pendingOrder())
+        GanttOrderUtil.applyPendingOrder(
+            this.ganttData()?.scheduledTasks ?? [],
+            this.pendingOrder()
+        )
     );
     public readonly backlogTasks = computed(() => this.ganttData()?.backlogTasks ?? []);
 
@@ -192,7 +195,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     // Critical path
     public readonly isCriticalPathEnabled = signal(false);
     public readonly criticalPath = computed(() => {
-        if (!this.isCriticalPathEnabled()) return emptyCriticalPath();
+        if (!this.isCriticalPathEnabled()) return GanttCriticalPathService.emptyCriticalPath();
         const tasks = this.scheduledTasks();
         const relations = this.relations();
         return this.criticalPathService.computeCriticalPath(tasks, relations);
@@ -258,7 +261,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         if (!dragState.taskId || !dragState.currentDate) return [];
 
         const rowHeight = this.timelineService.rowHeight();
-        const isComfortable = isComfortableMode(this.cardMode());
+        const isComfortable = IssueCardViewMode.isComfortable(this.cardMode());
         const minWidth = isComfortable
             ? 2 * BAR_BORDER + 2 * BAR_PADDING_COMFORTABLE
             : 2 * BAR_BORDER + 2 * BAR_PADDING_COMPACT;
@@ -434,7 +437,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 const barEl = document.querySelector<HTMLElement>(
                     `.gantt-bar[data-task-id="${idIssuePublic}"]`
                 );
-                if (barEl) pulseElement(barEl);
+                if (barEl) UiMotion.pulseElement(barEl);
             }
         });
     });
@@ -854,7 +857,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     }
 
     private updateRowHeight(): void {
-        const height = isComfortableMode(this.cardMode())
+        const height = IssueCardViewMode.isComfortable(this.cardMode())
             ? ROW_HEIGHT_COMFORTABLE
             : ROW_HEIGHT_COMPACT;
         this.timelineService.rowHeight.set(height);

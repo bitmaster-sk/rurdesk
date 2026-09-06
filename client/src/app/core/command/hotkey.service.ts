@@ -1,5 +1,5 @@
 import { Injectable, NgZone, inject } from '@angular/core';
-import { resolveHotkey } from './keyboard.util';
+import { KeyboardResolver } from './keyboard-resolver';
 import { CommandPaletteService } from './command-palette.service';
 
 @Injectable({ providedIn: 'root' })
@@ -24,7 +24,7 @@ export class HotkeyService {
     }
 
     private onKeydown(event: KeyboardEvent): void {
-        const action = resolveHotkey(event, {
+        const action = KeyboardResolver.resolveHotkey(event, {
             paletteOpen: this.palette.isOpen(),
             helpOpen: this.palette.isHelpOpen()
         });

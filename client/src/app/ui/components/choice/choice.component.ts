@@ -11,7 +11,7 @@ import {
     signal
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { resolveOptionLabel, resolveOptionValue } from '../../util/option-utils';
+import { OptionConverter } from '../../converter/option.converter';
 
 /**
  * Single-select segmented control: a row of joined buttons, one selectable at
@@ -27,6 +27,8 @@ import { resolveOptionLabel, resolveOptionValue } from '../../util/option-utils'
  * language as `ui-toggle-button`.
  */
 export type UiChoiceSeverity = 'primary' | 'secondary' | 'danger' | 'success' | 'info' | 'warn';
+
+type OptionRecord = Record<string, unknown>;
 
 @Component({
     selector: 'ui-choice',
@@ -44,27 +46,7 @@ export type UiChoiceSeverity = 'primary' | 'secondary' | 'danger' | 'success' | 
         class: 'ui-choice',
         role: 'group'
     },
-    template: `
-        @for (option of options(); track $index) {
-            <button
-                type="button"
-                class="ui-button ui-choice__option"
-                [class]="optionClasses(option)"
-                [attr.aria-pressed]="isSelected(option)"
-                [disabled]="isDisabled()"
-                (click)="onSelect(option)"
-            >
-                @if (itemTpl()) {
-                    <ng-container
-                        [ngTemplateOutlet]="itemTpl()!"
-                        [ngTemplateOutletContext]="{ $implicit: option }"
-                    ></ng-container>
-                } @else {
-                    {{ resolveLabel(option) }}
-                }
-            </button>
-        }
-    `
+    templateUrl: './choice.component.html'
 })
 export class UiChoiceComponent implements ControlValueAccessor {
     public readonly options = input<readonly unknown[]>([]);
@@ -87,7 +69,7 @@ export class UiChoiceComponent implements ControlValueAccessor {
     private onTouched: () => void = () => {};
 
     protected isSelected(option: unknown): boolean {
-        return resolveOptionValue(option, this.optionValue()) === this.value();
+        return this.getOptionValue(option) === this.value();
     }
 
     /** Per-segment classes: selected = severity fill, unselected = outlined secondary. */
@@ -101,12 +83,8 @@ export class UiChoiceComponent implements ControlValueAccessor {
         };
     }
 
-    protected resolveLabel(option: unknown): string {
-        return resolveOptionLabel(option, this.optionLabel());
-    }
-
     protected onSelect(option: unknown): void {
-        const optionVal = resolveOptionValue(option, this.optionValue());
+        const optionVal = this.getOptionValue(option);
         const isReclick = optionVal === this.value();
         if (isReclick && !this.allowEmpty()) {
             return;
@@ -115,6 +93,32 @@ export class UiChoiceComponent implements ControlValueAccessor {
         this.value.set(next);
         this.onChange(next);
         this.onTouched();
+    }
+
+    // ─── Option resolution ───────────────────────────────────────────────────
+    /**
+     * Display label of an option. When the option is an object, read
+     * `optionLabel` (default `'label'`); otherwise stringify the option. Used
+     * only as the fallback when no item template is projected.
+     */
+    protected getOptionLabel(option: unknown): string {
+        if (option !== null && typeof option === 'object') {
+            const key = this.optionLabel() ?? 'label';
+            return OptionConverter.toLabel((option as OptionRecord)[key]);
+        }
+        return OptionConverter.toLabel(option);
+    }
+
+    /**
+     * Bound value of an option. When `optionValue` is set and the option is an
+     * object, read that property; otherwise the option itself is the value.
+     */
+    private getOptionValue(option: unknown): unknown {
+        const key = this.optionValue();
+        if (key && option !== null && typeof option === 'object') {
+            return (option as OptionRecord)[key];
+        }
+        return option;
     }
 
     // ── ControlValueAccessor ──────────────────────────────────────────────

@@ -26,8 +26,11 @@ import {
 import { AgentStage, STAGE_LABELS } from '../../model/agent-stage.enum';
 import { User } from 'src/app/auth/model/user.model';
 import { HostType } from 'src/app/project/model/git-integration.model';
-import { prMrTermKey } from 'src/app/issue/util/pr-mr-term';
-import { FailedStageError, resolveFailedStageError } from '../../util/failed-stage-error';
+import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
+import {
+    FailedStageError,
+    FailedStageErrorConverter
+} from '../../converter/failed-stage-error.converter';
 
 interface TimelineRow {
     label: string; // i18n key for the stage name
@@ -145,7 +148,7 @@ export class AgentRunCardComponent {
     // matches the terminology each host uses in its own UI. Falls back to
     // a generic label when prHostType is missing (older runs, edge cases).
     protected readonly prMrTermKey = computed(() =>
-        prMrTermKey((this.run()?.prHostType as HostType | null) ?? null)
+        GitHostTerminology.termKey((this.run()?.prHostType as HostType | null) ?? null)
     );
 
     protected readonly isAwaitingInput = computed(
@@ -156,7 +159,7 @@ export class AgentRunCardComponent {
     // i18n key derived from the reason code (AGENT.ERROR.<UPPER>) plus the raw
     // provider/agent detail. Null when the run hasn't failed with a reason.
     protected readonly failedStageError = computed<FailedStageError | null>(() =>
-        resolveFailedStageError(this.run()?.stages ?? [])
+        FailedStageErrorConverter.toError(this.run()?.stages ?? [])
     );
 
     private readonly stageLabel = STAGE_LABELS as Record<string, string>;

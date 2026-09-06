@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildGroups } from './build-groups.util';
+import { CommandGroupBuilder } from './command-group.builder';
 import { Command } from './command.model';
 
 const cmd = (over: Partial<Command>): Command => ({
@@ -12,9 +12,9 @@ const cmd = (over: Partial<Command>): Command => ({
     ...over
 });
 
-describe('buildGroups', () => {
+describe('CommandGroupBuilder.buildGroups', () => {
     it('keeps only commands whose modes include the active prefixed mode', () => {
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [
                 cmd({ id: 'a', title: 'Assign', modes: ['commands'] }),
                 cmd({ id: 'n', title: 'Board', modes: ['navigation'] })
@@ -26,7 +26,7 @@ describe('buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))).toEqual(['a']);
     });
     it('filters by fuzzy query over title/subtitle/keywords', () => {
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [cmd({ id: 'a', title: 'Assign to me' }), cmd({ id: 'b', title: 'Set status' })],
             'commands',
             'assign',
@@ -35,7 +35,7 @@ describe('buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))).toEqual(['a']);
     });
     it('ranks recent commands first on an EMPTY query (browse state)', () => {
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [cmd({ id: 'a', title: 'Alpha' }), cmd({ id: 'b', title: 'Bravo' })],
             'commands',
             '',
@@ -45,7 +45,7 @@ describe('buildGroups', () => {
     });
     it('on a NON-empty query a strong match beats a recent-but-weak match', () => {
         // 'b' is recent but only weakly matches 'assign'; 'a' matches exactly → 'a' wins.
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [cmd({ id: 'a', title: 'Assign' }), cmd({ id: 'b', title: 'Archive scan signal' })],
             'commands',
             'assign',
@@ -54,8 +54,8 @@ describe('buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))[0]).toBe('a');
     });
     it('prefers an exact-token match (id via keywords) over a scattered fuzzy match', () => {
-        // Mirrors real buildIssueJumpCommands output: title '#428 Login' + keywords '428' (Task 8).
-        const groups = buildGroups(
+        // Mirrors real IssueSearchCommands.build output: title '#428 Login' + keywords '428' (Task 8).
+        const groups = CommandGroupBuilder.buildGroups(
             [
                 cmd({ id: 'fuzzy', title: '4 apples 2 pears 8 plums', modes: ['issues'] }),
                 cmd({ id: 'exact', title: '#428 Login', keywords: '428', modes: ['issues'] })
@@ -67,7 +67,7 @@ describe('buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))[0]).toBe('exact');
     });
     it('matches the #-prefixed token when the user types the full #id', () => {
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [
                 cmd({ id: 'other', title: '#4281 Something', keywords: '4281', modes: ['issues'] }),
                 cmd({ id: 'exact', title: '#428 Login', keywords: '428', modes: ['issues'] })
@@ -80,11 +80,16 @@ describe('buildGroups', () => {
         expect(groups.flatMap(g => g.items.map(i => i.id))[0]).toBe('exact');
     });
     it('attaches highlight segments', () => {
-        const groups = buildGroups([cmd({ id: 'a', title: 'Assign' })], 'commands', 'as', []);
+        const groups = CommandGroupBuilder.buildGroups(
+            [cmd({ id: 'a', title: 'Assign' })],
+            'commands',
+            'as',
+            []
+        );
         expect(groups[0].items[0].highlight[0]).toEqual({ text: 'As', hit: true });
     });
     it('groups under headings preserving first-seen order', () => {
-        const groups = buildGroups(
+        const groups = CommandGroupBuilder.buildGroups(
             [
                 cmd({ id: 'a', title: 'A', group: 'People' }),
                 cmd({ id: 'b', title: 'B', group: 'Actions' }),

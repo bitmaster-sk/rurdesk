@@ -46,14 +46,9 @@ import {
 import { CalendarIssueRenderer } from './components/calendar-issue-renderer/calendar-issue-renderer';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import {
-    prefersReducedMotion,
-    pulseElement,
-    UI_SETTLE_DURATION_MS,
-    UI_SETTLE_EASING
-} from 'src/app/ui/util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
-import { FULLCALENDAR_LOCALES, resolveFullCalendarLocale } from './fullcalendar-locales';
+import { FULLCALENDAR_LOCALES, FullCalendarLocales } from './fullcalendar-locales';
 
 @Component({
     selector: 'app-issue-calendar',
@@ -93,7 +88,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     public readonly defaultCalendarOps: CalendarOptions = {
         locales: FULLCALENDAR_LOCALES,
-        locale: resolveFullCalendarLocale(this.i18n.currentLang).code,
+        locale: FullCalendarLocales.resolve(this.i18n.currentLang).code,
         plugins: [dayGridPlugin, interactionPlugin, timeGridPlugin],
         headerToolbar: {
             left: 'prev,today,next',
@@ -130,7 +125,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
      * events settle by their first rendered segment.
      */
     private settleDroppedEvent(idIssue: number): void {
-        if (prefersReducedMotion() || document.hidden) return;
+        if (UiMotion.prefersReducedMotion() || document.hidden) return;
         this.pendingSettle = { idIssue, at: Date.now() };
         this.playSettle();
     }
@@ -205,7 +200,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             .subscribe(this.onEventsChange.bind(this));
 
         this.i18n.langChange$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(({ lang }) => {
-            this.calendarRef().getApi().setOption('locale', resolveFullCalendarLocale(lang).code);
+            this.calendarRef().getApi().setOption('locale', FullCalendarLocales.resolve(lang).code);
         });
 
         // Live updates (own palette edits and teammates' changes): reload the
@@ -345,7 +340,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
      * discarded by the timer.
      */
     private prepareSlideSnapshot(): void {
-        if (prefersReducedMotion() || document.hidden) return;
+        if (UiMotion.prefersReducedMotion() || document.hidden) return;
         this.discardSlideSnapshot();
 
         const harness = this.calendarRef()
@@ -402,7 +397,11 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         this.slideSnapshotTimer = null;
         this.slideSnapshot = null;
 
-        if (!previous || previous.getTime() === start.getTime() || prefersReducedMotion()) {
+        if (
+            !previous ||
+            previous.getTime() === start.getTime() ||
+            UiMotion.prefersReducedMotion()
+        ) {
             snapshot?.remove();
             return;
         }
@@ -582,7 +581,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             .el.querySelectorAll(`[data-issue-id="${idIssue}"]`)
             .forEach(el => {
                 const eventEl = el.closest<HTMLElement>('.fc-event');
-                if (eventEl) pulseElement(eventEl);
+                if (eventEl) UiMotion.pulseElement(eventEl);
             });
     }
 

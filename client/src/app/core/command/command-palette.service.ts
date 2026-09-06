@@ -4,14 +4,17 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { Subscription } from 'rxjs';
 import { UiCommandPaletteComponent } from '../../ui/components/command-palette/command-palette.component';
 import { UiCommandHelpComponent } from '../../ui/components/command-help/command-help.component';
-import { buildGroups } from './build-groups.util';
-import { parseQuery } from './parse-query.util';
-import { MODE_PREFIX, CommandContext, RankedCommand } from './command.model';
+import { CommandGroupBuilder } from './command-group.builder';
+import { MODE_PREFIX, CommandContext, CommandMode, RankedCommand } from './command.model';
 import { CommandRegistryService } from './command-registry.service';
 import { RecentCommandsStore } from './recent-commands.store';
 
 @Injectable({ providedIn: 'root' })
 export class CommandPaletteService {
+    private static readonly modeByPrefix: Record<string, CommandMode> = Object.fromEntries(
+        Object.entries(MODE_PREFIX).map(([mode, prefix]) => [prefix, mode as CommandMode])
+    );
+
     private readonly overlay = inject(Overlay);
     private readonly registry = inject(CommandRegistryService);
     private readonly recents = inject(RecentCommandsStore);
@@ -110,10 +113,16 @@ export class CommandPaletteService {
         this.subs.add(this.registry.prime(this.context).subscribe(() => this.recompute()));
     }
 
+    private parseQuery(raw: string): { mode: CommandMode; query: string } {
+        const first = raw[0];
+        const mode = first ? CommandPaletteService.modeByPrefix[first] : undefined;
+        return mode ? { mode, query: raw.slice(1).trim() } : { mode: 'all', query: raw.trim() };
+    }
+
     private recompute(): void {
         if (!this.ref) return;
-        const { mode, query } = parseQuery(this.query$());
-        const groups = buildGroups(
+        const { mode, query } = this.parseQuery(this.query$());
+        const groups = CommandGroupBuilder.buildGroups(
             this.registry.collect(this.context),
             mode,
             query,
@@ -150,7 +159,7 @@ export class CommandPaletteService {
     }
 
     private completeWith(command: RankedCommand): void {
-        const { mode } = parseQuery(this.query$());
+        const { mode } = this.parseQuery(this.query$());
         const prefix = mode === 'all' ? '' : MODE_PREFIX[mode];
         // Use the command's own completion token when set (e.g. '#428'), else its title.
         // The token already carries its prefix, so only add the mode prefix when it doesn't.
