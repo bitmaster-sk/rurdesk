@@ -72,7 +72,9 @@ runs, so it needs **write** access:
 
 - **MR/PR diff view** — the full diff rendered in the app (cached server-side,
   so repeated views don't re-hit the host API).
-- **MR/PR status** — open / merged / closed state next to the link.
+- **MR/PR status** — open / merged / closed state next to the link. It updates
+  on the open task by itself — CI result, approval and the final merge — so you
+  don't have to reload the page.
 - **Agent run cards** link the PR and show its diff inline, so the
   review-and-approve loop stays in one place.
 - **Manual linking** — on any task, the PR panel lets you **link an existing
