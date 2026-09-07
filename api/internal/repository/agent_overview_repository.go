@@ -42,47 +42,47 @@ func (r *AgentOverviewRepository) Load(ctx context.Context, idProject int64) ([]
 		ORDER BY usr.id_user
 	`, idProject)
 	if err != nil {
-		return nil, fmt.Errorf("querying bot users: %w", err)
+		return nil, fmt.Errorf("querying agent users: %w", err)
 	}
-	byBot := map[int64]*model.AgentOverview{}
+	byAgent := map[int64]*model.AgentOverview{}
 	var out []*model.AgentOverview
 	for rows.Next() {
 		var idUser int64
 		if err := rows.Scan(&idUser); err != nil {
 			rows.Close()
-			return nil, fmt.Errorf("scanning bot user: %w", err)
+			return nil, fmt.Errorf("scanning agent user: %w", err)
 		}
 		entry := &model.AgentOverview{IdUserBot: idUser, QueuedIdsIssuePublic: []int64{}}
-		byBot[idUser] = entry
+		byAgent[idUser] = entry
 		out = append(out, entry)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating bot users: %w", err)
+		return nil, fmt.Errorf("iterating agent users: %w", err)
 	}
 	if len(out) == 0 {
 		return nil, nil
 	}
 
-	if err := r.applyActive(ctx, idProject, byBot); err != nil {
+	if err := r.applyActive(ctx, idProject, byAgent); err != nil {
 		return nil, err
 	}
-	if err := r.applyQueue(ctx, idProject, byBot); err != nil {
+	if err := r.applyQueue(ctx, idProject, byAgent); err != nil {
 		return nil, err
 	}
-	if err := r.applyCompletedToday(ctx, byBot); err != nil {
+	if err := r.applyCompletedToday(ctx, byAgent); err != nil {
 		return nil, err
 	}
-	if err := r.applyTaskCounters(ctx, byBot); err != nil {
+	if err := r.applyTaskCounters(ctx, byAgent); err != nil {
 		return nil, err
 	}
-	if err := r.applyAvgDuration(ctx, byBot); err != nil {
+	if err := r.applyAvgDuration(ctx, byAgent); err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int64, byBot map[int64]*model.AgentOverview) error {
+func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int64, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT t.id_user_bot, t.stage, r.id_project, i.id_issue_public
 		FROM agent.task t
@@ -101,7 +101,7 @@ func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int
 		if err := rows.Scan(&idUserBot, &stage, &idRunProject, &idIssuePublic); err != nil {
 			return fmt.Errorf("scanning active task: %w", err)
 		}
-		entry, ok := byBot[idUserBot]
+		entry, ok := byAgent[idUserBot]
 		if !ok {
 			continue
 		}
@@ -113,7 +113,7 @@ func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int
 	return rows.Err()
 }
 
-func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int64, byBot map[int64]*model.AgentOverview) error {
+func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int64, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT r.id_user_bot, r.id_project, i.id_issue_public
 		FROM agent.run r
@@ -131,7 +131,7 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 		if err := rows.Scan(&idUserBot, &idRunProject, &idIssuePublic); err != nil {
 			return fmt.Errorf("scanning queued run: %w", err)
 		}
-		entry, ok := byBot[idUserBot]
+		entry, ok := byAgent[idUserBot]
 		if !ok {
 			continue
 		}
@@ -143,7 +143,7 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 	return rows.Err()
 }
 
-func (r *AgentOverviewRepository) applyCompletedToday(ctx context.Context, byBot map[int64]*model.AgentOverview) error {
+func (r *AgentOverviewRepository) applyCompletedToday(ctx context.Context, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT id_user_bot, COUNT(*)
 		FROM agent.run
@@ -161,14 +161,14 @@ func (r *AgentOverviewRepository) applyCompletedToday(ctx context.Context, byBot
 		if err := rows.Scan(&idUserBot, &count); err != nil {
 			return fmt.Errorf("scanning completed run count: %w", err)
 		}
-		if entry, ok := byBot[idUserBot]; ok {
+		if entry, ok := byAgent[idUserBot]; ok {
 			entry.CompletedToday = count
 		}
 	}
 	return rows.Err()
 }
 
-func (r *AgentOverviewRepository) applyTaskCounters(ctx context.Context, byBot map[int64]*model.AgentOverview) error {
+func (r *AgentOverviewRepository) applyTaskCounters(ctx context.Context, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT id_user_bot,
 		       COALESCE(SUM(tokens_used), 0),
@@ -188,7 +188,7 @@ func (r *AgentOverviewRepository) applyTaskCounters(ctx context.Context, byBot m
 		if err := rows.Scan(&idUserBot, &tokens, &failed); err != nil {
 			return fmt.Errorf("scanning task counters: %w", err)
 		}
-		if entry, ok := byBot[idUserBot]; ok {
+		if entry, ok := byAgent[idUserBot]; ok {
 			entry.Tokens7d = tokens
 			entry.FailedAttempts7d = failed
 		}
@@ -196,7 +196,7 @@ func (r *AgentOverviewRepository) applyTaskCounters(ctx context.Context, byBot m
 	return rows.Err()
 }
 
-func (r *AgentOverviewRepository) applyAvgDuration(ctx context.Context, byBot map[int64]*model.AgentOverview) error {
+func (r *AgentOverviewRepository) applyAvgDuration(ctx context.Context, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT id_user_bot,
 		       AVG(EXTRACT(EPOCH FROM (finished_at - started_at)) * 1000)::bigint
@@ -215,7 +215,7 @@ func (r *AgentOverviewRepository) applyAvgDuration(ctx context.Context, byBot ma
 		if err := rows.Scan(&idUserBot, &avgMs); err != nil {
 			return fmt.Errorf("scanning average run duration: %w", err)
 		}
-		if entry, ok := byBot[idUserBot]; ok {
+		if entry, ok := byAgent[idUserBot]; ok {
 			entry.AvgRunDurationMs7d = avgMs
 		}
 	}

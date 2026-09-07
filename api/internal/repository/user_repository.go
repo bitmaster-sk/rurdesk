@@ -243,7 +243,7 @@ func (r *UserRepository) DeleteUser(ctx context.Context, idUser int64) error {
 	return nil
 }
 
-func (r *UserRepository) IsBotUser(ctx context.Context, idUser int64) (bool, error) {
+func (r *UserRepository) IsAgentUser(ctx context.Context, idUser int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var isBot bool
 	err := db.QueryRow(ctx,
@@ -253,7 +253,7 @@ func (r *UserRepository) IsBotUser(ctx context.Context, idUser int64) (bool, err
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("querying user is bot: %w", err)
+		return false, fmt.Errorf("querying user is agent: %w", err)
 	}
 	return isBot, nil
 }

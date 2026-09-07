@@ -11,54 +11,54 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type BotGatewayRepository struct {
+type AgentGatewayRepository struct {
 	pool *pgxpool.Pool
 }
 
-func NewBotGatewayRepository(pool *pgxpool.Pool) *BotGatewayRepository {
-	return &BotGatewayRepository{pool: pool}
+func NewAgentGatewayRepository(pool *pgxpool.Pool) *AgentGatewayRepository {
+	return &AgentGatewayRepository{pool: pool}
 }
 
-const botGatewayColumns = `id_bot_gateway, id_user_bot, gateway_url, max_concurrent, webhook_secret, config_json, created_at`
+const agentGatewayColumns = `id_bot_gateway, id_user_bot, gateway_url, max_concurrent, webhook_secret, config_json, created_at`
 
-func scanBotGateway(row pgx.Row) (*model.BotGateway, error) {
-	gw := &model.BotGateway{}
+func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
+	gw := &model.AgentGateway{}
 	err := row.Scan(
 		&gw.IdBotGateway, &gw.IdUserBot, &gw.GatewayUrl,
 		&gw.MaxConcurrent, &gw.WebhookSecret, &gw.ConfigJson, &gw.CreatedAt,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("scanning bot gateway: %w", err)
+		return nil, fmt.Errorf("scanning agent gateway: %w", err)
 	}
 	return gw, nil
 }
 
-func (r *BotGatewayRepository) Insert(ctx context.Context, idUserBot int64, req model.CreateBotGatewayReq, webhookSecret []byte) (*model.BotGateway, error) {
+func (r *AgentGatewayRepository) Insert(ctx context.Context, idUserBot int64, req model.CreateAgentGatewayReq, webhookSecret []byte) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
 		INSERT INTO agent.bot_gateway (id_user_bot, gateway_url, webhook_secret)
 		VALUES ($1, $2, $3)
-		RETURNING `+botGatewayColumns,
+		RETURNING `+agentGatewayColumns,
 		idUserBot, req.GatewayUrl, webhookSecret,
 	)
-	return scanBotGateway(row)
+	return scanAgentGateway(row)
 }
 
-func (r *BotGatewayRepository) LoadByBotUser(ctx context.Context, idUserBot int64) (*model.BotGateway, error) {
+func (r *AgentGatewayRepository) LoadByAgentUser(ctx context.Context, idUserBot int64) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		SELECT `+botGatewayColumns+` FROM agent.bot_gateway
+		SELECT `+agentGatewayColumns+` FROM agent.bot_gateway
 		WHERE id_user_bot = $1`,
 		idUserBot,
 	)
-	gw, err := scanBotGateway(row)
+	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	return gw, err
 }
 
-func (r *BotGatewayRepository) DeleteByBotUser(ctx context.Context, idUserBot int64) error {
+func (r *AgentGatewayRepository) DeleteByAgentUser(ctx context.Context, idUserBot int64) error {
 	db := extctx.GetDb(ctx, r.pool)
 	tag, err := db.Exec(ctx, `
 		DELETE FROM agent.bot_gateway
@@ -66,44 +66,44 @@ func (r *BotGatewayRepository) DeleteByBotUser(ctx context.Context, idUserBot in
 		idUserBot,
 	)
 	if err != nil {
-		return fmt.Errorf("deleting bot gateway: %w", err)
+		return fmt.Errorf("deleting agent gateway: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return ErrBotGatewayNotFound
+		return ErrAgentGatewayNotFound
 	}
 	return nil
 }
 
 // UpdateUrl changes only the gateway URL (admin edit); the webhook secret is
 // untouched, so no token is reminted.
-func (r *BotGatewayRepository) UpdateUrl(ctx context.Context, idUserBot int64, gatewayUrl string) (*model.BotGateway, error) {
+func (r *AgentGatewayRepository) UpdateUrl(ctx context.Context, idUserBot int64, gatewayUrl string) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
 		UPDATE agent.bot_gateway
 		SET gateway_url = $2
 		WHERE id_user_bot = $1
-		RETURNING `+botGatewayColumns,
+		RETURNING `+agentGatewayColumns,
 		idUserBot, gatewayUrl,
 	)
-	gw, err := scanBotGateway(row)
+	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrBotGatewayNotFound
+		return nil, ErrAgentGatewayNotFound
 	}
 	return gw, err
 }
 
-func (r *BotGatewayRepository) UpdateSecret(ctx context.Context, idUserBot int64, webhookSecret []byte) (*model.BotGateway, error) {
+func (r *AgentGatewayRepository) UpdateSecret(ctx context.Context, idUserBot int64, webhookSecret []byte) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
 		UPDATE agent.bot_gateway
 		SET webhook_secret = $2
 		WHERE id_user_bot = $1
-		RETURNING `+botGatewayColumns,
+		RETURNING `+agentGatewayColumns,
 		idUserBot, webhookSecret,
 	)
-	gw, err := scanBotGateway(row)
+	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, ErrBotGatewayNotFound
+		return nil, ErrAgentGatewayNotFound
 	}
 	return gw, err
 }

@@ -696,7 +696,7 @@ func (r *IssueRepository) UpdateIssueState(ctx context.Context, idIssue int64, i
 // panel, which reads issues.issue.{id_git_integration, mr_id}, not agent.run.
 //
 // We deliberately don't write update_by/update_at: this is a system linkage from the
-// agent gateway, not a user edit, and shouldn't pollute "Last updated" with a bot id.
+// agent gateway, not a user edit, and shouldn't pollute "Last updated" with an agent id.
 func (r *IssueRepository) LinkMr(
 	ctx context.Context, idIssue, idGitIntegration int64, mrId string,
 ) error {

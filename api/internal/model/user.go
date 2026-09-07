@@ -43,7 +43,7 @@ type ChangePasswordReq struct {
 	NewPassword     string `json:"newPassword" binding:"required,min=5,max=100"`
 }
 
-// AdminCreateUserReq is the body for POST /admin/user. For bots, Email/Password are ignored.
+// AdminCreateUserReq is the body for POST /admin/user. For agents, Email/Password are ignored.
 type AdminCreateUserReq struct {
 	Name      string `json:"name"      binding:"required,min=1,max=250"`
 	Email     string `json:"email"     binding:"omitempty,email,max=250"`
@@ -56,7 +56,7 @@ type AdminCreateUserReq struct {
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
 }
 
-// AdminCreateUserRes returns the created user. RawKey is set only for bots (shown once).
+// AdminCreateUserRes returns the created user. RawKey is set only for agents (shown once).
 type AdminCreateUserRes struct {
 	User
 	RawKey string `json:"rawKey,omitempty"`

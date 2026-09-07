@@ -56,7 +56,7 @@ func (r *IssueParticipantRepository) List(ctx context.Context, idIssue int64) ([
 }
 
 // NotifiableUserIds returns participant ids who have notifications enabled and aren't
-// bots — the recipients for issue-comment notifications.
+// agents — the recipients for issue-comment notifications.
 func (r *IssueParticipantRepository) NotifiableUserIds(ctx context.Context, idIssue int64) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `

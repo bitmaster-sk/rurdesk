@@ -182,7 +182,7 @@ func (r *AgentRunRepository) LoadByProject(ctx context.Context, idProject int64,
 	return runs, nil
 }
 
-func (r *AgentRunRepository) LoadActiveByBot(ctx context.Context, idUserBot int64, phases []string) ([]*model.AgentRun, error) {
+func (r *AgentRunRepository) LoadActiveByAgent(ctx context.Context, idUserBot int64, phases []string) ([]*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var rows pgx.Rows
 	var err error
@@ -204,7 +204,7 @@ func (r *AgentRunRepository) LoadActiveByBot(ctx context.Context, idUserBot int6
 		)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("querying active runs by bot: %w", err)
+		return nil, fmt.Errorf("querying active runs by agent: %w", err)
 	}
 	defer rows.Close()
 
@@ -217,12 +217,12 @@ func (r *AgentRunRepository) LoadActiveByBot(ctx context.Context, idUserBot int6
 		runs = append(runs, run)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating active runs by bot: %w", err)
+		return nil, fmt.Errorf("iterating active runs by agent: %w", err)
 	}
 	return runs, nil
 }
 
-func (r *AgentRunRepository) LoadActiveByBotAndProject(ctx context.Context, idUserBot, idProject int64) ([]*model.AgentRun, error) {
+func (r *AgentRunRepository) LoadActiveByAgentAndProject(ctx context.Context, idUserBot, idProject int64) ([]*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, fmt.Sprintf(`
 		SELECT %s FROM agent.run
@@ -233,7 +233,7 @@ func (r *AgentRunRepository) LoadActiveByBotAndProject(ctx context.Context, idUs
 		idUserBot, idProject,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("querying active runs by bot and project: %w", err)
+		return nil, fmt.Errorf("querying active runs by agent and project: %w", err)
 	}
 	defer rows.Close()
 
@@ -246,38 +246,38 @@ func (r *AgentRunRepository) LoadActiveByBotAndProject(ctx context.Context, idUs
 		runs = append(runs, run)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating active runs by bot and project: %w", err)
+		return nil, fmt.Errorf("iterating active runs by agent and project: %w", err)
 	}
 	return runs, nil
 }
 
-// LoadActiveBotIds returns distinct id_user_bot for runs that are not terminal.
-// Used by the scheduler to know which bots to consider on each tick.
-func (r *AgentRunRepository) LoadActiveBotIds(ctx context.Context) ([]int64, error) {
+// LoadActiveAgentIds returns distinct id_user_bot for runs that are not terminal.
+// Used by the scheduler to know which agents to consider on each tick.
+func (r *AgentRunRepository) LoadActiveAgentIds(ctx context.Context) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT DISTINCT id_user_bot
 		FROM agent.run
 		WHERE phase NOT IN ('done', 'failed', 'cancelled')`)
 	if err != nil {
-		return nil, fmt.Errorf("querying active bot ids: %w", err)
+		return nil, fmt.Errorf("querying active agent ids: %w", err)
 	}
 	defer rows.Close()
 	var ids []int64
 	for rows.Next() {
 		var id int64
 		if scanErr := rows.Scan(&id); scanErr != nil {
-			return nil, fmt.Errorf("scanning active bot id: %w", scanErr)
+			return nil, fmt.Errorf("scanning active agent id: %w", scanErr)
 		}
 		ids = append(ids, id)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating active bot ids: %w", err)
+		return nil, fmt.Errorf("iterating active agent ids: %w", err)
 	}
 	return ids, nil
 }
 
-// LoadNextEligible returns the next run for a bot needing a stage dispatched. Order:
+// LoadNextEligible returns the next run for an agent needing a stage dispatched. Order:
 // manual queue_position ASC NULLS LAST, then severity order_rank ASC (lower = higher
 // priority), then created_at ASC. Excludes passive (awaiting_*) and terminal phases,
 // which wait for user action before the scheduler can act again.
@@ -315,10 +315,10 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserBot int
 	return run, err
 }
 
-// ReassignBot re-points a non-terminal run to a different executor bot for manual
+// ReassignAgent re-points a non-terminal run to a different executor agent for manual
 // hand-off/resume: completed stages are preserved and the scheduler routes the next
-// stage to the new bot's gateway. Returns nil if the run is already terminal.
-func (r *AgentRunRepository) ReassignBot(ctx context.Context, idRun, idUserBot int64) (*model.AgentRun, error) {
+// stage to the new agent's gateway. Returns nil if the run is already terminal.
+func (r *AgentRunRepository) ReassignAgent(ctx context.Context, idRun, idUserBot int64) (*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, fmt.Sprintf(`
 		UPDATE agent.run

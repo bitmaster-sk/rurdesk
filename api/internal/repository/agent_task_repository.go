@@ -44,7 +44,7 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 }
 
 // Insert creates a pending task for a stage attempt. idUserBot is the
-// executing bot, which can differ across stages after a manual hand-off.
+// executing agent, which can differ across stages after a manual hand-off.
 func (r *AgentTaskRepository) Insert(ctx context.Context, idRun, idUserBot int64, stage string, attemptNo int) (*model.AgentTask, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, fmt.Sprintf(`
@@ -286,11 +286,11 @@ func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge ti
 	return distinctRunIds(rows)
 }
 
-// FailActiveForBot marks every active task of the bot's runs as failed and
+// FailActiveForAgent marks every active task of the agent's runs as failed and
 // returns the affected run ids. Used when a gateway reports a (re)start: its
 // in-flight subprocesses are gone, so the caller fails those runs so the user
 // sees Continue/Restart.
-func (r *AgentTaskRepository) FailActiveForBot(ctx context.Context, idUserBot int64) ([]int64, error) {
+func (r *AgentTaskRepository) FailActiveForAgent(ctx context.Context, idUserBot int64) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		UPDATE agent.task t
@@ -305,7 +305,7 @@ func (r *AgentTaskRepository) FailActiveForBot(ctx context.Context, idUserBot in
 		idUserBot,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failing active tasks for bot: %w", err)
+		return nil, fmt.Errorf("failing active tasks for agent: %w", err)
 	}
 	defer rows.Close()
 	return distinctRunIds(rows)
@@ -330,7 +330,7 @@ func distinctRunIds(rows pgx.Rows) ([]int64, error) {
 	return ids, nil
 }
 
-// BotHasActiveTask reports whether the bot has any task currently active,
+// AgentHasActiveTask reports whether the agent has any task currently active,
 // so the scheduler can skip dispatching while it's busy with a stage.
 func (r *AgentTaskRepository) BotHasActiveTask(ctx context.Context, idUserBot int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
@@ -343,7 +343,7 @@ func (r *AgentTaskRepository) BotHasActiveTask(ctx context.Context, idUserBot in
 		idUserBot,
 	).Scan(&n)
 	if err != nil {
-		return false, fmt.Errorf("checking bot active task: %w", err)
+		return false, fmt.Errorf("checking agent active task: %w", err)
 	}
 	return n > 0, nil
 }

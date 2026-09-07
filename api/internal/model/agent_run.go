@@ -40,7 +40,7 @@ type AgentStageProgress struct {
 	Status     string     `json:"status"` // pending|active|done|awaiting_approval|failed|skipped
 	Note       string     `json:"note,omitempty"`
 	AttemptNo  int        `json:"attemptNo,omitempty"`
-	IdUserBot  *int64     `json:"idUserBot,omitempty"`  // which bot executed this stage (provenance)
+	IdUserBot  *int64     `json:"idUserBot,omitempty"`  // which agent executed this stage (provenance)
 	At         *time.Time `json:"at,omitempty"`         // finishedAt (done/failed) or startedAt (active)
 	ApprovedAt *time.Time `json:"approvedAt,omitempty"` // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
