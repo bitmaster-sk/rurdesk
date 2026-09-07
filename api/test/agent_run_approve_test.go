@@ -60,7 +60,7 @@ func (s *AgentRunApproveSuite) insertAwaitingApprovalRun() int64 {
 		"DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
 		SELECT id_issue, $1, $2, 'awaiting_approval', '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,

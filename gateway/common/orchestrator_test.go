@@ -67,12 +67,12 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 	const taskCount = 3
 	for i := 0; i < taskCount; i++ {
 		task := Task{
-			IdTask:    int64(100 + i),
-			IdRun:     int64(200 + i),
-			IdUserBot: 1,
-			IdIssue:   int64(300 + i), // distinct issue → distinct branch
-			Stage:     StageDesign,
-			AttemptNo: 1,
+			IdTask:      int64(100 + i),
+			IdRun:       int64(200 + i),
+			IdUserAgent: 1,
+			IdIssue:     int64(300 + i), // distinct issue → distinct branch
+			Stage:       StageDesign,
+			AttemptNo:   1,
 		}
 		go orchestrator.runStage(task)
 	}
@@ -130,10 +130,10 @@ func TestAgentErrorReason(t *testing.T) {
 
 func TestParseStageExecutePayload_Minimal(t *testing.T) {
 	payload := map[string]any{
-		"idRun":     float64(42),
-		"idIssue":   float64(7),
-		"idUserBot": float64(84),
-		"idProject": float64(1),
+		"idRun":       float64(42),
+		"idIssue":     float64(7),
+		"idUserAgent": float64(84),
+		"idProject":   float64(1),
 		"payload": map[string]any{
 			"idTask":    float64(123),
 			"stage":     "design",
@@ -161,10 +161,10 @@ func TestParseStageExecutePayload_Minimal(t *testing.T) {
 
 func threadPayload(thread []any) map[string]any {
 	return map[string]any{
-		"idRun":     float64(1),
-		"idIssue":   float64(2),
-		"idUserBot": float64(3),
-		"idProject": float64(4),
+		"idRun":       float64(1),
+		"idIssue":     float64(2),
+		"idUserAgent": float64(3),
+		"idProject":   float64(4),
 		"payload": map[string]any{
 			"idTask":        float64(5),
 			"stage":         "implementation",
@@ -233,10 +233,10 @@ func TestParseStageExecutePayload_ElidesArtifactBodiesInThread(t *testing.T) {
 
 func TestParseStageExecutePayload_WithApprovedArtifacts(t *testing.T) {
 	payload := map[string]any{
-		"idRun":     float64(1),
-		"idIssue":   float64(2),
-		"idUserBot": float64(3),
-		"idProject": float64(4),
+		"idRun":       float64(1),
+		"idIssue":     float64(2),
+		"idUserAgent": float64(3),
+		"idProject":   float64(4),
 		"payload": map[string]any{
 			"idTask":    float64(5),
 			"stage":     "implementation",
@@ -261,10 +261,10 @@ func TestParseStageExecutePayload_WithApprovedArtifacts(t *testing.T) {
 
 func TestParseStageExecutePayload_WithRejectedOutput(t *testing.T) {
 	payload := map[string]any{
-		"idRun":     float64(1),
-		"idIssue":   float64(2),
-		"idUserBot": float64(3),
-		"idProject": float64(4),
+		"idRun":       float64(1),
+		"idIssue":     float64(2),
+		"idUserAgent": float64(3),
+		"idProject":   float64(4),
 		"payload": map[string]any{
 			"idTask":    float64(5),
 			"stage":     "design",
@@ -288,10 +288,10 @@ func TestParseStageExecutePayload_ApprovedArtifactsAbsentOrNull(t *testing.T) {
 	// not panic on the type assertion. The API ships null when no such artifact
 	// exists yet (e.g. the design stage has no prior design).
 	payload := map[string]any{
-		"idRun":     float64(1),
-		"idIssue":   float64(2),
-		"idUserBot": float64(3),
-		"idProject": float64(4),
+		"idRun":       float64(1),
+		"idIssue":     float64(2),
+		"idUserAgent": float64(3),
+		"idProject":   float64(4),
 		"payload": map[string]any{
 			"idTask":    float64(5),
 			"stage":     "design",

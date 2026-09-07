@@ -36,6 +36,7 @@ import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { Issue } from '../../model/issue.model';
 import { ProposedIssue } from '../../model/split.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 describe('SplitDialogComponent', () => {
     let component: SplitDialogComponent;
@@ -43,16 +44,14 @@ describe('SplitDialogComponent', () => {
     let mockSplitApi: any;
     let mockToast: any;
 
-    const mockIssue: Issue = {
+    const mockIssue: Issue = Fixtures.issue({
         idIssue: 10,
         idIssuePublic: 2,
-        idProject: 1,
         idState: 5,
         idSeverity: 3,
         title: 'Test Issue',
-        description: 'Test description',
-        tracked: 0
-    };
+        description: 'Test description'
+    });
 
     const apiChildren: ProposedIssue[] = [
         { title: 'Child 1', description: 'Desc 1', idSeverity: null, idState: null },
@@ -129,16 +128,7 @@ describe('SplitDialogComponent', () => {
             { title: 'C1', description: '', idSeverity: null, idState: null }
         ];
         const returnedIssues: Issue[] = [
-            {
-                idIssue: 11,
-                idIssuePublic: 3,
-                idProject: 1,
-                idState: null,
-                idSeverity: null,
-                title: 'C1',
-                description: '',
-                tracked: 0
-            }
+            Fixtures.issue({ idIssue: 11, idIssuePublic: 3, title: 'C1' })
         ];
         mockSplitApi.accept$.mockReturnValue(of({ children: returnedIssues }));
         component.onAccept(acceptedChildren);
@@ -147,16 +137,7 @@ describe('SplitDialogComponent', () => {
 
     it('after accept$, step is done and acceptedCount is set', () => {
         const returnedIssues: Issue[] = [
-            {
-                idIssue: 11,
-                idIssuePublic: 3,
-                idProject: 1,
-                idState: null,
-                idSeverity: null,
-                title: 'C1',
-                description: '',
-                tracked: 0
-            }
+            Fixtures.issue({ idIssue: 11, idIssuePublic: 3, title: 'C1' })
         ];
         mockSplitApi.accept$.mockReturnValue(of({ children: returnedIssues }));
         component.onAccept([{ title: 'C1', description: '', idSeverity: null, idState: null }]);

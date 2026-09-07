@@ -16,6 +16,8 @@ export const SEVERITY_COLORS: readonly string[] = [
     '#546e7a'
 ];
 
-export function randomSeverityColor(): string {
-    return SEVERITY_COLORS[Math.floor(Math.random() * SEVERITY_COLORS.length)];
+export abstract class SeverityColors {
+    public static random(): string {
+        return SEVERITY_COLORS[Math.floor(Math.random() * SEVERITY_COLORS.length)];
+    }
 }

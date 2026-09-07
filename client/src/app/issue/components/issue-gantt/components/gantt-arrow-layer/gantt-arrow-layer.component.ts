@@ -18,7 +18,7 @@ import { IssueRelationDirection } from '../../../../constants/issue-relation-dir
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { MIN_BAR_WIDTH_PX, SMALL_BAR_THRESHOLD_PX } from '../gantt-task-bar/gantt-task-bar';
 import { addSeconds } from 'date-fns';
-import { ArrowDirection, routeArrow } from '../../service/gantt-arrow-routing';
+import { ArrowDirection, GanttArrowRouting } from '../../service/gantt-arrow-routing';
 
 interface ArrowPath {
     relationId: number;
@@ -239,7 +239,7 @@ export class GanttArrowLayerComponent {
             const traceIndex = isTracing ? traceOrder.get(relation.idIssueRelation) : undefined;
             const traceDelayMs = traceIndex !== undefined ? traceIndex * 120 : null;
 
-            const { path, midX, midY } = routeArrow({
+            const { path, midX, midY } = GanttArrowRouting.route({
                 sourceX: c.sourceX,
                 sourceY: c.fromPos.centerY,
                 targetX: c.targetX,

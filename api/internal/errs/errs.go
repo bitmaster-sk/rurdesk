@@ -95,9 +95,9 @@ var (
 
 	ErrLastOwner     = newErr("LAST_OWNER", "cannot remove last project owner", "error.last_owner", http.StatusUnprocessableEntity)
 	ErrInvalidRole   = newErr("INVALID_ROLE", "invalid role value: must be viewer, member, or owner", "error.invalid_role", http.StatusUnprocessableEntity)
-	ErrBotOwner      = newErr("BOT_OWNER", "bot users cannot be assigned the owner role", "error.bot_owner", http.StatusUnprocessableEntity)
+	ErrAgentOwner    = newErr("AGENT_OWNER", "agent users cannot be assigned the owner role", "error.agent_owner", http.StatusUnprocessableEntity)
 	ErrLastAdmin     = newErr("LAST_ADMIN", "cannot remove the last instance admin", "error.last_admin", http.StatusUnprocessableEntity)
-	ErrBotAdmin      = newErr("BOT_ADMIN", "bot users cannot be admins", "error.bot_admin", http.StatusUnprocessableEntity)
+	ErrAgentAdmin    = newErr("AGENT_ADMIN", "agent users cannot be admins", "error.agent_admin", http.StatusUnprocessableEntity)
 	ErrAgentActivity = newErr("USER_HAS_AGENT_ACTIVITY", "user has agent history and cannot be deleted", "error.user_has_agent_activity", http.StatusUnprocessableEntity)
 
 	ErrAuthoredContent    = newErr("USER_HAS_AUTHORED_CONTENT", "user authored issues and cannot be deleted", "error.user_has_authored_content", http.StatusUnprocessableEntity)
@@ -106,8 +106,8 @@ var (
 
 	// ── API keys ───────────────────────────────────────────────────────────
 
-	ErrNotABot            = newErr("NOT_A_BOT", "API keys can only be managed for bot users", "error.not_a_bot", http.StatusUnprocessableEntity)
-	ErrApiKeyExists       = newErr("API_KEY_EXISTS", "bot already has an API key", "error.api_key_exists", http.StatusUnprocessableEntity)
+	ErrNotAnAgent         = newErr("NOT_AN_AGENT", "API keys can only be managed for agent users", "error.not_an_agent", http.StatusUnprocessableEntity)
+	ErrApiKeyExists       = newErr("API_KEY_EXISTS", "agent already has an API key", "error.api_key_exists", http.StatusUnprocessableEntity)
 	ErrApiKeyLimitReached = newErr("API_KEY_LIMIT_REACHED", "user api key limit reached", "error.api_key_limit_reached", http.StatusUnprocessableEntity)
 	ErrApiKeySelfManage   = newErr("API_KEY_SELF_MANAGE", "api keys cannot be managed with an api key", "error.api_key_self_manage", http.StatusUnprocessableEntity)
 
@@ -117,8 +117,8 @@ var (
 	ErrGitIntegrationDuplicate = newErr("GIT_INTEGRATION_DUPLICATE", "an integration for this repository already exists", "error.git_integration_duplicate", http.StatusConflict)
 	ErrGitHostUnavailable      = newErr("GIT_HOST_UNAVAILABLE", "git host API is unavailable", "error.git_host_unavailable", http.StatusServiceUnavailable)
 	ErrInvalidMrLink           = newErr("INVALID_MR_LINK", "idGitIntegration and mrId must both be set or both be null", "error.invalid_mr_link", http.StatusUnprocessableEntity)
-	ErrBotNoGateway            = newErr("BOT_NO_GATEWAY", "bot user has no configured gateway", "error.bot_no_gateway", http.StatusUnprocessableEntity)
-	ErrGatewayExists           = newErr("GATEWAY_EXISTS", "bot already has a gateway", "error.gateway_exists", http.StatusConflict)
+	ErrAgentNoGateway          = newErr("AGENT_NO_GATEWAY", "agent user has no configured gateway", "error.agent_no_gateway", http.StatusUnprocessableEntity)
+	ErrGatewayExists           = newErr("GATEWAY_EXISTS", "agent already has a gateway", "error.gateway_exists", http.StatusConflict)
 
 	// ── Project scoping ────────────────────────────────────────────────────
 
@@ -146,8 +146,8 @@ var (
 
 	// ── Issue / message conflicts ──────────────────────────────────────────
 
-	ErrIssueHasActiveRun     = newErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run; hand it over by changing the assignee instead", "error.issue_has_active_run", http.StatusUnprocessableEntity)
-	ErrBotPostWhileRunPaused = newErr("BOT_POST_WHILE_RUN_PAUSED", "bot cannot post while run is paused", "error.bot_post_while_run_paused", http.StatusUnprocessableEntity)
+	ErrIssueHasActiveRun       = newErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run; hand it over by changing the assignee instead", "error.issue_has_active_run", http.StatusUnprocessableEntity)
+	ErrAgentPostWhileRunPaused = newErr("AGENT_POST_WHILE_RUN_PAUSED", "agent cannot post while run is paused", "error.agent_post_while_run_paused", http.StatusUnprocessableEntity)
 
 	// ── Project builder ────────────────────────────────────────────────────
 

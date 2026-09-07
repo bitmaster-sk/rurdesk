@@ -18,8 +18,8 @@ type AgentThinkingPersistenceSuite struct {
 	suite.Suite
 	App           *issue.Application
 	Token         string
-	BotApiKey     string
-	BotUserID     int64
+	AgentApiKey   string
+	AgentUserID   int64
 	IdProject     int64
 	IdIssuePublic int64
 }
@@ -35,25 +35,25 @@ func (s *AgentThinkingPersistenceSuite) SetupSuite() {
 	s.Require().Equal(http.StatusOK, loginRes.StatusCode)
 	var tk struct{ Token string }
 	json.NewDecoder(loginRes.Body).Decode(&tk)
-	botToken := tk.Token
+	agentToken := tk.Token
 
-	botUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", botToken)
-	var botUser model.User
-	json.NewDecoder(botUserRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	agentUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", agentToken)
+	var agentUser model.User
+	json.NewDecoder(agentUserRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
-	s.App.Cache.Del(context.Background(), botToken)
+	s.App.Cache.Del(context.Background(), agentToken)
 
 	keyRes := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/api-key", s.BotUserID),
+		fmt.Sprintf("/api/private/admin/user/%d/api-key", s.AgentUserID),
 		`{"name":"persist-bot-key"}`, s.Token)
 	s.Require().Equal(http.StatusOK, keyRes.StatusCode)
 	var apiKey model.CreateApiKeyRes
 	json.NewDecoder(keyRes.Body).Decode(&apiKey)
-	s.BotApiKey = apiKey.RawKey
+	s.AgentApiKey = apiKey.RawKey
 
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"persist-test-project","color":"#bbccdd"}`, s.Token)
@@ -66,7 +66,7 @@ func (s *AgentThinkingPersistenceSuite) SetupSuite() {
 
 	Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.BotUserID), s.Token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)
 
 	issueRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
@@ -83,7 +83,7 @@ func (s *AgentThinkingPersistenceSuite) TearDownSuite() {
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+		"DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 func (s *AgentThinkingPersistenceSuite) purgeRuns() {
@@ -107,19 +107,19 @@ func (s *AgentThinkingPersistenceSuite) insertRunWithActiveTask() (idRun int64, 
 	s.purgeRuns()
 
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
 		SELECT id_issue, $1, $2, 'in_progress', '{"stages":[{"name":"implementation","skippable":false,"skip":false}]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,
-		s.BotUserID, s.IdProject, s.IdIssuePublic,
+		s.AgentUserID, s.IdProject, s.IdIssuePublic,
 	).Scan(&idRun)
 	s.Require().NoError(err)
 
 	err = s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.task(id_run, id_user_bot, stage, attempt_no, status, started_at)
+		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status, started_at)
 		VALUES ($1, $2, 'implementation', 1, 'active', now())
 		RETURNING id_task`,
-		idRun, s.BotUserID,
+		idRun, s.AgentUserID,
 	).Scan(&idTask)
 	s.Require().NoError(err)
 
@@ -130,14 +130,14 @@ func (s *AgentThinkingPersistenceSuite) postThinking(idTask int64, seq int, text
 	res := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/agent/task/%d/thinking", idTask),
 		fmt.Sprintf(`{"seq":%d,"events":[{"kind":"thinking","text":%q,"at":1}]}`, seq, text),
-		s.BotApiKey)
+		s.AgentApiKey)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 }
 
 func (s *AgentThinkingPersistenceSuite) completeStage(idTask int64) {
 	res := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/agent/task/%d/complete", idTask),
-		`{"outcome":"output_submitted"}`, s.BotApiKey)
+		`{"outcome":"output_submitted"}`, s.AgentApiKey)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 }
 
@@ -206,7 +206,7 @@ func (s *AgentThinkingPersistenceSuite) Test_PersistenceOn_ReplaysToolCallsStruc
 		fmt.Sprintf("/api/private/agent/task/%d/thinking", idTask), `{"seq":1,"events":[
 			{"kind":"thinking","text":"→ shell returns nil here","at":1},
 			{"kind":"tool","tool":"developer__shell","text":"rg --files src","at":2}
-		]}`, s.BotApiKey)
+		]}`, s.AgentApiKey)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 
 	s.completeStage(idTask)

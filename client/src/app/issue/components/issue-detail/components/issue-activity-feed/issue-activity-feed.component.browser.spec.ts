@@ -171,18 +171,22 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
         fixture.componentRef.setInput('idProject', 10);
-        fixture.componentRef.setInput('agentRun', { idRun: 5, idUserBot: 7, phase: 'in_progress' });
+        fixture.componentRef.setInput('agentRun', {
+            idRun: 5,
+            idUserAgent: 7,
+            phase: 'in_progress'
+        });
         fixture.detectChanges();
 
         const comp = fixture.componentInstance;
         expect(comp.agentCreator()).toBeNull();
 
-        const bot = makeUser(7, 'Kimi');
+        const agent = makeUser(7, 'Kimi');
         (comp as unknown as { usersMap: { set: (m: Map<number, User>) => void } }).usersMap.set(
-            new Map([[7, bot]])
+            new Map([[7, agent]])
         );
 
-        expect(comp.agentCreator()).toBe(bot);
+        expect(comp.agentCreator()).toBe(agent);
     });
 
     it('offers only the comment and time chips', () => {

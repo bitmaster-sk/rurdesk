@@ -12,20 +12,20 @@ export interface CriticalPathResult {
     relationOrder: Map<number, number>;
 }
 
-/** Single definition of "no critical path" — reused by the disabled state. */
-export function emptyCriticalPath(): CriticalPathResult {
-    return { taskIds: new Set(), relationIds: new Set(), relationOrder: new Map() };
-}
-
 @Injectable()
 export class GanttCriticalPathService {
+    /** Single definition of "no critical path" — reused by the disabled state. */
+    public static emptyCriticalPath(): CriticalPathResult {
+        return { taskIds: new Set(), relationIds: new Set(), relationOrder: new Map() };
+    }
+
     /**
      * Computes the critical path using a CPM forward pass.
      * The longest path from any source (no inbound) to any sink (no outbound).
      * Edge weight: from.estimated + lagMinutes. Final node adds its own estimated.
      */
     public computeCriticalPath(tasks: Issue[], relations: GanttRelation[]): CriticalPathResult {
-        const emptyResult = emptyCriticalPath();
+        const emptyResult = GanttCriticalPathService.emptyCriticalPath();
 
         if (tasks.length === 0) return emptyResult;
 

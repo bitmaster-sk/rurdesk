@@ -66,7 +66,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// ${ENV} substitution, which goose doesn't apply to the extension uri).
 	// Assumes MAX_CONCURRENT=1 (config path is shared); concurrent runs would
 	// need per-run config dirs.
-	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.BotApiKey); err != nil {
+	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.AgentApiKey); err != nil {
 		return stats, fmt.Errorf("writing goose config: %w", err)
 	}
 

@@ -1,11 +1,11 @@
 ---
 title: Agents
-description: Add a bot, wire a gateway, and run the AI agent workflow.
+description: Add an agent, wire a gateway, and run the AI agent workflow.
 ---
 
 # Agents
 
-This page covers the human side of the **AI Agent workflow**: creating a bot,
+This page covers the human side of the **AI Agent workflow**: creating an agent,
 connecting it to a [gateway](./gateway.md), starting a run on a task, and
 approving stages.
 
@@ -16,25 +16,25 @@ approving stages.
 
 | Term                        | Meaning                                                                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Bot user**                | A non-human user account the agent acts as. Its writes are attributed to the bot (provenance).                                |
-| **Gateway → Tracker token** | The bot's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                                |
-| **Bot Gateway**             | The bot's single gateway record (the Goose gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with. |
+| **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                              |
+| **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                              |
+| **Agent gateway**           | The agent's single gateway record (the Goose gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with. |
 | **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                              |
 | **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                  |
 
-## 1. Create a bot user
+## 1. Create an agent user
 
-In **Administration → Users** click **Create user**, toggle **Bot**, give it a
+In **Administration → Users** click **Create user**, toggle **Agent**, give it a
 name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
-`http://gateway-goose-qwen-cloud:9090`. Each bot has exactly **one** gateway and
-can work on any project it is a member of.
-More detail in [User management](./user-management.md#bots).
+`http://gateway-goose-qwen-cloud:9090`. Each agent has exactly **one** gateway
+and can work on any project it is a member of.
+More detail in [User management](./user-management.md#agents).
 
-![Creating a bot](../../site/assets/img/bot-create.png)
+![Creating an agent](../../site/assets/img/bot-create.png)
 
-## 2. Copy the bot's credentials
+## 2. Copy the agent's credentials
 
-On creation the bot's **credentials dialog** opens with **both one-time tokens**.
+On creation the agent's **credentials dialog** opens with **both one-time tokens**.
 Copy each immediately and set it in the gateway container's environment:
 
 | Token                       | Gateway env var                                                         |
@@ -42,8 +42,8 @@ Copy each immediately and set it in the gateway container's environment:
 | **Gateway → Tracker token** | `GATEWAY_TO_TRACKER_TOKEN` — the gateway sends it on every tracker call |
 | **Tracker → Gateway token** | `TRACKER_TO_GATEWAY_TOKEN` — the tracker signs each webhook with it     |
 
-Each token is shown **only once**; the dialog also records the bot's Gateway URL.
-If you lose a token, reopen the dialog (key icon on the bot row) and use
+Each token is shown **only once**; the dialog also records the agent's Gateway
+URL. If you lose a token, reopen the dialog (key icon on the agent row) and use
 **Regenerate token**, then reconfigure the gateway container.
 
 The token row scrolls horizontally, so a long token stays fully readable and can
@@ -52,7 +52,7 @@ expose only over HTTPS (or `localhost`); on a plain-HTTP deployment it falls bac
 to a legacy copy path, and if the browser blocks that too the dialog says so —
 select the token in the row and copy it manually.
 
-![Bot credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/bot-keys.png)
+![Agent credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/bot-keys.png)
 
 > The tracker signs each `stage_execute` webhook with the Tracker → Gateway
 > token; the gateway verifies the `X-Tracker-Signature` and rejects mismatches
@@ -60,7 +60,7 @@ select the token in the row and copy it manually.
 
 ## 3. Start a run on a task
 
-Assign a task to the bot (or trigger the agent action on the task). The API
+Assign a task to the agent (or trigger the agent action on the task). The API
 enqueues a run and fires a `stage_execute` webhook at the gateway. The gateway
 checks out a per-run worktree and starts the agent. From there the run drives
 itself through the stages — assign, approve the gated stages, and it ends in a
@@ -85,7 +85,7 @@ A run advances through **phases**:
 
 Each **stage** carries its own status: `pending`, `active`, `done`,
 `awaiting_approval`, `failed`, or `skipped`. The run card shows stage progress,
-which bot executed each stage (provenance), and timestamps.
+which agent executed each stage (provenance), and timestamps.
 
 ![Agent run card — stage timeline and phase badge](../../site/assets/img/run-card.png)
 

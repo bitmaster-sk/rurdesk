@@ -10,7 +10,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { I18nService } from '../shared/i18n/i18n.service';
 import { ToastNotificationService } from './toast-notification.service';
-import { SILENCE_ERROR_TOAST } from './http-error-context';
+import { SILENCE_ERROR_TOAST } from './request-context';
 import { ApiError } from '../shared/model/api-error.model';
 
 @Injectable()

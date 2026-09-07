@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CommandContext } from '../../core/command/command.model';
 import { SavedView } from '../model/saved-view.model';
 import { IssueViewMode } from '../../issue/constants/issue-view-modes.enum';
-import { buildSavedViewCommands } from './saved-view.commands';
+import { SavedViewCommands } from './saved-view.commands';
 
 const t = (key: string): string => key;
 
@@ -24,9 +24,9 @@ function view(over: Partial<SavedView> = {}): SavedView {
     };
 }
 
-describe('buildSavedViewCommands', () => {
+describe('SavedViewCommands.build', () => {
     it('builds one command per view, titled by name', () => {
-        const commands = buildSavedViewCommands(
+        const commands = SavedViewCommands.build(
             ctx(1),
             [view({ idSavedView: 1, name: 'Alpha' }), view({ idSavedView: 2, name: 'Beta' })],
             vi.fn(),
@@ -38,7 +38,7 @@ describe('buildSavedViewCommands', () => {
     });
 
     it('surfaces views in the navigation list under their own heading', () => {
-        const [command] = buildSavedViewCommands(ctx(1), [view()], vi.fn(), t);
+        const [command] = SavedViewCommands.build(ctx(1), [view()], vi.fn(), t);
 
         expect(command.modes).toContain('navigation');
         expect(command.modes).toContain('all');
@@ -49,7 +49,7 @@ describe('buildSavedViewCommands', () => {
     });
 
     it('makes the view type searchable as a keyword', () => {
-        const [command] = buildSavedViewCommands(
+        const [command] = SavedViewCommands.build(
             ctx(1),
             [view({ viewType: IssueViewMode.KANBAN })],
             vi.fn(),
@@ -63,7 +63,7 @@ describe('buildSavedViewCommands', () => {
     // the issue page's ?view= handler applies on arrival.
     it('navigates to the view route with the view id as a query param', () => {
         const nav = vi.fn();
-        const [command] = buildSavedViewCommands(
+        const [command] = SavedViewCommands.build(
             ctx(1),
             [view({ idSavedView: 9, viewType: IssueViewMode.GANTT })],
             nav,
@@ -76,10 +76,10 @@ describe('buildSavedViewCommands', () => {
     });
 
     it('offers nothing outside a project', () => {
-        expect(buildSavedViewCommands(ctx(null), [view()], vi.fn(), t)).toEqual([]);
+        expect(SavedViewCommands.build(ctx(null), [view()], vi.fn(), t)).toEqual([]);
     });
 
     it('offers nothing when there are no views', () => {
-        expect(buildSavedViewCommands(ctx(1), [], vi.fn(), t)).toEqual([]);
+        expect(SavedViewCommands.build(ctx(1), [], vi.fn(), t)).toEqual([]);
     });
 });

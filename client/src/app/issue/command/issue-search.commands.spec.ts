@@ -1,23 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildIssueJumpCommands } from './issue-search.commands';
+import { IssueSearchCommands } from './issue-search.commands';
 import { Issue } from '../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 const t = (k: string) => k;
 
-describe('buildIssueJumpCommands', () => {
+describe('IssueSearchCommands.build', () => {
     it('maps issues to #-prefixed jump commands with numeric keywords + bare-token completion', () => {
         const nav = vi.fn();
-        const issue: Issue = {
-            idIssue: 1,
+        const issue: Issue = Fixtures.issue({
             idIssuePublic: 428,
             idProject: 4,
-            title: 'Login',
-            description: '',
-            idState: null,
-            idSeverity: null,
-            tracked: 0
-        };
-        const cmds = buildIssueJumpCommands({ idProject: 4, issue: null }, [issue], nav, t);
+            title: 'Login'
+        });
+        const cmds = IssueSearchCommands.build({ idProject: 4, issue: null }, [issue], nav, t);
         expect(cmds[0].title).toBe('#428 Login');
         expect(cmds[0].keywords).toBe('428'); // bare number → exact-ID ranking tier fires on real data
         expect(cmds[0].completion).toBe('#428');

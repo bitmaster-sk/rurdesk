@@ -171,20 +171,20 @@ func TestBuildStageProgress_SkippedAndFailed(t *testing.T) {
 	}
 }
 
-func TestBuildStageProgress_CarriesBotProvenance(t *testing.T) {
+func TestBuildStageProgress_CarriesAgentProvenance(t *testing.T) {
 	run := &model.AgentRun{Phase: constants.PhaseInProgress, StagePlan: fullStagePlan()}
-	botA := int64(7)
-	botB := int64(9)
+	agentA := int64(7)
+	agentB := int64(9)
 	pickup := completedTask(constants.StagePickup, at(19), nil)
-	pickup.IdUserBot = &botA
-	design := &model.AgentTask{Stage: constants.StageDesign, AttemptNo: 1, Status: constants.TaskStatusActive, StartedAt: at(25), CreatedAt: *at(25), IdUserBot: &botB}
+	pickup.IdUserAgent = &agentA
+	design := &model.AgentTask{Stage: constants.StageDesign, AttemptNo: 1, Status: constants.TaskStatusActive, StartedAt: at(25), CreatedAt: *at(25), IdUserAgent: &agentB}
 
 	rows := BuildStageProgress(run, []*model.AgentTask{pickup, design}, nil)
-	if got := stageByName(rows, constants.StagePickup); got.IdUserBot == nil || *got.IdUserBot != botA {
-		t.Errorf("pickup bot = %v, want %d", got.IdUserBot, botA)
+	if got := stageByName(rows, constants.StagePickup); got.IdUserAgent == nil || *got.IdUserAgent != agentA {
+		t.Errorf("pickup bot = %v, want %d", got.IdUserAgent, agentA)
 	}
-	if got := stageByName(rows, constants.StageDesign); got.IdUserBot == nil || *got.IdUserBot != botB {
-		t.Errorf("design bot = %v, want %d", got.IdUserBot, botB)
+	if got := stageByName(rows, constants.StageDesign); got.IdUserAgent == nil || *got.IdUserAgent != agentB {
+		t.Errorf("design bot = %v, want %d", got.IdUserAgent, agentB)
 	}
 }
 

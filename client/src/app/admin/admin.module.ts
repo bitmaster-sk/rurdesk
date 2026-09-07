@@ -30,7 +30,7 @@ import { AdminTeamsComponent } from './components/admin-teams/admin-teams.compon
 import { TeamDialogComponent } from './components/team-dialog/team-dialog.component';
 import { CreateUserDialogComponent } from './components/create-user-dialog/create-user-dialog.component';
 import { EditUserDialogComponent } from './components/edit-user-dialog/edit-user-dialog.component';
-import { BotKeysDialogComponent } from './components/bot-keys-dialog/bot-keys-dialog.component';
+import { AgentKeysDialogComponent } from './components/agent-keys-dialog/agent-keys-dialog.component';
 import { AdminSettingsComponent } from './pages/admin-settings/admin-settings.component';
 import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.component';
 
@@ -43,7 +43,7 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
         TeamDialogComponent,
         CreateUserDialogComponent,
         EditUserDialogComponent,
-        BotKeysDialogComponent
+        AgentKeysDialogComponent
     ],
     imports: [
         CommonModule,

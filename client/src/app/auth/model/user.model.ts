@@ -3,6 +3,6 @@ export interface User {
     name: string;
     email: string;
     colorAvatarBg: string;
-    isBot?: boolean;
+    isAgent?: boolean;
     isAdmin?: boolean;
 }

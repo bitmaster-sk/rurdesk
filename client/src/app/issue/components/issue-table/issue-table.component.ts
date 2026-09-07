@@ -37,7 +37,6 @@ import { RelationDropEvent } from './components/issue-table-drop-zone/issue-tabl
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
-import { resolveHighlightIndex } from './highlight.util';
 
 @Component({
     selector: 'app-issue-table',
@@ -74,9 +73,12 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
      */
     public readonly highlightedId = signal<number | null>(null);
 
-    public readonly highlightedIndex = computed(() =>
-        resolveHighlightIndex(this.rows(), this.highlightedId())
-    );
+    public readonly highlightedIndex = computed(() => {
+        const idIssuePublic = this.highlightedId();
+        if (idIssuePublic === null) return null;
+        const index = this.rows().findIndex(row => row.issue.idIssuePublic === idIssuePublic);
+        return index === -1 ? null : index;
+    });
 
     public readonly highlightedIssue = computed<Issue | null>(() => {
         const index = this.highlightedIndex();

@@ -42,7 +42,6 @@ function makeCalendarApi() {
         addEventSource: vi.fn(),
         setOption: vi.fn(),
         on: vi.fn(),
-        setOption: vi.fn(),
         el
     };
     return api;

@@ -8,7 +8,7 @@ type User struct {
 	Email         string `json:"email"         db:"email"`
 	ColorAvatarBg string `json:"colorAvatarBg" db:"color_avatar_bg"`
 	Password      string `json:"-"             db:"password"`
-	IsBot         bool   `json:"isBot"         db:"is_bot"`
+	IsAgent       bool   `json:"isAgent"         db:"is_agent"`
 	IsAdmin       bool   `json:"isAdmin"       db:"is_admin"`
 }
 
@@ -43,12 +43,12 @@ type ChangePasswordReq struct {
 	NewPassword     string `json:"newPassword" binding:"required,min=5,max=100"`
 }
 
-// AdminCreateUserReq is the body for POST /admin/user. For bots, Email/Password are ignored.
+// AdminCreateUserReq is the body for POST /admin/user. For agents, Email/Password are ignored.
 type AdminCreateUserReq struct {
 	Name      string `json:"name"      binding:"required,min=1,max=250"`
 	Email     string `json:"email"     binding:"omitempty,email,max=250"`
 	Password  string `json:"password"  binding:"omitempty,min=5,max=100"`
-	IsBot     bool   `json:"isBot"`
+	IsAgent   bool   `json:"isAgent"`
 	IsAdmin   bool   `json:"isAdmin"`
 	IdProject *int64 `json:"idProject"`
 	Role      Role   `json:"role"`
@@ -56,7 +56,7 @@ type AdminCreateUserReq struct {
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
 }
 
-// AdminCreateUserRes returns the created user. RawKey is set only for bots (shown once).
+// AdminCreateUserRes returns the created user. RawKey is set only for agents (shown once).
 type AdminCreateUserRes struct {
 	User
 	RawKey string `json:"rawKey,omitempty"`

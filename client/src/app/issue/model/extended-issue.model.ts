@@ -11,4 +11,19 @@ export interface ExtendedIssue extends Issue {
     assignedToUser: User | undefined;
 }
 
-export type ScheduledIssue = ExtendedIssue & { scheduledAt: Date };
+export type Scheduled<T extends Issue> = T & { scheduledAt: Date };
+export type ScheduledIssue = Scheduled<ExtendedIssue>;
+
+/**
+ * Type guard that rejects `Invalid Date` — `instanceof Date` alone is not
+ * enough because `new Date('nonsense')` is still a Date instance but has
+ * `getTime() === NaN`. Widened to `{ scheduledAt?: Date | null }` so the
+ * same guard serves both `Issue`-based and structural-type call sites.
+ */
+export abstract class IssueGuard {
+    public static isScheduled<T extends { scheduledAt?: Date | null }>(
+        issue: T
+    ): issue is T & { scheduledAt: Date } {
+        return issue.scheduledAt instanceof Date && !isNaN(issue.scheduledAt.getTime());
+    }
+}

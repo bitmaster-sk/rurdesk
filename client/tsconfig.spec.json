@@ -5,7 +5,9 @@
     "extends": "./tsconfig.json",
     "compilerOptions": {
         "outDir": "./out-tsc/spec",
-        "types": ["vitest/globals", "node"]
+        "types": ["vitest/globals", "node"],
+        /* Vypnuté len pre spec projekt — v produkčnom kóde zostáva zapnuté. */
+        "noPropertyAccessFromIndexSignature": false
     },
     "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
 }

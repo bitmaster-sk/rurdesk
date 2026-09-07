@@ -28,6 +28,8 @@ import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { NoticeSubject } from 'src/app/shared/notice/constant/notice-subject.enum';
 import { Issue } from '../../model/issue.model';
+import { LangChangeEvent } from '@ngx-translate/core';
+import { Fixtures } from 'src/testing/fixtures';
 
 const storage = new Map<string, string>();
 vi.stubGlobal('localStorage', {
@@ -70,20 +72,17 @@ const bob: User = {
 
 function makeTile(overrides: Partial<KanbanTile> = {}): KanbanTile {
     return {
-        idIssue: 1,
-        idIssuePublic: overrides.idIssue ?? 1,
-        idProject: 1,
-        idState: 1,
-        idSeverity: 1,
-        title: 'test',
-        description: '',
-        tracked: 0,
+        ...Fixtures.extendedIssue({
+            idIssuePublic: overrides.idIssue ?? 1,
+            idState: 1,
+            idSeverity: 1,
+            title: 'test',
+            assignedTo: alice.idUser
+        }),
         state: stateA,
-        severity: undefined,
         createUser: undefined,
         updateUser: undefined,
         assignedToUser: alice,
-        assignedTo: alice.idUser,
         ...overrides
     };
 }
@@ -92,16 +91,7 @@ function issueNotice(idProject: number, idIssue: number): Notice<Issue> {
     return {
         subject: NoticeSubject.Issue,
         action: NoticeAction.Create,
-        payload: {
-            idIssue,
-            idIssuePublic: idIssue,
-            idProject,
-            idState: null,
-            idSeverity: null,
-            title: 'T',
-            description: '',
-            tracked: 0
-        }
+        payload: Fixtures.issue({ idIssue, idIssuePublic: idIssue, idProject, title: 'T' })
     };
 }
 
@@ -133,7 +123,11 @@ function makeCellDropEvent(
     toCell: SwimlaneCell,
     previousIndex = 0
 ): CdkDragDrop<SwimlaneCell> {
-    const fromCell: SwimlaneCell = { state: stateA, user: alice, tiles: fromTiles };
+    const fromCell: SwimlaneCell = Fixtures.swimlaneCell({
+        state: stateA,
+        user: alice,
+        tiles: fromTiles
+    });
     return {
         previousContainer: { data: fromCell } as any,
         container: { data: toCell } as any,
@@ -292,6 +286,8 @@ interface Handlers {
     onSprintChange(idSprint: number | null): void;
     onEditSprint(idSprint: number): void;
     onSprintDeleted(): void;
+    currentSortLabel(): string;
+    sortMenuItems(): { label: string; command: () => void }[];
 }
 const handlers = (c: IssueKanbanComponent): Handlers => c as unknown as Handlers;
 
@@ -375,7 +371,7 @@ describe('IssueKanbanComponent — i18n reactivity', () => {
 
     it('uses labelKey for view mode options', () => {
         const h = setup();
-        expect(h.component.viewModeOptions).toEqual([
+        expect(h.component['viewModeOptions']).toEqual([
             { labelKey: 'ISSUE.KANBAN.LAYOUT.COLUMNS', value: 'columns' },
             { labelKey: 'ISSUE.KANBAN.LAYOUT.SWIMLANE', value: 'swimlane' }
         ]);
@@ -512,7 +508,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
     it('state change: calls updateIssue with the new idState and state', () => {
         const h = setup();
         const tile = makeTile({ idState: 1, state: stateA });
-        const toCell: SwimlaneCell = { state: stateB, user: alice, tiles: [] };
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
@@ -525,7 +521,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
     it('user change: calls updateIssue with the new assignedTo and assignedToUser', () => {
         const h = setup();
         const tile = makeTile({ assignedTo: alice.idUser, assignedToUser: alice });
-        const toCell: SwimlaneCell = { state: stateA, user: bob, tiles: [] };
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateA, user: bob });
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
@@ -538,7 +534,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
     it('no-op drop (same state and user): does not call updateIssue', () => {
         const h = setup();
         const tile = makeTile({ idState: 1, assignedTo: alice.idUser });
-        const toCell: SwimlaneCell = { state: stateA, user: alice, tiles: [] };
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateA, user: alice });
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
@@ -548,7 +544,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
     it('on success: does not refresh the board nor show a toast', () => {
         const h = setup();
         const tile = makeTile({ idState: 1, state: stateA });
-        const toCell: SwimlaneCell = { state: stateB, user: alice, tiles: [] };
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
@@ -560,7 +556,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
         const h = setup();
         h.updateIssue.mockReturnValue(throwError(() => new Error('409')));
         const tile = makeTile({ idState: 1, state: stateA });
-        const toCell: SwimlaneCell = { state: stateB, user: alice, tiles: [] };
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 

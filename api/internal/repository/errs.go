@@ -12,7 +12,7 @@ var (
 	ErrTaskNotFound       = errors.New("agent task not found")
 	ErrTaskStatusMismatch = errors.New("agent task status does not match expected")
 
-	ErrBotGatewayNotFound      = errors.New("bot gateway not found")
+	ErrAgentGatewayNotFound    = errors.New("agent gateway not found")
 	ErrGitIntegrationDuplicate = errors.New("git integration duplicate")
 
 	ErrAnchorWrongThread = errors.New("anchor parent message belongs to a different thread")

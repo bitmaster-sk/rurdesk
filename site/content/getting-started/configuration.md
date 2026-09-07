@@ -46,6 +46,7 @@ These must match the credentials your Postgres service is configured with.
 | `MCP_PUBLIC_BASE_URL` | _(empty)_ | Pins the origin advertised to MCP clients in the `/mcp` endpoint URL. Empty by default — derived from each request's `Host`. Set it only when your proxy cannot preserve `Host` |
 | `GIT_INTEGRATION_ENCRYPTION_KEY` | `<32-byte-key>` | Encrypts stored git integration tokens at rest |
 | `MERGE_POLL_INTERVAL` | `60s` | How often linked pull requests are checked for a merge. Lower it for snappier `done` state changes at the cost of more git-host API calls |
+| `AGENT_EMAIL_DOMAIN` | `agents.local` | Domain for the synthesized e-mail of an agent account (`agent-<name>@<domain>`). Renamed from `BOT_EMAIL_DOMAIN`; existing accounts keep the address they were created with |
 
 > **WebSocket origin & your reverse proxy.** Real-time updates use a WebSocket
 > that is accepted only when the request's `Origin` matches its `Host` (a
@@ -100,7 +101,7 @@ docker exec \
 
 ### Password hashing cost
 
-Passwords and bot secrets are hashed with bcrypt at cost 10. `BCRYPT_COST`
+Passwords and agent secrets are hashed with bcrypt at cost 10. `BCRYPT_COST`
 overrides that, and values outside bcrypt's accepted range (4–31) are ignored in
 favour of the default.
 

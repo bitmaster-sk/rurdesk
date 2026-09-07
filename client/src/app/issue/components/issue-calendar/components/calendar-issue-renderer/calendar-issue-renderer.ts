@@ -5,7 +5,7 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Issue } from '../../../../model/issue.model';
 import {
     IssueCardViewType,
-    isComfortableMode
+    IssueCardViewMode
 } from '../../../../constants/issue-card-view-type.constant';
 
 export interface CalendarRenderData {
@@ -21,7 +21,7 @@ export class CalendarIssueRenderer {
         const severity = evt.event.extendedProps['severity'] as IssueSeverity | undefined;
         const state = evt.event.extendedProps['state'] as IssueState | undefined;
 
-        const node = isComfortableMode(cardMode)
+        const node = IssueCardViewMode.isComfortable(cardMode)
             ? this.buildComfortable(evt, issue, assigned, severity, state)
             : this.buildCompact(evt, issue, assigned, severity, state);
 

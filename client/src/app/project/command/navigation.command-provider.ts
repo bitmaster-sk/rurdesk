@@ -9,7 +9,7 @@ import {
     CommandProvider,
     Translator
 } from '../../core/command/command.model';
-import { buildNavigationCommands, buildGlobalCommands } from './navigation.commands';
+import { NavigationCommands } from './navigation.commands';
 import { ProjectService } from '../project.service';
 import { Project } from '../model/project.model';
 import { AclStore } from '../store/acl.store';
@@ -38,7 +38,7 @@ export class NavigationCommandProvider implements CommandProvider {
 
     public getCommands(ctx: CommandContext): Command[] {
         const others = this.projects.filter(p => p.idProject !== ctx.idProject);
-        const nav = buildNavigationCommands(
+        const nav = NavigationCommands.build(
             ctx,
             others,
             p => {
@@ -47,7 +47,7 @@ export class NavigationCommandProvider implements CommandProvider {
             { canOpenSettings: this.acl.canUpdateProject() },
             this.t
         );
-        const global = buildGlobalCommands(
+        const global = NavigationCommands.buildGlobal(
             ctx,
             {
                 // `0` is the app's new-issue sentinel (same target as the Tasks page "+" button)

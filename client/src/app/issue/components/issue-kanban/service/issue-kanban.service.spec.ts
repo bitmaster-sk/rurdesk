@@ -12,6 +12,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { User } from 'src/app/auth/model/user.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
@@ -54,19 +55,15 @@ const sev: IssueSeverity = {
 };
 
 function makeIssue(overrides: Partial<Issue>): Issue {
-    return {
-        idIssue: 1,
+    return Fixtures.issue({
         idIssuePublic: overrides.idIssue ?? 1,
-        idProject: 1,
         idState: 1,
         idSeverity: 1,
         title: 'test',
-        description: '',
-        tracked: 0,
         createBy: 1,
         updateBy: 1,
         ...overrides
-    };
+    });
 }
 
 // Mimics the backend grouped endpoint: groups issues by state (and assignedTo for swimlane).

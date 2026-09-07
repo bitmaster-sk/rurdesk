@@ -103,7 +103,7 @@ func (s *McpProjectContextSuite) callGetProjectContext(token string) mcpToolResu
 	return out
 }
 
-// A project member who is not the owner is the tool's main consumer (bots can
+// A project member who is not the owner is the tool's main consumer (agents can
 // never be project owners), so the aggregate must succeed for them.
 func (s *McpProjectContextSuite) Test_01_Member_GetsContextWithMembers() {
 	out := s.callGetProjectContext(s.MemberToken)

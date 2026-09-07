@@ -8,19 +8,21 @@ const LOCALE_MAP: Record<string, typeof enLocale> = {
     sk: skLocale
 };
 
-/**
- * Resolve the active app language to a FullCalendar locale object.
- * Unknown or missing codes fall back to English.
- */
-export function resolveFullCalendarLocale(lang?: string): typeof enLocale {
-    if (!lang) {
+export abstract class FullCalendarLocales {
+    /**
+     * Resolve the active app language to a FullCalendar locale object.
+     * Unknown or missing codes fall back to English.
+     */
+    public static resolve(lang?: string): typeof enLocale {
+        if (!lang) {
+            return enLocale;
+        }
+
+        const locale = LOCALE_MAP[lang];
+        if (locale) {
+            return locale;
+        }
+
         return enLocale;
     }
-
-    const locale = LOCALE_MAP[lang];
-    if (locale) {
-        return locale;
-    }
-
-    return enLocale;
 }

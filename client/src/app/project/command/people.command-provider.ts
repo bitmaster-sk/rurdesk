@@ -8,7 +8,7 @@ import {
     CommandProvider,
     Translator
 } from '../../core/command/command.model';
-import { buildPeopleCommands } from './people.commands';
+import { PeopleCommands } from './people.commands';
 import { ProjectMemberStore } from '../project-member.store';
 import { AclStore } from '../store/acl.store';
 import { IssueService } from '../../issue/issue.service';
@@ -25,7 +25,7 @@ export class PeopleCommandProvider implements CommandProvider {
     private readonly users = toSignal(inject(ProjectMemberStore).users$, { initialValue: [] });
 
     public getCommands(ctx: CommandContext): Command[] {
-        return buildPeopleCommands(
+        return PeopleCommands.build(
             ctx,
             this.users() ?? [],
             idUser => this.onPick(idUser, ctx),
