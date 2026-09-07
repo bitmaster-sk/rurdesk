@@ -104,7 +104,7 @@ export class IssueInfoComponent implements OnInit {
     public readonly currentIssue = signal<Issue | null>(null);
     public readonly isNewIssue = computed(() => !this.currentIssue()?.idIssue);
 
-    /** Whole-issue auto-save status (one form → one save), shown in the header. */
+    // Auto-save status of the whole issue form, shown in the header.
     public readonly saveStatus = signal<UiSaveState>(UiSaveState.Idle);
 
     public currentUserId(): number {
@@ -114,16 +114,12 @@ export class IssueInfoComponent implements OnInit {
     public readonly showInputDescription = signal(false);
 
     protected readonly isMrLinkPickerOpen = signal(false);
-    // PR collapsible panel — default closed so the issue panel isn't
-    // dominated by the diff. The diff fetch is deferred until the first
-    // expand, matching the previous "load on toggle" behavior.
+    // PR panel starts closed; the diff is fetched on the first expand.
     protected readonly isPrPanelCollapsed = signal(true);
     protected readonly mrStatus = signal<MrStatus | null>(null);
     protected readonly mrDiff = signal<MrDiff | null>(null);
     protected readonly isMrDiffLoading = signal(false);
-    // Loaded on demand the first time the issue's idGitIntegration is seen
-    // so the panel can render host-appropriate labels ("Pull request" vs
-    // "Merge request") and the link picker / unlink action match.
+    // Git integration of the linked MR; gives the panel the host name and labels.
     protected readonly gitIntegration = signal<GitIntegrationRes | null>(null);
     protected readonly mrTermKey = computed(() =>
         GitHostTerminology.termKey(this.gitIntegration()?.hostType ?? null)
@@ -135,14 +131,8 @@ export class IssueInfoComponent implements OnInit {
         () => this.agentRun()?.prUrl ?? (this.mrStatus()?.webUrl || null)
     );
 
-    /**
-     * Per-file deep-link generator handed to the diff viewer so each file
-     * header can render an "open on host" icon. All files in the same MR
-     * point at the same files-changed URL on the host — we don't compute
-     * per-file anchors (would need async hashing of the path). Returns null
-     * until the issue actually has an MR id + the git integration is
-     * loaded; the viewer then just skips the icon.
-     */
+    // Builds the "open on host" link for each file in the diff. Every file gets
+    // the same files-changed URL; null until the MR and integration are known.
     protected readonly mrFileLinkBuilder = computed<DiffFileLinkBuilder | null>(() => {
         const integration = this.gitIntegration();
         const mrId = this.currentIssue()?.mrId;
@@ -217,6 +207,12 @@ export class IssueInfoComponent implements OnInit {
 
     private readonly formReset$ = new Subject<void>();
 
+    // What the panel currently shows and what was already requested. Every
+    // issue notice swaps in a new issue object, so without these keys the panel
+    // would reset and refetch on unrelated edits.
+    private gitMrKey: string | null = null;
+    private gitIntegrationKey: number | null = null;
+
     public constructor() {
         this.destroyRef.onDestroy(() => this.formReset$.complete());
 
@@ -226,22 +222,41 @@ export class IssueInfoComponent implements OnInit {
             untracked(() => {
                 this.form = this.issueToForm();
                 this.listenFormChange();
-                this.mrStatus.set(null);
-                this.mrDiff.set(null);
-                this.isPrPanelCollapsed.set(true);
-                this.gitIntegration.set(null);
-                if (issue?.idGitIntegration && issue.mrId) {
-                    this.loadMrStatus(issue.idGitIntegration, issue.mrId);
-                }
-                if (issue?.idGitIntegration) {
-                    this.loadGitIntegration(issue.idProject, issue.idGitIntegration);
-                }
+                this.syncMrPanel(issue);
             });
         });
     }
 
     public ngOnInit(): void {
         this.listenMrStatusChange();
+    }
+
+    // Resets and reloads the PR panel, but only when the issue points at a
+    // different MR or integration than what is already shown.
+    private syncMrPanel(issue: Issue | null): void {
+        const gitMrKey =
+            issue?.idGitIntegration && issue.mrId
+                ? `${issue.idIssue}:${issue.idGitIntegration}:${issue.mrId}`
+                : null;
+
+        if (gitMrKey !== this.gitMrKey) {
+            this.gitMrKey = gitMrKey;
+            this.mrStatus.set(null);
+            this.mrDiff.set(null);
+            this.isPrPanelCollapsed.set(true);
+            if (issue?.idGitIntegration && issue.mrId) {
+                this.loadMrStatus(issue.idGitIntegration, issue.mrId);
+            }
+        }
+
+        const idGitIntegration = issue?.idGitIntegration ?? null;
+        if (idGitIntegration !== this.gitIntegrationKey) {
+            this.gitIntegrationKey = idGitIntegration;
+            this.gitIntegration.set(null);
+            if (issue && idGitIntegration) {
+                this.loadGitIntegration(issue.idProject, idGitIntegration);
+            }
+        }
     }
 
     private listenMrStatusChange(): void {
@@ -282,8 +297,7 @@ export class IssueInfoComponent implements OnInit {
     public onSave(): void {
         const issue = this.formToIssue();
         const isUpdate = !!issue.idIssue;
-        // Only an edit auto-saves and shows the header chip; a new issue is an
-        // explicit create that navigates away on success.
+        // Only an edit shows the save chip; a create navigates away instead.
         if (isUpdate) {
             this.saveStatus.set(UiSaveState.Saving);
         }
@@ -373,21 +387,12 @@ export class IssueInfoComponent implements OnInit {
         };
         this.sIssue.updateIssue(updated).subscribe(saved => {
             this.currentIssue.set(saved);
-            this.mrStatus.set(null);
-            this.mrDiff.set(null);
-            this.isPrPanelCollapsed.set(true);
-            if (saved.idGitIntegration && saved.mrId) {
-                this.loadMrStatus(saved.idGitIntegration, saved.mrId);
-            }
+            this.syncMrPanel(saved);
         });
     }
 
-    /**
-     * The dock already assigned the bot and created its run server-side. Both
-     * the control and the local issue must be synced WITHOUT emitting: the form
-     * autosaves on every change, so a stale `assignedTo` would be PATCHed back
-     * on the next edit — un-assigning the agent and re-entering the assignee hook.
-     */
+    // Syncs the assignee the dock already saved. Must not emit: the form
+    // autosaves, so a stale assignedTo would be sent back and un-assign the agent.
     protected onAgentRunCreated(run: AgentRun): void {
         this.assignedToControl.setValue(run.idUserAgent, { emitEvent: false });
         const issue = this.currentIssue();
@@ -405,8 +410,7 @@ export class IssueInfoComponent implements OnInit {
         this.isPrPanelCollapsed.set(!wasCollapsed);
         if (!wasCollapsed) return;
 
-        // Lazy-load the diff the first time the panel is opened so we don't
-        // hit the git host on every issue render.
+        // Load the diff on first expand, not on every issue render.
         const issue = this.currentIssue();
         if (!issue?.idGitIntegration || !issue.mrId || this.mrDiff()) return;
         this.isMrDiffLoading.set(true);

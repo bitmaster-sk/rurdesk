@@ -32,9 +32,13 @@ const ISSUE: Issue = {
 
 describe('IssueInfoComponent — live MR status notice (browser)', () => {
     let mrStatus$: Subject<unknown>;
+    let getStatus$: ReturnType<typeof vi.fn>;
+    let getIntegration$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         mrStatus$ = new Subject<unknown>();
+        getStatus$ = vi.fn(() => NEVER);
+        getIntegration$ = vi.fn(() => NEVER);
         await TestBed.configureTestingModule({
             declarations: [IssueInfoComponent],
             providers: [
@@ -54,9 +58,9 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 { provide: PinService, useValue: { insertPin: () => NEVER } },
                 {
                     provide: MrDiffApi,
-                    useValue: { getStatus$: () => NEVER, getDiff$: () => NEVER }
+                    useValue: { getStatus$, getDiff$: () => NEVER }
                 },
-                { provide: GitIntegrationApi, useValue: { get$: () => NEVER } },
+                { provide: GitIntegrationApi, useValue: { get$: getIntegration$ } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
                 { provide: NoticeService, useValue: { mrStatus$: mrStatus$.asObservable() } }
             ]
@@ -97,5 +101,101 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
         expect(
             (fixture.componentInstance as unknown as { mrStatus: () => MrStatus | null }).mrStatus()
         ).toEqual(expectedStatus);
+    });
+
+    it('patches the badge to merged from a terminal mr_status notice', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        mrStatus$.next({
+            subject: 'mr_status',
+            action: 'u',
+            payload: {
+                idIssue: 10,
+                idGitIntegration: 3,
+                idMr: 'mr-123',
+                state: 'merged',
+                approved: true,
+                ciStatus: 'success',
+                webUrl: 'https://host/mr/123',
+                headSha: 'def456'
+            } satisfies MrStatusNotice
+        });
+        fixture.detectChanges();
+
+        expect(
+            (fixture.componentInstance as unknown as { mrStatus: () => MrStatus | null }).mrStatus()
+                ?.state
+        ).toBe(MrState.Merged);
+    });
+
+    it('keeps badge, panel and requests untouched when an issue notice swaps the object', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        mrStatus$.next({
+            subject: 'mr_status',
+            action: 'u',
+            payload: {
+                idIssue: 10,
+                idGitIntegration: 3,
+                idMr: 'mr-123',
+                state: 'merged',
+                approved: true,
+                ciStatus: 'success',
+                webUrl: 'https://host/mr/123',
+                headSha: 'def456'
+            } satisfies MrStatusNotice
+        });
+        fixture.detectChanges();
+
+        const component = fixture.componentInstance as unknown as {
+            mrStatus: () => MrStatus | null;
+            isPrPanelCollapsed: { (): boolean; set: (value: boolean) => void };
+        };
+        component.isPrPanelCollapsed.set(false);
+        const patched = component.mrStatus();
+
+        fixture.componentRef.setInput('issue', { ...ISSUE, idState: 3, title: 'renamed' });
+        fixture.detectChanges();
+
+        expect(component.mrStatus()).toBe(patched);
+        expect(component.isPrPanelCollapsed()).toBe(false);
+        expect(getStatus$).toHaveBeenCalledTimes(1);
+        expect(getIntegration$).toHaveBeenCalledTimes(1);
+    });
+
+    it('resets and reloads when the issue points at a different MR', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        mrStatus$.next({
+            subject: 'mr_status',
+            action: 'u',
+            payload: {
+                idIssue: 10,
+                idGitIntegration: 3,
+                idMr: 'mr-123',
+                state: 'open',
+                approved: false,
+                ciStatus: 'pending',
+                webUrl: 'https://host/mr/123',
+                headSha: 'def456'
+            } satisfies MrStatusNotice
+        });
+        fixture.detectChanges();
+
+        fixture.componentRef.setInput('issue', { ...ISSUE, mrId: 'mr-999' });
+        fixture.detectChanges();
+
+        const component = fixture.componentInstance as unknown as {
+            mrStatus: () => MrStatus | null;
+        };
+        expect(component.mrStatus()).toBeNull();
+        expect(getStatus$).toHaveBeenCalledTimes(2);
+        expect(getIntegration$).toHaveBeenCalledTimes(1);
     });
 });
