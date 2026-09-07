@@ -35,7 +35,7 @@ type LoadIssueFilter struct {
 }
 
 func (f *LoadIssueFilter) IsValid() bool {
-	return !(f.IdProject == nil && f.IdIssuePublic == nil && f.IdIssue == nil)
+	return f.IdProject != nil || f.IdIssuePublic != nil || f.IdIssue != nil
 }
 
 type IssueRepository struct {

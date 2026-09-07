@@ -13,12 +13,12 @@ type fakeStore struct {
 	upserted map[string]string
 }
 
-func (f *fakeStore) LoadAll(ctx context.Context) (map[string]string, error) {
+func (f *fakeStore) LoadAll(_ context.Context) (map[string]string, error) {
 	f.loads++
 	return f.data, nil
 }
 
-func (f *fakeStore) Upsert(ctx context.Context, values map[string]string) error {
+func (f *fakeStore) Upsert(_ context.Context, values map[string]string) error {
 	f.upserted = values
 	for k, v := range values {
 		f.data[k] = v

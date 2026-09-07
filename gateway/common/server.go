@@ -79,7 +79,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	log.Debug().Msg("health check")
 	log.Debug().
 		Int("count", s.orchestrator.ActiveTaskCount()).

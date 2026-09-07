@@ -77,12 +77,12 @@ func reportRecoveredWithRetry(ctx context.Context, tc *common.TrackerClient) {
 	)
 	delay := baseDelay
 	for attempt := 1; ; attempt++ {
-		if err := tc.ReportRecovered(ctx); err == nil {
+		err := tc.ReportRecovered(ctx)
+		if err == nil {
 			log.Info().Msg("gateway recovery reported")
 			return
-		} else {
-			log.Warn().Err(err).Int("attempt", attempt).Msg("gateway recovery report failed; will retry")
 		}
+		log.Warn().Err(err).Int("attempt", attempt).Msg("gateway recovery report failed; will retry")
 		if attempt >= maxAttempts {
 			log.Warn().Msg("gateway recovery report gave up; heartbeat sweep will reap orphaned tasks")
 			return

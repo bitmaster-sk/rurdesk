@@ -265,7 +265,7 @@ type recordingSender struct {
 	events []common.ThinkingEvent
 }
 
-func (r *recordingSender) SendThinking(ctx context.Context, idTask int64, seq int, events []common.ThinkingEvent) error {
+func (r *recordingSender) SendThinking(_ context.Context, _ int64, _ int, events []common.ThinkingEvent) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.events = append(r.events, events...)

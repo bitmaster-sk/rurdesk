@@ -38,42 +38,42 @@ func newFakeStore() *fakeStore {
 	}
 }
 
-func (f *fakeStore) StoredSize(ctx context.Context, idTask int64) (int, bool, error) {
+func (f *fakeStore) StoredSize(_ context.Context, _ int64) (int, bool, error) {
 	return f.storedBytes, f.isTruncated, nil
 }
 
-func (f *fakeStore) Append(ctx context.Context, idTask int64, seq int, events model.AgentThinkingEvents) error {
+func (f *fakeStore) Append(_ context.Context, _ int64, _ int, events model.AgentThinkingEvents) error {
 	f.appended = append(f.appended, events)
 	return nil
 }
 
-func (f *fakeStore) MarkTruncated(ctx context.Context, idTask int64, seq int) error {
+func (f *fakeStore) MarkTruncated(_ context.Context, _ int64, _ int) error {
 	f.truncated++
 	return nil
 }
 
-func (f *fakeStore) LoadEventsByTask(ctx context.Context, idTask int64) (model.AgentThinkingEvents, error) {
+func (f *fakeStore) LoadEventsByTask(_ context.Context, idTask int64) (model.AgentThinkingEvents, error) {
 	if f.unreadable == idTask {
 		return nil, errors.New("event row is unreadable")
 	}
 	return f.events[idTask], nil
 }
 
-func (f *fakeStore) Compact(ctx context.Context, idTask int64, blob []byte, tail string) error {
+func (f *fakeStore) Compact(_ context.Context, idTask int64, blob []byte, tail string) error {
 	f.compactedTo[idTask] = tail
 	f.blobs[idTask] = blob
 	return nil
 }
 
-func (f *fakeStore) LoadCompacted(ctx context.Context, idRun int64, stage string) ([]byte, string, error) {
+func (f *fakeStore) LoadCompacted(_ context.Context, _ int64, _ string) ([]byte, string, error) {
 	return f.loadedBlob, f.loadedTail, f.loadErr
 }
 
-func (f *fakeStore) LoadEventsByStage(ctx context.Context, idRun int64, stage string) (model.AgentThinkingEvents, int64, int, error) {
+func (f *fakeStore) LoadEventsByStage(_ context.Context, _ int64, _ string) (model.AgentThinkingEvents, int64, int, error) {
 	return f.stageEvents, f.stageIdTask, f.stageLastSeq, f.stageErr
 }
 
-func (f *fakeStore) OrphanedTaskIds(ctx context.Context) ([]int64, error) {
+func (f *fakeStore) OrphanedTaskIds(_ context.Context) ([]int64, error) {
 	return f.orphans, nil
 }
 
@@ -82,18 +82,18 @@ type fakeTasks struct {
 	beatErr    error
 }
 
-func (f *fakeTasks) LoadById(ctx context.Context, idTask int64) (*model.AgentTask, error) {
+func (f *fakeTasks) LoadById(_ context.Context, idTask int64) (*model.AgentTask, error) {
 	return &model.AgentTask{IdTask: idTask, IdRun: 9, Stage: "implementation"}, nil
 }
 
-func (f *fakeTasks) RecordHeartbeat(ctx context.Context, idTask int64) error {
+func (f *fakeTasks) RecordHeartbeat(_ context.Context, _ int64) error {
 	f.heartbeats++
 	return f.beatErr
 }
 
 type fakeRuns struct{}
 
-func (f *fakeRuns) LoadById(ctx context.Context, idRun int64) (*model.AgentRun, error) {
+func (f *fakeRuns) LoadById(_ context.Context, idRun int64) (*model.AgentRun, error) {
 	return &model.AgentRun{IdRun: idRun, IdProject: 3}, nil
 }
 
@@ -102,7 +102,7 @@ type fakeNotifier struct {
 	idsProject []int64
 }
 
-func (f *fakeNotifier) Broadcast(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice) {
+func (f *fakeNotifier) Broadcast(_ context.Context, idProject int64, notice *model.AgentThinkingNotice) {
 	f.notices = append(f.notices, notice)
 	f.idsProject = append(f.idsProject, idProject)
 }

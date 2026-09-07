@@ -573,7 +573,7 @@ func GetJobScheduler() *scheduler.Scheduler {
 			scheduler.Task{
 				Name:     "agent-thinking-tail-sweep",
 				Interval: time.Hour,
-				Run: func(ctx context.Context) error {
+				Run: func(_ context.Context) error {
 					thinking, err := GetAgentThinkingService()
 					if err != nil {
 						return err

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"time"
@@ -62,7 +61,7 @@ func NewDispatcher(
 // DispatchStageExecute fires the per-stage execution webhook for an agent_task,
 // carrying the resolved stage plan and context bundle. On final failure it
 // marks both the task and the run failed.
-func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask) {
+func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun, task *model.AgentTask) {
 	go func() {
 		bgCtx := context.Background()
 		bundle, err := d.buildContextBundle(bgCtx, run, task)
@@ -82,7 +81,7 @@ func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentR
 				"idTask":        task.IdTask,
 				"stage":         task.Stage,
 				"attemptNo":     task.AttemptNo,
-				"stagePlan":     json.RawMessage(run.StagePlan),
+				"stagePlan":     run.StagePlan,
 				"contextBundle": bundle,
 			},
 		}

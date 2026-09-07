@@ -359,7 +359,7 @@ func TestGitHubHost_FindOpenPullRequest(t *testing.T) {
 }
 
 func TestGitHubHost_FindOpenPullRequest_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		json.NewEncoder(w).Encode([]map[string]any{})
 	}))
 	defer srv.Close()
@@ -393,7 +393,7 @@ func TestGitHubHost_CreatePullRequest(t *testing.T) {
 }
 
 func TestGitHubHost_CreatePullRequest_Error(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(w).Encode(map[string]any{"message": "No commits between main and feature"})
 	}))

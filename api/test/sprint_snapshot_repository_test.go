@@ -287,15 +287,15 @@ func TestSprintSnapshot_ScheduledRunIsIdempotent(t *testing.T) {
 
 	repo := injector.GetSprintRepository()
 	ctx := context.Background()
-	require.Positive(t, mustUpsertOpen(t, repo, ctx))
-	require.Zero(t, mustUpsertOpen(t, repo, ctx), "an unchanged day costs no write")
+	require.Positive(t, mustUpsertOpen(ctx, t, repo))
+	require.Zero(t, mustUpsertOpen(ctx, t, repo), "an unchanged day costs no write")
 
 	snaps, err := repo.LoadSnapshots(ctx, sprint.IdSprint)
 	require.NoError(t, err)
 	require.Len(t, snaps, 1)
 }
 
-func mustUpsertOpen(t *testing.T, repo *repository.SprintRepository, ctx context.Context) int64 {
+func mustUpsertOpen(ctx context.Context, t *testing.T, repo *repository.SprintRepository) int64 {
 	written, err := repo.UpsertSnapshotsForOpenSprints(ctx)
 	require.NoError(t, err)
 	return written

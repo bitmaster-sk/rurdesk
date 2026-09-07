@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func (h *GiteaHost) getCiStatus(ctx context.Context, idMr, sha string) string {
+func (h *GiteaHost) getCiStatus(ctx context.Context, _, sha string) string {
 	return aggregateCiStatus(fetchCommitStatusJobs(ctx, h.client,
 		fmt.Sprintf("%s/api/v1/repos/%s/commits/%s/status", h.baseUrl, h.repoPath, sha), h.setAuth))
 }

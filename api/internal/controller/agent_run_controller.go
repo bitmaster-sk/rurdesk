@@ -281,7 +281,7 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 	}
 
 	ctrl.notifyRunUpdate(updated)
-	ctrl.respondRunSnapshot(c, ctx, updated)
+	ctrl.respondRunSnapshot(ctx, c, updated)
 }
 
 // Cancel transitions the run to cancelled and cancels any non-terminal tasks.
@@ -336,7 +336,7 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 	}()
 
 	ctrl.notifyRunUpdate(updated)
-	ctrl.respondRunSnapshot(c, ctx, updated)
+	ctrl.respondRunSnapshot(ctx, c, updated)
 }
 
 // Continue creates a fresh pending agent_task for the failed stage and
@@ -1344,7 +1344,7 @@ func (ctrl *AgentRunController) notifyRunUpdate(run *model.AgentRun) {
 // respondRunSnapshot returns the same snapshot shape as the GET endpoints and
 // the websocket broadcast. Mutating endpoints must use this — the bare run
 // drops `stages`, blanking the client's timeline until the next notice.
-func (ctrl *AgentRunController) respondRunSnapshot(c *gin.Context, ctx context.Context, run *model.AgentRun) {
+func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.Context, run *model.AgentRun) {
 	events, err := ctrl.agentRunRepo.LoadEvents(ctx, run.IdRun)
 	if err != nil {
 		_ = c.Error(err)

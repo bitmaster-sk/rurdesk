@@ -72,9 +72,10 @@ func (s *SeverityNotificationSuite) TestSeverityNotification() {
 	var low, high *model.Severity
 	for _, sev := range severities {
 		if sev.IdProject == project.IdProject {
-			if sev.Title == "Low" {
+			switch sev.Title {
+			case "Low":
 				low = sev
-			} else if sev.Title == "High" {
+			case "High":
 				high = sev
 			}
 		}
@@ -138,9 +139,10 @@ func (s *SeverityNotificationSuite) TestSeverityEscalationNotification() {
 	var low, high *model.Severity
 	for _, sev := range severities {
 		if sev.IdProject == project.IdProject {
-			if sev.Title == "Low" {
+			switch sev.Title {
+			case "Low":
 				low = sev
-			} else if sev.Title == "High" {
+			case "High":
 				high = sev
 			}
 		}

@@ -26,51 +26,47 @@ func NewDependencyInjector() *DependencyInjector {
 //
 // WARNING: use through typed accessor functions, not directly.
 func (di *DependencyInjector) GetWithNew(key string, factory func() (any, error)) (any, error) {
-	for {
-		di.lock.RLock()
-		state, exists := di.deps[key]
-		di.lock.RUnlock()
+	di.lock.RLock()
+	state, exists := di.deps[key]
+	di.lock.RUnlock()
 
-		if !exists {
-			// Try to become the creator.
-			di.lock.Lock()
+	if !exists {
+		// Try to become the creator.
+		di.lock.Lock()
 
-			// Re-check: another goroutine may have created it while we waited for the lock.
-			if state, exists = di.deps[key]; exists {
-				// We lost the race; fall through to wait for the actual creator.
-				di.lock.Unlock()
-			} else {
-				// We are the creator.
-				state = &dependency{
-					creating: true,
-					ready:    make(chan struct{}),
-				}
-				di.deps[key] = state
-				di.lock.Unlock()
-
-				// Run the factory without holding the lock.
-				instance, err := factory()
-
-				// Publish the result and wake any waiters.
-				di.lock.Lock()
-				state.instance = instance
-				state.err = err
-				state.creating = false
-				close(state.ready)
-				di.lock.Unlock()
-
-				return instance, err
-			}
-		}
-
-		if state.creating {
-			// Another goroutine is creating it; wait for it to finish.
-			<-state.ready
-			return state.instance, state.err
+		// Re-check: another goroutine may have created it while we waited for the lock.
+		if state, exists = di.deps[key]; exists {
+			// We lost the race; fall through to wait for the actual creator.
+			di.lock.Unlock()
 		} else {
-			return state.instance, state.err
+			// We are the creator.
+			state = &dependency{
+				creating: true,
+				ready:    make(chan struct{}),
+			}
+			di.deps[key] = state
+			di.lock.Unlock()
+
+			// Run the factory without holding the lock.
+			instance, err := factory()
+
+			// Publish the result and wake any waiters.
+			di.lock.Lock()
+			state.instance = instance
+			state.err = err
+			state.creating = false
+			close(state.ready)
+			di.lock.Unlock()
+
+			return instance, err
 		}
 	}
+
+	if state.creating {
+		// Another goroutine is creating it; wait for it to finish.
+		<-state.ready
+	}
+	return state.instance, state.err
 }
 
 // Set injects a dependency directly.

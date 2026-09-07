@@ -16,7 +16,7 @@ type countingMemberLoader struct {
 	members []*model.User
 }
 
-func (l *countingMemberLoader) LoadProjectsMembers(ctx context.Context, idsProject []int64) ([]*model.User, error) {
+func (l *countingMemberLoader) LoadProjectsMembers(_ context.Context, _ []int64) ([]*model.User, error) {
 	l.calls++
 	return l.members, nil
 }

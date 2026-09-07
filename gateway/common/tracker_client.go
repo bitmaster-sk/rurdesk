@@ -85,11 +85,7 @@ func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stat
 		DurationMs     int `json:"durationMs"`
 		ToolCallsCount int `json:"toolCallsCount"`
 	}
-	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/stats", idTask), body{
-		TokensUsed:     stats.TokensUsed,
-		DurationMs:     stats.DurationMs,
-		ToolCallsCount: stats.ToolCallsCount,
-	})
+	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/stats", idTask), body(stats))
 }
 
 // SendThinking posts one batch of the task's thinking events to the tracker.

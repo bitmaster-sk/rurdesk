@@ -41,7 +41,7 @@ func handleGatewayEvent(w http.ResponseWriter, r *http.Request) {
 		go executeStage(target, event.IdRun, event.Payload)
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"ok":true}`))
+	_, _ = w.Write([]byte(`{"ok":true}`))
 }
 
 func decodeHexSecret(value string) ([]byte, error) {

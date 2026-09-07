@@ -80,9 +80,9 @@ func BuildBurndownDays(sprint *model.Sprint, snaps []*model.SprintSnapshot) []mo
 
 	var carried *model.SprintSnapshot
 	for day := startDay; !day.After(lastDay); day = day.AddDate(0, 0, 1) {
-		sn, real := byDay[day]
+		sn, isRecorded := byDay[day]
 		switch {
-		case real:
+		case isRecorded:
 			carried = sn
 			days = append(days, burndownDay(day, sn, true))
 		case day.Equal(startDay) && preStart != nil:
@@ -97,7 +97,7 @@ func BuildBurndownDays(sprint *model.Sprint, snaps []*model.SprintSnapshot) []mo
 	return days
 }
 
-func burndownDay(day time.Time, sn *model.SprintSnapshot, real bool) model.SprintBurndownDay {
+func burndownDay(day time.Time, sn *model.SprintSnapshot, isRecorded bool) model.SprintBurndownDay {
 	totalPoints, donePoints := sn.TotalPoints, sn.DonePoints
 	totalIssues, doneIssues := sn.TotalIssues, sn.DoneIssues
 	remainingPoints := totalPoints - donePoints
@@ -110,7 +110,7 @@ func burndownDay(day time.Time, sn *model.SprintSnapshot, real bool) model.Sprin
 		TotalIssues:     &totalIssues,
 		DoneIssues:      &doneIssues,
 		RemainingIssues: &remainingIssues,
-		Snapshot:        real,
+		Snapshot:        isRecorded,
 	}
 }
 

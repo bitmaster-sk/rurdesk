@@ -21,8 +21,8 @@ func fullStagePlan() json.RawMessage {
 	return b
 }
 
-func at(min int) *time.Time {
-	t := time.Date(2026, 5, 26, 19, min, 0, 0, time.UTC)
+func at(minute int) *time.Time {
+	t := time.Date(2026, 5, 26, 19, minute, 0, 0, time.UTC)
 	return &t
 }
 
@@ -33,10 +33,10 @@ func completedTask(stage string, finished *time.Time, output *int64) *model.Agen
 	}
 }
 
-func approvalEvent(min int) *model.AgentRunEvent {
+func approvalEvent(minute int) *model.AgentRunEvent {
 	reason := "approved"
 	return &model.AgentRunEvent{
-		ActorType: constants.ActorTypeUser, Reason: &reason, CreatedAt: *at(min),
+		ActorType: constants.ActorTypeUser, Reason: &reason, CreatedAt: *at(minute),
 	}
 }
 

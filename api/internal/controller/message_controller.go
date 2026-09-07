@@ -97,7 +97,7 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	msgs := []*model.Message{}
+	var msgs []*model.Message
 
 	switch recipientType {
 	case model.TeammateRecipientType:
@@ -601,11 +601,11 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 	c.JSON(http.StatusOK, updatedMsg)
 }
 
-func truncate(s string, max int) string {
-	if utf8.RuneCountInString(s) <= max {
+func truncate(s string, maxRunes int) string {
+	if utf8.RuneCountInString(s) <= maxRunes {
 		return s
 	}
-	return string([]rune(s)[:max]) + "..."
+	return string([]rune(s)[:maxRunes]) + "..."
 }
 
 // handleAgentRunHook reacts to a user comment on an issue with an active agent

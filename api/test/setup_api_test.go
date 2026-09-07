@@ -273,7 +273,7 @@ func Setup(t *testing.T) *issue.Application {
 	return app
 }
 
-func Request(t *testing.T, app *issue.Application, method, url, body, token string) *http.Response {
+func Request(_ *testing.T, app *issue.Application, method, url, body, token string) *http.Response {
 	req := httptest.NewRequest(method, url, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", token)
@@ -282,7 +282,7 @@ func Request(t *testing.T, app *issue.Application, method, url, body, token stri
 	return w.Result()
 }
 
-func RequestWithHeaders(t *testing.T, app *issue.Application, method, url, body string, headers map[string]string) *http.Response {
+func RequestWithHeaders(_ *testing.T, app *issue.Application, method, url, body string, headers map[string]string) *http.Response {
 	req := httptest.NewRequest(method, url, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	for k, v := range headers {

@@ -39,7 +39,7 @@ func TestGeminiProvider_Complete_Success(t *testing.T) {
 		}]
 	}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
@@ -86,7 +86,7 @@ func TestGeminiProvider_Complete_Success(t *testing.T) {
 func TestGeminiProvider_Complete_APIError(t *testing.T) {
 	responseJSON := `{"error": {"code": 400, "message": "invalid", "status": "INVALID_ARGUMENT"}}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(responseJSON))
@@ -120,7 +120,7 @@ func TestGeminiProvider_Complete_NoText(t *testing.T) {
 		}]
 	}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
@@ -160,7 +160,7 @@ func TestOpenAIProvider_Complete_Success(t *testing.T) {
 		}]
 	}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
@@ -207,7 +207,7 @@ func TestOpenAIProvider_Complete_Success(t *testing.T) {
 func TestOpenAIProvider_Complete_APIError(t *testing.T) {
 	responseJSON := `{"error": {"message": "invalid key", "type": "invalid_request_error"}}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(responseJSON))
@@ -235,7 +235,7 @@ func TestOpenAIProvider_Complete_APIError(t *testing.T) {
 func TestOpenAIProvider_Complete_NoToolCall(t *testing.T) {
 	responseJSON := `{"choices": []}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
@@ -268,7 +268,7 @@ func TestOllamaProvider_Complete_Success(t *testing.T) {
 		"done_reason": "stop"
 	}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
@@ -316,7 +316,7 @@ func TestOllamaProvider_Complete_APIError(t *testing.T) {
 	// Ollama native API returns a top-level string error field.
 	responseJSON := `{"error": "model \"qwen-test\" not found"}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(responseJSON))
@@ -344,7 +344,7 @@ func TestOllamaProvider_Complete_APIError(t *testing.T) {
 func TestOllamaProvider_Complete_EmptyContent(t *testing.T) {
 	responseJSON := `{"message": {"role": "assistant", "content": ""}, "done_reason": "length"}`
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(responseJSON))
