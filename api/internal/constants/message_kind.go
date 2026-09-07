@@ -12,4 +12,5 @@ const (
 	MessageKindImplementationPlan    MessageKind = "implementation_plan"
 	MessageKindPullRequestPushed     MessageKind = "pull_request_pushed"
 	MessageKindImplementationDone    MessageKind = "implementation_done"
+	MessageKindReviewReply           MessageKind = "review_reply"
 )

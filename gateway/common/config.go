@@ -20,7 +20,7 @@ type Config struct {
 	// paths above.
 	TrackerMCPUrl  string
 	TrackerAPIUrl  string
-	BotApiKey      string
+	AgentApiKey    string
 	WebhookSecret  []byte
 	ListenPort     int
 	RepoUrl        string
@@ -76,7 +76,7 @@ type GooseConfig struct {
 
 func LoadConfig(adapterType string) (*Config, error) {
 	trackerURL := strings.TrimRight(os.Getenv("TRACKER_URL"), "/")
-	botApiKey := os.Getenv("GATEWAY_TO_TRACKER_TOKEN")
+	agentApiKey := os.Getenv("GATEWAY_TO_TRACKER_TOKEN")
 	webhookSecretHex := os.Getenv("TRACKER_TO_GATEWAY_TOKEN")
 	repoUrl := strings.TrimSpace(os.Getenv("REPO_URL"))
 	gitAccessToken := os.Getenv("GIT_ACCESS_TOKEN")
@@ -84,7 +84,7 @@ func LoadConfig(adapterType string) (*Config, error) {
 	var missing []string
 	for _, v := range []struct{ name, val string }{
 		{"TRACKER_URL", trackerURL},
-		{"GATEWAY_TO_TRACKER_TOKEN", botApiKey},
+		{"GATEWAY_TO_TRACKER_TOKEN", agentApiKey},
 		{"TRACKER_TO_GATEWAY_TOKEN", webhookSecretHex},
 		{"REPO_URL", repoUrl},
 		{"GIT_ACCESS_TOKEN", gitAccessToken},
@@ -110,7 +110,7 @@ func LoadConfig(adapterType string) (*Config, error) {
 	cfg := &Config{
 		TrackerMCPUrl:  trackerURL + trackerMCPPath,
 		TrackerAPIUrl:  trackerURL + trackerAPIPath,
-		BotApiKey:      botApiKey,
+		AgentApiKey:    agentApiKey,
 		WebhookSecret:  webhookSecret,
 		ListenPort:     listenPort,
 		RepoUrl:        repoUrl,

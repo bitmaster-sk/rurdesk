@@ -20,19 +20,16 @@ import { NoticeService } from '../../shared/notice/notice.service';
 import { CommandPaletteService } from './command-palette.service';
 import { Role } from '../../shared/constants/role.enum';
 import { Issue } from '../../issue/model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 const t = { instant: (k: string, p?: any) => (p ? `${k}:${JSON.stringify(p)}` : k) };
 const issues: Issue[] = [
-    {
+    Fixtures.issue({
         idIssue: 42,
         idIssuePublic: 428,
-        idProject: 1,
         title: 'Login',
-        idState: 1,
-        idSeverity: null,
-        description: '',
-        tracked: 0
-    }
+        idState: 1
+    })
 ];
 
 describe('IssueSearchCommandProvider', () => {
@@ -166,17 +163,15 @@ describe('NavigationCommandProvider', () => {
 });
 
 describe('IssueActionCommandProvider', () => {
-    const issue: Issue = {
+    const issue: Issue = Fixtures.issue({
         idIssue: 15,
-        idProject: 1,
         idIssuePublic: 5,
         title: 'Login',
         description: 'd',
         idState: 3,
         idSeverity: 2,
-        assignedTo: 7,
-        tracked: 0
-    };
+        assignedTo: 7
+    });
     function setup(states: any[] = []) {
         const router = { navigate: vi.fn() };
         const insertIssue = vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }));
@@ -267,16 +262,7 @@ describe('PeopleCommandProvider', () => {
     }
 
     it('assigns the picked person to the open issue on a detail and emits the change (not navigate)', () => {
-        const issue: Issue = {
-            idIssue: 15,
-            idProject: 1,
-            idIssuePublic: 5,
-            title: 'X',
-            description: '',
-            idState: null,
-            idSeverity: null,
-            tracked: 0
-        };
+        const issue: Issue = Fixtures.issue({ idIssue: 15, idIssuePublic: 5, title: 'X' });
         const { provider, router, updateIssue, emitIssue } = setup();
         provider.getCommands({ idProject: 1, issue })[0].run();
         expect(updateIssue).toHaveBeenCalledWith(expect.objectContaining({ assignedTo: 9 }));

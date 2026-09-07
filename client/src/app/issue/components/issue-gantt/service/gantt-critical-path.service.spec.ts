@@ -1,5 +1,6 @@
 import { GanttCriticalPathService } from './gantt-critical-path.service';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
@@ -13,18 +14,13 @@ describe('GanttCriticalPathService', () => {
     });
 
     function makeIssue(id: number, estimated: number): Issue {
-        return {
+        return Fixtures.issue({
             idIssue: id,
             idIssuePublic: id,
-            idProject: 1,
-            idState: null,
-            idSeverity: null,
             title: `Issue ${id}`,
-            description: '',
-            tracked: 0,
             estimated,
             scheduledAt: new Date('2026-04-10T09:00:00Z')
-        };
+        });
     }
 
     function makeRelation(

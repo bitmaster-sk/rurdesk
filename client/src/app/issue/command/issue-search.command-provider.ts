@@ -10,8 +10,8 @@ import {
     CommandProvider,
     Translator
 } from '../../core/command/command.model';
-import { buildIssueJumpCommands } from './issue-search.commands';
-import { buildCreateFromQuery } from './create-issue.commands';
+import { IssueSearchCommands } from './issue-search.commands';
+import { IssueCreateCommands } from './issue-create.commands';
 import { IssueService } from '../issue.service';
 import { StateStore } from '../../state/store/state.store';
 import { AclStore } from '../../project/store/acl.store';
@@ -45,7 +45,7 @@ export class IssueSearchCommandProvider implements CommandProvider {
 
     public getCommands(ctx: CommandContext): Command[] {
         if (this.cache?.idProject !== ctx.idProject) return [];
-        return buildIssueJumpCommands(
+        return IssueSearchCommands.build(
             ctx,
             this.cache.issues,
             p => {
@@ -56,7 +56,7 @@ export class IssueSearchCommandProvider implements CommandProvider {
     }
 
     public createFromQuery(query: string, ctx: CommandContext): Command | null {
-        return buildCreateFromQuery(
+        return IssueCreateCommands.build(
             query,
             ctx,
             this.acl.canCreateIssue(),

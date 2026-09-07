@@ -28,6 +28,7 @@ const (
 	SubjectAgentRun         NoticeSubject = "agent_run"
 	SubjectAgentTask        NoticeSubject = "agent_task"
 	SubjectAgentStats       NoticeSubject = "agent_stats"
+	SubjectAgentThinking    NoticeSubject = "agent_thinking"
 	SubjectIssueParticipant NoticeSubject = "issue_participant"
 )
 
@@ -45,7 +46,7 @@ type Notice struct {
 	Subject NoticeSubject `json:"subject"`
 	Action  NoticeAction  `json:"action"`
 	Payload any           `json:"payload"`
-	Source  string        `json:"source,omitempty"` // "bot" when author is_bot=true
+	Source  string        `json:"source,omitempty"` // "agent" when the author is an agent user (users.user.is_agent)
 }
 
 type NotifyConnection struct {

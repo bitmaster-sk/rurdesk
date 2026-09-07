@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DAY_MS, DateUtil, msUntilNextUtcDay } from './date.util';
+import { DAY_MS, DateUtil } from './date.util';
 
 describe('DateUtil', () => {
     describe('truncateTimeUtc', () => {
@@ -42,19 +42,21 @@ describe('DateUtil', () => {
         });
     });
 
-    describe('msUntilNextUtcDay', () => {
+    describe('DateUtil.msUntilNextUtcDay', () => {
         it('waits only the remainder of the current UTC day', () => {
-            expect(msUntilNextUtcDay(new Date('2026-08-10T23:30:00.000Z'))).toBe(30 * 60_000);
+            expect(DateUtil.msUntilNextUtcDay(new Date('2026-08-10T23:30:00.000Z'))).toBe(
+                30 * 60_000
+            );
         });
 
         it('waits a full day at exactly UTC midnight', () => {
-            expect(msUntilNextUtcDay(new Date('2026-08-10T00:00:00.000Z'))).toBe(DAY_MS);
+            expect(DateUtil.msUntilNextUtcDay(new Date('2026-08-10T00:00:00.000Z'))).toBe(DAY_MS);
         });
 
         // The day maths everywhere else buckets in UTC, so the tick must not follow
         // the local clock: for a UTC+2 user local midnight is two hours early.
         it('lands on the UTC boundary, not the local one', () => {
-            const wait = msUntilNextUtcDay(new Date('2026-08-10T22:30:00.000Z'));
+            const wait = DateUtil.msUntilNextUtcDay(new Date('2026-08-10T22:30:00.000Z'));
             expect(wait).toBe(90 * 60_000);
         });
     });

@@ -4,7 +4,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { AdminApi } from '../../api/admin.api.service';
 import { CreateUserDialogComponent } from './create-user-dialog.component';
 
-describe('CreateUserDialogComponent — isBot validator wiring (browser)', () => {
+describe('CreateUserDialogComponent — isAgent validator wiring (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             declarations: [CreateUserDialogComponent],
@@ -25,17 +25,17 @@ describe('CreateUserDialogComponent — isBot validator wiring (browser)', () =>
         return (fixture.componentInstance as unknown as { form: FormGroup }).form;
     }
 
-    it('turning isBot on clears email requirement and makes gatewayUrl required', () => {
+    it('turning isAgent on clears email requirement and makes gatewayUrl required', () => {
         const f = form();
-        f.controls['isBot'].setValue(true);
-        expect(f.controls['email'].valid).toBe(true); // empty email OK for a bot
-        expect(f.controls['gatewayUrl'].valid).toBe(false); // required for a bot
+        f.controls['isAgent'].setValue(true);
+        expect(f.controls['email'].valid).toBe(true); // empty email OK for an agent
+        expect(f.controls['gatewayUrl'].valid).toBe(false); // required for an agent
     });
 
-    it('turning isBot off requires email/password and clears gatewayUrl requirement', () => {
+    it('turning isAgent off requires email/password and clears gatewayUrl requirement', () => {
         const f = form();
-        f.controls['isBot'].setValue(true);
-        f.controls['isBot'].setValue(false);
+        f.controls['isAgent'].setValue(true);
+        f.controls['isAgent'].setValue(false);
         expect(f.controls['email'].valid).toBe(false); // required for a human
         expect(f.controls['password'].valid).toBe(false);
         expect(f.controls['gatewayUrl'].valid).toBe(true);

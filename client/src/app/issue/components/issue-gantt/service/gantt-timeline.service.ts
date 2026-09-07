@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { differenceInMilliseconds, isSameDay, isWeekend as dateFnsIsWeekend } from 'date-fns';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { IssueGuard } from '../../../model/extended-issue.model';
 import { GanttZoomLevel, ZOOM_CONFIGS } from '../constants/gantt-zoom-config';
 import { STORAGE_KEY_ZOOM } from '../constants/gantt-storage-keys';
 
@@ -168,9 +169,7 @@ export class GanttTimelineService {
     } {
         const cfg = this.config();
 
-        const scheduled = tasks.filter(
-            (t): t is { scheduledAt: Date; estimated?: number | null } => t.scheduledAt != null
-        );
+        const scheduled = tasks.filter(IssueGuard.isScheduled);
 
         let contentStart: Date;
         let contentEnd: Date;

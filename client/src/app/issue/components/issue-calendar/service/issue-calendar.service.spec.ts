@@ -8,19 +8,10 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 function makeIssue(over: Partial<Issue>): Issue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 1,
-        idState: 1,
-        idSeverity: 1,
-        title: 'T',
-        description: '',
-        tracked: 0,
-        ...over
-    };
+    return Fixtures.issue({ idState: 1, idSeverity: 1, title: 'T', ...over });
 }
 
 function buildService(issues: Issue[]): IssueCalendarService {
@@ -80,5 +71,12 @@ describe('IssueCalendarService — events$', () => {
         );
         expect(events[0].allDay).toBe(true);
         expect(events[0].end).toBeUndefined();
+    });
+
+    it('excludes issues with an Invalid Date scheduledAt', () => {
+        const events = firstEmit(
+            buildService([makeIssue({ idIssue: 9, scheduledAt: new Date('not-a-date') })])
+        );
+        expect(events).toHaveLength(0);
     });
 });

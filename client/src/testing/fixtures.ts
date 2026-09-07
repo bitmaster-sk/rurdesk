@@ -1,26 +1,68 @@
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { User } from 'src/app/auth/model/user.model';
+import { SwimlaneCell } from 'src/app/issue/components/issue-kanban/entity/swimlane-cell.entity';
+import { ExtendedIssue } from 'src/app/issue/model/extended-issue.model';
+import { Issue } from 'src/app/issue/model/issue.model';
 import { Skill } from 'src/app/shared/model/skill.model';
 
 export abstract class Fixtures {
+    public static issue(overrides: Partial<Issue> = {}): Issue {
+        return {
+            idIssue: 1,
+            idIssuePublic: 1,
+            idProject: 1,
+            idState: null,
+            idSeverity: null,
+            idIssueType: null,
+            title: 'Issue',
+            description: '',
+            tracked: 0,
+            ...overrides
+        };
+    }
+
+    public static extendedIssue(overrides: Partial<ExtendedIssue> = {}): ExtendedIssue {
+        return {
+            ...Fixtures.issue(overrides),
+            state: undefined,
+            severity: undefined,
+            issueType: undefined,
+            assignedToUser: undefined,
+            ...overrides
+        };
+    }
+
+    public static swimlaneCell(
+        overrides: Partial<SwimlaneCell> & Pick<SwimlaneCell, 'state'>
+    ): SwimlaneCell {
+        return {
+            user: undefined,
+            tiles: [],
+            total: 0,
+            cursor: null,
+            loading: false,
+            ...overrides
+        };
+    }
+
     public static user(overrides: Partial<User> = {}): User {
         return {
             idUser: 1,
             name: 'Ada',
             email: 'ada@test.sk',
             colorAvatarBg: '#123456',
-            isBot: false,
+            isAgent: false,
             ...overrides
         };
     }
 
-    public static bot(overrides: Partial<User> = {}): User {
+    public static agent(overrides: Partial<User> = {}): User {
         return Fixtures.user({
             idUser: 8,
-            name: 'ci-bot',
-            email: 'ci-bot@test.sk',
-            isBot: true,
+            name: 'ci-agent',
+            email: 'ci-agent@test.sk',
+            isAgent: true,
             ...overrides
         });
     }
@@ -44,7 +86,7 @@ export abstract class Fixtures {
             idRun: 55,
             idIssue: 10,
             idProject: 7,
-            idUserBot: 8,
+            idUserAgent: 8,
             idGitIntegration: null,
             phase: AgentPhase.Queued,
             stagePlan: { stages: [] },

@@ -1,6 +1,6 @@
 import { Observable } from 'rxjs';
 import { Issue } from '../../issue/model/issue.model';
-import { HighlightSegment } from './fuzzy.util';
+import { HighlightSegment } from './fuzzy-search';
 
 export type CommandMode = 'all' | 'commands' | 'people' | 'issues' | 'navigation';
 

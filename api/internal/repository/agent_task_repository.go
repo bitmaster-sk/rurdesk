@@ -13,9 +13,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var ErrTaskNotFound = errors.New("agent task not found")
-var ErrTaskStatusMismatch = errors.New("agent task status does not match expected")
-
 type AgentTaskRepository struct {
 	pool *pgxpool.Pool
 }
@@ -25,18 +22,20 @@ func NewAgentTaskRepository(pool *pgxpool.Pool) *AgentTaskRepository {
 }
 
 const agentTaskColumns = `
-	id_task, id_run, id_user_bot, stage, attempt_no, status, id_output_message,
+	id_task, id_run, id_user_agent, stage, attempt_no, status, id_result_message,
 	error_reason, error_detail,
 	tokens_used, duration_ms, tool_calls_count,
-	started_at, finished_at, last_heartbeat_at, created_at`
+	started_at, finished_at, last_heartbeat_at, created_at,
+	thinking_tail, thinking_blob IS NOT NULL`
 
 func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 	task := &model.AgentTask{}
 	err := row.Scan(
-		&task.IdTask, &task.IdRun, &task.IdUserBot, &task.Stage, &task.AttemptNo, &task.Status, &task.IdOutputMessage,
+		&task.IdTask, &task.IdRun, &task.IdUserAgent, &task.Stage, &task.AttemptNo, &task.Status, &task.IdResultMessage,
 		&task.ErrorReason, &task.ErrorDetail,
 		&task.TokensUsed, &task.DurationMs, &task.ToolCallsCount,
 		&task.StartedAt, &task.FinishedAt, &task.LastHeartbeatAt, &task.CreatedAt,
+		&task.ThinkingTail, &task.HasThinking,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent task: %w", err)
@@ -44,15 +43,15 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 	return task, nil
 }
 
-// Insert creates a pending task for a stage attempt. idUserBot is the
-// executing bot, which can differ across stages after a manual hand-off.
-func (r *AgentTaskRepository) Insert(ctx context.Context, idRun, idUserBot int64, stage string, attemptNo int) (*model.AgentTask, error) {
+// Insert creates a pending task for a stage attempt. idUserAgent is the
+// executing agent, which can differ across stages after a manual hand-off.
+func (r *AgentTaskRepository) Insert(ctx context.Context, idRun, idUserAgent int64, stage string, attemptNo int) (*model.AgentTask, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, fmt.Sprintf(`
-		INSERT INTO agent.task (id_run, id_user_bot, stage, attempt_no, status)
+		INSERT INTO agent.task (id_run, id_user_agent, stage, attempt_no, status)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING %s`, agentTaskColumns),
-		idRun, idUserBot, stage, attemptNo, constants.TaskStatusPending,
+		idRun, idUserAgent, stage, attemptNo, constants.TaskStatusPending,
 	)
 	return scanAgentTask(row)
 }
@@ -67,26 +66,25 @@ func (r *AgentTaskRepository) LoadById(ctx context.Context, idTask int64) (*mode
 	return task, err
 }
 
-// BotForTask returns the id of the bot that owns the task's run. Callers use it
-// to authorize gateway callbacks that address a task directly, without paying
-// for two full row loads on hot paths like the 30s heartbeat.
-func (r *AgentTaskRepository) BotForTask(ctx context.Context, idTask int64) (int64, error) {
+// LoadAgentForTask returns the id of the agent that owns the task's run, in one
+// query and without loading either row in full.
+func (r *AgentTaskRepository) LoadAgentForTask(ctx context.Context, idTask int64) (int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
-	var idUserBot int64
+	var idUserAgent int64
 	err := db.QueryRow(ctx, `
-		SELECT r.id_user_bot
+		SELECT r.id_user_agent
 		FROM agent.task t
 		JOIN agent.run r ON r.id_run = t.id_run
 		WHERE t.id_task = $1`,
 		idTask,
-	).Scan(&idUserBot)
+	).Scan(&idUserAgent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, ErrTaskNotFound
 	}
 	if err != nil {
-		return 0, fmt.Errorf("loading bot for task %d: %w", idTask, err)
+		return 0, fmt.Errorf("loading the agent of task %d: %w", idTask, err)
 	}
-	return idUserBot, nil
+	return idUserAgent, nil
 }
 
 func (r *AgentTaskRepository) LoadByRun(ctx context.Context, idRun int64) ([]*model.AgentTask, error) {
@@ -176,21 +174,21 @@ func (r *AgentTaskRepository) CompleteReconcilable(ctx context.Context, idTask i
 	return task, err
 }
 
-func (r *AgentTaskRepository) SetOutputAndStats(
+func (r *AgentTaskRepository) SetResultAndStats(
 	ctx context.Context,
 	idTask int64,
-	idOutputMessage *int64,
+	idResultMessage *int64,
 	tokensUsed, durationMs, toolCallsCount *int,
 ) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
 		UPDATE agent.task
-		SET id_output_message = $2,
+		SET id_result_message = $2,
 		    tokens_used = $3,
 		    duration_ms = $4,
 		    tool_calls_count = $5
 		WHERE id_task = $1`,
-		idTask, idOutputMessage, tokensUsed, durationMs, toolCallsCount,
+		idTask, idResultMessage, tokensUsed, durationMs, toolCallsCount,
 	)
 	if err != nil {
 		return fmt.Errorf("setting task output and stats: %w", err)
@@ -288,11 +286,11 @@ func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge ti
 	return distinctRunIds(rows)
 }
 
-// FailActiveForBot marks every active task of the bot's runs as failed and
+// FailActiveForAgent marks every active task of the agent's runs as failed and
 // returns the affected run ids. Used when a gateway reports a (re)start: its
 // in-flight subprocesses are gone, so the caller fails those runs so the user
 // sees Continue/Restart.
-func (r *AgentTaskRepository) FailActiveForBot(ctx context.Context, idUserBot int64) ([]int64, error) {
+func (r *AgentTaskRepository) FailActiveForAgent(ctx context.Context, idUserAgent int64) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		UPDATE agent.task t
@@ -301,13 +299,13 @@ func (r *AgentTaskRepository) FailActiveForBot(ctx context.Context, idUserBot in
 		    error_reason = COALESCE(error_reason, 'gateway_restart')
 		FROM agent.run r
 		WHERE t.id_run = r.id_run
-		  AND r.id_user_bot = $1
+		  AND r.id_user_agent = $1
 		  AND t.status = 'active'
 		RETURNING t.id_run`,
-		idUserBot,
+		idUserAgent,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failing active tasks for bot: %w", err)
+		return nil, fmt.Errorf("failing active tasks for agent: %w", err)
 	}
 	defer rows.Close()
 	return distinctRunIds(rows)
@@ -332,38 +330,49 @@ func distinctRunIds(rows pgx.Rows) ([]int64, error) {
 	return ids, nil
 }
 
-// BotHasActiveTask reports whether the bot has any task currently active,
+// AgentHasActiveTask reports whether the agent has any task currently active,
 // so the scheduler can skip dispatching while it's busy with a stage.
-func (r *AgentTaskRepository) BotHasActiveTask(ctx context.Context, idUserBot int64) (bool, error) {
+func (r *AgentTaskRepository) BotHasActiveTask(ctx context.Context, idUserAgent int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var n int
 	err := db.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM agent.task t
 		JOIN agent.run r ON r.id_run = t.id_run
-		WHERE r.id_user_bot = $1 AND t.status = 'active'`,
-		idUserBot,
+		WHERE r.id_user_agent = $1 AND t.status = 'active'`,
+		idUserAgent,
 	).Scan(&n)
 	if err != nil {
-		return false, fmt.Errorf("checking bot active task: %w", err)
+		return false, fmt.Errorf("checking agent active task: %w", err)
 	}
 	return n > 0, nil
 }
 
-// CancelNonTerminalForRun cancels any pending/active tasks under the given
-// run. Used by Restart and Cancel paths.
-func (r *AgentTaskRepository) CancelNonTerminalForRun(ctx context.Context, idRun int64) error {
+// CancelNonTerminalForRun cancels every pending or active task under the run
+// and returns the ids of the tasks it cancelled.
+func (r *AgentTaskRepository) CancelNonTerminalForRun(ctx context.Context, idRun int64) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
-	_, err := db.Exec(ctx, `
+	rows, err := db.Query(ctx, `
 		UPDATE agent.task
 		SET status = 'cancelled', finished_at = now()
-		WHERE id_run = $1 AND status IN ('pending', 'active')`,
+		WHERE id_run = $1 AND status IN ('pending', 'active')
+		RETURNING id_task`,
 		idRun,
 	)
 	if err != nil {
-		return fmt.Errorf("cancelling non-terminal tasks for run: %w", err)
+		return nil, fmt.Errorf("cancelling non-terminal tasks for run: %w", err)
 	}
-	return nil
+	defer rows.Close()
+
+	var idsTask []int64
+	for rows.Next() {
+		var idTask int64
+		if err := rows.Scan(&idTask); err != nil {
+			return nil, fmt.Errorf("scanning cancelled task: %w", err)
+		}
+		idsTask = append(idsTask, idTask)
+	}
+	return idsTask, rows.Err()
 }
 
 // StatsForRun returns aggregate counters per stage / per status.

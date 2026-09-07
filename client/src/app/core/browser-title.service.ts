@@ -18,26 +18,26 @@ export class BrowserTitleService {
             this.setDefault();
             return;
         }
-        this.setTitle(buildIssueTitle(issue));
+        this.setTitle(this.buildIssueTitle(issue));
+    }
+
+    private buildIssueTitle(issue: Issue): string {
+        const title = this.truncateIssueTitle(issue.title);
+        return `#${issue.idIssuePublic} ${title} · ${DEFAULT_TITLE}`;
+    }
+
+    private truncateIssueTitle(
+        title: string | null | undefined,
+        maxLength = ISSUE_TITLE_MAX_LENGTH
+    ): string {
+        const safeTitle = title ?? '';
+        if (safeTitle.length <= maxLength) {
+            return safeTitle;
+        }
+        return `${safeTitle.slice(0, maxLength)}…`;
     }
 
     private setTitle(title: string): void {
         this.document.title = title;
     }
-}
-
-export function buildIssueTitle(issue: Issue): string {
-    const title = truncateIssueTitle(issue.title);
-    return `#${issue.idIssuePublic} ${title} · ${DEFAULT_TITLE}`;
-}
-
-export function truncateIssueTitle(
-    title: string | null | undefined,
-    maxLength = ISSUE_TITLE_MAX_LENGTH
-): string {
-    const safeTitle = title ?? '';
-    if (safeTitle.length <= maxLength) {
-        return safeTitle;
-    }
-    return `${safeTitle.slice(0, maxLength)}…`;
 }

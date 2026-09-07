@@ -29,7 +29,7 @@ func at(min int) *time.Time {
 func completedTask(stage string, finished *time.Time, output *int64) *model.AgentTask {
 	return &model.AgentTask{
 		Stage: stage, AttemptNo: 1, Status: constants.TaskStatusCompleted,
-		FinishedAt: finished, IdOutputMessage: output, CreatedAt: *finished,
+		FinishedAt: finished, IdResultMessage: output, CreatedAt: *finished,
 	}
 }
 
@@ -79,7 +79,8 @@ func TestBuildStageProgress_FailedStageCarriesErrorCode(t *testing.T) {
 }
 
 func TestBuildStageProgress_HappyPathFullRun(t *testing.T) {
-	run := &model.AgentRun{Phase: constants.PhaseDone, StagePlan: fullStagePlan()}
+	prId := "70"
+	run := &model.AgentRun{Phase: constants.PhaseDone, StagePlan: fullStagePlan(), PrId: &prId}
 	msgID := int64(1)
 	tasks := []*model.AgentTask{
 		completedTask(constants.StagePickup, at(19), nil),
@@ -170,20 +171,20 @@ func TestBuildStageProgress_SkippedAndFailed(t *testing.T) {
 	}
 }
 
-func TestBuildStageProgress_CarriesBotProvenance(t *testing.T) {
+func TestBuildStageProgress_CarriesAgentProvenance(t *testing.T) {
 	run := &model.AgentRun{Phase: constants.PhaseInProgress, StagePlan: fullStagePlan()}
-	botA := int64(7)
-	botB := int64(9)
+	agentA := int64(7)
+	agentB := int64(9)
 	pickup := completedTask(constants.StagePickup, at(19), nil)
-	pickup.IdUserBot = &botA
-	design := &model.AgentTask{Stage: constants.StageDesign, AttemptNo: 1, Status: constants.TaskStatusActive, StartedAt: at(25), CreatedAt: *at(25), IdUserBot: &botB}
+	pickup.IdUserAgent = &agentA
+	design := &model.AgentTask{Stage: constants.StageDesign, AttemptNo: 1, Status: constants.TaskStatusActive, StartedAt: at(25), CreatedAt: *at(25), IdUserAgent: &agentB}
 
 	rows := BuildStageProgress(run, []*model.AgentTask{pickup, design}, nil)
-	if got := stageByName(rows, constants.StagePickup); got.IdUserBot == nil || *got.IdUserBot != botA {
-		t.Errorf("pickup bot = %v, want %d", got.IdUserBot, botA)
+	if got := stageByName(rows, constants.StagePickup); got.IdUserAgent == nil || *got.IdUserAgent != agentA {
+		t.Errorf("pickup bot = %v, want %d", got.IdUserAgent, agentA)
 	}
-	if got := stageByName(rows, constants.StageDesign); got.IdUserBot == nil || *got.IdUserBot != botB {
-		t.Errorf("design bot = %v, want %d", got.IdUserBot, botB)
+	if got := stageByName(rows, constants.StageDesign); got.IdUserAgent == nil || *got.IdUserAgent != agentB {
+		t.Errorf("design bot = %v, want %d", got.IdUserAgent, agentB)
 	}
 }
 
@@ -198,5 +199,42 @@ func TestBuildStageProgress_LatestAttemptWins(t *testing.T) {
 	got := stageByName(rows, constants.StageDesign)
 	if got.Status != "active" || got.AttemptNo != 2 {
 		t.Errorf("design = %+v, want active/attempt 2", got)
+	}
+}
+
+// The snapshot carries what the feed needs to render a stage's thinking row:
+// which message it hangs under, the tail, and whether full text still exists.
+func TestBuildStageProgress_CarriesThinkingFields(t *testing.T) {
+	run := &model.AgentRun{Phase: constants.PhaseInProgress, StagePlan: fullStagePlan()}
+	idMessage := int64(77)
+	tail := "the tail of the thinking"
+	task := completedTask(constants.StageDesign, at(21), nil)
+	task.IdResultMessage = &idMessage
+	task.ThinkingTail = &tail
+	task.HasThinking = true
+
+	rows := BuildStageProgress(run, []*model.AgentTask{task}, nil)
+	got := stageByName(rows, constants.StageDesign)
+
+	if got.IdResultMessage == nil || *got.IdResultMessage != idMessage {
+		t.Errorf("IdResultMessage = %v, want %d", got.IdResultMessage, idMessage)
+	}
+	if got.ThinkingTail == nil || *got.ThinkingTail != tail {
+		t.Errorf("ThinkingTail = %v, want %q", got.ThinkingTail, tail)
+	}
+	if !got.HasThinking {
+		t.Error("HasThinking = false, want true when the full text is stored")
+	}
+}
+
+func TestBuildStageProgress_ImplementationWithoutPrIsNotLabelledPrOpened(t *testing.T) {
+	run := &model.AgentRun{Phase: constants.PhasePrOpen, StagePlan: fullStagePlan()}
+	msgID := int64(1)
+	tasks := []*model.AgentTask{completedTask(constants.StageImplementation, at(32), &msgID)}
+
+	rows := BuildStageProgress(run, tasks, nil)
+
+	if impl := stageByName(rows, constants.StageImplementation); impl.Note != "" {
+		t.Errorf("implementation note = %q, want empty when the run has no PR", impl.Note)
 	}
 }

@@ -12,17 +12,18 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
 import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
-import { topologicalSort } from './gantt-order.util';
+import { GanttOrderUtil } from './gantt-order.util';
 
 function initialFilter(): IssuesFilter {
     return { idProject: 1, orderColumn: 'idIssuePublic', orderDirection: 'desc' };
 }
 
 // IssueGanttService uses inject() for 6 deps; only actualFilter$ is touched at
-// construction (the rest stay lazy inside switchMap). topologicalSort is pure, so we
+// construction (the rest stay lazy inside switchMap). GanttOrderUtil.topologicalSort is pure, so we
 // build the service with stub deps and call the private method directly.
 function buildService(): IssueGanttService {
     const injector = Injector.create({
@@ -58,17 +59,12 @@ function buildService(): IssueGanttService {
 }
 
 function makeIssue(id: number, scheduledAt: string): Issue {
-    return {
+    return Fixtures.issue({
         idIssue: id,
         idIssuePublic: id,
-        idProject: 1,
-        idState: null,
-        idSeverity: null,
         title: `Issue ${id}`,
-        description: '',
-        tracked: 0,
         scheduledAt: new Date(scheduledAt)
-    };
+    });
 }
 
 function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
@@ -103,16 +99,16 @@ function makeRelation(fromId: number, toId: number): ReadIssueRelationDto {
     };
 }
 
-// topologicalSort now lives in the pure util; test it directly.
+// GanttOrderUtil.topologicalSort now lives in the pure util; test it directly.
 function topoSort(
     _svc: IssueGanttService,
     issues: Issue[],
     relations: ReadIssueRelationDto[]
 ): Issue[] {
-    return topologicalSort(issues, relations);
+    return GanttOrderUtil.topologicalSort(issues, relations);
 }
 
-describe('IssueGanttService — topologicalSort', () => {
+describe('IssueGanttService — GanttOrderUtil.topologicalSort', () => {
     it('orders A → B → C in dependency order (not date order)', () => {
         const svc = buildService();
         // Dates intentionally out of dependency order.
@@ -144,22 +140,83 @@ describe('IssueGanttService — topologicalSort', () => {
     });
 });
 
+describe('IssueGanttService — Invalid Date filtering', () => {
+    function buildWithIssues(issues: Issue[]): IssueGanttService {
+        const injector = Injector.create({
+            providers: [
+                { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
+                { provide: SettingsStore, useValue: { ganttBacklogPageSize: () => 30 } },
+                {
+                    provide: IssueFilterStore,
+                    useValue: {
+                        clear: () => {},
+                        actualFilter$: of({ idProject: 1 }),
+                        actualFilterChange$: of({ filter: { idProject: 1 }, refresh: false })
+                    }
+                },
+                {
+                    provide: IssueService,
+                    useValue: {
+                        loadIssues: () => of(issues),
+                        loadIssuesPage$: () => of({ items: [], nextCursor: null, total: 0 })
+                    }
+                },
+                { provide: IssueRelationApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: SeverityStore,
+                    useValue: { severitiesMapByProject$: () => of(new Map()) }
+                },
+                {
+                    provide: IssueTypeStore,
+                    useValue: { issueTypesMapByProject$: () => of(new Map()) }
+                },
+                { provide: ProjectMemberStore, useValue: { usersMap$: of(new Map()) } },
+                { provide: StateStore, useValue: { statesMapByProject$: () => of(new Map()) } }
+            ]
+        });
+        return runInInjectionContext(injector, () => new IssueGanttService());
+    }
+
+    it('excludes issues with an Invalid Date scheduledAt from scheduledTasks', () => {
+        const svc = buildWithIssues([makeIssue(1, 'not-a-date')]);
+        let scheduledTasks: unknown[] = [];
+        (
+            svc as unknown as {
+                data$: { subscribe: (fn: (v: unknown) => void) => void };
+            }
+        ).data$.subscribe(
+            v => (scheduledTasks = (v as { scheduledTasks: unknown[] }).scheduledTasks)
+        );
+        expect(scheduledTasks).toHaveLength(0);
+    });
+
+    it('keeps issues with a valid scheduledAt in scheduledTasks', () => {
+        const svc = buildWithIssues([makeIssue(1, '2026-04-01T00:00:00Z')]);
+        let scheduledTasks: unknown[] = [];
+        (
+            svc as unknown as {
+                data$: { subscribe: (fn: (v: unknown) => void) => void };
+            }
+        ).data$.subscribe(
+            v => (scheduledTasks = (v as { scheduledTasks: unknown[] }).scheduledTasks)
+        );
+        expect(scheduledTasks).toHaveLength(1);
+    });
+});
+
 // Backlog pagination survives a refresh() (e.g. after a backlog task is scheduled).
 // Regression: refresh() used to re-emit the filter and snap the backlog back to page 1,
 // unloading every "Load more" page the user had fetched.
 describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
     function backlogItems(n: number): Issue[] {
-        return Array.from({ length: n }, (_, i): Issue => ({
-            idIssue: i + 1,
-            idIssuePublic: i + 1,
-            idProject: 1,
-            idState: null,
-            idSeverity: null,
-            title: `Backlog ${i + 1}`,
-            description: '',
-            tracked: 0,
-            scheduledAt: null
-        }));
+        return Array.from({ length: n }, (_, i): Issue =>
+            Fixtures.issue({
+                idIssue: i + 1,
+                idIssuePublic: i + 1,
+                title: `Backlog ${i + 1}`,
+                scheduledAt: null
+            })
+        );
     }
 
     function buildWithStore(

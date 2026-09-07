@@ -16,7 +16,6 @@
         class="gantt-body--canvas"
         [style.width.px]="totalWidth()"
         [style.height.px]="totalHeight()"
-        (dblclick)="onDoubleClick($event)"
     >
         <!-- Grid lines -->
         @for (col of columns(); track col.left) {

@@ -8,7 +8,7 @@ import (
 type AgentRun struct {
 	IdRun             int64           `json:"idRun"            db:"id_run"`
 	IdIssue           int64           `json:"idIssue"          db:"id_issue"`
-	IdUserBot         int64           `json:"idUserBot"        db:"id_user_bot"`
+	IdUserAgent       int64           `json:"idUserAgent"        db:"id_user_agent"`
 	IdProject         int64           `json:"idProject"        db:"id_project"`
 	IdGitIntegration  *int64          `json:"idGitIntegration" db:"id_git_integration"`
 	Phase             string          `json:"phase"            db:"phase"`
@@ -36,17 +36,20 @@ type AgentRunWithEvents struct {
 // from raw phase transitions. Note is an i18n token, not display text: e.g.
 // "no_clarifications" | "submitted" | "pr_opened".
 type AgentStageProgress struct {
-	Stage      string     `json:"stage"`
-	Status     string     `json:"status"` // pending|active|done|awaiting_approval|failed|skipped
-	Note       string     `json:"note,omitempty"`
-	AttemptNo  int        `json:"attemptNo,omitempty"`
-	IdUserBot  *int64     `json:"idUserBot,omitempty"`  // which bot executed this stage (provenance)
-	At         *time.Time `json:"at,omitempty"`         // finishedAt (done/failed) or startedAt (active)
-	ApprovedAt *time.Time `json:"approvedAt,omitempty"` // user approval waypoint
+	Stage       string     `json:"stage"`
+	Status      string     `json:"status"` // pending|active|done|awaiting_approval|failed|skipped
+	Note        string     `json:"note,omitempty"`
+	AttemptNo   int        `json:"attemptNo,omitempty"`
+	IdUserAgent *int64     `json:"idUserAgent,omitempty"` // which agent executed this stage (provenance)
+	At          *time.Time `json:"at,omitempty"`          // finishedAt (done/failed) or startedAt (active)
+	ApprovedAt  *time.Time `json:"approvedAt,omitempty"`  // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
 	// i18n; ErrorDetail is the raw provider/agent message. Set only on failure.
-	ErrorReason *string `json:"errorReason,omitempty"`
-	ErrorDetail *string `json:"errorDetail,omitempty"`
+	ErrorReason     *string `json:"errorReason,omitempty"`
+	ErrorDetail     *string `json:"errorDetail,omitempty"`
+	IdResultMessage *int64  `json:"idResultMessage,omitempty"`
+	ThinkingTail    *string `json:"thinkingTail,omitempty"`
+	HasThinking     bool    `json:"hasThinking,omitempty"`
 }
 
 type AgentRunEvent struct {
@@ -63,11 +66,11 @@ type AgentRunEvent struct {
 type AgentTask struct {
 	IdTask          int64      `json:"idTask"          db:"id_task"`
 	IdRun           int64      `json:"idRun"           db:"id_run"`
-	IdUserBot       *int64     `json:"idUserBot"       db:"id_user_bot"`
+	IdUserAgent     *int64     `json:"idUserAgent"       db:"id_user_agent"`
 	Stage           string     `json:"stage"           db:"stage"`
 	AttemptNo       int        `json:"attemptNo"       db:"attempt_no"`
 	Status          string     `json:"status"          db:"status"`
-	IdOutputMessage *int64     `json:"idOutputMessage" db:"id_output_message"`
+	IdResultMessage *int64     `json:"idResultMessage" db:"id_result_message"`
 	ErrorReason     *string    `json:"errorReason"     db:"error_reason"`
 	ErrorDetail     *string    `json:"errorDetail"     db:"error_detail"`
 	TokensUsed      *int       `json:"tokensUsed"      db:"tokens_used"`
@@ -77,6 +80,8 @@ type AgentTask struct {
 	FinishedAt      *time.Time `json:"finishedAt"      db:"finished_at"`
 	LastHeartbeatAt *time.Time `json:"lastHeartbeatAt" db:"last_heartbeat_at"`
 	CreatedAt       time.Time  `json:"createdAt"       db:"created_at"`
+	ThinkingTail    *string    `json:"thinkingTail"  db:"thinking_tail"`
+	HasThinking     bool       `json:"hasThinking"     db:"-"`
 }
 
 type StagePlan struct {
@@ -136,7 +141,7 @@ type AgentStatsNotice struct {
 }
 
 type CreateAgentRunReq struct {
-	IdUserBot       int64              `json:"idUserBot"       binding:"required"`
+	IdUserAgent     int64              `json:"idUserAgent"       binding:"required"`
 	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
 }
 

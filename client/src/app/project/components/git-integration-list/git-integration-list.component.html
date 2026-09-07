@@ -43,7 +43,9 @@
                                     variant="text"
                                     severity="danger"
                                     size="small"
-                                    (click)="onDelete(integration)"
+                                    uiConfirm
+                                    [confirmText]="'GIT_INTEGRATION.CONFIRM_DELETE' | translate"
+                                    (confirmed)="onDelete(integration)"
                                 >
                                     <tabler-icon icon="trash" [size]="14" />
                                 </ui-button>

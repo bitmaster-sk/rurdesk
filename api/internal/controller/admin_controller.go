@@ -69,26 +69,26 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if req.IsBot && req.IsAdmin {
-		_ = c.Error(errBotAdmin)
+	if req.IsAgent && req.IsAdmin {
+		_ = c.Error(errs.ErrAgentAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 	if req.IdProject != nil && !model.IsValidRole(req.Role) {
-		_ = c.Error(errInvalidRole)
+		_ = c.Error(errs.ErrInvalidRole)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	if req.IsBot {
-		ac.createBot(c, &req)
+	if req.IsAgent {
+		ac.createAgent(c, &req)
 		return
 	}
 
 	ctx := c.Request.Context()
 
 	if req.Email == "" || req.Password == "" {
-		_ = c.Error(errMissingCredentials)
+		_ = c.Error(errs.ErrMissingCredentials)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -132,13 +132,13 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 }
 
 // assignToProject reuses ProjectMemberController.AddUser's insert path, with the
-// bot-owner guard and cache invalidation.
+// agent-owner guard and cache invalidation.
 func (ac *AdminController) assignToProject(ctx context.Context, idUser int64, req *model.AdminCreateUserReq) error {
 	if req.IdProject == nil {
 		return nil
 	}
-	if req.Role == model.RoleOwner && req.IsBot {
-		return errBotOwner
+	if req.Role == model.RoleOwner && req.IsAgent {
+		return errs.ErrAgentOwner
 	}
 	if err := ac.projectRepo.InsertProjectUser(ctx, *req.IdProject, idUser, req.Role); err != nil {
 		return err
@@ -151,8 +151,8 @@ func (ac *AdminController) assignToProject(ctx context.Context, idUser int64, re
 // case of losing the EmailExists pre-check race to a unique-constraint conflict.
 func (ac *AdminController) writeCreateErr(c *gin.Context, err error) {
 	switch {
-	case err == errBotOwner:
-		_ = c.Error(errBotOwner)
+	case err == errs.ErrAgentOwner:
+		_ = c.Error(errs.ErrAgentOwner)
 		c.Status(http.StatusUnprocessableEntity)
 	case isConflict(err):
 		_ = c.Error(errs.ErrBadRequest)
@@ -163,24 +163,24 @@ func (ac *AdminController) writeCreateErr(c *gin.Context, err error) {
 	}
 }
 
-var botSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
+var agentSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
 
-func botEmailDomain() string {
-	domain := strings.TrimSpace(viper.GetString("BOT_EMAIL_DOMAIN"))
+func agentEmailDomain() string {
+	domain := strings.TrimSpace(viper.GetString("AGENT_EMAIL_DOMAIN"))
 	if domain == "" {
-		return "bots.local"
+		return "agents.local"
 	}
 	return domain
 }
 
-// synthBotEmail returns a unique bot-<slug>@<domain>, suffixing -2, -3, … on collision.
-func (ac *AdminController) synthBotEmail(ctx context.Context, name string) (string, error) {
-	slug := strings.Trim(botSlugRe.ReplaceAllString(strings.ToLower(name), "-"), "-")
+// synthAgentEmail returns a unique agent-<slug>@<domain>, suffixing -2, -3, … on collision.
+func (ac *AdminController) synthAgentEmail(ctx context.Context, name string) (string, error) {
+	slug := strings.Trim(agentSlugRe.ReplaceAllString(strings.ToLower(name), "-"), "-")
 	if slug == "" {
-		slug = "bot"
+		slug = "agent"
 	}
-	domain := botEmailDomain()
-	candidate := fmt.Sprintf("bot-%s@%s", slug, domain)
+	domain := agentEmailDomain()
+	candidate := fmt.Sprintf("agent-%s@%s", slug, domain)
 	for i := 2; ; i++ {
 		exists, err := ac.userRepo.EmailExists(ctx, candidate)
 		if err != nil {
@@ -189,12 +189,12 @@ func (ac *AdminController) synthBotEmail(ctx context.Context, name string) (stri
 		if !exists {
 			return candidate, nil
 		}
-		candidate = fmt.Sprintf("bot-%s-%d@%s", slug, i, domain)
+		candidate = fmt.Sprintf("agent-%s-%d@%s", slug, i, domain)
 	}
 }
 
-// generateRandomSecret returns a hex-encoded bot password seed that is discarded
-// immediately, so the bot can never password-login.
+// generateRandomSecret returns a hex-encoded agent password seed that is discarded
+// immediately, so the agent can never password-login.
 func generateRandomSecret() (string, error) {
 	buf := make([]byte, 32)
 	if _, err := crand.Read(buf); err != nil {
@@ -203,10 +203,10 @@ func generateRandomSecret() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
-func (ac *AdminController) createBot(c *gin.Context, req *model.AdminCreateUserReq) {
+func (ac *AdminController) createAgent(c *gin.Context, req *model.AdminCreateUserReq) {
 	ctx := c.Request.Context()
 
-	email, err := ac.synthBotEmail(ctx, req.Name)
+	email, err := ac.synthAgentEmail(ctx, req.Name)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -229,7 +229,7 @@ func (ac *AdminController) createBot(c *gin.Context, req *model.AdminCreateUserR
 		Name:          req.Name,
 		Password:      hash,
 		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
-		IsBot:         true,
+		IsAgent:       true,
 	}
 	var created *model.User
 	var keyRes *model.CreateApiKeyRes
@@ -266,14 +266,14 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 
-	isBot, err := ac.userRepo.IsBotUser(ctx, idUser)
+	isAgent, err := ac.userRepo.IsAgentUser(ctx, idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if req.IsAdmin != nil && *req.IsAdmin && isBot {
-		_ = c.Error(errBotAdmin)
+	if req.IsAdmin != nil && *req.IsAdmin && isAgent {
+		_ = c.Error(errs.ErrAgentAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -283,7 +283,7 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	// admin toggle (isAdmin only) and the edit form (name/email[/isAdmin]).
 	adminChanged := false
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
-		if pErr := ac.applyProfileUpdate(ctx, idUser, isBot, &req); pErr != nil {
+		if pErr := ac.applyProfileUpdate(ctx, idUser, isAgent, &req); pErr != nil {
 			return pErr
 		}
 		if req.IsAdmin == nil {
@@ -304,11 +304,11 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 		return ac.userRepo.SetAdmin(ctx, idUser, *req.IsAdmin)
 	})
 	switch {
-	case err == errLastAdmin:
-		_ = c.Error(errLastAdmin)
+	case err == errs.ErrLastAdmin:
+		_ = c.Error(errs.ErrLastAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 	case errors.Is(err, repository.ErrUserNotFound):
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 	case isConflict(err): // email taken (incl. losing the unique-index race)
 		_ = c.Error(errs.ErrBadRequest)
@@ -331,12 +331,12 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	}
 }
 
-// applyProfileUpdate writes name/email when present. Bots have a synthetic,
+// applyProfileUpdate writes name/email when present. Agents have a synthetic,
 // non-editable email so only their name is touched; a human email change also
-func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64, isBot bool, req *model.AdminUpdateUserReq) error {
+func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64, isAgent bool, req *model.AdminUpdateUserReq) error {
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
-		if !isBot && req.Email != nil {
+		if !isAgent && req.Email != nil {
 			email := strings.TrimSpace(*req.Email)
 			if err := ac.userRepo.UpdateProfile(ctx, idUser, name, email); err != nil {
 				return err
@@ -377,14 +377,14 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 			return gErr
 		}
 		if hasActivity {
-			return errAgentActivity
+			return errs.ErrAgentActivity
 		}
 		hasContent, gErr := ac.userRepo.HasAuthoredContent(ctx, idUser)
 		if gErr != nil {
 			return gErr
 		}
 		if hasContent {
-			return errAuthoredContent
+			return errs.ErrAuthoredContent
 		}
 		isAdmin, gErr := ac.userRepo.IsAdminUser(ctx, idUser)
 		if gErr != nil {
@@ -398,17 +398,17 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 		return ac.userRepo.DeleteUser(ctx, idUser)
 	})
 	switch {
-	case err == errAgentActivity:
-		_ = c.Error(errAgentActivity)
+	case err == errs.ErrAgentActivity:
+		_ = c.Error(errs.ErrAgentActivity)
 		c.Status(http.StatusConflict)
-	case err == errAuthoredContent:
-		_ = c.Error(errAuthoredContent)
+	case err == errs.ErrAuthoredContent:
+		_ = c.Error(errs.ErrAuthoredContent)
 		c.Status(http.StatusConflict)
-	case err == errLastAdmin:
-		_ = c.Error(errLastAdmin)
+	case err == errs.ErrLastAdmin:
+		_ = c.Error(errs.ErrLastAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 	case errors.Is(err, repository.ErrUserNotFound):
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 	case err != nil:
 		_ = c.Error(err)
@@ -431,7 +431,7 @@ func (ac *AdminController) guardLastAdmin(ctx context.Context) error {
 		return err
 	}
 	if count <= 1 {
-		return errLastAdmin
+		return errs.ErrLastAdmin
 	}
 	return nil
 }
@@ -439,14 +439,14 @@ func (ac *AdminController) guardLastAdmin(ctx context.Context) error {
 // requireAgent aborts with 422 unless the target user is an agent. API keys minted
 // here are agent-only; humans mint their own through the user routes.
 func (ac *AdminController) requireAgent(c *gin.Context, idUser int64) bool {
-	isBot, err := ac.userRepo.IsBotUser(c.Request.Context(), idUser)
+	isAgent, err := ac.userRepo.IsAgentUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return false
 	}
-	if !isBot {
-		_ = c.Error(errNotABot)
+	if !isAgent {
+		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusUnprocessableEntity)
 		return false
 	}
@@ -454,7 +454,7 @@ func (ac *AdminController) requireAgent(c *gin.Context, idUser int64) bool {
 }
 
 // GetAgentApiKey returns the agent's single API key, or null when none exists
-// (mirrors GetBotGateway).
+// (mirrors GetAgentGateway).
 func (ac *AdminController) GetAgentApiKey(c *gin.Context) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
@@ -494,7 +494,7 @@ func (ac *AdminController) CreateAgentApiKey(c *gin.Context) {
 	}
 	res, err := ac.apiKeySvc.CreateAgentApiKey(c.Request.Context(), idUser, &req)
 	if isConflict(err) {
-		_ = c.Error(errApiKeyExists)
+		_ = c.Error(errs.ErrApiKeyExists)
 		c.Status(http.StatusConflict)
 		return
 	} else if err != nil {
@@ -519,6 +519,7 @@ func (ac *AdminController) RegenerateAgentApiKey(c *gin.Context) {
 	}
 	res, err := ac.apiKeySvc.RegenerateAgentApiKey(c.Request.Context(), idUser)
 	if errors.Is(err, repository.ErrApiKeyNotFound) {
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	} else if err != nil {

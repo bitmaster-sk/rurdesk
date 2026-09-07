@@ -116,7 +116,7 @@ func TestAuthUnknownApiKeyIsUnauthorized(t *testing.T) {
 func TestAuthValidApiKeyPasses(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{
 		IdApiKey: 7,
-		User:     model.User{IdUser: 2, Name: "Bot"},
+		User:     model.User{IdUser: 2, Name: "Agent"},
 	}}
 	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
 

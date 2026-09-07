@@ -15,7 +15,7 @@ export interface Notification {
     refPublicId?: number;
     body?: NotificationBody;
     isRead: boolean;
-    createdAt: Date;
+    createdAt: string;
 }
 
 export interface NotificationGroup {

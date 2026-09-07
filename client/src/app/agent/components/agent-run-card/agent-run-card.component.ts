@@ -26,8 +26,11 @@ import {
 import { AgentStage, STAGE_LABELS } from '../../model/agent-stage.enum';
 import { User } from 'src/app/auth/model/user.model';
 import { HostType } from 'src/app/project/model/git-integration.model';
-import { prMrTermKey } from 'src/app/issue/util/pr-mr-term';
-import { FailedStageError, resolveFailedStageError } from '../../util/failed-stage-error';
+import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
+import {
+    FailedStageError,
+    FailedStageErrorConverter
+} from '../../converter/failed-stage-error.converter';
 
 interface TimelineRow {
     label: string; // i18n key for the stage name
@@ -36,7 +39,7 @@ interface TimelineRow {
     glyph: string; // tabler icon name for the status
     noteKey: string | null; // i18n key for the outcome note
     attemptNo: number | null;
-    botName: string | null; // executor bot — only surfaced when a hand-off occurred
+    agentName: string | null; // executor agent — only surfaced when a hand-off occurred
     at: string | null;
     approvedAt: string | null;
 }
@@ -146,7 +149,7 @@ export class AgentRunCardComponent {
     // matches the terminology each host uses in its own UI. Falls back to
     // a generic label when prHostType is missing (older runs, edge cases).
     protected readonly prMrTermKey = computed(() =>
-        prMrTermKey((this.run()?.prHostType as HostType | null) ?? null)
+        GitHostTerminology.termKey((this.run()?.prHostType as HostType | null) ?? null)
     );
 
     protected readonly isAwaitingInput = computed(
@@ -157,20 +160,20 @@ export class AgentRunCardComponent {
     // i18n key derived from the reason code (AGENT.ERROR.<UPPER>) plus the raw
     // provider/agent detail. Null when the run hasn't failed with a reason.
     protected readonly failedStageError = computed<FailedStageError | null>(() =>
-        resolveFailedStageError(this.run()?.stages ?? [])
+        FailedStageErrorConverter.toError(this.run()?.stages ?? [])
     );
 
     private readonly stageLabel = STAGE_LABELS as Record<string, string>;
 
     protected readonly timeline = computed<TimelineRow[]>(() => {
         const stages = this.run()?.stages ?? [];
-        // Bot provenance is only meaningful after a hand-off — i.e. when more
-        // than one distinct bot executed stages. For single-bot runs the label
+        // Agent provenance is only meaningful after a hand-off — i.e. when more
+        // than one distinct agent executed stages. For single-agent runs the label
         // would be noise, so we suppress it.
-        const distinctBots = new Set(
-            stages.map(s => s.idUserBot).filter((id): id is number => id != null)
+        const distinctAgents = new Set(
+            stages.map(s => s.idUserAgent).filter((id): id is number => id != null)
         );
-        const showBot = distinctBots.size > 1;
+        const showAgent = distinctAgents.size > 1;
         const users = this.usersMap();
         return stages.map((s: AgentStageProgress) => ({
             label: this.stageLabel[s.stage] ?? s.stage,
@@ -179,7 +182,10 @@ export class AgentRunCardComponent {
             glyph: STAGE_STATUS_GLYPH[s.status] ?? 'circle',
             noteKey: s.note ? (STAGE_NOTE_KEY[s.note] ?? null) : null,
             attemptNo: s.attemptNo && s.attemptNo > 1 ? s.attemptNo : null,
-            botName: showBot && s.idUserBot != null ? (users.get(s.idUserBot)?.name ?? null) : null,
+            agentName:
+                showAgent && s.idUserAgent != null
+                    ? (users.get(s.idUserAgent)?.name ?? null)
+                    : null,
             at: s.at ?? null,
             approvedAt: s.approvedAt ?? null
         }));

@@ -8,6 +8,7 @@ import { GanttTimelineBodyComponent } from './gantt-timeline-body';
 import { UiTooltipComponent } from '../../../../../ui/components/tooltip/tooltip.component';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { ScheduledIssue } from '../../../../model/extended-issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 @Component({ selector: 'app-gantt-timeline-header', template: '', standalone: true })
 class TimelineHeaderStub {
@@ -64,19 +65,14 @@ const timelineServiceMock = {
 
 function makeTask(idIssuePublic: number): ScheduledIssue {
     return {
-        idIssue: idIssuePublic,
-        idIssuePublic,
-        idProject: 10,
-        idState: null,
-        idSeverity: null,
-        title: `Task ${idIssuePublic}`,
-        description: '',
-        tracked: 0,
-        estimated: 3600,
-        scheduledAt: new Date('2025-01-15T00:00:00Z'),
-        state: undefined,
-        severity: undefined,
-        assignedToUser: undefined
+        ...Fixtures.extendedIssue({
+            idIssue: idIssuePublic,
+            idIssuePublic,
+            idProject: 10,
+            title: `Task ${idIssuePublic}`,
+            estimated: 3600
+        }),
+        scheduledAt: new Date('2025-01-15T00:00:00Z')
     };
 }
 

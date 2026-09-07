@@ -14,7 +14,7 @@ import {
     viewChild,
     AfterViewInit
 } from '@angular/core';
-import { Router } from '@angular/router';
+
 import {
     ConnectedPosition,
     FlexibleConnectedPositionStrategy,
@@ -47,7 +47,6 @@ const DRAG_TOOLTIP_POSITIONS: ConnectedPosition[] = [
     standalone: false
 })
 export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
-    private readonly router = inject(Router);
     private readonly ngZone = inject(NgZone);
     private readonly overlay = inject(Overlay);
     public readonly timelineService = inject(GanttTimelineService);
@@ -249,21 +248,6 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
         this.dragTooltipOverlayRef = null;
         this.dragTooltipRef = null;
         this.dragTooltipPosition = null;
-    }
-
-    public onDoubleClick(event: MouseEvent): void {
-        const container = this.scrollContainer().nativeElement;
-        const rect = container.getBoundingClientRect();
-        const pixelX = event.clientX - rect.left + container.scrollLeft;
-        const clickedDate = this.timelineService.toDate(pixelX);
-        const snapped = this.timelineService.snapToGrid(clickedDate);
-
-        // Navigate to create issue with scheduledAt
-        // idProject extracted from current route by parent
-        void this.router.navigate([], {
-            queryParams: { scheduledAt: snapped.toISOString() },
-            queryParamsHandling: 'merge'
-        });
     }
 
     public onMiddleMouseDown(event: MouseEvent): void {

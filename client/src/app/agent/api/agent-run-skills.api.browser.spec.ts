@@ -36,7 +36,7 @@ describe('AgentRunApi skills endpoints', () => {
         request.flush({ stages: [] });
     });
 
-    it('reads the bot workload overview per project', () => {
+    it('reads the agent workload overview per project', () => {
         api.agentsOverview$(3).subscribe();
 
         const request = http.expectOne('/api/private/project/3/agents/overview');
@@ -44,16 +44,16 @@ describe('AgentRunApi skills endpoints', () => {
         request.flush([]);
     });
 
-    it('assigns a bot with explicit per-stage skills', () => {
+    it('assigns an agent with explicit per-stage skills', () => {
         api.assignAgent$(3, 42, {
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1] }
         }).subscribe();
 
         const request = http.expectOne('/api/private/project/3/issue/42/assign-agent');
         expect(request.request.method).toBe('POST');
         expect(request.request.body).toEqual({
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1] }
         });
         request.flush({});

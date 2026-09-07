@@ -420,7 +420,7 @@ func GetProjectMemberController() *controller.ProjectMemberController {
 func GetAgentRunRepository() *repository.AgentRunRepository {
 	instance, _ := di.GetWithNew("agent-run-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewAgentRunRepository(pool).WithEventMirror(GetWorkflowEventMirror()), nil
+		return repository.NewAgentRunRepository(pool).WithPhaseStateTransitioner(GetPhaseStateTransitioner()), nil
 	})
 	return instance.(*repository.AgentRunRepository)
 }
@@ -433,12 +433,54 @@ func GetAgentTaskRepository() *repository.AgentTaskRepository {
 	return instance.(*repository.AgentTaskRepository)
 }
 
-func GetBotGatewayRepository() *repository.BotGatewayRepository {
+func GetAgentTaskService() *agent.TaskService {
+	instance, _ := di.GetWithNew("agent-task-service", func() (any, error) {
+		return agent.NewTaskService(GetAgentTaskRepository()), nil
+	})
+	return instance.(*agent.TaskService)
+}
+
+func GetAgentThinkingService() (*agent.ThinkingService, error) {
+	instance, err := di.GetWithNew("agent-thinking-service", func() (any, error) {
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
+		return agent.NewThinkingService(
+			GetAgentThinkingRepository(),
+			GetAgentTaskRepository(),
+			GetAgentRunRepository(),
+			GetAgentThinkingNotifier(),
+			settings,
+		), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*agent.ThinkingService), nil
+}
+
+func GetAgentThinkingNotifier() *agent.ThinkingNotifier {
+	instance, _ := di.GetWithNew("agent-thinking-notifier", func() (any, error) {
+		return agent.NewThinkingNotifier(GetNotifier(), GetProjectRepository()), nil
+	})
+	return instance.(*agent.ThinkingNotifier)
+}
+
+func GetAgentThinkingRepository() *repository.AgentThinkingRepository {
+	instance, _ := di.GetWithNew("agent-thinking-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewAgentThinkingRepository(pool), nil
+	})
+	return instance.(*repository.AgentThinkingRepository)
+}
+
+func GetAgentGatewayRepository() *repository.AgentGatewayRepository {
 	instance, _ := di.GetWithNew("bot-gateway-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewBotGatewayRepository(pool), nil
+		return repository.NewAgentGatewayRepository(pool), nil
 	})
-	return instance.(*repository.BotGatewayRepository)
+	return instance.(*repository.AgentGatewayRepository)
 }
 
 func GetWebhookDedupRepository() *repository.WebhookDedupRepository {
@@ -461,7 +503,7 @@ func GetDispatcher() *agent.Dispatcher {
 		return agent.NewDispatcher(
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
-			GetBotGatewayRepository(),
+			GetAgentGatewayRepository(),
 			GetIssueRepository(),
 			GetMessageRepository(),
 			GetProjectRepository(),
@@ -503,26 +545,61 @@ func GetScheduler() *agent.Scheduler {
 
 func GetJobScheduler() *scheduler.Scheduler {
 	instance, _ := di.GetWithNew("job-scheduler", func() (any, error) {
-		return scheduler.New(scheduler.Task{
-			Name:       "sprint-snapshot",
-			Interval:   time.Hour,
-			RunOnStart: true,
-			Run: func(ctx context.Context) error {
-				_, err := GetSprintRepository().UpsertSnapshotsForOpenSprints(ctx)
-				return err
+		return scheduler.New(
+			scheduler.Task{
+				Name:       "sprint-snapshot",
+				Interval:   time.Hour,
+				RunOnStart: true,
+				Run: func(ctx context.Context) error {
+					_, err := GetSprintRepository().UpsertSnapshotsForOpenSprints(ctx)
+					return err
+				},
 			},
-		}), nil
+			scheduler.Task{
+				// Hourly, not weekly: a cancelled or swept stage has no thinking
+				// to show until this runs.
+				Name:       "agent-thinking-compaction",
+				Interval:   time.Hour,
+				RunOnStart: true,
+				Run: func(ctx context.Context) error {
+					thinking, err := GetAgentThinkingService()
+					if err != nil {
+						return err
+					}
+					_, err = thinking.CompactOrphaned(ctx)
+					return err
+				},
+			},
+			scheduler.Task{
+				Name:     "agent-thinking-tail-sweep",
+				Interval: time.Hour,
+				Run: func(ctx context.Context) error {
+					thinking, err := GetAgentThinkingService()
+					if err != nil {
+						return err
+					}
+					thinking.SweepTails()
+					return nil
+				},
+			},
+		), nil
 	})
 	return instance.(*scheduler.Scheduler)
 }
 
-func GetAgentRunController() *controller.AgentRunController {
-	instance, _ := di.GetWithNew("agent-run-controller", func() (any, error) {
+func GetAgentRunController() (*controller.AgentRunController, error) {
+	instance, err := di.GetWithNew("agent-run-controller", func() (any, error) {
 		pool := mustDb()
+		thinking, err := GetAgentThinkingService()
+		if err != nil {
+			return nil, err
+		}
 		return controller.NewAgentRunController(
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
-			GetBotGatewayRepository(),
+			GetAgentTaskService(),
+			thinking,
+			GetAgentGatewayRepository(),
 			GetIssueRepository(),
 			GetProjectRepository(),
 			GetMessageRepository(),
@@ -534,17 +611,20 @@ func GetAgentRunController() *controller.AgentRunController {
 			pool,
 		), nil
 	})
-	return instance.(*controller.AgentRunController)
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.AgentRunController), nil
 }
 
-func GetBotGatewayController() *controller.BotGatewayController {
+func GetAgentGatewayController() *controller.AgentGatewayController {
 	instance, _ := di.GetWithNew("bot-gateway-controller", func() (any, error) {
-		return controller.NewBotGatewayController(
-			GetBotGatewayRepository(),
+		return controller.NewAgentGatewayController(
+			GetAgentGatewayRepository(),
 			GetUserRepository(),
 		), nil
 	})
-	return instance.(*controller.BotGatewayController)
+	return instance.(*controller.AgentGatewayController)
 }
 
 func GetMessageController() *controller.MessageController {
@@ -561,7 +641,7 @@ func GetMessageController() *controller.MessageController {
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
 			pool,
-		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(), GetDispatcher(), GetNotifier()), nil
+		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.MessageController)
 }
@@ -589,7 +669,7 @@ func GetIssueController() *controller.IssueController {
 			GetNotificationService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).
-			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(),
+			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
 				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.IssueController)
@@ -834,7 +914,7 @@ func GetMergePoller() *agent.MergePoller {
 			GetGitIntegrationRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
-			GetWorkflowEventMirror(),
+			GetPhaseStateTransitioner(),
 			GetNotifier(),
 		), nil
 	})
@@ -906,6 +986,25 @@ func GetAgentOverviewRepository() *repository.AgentOverviewRepository {
 	return instance.(*repository.AgentOverviewRepository)
 }
 
+func GetAgentThinkingController() (*controller.AgentThinkingController, error) {
+	instance, err := di.GetWithNew("agent-thinking-controller", func() (any, error) {
+		thinking, err := GetAgentThinkingService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewAgentThinkingController(
+			thinking,
+			GetAgentTaskService(),
+			GetAgentRunRepository(),
+			GetAclService(),
+		), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.AgentThinkingController), nil
+}
+
 func GetAgentOverviewController() *controller.AgentOverviewController {
 	instance, _ := di.GetWithNew("agent-overview-controller", func() (any, error) {
 		return controller.NewAgentOverviewController(
@@ -923,15 +1022,17 @@ func GetSkillController() *controller.SkillController {
 	return instance.(*controller.SkillController)
 }
 
-func GetWorkflowEventMirror() *agent.WorkflowEventMirror {
+func GetPhaseStateTransitioner() *agent.PhaseStateTransitioner {
 	instance, _ := di.GetWithNew("workflow-event-mirror", func() (any, error) {
-		return agent.NewWorkflowEventMirror(
+		return agent.NewPhaseStateTransitioner(
 			GetWorkflowEventMapRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
+			GetProjectRepository(),
+			GetNotifier(),
 		), nil
 	})
-	return instance.(*agent.WorkflowEventMirror)
+	return instance.(*agent.PhaseStateTransitioner)
 }
 
 func GetWorkflowEventMapController() *controller.WorkflowEventMapController {
@@ -1005,6 +1106,16 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		agentRunController, err := GetAgentRunController()
+		if err != nil {
+			return nil, err
+		}
+
+		agentThinkingController, err := GetAgentThinkingController()
+		if err != nil {
+			return nil, err
+		}
+
 		return router.New(
 			GetHttpServer(),
 			GetBaseLogger(),
@@ -1034,8 +1145,9 @@ func GetRouter() (*router.Router, error) {
 			GetAdminController(),
 			GetMyIssuesController(),
 			GetGitIntegrationController(),
-			GetAgentRunController(),
-			GetBotGatewayController(),
+			agentRunController,
+			agentThinkingController,
+			GetAgentGatewayController(),
 			GetWorkflowEventMapController(),
 			GetSkillController(),
 			GetProjectSkillController(),

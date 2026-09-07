@@ -1,5 +1,5 @@
 import { AfterViewChecked, Directive, ElementRef, inject } from '@angular/core';
-import { prefersReducedMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from '../util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from '../util/ui-motion';
 
 const MIN_DELTA_PX = 2;
 
@@ -36,7 +36,7 @@ export class UiFlipListDirective implements AfterViewChecked {
 
         const previousPositions = this.positions;
         const nextPositions = new Map<string, number>();
-        const isReduced = prefersReducedMotion();
+        const isReduced = UiMotion.prefersReducedMotion();
 
         items.forEach(item => {
             const id = item.dataset['flipId'];

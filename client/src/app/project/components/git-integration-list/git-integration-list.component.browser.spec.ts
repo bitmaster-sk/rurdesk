@@ -4,6 +4,8 @@ import { By } from '@angular/platform-browser';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
+import { UiModule } from '../../../ui/ui.module';
+import { TablerIconStub } from 'src/testing/stubs';
 import { GitIntegrationListComponent } from './git-integration-list.component';
 import { GitIntegrationApi } from '../../api/git-integration.api.service';
 import { AclStore } from '../../store/acl.store';
@@ -36,7 +38,7 @@ describe('GitIntegrationListComponent', () => {
 
         TestBed.configureTestingModule({
             declarations: [GitIntegrationListComponent],
-            imports: [HttpClientTestingModule, TranslateModule.forRoot()],
+            imports: [HttpClientTestingModule, TranslateModule.forRoot(), UiModule, TablerIconStub],
             providers: [
                 { provide: GitIntegrationApi, useValue: api },
                 // Read-only viewer: hides the manage column so the row never
@@ -72,5 +74,55 @@ describe('GitIntegrationListComponent', () => {
             .nativeElement.textContent.trim();
 
         expect(cellText).toBe('Gitea');
+    });
+});
+
+describe('GitIntegrationListComponent — delete confirmation (browser)', () => {
+    let fixture: ComponentFixture<GitIntegrationListComponent>;
+    let deleteFn: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        deleteFn = vi.fn().mockReturnValue(of(void 0));
+
+        TestBed.configureTestingModule({
+            declarations: [GitIntegrationListComponent],
+            imports: [HttpClientTestingModule, TranslateModule.forRoot(), UiModule, TablerIconStub],
+            providers: [
+                {
+                    provide: GitIntegrationApi,
+                    useValue: {
+                        list$: vi.fn().mockReturnValue(of([makeIntegration(1, HostType.GitHub)])),
+                        delete$: deleteFn
+                    }
+                },
+                { provide: AclStore, useValue: { canManageGitIntegration: signal(true) } }
+            ]
+        });
+    });
+
+    function panel(): HTMLElement | null {
+        return document.querySelector('.ui-confirm-panel');
+    }
+
+    it('shows a confirm popup on delete click and calls delete$ only on accept', () => {
+        fixture = TestBed.createComponent(GitIntegrationListComponent);
+        fixture.componentRef.setInput('project', { idProject: 1 });
+        fixture.detectChanges();
+
+        const trashButton = fixture.debugElement.queryAll(By.css('ui-button'))[1];
+        (trashButton.nativeElement as HTMLElement).click();
+        fixture.detectChanges();
+
+        // Popup is open, delete not yet called.
+        expect(panel()).not.toBeNull();
+        expect(deleteFn).not.toHaveBeenCalled();
+
+        // Click accept (second button in the confirm panel).
+        const buttons = Array.from(document.querySelectorAll('.ui-confirm-panel button'));
+        (buttons[1] as HTMLElement).click();
+        fixture.detectChanges();
+
+        expect(panel()).toBeNull();
+        expect(deleteFn).toHaveBeenCalledTimes(1);
     });
 });

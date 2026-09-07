@@ -10,17 +10,9 @@ import { CommandPaletteService } from 'src/app/core/command/command-palette.serv
 import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const issue: Issue = {
-    idProject: 1,
-    idIssue: 10,
-    idIssuePublic: 5,
-    title: 'X',
-    idState: 1,
-    idSeverity: null,
-    description: '',
-    tracked: 0
-};
+const issue: Issue = Fixtures.issue({ idIssue: 10, idIssuePublic: 5, title: 'X', idState: 1 });
 
 describe('IssueDetailPage title', () => {
     let setContext: any;

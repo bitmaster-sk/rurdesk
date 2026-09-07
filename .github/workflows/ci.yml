@@ -238,14 +238,22 @@ jobs:
               working-directory: client
               run: npm run lint
 
-            # The only step that type-checks the client: Vitest transpiles with
-            # esbuild and ignores types, so without this a violation of `strict`
-            # merges green and surfaces a day later as a failed nightly e2e image
-            # build. `ng build` rather than `tsc --noEmit` because it also checks
-            # templates under strictTemplates.
+            # Type-checks the client app: Vitest transpiles with esbuild and
+            # ignores types, so without this a violation of `strict` merges green
+            # and surfaces a day later as a failed nightly e2e image build.
+            # `ng build` rather than `tsc --noEmit` because it also checks
+            # templates under strictTemplates. It compiles tsconfig.app.json
+            # only — specs are covered by the step below.
             - name: Build (type + template check)
               working-directory: client
               run: npm run build
+
+            # Specs are outside tsconfig.app.json, so `ng build` never sees them.
+            # Without this a test can call a 3-arg function with 4 arguments and
+            # still pass, asserting something other than what the author meant.
+            - name: Type-check specs
+              working-directory: client
+              run: npm run type-check:spec
 
             - name: Unit tests (node) with coverage
               working-directory: client

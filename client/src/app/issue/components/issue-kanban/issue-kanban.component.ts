@@ -14,12 +14,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SavedViewKanbanLayout } from 'src/app/project/model/saved-view.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import {
-    prefersReducedMotion,
-    pulseElement,
-    UI_SETTLE_DURATION_MS,
-    UI_SETTLE_EASING
-} from 'src/app/ui/util/motion';
+import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -97,8 +92,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected readonly viewMode = signal<SavedViewKanbanLayout>('swimlane');
 
     protected readonly viewModeOptions = [
-        { label: this.i18n.instant('ISSUE.KANBAN.LAYOUT.COLUMNS'), value: 'columns' },
-        { label: this.i18n.instant('ISSUE.KANBAN.LAYOUT.SWIMLANE'), value: 'swimlane' }
+        { labelKey: 'ISSUE.KANBAN.LAYOUT.COLUMNS', value: 'columns' },
+        { labelKey: 'ISSUE.KANBAN.LAYOUT.SWIMLANE', value: 'swimlane' }
     ];
 
     protected readonly swimlaneData$ = combineLatest([
@@ -144,6 +139,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         localStorage.getItem(IssueKanbanComponent.showClosedSprintsKey) === 'true'
     );
 
+    private readonly lang = toSignal(this.i18n.langChange$, { initialValue: null });
+
     protected readonly sprintTabs = computed<SprintTab[]>(() => {
         const list = this.sprints();
         const current = this.currentSprint();
@@ -164,7 +161,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         return [
             {
                 idSprint: null,
-                label: this.i18n.instant('ISSUE.KANBAN.SPRINTS.BACKLOG'),
+                label: '',
+                labelKey: 'ISSUE.KANBAN.SPRINTS.BACKLOG',
                 isCurrent: false,
                 isClosed: false,
                 listId: 'sprint-tab-backlog'
@@ -204,22 +202,28 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected readonly sortDirection = signal<'asc' | 'desc'>('asc');
 
     protected readonly sortOptions = [
-        { label: this.i18n.instant('TITLE'), value: 'title' },
-        { label: this.i18n.instant('STATE.SINGULAR'), value: 'state' },
-        { label: this.i18n.instant('SEVERITY.SINGULAR'), value: 'severity' },
-        { label: this.i18n.instant('UPDATED.AT'), value: 'updateAt' },
-        { label: this.i18n.instant('CREATED.AT'), value: 'createAt' }
+        { labelKey: 'TITLE', value: 'title' },
+        { labelKey: 'STATE.SINGULAR', value: 'state' },
+        { labelKey: 'SEVERITY.SINGULAR', value: 'severity' },
+        { labelKey: 'UPDATED.AT', value: 'updateAt' },
+        { labelKey: 'CREATED.AT', value: 'createAt' }
     ];
 
-    protected readonly currentSortLabel = computed(
-        () => this.sortOptions.find(o => o.value === this.sortColumn())?.label ?? ''
-    );
+    protected readonly currentSortLabel = computed(() => {
+        this.lang();
+        return this.i18n.instant(
+            this.sortOptions.find(o => o.value === this.sortColumn())?.labelKey ?? ''
+        );
+    });
 
     protected readonly sortMenuItems = computed(() =>
-        this.sortOptions.map(o => ({
-            label: o.label,
-            command: () => this.onSortColumnChange(o.value)
-        }))
+        this.sortOptions.map(o => {
+            this.lang();
+            return {
+                label: this.i18n.instant(o.labelKey),
+                command: () => this.onSortColumnChange(o.value)
+            };
+        })
     );
 
     public ngOnInit(): void {
@@ -277,13 +281,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private pulseTile(idIssue: number): void {
         requestAnimationFrame(() => {
             const el = document.querySelector<HTMLElement>(`[data-tile-id="${idIssue}"]`);
-            if (el) pulseElement(el);
+            if (el) UiMotion.pulseElement(el);
         });
     }
 
     /** Cross-column FLIP: the re-rendered tile glides from its old rect. */
     private flyTile(idIssue: number, from: DOMRect): void {
-        if (prefersReducedMotion()) return;
+        if (UiMotion.prefersReducedMotion()) return;
         // In a hidden tab rAF stalls until the tab is shown again — the flight
         // would replay on return, long after the change. Just land the tile.
         if (document.hidden) return;

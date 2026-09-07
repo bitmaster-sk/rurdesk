@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -19,7 +20,7 @@ var retryBackoffs = []time.Duration{5 * time.Second, 15 * time.Second, 45 * time
 type Dispatcher struct {
 	agentRunRepo *repository.AgentRunRepository
 	taskRepo     *repository.AgentTaskRepository
-	botGwRepo    *repository.BotGatewayRepository
+	agentGwRepo  *repository.AgentGatewayRepository
 	issueRepo    *repository.IssueRepository
 	messageRepo  *repository.MessageRepository
 	projectRepo  *repository.ProjectRepository
@@ -33,7 +34,7 @@ type Dispatcher struct {
 func NewDispatcher(
 	agentRunRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
-	botGwRepo *repository.BotGatewayRepository,
+	agentGwRepo *repository.AgentGatewayRepository,
 	issueRepo *repository.IssueRepository,
 	messageRepo *repository.MessageRepository,
 	projectRepo *repository.ProjectRepository,
@@ -46,7 +47,7 @@ func NewDispatcher(
 	return &Dispatcher{
 		agentRunRepo: agentRunRepo,
 		taskRepo:     taskRepo,
-		botGwRepo:    botGwRepo,
+		agentGwRepo:  agentGwRepo,
 		issueRepo:    issueRepo,
 		messageRepo:  messageRepo,
 		projectRepo:  projectRepo,
@@ -72,11 +73,11 @@ func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentR
 		}
 
 		event := WebhookEvent{
-			IdRun:     run.IdRun,
-			IdProject: run.IdProject,
-			IdIssue:   run.IdIssue,
-			IdUserBot: run.IdUserBot,
-			Event:     "stage_execute",
+			IdRun:       run.IdRun,
+			IdProject:   run.IdProject,
+			IdIssue:     run.IdIssue,
+			IdUserAgent: run.IdUserAgent,
+			Event:       "stage_execute",
 			Payload: map[string]any{
 				"idTask":        task.IdTask,
 				"stage":         task.Stage,
@@ -94,20 +95,20 @@ func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentR
 
 func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun) error {
 	event := WebhookEvent{
-		IdRun:     run.IdRun,
-		IdProject: run.IdProject,
-		IdIssue:   run.IdIssue,
-		IdUserBot: run.IdUserBot,
-		Event:     "cancelled",
-		Payload:   map[string]any{},
+		IdRun:       run.IdRun,
+		IdProject:   run.IdProject,
+		IdIssue:     run.IdIssue,
+		IdUserAgent: run.IdUserAgent,
+		Event:       "cancelled",
+		Payload:     map[string]any{},
 	}
 	return d.DispatchEvent(ctx, run, event)
 }
 
 func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, event WebhookEvent) error {
-	gateway, err := d.botGwRepo.LoadByBotUser(ctx, run.IdUserBot)
+	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil || gateway == nil {
-		return fmt.Errorf("no gateway configured for bot %d", run.IdUserBot)
+		return fmt.Errorf("no gateway configured for bot %d", run.IdUserAgent)
 	}
 
 	seq, err := d.agentRunRepo.CountEvents(ctx, run.IdRun)
@@ -131,9 +132,9 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	if err != nil {
 		return nil, fmt.Errorf("loading project: %w", err)
 	}
-	bot, err := d.userRepo.LoadUser(ctx, run.IdUserBot)
+	agent, err := d.userRepo.LoadUser(ctx, run.IdUserAgent)
 	if err != nil {
-		return nil, fmt.Errorf("loading bot user: %w", err)
+		return nil, fmt.Errorf("loading agent user: %w", err)
 	}
 
 	messages, err := d.messageRepo.LoadIssueMessages(ctx, run.IdIssue, 0, nil)
@@ -162,8 +163,8 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	bundle := map[string]any{
 		"issue":             issue,
 		"project":           project,
-		"bot":               bot,
-		"pendingComments":   filterCommentsAfterLastAttempt(messages, priorTasks, task.Stage),
+		"agent":             agent,
+		"reviewThread":      reviewThread(messages),
 		"approvedDesign":    artifacts.ApprovedDesign,
 		"approvedImplPlan":  artifacts.ApprovedImplPlan,
 		"rejectedOutput":    artifacts.RejectedOutput,
@@ -180,29 +181,35 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	return bundle, nil
 }
 
-// filterCommentsAfterLastAttempt returns comments on the issue after the most
-// recent completed attempt of `stage`, or all comments if there's no prior
-// completed attempt — the first attempt sees the full conversation.
-func filterCommentsAfterLastAttempt(messages []*model.Message, priorTasks []*model.AgentTask, stage string) []*model.Message {
-	var cutoff time.Time
-	for _, t := range priorTasks {
-		if t.Stage == stage && t.Status == constants.TaskStatusCompleted && t.FinishedAt != nil {
-			if t.FinishedAt.After(cutoff) {
-				cutoff = *t.FinishedAt
-			}
-		}
+// reviewThread returns the whole issue conversation oldest-first. Never trim it
+// to the current round: an attempt that cannot see the instruction behind the
+// code it is revising reverts that code back to the approved plan.
+func reviewThread(messages []*model.Message) []*model.Message {
+	out := make([]*model.Message, 0, len(messages))
+	for _, message := range messages {
+		out = append(out, withoutArtifactBody(message))
 	}
-	var out []*model.Message
-	for _, m := range messages {
-		if m.MessageKind != constants.MessageKindComment {
-			continue
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].CreatedAt.Equal(out[j].CreatedAt) {
+			return out[i].IdMessage < out[j].IdMessage
 		}
-		if !cutoff.IsZero() && !m.CreatedAt.After(cutoff) {
-			continue
-		}
-		out = append(out, m)
-	}
+		return out[i].CreatedAt.Before(out[j].CreatedAt)
+	})
 	return out
+}
+
+// withoutArtifactBody drops the body of the two kinds the bundle already ships
+// whole as approvedDesign / approvedImplPlan, keeping the thread under the
+// gateway's 1 MiB webhook limit. Copies: those fields alias these messages.
+func withoutArtifactBody(message *model.Message) *model.Message {
+	switch message.MessageKind {
+	case constants.MessageKindDesign, constants.MessageKindImplementationPlan:
+		trimmed := *message
+		trimmed.Message = ""
+		return &trimmed
+	default:
+		return message
+	}
 }
 
 // derefStringOrNil returns the string or nil so it serialises as a JSON string
@@ -250,7 +257,7 @@ func stageArtifactContext(stage string, tasks []*model.AgentTask, messages []*mo
 func latestStageOutput(stage string, tasks []*model.AgentTask, messages []*model.Message) *model.Message {
 	var latest *model.AgentTask
 	for _, task := range tasks {
-		if task.Stage != stage || task.Status != constants.TaskStatusCompleted || task.IdOutputMessage == nil {
+		if task.Stage != stage || task.Status != constants.TaskStatusCompleted || task.IdResultMessage == nil {
 			continue
 		}
 		if latest == nil || task.AttemptNo > latest.AttemptNo ||
@@ -261,7 +268,7 @@ func latestStageOutput(stage string, tasks []*model.AgentTask, messages []*model
 	if latest == nil {
 		return nil
 	}
-	return findMessageById(messages, *latest.IdOutputMessage)
+	return findMessageById(messages, *latest.IdResultMessage)
 }
 
 func findMessageById(messages []*model.Message, idMessage int64) *model.Message {

@@ -59,9 +59,9 @@ func TestToStreamableHTTP(t *testing.T) {
 func TestWriteGooseConfig(t *testing.T) {
 	dir := t.TempDir()
 	const mcpURL = "http://issue.proxy/mcp/plan/http"
-	const botKey = "deadbeef"
+	const agentKey = "deadbeef"
 
-	path, err := writeGooseConfig(dir, mcpURL, botKey)
+	path, err := writeGooseConfig(dir, mcpURL, agentKey)
 	if err != nil {
 		t.Fatalf("writeGooseConfig: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestWriteGooseConfig(t *testing.T) {
 	for _, want := range []string{
 		"type: streamable_http",
 		"uri: " + mcpURL,
-		"Authorization: Bearer " + botKey,
+		"Authorization: Bearer " + agentKey,
 		"enabled: true",
 		// Non-essential built-ins are disabled (headless tool gate); `apps`
 		// caused agents to build goose apps instead of repo files.
@@ -238,7 +238,7 @@ func TestRunWithStubBinary(t *testing.T) {
 
 			cfg := &common.Config{
 				TrackerMCPUrl: "http://issue.proxy/mcp/sse",
-				BotApiKey:     "deadbeef",
+				AgentApiKey:   "deadbeef",
 				Goose: &common.GooseConfig{
 					Provider:          "anthropic",
 					AnthropicAPIKey:   "sk-ant",
@@ -246,7 +246,7 @@ func TestRunWithStubBinary(t *testing.T) {
 					MaxTurnsImplement: 60,
 				},
 			}
-			adapter := NewGooseAdapter(cfg)
+			adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
 			task := common.Task{
 				IdRun:        7,
 				IdTask:       1,

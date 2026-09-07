@@ -19,13 +19,13 @@ import { MessageRecipientType } from 'src/app/message/constant/message-recipient
 import { Message } from 'src/app/message/model/message.model';
 import { MessageService } from 'src/app/message/message.service';
 import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
+import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamService } from 'src/app/team/team.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
 @Component({
@@ -42,7 +42,6 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly userApi = inject(UserApi);
     private readonly sProject = inject(ProjectService);
     private readonly sNotice = inject(NoticeService);
-    private readonly i18n = inject(I18nService);
 
     private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
 
@@ -71,8 +70,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     });
 
     protected readonly messageCountDisplay = computed<string>(() => {
-        const count = this.messageCount();
-        return count > 99 ? '99+' : count.toString();
+        return MessageFormatter.formatUnreadBadgeText(this.messageCount()) ?? '';
     });
 
     private readonly subscriptions = new Subscription();
@@ -89,7 +87,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         });
 
         this.userApi.loadUsers$().subscribe(users => {
-            this._teammates.set(users.filter(u => !u.isBot));
+            this._teammates.set(users.filter(u => !u.isAgent));
         });
 
         this.subscriptions.add(
@@ -117,7 +115,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     ): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('PROJECT.CHATS'),
+                labelKey: 'PROJECT.CHATS',
                 items: projects.map(p => this.toProjectChatMenuItem(p, unreadMap))
             }
         ];
@@ -133,7 +131,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: project.name,
             icon: 'messages',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', project.idProject, MessageRecipientType.project, 'view']
         };
@@ -142,7 +140,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private toTeamChatMenuItems(teams: Team[], unreadMap: Map<string, Message[]>): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('TEAM.CHATS'),
+                labelKey: 'TEAM.CHATS',
                 items: teams.map(t => this.toTeamChatMenuItem(t, unreadMap))
             }
         ];
@@ -154,7 +152,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: team.name,
             icon: 'users',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', team.idTeam, MessageRecipientType.team, 'view']
         };
@@ -167,7 +165,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     ): UiMenuItem[] {
         return [
             {
-                label: this.i18n.instant('DIRECT.CHATS'),
+                labelKey: 'DIRECT.CHATS',
                 items: users.map(u => this.toTeammatesChatMenuItem(u, unreadMap, currentUserId))
             }
         ];
@@ -187,7 +185,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return {
             label: user.name,
             icon: 'user',
-            badge: count > 0 ? count.toString() : undefined,
+            badge: MessageFormatter.formatUnreadBadgeText(count),
             badgeSeverity: 'danger',
             routerLink: ['/message', user.idUser, MessageRecipientType.user, 'view']
         };

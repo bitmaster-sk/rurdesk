@@ -156,9 +156,11 @@ export class IssueService {
     // issue$ payload) can normalize its date fields the same way HTTP responses
     // are normalized.
     public toIssue(issue: Issue): Issue {
-        issue.createAt = issue.createAt ? new Date(issue.createAt) : undefined;
-        issue.updateAt = issue.updateAt ? new Date(issue.updateAt) : undefined;
-        issue.scheduledAt = issue.scheduledAt ? new Date(issue.scheduledAt) : null;
-        return issue;
+        return {
+            ...issue,
+            createAt: issue.createAt ? new Date(issue.createAt) : undefined,
+            updateAt: issue.updateAt ? new Date(issue.updateAt) : undefined,
+            scheduledAt: issue.scheduledAt ? new Date(issue.scheduledAt) : null
+        };
     }
 }

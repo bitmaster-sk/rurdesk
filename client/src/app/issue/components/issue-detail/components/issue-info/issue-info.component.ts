@@ -51,7 +51,6 @@ import { PinService } from 'src/app/pin/pin.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import {
@@ -60,8 +59,8 @@ import {
     MrDiffFile,
     MrStatus
 } from 'src/app/project/model/git-integration.model';
-import { prMrLinkTitleKey, prMrTermKey } from 'src/app/issue/util/pr-mr-term';
-import { buildGitHostMrFilesUrl } from 'src/app/issue/util/git-host-file-url';
+import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
+import { GitHostUrl } from 'src/app/issue/util/git-host-file-url';
 import { DiffFileLinkBuilder } from 'src/app/shared/components/diff-viewer/diff-viewer.component';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
@@ -88,7 +87,6 @@ export class IssueInfoComponent {
 
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly i18n = inject(I18nService);
     private readonly sIssue = inject(IssueService);
     private readonly sPin = inject(PinService);
     private readonly authStore = inject(AuthStore);
@@ -126,10 +124,10 @@ export class IssueInfoComponent {
     // "Merge request") and the link picker / unlink action match.
     protected readonly gitIntegration = signal<GitIntegrationRes | null>(null);
     protected readonly mrTermKey = computed(() =>
-        prMrTermKey(this.gitIntegration()?.hostType ?? null)
+        GitHostTerminology.termKey(this.gitIntegration()?.hostType ?? null)
     );
     protected readonly mrLinkTitleKey = computed(() =>
-        prMrLinkTitleKey(this.gitIntegration()?.hostType ?? null)
+        GitHostTerminology.linkTitleKey(this.gitIntegration()?.hostType ?? null)
     );
     protected readonly mrLink = computed(
         () => this.agentRun()?.prUrl ?? (this.mrStatus()?.webUrl || null)
@@ -147,7 +145,7 @@ export class IssueInfoComponent {
         const integration = this.gitIntegration();
         const mrId = this.currentIssue()?.mrId;
         if (!integration || !mrId) return null;
-        const url = buildGitHostMrFilesUrl(
+        const url = GitHostUrl.buildMrFilesUrl(
             integration.hostType,
             integration.baseUrl,
             integration.repoPath,
@@ -185,10 +183,10 @@ export class IssueInfoComponent {
 
     public readonly actions: UiMenuItem[] = [
         {
-            label: this.i18n.instant('AI.SINGULAR'),
+            labelKey: 'AI.SINGULAR',
             items: [
                 {
-                    label: this.i18n.instant('SPLIT.SINGULAR'),
+                    labelKey: 'SPLIT.SINGULAR',
                     command: () => {
                         const issue = this.currentIssue();
                         if (issue) {
@@ -199,14 +197,14 @@ export class IssueInfoComponent {
             ]
         },
         {
-            label: this.i18n.instant('ISSUE.PIN.SINGULAR'),
+            labelKey: 'ISSUE.PIN.SINGULAR',
             items: [
                 {
-                    label: this.i18n.instant('ISSUE.PIN.TO.PROJECT.PAGE'),
+                    labelKey: 'ISSUE.PIN.TO.PROJECT.PAGE',
                     command: () => this.onPin(PinDestinationType.PROJECT)
                 },
                 {
-                    label: this.i18n.instant('ISSUE.PIN.TO.MY.PAGE'),
+                    labelKey: 'ISSUE.PIN.TO.MY.PAGE',
                     command: () => this.onPin(PinDestinationType.USER)
                 }
             ]
@@ -354,13 +352,13 @@ export class IssueInfoComponent {
      * The dock already assigned the bot and created its run server-side. Both
      * the control and the local issue must be synced WITHOUT emitting: the form
      * autosaves on every change, so a stale `assignedTo` would be PATCHed back
-     * on the next edit — un-assigning the bot and re-entering the assignee hook.
+     * on the next edit — un-assigning the agent and re-entering the assignee hook.
      */
     protected onAgentRunCreated(run: AgentRun): void {
-        this.assignedToControl.setValue(run.idUserBot, { emitEvent: false });
+        this.assignedToControl.setValue(run.idUserAgent, { emitEvent: false });
         const issue = this.currentIssue();
         if (issue) {
-            this.currentIssue.set({ ...issue, assignedTo: run.idUserBot });
+            this.currentIssue.set({ ...issue, assignedTo: run.idUserAgent });
         }
     }
 

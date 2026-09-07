@@ -2,7 +2,7 @@ package mcp
 
 // Stage controls which tools a register function exposes. Plan-stage MCP
 // connections see only read-only context tools plus submit_plan and
-// request_clarification — the bot cannot call any write tool during planning.
+// request_clarification — the agent cannot call any write tool during planning.
 // Implement stage sees everything.
 const (
 	StageAll  = "all"

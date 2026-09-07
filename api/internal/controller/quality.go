@@ -88,7 +88,7 @@ func (c *QualityController) Preview(ctx *gin.Context) {
 	user, _ := extctx.GetUser(reqCtx)
 
 	if !c.aclSvc.CanUpdateIssue(reqCtx, user.IdUser, idProject) {
-		_ = ctx.Error(errForbidden)
+		_ = ctx.Error(errs.ErrForbidden)
 		ctx.Status(http.StatusForbidden)
 		return
 	}
@@ -141,7 +141,7 @@ func (c *QualityController) Check(ctx *gin.Context) {
 	user, _ := extctx.GetUser(reqCtx)
 
 	if !c.aclSvc.CanUpdateIssue(reqCtx, user.IdUser, idProject) {
-		_ = ctx.Error(errForbidden)
+		_ = ctx.Error(errs.ErrForbidden)
 		ctx.Status(http.StatusForbidden)
 		return
 	}
@@ -202,7 +202,7 @@ func (c *QualityController) GetQuality(ctx *gin.Context) {
 	user, _ := extctx.GetUser(reqCtx)
 
 	if !c.aclSvc.CanReadProject(reqCtx, user.IdUser, idProject) {
-		_ = ctx.Error(errForbidden)
+		_ = ctx.Error(errs.ErrForbidden)
 		ctx.Status(http.StatusForbidden)
 		return
 	}

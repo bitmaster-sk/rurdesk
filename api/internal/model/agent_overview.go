@@ -3,7 +3,7 @@ package model
 // Counters are global; named issues are scoped to the requested project so a
 // dropdown cannot leak issue numbers from a project the caller cannot read.
 type AgentOverview struct {
-	IdUserBot            int64            `json:"idUserBot"`
+	IdUserAgent          int64            `json:"idUserAgent"`
 	IsBusy               bool             `json:"isBusy"`
 	Current              *AgentCurrentRun `json:"current"`
 	QueueCount           int              `json:"queueCount"`

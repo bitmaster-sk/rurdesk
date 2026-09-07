@@ -101,7 +101,7 @@ export class IssueParticipantsComponent {
     }
 
     public getRoleLabelKey(participant: IssueParticipantModel): string {
-        if (participant.isBot) return 'ISSUE.PARTICIPANTS.ROLE.BOT';
+        if (participant.isAgent) return 'ISSUE.PARTICIPANTS.ROLE.AGENT';
         switch (participant.source) {
             case ParticipantSource.Creator:
                 return 'ISSUE.PARTICIPANTS.ROLE.CREATOR';
@@ -117,7 +117,7 @@ export class IssueParticipantsComponent {
     }
 
     public getRoleBadgeClass(participant: IssueParticipantModel): string {
-        if (participant.isBot) return 'role-badge role-badge--bot';
+        if (participant.isAgent) return 'role-badge role-badge--agent';
         switch (participant.source) {
             case ParticipantSource.Creator:
                 return 'role-badge role-badge--creator';

@@ -30,7 +30,7 @@ const makeParticipant = (
     idUser: 1,
     name: 'Me',
     colorAvatarBg: '#000',
-    isBot: false,
+    isAgent: false,
     source: ParticipantSource.Creator,
     hasNotificationsEnabled: true,
     ...overrides
@@ -106,7 +106,9 @@ describe('IssueParticipantsComponent — notification toggle', () => {
     it('clicking the toggle calls setMyNotifications$ with the negated value', async () => {
         const { fixture, serviceStub } = await setup({ currentUserId: 1 });
         const rows = fixture.nativeElement.querySelectorAll('.participant-row');
-        const toggleBtn = rows[0].querySelector<HTMLButtonElement>('.participant-row__notify-btn');
+        const toggleBtn: HTMLButtonElement | null = rows[0].querySelector(
+            '.participant-row__notify-btn'
+        );
         expect(toggleBtn).not.toBeNull();
 
         toggleBtn!.click();
@@ -133,14 +135,14 @@ describe('IssueParticipantsComponent — role badges', () => {
         expect(badge?.classList.contains('role-badge--creator')).toBe(true);
     });
 
-    it('assigns bot badge class when isBot is true regardless of source', async () => {
+    it('assigns bot badge class when isAgent is true regardless of source', async () => {
         const { fixture } = await setup({
             participants: [
-                makeParticipant({ idUser: 1, isBot: true, source: ParticipantSource.Creator })
+                makeParticipant({ idUser: 1, isAgent: true, source: ParticipantSource.Creator })
             ],
             currentUserId: 99
         });
         const badge = fixture.nativeElement.querySelector('.role-badge');
-        expect(badge?.classList.contains('role-badge--bot')).toBe(true);
+        expect(badge?.classList.contains('role-badge--agent')).toBe(true);
     });
 });

@@ -111,7 +111,7 @@ type originRewriteHandler struct {
 // The endpoint URL built from it is where the client sends its Authorization
 // bearer, so the host must never come from an attacker-controlled header:
 // X-Forwarded-Host is deliberately NOT read. A direct request carrying a forged
-// one would otherwise redirect the bot's token to that host. Every proxy we ship
+// one would otherwise redirect the agent's token to that host. Every proxy we ship
 // sets Host to the client-facing value (docker/proxy/templates/default.conf.template),
 // so r.Host already carries what X-Forwarded-Host would have.
 //
