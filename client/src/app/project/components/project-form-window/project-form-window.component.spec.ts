@@ -5,7 +5,7 @@ import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { ProjectFormWindowComponent } from './project-form-window.component';
 import { ProjectService } from '../../project.service';
-import { Project, ProjectInsert } from '../../model/project.model';
+import { Project, CreateProjectReq } from '../../model/project.model';
 
 describe('ProjectFormWindowComponent', () => {
     let close: ReturnType<typeof vi.fn>;
@@ -15,7 +15,7 @@ describe('ProjectFormWindowComponent', () => {
     let component: ProjectFormWindowComponent;
 
     // idProject is absent on purpose — the component treats its absence as "insert, not update".
-    const draftProject: ProjectInsert = { name: 'New', color: '#123456' };
+    const draftProject: CreateProjectReq = { name: 'New', color: '#123456' };
     const newProject = draftProject as Project;
     const savedProject: Project = { idProject: 7, name: 'New', color: '#123456' };
     const existingProject: Project = { idProject: 3, name: 'Edit', color: '#654321' };

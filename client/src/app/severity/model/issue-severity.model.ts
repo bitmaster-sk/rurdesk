@@ -6,3 +6,5 @@ export interface IssueSeverity {
     protected: boolean;
     orderRank: number;
 }
+
+export type CreateIssueSeverityReq = Omit<IssueSeverity, 'idSeverity' | 'protected'>;

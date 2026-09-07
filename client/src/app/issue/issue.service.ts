@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IssuesFilter } from './components/filter/issue-filter.entity';
-import { Issue, IssueDraft } from './model/issue.model';
+import { Issue, CreateIssueReq } from './model/issue.model';
 import { IssuesPage, IssueGroup } from './model/issues-page.model';
 
 @Injectable({
@@ -133,7 +133,7 @@ export class IssueService {
             .pipe(map(issue => this.toIssue(issue)));
     }
 
-    public insertIssue(issue: IssueDraft): Observable<Issue> {
+    public insertIssue(issue: CreateIssueReq): Observable<Issue> {
         return this.http
             .post<Issue>(`/api/private/project/${issue.idProject}/issue`, issue)
             .pipe(map(iss => this.toIssue(iss)));

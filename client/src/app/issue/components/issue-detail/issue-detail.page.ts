@@ -16,7 +16,7 @@ import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { IssueService } from '../../issue.service';
-import { Issue, IssueDraft } from '../../model/issue.model';
+import { Issue, CreateIssueReq } from '../../model/issue.model';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 
@@ -145,7 +145,7 @@ export class IssueDetailPage implements OnDestroy {
             return this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
         }
         // idIssue/idIssuePublic stay absent on purpose — the form reads their absence as "new issue".
-        const draft: IssueDraft = {
+        const draft: CreateIssueReq = {
             idProject: params.idProject,
             idState: null,
             idSeverity: null,

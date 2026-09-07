@@ -1,4 +1,4 @@
-export type IssueDraft = Omit<Issue, 'idIssue' | 'idIssuePublic'>;
+export type CreateIssueReq = Omit<Issue, 'idIssue' | 'idIssuePublic'>;
 
 export interface Issue {
     idIssue: number;

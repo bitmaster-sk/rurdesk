@@ -7,3 +7,5 @@ export interface IssueState {
     protected: boolean;
     orderRank: number;
 }
+
+export type CreateIssueStateReq = Omit<IssueState, 'idState' | 'protected'>;
