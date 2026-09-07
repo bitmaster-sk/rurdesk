@@ -48,7 +48,7 @@ func (s *AgentCallbackAuthzSuite) SetupSuite() {
 	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 	s.App.Cache.Del(context.Background(), agentToken)
 
@@ -112,7 +112,7 @@ func (s *AgentCallbackAuthzSuite) insertRunWithActiveTask() (idRun int64, idTask
 	s.purgeRuns()
 
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
 		SELECT id_issue, $1, $2, 'in_progress', '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,
@@ -121,7 +121,7 @@ func (s *AgentCallbackAuthzSuite) insertRunWithActiveTask() (idRun int64, idTask
 	s.Require().NoError(err)
 
 	err = s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.task(id_run, id_user_bot, stage, attempt_no, status)
+		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status)
 		VALUES ($1, $2, 'implementation', 1, 'active')
 		RETURNING id_task`,
 		idRun, s.AgentUserID,

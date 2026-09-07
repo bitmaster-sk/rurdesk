@@ -20,7 +20,7 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         name: 'Ada',
         email: 'ada@x.io',
         colorAvatarBg: '#123456',
-        isBot: false,
+        isAgent: false,
         isAdmin: false
     };
     let addTeamMember$: ReturnType<typeof vi.fn>;

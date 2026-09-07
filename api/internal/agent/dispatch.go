@@ -73,11 +73,11 @@ func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentR
 		}
 
 		event := WebhookEvent{
-			IdRun:     run.IdRun,
-			IdProject: run.IdProject,
-			IdIssue:   run.IdIssue,
-			IdUserBot: run.IdUserBot,
-			Event:     "stage_execute",
+			IdRun:       run.IdRun,
+			IdProject:   run.IdProject,
+			IdIssue:     run.IdIssue,
+			IdUserAgent: run.IdUserAgent,
+			Event:       "stage_execute",
 			Payload: map[string]any{
 				"idTask":        task.IdTask,
 				"stage":         task.Stage,
@@ -95,20 +95,20 @@ func (d *Dispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentR
 
 func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun) error {
 	event := WebhookEvent{
-		IdRun:     run.IdRun,
-		IdProject: run.IdProject,
-		IdIssue:   run.IdIssue,
-		IdUserBot: run.IdUserBot,
-		Event:     "cancelled",
-		Payload:   map[string]any{},
+		IdRun:       run.IdRun,
+		IdProject:   run.IdProject,
+		IdIssue:     run.IdIssue,
+		IdUserAgent: run.IdUserAgent,
+		Event:       "cancelled",
+		Payload:     map[string]any{},
 	}
 	return d.DispatchEvent(ctx, run, event)
 }
 
 func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, event WebhookEvent) error {
-	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserBot)
+	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil || gateway == nil {
-		return fmt.Errorf("no gateway configured for bot %d", run.IdUserBot)
+		return fmt.Errorf("no gateway configured for bot %d", run.IdUserAgent)
 	}
 
 	seq, err := d.agentRunRepo.CountEvents(ctx, run.IdRun)
@@ -132,7 +132,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	if err != nil {
 		return nil, fmt.Errorf("loading project: %w", err)
 	}
-	agent, err := d.userRepo.LoadUser(ctx, run.IdUserBot)
+	agent, err := d.userRepo.LoadUser(ctx, run.IdUserAgent)
 	if err != nil {
 		return nil, fmt.Errorf("loading agent user: %w", err)
 	}
@@ -163,7 +163,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	bundle := map[string]any{
 		"issue":             issue,
 		"project":           project,
-		"bot":               agent,
+		"agent":             agent,
 		"reviewThread":      reviewThread(messages),
 		"approvedDesign":    artifacts.ApprovedDesign,
 		"approvedImplPlan":  artifacts.ApprovedImplPlan,

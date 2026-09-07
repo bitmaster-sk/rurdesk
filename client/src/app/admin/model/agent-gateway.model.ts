@@ -1,6 +1,6 @@
 export interface AgentGateway {
-    idBotGateway: number;
-    idUserBot: number;
+    idGateway: number;
+    idUserAgent: number;
     gatewayUrl: string;
     configJson: string;
     createdAt: string;

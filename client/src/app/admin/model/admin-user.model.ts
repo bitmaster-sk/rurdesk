@@ -3,7 +3,7 @@ export interface AdminUser {
     name: string;
     email: string;
     colorAvatarBg: string;
-    isBot: boolean;
+    isAgent: boolean;
     isAdmin: boolean;
 }
 
@@ -11,7 +11,7 @@ export interface AdminCreateUserReq {
     name: string;
     email?: string;
     password?: string;
-    isBot: boolean;
+    isAgent: boolean;
     isAdmin?: boolean;
     colorAvatarBg?: string;
 }

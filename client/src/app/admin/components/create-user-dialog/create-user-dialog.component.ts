@@ -36,7 +36,7 @@ export class CreateUserDialogComponent {
 
     protected readonly form = this.fb.group({
         name: ['', [Validators.required, Validators.maxLength(250)]],
-        isBot: [false],
+        isAgent: [false],
         isAdmin: [false],
         email: ['', [Validators.email, Validators.maxLength(250)]],
         password: ['', [Validators.minLength(5), Validators.maxLength(100)]],
@@ -50,17 +50,17 @@ export class CreateUserDialogComponent {
         // flips. Driven off the control's valueChanges (not a DOM event) so it
         // always runs AFTER the value is written to the model, which a native
         // checkbox's change event doesn't guarantee.
-        this.form.controls.isBot.valueChanges
+        this.form.controls.isAgent.valueChanges
             .pipe(takeUntilDestroyed())
             .subscribe(() => this.onToggleBot());
     }
 
     protected onToggleBot(): void {
-        const isBot = this.form.controls.isBot.value;
+        const isAgent = this.form.controls.isAgent.value;
         const email = this.form.controls.email;
         const password = this.form.controls.password;
         const gatewayUrl = this.form.controls.gatewayUrl;
-        if (isBot) {
+        if (isAgent) {
             email.clearValidators();
             password.clearValidators();
             // An agent is only useful with a gateway — its URL is required so the
@@ -86,18 +86,18 @@ export class CreateUserDialogComponent {
             return;
         }
         const value = this.form.getRawValue();
-        const req: AdminCreateUserReq = value.isBot!
-            ? { name: value.name!, isBot: true, colorAvatarBg: value.colorAvatarBg! }
+        const req: AdminCreateUserReq = value.isAgent!
+            ? { name: value.name!, isAgent: true, colorAvatarBg: value.colorAvatarBg! }
             : {
                   name: value.name!,
-                  isBot: false,
+                  isAgent: false,
                   email: value.email!,
                   password: value.password!,
                   isAdmin: value.isAdmin!,
                   colorAvatarBg: value.colorAvatarBg!
               };
 
-        const gatewayUrl = value.isBot ? (value.gatewayUrl ?? '').trim() : '';
+        const gatewayUrl = value.isAgent ? (value.gatewayUrl ?? '').trim() : '';
 
         this.isSaving.set(true);
         this.adminApi.createUser$(req).subscribe({
@@ -140,7 +140,7 @@ export class CreateUserDialogComponent {
     }
 
     private close(): void {
-        this.form.reset({ isBot: false, isAdmin: false, colorAvatarBg: Color.randomAvatarBg() });
+        this.form.reset({ isAgent: false, isAdmin: false, colorAvatarBg: Color.randomAvatarBg() });
         this.onToggleBot();
         this.visible.set(false);
     }

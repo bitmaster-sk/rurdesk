@@ -58,8 +58,8 @@ export class UserDropdownComponent implements ControlValueAccessor {
             return users;
         }
         return [...users].sort((left, right) => {
-            if (!!left.isBot !== !!right.isBot) {
-                return left.isBot ? 1 : -1;
+            if (!!left.isAgent !== !!right.isAgent) {
+                return left.isAgent ? 1 : -1;
             }
             return left.name.localeCompare(right.name);
         });
@@ -106,7 +106,7 @@ export class UserDropdownComponent implements ControlValueAccessor {
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: all =>
-                    this.overviewByAgent.set(new Map(all.map(row => [row.idUserBot, row]))),
+                    this.overviewByAgent.set(new Map(all.map(row => [row.idUserAgent, row]))),
                 error: () => this.overviewByAgent.set(new Map())
             });
     }
@@ -114,7 +114,7 @@ export class UserDropdownComponent implements ControlValueAccessor {
     // Writes the value WITHOUT emitting: the run already exists, and onChange would
     // re-enter the assignee-change path and create a second one.
     protected onAgentRunCreated(run: AgentRun): void {
-        this.value = run.idUserBot;
+        this.value = run.idUserAgent;
         this.agentRunCreated.emit(run);
         this.select()?.closePanel();
     }

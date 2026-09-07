@@ -19,12 +19,12 @@ func NewAgentGatewayRepository(pool *pgxpool.Pool) *AgentGatewayRepository {
 	return &AgentGatewayRepository{pool: pool}
 }
 
-const agentGatewayColumns = `id_bot_gateway, id_user_bot, gateway_url, max_concurrent, webhook_secret, config_json, created_at`
+const agentGatewayColumns = `id_gateway, id_user_agent, gateway_url, max_concurrent, webhook_secret, config_json, created_at`
 
 func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
 	gw := &model.AgentGateway{}
 	err := row.Scan(
-		&gw.IdBotGateway, &gw.IdUserBot, &gw.GatewayUrl,
+		&gw.IdGateway, &gw.IdUserAgent, &gw.GatewayUrl,
 		&gw.MaxConcurrent, &gw.WebhookSecret, &gw.ConfigJson, &gw.CreatedAt,
 	)
 	if err != nil {
@@ -33,23 +33,23 @@ func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
 	return gw, nil
 }
 
-func (r *AgentGatewayRepository) Insert(ctx context.Context, idUserBot int64, req model.CreateAgentGatewayReq, webhookSecret []byte) (*model.AgentGateway, error) {
+func (r *AgentGatewayRepository) Insert(ctx context.Context, idUserAgent int64, req model.CreateAgentGatewayReq, webhookSecret []byte) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		INSERT INTO agent.bot_gateway (id_user_bot, gateway_url, webhook_secret)
+		INSERT INTO agent.gateway (id_user_agent, gateway_url, webhook_secret)
 		VALUES ($1, $2, $3)
 		RETURNING `+agentGatewayColumns,
-		idUserBot, req.GatewayUrl, webhookSecret,
+		idUserAgent, req.GatewayUrl, webhookSecret,
 	)
 	return scanAgentGateway(row)
 }
 
-func (r *AgentGatewayRepository) LoadByAgentUser(ctx context.Context, idUserBot int64) (*model.AgentGateway, error) {
+func (r *AgentGatewayRepository) LoadByAgentUser(ctx context.Context, idUserAgent int64) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		SELECT `+agentGatewayColumns+` FROM agent.bot_gateway
-		WHERE id_user_bot = $1`,
-		idUserBot,
+		SELECT `+agentGatewayColumns+` FROM agent.gateway
+		WHERE id_user_agent = $1`,
+		idUserAgent,
 	)
 	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -58,12 +58,12 @@ func (r *AgentGatewayRepository) LoadByAgentUser(ctx context.Context, idUserBot 
 	return gw, err
 }
 
-func (r *AgentGatewayRepository) DeleteByAgentUser(ctx context.Context, idUserBot int64) error {
+func (r *AgentGatewayRepository) DeleteByAgentUser(ctx context.Context, idUserAgent int64) error {
 	db := extctx.GetDb(ctx, r.pool)
 	tag, err := db.Exec(ctx, `
-		DELETE FROM agent.bot_gateway
-		WHERE id_user_bot = $1`,
-		idUserBot,
+		DELETE FROM agent.gateway
+		WHERE id_user_agent = $1`,
+		idUserAgent,
 	)
 	if err != nil {
 		return fmt.Errorf("deleting agent gateway: %w", err)
@@ -76,14 +76,14 @@ func (r *AgentGatewayRepository) DeleteByAgentUser(ctx context.Context, idUserBo
 
 // UpdateUrl changes only the gateway URL (admin edit); the webhook secret is
 // untouched, so no token is reminted.
-func (r *AgentGatewayRepository) UpdateUrl(ctx context.Context, idUserBot int64, gatewayUrl string) (*model.AgentGateway, error) {
+func (r *AgentGatewayRepository) UpdateUrl(ctx context.Context, idUserAgent int64, gatewayUrl string) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		UPDATE agent.bot_gateway
+		UPDATE agent.gateway
 		SET gateway_url = $2
-		WHERE id_user_bot = $1
+		WHERE id_user_agent = $1
 		RETURNING `+agentGatewayColumns,
-		idUserBot, gatewayUrl,
+		idUserAgent, gatewayUrl,
 	)
 	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -92,14 +92,14 @@ func (r *AgentGatewayRepository) UpdateUrl(ctx context.Context, idUserBot int64,
 	return gw, err
 }
 
-func (r *AgentGatewayRepository) UpdateSecret(ctx context.Context, idUserBot int64, webhookSecret []byte) (*model.AgentGateway, error) {
+func (r *AgentGatewayRepository) UpdateSecret(ctx context.Context, idUserAgent int64, webhookSecret []byte) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		UPDATE agent.bot_gateway
+		UPDATE agent.gateway
 		SET webhook_secret = $2
-		WHERE id_user_bot = $1
+		WHERE id_user_agent = $1
 		RETURNING `+agentGatewayColumns,
-		idUserBot, webhookSecret,
+		idUserAgent, webhookSecret,
 	)
 	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {

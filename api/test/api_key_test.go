@@ -41,7 +41,7 @@ func (s *ApiKeySuite) keyURL(idUser int64) string {
 // one-time raw key. The agent is cleaned up when the test finishes.
 func (s *ApiKeySuite) newAgent(name string) (int64, string) {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		fmt.Sprintf(`{"name":%q,"isBot":true}`, name), s.AdminToken)
+		fmt.Sprintf(`{"name":%q,"isAgent":true}`, name), s.AdminToken)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent model.AdminCreateUserRes
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))

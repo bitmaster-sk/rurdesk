@@ -8,7 +8,7 @@ type User struct {
 	Email         string `json:"email"         db:"email"`
 	ColorAvatarBg string `json:"colorAvatarBg" db:"color_avatar_bg"`
 	Password      string `json:"-"             db:"password"`
-	IsBot         bool   `json:"isBot"         db:"is_bot"`
+	IsAgent       bool   `json:"isAgent"         db:"is_agent"`
 	IsAdmin       bool   `json:"isAdmin"       db:"is_admin"`
 }
 
@@ -48,7 +48,7 @@ type AdminCreateUserReq struct {
 	Name      string `json:"name"      binding:"required,min=1,max=250"`
 	Email     string `json:"email"     binding:"omitempty,email,max=250"`
 	Password  string `json:"password"  binding:"omitempty,min=5,max=100"`
-	IsBot     bool   `json:"isBot"`
+	IsAgent   bool   `json:"isAgent"`
 	IsAdmin   bool   `json:"isAdmin"`
 	IdProject *int64 `json:"idProject"`
 	Role      Role   `json:"role"`

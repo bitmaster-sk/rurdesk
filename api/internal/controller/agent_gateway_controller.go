@@ -38,13 +38,13 @@ func (ctrl *AgentGatewayController) requireAgent(c *gin.Context) (int64, bool) {
 		c.Status(http.StatusBadRequest)
 		return 0, false
 	}
-	isBot, err := ctrl.userRepo.IsAgentUser(c.Request.Context(), idUser)
+	isAgent, err := ctrl.userRepo.IsAgentUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return 0, false
 	}
-	if !isBot {
+	if !isAgent {
 		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusUnprocessableEntity)
 		return 0, false

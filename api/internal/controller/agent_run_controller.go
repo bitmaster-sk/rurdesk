@@ -450,7 +450,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserBot, oldRun.IdProject, stagePlan)
+	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserAgent, oldRun.IdProject, stagePlan)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -683,7 +683,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		return
 	}
 	user, _ := extctx.GetUser(ctx)
-	if user.IdUser != run.IdUserBot {
+	if user.IdUser != run.IdUserAgent {
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
@@ -996,7 +996,7 @@ func (ctrl *AgentRunController) ReportRunRepo(c *gin.Context) {
 		return
 	}
 	user, _ := extctx.GetUser(ctx)
-	if user.IdUser != run.IdUserBot {
+	if user.IdUser != run.IdUserAgent {
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return

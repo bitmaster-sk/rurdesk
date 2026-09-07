@@ -40,7 +40,7 @@ export class EditUserDialogComponent {
     public readonly updated = output<void>();
 
     protected readonly isSaving = signal(false);
-    protected readonly isBot = computed(() => this.user()?.isBot ?? false);
+    protected readonly isAgent = computed(() => this.user()?.isAgent ?? false);
     // The agent's existing gateway, loaded on open. null = agent has none yet
     // (URL is then managed in the keys window, not here).
     protected readonly gateway = signal<AgentGateway | null>(null);
@@ -48,7 +48,7 @@ export class EditUserDialogComponent {
     protected readonly form = this.fb.group({
         name: ['', [Validators.required, Validators.maxLength(250)]],
         // Read-only — the agent flag can't change after creation.
-        isBot: [{ value: false, disabled: true }],
+        isAgent: [{ value: false, disabled: true }],
         email: ['', [Validators.email, Validators.maxLength(250)]],
         isAdmin: [false],
         gatewayUrl: ['', [Validators.maxLength(2000)]],
@@ -64,7 +64,7 @@ export class EditUserDialogComponent {
             }
             this.form.reset({
                 name: user.name,
-                isBot: user.isBot,
+                isAgent: user.isAgent,
                 email: user.email,
                 isAdmin: user.isAdmin,
                 gatewayUrl: '',
@@ -72,7 +72,7 @@ export class EditUserDialogComponent {
             });
             const email = this.form.controls.email;
             const gatewayUrl = this.form.controls.gatewayUrl;
-            if (user.isBot) {
+            if (user.isAgent) {
                 email.clearValidators();
                 // Gateway URL is editable only once the gateway exists; required then.
                 this.gateway.set(null);
@@ -106,7 +106,7 @@ export class EditUserDialogComponent {
             return;
         }
         const value = this.form.getRawValue();
-        const req: AdminUpdateUserReq = user.isBot
+        const req: AdminUpdateUserReq = user.isAgent
             ? { name: value.name!.trim(), colorAvatarBg: value.colorAvatarBg! }
             : {
                   name: value.name!.trim(),
@@ -121,7 +121,7 @@ export class EditUserDialogComponent {
         const calls: ReturnType<AdminApi['updateUser$']>[] = [
             this.adminApi.updateUser$(user.idUser, req)
         ];
-        if (user.isBot && gw && newUrl && newUrl !== gw.gatewayUrl) {
+        if (user.isAgent && gw && newUrl && newUrl !== gw.gatewayUrl) {
             calls.push(
                 this.agentGatewayApi
                     .update$(user.idUser, { gatewayUrl: newUrl })

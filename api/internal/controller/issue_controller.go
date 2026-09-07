@@ -412,7 +412,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		// An agent with no configured gateway can't be assigned.
 		if ic.agentGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
 			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
-			if loadErr == nil && assignee.IsBot {
+			if loadErr == nil && assignee.IsAgent {
 				gw, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
 					return errs.ErrAgentNoGateway
@@ -548,13 +548,13 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 
-	agentUser, err := ic.userRepo.LoadUser(ctx, dto.IdUserBot)
+	agentUser, err := ic.userRepo.LoadUser(ctx, dto.IdUserAgent)
 	if err != nil || agentUser == nil {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if !agentUser.IsBot {
+	if !agentUser.IsAgent {
 		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusBadRequest)
 		return
@@ -641,7 +641,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 
 	// An assignee change never cancels the run — completed stages are kept for
 	// resume/hand-off. The scheduler gates on issue.assigned_to ==
-	// run.id_user_bot, so a run parks when the issue leaves its agentUser and resumes
+	// run.id_user_agent, so a run parks when the issue leaves its agentUser and resumes
 	// when it returns (or is re-pointed below). Only Cancel truly cancels a run.
 	existing, _ := ic.agentRunRepo.LoadActiveByIssue(ctx, newIssue.IdIssue)
 
@@ -650,7 +650,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	// the run up next). Completed stages and the run phase are untouched.
 	if oldIssue.AssignedTo != nil && existing != nil {
 		oldUser, err := ic.userRepo.LoadUser(ctx, *oldIssue.AssignedTo)
-		if err == nil && oldUser.IsBot {
+		if err == nil && oldUser.IsAgent {
 			_, _ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
 			runForAbort := existing // still points at the old agent
 			go func() {
@@ -667,7 +667,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 		return
 	}
 	newUser, err := ic.userRepo.LoadUser(ctx, *newIssue.AssignedTo)
-	if err != nil || !newUser.IsBot {
+	if err != nil || !newUser.IsAgent {
 		if existing != nil {
 			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
@@ -687,7 +687,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	// keeping completed stages; the scheduler dispatches the next stage.
 	if existing != nil {
 		updated := existing
-		if existing.IdUserBot != newUser.IdUser {
+		if existing.IdUserAgent != newUser.IdUser {
 			if reassigned, rerr := ic.agentRunRepo.ReassignAgent(ctx, existing.IdRun, newUser.IdUser); rerr == nil && reassigned != nil {
 				updated = reassigned
 			}

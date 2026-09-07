@@ -35,7 +35,7 @@ func emptyStagePlan(t *testing.T) json.RawMessage {
 
 func (s *AgentOverviewSuite) createAgent(name string) int64 {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		fmt.Sprintf(`{"name":%q,"isBot":true}`, name), s.Token)
+		fmt.Sprintf(`{"name":%q,"isAgent":true}`, name), s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`
@@ -91,8 +91,8 @@ func (s *AgentOverviewSuite) SetupSuite() {
 
 func (s *AgentOverviewSuite) TearDownSuite() {
 	ctx := context.Background()
-	s.App.Pool.Exec(ctx, "DELETE FROM agent.task WHERE id_user_bot IN ($1, $2)", s.BusyAgentID, s.IdleAgentID)
-	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_user_bot IN ($1, $2)", s.BusyAgentID, s.IdleAgentID)
+	s.App.Pool.Exec(ctx, "DELETE FROM agent.task WHERE id_user_agent IN ($1, $2)", s.BusyAgentID, s.IdleAgentID)
+	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_user_agent IN ($1, $2)", s.BusyAgentID, s.IdleAgentID)
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project IN ($1, $2)", s.IdProjectA, s.IdProjectB)
 	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user IN ($1, $2)", s.BusyAgentID, s.IdleAgentID)
 }
@@ -110,7 +110,7 @@ func (s *AgentOverviewSuite) overview(idProject int64, token string) ([]model.Ag
 
 func (s *AgentOverviewSuite) agentRow(all []model.AgentOverview, idAgent int64) model.AgentOverview {
 	for _, row := range all {
-		if row.IdUserBot == idAgent {
+		if row.IdUserAgent == idAgent {
 			return row
 		}
 	}
@@ -157,8 +157,8 @@ func (s *AgentOverviewSuite) TestOnlyAgentsOfThisProjectAreListed() {
 	all, _ := s.overview(idOtherProject, s.Token)
 
 	for _, row := range all {
-		s.NotEqual(s.BusyAgentID, row.IdUserBot, "a bot that is not a member here must not be listed")
-		s.NotEqual(s.IdleAgentID, row.IdUserBot)
+		s.NotEqual(s.BusyAgentID, row.IdUserAgent, "a bot that is not a member here must not be listed")
+		s.NotEqual(s.IdleAgentID, row.IdUserAgent)
 	}
 }
 

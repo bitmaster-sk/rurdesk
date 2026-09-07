@@ -37,7 +37,7 @@ type Task struct {
 	IdTask        int64
 	IdRun         int64
 	IdIssue       int64
-	IdUserBot     int64
+	IdUserAgent   int64
 	IdProject     int64
 	IdIssuePublic int64
 	Branch        string

@@ -26,11 +26,11 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <input type="checkbox" uiToggle id="eu-isagent" formControlName="isBot" />
+            <input type="checkbox" uiToggle id="eu-isagent" formControlName="isAgent" />
             <label for="eu-isagent">{{ 'ADMIN.IS_AGENT' | translate }}</label>
         </div>
 
-        @if (!isBot()) {
+        @if (!isAgent()) {
             <div class="flex flex-col gap-1">
                 <label for="eu-email">{{ 'ADMIN.EMAIL' | translate }}</label>
                 <input uiInput id="eu-email" type="email" formControlName="email" />

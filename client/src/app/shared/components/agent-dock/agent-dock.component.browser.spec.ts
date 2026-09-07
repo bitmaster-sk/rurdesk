@@ -26,7 +26,7 @@ const DEFAULTS: ProjectSkill[] = [{ idProject: 7, idSkill: 1, stage: AgentStage.
 const RUN: AgentRun = Fixtures.agentRun();
 
 const WORKLOAD: AgentOverview = {
-    idUserBot: 8,
+    idUserAgent: 8,
     isBusy: true,
     current: { idIssuePublic: 42, stage: AgentStage.Design },
     queueCount: 3,
@@ -115,7 +115,7 @@ describe('AgentDockComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(7, 42, {
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1], design: [2] }
         });
         expect(assigned).toHaveBeenCalledWith(RUN);

@@ -58,7 +58,7 @@ func (s *WorkflowEventMapSuite) SetupSuite() {
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.OwnerToken)
 	s.Require().Equal(http.StatusOK, addRes.StatusCode)
 
-	// Create an agent user — runs reference it via run.id_user_bot (FK to users.user).
+	// Create an agent user — runs reference it via run.id_user_agent (FK to users.user).
 	Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"psbot","email":"psbot@test.sk","password":"kreslo"}`, s.OwnerToken)
 	agentLogin := Request(s.T(), s.App, "POST", "/api/public/login",
@@ -71,7 +71,7 @@ func (s *WorkflowEventMapSuite) SetupSuite() {
 	json.NewDecoder(agentRes.Body).Decode(&agentUser)
 	s.AgentUserID = agentUser.IdUser
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
 	s.IdStateToDo = s.createState("To Do", false, false)
@@ -254,7 +254,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 	ctx := context.Background()
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -292,7 +292,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnSetPrInfoFrom() {
 	ctx := context.Background()
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -336,7 +336,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_SetPrInfoFrom_NoMapping_NoStateChang
 	ctx := context.Background()
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -373,7 +373,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -413,7 +413,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -442,7 +442,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition()
 
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
@@ -485,7 +485,7 @@ func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnReconcileToPh
 	ctx := context.Background()
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'failed', '{"stages":[]}')
 		RETURNING id_run
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)

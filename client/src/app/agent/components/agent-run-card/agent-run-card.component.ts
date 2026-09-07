@@ -170,7 +170,7 @@ export class AgentRunCardComponent {
         // than one distinct agent executed stages. For single-agent runs the label
         // would be noise, so we suppress it.
         const distinctAgents = new Set(
-            stages.map(s => s.idUserBot).filter((id): id is number => id != null)
+            stages.map(s => s.idUserAgent).filter((id): id is number => id != null)
         );
         const showAgent = distinctAgents.size > 1;
         const users = this.usersMap();
@@ -182,7 +182,9 @@ export class AgentRunCardComponent {
             noteKey: s.note ? (STAGE_NOTE_KEY[s.note] ?? null) : null,
             attemptNo: s.attemptNo && s.attemptNo > 1 ? s.attemptNo : null,
             agentName:
-                showAgent && s.idUserBot != null ? (users.get(s.idUserBot)?.name ?? null) : null,
+                showAgent && s.idUserAgent != null
+                    ? (users.get(s.idUserAgent)?.name ?? null)
+                    : null,
             at: s.at ?? null,
             approvedAt: s.approvedAt ?? null
         }));

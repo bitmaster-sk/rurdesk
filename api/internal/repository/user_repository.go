@@ -22,10 +22,10 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
-		INSERT INTO users.user(email, password, name, color_avatar_bg, is_bot, is_admin)
+		INSERT INTO users.user(email, password, name, color_avatar_bg, is_agent, is_admin)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id_user
-	`, user.Email, user.Password, user.Name, user.ColorAvatarBg, user.IsBot, user.IsAdmin,
+	`, user.Email, user.Password, user.Name, user.ColorAvatarBg, user.IsAgent, user.IsAdmin,
 	).Scan(&user.IdUser)
 	if err != nil {
 		return nil, fmt.Errorf("inserting user: %w", err)
@@ -36,7 +36,7 @@ func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*mod
 func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_bot, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
 		FROM users.user
 		WHERE id_user = $1
 	`, idUser)
@@ -53,7 +53,7 @@ func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.Use
 func (r *UserRepository) LoadUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_bot, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
 		FROM users.user
 		WHERE email = $1
 	`, email)
@@ -137,7 +137,7 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_bot, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
 		FROM users.user
 		ORDER BY id_user
 	`)
@@ -198,15 +198,15 @@ func (r *UserRepository) IsAdminUser(ctx context.Context, idUser int64) (bool, e
 }
 
 // HasAgentActivity reports whether the user is referenced by any agent table
-// lacking ON DELETE CASCADE (agent.run.id_user_bot, agent.task.id_user_bot,
-// agent.run_event.id_user). api_key, bot_gateway, and project memberships
+// lacking ON DELETE CASCADE (agent.run.id_user_agent, agent.task.id_user_agent,
+// agent.run_event.id_user). api_key, gateway, and project memberships
 // cascade and are intentionally excluded.
 func (r *UserRepository) HasAgentActivity(ctx context.Context, idUser int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var exists bool
 	err := db.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM agent.run        WHERE id_user_bot = $1)
-		    OR EXISTS(SELECT 1 FROM agent.task       WHERE id_user_bot = $1)
+		SELECT EXISTS(SELECT 1 FROM agent.run        WHERE id_user_agent = $1)
+		    OR EXISTS(SELECT 1 FROM agent.task       WHERE id_user_agent = $1)
 		    OR EXISTS(SELECT 1 FROM agent.run_event  WHERE id_user     = $1)
 	`, idUser).Scan(&exists)
 	if err != nil {
@@ -245,15 +245,15 @@ func (r *UserRepository) DeleteUser(ctx context.Context, idUser int64) error {
 
 func (r *UserRepository) IsAgentUser(ctx context.Context, idUser int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
-	var isBot bool
+	var isAgent bool
 	err := db.QueryRow(ctx,
-		`SELECT is_bot FROM users.user WHERE id_user = $1`, idUser,
-	).Scan(&isBot)
+		`SELECT is_agent FROM users.user WHERE id_user = $1`, idUser,
+	).Scan(&isAgent)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("querying user is agent: %w", err)
 	}
-	return isBot, nil
+	return isAgent, nil
 }

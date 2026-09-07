@@ -12,7 +12,7 @@ function makeRun(idRun: number, idIssue = 10): AgentRun {
         idRun,
         idIssue,
         idProject: 1,
-        idUserBot: 2,
+        idUserAgent: 2,
         idGitIntegration: null,
         phase: AgentPhase.Queued,
         stagePlan: { stages: [] },

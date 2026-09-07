@@ -18,7 +18,7 @@ const RUN: AgentRun = Fixtures.agentRun();
 
 const OVERVIEW: AgentOverview[] = [
     {
-        idUserBot: 8,
+        idUserAgent: 8,
         isBusy: true,
         current: null,
         queueCount: 2,

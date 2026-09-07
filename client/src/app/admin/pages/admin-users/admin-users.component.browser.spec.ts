@@ -18,7 +18,7 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
         name: 'Ada',
         email: 'ada@x.io',
         colorAvatarBg: '#123456',
-        isBot: false,
+        isAgent: false,
         isAdmin: false
     };
 

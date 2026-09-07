@@ -24,7 +24,7 @@ type AgentGatewaySuite struct {
 
 func (s *AgentGatewaySuite) createAgent(name string) int64 {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		fmt.Sprintf(`{"name":%q,"isBot":true}`, name), s.Token)
+		fmt.Sprintf(`{"name":%q,"isAgent":true}`, name), s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var created struct {
 		IdUser int64 `json:"idUser"`
@@ -59,7 +59,7 @@ func (s *AgentGatewaySuite) SetupSuite() {
 
 func (s *AgentGatewaySuite) TearDownSuite() {
 	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.AgentUserID)
+		"DELETE FROM agent.gateway WHERE id_user_agent = $1", s.AgentUserID)
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),
@@ -131,13 +131,13 @@ func (s *AgentGatewaySuite) TestGatewayLifecycle() {
 	s.Require().NoError(json.NewDecoder(createRes.Body).Decode(&created))
 	s.Len(created.TrackerToGatewayToken, 64, "one-time token must be 32 hex-encoded bytes")
 	s.Equal(1, created.MaxConcurrent, "concurrency must default to the safe single-run value")
-	s.Equal(s.AgentUserID, created.IdUserBot)
+	s.Equal(s.AgentUserID, created.IdUserAgent)
 
 	getRes := Request(s.T(), s.App, "GET", path, "", s.Token)
 	s.Require().Equal(http.StatusOK, getRes.StatusCode)
 	var loaded model.AgentGateway
 	s.Require().NoError(json.NewDecoder(getRes.Body).Decode(&loaded))
-	s.Equal(created.IdBotGateway, loaded.IdBotGateway)
+	s.Equal(created.IdGateway, loaded.IdGateway)
 	s.Equal("http://gw:9090", loaded.GatewayUrl)
 
 	dupRes := Request(s.T(), s.App, "POST", path, body, s.Token)
@@ -150,7 +150,7 @@ func (s *AgentGatewaySuite) TestGatewayLifecycle() {
 	s.Len(regen.TrackerToGatewayToken, 64)
 	s.NotEqual(created.TrackerToGatewayToken, regen.TrackerToGatewayToken,
 		"regeneration must invalidate the old token")
-	s.Equal(created.IdBotGateway, regen.IdBotGateway, "regeneration keeps the gateway record")
+	s.Equal(created.IdGateway, regen.IdGateway, "regeneration keeps the gateway record")
 
 	s.Equal(http.StatusOK, Request(s.T(), s.App, "DELETE", path, "", s.Token).StatusCode)
 

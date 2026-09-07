@@ -69,7 +69,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if req.IsBot && req.IsAdmin {
+	if req.IsAgent && req.IsAdmin {
 		_ = c.Error(errs.ErrAgentAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -80,7 +80,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	if req.IsBot {
+	if req.IsAgent {
 		ac.createAgent(c, &req)
 		return
 	}
@@ -137,7 +137,7 @@ func (ac *AdminController) assignToProject(ctx context.Context, idUser int64, re
 	if req.IdProject == nil {
 		return nil
 	}
-	if req.Role == model.RoleOwner && req.IsBot {
+	if req.Role == model.RoleOwner && req.IsAgent {
 		return errs.ErrAgentOwner
 	}
 	if err := ac.projectRepo.InsertProjectUser(ctx, *req.IdProject, idUser, req.Role); err != nil {
@@ -166,9 +166,9 @@ func (ac *AdminController) writeCreateErr(c *gin.Context, err error) {
 var agentSlugRe = regexp.MustCompile(`[^a-z0-9]+`)
 
 func agentEmailDomain() string {
-	domain := strings.TrimSpace(viper.GetString("BOT_EMAIL_DOMAIN"))
+	domain := strings.TrimSpace(viper.GetString("AGENT_EMAIL_DOMAIN"))
 	if domain == "" {
-		return "bots.local"
+		return "agents.local"
 	}
 	return domain
 }
@@ -177,10 +177,10 @@ func agentEmailDomain() string {
 func (ac *AdminController) synthAgentEmail(ctx context.Context, name string) (string, error) {
 	slug := strings.Trim(agentSlugRe.ReplaceAllString(strings.ToLower(name), "-"), "-")
 	if slug == "" {
-		slug = "bot"
+		slug = "agent"
 	}
 	domain := agentEmailDomain()
-	candidate := fmt.Sprintf("bot-%s@%s", slug, domain)
+	candidate := fmt.Sprintf("agent-%s@%s", slug, domain)
 	for i := 2; ; i++ {
 		exists, err := ac.userRepo.EmailExists(ctx, candidate)
 		if err != nil {
@@ -189,7 +189,7 @@ func (ac *AdminController) synthAgentEmail(ctx context.Context, name string) (st
 		if !exists {
 			return candidate, nil
 		}
-		candidate = fmt.Sprintf("bot-%s-%d@%s", slug, i, domain)
+		candidate = fmt.Sprintf("agent-%s-%d@%s", slug, i, domain)
 	}
 }
 
@@ -229,7 +229,7 @@ func (ac *AdminController) createAgent(c *gin.Context, req *model.AdminCreateUse
 		Name:          req.Name,
 		Password:      hash,
 		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
-		IsBot:         true,
+		IsAgent:       true,
 	}
 	var created *model.User
 	var keyRes *model.CreateApiKeyRes
@@ -266,13 +266,13 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 
-	isBot, err := ac.userRepo.IsAgentUser(ctx, idUser)
+	isAgent, err := ac.userRepo.IsAgentUser(ctx, idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if req.IsAdmin != nil && *req.IsAdmin && isBot {
+	if req.IsAdmin != nil && *req.IsAdmin && isAgent {
 		_ = c.Error(errs.ErrAgentAdmin)
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -283,7 +283,7 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	// admin toggle (isAdmin only) and the edit form (name/email[/isAdmin]).
 	adminChanged := false
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
-		if pErr := ac.applyProfileUpdate(ctx, idUser, isBot, &req); pErr != nil {
+		if pErr := ac.applyProfileUpdate(ctx, idUser, isAgent, &req); pErr != nil {
 			return pErr
 		}
 		if req.IsAdmin == nil {
@@ -333,10 +333,10 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 
 // applyProfileUpdate writes name/email when present. Agents have a synthetic,
 // non-editable email so only their name is touched; a human email change also
-func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64, isBot bool, req *model.AdminUpdateUserReq) error {
+func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64, isAgent bool, req *model.AdminUpdateUserReq) error {
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
-		if !isBot && req.Email != nil {
+		if !isAgent && req.Email != nil {
 			email := strings.TrimSpace(*req.Email)
 			if err := ac.userRepo.UpdateProfile(ctx, idUser, name, email); err != nil {
 				return err
@@ -439,13 +439,13 @@ func (ac *AdminController) guardLastAdmin(ctx context.Context) error {
 // requireAgent aborts with 422 unless the target user is an agent. API keys minted
 // here are agent-only; humans mint their own through the user routes.
 func (ac *AdminController) requireAgent(c *gin.Context, idUser int64) bool {
-	isBot, err := ac.userRepo.IsAgentUser(c.Request.Context(), idUser)
+	isAgent, err := ac.userRepo.IsAgentUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return false
 	}
-	if !isBot {
+	if !isAgent {
 		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusUnprocessableEntity)
 		return false

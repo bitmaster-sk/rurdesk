@@ -28,7 +28,7 @@ func (s *RunSkillsSuite) SetupSuite() {
 	seedBuiltinSkills(s.T())
 
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"runskillbot","isBot":true}`, s.Token)
+		`{"name":"runskillbot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`
@@ -58,7 +58,7 @@ func (s *RunSkillsSuite) SetupSuite() {
 func (s *RunSkillsSuite) TearDownSuite() {
 	ctx := context.Background()
 	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(ctx, "DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.AgentUserID)
+	s.App.Pool.Exec(ctx, "DELETE FROM agent.gateway WHERE id_user_agent = $1", s.AgentUserID)
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }

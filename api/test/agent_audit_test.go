@@ -45,7 +45,7 @@ func (s *AgentAuditSuite) SetupSuite() {
 	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 	s.App.Cache.Del(context.Background(), agentToken)
 
@@ -72,7 +72,7 @@ func (s *AgentAuditSuite) SetupSuite() {
 
 	var secret []byte
 	err = s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.bot_gateway(id_user_bot, gateway_url, max_concurrent, webhook_secret)
+		INSERT INTO agent.gateway(id_user_agent, gateway_url, max_concurrent, webhook_secret)
 		VALUES ($1, 'http://stub:9090', 1, decode(md5(random()::text), 'hex'))
 		RETURNING webhook_secret`,
 		s.AgentUserID,
@@ -103,7 +103,7 @@ func (s *AgentAuditSuite) insertQueuedRun() int64 {
 		"DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
 		SELECT id_issue, $1, $2, 'queued', '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,

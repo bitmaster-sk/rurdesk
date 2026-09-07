@@ -49,7 +49,7 @@
                                 </td>
                                 <td>{{ user.email }}</td>
                                 <td>
-                                    @if (user.isBot) {
+                                    @if (user.isAgent) {
                                         <ui-tag
                                             [value]="'ADMIN.AGENT' | translate"
                                             severity="info"
@@ -61,7 +61,7 @@
                                             severity="success"
                                         />
                                     }
-                                    @if (!user.isBot && !user.isAdmin) {
+                                    @if (!user.isAgent && !user.isAdmin) {
                                         <ui-tag
                                             [value]="'ADMIN.USER' | translate"
                                             severity="secondary"
@@ -69,7 +69,7 @@
                                     }
                                 </td>
                                 <td class="flex gap-1 justify-end pr-2">
-                                    @if (!user.isBot) {
+                                    @if (!user.isAgent) {
                                         <ui-button
                                             variant="text"
                                             severity="secondary"
@@ -87,7 +87,7 @@
                                             />
                                         </ui-button>
                                     }
-                                    @if (user.isBot) {
+                                    @if (user.isAgent) {
                                         <ui-button
                                             variant="text"
                                             severity="secondary"

@@ -28,7 +28,7 @@ type AgentAutoRunSuite struct {
 
 func (s *AgentAutoRunSuite) createAgent(name string) int64 {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		fmt.Sprintf(`{"name":%q,"isBot":true}`, name), s.Token)
+		fmt.Sprintf(`{"name":%q,"isAgent":true}`, name), s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var created struct {
 		IdUser int64 `json:"idUser"`
@@ -99,7 +99,7 @@ func (s *AgentAutoRunSuite) TearDownSuite() {
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.AgentUserID)
+		"DELETE FROM agent.gateway WHERE id_user_agent = $1", s.AgentUserID)
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),

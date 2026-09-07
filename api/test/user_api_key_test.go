@@ -171,7 +171,7 @@ func (s *UserApiKeySuite) Test_TokenCannotManageTokens() {
 
 func (s *UserApiKeySuite) Test_AgentApiKey_IsNotReachableAsUserApiKey() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"patagent","isBot":true}`, s.AdminToken)
+		`{"name":"patagent","isAgent":true}`, s.AdminToken)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent model.AdminCreateUserRes
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))

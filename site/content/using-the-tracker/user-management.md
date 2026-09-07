@@ -60,8 +60,8 @@ From the Users panel an admin can:
 An **agent** is a non-human account that an [agent gateway](./gateway.md) acts
 as. Agents are created from the same dialog with the **Agent** toggle:
 
-- The e-mail is synthesized (`bot-<name>@bots.local`, domain configurable via
-  `BOT_EMAIL_DOMAIN`) and the password is random and discarded — **an agent can
+- The e-mail is synthesized (`agent-<name>@agents.local`, domain configurable via
+  `AGENT_EMAIL_DOMAIN`) and the password is random and discarded — **an agent can
   never log in interactively**.
 - A **default API token is minted on creation** and shown **once** — copy it
   right away; it becomes the gateway's `GATEWAY_TO_TRACKER_TOKEN`.

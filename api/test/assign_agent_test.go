@@ -28,7 +28,7 @@ func (s *AssignAgentSuite) SetupSuite() {
 	seedBuiltinSkills(s.T())
 
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"assignbot","isBot":true}`, s.Token)
+		`{"name":"assignbot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`
@@ -59,7 +59,7 @@ func (s *AssignAgentSuite) SetupSuite() {
 func (s *AssignAgentSuite) TearDownSuite() {
 	ctx := context.Background()
 	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(ctx, "DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.AgentUserID)
+	s.App.Pool.Exec(ctx, "DELETE FROM agent.gateway WHERE id_user_agent = $1", s.AgentUserID)
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user IN ($1, $2)", s.AgentUserID, s.HumanID)
 }
@@ -102,7 +102,7 @@ func (s *AssignAgentSuite) TestAssignCreatesExactlyOneRunWithRequestedSkills() {
 	iss := s.createIssue("assign-happy")
 
 	res := s.assignAgent(iss.IdIssuePublic,
-		fmt.Sprintf(`{"idUserBot":%d,"idsSkillByStage":{"implementation":[%d]}}`, s.AgentUserID, s.IdSkill),
+		fmt.Sprintf(`{"idUserAgent":%d,"idsSkillByStage":{"implementation":[%d]}}`, s.AgentUserID, s.IdSkill),
 		s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 
@@ -134,10 +134,10 @@ func (s *AssignAgentSuite) TestAssignCreatesExactlyOneRunWithRequestedSkills() {
 func (s *AssignAgentSuite) TestSecondAssignWhileActiveConflicts() {
 	iss := s.createIssue("assign-twice")
 
-	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.AgentUserID), s.Token)
+	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusOK, first.StatusCode)
 
-	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.AgentUserID), s.Token)
+	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
 	s.Equal(http.StatusConflict, second.StatusCode)
 	s.Equal(1, s.runCount(iss.IdIssuePublic))
 }
@@ -147,7 +147,7 @@ func (s *AssignAgentSuite) TestSecondAssignWhileActiveConflicts() {
 func (s *AssignAgentSuite) TestRefusedAssignLeavesTheAssigneeUntouched() {
 	iss := s.createIssue("assign-conflict-rollback")
 
-	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.AgentUserID), s.Token)
+	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusOK, first.StatusCode)
 
 	edit := Request(s.T(), s.App, "PATCH",
@@ -155,7 +155,7 @@ func (s *AssignAgentSuite) TestRefusedAssignLeavesTheAssigneeUntouched() {
 		fmt.Sprintf(`{"idProject":%d,"assignedTo":%d}`, s.IdProject, s.HumanID), s.Token)
 	s.Require().Equal(http.StatusOK, edit.StatusCode)
 
-	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.AgentUserID), s.Token)
+	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusConflict, second.StatusCode)
 
 	issRes := Request(s.T(), s.App, "GET",
@@ -169,7 +169,7 @@ func (s *AssignAgentSuite) TestRefusedAssignLeavesTheAssigneeUntouched() {
 
 func (s *AssignAgentSuite) TestAssignAgentFromAnotherProjectRejected() {
 	outsideAgent := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"assignoutsidebot","isBot":true}`, s.Token)
+		`{"name":"assignoutsidebot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, outsideAgent.StatusCode)
 	var outsider struct {
 		IdUser int64 `json:"idUser"`
@@ -184,7 +184,7 @@ func (s *AssignAgentSuite) TestAssignAgentFromAnotherProjectRejected() {
 	s.Require().Equal(http.StatusOK, gw.StatusCode)
 
 	iss := s.createIssue("assign-outside-agent")
-	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, outsider.IdUser), s.Token)
+	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, outsider.IdUser), s.Token)
 
 	s.Equal(http.StatusForbidden, res.StatusCode, "an agent that cannot read the project cannot be assigned to its issues")
 	s.Equal(0, s.runCount(iss.IdIssuePublic))
@@ -193,7 +193,7 @@ func (s *AssignAgentSuite) TestAssignAgentFromAnotherProjectRejected() {
 func (s *AssignAgentSuite) TestAssignHumanRejected() {
 	iss := s.createIssue("assign-human")
 
-	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.HumanID), s.Token)
+	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.HumanID), s.Token)
 	s.Equal(http.StatusBadRequest, res.StatusCode)
 	s.Equal(0, s.runCount(iss.IdIssuePublic))
 }
@@ -202,7 +202,7 @@ func (s *AssignAgentSuite) TestAssignUnknownStageRejected() {
 	iss := s.createIssue("assign-bad-stage")
 
 	res := s.assignAgent(iss.IdIssuePublic,
-		fmt.Sprintf(`{"idUserBot":%d,"idsSkillByStage":{"pickup":[%d]}}`, s.AgentUserID, s.IdSkill), s.Token)
+		fmt.Sprintf(`{"idUserAgent":%d,"idsSkillByStage":{"pickup":[%d]}}`, s.AgentUserID, s.IdSkill), s.Token)
 	s.Equal(http.StatusBadRequest, res.StatusCode)
 	s.Equal(0, s.runCount(iss.IdIssuePublic))
 }
@@ -213,7 +213,7 @@ func (s *AssignAgentSuite) TestAssignWithoutAclForbidden() {
 	outsiderToken := createUserAsAdmin(s.T(), s.App, s.Token,
 		`{"name":"assign-outsider","email":"assign-outsider@test.sk","password":"kreslo1"}`)
 
-	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, s.AgentUserID), outsiderToken)
+	res := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), outsiderToken)
 	s.Equal(http.StatusForbidden, res.StatusCode)
 	s.Equal(0, s.runCount(iss.IdIssuePublic))
 }
@@ -222,7 +222,7 @@ func (s *AssignAgentSuite) TestAssignAgentWithoutGatewayRejected() {
 	iss := s.createIssue("assign-no-gw")
 
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"gatewayless","isBot":true}`, s.Token)
+		`{"name":"gatewayless","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`
@@ -235,7 +235,7 @@ func (s *AssignAgentSuite) TestAssignAgentWithoutGatewayRejected() {
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), s.Token)
 	s.Require().Equal(http.StatusOK, member.StatusCode, "membership must pass so the gateway check is what refuses")
 
-	assign := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserBot":%d}`, agent.IdUser), s.Token)
+	assign := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, agent.IdUser), s.Token)
 	s.Equal(http.StatusUnprocessableEntity, assign.StatusCode)
 	s.Equal(0, s.runCount(iss.IdIssuePublic))
 }

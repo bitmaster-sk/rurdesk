@@ -51,7 +51,7 @@ func (s *SchedulerBroadcastSuite) SetupSuite() {
 	s.Token = Token(s.T(), s.App)
 
 	agentRes := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"schedbroadcastbot","isBot":true}`, s.Token)
+		`{"name":"schedbroadcastbot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, agentRes.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`
@@ -75,7 +75,7 @@ func (s *SchedulerBroadcastSuite) SetupSuite() {
 
 	// Create the issue unassigned (assigning an agent here would auto-start a run of
 	// its own), then point assigned_to at the agent directly — LoadNextEligible
-	// gates on i.assigned_to = r.id_user_bot.
+	// gates on i.assigned_to = r.id_user_agent.
 	issRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
 		`{"title":"sched broadcast issue","description":"body body body","estimated":0}`, s.Token)

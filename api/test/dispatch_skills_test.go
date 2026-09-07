@@ -33,7 +33,7 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 	defer gateway.Close()
 
 	agentRes := Request(t, app, "POST", "/api/private/admin/user",
-		`{"name":"dispatchskillbot","isBot":true}`, token)
+		`{"name":"dispatchskillbot","isAgent":true}`, token)
 	require.Equal(t, http.StatusOK, agentRes.StatusCode)
 	var agent struct {
 		IdUser int64 `json:"idUser"`

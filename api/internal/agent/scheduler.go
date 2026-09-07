@@ -73,7 +73,7 @@ func (s *Scheduler) TickOnce(ctx context.Context) error {
 	}
 	for _, idAgent := range agents {
 		if err := s.dispatchOneForAgent(ctx, idAgent); err != nil {
-			log.Error().Err(err).Int64("idUserBot", idAgent).Msg("scheduler: dispatch error")
+			log.Error().Err(err).Int64("idUserAgent", idAgent).Msg("scheduler: dispatch error")
 		}
 	}
 	return nil
@@ -83,8 +83,8 @@ func (s *Scheduler) TickOnce(ctx context.Context) error {
 // dispatches one stage attempt. Skips if the agent already has an active task —
 // stages are atomic, so the scheduler waits for it to finish before claiming
 // the next.
-func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserBot int64) error {
-	hasActive, err := s.taskRepo.BotHasActiveTask(ctx, idUserBot)
+func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) error {
+	hasActive, err := s.taskRepo.BotHasActiveTask(ctx, idUserAgent)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserBot int64) er
 		return nil
 	}
 
-	run, err := s.runRepo.LoadNextEligible(ctx, idUserBot)
+	run, err := s.runRepo.LoadNextEligible(ctx, idUserAgent)
 	if err != nil {
 		return fmt.Errorf("loading next eligible run: %w", err)
 	}
@@ -132,7 +132,7 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserBot int64) er
 	}
 
 	attemptNo := ResolveNextAttemptNo(existing, stage)
-	task, err := s.taskRepo.Insert(ctx, run.IdRun, run.IdUserBot, stage, attemptNo)
+	task, err := s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, stage, attemptNo)
 	if err != nil {
 		return err
 	}

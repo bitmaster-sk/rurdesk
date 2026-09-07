@@ -62,7 +62,7 @@ func (s *AgentReconcileSuite) SetupSuite() {
 	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 	// NOTE: do NOT delete the cached login token — the reconcile tests call
 	// complete_stage over HTTP with s.AgentToken, which the Auth middleware validates
@@ -153,7 +153,7 @@ func (s *AgentReconcileSuite) SetupTest() {
 func (s *AgentReconcileSuite) insertRun(phase string, failed bool) int64 {
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, id_git_integration, stage_plan,
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, id_git_integration, stage_plan,
 		                      finished_at, error_message)
 		SELECT id_issue, $1, $2, $3, $4, '{"stages":[]}',
 		       CASE WHEN $5 THEN now() ELSE NULL END,
@@ -171,7 +171,7 @@ func (s *AgentReconcileSuite) insertRun(phase string, failed bool) int64 {
 func (s *AgentReconcileSuite) insertPrOpenRunWithPr() int64 {
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
 		SELECT id_issue, $1, $2, 'pr_open', '7', 'github', 'https://github.com/org/repo/pull/7', 'agent/b1/i1/111', $3, '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $4 AND id_project = $2
 		RETURNING id_run`,
@@ -184,7 +184,7 @@ func (s *AgentReconcileSuite) insertPrOpenRunWithPr() int64 {
 func (s *AgentReconcileSuite) insertTask(idRun int64, stage, status string, errorReason *string) int64 {
 	var idTask int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.task(id_run, id_user_bot, stage, attempt_no, status, error_reason,
+		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status, error_reason,
 		                       finished_at)
 		VALUES ($1, $2, $3, 1, $4, $5,
 		        CASE WHEN $4 IN ('failed','completed','cancelled') THEN now() ELSE NULL END)

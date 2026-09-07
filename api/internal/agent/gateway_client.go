@@ -14,13 +14,13 @@ import (
 )
 
 type WebhookEvent struct {
-	IdRun     int64          `json:"idRun"`
-	IdProject int64          `json:"idProject"`
-	IdIssue   int64          `json:"idIssue"`
-	IdUserBot int64          `json:"idUserBot"`
-	Event     string         `json:"event"`
-	Payload   map[string]any `json:"payload"`
-	Sequence  int64          `json:"-"`
+	IdRun       int64          `json:"idRun"`
+	IdProject   int64          `json:"idProject"`
+	IdIssue     int64          `json:"idIssue"`
+	IdUserAgent int64          `json:"idUserAgent"`
+	Event       string         `json:"event"`
+	Payload     map[string]any `json:"payload"`
+	Sequence    int64          `json:"-"`
 }
 
 type GatewayClient struct {

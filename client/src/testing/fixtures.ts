@@ -52,7 +52,7 @@ export abstract class Fixtures {
             name: 'Ada',
             email: 'ada@test.sk',
             colorAvatarBg: '#123456',
-            isBot: false,
+            isAgent: false,
             ...overrides
         };
     }
@@ -62,7 +62,7 @@ export abstract class Fixtures {
             idUser: 8,
             name: 'ci-agent',
             email: 'ci-agent@test.sk',
-            isBot: true,
+            isAgent: true,
             ...overrides
         });
     }
@@ -86,7 +86,7 @@ export abstract class Fixtures {
             idRun: 55,
             idIssue: 10,
             idProject: 7,
-            idUserBot: 8,
+            idUserAgent: 8,
             idGitIntegration: null,
             phase: AgentPhase.Queued,
             stagePlan: { stages: [] },

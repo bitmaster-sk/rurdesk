@@ -3,8 +3,8 @@ package model
 import "time"
 
 type AgentGateway struct {
-	IdBotGateway  int64     `json:"idBotGateway"  db:"id_bot_gateway"`
-	IdUserBot     int64     `json:"idUserBot"     db:"id_user_bot"`
+	IdGateway     int64     `json:"idGateway"  db:"id_gateway"`
+	IdUserAgent   int64     `json:"idUserAgent"     db:"id_user_agent"`
 	GatewayUrl    string    `json:"gatewayUrl"    db:"gateway_url"`
 	MaxConcurrent int       `json:"maxConcurrent" db:"max_concurrent"`
 	WebhookSecret []byte    `json:"-"             db:"webhook_secret"`

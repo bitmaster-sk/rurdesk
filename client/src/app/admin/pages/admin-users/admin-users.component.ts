@@ -43,7 +43,7 @@ export class AdminUsersComponent implements OnInit {
         this.loadUsers();
         // An agent lands straight in its keys window with the freshly-minted tokens
         // revealed once. Human users have no keys — nothing more to show.
-        if (event.user.isBot) {
+        if (event.user.isAgent) {
             this.keysAgent.set(event.user);
             this.keysPresetKey.set(event.user.rawKey ?? null);
             this.keysPresetGatewayToken.set(event.gatewayToken);

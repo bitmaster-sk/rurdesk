@@ -231,9 +231,9 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 	// user (awaiting_approval or awaiting_input) — plan submissions go through
 	// submit_plan, clarifications through request_clarification. A raw
 	// post_issue_message in a paused phase indicates a misbehaving model.
-	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil && user.IsBot {
+	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil && user.IsAgent {
 		activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, dto.IdRecipient)
-		if err == nil && activeRun != nil && activeRun.IdUserBot == user.IdUser &&
+		if err == nil && activeRun != nil && activeRun.IdUserAgent == user.IdUser &&
 			(activeRun.Phase == constants.PhaseAwaitingApproval || activeRun.Phase == constants.PhaseAwaitingInput) {
 			_ = c.Error(errs.ErrAgentPostWhileRunPaused)
 			c.Status(http.StatusConflict)
@@ -615,7 +615,7 @@ func truncate(s string, max int) string {
 // clarification messages do NOT come through here — those go through
 // submit_plan / request_clarification, which own their own phase transitions.
 func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *model.User, msg *model.Message, idIssue int64) {
-	if author.IsBot {
+	if author.IsAgent {
 		return
 	}
 	if msg.MessageKind != constants.MessageKindComment {
@@ -646,7 +646,7 @@ func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *mod
 	}
 
 	attemptNo := agent.ResolveNextAttemptNo(tasks, lastCompleted.Stage)
-	if _, err := mc.agentTaskRepo.Insert(ctx, activeRun.IdRun, activeRun.IdUserBot, lastCompleted.Stage, attemptNo); err != nil {
+	if _, err := mc.agentTaskRepo.Insert(ctx, activeRun.IdRun, activeRun.IdUserAgent, lastCompleted.Stage, attemptNo); err != nil {
 		return
 	}
 	idUser := author.IdUser

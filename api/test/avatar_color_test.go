@@ -34,7 +34,7 @@ func (s *AdminSuite) Test_CreateUser_DefaultsToRandomAvatarColor() {
 }
 
 func (s *AdminSuite) Test_CreateAgent_HonorsSuppliedAvatarColor() {
-	body := `{"name":"Colored Bot","isBot":true,"colorAvatarBg":"#abcdef"}`
+	body := `{"name":"Colored Bot","isAgent":true,"colorAvatarBg":"#abcdef"}`
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 

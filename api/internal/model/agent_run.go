@@ -8,7 +8,7 @@ import (
 type AgentRun struct {
 	IdRun             int64           `json:"idRun"            db:"id_run"`
 	IdIssue           int64           `json:"idIssue"          db:"id_issue"`
-	IdUserBot         int64           `json:"idUserBot"        db:"id_user_bot"`
+	IdUserAgent       int64           `json:"idUserAgent"        db:"id_user_agent"`
 	IdProject         int64           `json:"idProject"        db:"id_project"`
 	IdGitIntegration  *int64          `json:"idGitIntegration" db:"id_git_integration"`
 	Phase             string          `json:"phase"            db:"phase"`
@@ -36,13 +36,13 @@ type AgentRunWithEvents struct {
 // from raw phase transitions. Note is an i18n token, not display text: e.g.
 // "no_clarifications" | "submitted" | "pr_opened".
 type AgentStageProgress struct {
-	Stage      string     `json:"stage"`
-	Status     string     `json:"status"` // pending|active|done|awaiting_approval|failed|skipped
-	Note       string     `json:"note,omitempty"`
-	AttemptNo  int        `json:"attemptNo,omitempty"`
-	IdUserBot  *int64     `json:"idUserBot,omitempty"`  // which agent executed this stage (provenance)
-	At         *time.Time `json:"at,omitempty"`         // finishedAt (done/failed) or startedAt (active)
-	ApprovedAt *time.Time `json:"approvedAt,omitempty"` // user approval waypoint
+	Stage       string     `json:"stage"`
+	Status      string     `json:"status"` // pending|active|done|awaiting_approval|failed|skipped
+	Note        string     `json:"note,omitempty"`
+	AttemptNo   int        `json:"attemptNo,omitempty"`
+	IdUserAgent *int64     `json:"idUserAgent,omitempty"` // which agent executed this stage (provenance)
+	At          *time.Time `json:"at,omitempty"`          // finishedAt (done/failed) or startedAt (active)
+	ApprovedAt  *time.Time `json:"approvedAt,omitempty"`  // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
 	// i18n; ErrorDetail is the raw provider/agent message. Set only on failure.
 	ErrorReason     *string `json:"errorReason,omitempty"`
@@ -66,7 +66,7 @@ type AgentRunEvent struct {
 type AgentTask struct {
 	IdTask          int64      `json:"idTask"          db:"id_task"`
 	IdRun           int64      `json:"idRun"           db:"id_run"`
-	IdUserBot       *int64     `json:"idUserBot"       db:"id_user_bot"`
+	IdUserAgent     *int64     `json:"idUserAgent"       db:"id_user_agent"`
 	Stage           string     `json:"stage"           db:"stage"`
 	AttemptNo       int        `json:"attemptNo"       db:"attempt_no"`
 	Status          string     `json:"status"          db:"status"`
@@ -141,7 +141,7 @@ type AgentStatsNotice struct {
 }
 
 type CreateAgentRunReq struct {
-	IdUserBot       int64              `json:"idUserBot"       binding:"required"`
+	IdUserAgent     int64              `json:"idUserAgent"       binding:"required"`
 	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
 }
 

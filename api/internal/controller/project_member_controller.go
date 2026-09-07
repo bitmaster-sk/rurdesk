@@ -418,11 +418,11 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 // rejectIfAgent returns errs.ErrAgentOwner if the target user is an agent; call whenever
 // role==owner is requested.
 func (mc *ProjectMemberController) rejectIfAgent(ctx context.Context, idUser int64) error {
-	isBot, err := mc.userRepo.IsAgentUser(ctx, idUser)
+	isAgent, err := mc.userRepo.IsAgentUser(ctx, idUser)
 	if err != nil {
 		return err
 	}
-	if isBot {
+	if isAgent {
 		return errs.ErrAgentOwner
 	}
 	return nil

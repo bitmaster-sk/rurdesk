@@ -355,10 +355,10 @@ export class IssueInfoComponent {
      * on the next edit — un-assigning the agent and re-entering the assignee hook.
      */
     protected onAgentRunCreated(run: AgentRun): void {
-        this.assignedToControl.setValue(run.idUserBot, { emitEvent: false });
+        this.assignedToControl.setValue(run.idUserAgent, { emitEvent: false });
         const issue = this.currentIssue();
         if (issue) {
-            this.currentIssue.set({ ...issue, assignedTo: run.idUserBot });
+            this.currentIssue.set({ ...issue, assignedTo: run.idUserAgent });
         }
     }
 

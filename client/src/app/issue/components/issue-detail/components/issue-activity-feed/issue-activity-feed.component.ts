@@ -94,16 +94,16 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     );
 
     public readonly agentCreator = computed<User | null>(() => {
-        const idUserBot = this.agentRun()?.idUserBot;
-        if (idUserBot == null) {
+        const idUserAgent = this.agentRun()?.idUserAgent;
+        if (idUserAgent == null) {
             return null;
         }
-        const member = this.usersMap().get(idUserBot);
+        const member = this.usersMap().get(idUserAgent);
         if (member) {
             return member;
         }
         for (const item of [...this.displayItems()].reverse()) {
-            if (item.type === 'comment' && item.data.creator.idUser === idUserBot) {
+            if (item.type === 'comment' && item.data.creator.idUser === idUserAgent) {
                 return item.data.creator;
             }
         }

@@ -46,14 +46,14 @@ describe('AgentRunApi skills endpoints', () => {
 
     it('assigns an agent with explicit per-stage skills', () => {
         api.assignAgent$(3, 42, {
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1] }
         }).subscribe();
 
         const request = http.expectOne('/api/private/project/3/issue/42/assign-agent');
         expect(request.request.method).toBe('POST');
         expect(request.request.body).toEqual({
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1] }
         });
         request.flush({});

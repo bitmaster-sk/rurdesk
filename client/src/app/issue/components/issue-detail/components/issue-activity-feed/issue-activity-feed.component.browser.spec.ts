@@ -171,7 +171,11 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
         fixture.componentRef.setInput('idProject', 10);
-        fixture.componentRef.setInput('agentRun', { idRun: 5, idUserBot: 7, phase: 'in_progress' });
+        fixture.componentRef.setInput('agentRun', {
+            idRun: 5,
+            idUserAgent: 7,
+            phase: 'in_progress'
+        });
         fixture.detectChanges();
 
         const comp = fixture.componentInstance;

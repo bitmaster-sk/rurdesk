@@ -60,7 +60,7 @@ func (s *MergePollerSuite) SetupSuite() {
 	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 	s.App.Cache.Del(context.Background(), s.AgentToken)
 
@@ -162,7 +162,7 @@ func (s *MergePollerSuite) insertPrOpenRun() int64 {
 func (s *MergePollerSuite) insertPrOpenRunWithIntegration(idGitIntegration int64) int64 {
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
 		SELECT id_issue, $1, $2, 'pr_open', '42', 'github', 'https://github.com/org/repo/pull/42',
 		       'agent/b1/i1/123456', $3, '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $4 AND id_project = $2
@@ -181,13 +181,13 @@ func (s *MergePollerSuite) cleanupRuns() {
 func (s *MergePollerSuite) loadRun(idRun int64) *model.AgentRun {
 	var run model.AgentRun
 	err := s.App.Pool.QueryRow(context.Background(), `
-		SELECT id_run, id_issue, id_user_bot, id_project, id_git_integration,
+		SELECT id_run, id_issue, id_user_agent, id_project, id_git_integration,
 		       phase, stage_plan, queue_position,
 		       pr_url, pr_host_type, pr_id, branch_name, error_message,
 		       started_at, finished_at, created_at
 		FROM agent.run WHERE id_run = $1`, idRun,
 	).Scan(
-		&run.IdRun, &run.IdIssue, &run.IdUserBot, &run.IdProject, &run.IdGitIntegration,
+		&run.IdRun, &run.IdIssue, &run.IdUserAgent, &run.IdProject, &run.IdGitIntegration,
 		&run.Phase, &run.StagePlan, &run.QueuePosition,
 		&run.PrUrl, &run.PrHostType, &run.PrId, &run.BranchName, &run.ErrorMessage,
 		&run.StartedAt, &run.FinishedAt, &run.CreatedAt,
@@ -256,7 +256,7 @@ func (s *MergePollerSuite) Test_PollsOnlyPrOpen() {
 	// LoadPrOpenRuns only fetches phase='pr_open', so this run must not be transitioned.
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, id_git_integration, stage_plan)
 		SELECT id_issue, $1, $2, 'implementing', '42', 'github', 'https://github.com/org/repo/pull/42',
 		       'agent/b1/i1/123456', $3, '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $4 AND id_project = $2
@@ -279,7 +279,7 @@ func (s *MergePollerSuite) Test_NoGitIntegration_SkipsRun() {
 	// Insert a run in pr_open with pr_id but NULL id_git_integration.
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, pr_id, pr_host_type, pr_url, branch_name, stage_plan)
 		SELECT id_issue, $1, $2, 'pr_open', '42', 'github', 'https://github.com/org/repo/pull/42', 'agent/b1/i1/123456', '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,

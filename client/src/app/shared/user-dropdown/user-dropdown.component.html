@@ -39,7 +39,7 @@
                 </div>
                 <div class="ml-2 flex flex-col">
                     <span>{{ member.name }}</span>
-                    @if (hasAgentFeatures() && member.isBot) {
+                    @if (hasAgentFeatures() && member.isAgent) {
                         <span class="user-dropdown__status ui-color-text-muted">
                             @if (overviewOf(member.idUser); as workload) {
                                 <span
@@ -63,7 +63,7 @@
 
         @if (hasAgentFeatures() && idProject() !== null && idIssuePublic() !== null) {
             <ng-template #optionActions let-member let-openDock="openDock">
-                @if (member.isBot) {
+                @if (member.isAgent) {
                     <button
                         type="button"
                         class="user-dropdown__action"

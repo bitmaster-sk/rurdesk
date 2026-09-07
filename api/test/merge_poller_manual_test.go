@@ -61,7 +61,7 @@ func (s *MergePollerManualSuite) SetupSuite() {
 	json.NewDecoder(agentRes.Body).Decode(&agentUser)
 	s.AgentUserID = agentUser.IdUser
 	_, err = s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
 	s.poller = agent.NewMergePoller(
@@ -242,7 +242,7 @@ func (s *MergePollerManualSuite) Test_LoadIssuesWithOpenMr_SkipsProcessedAndRunO
 	s.linkMr(issC.IdIssue, "203")
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'pr_open', '{"stages":[]}')
 		RETURNING id_run
 	`, issC.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)

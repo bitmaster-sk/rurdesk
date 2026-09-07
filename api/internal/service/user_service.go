@@ -140,7 +140,7 @@ func (s *UserService) ChangePassword(ctx context.Context, idUser int64, currentP
 	if err != nil {
 		return fmt.Errorf("loading user %d: %w", idUser, err)
 	}
-	if user.IsBot {
+	if user.IsAgent {
 		return ErrInvalidPassword
 	}
 	if password.Compare(user.Password, currentPassword) != nil {

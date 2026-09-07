@@ -158,7 +158,7 @@ func (o *Orchestrator) runStage(task Task) {
 
 	// New branch on the first Implementation attempt, reused for every later
 	// stage of the same run. Branch name is deterministic from
-	// idUserBot+idIssue, so a redispatched run with the same idRun lands on
+	// idUserAgent+idIssue, so a redispatched run with the same idRun lands on
 	// the same worktree.
 	repoPath := RepoPathFromURL(o.cfg.WorkspaceBase, o.cfg.RepoUrl)
 	if WorktreeExists(repoPath, task.IdRun) {
@@ -167,7 +167,7 @@ func (o *Orchestrator) runStage(task Task) {
 			task.Branch = branch
 		}
 	} else {
-		branch := GenerateBranchName(task.IdUserBot, task.IdIssue)
+		branch := GenerateBranchName(task.IdUserAgent, task.IdIssue)
 		task.Branch = branch
 		path, err := CreateWorktree(repoPath, branch, task.IdRun)
 		if err != nil {
@@ -284,10 +284,10 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		return Task{}, fmt.Errorf("nil payload")
 	}
 	task := Task{
-		IdRun:     int64Field(payload, "idRun"),
-		IdIssue:   int64Field(payload, "idIssue"),
-		IdUserBot: int64Field(payload, "idUserBot"),
-		IdProject: int64Field(payload, "idProject"),
+		IdRun:       int64Field(payload, "idRun"),
+		IdIssue:     int64Field(payload, "idIssue"),
+		IdUserAgent: int64Field(payload, "idUserAgent"),
+		IdProject:   int64Field(payload, "idProject"),
 	}
 	if task.IdRun == 0 {
 		return Task{}, fmt.Errorf("missing idRun")
