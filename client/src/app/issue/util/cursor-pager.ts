@@ -93,6 +93,9 @@ export class CursorPager {
     // isLoading set disables "Load more" until the view remounts.
     private finishIfCurrent(generation: number): void {
         if (generation === this.generation) {
+            // hasLoaded marks "a fetch settled", not "a fetch succeeded" — without it a
+            // failed first load leaves the table spinning forever.
+            this.hasLoaded.set(true);
             this.isLoading.set(false);
         }
     }

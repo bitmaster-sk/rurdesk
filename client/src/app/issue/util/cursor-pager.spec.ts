@@ -102,6 +102,27 @@ describe('CursorPager', () => {
         expect(pager.items().map(i => i.idIssuePublic)).toEqual([1, 2]);
     });
 
+    it('reports hasLoaded only once a first page has arrived', () => {
+        const pager = new CursorPager(() => of(page([1, 2], null, 2)));
+        expect(pager.hasLoaded()).toBe(false);
+
+        pager.reset();
+
+        expect(pager.hasLoaded()).toBe(true);
+    });
+
+    // The table shows its loading row until hasLoaded flips, so a failed first
+    // request that left it false would spin forever.
+    it('reports hasLoaded when the first page fails', () => {
+        const pager = new CursorPager(() => throwError(() => new Error('boom')));
+
+        pager.reset();
+
+        expect(pager.hasLoaded()).toBe(true);
+        expect(pager.isLoading()).toBe(false);
+        expect(pager.items()).toEqual([]);
+    });
+
     // A filter or sort change resets the pager; a loadMore already in flight must
     // not append its old-query rows on top of the fresh first page.
     it('drops a response that a later reset has superseded', () => {
