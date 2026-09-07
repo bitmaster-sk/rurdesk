@@ -28,7 +28,7 @@ type AgentRunController struct {
 	agentTaskRepo *repository.AgentTaskRepository
 	tasks         *agent.TaskService
 	thinking      *agent.ThinkingService
-	botGwRepo     *repository.BotGatewayRepository
+	agentGwRepo   *repository.AgentGatewayRepository
 	issueRepo     *repository.IssueRepository
 	projectRepo   *repository.ProjectRepository
 	messageRepo   *repository.MessageRepository
@@ -45,7 +45,7 @@ func NewAgentRunController(
 	agentTaskRepo *repository.AgentTaskRepository,
 	tasks *agent.TaskService,
 	thinking *agent.ThinkingService,
-	botGwRepo *repository.BotGatewayRepository,
+	agentGwRepo *repository.AgentGatewayRepository,
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
 	messageRepo *repository.MessageRepository,
@@ -61,7 +61,7 @@ func NewAgentRunController(
 		agentTaskRepo: agentTaskRepo,
 		tasks:         tasks,
 		thinking:      thinking,
-		botGwRepo:     botGwRepo,
+		agentGwRepo:   agentGwRepo,
 		issueRepo:     issueRepo,
 		projectRepo:   projectRepo,
 		messageRepo:   messageRepo,
@@ -397,7 +397,7 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 }
 
 // Restart soft-cancels the existing run and its tasks, then creates a fresh
-// run for the same issue/bot/project. Message log is preserved.
+// run for the same issue/agent/project. Message log is preserved.
 func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	ctx := c.Request.Context()
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
@@ -695,7 +695,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		return
 	}
 
-	botUser, _ := extctx.GetUser(ctx)
+	agentUser, _ := extctx.GetUser(ctx)
 
 	// reconcilability gate. A still-live gateway may report completion for a
 	// task an API/gateway restart already blanket-failed (crash recovery). Decide
@@ -736,7 +736,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	var notifierMsg *model.Message
 	var targetStatus, nextPhase string
 	txErr := extctx.RunInTx(ctx, ctrl.pool, func(ctx context.Context) error {
-		return ctrl.applyCompleteStage(ctx, run, task, &body, pr, reconcile, &botUser, &idMessageOut, &notifierMsg, &targetStatus, &nextPhase)
+		return ctrl.applyCompleteStage(ctx, run, task, &body, pr, reconcile, &agentUser, &idMessageOut, &notifierMsg, &targetStatus, &nextPhase)
 	})
 	if txErr != nil {
 		if errors.Is(txErr, errReconcileSuperseded) {
@@ -767,7 +767,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
 			Payload: notifierMsg,
-			Source:  "bot",
+			Source:  "agent",
 		}
 	}
 	ctrl.notifier.Send <- &notify.Notice{
@@ -799,7 +799,7 @@ func (ctrl *AgentRunController) applyCompleteStage(
 	body *model.CompleteStageReq,
 	pr *prComputed,
 	reconcile bool,
-	botUser *model.User,
+	agentUser *model.User,
 	idMessageOut **int64,
 	notifierMsgOut **model.Message,
 	targetStatusOut *string,
@@ -807,7 +807,7 @@ func (ctrl *AgentRunController) applyCompleteStage(
 ) error {
 	if body.Message != "" {
 		msg, err := ctrl.messageRepo.InsertIssueAgentMessage(
-			ctx, body.Message, botUser, run.IdIssue, constants.MessageKind(body.MessageKind),
+			ctx, body.Message, agentUser, run.IdIssue, constants.MessageKind(body.MessageKind),
 		)
 		if err != nil {
 			return fmt.Errorf("writing message: %w", err)
@@ -894,18 +894,18 @@ func (ctrl *AgentRunController) applyCompleteStage(
 }
 
 // GatewayRecovered is called when a gateway (re)starts. Its in-flight
-// subprocesses died with it, so every active task for this bot is orphaned —
+// subprocesses died with it, so every active task for this agent is orphaned —
 // fail them and their runs so the user gets Continue/Restart instead of a
 // silently-stuck run.
 func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 	ctx := c.Request.Context()
-	bot, ok := extctx.GetUser(ctx)
+	agentUser, ok := extctx.GetUser(ctx)
 	if !ok {
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusUnauthorized)
 		return
 	}
-	runIds, err := ctrl.agentTaskRepo.FailActiveForBot(ctx, bot.IdUser)
+	runIds, err := ctrl.agentTaskRepo.FailActiveForAgent(ctx, agentUser.IdUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)

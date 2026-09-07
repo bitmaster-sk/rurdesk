@@ -13,39 +13,39 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// BotGatewayController manages the 1:1 bot→gateway record. All endpoints sit
+// AgentGatewayController manages the 1:1 agent→gateway record. All endpoints sit
 // behind the AdminOnly middleware; handlers only validate the target user.
-type BotGatewayController struct {
-	botGwRepo *repository.BotGatewayRepository
-	userRepo  *repository.UserRepository
+type AgentGatewayController struct {
+	agentGwRepo *repository.AgentGatewayRepository
+	userRepo    *repository.UserRepository
 }
 
-func NewBotGatewayController(
-	botGwRepo *repository.BotGatewayRepository,
+func NewAgentGatewayController(
+	agentGwRepo *repository.AgentGatewayRepository,
 	userRepo *repository.UserRepository,
-) *BotGatewayController {
-	return &BotGatewayController{
-		botGwRepo: botGwRepo,
-		userRepo:  userRepo,
+) *AgentGatewayController {
+	return &AgentGatewayController{
+		agentGwRepo: agentGwRepo,
+		userRepo:    userRepo,
 	}
 }
 
-// requireBot aborts with 422 unless the target user is a bot.
-func (ctrl *BotGatewayController) requireBot(c *gin.Context) (int64, bool) {
+// requireAgent aborts with 422 unless the target user is an agent.
+func (ctrl *AgentGatewayController) requireAgent(c *gin.Context) (int64, bool) {
 	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return 0, false
 	}
-	isBot, err := ctrl.userRepo.IsBotUser(c.Request.Context(), idUser)
+	isBot, err := ctrl.userRepo.IsAgentUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return 0, false
 	}
 	if !isBot {
-		_ = c.Error(errs.ErrNotABot)
+		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusUnprocessableEntity)
 		return 0, false
 	}
@@ -60,12 +60,12 @@ func generateWebhookSecret() ([]byte, error) {
 	return secret, nil
 }
 
-func (ctrl *BotGatewayController) GetBotGateway(c *gin.Context) {
-	idUser, ok := ctrl.requireBot(c)
+func (ctrl *AgentGatewayController) GetAgentGateway(c *gin.Context) {
+	idUser, ok := ctrl.requireAgent(c)
 	if !ok {
 		return
 	}
-	gw, err := ctrl.botGwRepo.LoadByBotUser(c.Request.Context(), idUser)
+	gw, err := ctrl.agentGwRepo.LoadByAgentUser(c.Request.Context(), idUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -74,13 +74,13 @@ func (ctrl *BotGatewayController) GetBotGateway(c *gin.Context) {
 	c.JSON(http.StatusOK, gw)
 }
 
-func (ctrl *BotGatewayController) CreateBotGateway(c *gin.Context) {
-	idUser, ok := ctrl.requireBot(c)
+func (ctrl *AgentGatewayController) CreateAgentGateway(c *gin.Context) {
+	idUser, ok := ctrl.requireAgent(c)
 	if !ok {
 		return
 	}
 
-	var req model.CreateBotGatewayReq
+	var req model.CreateAgentGatewayReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
@@ -94,7 +94,7 @@ func (ctrl *BotGatewayController) CreateBotGateway(c *gin.Context) {
 		return
 	}
 
-	gw, err := ctrl.botGwRepo.Insert(c.Request.Context(), idUser, req, secret)
+	gw, err := ctrl.agentGwRepo.Insert(c.Request.Context(), idUser, req, secret)
 	if isConflict(err) {
 		_ = c.Error(errs.ErrGatewayExists)
 		c.Status(http.StatusConflict)
@@ -105,29 +105,29 @@ func (ctrl *BotGatewayController) CreateBotGateway(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &model.CreateBotGatewayRes{
-		BotGateway:            *gw,
+	c.JSON(http.StatusOK, &model.CreateAgentGatewayRes{
+		AgentGateway:          *gw,
 		TrackerToGatewayToken: hex.EncodeToString(secret),
 	})
 }
 
-// UpdateBotGateway changes the gateway URL of an existing record (admin edit).
+// UpdateAgentGateway changes the gateway URL of an existing record (admin edit).
 // The webhook secret is untouched — no new token is issued.
-func (ctrl *BotGatewayController) UpdateBotGateway(c *gin.Context) {
-	idUser, ok := ctrl.requireBot(c)
+func (ctrl *AgentGatewayController) UpdateAgentGateway(c *gin.Context) {
+	idUser, ok := ctrl.requireAgent(c)
 	if !ok {
 		return
 	}
 
-	var req model.CreateBotGatewayReq
+	var req model.CreateAgentGatewayReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 
-	gw, err := ctrl.botGwRepo.UpdateUrl(c.Request.Context(), idUser, req.GatewayUrl)
-	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+	gw, err := ctrl.agentGwRepo.UpdateUrl(c.Request.Context(), idUser, req.GatewayUrl)
+	if errors.Is(err, repository.ErrAgentGatewayNotFound) {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
@@ -142,8 +142,8 @@ func (ctrl *BotGatewayController) UpdateBotGateway(c *gin.Context) {
 
 // RegenerateGatewayToken replaces the gateway's webhook signing secret and
 // returns the new one-time token. The old secret stops verifying immediately.
-func (ctrl *BotGatewayController) RegenerateGatewayToken(c *gin.Context) {
-	idUser, ok := ctrl.requireBot(c)
+func (ctrl *AgentGatewayController) RegenerateGatewayToken(c *gin.Context) {
+	idUser, ok := ctrl.requireAgent(c)
 	if !ok {
 		return
 	}
@@ -155,8 +155,8 @@ func (ctrl *BotGatewayController) RegenerateGatewayToken(c *gin.Context) {
 		return
 	}
 
-	gw, err := ctrl.botGwRepo.UpdateSecret(c.Request.Context(), idUser, secret)
-	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+	gw, err := ctrl.agentGwRepo.UpdateSecret(c.Request.Context(), idUser, secret)
+	if errors.Is(err, repository.ErrAgentGatewayNotFound) {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
@@ -166,19 +166,19 @@ func (ctrl *BotGatewayController) RegenerateGatewayToken(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &model.CreateBotGatewayRes{
-		BotGateway:            *gw,
+	c.JSON(http.StatusOK, &model.CreateAgentGatewayRes{
+		AgentGateway:          *gw,
 		TrackerToGatewayToken: hex.EncodeToString(secret),
 	})
 }
 
-func (ctrl *BotGatewayController) DeleteBotGateway(c *gin.Context) {
-	idUser, ok := ctrl.requireBot(c)
+func (ctrl *AgentGatewayController) DeleteAgentGateway(c *gin.Context) {
+	idUser, ok := ctrl.requireAgent(c)
 	if !ok {
 		return
 	}
-	err := ctrl.botGwRepo.DeleteByBotUser(c.Request.Context(), idUser)
-	if errors.Is(err, repository.ErrBotGatewayNotFound) {
+	err := ctrl.agentGwRepo.DeleteByAgentUser(c.Request.Context(), idUser)
+	if errors.Is(err, repository.ErrAgentGatewayNotFound) {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return

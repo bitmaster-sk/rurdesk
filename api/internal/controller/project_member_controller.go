@@ -94,8 +94,8 @@ func (mc *ProjectMemberController) AddUser(c *gin.Context) {
 	}
 
 	if dto.Role == model.RoleOwner {
-		if err := mc.rejectIfBot(ctx, dto.IdUser); err == errs.ErrBotOwner {
-			_ = c.Error(errs.ErrBotOwner)
+		if err := mc.rejectIfAgent(ctx, dto.IdUser); err == errs.ErrAgentOwner {
+			_ = c.Error(errs.ErrAgentOwner)
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -155,8 +155,8 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 	}
 
 	if dto.Role == model.RoleOwner {
-		if err := mc.rejectIfBot(ctx, idUser); err == errs.ErrBotOwner {
-			_ = c.Error(errs.ErrBotOwner)
+		if err := mc.rejectIfAgent(ctx, idUser); err == errs.ErrAgentOwner {
+			_ = c.Error(errs.ErrAgentOwner)
 			c.Status(http.StatusUnprocessableEntity)
 			return
 		} else if err != nil {
@@ -415,15 +415,15 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// rejectIfBot returns errs.ErrBotOwner if the target user is a bot; call whenever
+// rejectIfAgent returns errs.ErrAgentOwner if the target user is an agent; call whenever
 // role==owner is requested.
-func (mc *ProjectMemberController) rejectIfBot(ctx context.Context, idUser int64) error {
-	isBot, err := mc.userRepo.IsBotUser(ctx, idUser)
+func (mc *ProjectMemberController) rejectIfAgent(ctx context.Context, idUser int64) error {
+	isBot, err := mc.userRepo.IsAgentUser(ctx, idUser)
 	if err != nil {
 		return err
 	}
 	if isBot {
-		return errs.ErrBotOwner
+		return errs.ErrAgentOwner
 	}
 	return nil
 }

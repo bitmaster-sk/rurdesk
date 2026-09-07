@@ -475,12 +475,12 @@ func GetAgentThinkingRepository() *repository.AgentThinkingRepository {
 	return instance.(*repository.AgentThinkingRepository)
 }
 
-func GetBotGatewayRepository() *repository.BotGatewayRepository {
+func GetAgentGatewayRepository() *repository.AgentGatewayRepository {
 	instance, _ := di.GetWithNew("bot-gateway-repository", func() (any, error) {
 		pool := mustDb()
-		return repository.NewBotGatewayRepository(pool), nil
+		return repository.NewAgentGatewayRepository(pool), nil
 	})
-	return instance.(*repository.BotGatewayRepository)
+	return instance.(*repository.AgentGatewayRepository)
 }
 
 func GetWebhookDedupRepository() *repository.WebhookDedupRepository {
@@ -503,7 +503,7 @@ func GetDispatcher() *agent.Dispatcher {
 		return agent.NewDispatcher(
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
-			GetBotGatewayRepository(),
+			GetAgentGatewayRepository(),
 			GetIssueRepository(),
 			GetMessageRepository(),
 			GetProjectRepository(),
@@ -599,7 +599,7 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAgentTaskRepository(),
 			GetAgentTaskService(),
 			thinking,
-			GetBotGatewayRepository(),
+			GetAgentGatewayRepository(),
 			GetIssueRepository(),
 			GetProjectRepository(),
 			GetMessageRepository(),
@@ -617,14 +617,14 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 	return instance.(*controller.AgentRunController), nil
 }
 
-func GetBotGatewayController() *controller.BotGatewayController {
+func GetAgentGatewayController() *controller.AgentGatewayController {
 	instance, _ := di.GetWithNew("bot-gateway-controller", func() (any, error) {
-		return controller.NewBotGatewayController(
-			GetBotGatewayRepository(),
+		return controller.NewAgentGatewayController(
+			GetAgentGatewayRepository(),
 			GetUserRepository(),
 		), nil
 	})
-	return instance.(*controller.BotGatewayController)
+	return instance.(*controller.AgentGatewayController)
 }
 
 func GetMessageController() *controller.MessageController {
@@ -641,7 +641,7 @@ func GetMessageController() *controller.MessageController {
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
 			pool,
-		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(), GetDispatcher(), GetNotifier()), nil
+		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.MessageController)
 }
@@ -669,7 +669,7 @@ func GetIssueController() *controller.IssueController {
 			GetNotificationService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).
-			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetBotGatewayRepository(),
+			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
 				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.IssueController)
@@ -1147,7 +1147,7 @@ func GetRouter() (*router.Router, error) {
 			GetGitIntegrationController(),
 			agentRunController,
 			agentThinkingController,
-			GetBotGatewayController(),
+			GetAgentGatewayController(),
 			GetWorkflowEventMapController(),
 			GetSkillController(),
 			GetProjectSkillController(),
