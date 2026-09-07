@@ -19,7 +19,7 @@ type WorkflowEventMapSuite struct {
 	App           *issue.Application
 	OwnerToken    string
 	MemberToken   string
-	BotUserID     int64
+	AgentUserID   int64
 	IdProject     int64
 	IdStateToDo   int64
 	IdStateInProg int64
@@ -58,20 +58,20 @@ func (s *WorkflowEventMapSuite) SetupSuite() {
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.OwnerToken)
 	s.Require().Equal(http.StatusOK, addRes.StatusCode)
 
-	// Create a bot user — runs reference it via run.id_user_bot (FK to users.user).
+	// Create an agent user — runs reference it via run.id_user_bot (FK to users.user).
 	Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"psbot","email":"psbot@test.sk","password":"kreslo"}`, s.OwnerToken)
-	botLogin := Request(s.T(), s.App, "POST", "/api/public/login",
+	agentLogin := Request(s.T(), s.App, "POST", "/api/public/login",
 		`{"email":"psbot@test.sk","password":"kreslo"}`, "")
-	s.Require().Equal(http.StatusOK, botLogin.StatusCode)
-	var botTk struct{ Token string }
-	json.NewDecoder(botLogin.Body).Decode(&botTk)
-	var botUser model.User
-	botRes := Request(s.T(), s.App, "GET", "/api/private/user", "", botTk.Token)
-	json.NewDecoder(botRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	s.Require().Equal(http.StatusOK, agentLogin.StatusCode)
+	var agentTk struct{ Token string }
+	json.NewDecoder(agentLogin.Body).Decode(&agentTk)
+	var agentUser model.User
+	agentRes := Request(s.T(), s.App, "GET", "/api/private/user", "", agentTk.Token)
+	json.NewDecoder(agentRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
 	s.IdStateToDo = s.createState("To Do", false, false)
@@ -257,7 +257,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnPhaseTransition() {
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	// Goes through the injected repository so the mirror is wired in, unlike a bare TransitionPhase call.
@@ -295,7 +295,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnSetPrInfoFrom() {
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	gitIntID1 := s.createGitIntegration()
@@ -339,7 +339,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_SetPrInfoFrom_NoMapping_NoStateChang
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	gitIntID2 := s.createGitIntegration()
@@ -376,7 +376,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_NoMapping_NoStateChange() {
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	agentRunRepo := injector.GetAgentRunRepository()
@@ -416,7 +416,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_DeletedState_SkipsGracefully() {
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	agentRunRepo := injector.GetAgentRunRepository()
@@ -445,7 +445,7 @@ func (s *WorkflowEventMapSuite) Test_Mirror_FailureDoesNotBlockPhaseTransition()
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'queued', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
 	agentRunRepo := injector.GetAgentRunRepository()
@@ -466,7 +466,7 @@ func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnInsert() {
 
 	ctx := context.Background()
 	run, err := injector.GetAgentRunRepository().
-		Insert(ctx, iss.IdIssue, s.BotUserID, s.IdProject, json.RawMessage(`{"stages":[]}`))
+		Insert(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, json.RawMessage(`{"stages":[]}`))
 	s.Require().NoError(err)
 	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, run.IdRun) //nolint:errcheck
 
@@ -488,7 +488,7 @@ func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnReconcileToPh
 		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'failed', '{"stages":[]}')
 		RETURNING id_run
-	`, iss.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
 

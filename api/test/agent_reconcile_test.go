@@ -28,8 +28,8 @@ type AgentReconcileSuite struct {
 	suite.Suite
 	App              *issue.Application
 	Token            string
-	BotToken         string
-	BotUserID        int64
+	AgentToken       string
+	AgentUserID      int64
 	IdProject        int64
 	IdIssuePublic    int64
 	IdGitIntegration int64
@@ -54,18 +54,18 @@ func (s *AgentReconcileSuite) SetupSuite() {
 	s.Require().Equal(http.StatusOK, loginRes.StatusCode)
 	var tk struct{ Token string }
 	json.NewDecoder(loginRes.Body).Decode(&tk)
-	s.BotToken = tk.Token
+	s.AgentToken = tk.Token
 
-	botUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", s.BotToken)
-	var botUser model.User
-	json.NewDecoder(botUserRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	agentUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", s.AgentToken)
+	var agentUser model.User
+	json.NewDecoder(agentUserRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 	// NOTE: do NOT delete the cached login token — the reconcile tests call
-	// complete_stage over HTTP with s.BotToken, which the Auth middleware validates
+	// complete_stage over HTTP with s.AgentToken, which the Auth middleware validates
 	// against the cache. (Deleting it would 401 every call.)
 
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
@@ -79,7 +79,7 @@ func (s *AgentReconcileSuite) SetupSuite() {
 
 	addRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.BotUserID), s.Token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusOK, addRes.StatusCode)
 
 	issueRes := Request(s.T(), s.App, "POST",
@@ -135,7 +135,7 @@ func (s *AgentReconcileSuite) TearDownSuite() {
 	}
 	s.App.Pool.Exec(context.Background(), "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(), "DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+	s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 func (s *AgentReconcileSuite) SetupTest() {
@@ -160,7 +160,7 @@ func (s *AgentReconcileSuite) insertRun(phase string, failed bool) int64 {
 		       CASE WHEN $5 THEN 'crash_recovery' ELSE NULL END
 		FROM issues.issue WHERE id_issue_public = $6 AND id_project = $2
 		RETURNING id_run`,
-		s.BotUserID, s.IdProject, phase, s.IdGitIntegration, failed, s.IdIssuePublic,
+		s.AgentUserID, s.IdProject, phase, s.IdGitIntegration, failed, s.IdIssuePublic,
 	).Scan(&idRun)
 	s.Require().NoError(err)
 	return idRun
@@ -175,7 +175,7 @@ func (s *AgentReconcileSuite) insertPrOpenRunWithPr() int64 {
 		SELECT id_issue, $1, $2, 'pr_open', '7', 'github', 'https://github.com/org/repo/pull/7', 'agent/b1/i1/111', $3, '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $4 AND id_project = $2
 		RETURNING id_run`,
-		s.BotUserID, s.IdProject, s.IdGitIntegration, s.IdIssuePublic,
+		s.AgentUserID, s.IdProject, s.IdGitIntegration, s.IdIssuePublic,
 	).Scan(&idRun)
 	s.Require().NoError(err)
 	return idRun
@@ -189,7 +189,7 @@ func (s *AgentReconcileSuite) insertTask(idRun int64, stage, status string, erro
 		VALUES ($1, $2, $3, 1, $4, $5,
 		        CASE WHEN $4 IN ('failed','completed','cancelled') THEN now() ELSE NULL END)
 		RETURNING id_task`,
-		idRun, s.BotUserID, stage, status, errorReason,
+		idRun, s.AgentUserID, stage, status, errorReason,
 	).Scan(&idTask)
 	s.Require().NoError(err)
 	return idTask
@@ -220,7 +220,7 @@ func (s *AgentReconcileSuite) complete(idTask int64, stage, outcome, kind, branc
 		outcome, stage, kind, branch,
 	)
 	return Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/agent/task/%d/complete", idTask), body, s.BotToken)
+		fmt.Sprintf("/api/private/agent/task/%d/complete", idTask), body, s.AgentToken)
 }
 
 func strptr(s string) *string { return &s }

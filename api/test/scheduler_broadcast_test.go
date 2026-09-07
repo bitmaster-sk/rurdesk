@@ -39,25 +39,25 @@ func (d *stubStageDispatcher) DispatchStageExecute(_ context.Context, _ *model.A
 // completed.
 type SchedulerBroadcastSuite struct {
 	suite.Suite
-	App       *issue.Application
-	Token     string
-	BotUserID int64
-	IdProject int64
-	IdIssue   int64
+	App         *issue.Application
+	Token       string
+	AgentUserID int64
+	IdProject   int64
+	IdIssue     int64
 }
 
 func (s *SchedulerBroadcastSuite) SetupSuite() {
 	s.App = Setup(s.T())
 	s.Token = Token(s.T(), s.App)
 
-	botRes := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+	agentRes := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"schedbroadcastbot","isBot":true}`, s.Token)
-	s.Require().Equal(http.StatusOK, botRes.StatusCode)
-	var bot struct {
+	s.Require().Equal(http.StatusOK, agentRes.StatusCode)
+	var agent struct {
 		IdUser int64 `json:"idUser"`
 	}
-	s.Require().NoError(json.NewDecoder(botRes.Body).Decode(&bot))
-	s.BotUserID = bot.IdUser
+	s.Require().NoError(json.NewDecoder(agentRes.Body).Decode(&agent))
+	s.AgentUserID = agent.IdUser
 
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"sched-broadcast-project","color":"#445566"}`, s.Token)
@@ -70,11 +70,11 @@ func (s *SchedulerBroadcastSuite) SetupSuite() {
 
 	addRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.BotUserID), s.Token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusOK, addRes.StatusCode)
 
-	// Create the issue unassigned (assigning a bot here would auto-start a run of
-	// its own), then point assigned_to at the bot directly — LoadNextEligible
+	// Create the issue unassigned (assigning an agent here would auto-start a run of
+	// its own), then point assigned_to at the agent directly — LoadNextEligible
 	// gates on i.assigned_to = r.id_user_bot.
 	issRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
@@ -85,7 +85,7 @@ func (s *SchedulerBroadcastSuite) SetupSuite() {
 	s.IdIssue = iss.IdIssue
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE issues.issue SET assigned_to = $1 WHERE id_issue = $2", s.BotUserID, s.IdIssue)
+		"UPDATE issues.issue SET assigned_to = $1 WHERE id_issue = $2", s.AgentUserID, s.IdIssue)
 	s.Require().NoError(err)
 }
 
@@ -93,7 +93,7 @@ func (s *SchedulerBroadcastSuite) TearDownSuite() {
 	ctx := context.Background()
 	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 // wsRunSnapshot is the subset of the agent_run notice payload the assertion reads.
@@ -128,7 +128,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 	taskRepo := repository.NewAgentTaskRepository(s.App.Pool)
 	projectRepo := repository.NewProjectRepository(s.App.Pool)
 
-	run, err := runRepo.Insert(ctx, s.IdIssue, s.BotUserID, s.IdProject, emptyStagePlan(s.T()))
+	run, err := runRepo.Insert(ctx, s.IdIssue, s.AgentUserID, s.IdProject, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
 
 	// Move the run to in_progress and mark the first stage (pickup) completed, so
@@ -139,7 +139,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 		"UPDATE agent.run SET phase = $1 WHERE id_run = $2", constants.PhaseInProgress, run.IdRun)
 	s.Require().NoError(err)
 
-	pickup, err := taskRepo.Insert(ctx, run.IdRun, s.BotUserID, constants.StagePickup, 1)
+	pickup, err := taskRepo.Insert(ctx, run.IdRun, s.AgentUserID, constants.StagePickup, 1)
 	s.Require().NoError(err)
 	_, err = s.App.Pool.Exec(ctx,
 		"UPDATE agent.task SET status = $1, finished_at = now() WHERE id_task = $2",
@@ -151,7 +151,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 
 	s.Require().NoError(sched.TickOnce(ctx))
 
-	// The next stage for our run was dispatched. (The tick scans every active bot;
+	// The next stage for our run was dispatched. (The tick scans every active agent;
 	// filter to our run so leftover runs from other suites can't fool the assert.)
 	var dispatched *model.AgentTask
 	for _, t := range dispatcher.dispatched {

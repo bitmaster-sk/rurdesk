@@ -24,36 +24,36 @@ type ApiKeySuite struct {
 	suite.Suite
 	App        *issue.Application
 	AdminToken string
-	BotID      int64
+	AgentID    int64
 }
 
 func (s *ApiKeySuite) SetupSuite() {
 	s.App = Setup(s.T())
 	s.AdminToken = Token(s.T(), s.App)
-	s.BotID, _ = s.newBot("keybot")
+	s.AgentID, _ = s.newAgent("keybot")
 }
 
 func (s *ApiKeySuite) keyURL(idUser int64) string {
 	return fmt.Sprintf("/api/private/admin/user/%d/api-key", idUser)
 }
 
-// newBot creates a bot (which mints a "default" key) and returns its id and the
-// one-time raw key. The bot is cleaned up when the test finishes.
-func (s *ApiKeySuite) newBot(name string) (int64, string) {
+// newAgent creates an agent (which mints a "default" key) and returns its id and the
+// one-time raw key. The agent is cleaned up when the test finishes.
+func (s *ApiKeySuite) newAgent(name string) (int64, string) {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		fmt.Sprintf(`{"name":%q,"isBot":true}`, name), s.AdminToken)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
-	var bot model.AdminCreateUserRes
-	s.Require().NoError(json.NewDecoder(res.Body).Decode(&bot))
-	id := bot.IdUser
+	var agent model.AdminCreateUserRes
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))
+	id := agent.IdUser
 	s.T().Cleanup(func() {
 		s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE id_user = $1", id)
 	})
-	return id, bot.RawKey
+	return id, agent.RawKey
 }
 
 func (s *ApiKeySuite) Test_Get_ReturnsSingleKey() {
-	res := Request(s.T(), s.App, "GET", s.keyURL(s.BotID), "", s.AdminToken)
+	res := Request(s.T(), s.App, "GET", s.keyURL(s.AgentID), "", s.AdminToken)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var key model.ApiKey
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&key))
@@ -62,13 +62,13 @@ func (s *ApiKeySuite) Test_Get_ReturnsSingleKey() {
 }
 
 func (s *ApiKeySuite) Test_Create_Conflict_WhenKeyExists() {
-	// s.BotID already owns the "default" key minted at creation.
-	res := Request(s.T(), s.App, "POST", s.keyURL(s.BotID), `{"name":"second"}`, s.AdminToken)
+	// s.AgentID already owns the "default" key minted at creation.
+	res := Request(s.T(), s.App, "POST", s.keyURL(s.AgentID), `{"name":"second"}`, s.AdminToken)
 	s.Equal(http.StatusConflict, res.StatusCode)
 }
 
 func (s *ApiKeySuite) Test_Regenerate_RotatesKey() {
-	id, oldRaw := s.newBot("regenbot")
+	id, oldRaw := s.newAgent("regenbot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "GET", "/api/private/user", "", oldRaw).StatusCode)
 
@@ -87,7 +87,7 @@ func (s *ApiKeySuite) Test_Regenerate_RotatesKey() {
 }
 
 func (s *ApiKeySuite) Test_Regenerate_NotFound_WhenNoKey() {
-	id, _ := s.newBot("noregenbot")
+	id, _ := s.newAgent("noregenbot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "DELETE", s.keyURL(id), "", s.AdminToken).StatusCode)
 
@@ -96,7 +96,7 @@ func (s *ApiKeySuite) Test_Regenerate_NotFound_WhenNoKey() {
 }
 
 func (s *ApiKeySuite) Test_Revoke_BlocksAuth_AndClearsKey() {
-	id, raw := s.newBot("revokebot")
+	id, raw := s.newAgent("revokebot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "GET", "/api/private/user", "", raw).StatusCode)
 
@@ -113,7 +113,7 @@ func (s *ApiKeySuite) Test_Revoke_BlocksAuth_AndClearsKey() {
 }
 
 func (s *ApiKeySuite) Test_Create_AfterRevoke() {
-	id, _ := s.newBot("recreatebot")
+	id, _ := s.newAgent("recreatebot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "DELETE", s.keyURL(id), "", s.AdminToken).StatusCode)
 
@@ -129,7 +129,7 @@ func (s *ApiKeySuite) Test_Create_AfterRevoke() {
 }
 
 func (s *ApiKeySuite) Test_RawKeyAuthenticates() {
-	id, raw := s.newBot("authbot")
+	id, raw := s.newAgent("authbot")
 	userRes := Request(s.T(), s.App, "GET", "/api/private/user", "", raw)
 	s.Require().Equal(http.StatusOK, userRes.StatusCode)
 	var u model.User
@@ -138,7 +138,7 @@ func (s *ApiKeySuite) Test_RawKeyAuthenticates() {
 }
 
 func (s *ApiKeySuite) Test_RateLimit_Override() {
-	id, _ := s.newBot("ratelimitbot")
+	id, _ := s.newAgent("ratelimitbot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "DELETE", s.keyURL(id), "", s.AdminToken).StatusCode)
 
@@ -164,7 +164,7 @@ func (s *ApiKeySuite) Test_RateLimit_Override() {
 // must now be capped to the key's remaining lifetime, so the key stops
 // authenticating once it expires — not up to 5 minutes later.
 func (s *ApiKeySuite) Test_ExpiredKey_StopsAuth_EvenAfterCaching() {
-	id, raw := s.newBot("expirebot")
+	id, raw := s.newAgent("expirebot")
 
 	// Give the key a short lifetime (expires_at is UTC wall-clock, matching the
 	// LoadByHash comparison against NOW() AT TIME ZONE 'utc').
@@ -185,11 +185,11 @@ func (s *ApiKeySuite) Test_ExpiredKey_StopsAuth_EvenAfterCaching() {
 }
 
 // rateLimitOverride=0 used to be accepted and then
-// locked the bot out permanently (first request already exceeded the 0 quota →
+// locked the agent out permanently (first request already exceeded the 0 quota →
 // 429 forever). Non-positive overrides must now be rejected at the boundary;
 // omitting the field still falls back to the default limit.
 func (s *ApiKeySuite) Test_Create_RejectsNonPositiveRateLimit() {
-	id, _ := s.newBot("rlzerobot")
+	id, _ := s.newAgent("rlzerobot")
 	s.Require().Equal(http.StatusOK,
 		Request(s.T(), s.App, "DELETE", s.keyURL(id), "", s.AdminToken).StatusCode)
 
@@ -221,30 +221,30 @@ func (s *ApiKeySuite) Test_KeyEndpoints_RejectHumanTarget() {
 	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
 }
 
-func (s *ApiKeySuite) Test_BotCannotBeOwner() {
-	bot, _ := s.newBot("ownerbot")
+func (s *ApiKeySuite) Test_AgentCannotBeOwner() {
+	agent, _ := s.newAgent("ownerbot")
 
 	idProject := createProject(s.T(), s.App, s.AdminToken, "bot-owner-test-prj")
 
-	// Add bot as member — must succeed.
+	// Add agent as member — must succeed.
 	addRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, bot), s.AdminToken)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent), s.AdminToken)
 	s.Require().Equal(http.StatusOK, addRes.StatusCode)
 
-	// Promote bot to owner — must be rejected.
+	// Promote agent to owner — must be rejected.
 	promoteRes := Request(s.T(), s.App, "PATCH",
-		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, bot),
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, agent),
 		`{"role":"owner"}`, s.AdminToken)
 	s.Equal(http.StatusUnprocessableEntity, promoteRes.StatusCode)
 
 	// Direct add as owner — also rejected.
 	Request(s.T(), s.App, "DELETE",
-		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, bot),
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, agent),
 		"", s.AdminToken)
 	addOwnerRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, bot), s.AdminToken)
+		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, agent), s.AdminToken)
 	s.Equal(http.StatusUnprocessableEntity, addOwnerRes.StatusCode)
 }
 

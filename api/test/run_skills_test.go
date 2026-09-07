@@ -15,11 +15,11 @@ import (
 
 type RunSkillsSuite struct {
 	suite.Suite
-	App       *issue.Application
-	Token     string
-	BotUserID int64
-	IdProject int64
-	IdSkill   int64
+	App         *issue.Application
+	Token       string
+	AgentUserID int64
+	IdProject   int64
+	IdSkill     int64
 }
 
 func (s *RunSkillsSuite) SetupSuite() {
@@ -30,21 +30,21 @@ func (s *RunSkillsSuite) SetupSuite() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"runskillbot","isBot":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
-	var bot struct {
+	var agent struct {
 		IdUser int64 `json:"idUser"`
 	}
-	s.Require().NoError(json.NewDecoder(res.Body).Decode(&bot))
-	s.BotUserID = bot.IdUser
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))
+	s.AgentUserID = agent.IdUser
 
 	s.IdProject = createProject(s.T(), s.App, s.Token, "run-skills-project")
 
 	member := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.BotUserID), s.Token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)
 	s.Require().Equal(http.StatusOK, member.StatusCode)
 
 	gw := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/gateway", s.BotUserID),
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", s.AgentUserID),
 		`{"gatewayUrl":"http://gw:9090"}`, s.Token)
 	s.Require().Equal(http.StatusOK, gw.StatusCode)
 
@@ -58,9 +58,9 @@ func (s *RunSkillsSuite) SetupSuite() {
 func (s *RunSkillsSuite) TearDownSuite() {
 	ctx := context.Background()
 	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(ctx, "DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.BotUserID)
+	s.App.Pool.Exec(ctx, "DELETE FROM agent.bot_gateway WHERE id_user_bot = $1", s.AgentUserID)
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
-	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 func (s *RunSkillsSuite) SetupTest() {
@@ -73,7 +73,7 @@ func (s *RunSkillsSuite) SetupTest() {
 func (s *RunSkillsSuite) createRun(title string) model.AgentRun {
 	res := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
-		fmt.Sprintf(`{"title":%q,"description":"body","assignedTo":%d,"estimated":0}`, title, s.BotUserID),
+		fmt.Sprintf(`{"title":%q,"description":"body","assignedTo":%d,"estimated":0}`, title, s.AgentUserID),
 		s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var iss model.Issue
@@ -183,7 +183,7 @@ func (s *RunSkillsSuite) TestInsertMaterializesSkillsIntoStagePlan() {
 
 	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"design": {s.IdSkill}})
 	s.Require().NoError(err)
-	run, err := repo.Insert(ctx, iss.IdIssue, s.BotUserID, s.IdProject, stagePlan)
+	run, err := repo.Insert(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, stagePlan)
 	s.Require().NoError(err)
 
 	var plan model.StagePlan

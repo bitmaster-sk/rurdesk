@@ -32,23 +32,23 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 	}))
 	defer gateway.Close()
 
-	botRes := Request(t, app, "POST", "/api/private/admin/user",
+	agentRes := Request(t, app, "POST", "/api/private/admin/user",
 		`{"name":"dispatchskillbot","isBot":true}`, token)
-	require.Equal(t, http.StatusOK, botRes.StatusCode)
-	var bot struct {
+	require.Equal(t, http.StatusOK, agentRes.StatusCode)
+	var agent struct {
 		IdUser int64 `json:"idUser"`
 	}
-	require.NoError(t, json.NewDecoder(botRes.Body).Decode(&bot))
+	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agent))
 
 	gwRes := Request(t, app, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/gateway", bot.IdUser),
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", agent.IdUser),
 		fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), token)
 	require.Equal(t, http.StatusOK, gwRes.StatusCode)
 
 	idProject := createProject(t, app, token, "dispatch-skills-project")
 	member := Request(t, app, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, bot.IdUser), token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), token)
 	require.Equal(t, http.StatusOK, member.StatusCode)
 
 	issRes := Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/issue", idProject),
@@ -60,10 +60,10 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 	skill := skillByName(t, listSkills(t, app, token), "Verification rules")
 	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"implementation": {skill.IdSkill}})
 	require.NoError(t, err)
-	run, err := injector.GetAgentRunRepository().Insert(ctx, iss.IdIssue, bot.IdUser, idProject, stagePlan)
+	run, err := injector.GetAgentRunRepository().Insert(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 
-	task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, bot.IdUser, "implementation", 1)
+	task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, agent.IdUser, "implementation", 1)
 	require.NoError(t, err)
 
 	injector.GetDispatcher().DispatchStageExecute(ctx, run, task)
