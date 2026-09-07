@@ -62,4 +62,5 @@ export interface MrStatus {
     approved: boolean;
     ciStatus: CiStatus;
     webUrl: string;
+    headSha: string;
 }

@@ -8,13 +8,17 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,9 +33,15 @@ type MergePollerTransitionSuite struct {
 	IdGitIntegration int64
 	AgentUserID      int64
 	poller           *agent.MergePoller
+	pollerNotifier   *notify.Notifier
 	gitHub           *httptest.Server
 	// prState is what the fake GitHub serves, keyed by pull request id.
 	prState map[string]string
+	// mutable fields protected by statusMu describe the currently served open PR status.
+	statusMu         sync.Mutex
+	lastStatusCi     string
+	lastStatusHead   string
+	lastStatusReview bool
 }
 
 func (s *MergePollerTransitionSuite) SetupSuite() {
@@ -54,6 +64,12 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 	s.IdStateDone = s.createState("Merged", false, false)
 	s.IdStateFailed = s.createState("Rejected", false, false)
 	s.IdStateFinal = s.createState("Closed", false, true)
+
+	s.statusMu.Lock()
+	s.lastStatusCi = constants.CiStatusPending
+	s.lastStatusHead = "abc123"
+	s.lastStatusReview = false
+	s.statusMu.Unlock()
 
 	s.gitHub = httptest.NewServer(http.HandlerFunc(s.serveGitHub))
 
@@ -82,6 +98,12 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
+	// Use a dedicated notifier for the poller in tests. The global notifier's
+	// background listener immediately drains its Send channel, making it
+	// impossible to assert on queued notices. A plain channel lets the test
+	// drain what the poller produced.
+	s.pollerNotifier = &notify.Notifier{Send: make(chan *notify.Notice, 1024)}
+
 	s.poller = agent.NewMergePoller(
 		injector.GetAgentRunRepository(),
 		injector.GetAgentTaskRepository(),
@@ -90,8 +112,9 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
-		injector.GetNotifier(),
+		s.pollerNotifier,
 	)
+	s.Require().NotNil(s.poller)
 }
 
 func (s *MergePollerTransitionSuite) serveGitHub(w http.ResponseWriter, r *http.Request) {
@@ -103,16 +126,85 @@ func (s *MergePollerTransitionSuite) serveGitHub(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if strings.HasSuffix(path, "/status") {
+		s.statusMu.Lock()
+		defer s.statusMu.Unlock()
+		fmt.Fprintf(w, `{"state":"%s","statuses":[{"state":"%s"}]}`, s.lastStatusCi, s.lastStatusCi)
+		return
+	}
+	if strings.HasSuffix(path, "/check-runs") {
+		s.statusMu.Lock()
+		defer s.statusMu.Unlock()
+		fmt.Fprintf(w, `{"total_count":0,"check_runs":[]}`)
+		return
+	}
+	if strings.Contains(path, "/commits/") {
+		s.statusMu.Lock()
+		defer s.statusMu.Unlock()
+		fmt.Fprintf(w, `{"state":"%s","statuses":[{"state":"%s"}]}`, s.lastStatusCi, s.lastStatusCi)
+		return
+	}
+
 	segments := strings.Split(strings.Trim(path, "/"), "/")
 	prId := segments[len(segments)-1]
+	s.statusMu.Lock()
+	defer s.statusMu.Unlock()
 	switch s.prState[prId] {
 	case "merged":
-		fmt.Fprint(w, `{"state":"closed","merged":true}`)
+		fmt.Fprint(w, `{"state":"closed","merged":true,"head":{"sha":"def"}}`)
 	case "closed":
-		fmt.Fprint(w, `{"state":"closed","merged":false}`)
+		fmt.Fprint(w, `{"state":"closed","merged":false,"head":{"sha":"def"}}`)
 	default:
-		fmt.Fprint(w, `{"state":"open","merged":false}`)
+		fmt.Fprintf(w, `{"state":"open","merged":false,"head":{"sha":%q},"approved":%v}`, s.lastStatusHead, s.lastStatusReview)
 	}
+}
+
+// drainMrStatusNotices pulls all currently queued notices and returns those whose subject is mr_status.
+func (s *MergePollerTransitionSuite) drainMrStatusNotices() []*notify.Notice {
+	var out []*notify.Notice
+	for {
+		select {
+		case n := <-s.pollerNotifier.Send:
+			if n.Subject == notify.SubjectMrStatus {
+				out = append(out, n)
+			}
+		case <-time.After(500 * time.Millisecond):
+			return out
+		}
+	}
+}
+
+func (s *MergePollerTransitionSuite) Test_OpenManualMr_CiChange_EmitsMrStatus() {
+	s.statusMu.Lock()
+	s.lastStatusCi = constants.CiStatusPending
+	s.lastStatusHead = "abc123"
+	s.lastStatusReview = false
+	s.statusMu.Unlock()
+
+	iss := s.createIssue("open manual mr ci change")
+	s.linkManualMr(iss.IdIssue, "401")
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+	// First poll sees the new open MR; because the in-memory cache has no
+	// previous value, it broadcasts the initial state.
+	firstNotices := s.drainMrStatusNotices()
+	s.Require().Len(firstNotices, 1, "initial open-manual-MR poll must seed the cache by broadcasting")
+
+	s.statusMu.Lock()
+	s.lastStatusCi = constants.CiStatusSuccess
+	s.lastStatusHead = "def456"
+	s.statusMu.Unlock()
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+	// Second poll: only ciStatus and headSha changed, so exactly one update.
+	notices := s.drainMrStatusNotices()
+	s.Require().Len(notices, 1)
+	payload, ok := notices[0].Payload.(model.MrStatusNotice)
+	s.Require().True(ok)
+	s.Equal(iss.IdIssue, payload.IdIssue)
+	s.Equal(s.IdGitIntegration, payload.IdGitIntegration)
+	s.Equal("401", payload.IdMr)
+	s.Equal(constants.CiStatusSuccess, payload.CiStatus)
 }
 
 func (s *MergePollerTransitionSuite) TearDownSuite() {
@@ -289,6 +381,52 @@ func (s *MergePollerTransitionSuite) Test_ManualMr_Closed_FinalState_OnlyStamps(
 	mrState := s.loadMrState(iss.IdIssue)
 	s.Require().NotNil(mrState)
 	s.Equal("closed", *mrState)
+}
+
+func (s *MergePollerTransitionSuite) mergedMrStatusNotices(idIssue int64) []model.MrStatusNotice {
+	var out []model.MrStatusNotice
+	for _, notice := range s.drainMrStatusNotices() {
+		payload, ok := notice.Payload.(model.MrStatusNotice)
+		if ok && payload.IdIssue == idIssue {
+			out = append(out, payload)
+		}
+	}
+	return out
+}
+
+func (s *MergePollerTransitionSuite) Test_MergedRun_EmitsTerminalMrStatus() {
+	s.mapEvents(fmt.Sprintf(`{"event":"done","idState":%d}`, s.IdStateDone))
+	defer s.clearEventMap()
+
+	iss := s.createIssue("merged run mr status issue")
+	s.prState["306"] = "merged"
+	s.linkManualMr(iss.IdIssue, "306")
+	idRun := s.insertPrOpenRun(iss.IdIssue, "306")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().NotEmpty(notices, "a merged PR must reach the detail badge over the socket, not via a refetch")
+	s.Equal("merged", notices[0].State)
+	s.Equal("306", notices[0].IdMr)
+	s.Equal(s.IdGitIntegration, notices[0].IdGitIntegration)
+}
+
+func (s *MergePollerTransitionSuite) Test_ManualMr_Merged_EmitsTerminalMrStatus() {
+	s.mapEvents(fmt.Sprintf(`{"event":"done","idState":%d}`, s.IdStateDone))
+	defer s.clearEventMap()
+
+	iss := s.createIssue("manual merged mr status issue")
+	s.prState["307"] = "merged"
+	s.linkManualMr(iss.IdIssue, "307")
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().NotEmpty(notices)
+	s.Equal("merged", notices[0].State)
+	s.Equal("307", notices[0].IdMr)
 }
 
 func TestMergePollerTransitionSuite(t *testing.T) {
