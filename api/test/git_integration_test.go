@@ -162,7 +162,7 @@ func (s *GitIntegrationSuite) Test_Get_WrongProjectId_404() {
 func (s *GitIntegrationSuite) Test_Update_KeepsExistingTokenWhenAccessTokenOmitted() {
 	created := s.createIntegration("keep-token", "org/keep-token")
 
-	updateBody := fmt.Sprintf(`{"name":"keep-token-updated","hostType":"github","baseUrl":"https://github.com","repoPath":"org/keep-token"}`)
+	updateBody := `{"name":"keep-token-updated","hostType":"github","baseUrl":"https://github.com","repoPath":"org/keep-token"}`
 	res := Request(s.T(), s.App, "PUT",
 		fmt.Sprintf("/api/private/project/%d/git-integration/%d", s.ProjectID, created.IdGitIntegration),
 		updateBody, s.Token)
@@ -181,7 +181,7 @@ func (s *GitIntegrationSuite) Test_Update_KeepsExistingTokenWhenAccessTokenOmitt
 func (s *GitIntegrationSuite) Test_Update_RotatesTokenWhenProvided() {
 	created := s.createIntegration("rotate-token", "org/rotate-token")
 
-	updateBody := fmt.Sprintf(`{"name":"rotate-token","hostType":"github","baseUrl":"https://github.com","repoPath":"org/rotate-token","accessToken":"ghp_new_token"}`)
+	updateBody := `{"name":"rotate-token","hostType":"github","baseUrl":"https://github.com","repoPath":"org/rotate-token","accessToken":"ghp_new_token"}`
 	res := Request(s.T(), s.App, "PUT",
 		fmt.Sprintf("/api/private/project/%d/git-integration/%d", s.ProjectID, created.IdGitIntegration),
 		updateBody, s.Token)

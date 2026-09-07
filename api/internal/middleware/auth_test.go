@@ -21,7 +21,7 @@ type fakeSessionCache struct {
 	err   error
 }
 
-func (f *fakeSessionCache) Get(ctx context.Context, key string) *redis.StringCmd {
+func (f *fakeSessionCache) Get(_ context.Context, _ string) *redis.StringCmd {
 	return redis.NewStringResult(f.value, f.err)
 }
 
@@ -32,12 +32,12 @@ type fakeApiKeyAuth struct {
 	lookupCalled bool
 }
 
-func (f *fakeApiKeyAuth) LookupSession(ctx context.Context, rawKey string) (*model.ApiKeySession, error) {
+func (f *fakeApiKeyAuth) LookupSession(_ context.Context, _ string) (*model.ApiKeySession, error) {
 	f.lookupCalled = true
 	return f.session, f.lookupErr
 }
 
-func (f *fakeApiKeyAuth) CheckRateLimit(ctx context.Context, idApiKey int64, limitPerMin int) error {
+func (f *fakeApiKeyAuth) CheckRateLimit(_ context.Context, _ int64, _ int) error {
 	return f.rateLimitErr
 }
 

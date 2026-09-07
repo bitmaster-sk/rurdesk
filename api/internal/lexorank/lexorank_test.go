@@ -12,10 +12,10 @@ func TestBetweenStrictlyOrdered(t *testing.T) {
 	}
 	for _, tc := range tests {
 		got := Between(tc.prev, tc.next)
-		if tc.prev != "" && !(tc.prev < got) {
+		if tc.prev != "" && tc.prev >= got {
 			t.Fatalf("Between(%q,%q)=%q not > prev", tc.prev, tc.next, got)
 		}
-		if tc.next != "" && !(got < tc.next) {
+		if tc.next != "" && got >= tc.next {
 			t.Fatalf("Between(%q,%q)=%q not < next", tc.prev, tc.next, got)
 		}
 	}
@@ -30,7 +30,7 @@ func TestBetweenNeverReturnsBareFloor(t *testing.T) {
 	next := "n"
 	for i := 0; i < 50; i++ {
 		got := Between("", next)
-		if !(got < next) {
+		if got >= next {
 			t.Fatalf("iter %d: %q not < %q", i, got, next)
 		}
 		if got == "a" || got == "" {
@@ -51,7 +51,7 @@ func TestSeedRanksStrictlyIncreasing(t *testing.T) {
 			if strings.Trim(ranks[i], "a") == "" {
 				t.Fatalf("SeedRanks(%d) produced all-'a' floor key %q at %d", n, ranks[i], i)
 			}
-			if i > 0 && !(ranks[i-1] < ranks[i]) {
+			if i > 0 && ranks[i-1] >= ranks[i] {
 				t.Fatalf("SeedRanks(%d) not increasing at %d: %q !< %q", n, i, ranks[i-1], ranks[i])
 			}
 		}

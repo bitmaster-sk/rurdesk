@@ -22,7 +22,7 @@ type fakeThinkingSender struct {
 	delay        time.Duration
 }
 
-func (f *fakeThinkingSender) SendThinking(ctx context.Context, idTask int64, seq int, events []ThinkingEvent) error {
+func (f *fakeThinkingSender) SendThinking(_ context.Context, _ int64, seq int, events []ThinkingEvent) error {
 	if f.delay > 0 {
 		time.Sleep(f.delay)
 	}
@@ -221,7 +221,7 @@ func TestThinkingBatcher_AddNeverBlocksOnSlowSender(t *testing.T) {
 	}
 }
 
-func TestThinkingBatcher_NilSenderIsInert(t *testing.T) {
+func TestThinkingBatcher_NilSenderIsInert(_ *testing.T) {
 	batcher := NewThinkingBatcher(nil, 7)
 	batcher.Add(ThinkingEvent{Kind: "thinking", Text: "x"})
 	batcher.Stop()

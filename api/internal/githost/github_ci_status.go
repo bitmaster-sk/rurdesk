@@ -13,7 +13,7 @@ const (
 )
 
 // Actions reports through check runs; commit statuses cover external CI only.
-func (h *GitHubHost) getCiStatus(ctx context.Context, idMr, sha string) string {
+func (h *GitHubHost) getCiStatus(ctx context.Context, _, sha string) string {
 	jobs := h.fetchCheckRunJobs(ctx, sha)
 	if len(jobs) == 0 {
 		jobs = fetchCommitStatusJobs(ctx, h.client,

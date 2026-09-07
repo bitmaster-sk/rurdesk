@@ -301,7 +301,7 @@ func (ic *IssueRelationController) DeleteRelation(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
+func (ic *IssueRelationController) UpdateRelation(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
@@ -318,7 +318,7 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	if !irc.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
+	if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
@@ -333,7 +333,7 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 		return
 	}
 
-	relation, err := irc.relationRepo.LoadRelation(ctx, idRelation)
+	relation, err := ic.relationRepo.LoadRelation(ctx, idRelation)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -356,7 +356,7 @@ func (irc *IssueRelationController) UpdateRelation(c *gin.Context) {
 		return
 	}
 
-	updated, err := irc.relationRepo.UpdateRelation(ctx, idRelation, dto.LagMinutes)
+	updated, err := ic.relationRepo.UpdateRelation(ctx, idRelation, dto.LagMinutes)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)

@@ -161,7 +161,7 @@ func (r *MessageRepository) LoadProjectMessages(ctx context.Context, idsProject 
 	return scanMessages(rows, model.ProjectRecipientType)
 }
 
-func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64, idReader int64, read *bool) ([]*model.Message, error) {
+func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64, _ int64, _ *bool) ([]*model.Message, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT

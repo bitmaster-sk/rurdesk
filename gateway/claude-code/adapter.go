@@ -415,7 +415,7 @@ func hasPrefixFold(s, prefix string) bool {
 	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
 }
 
-func (a *ClaudeCodeAdapter) Cancel(ctx context.Context, runID common.RunID) error {
+func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error {
 	a.mu.Lock()
 	session, ok := a.sessions[runID]
 	if ok {

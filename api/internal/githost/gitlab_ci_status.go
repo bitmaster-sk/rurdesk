@@ -8,7 +8,7 @@ import (
 )
 
 // Only terminal states are enumerated; an unknown state is in flight, not a verdict.
-func (h *GitLabHost) getCiStatus(ctx context.Context, idMr, sha string) string {
+func (h *GitLabHost) getCiStatus(ctx context.Context, idMr, _ string) string {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s/pipelines", h.baseUrl, h.encodedPath, idMr)
 	var pipelines []struct {
 		Status string `json:"status"`

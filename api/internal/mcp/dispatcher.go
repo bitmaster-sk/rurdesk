@@ -92,7 +92,7 @@ func (d *Dispatcher) Request(ctx context.Context, opts RequestOpts) (*Response, 
 }
 
 // The caller should close the SSE session in this case.
-func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Response, error) {
+func mapResponse(recorder *httptest.ResponseRecorder, _ string) (*Response, error) {
 	result := recorder.Result()
 	defer result.Body.Close()
 
@@ -104,15 +104,15 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 		body = json.RawMessage(rawBody)
 	}
 
-	switch {
-	case status == http.StatusOK || status == http.StatusCreated || status == http.StatusNoContent:
+	switch status {
+	case http.StatusOK, http.StatusCreated, http.StatusNoContent:
 		return &Response{
 			StatusCode: status,
 			Body:       body,
 			Headers:    result.Header,
 		}, nil
 
-	case status == http.StatusBadRequest:
+	case http.StatusBadRequest:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -121,7 +121,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: fmt.Sprintf("invalid request: %s", extractMessage(rawBody)),
 		}, nil
 
-	case status == http.StatusUnauthorized:
+	case http.StatusUnauthorized:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -131,7 +131,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: "authentication failed",
 		}, nil
 
-	case status == http.StatusForbidden:
+	case http.StatusForbidden:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -140,7 +140,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: "forbidden",
 		}, nil
 
-	case status == http.StatusNotFound:
+	case http.StatusNotFound:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -149,7 +149,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: "not found",
 		}, nil
 
-	case status == http.StatusConflict:
+	case http.StatusConflict:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -158,7 +158,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: fmt.Sprintf("conflict: %s", extractMessage(rawBody)),
 		}, nil
 
-	case status == http.StatusUnprocessableEntity:
+	case http.StatusUnprocessableEntity:
 		return &Response{
 			StatusCode:   status,
 			Body:         body,
@@ -167,7 +167,7 @@ func mapResponse(recorder *httptest.ResponseRecorder, toolName string) (*Respons
 			ErrorMessage: fmt.Sprintf("unprocessable: %s", extractMessage(rawBody)),
 		}, nil
 
-	case status == http.StatusTooManyRequests:
+	case http.StatusTooManyRequests:
 		retryAfter := result.Header.Get("Retry-After")
 		msg := "rate limited"
 		if retryAfter != "" {

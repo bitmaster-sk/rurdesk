@@ -156,7 +156,7 @@ func TestGiteaHost_FindOpenPullRequest(t *testing.T) {
 }
 
 func TestGiteaHost_FindOpenPullRequest_NotFound(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"number": 1, "html_url": "x", "head": map[string]any{"ref": "other"}},
 		})
@@ -210,7 +210,7 @@ func TestGiteaHost_FindOpenPullRequest_WalksPages(t *testing.T) {
 // A short page means the end of the list — no point asking for another.
 func TestGiteaHost_FindOpenPullRequest_StopsOnShortPage(t *testing.T) {
 	var requests int
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		requests++
 		json.NewEncoder(w).Encode([]map[string]any{
 			{"number": 1, "html_url": "x", "head": map[string]any{"ref": "other"}},

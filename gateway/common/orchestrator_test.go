@@ -27,7 +27,7 @@ func (a *blockingAgent) Run(ctx context.Context, task Task) (RunStats, error) {
 	return RunStats{}, nil
 }
 
-func (a *blockingAgent) Cancel(ctx context.Context, runID RunID) error { return nil }
+func (a *blockingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
 
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()

@@ -79,7 +79,7 @@ func TestBroadcast_FullBufferDropsWithoutBlocking(t *testing.T) {
 // Broadcasting concurrently with Add/Remove must not race on n.conns. The old
 // IdsUser branch read the map without the lock — "concurrent map iteration and
 // map write". Requires -race to catch a regression.
-func TestBroadcast_ConcurrentAddRemoveNoRace(t *testing.T) {
+func TestBroadcast_ConcurrentAddRemoveNoRace(_ *testing.T) {
 	n := &Notifier{conns: make(map[int64]map[*NotifyConnection]bool)}
 
 	stop := make(chan struct{})

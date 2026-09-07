@@ -49,7 +49,7 @@ func (s *prStateStore) reset() {
 func handleGitHostRepos(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if strings.HasSuffix(r.URL.Path, "/reviews") {
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 		return
 	}
 

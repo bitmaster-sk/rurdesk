@@ -14,7 +14,7 @@ type fakeTaskAgents struct {
 	err         error
 }
 
-func (f *fakeTaskAgents) LoadAgentForTask(ctx context.Context, idTask int64) (int64, error) {
+func (f *fakeTaskAgents) LoadAgentForTask(_ context.Context, _ int64) (int64, error) {
 	return f.idUserAgent, f.err
 }
 

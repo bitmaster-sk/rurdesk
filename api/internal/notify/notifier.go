@@ -82,9 +82,9 @@ func NewNotifyConnection(idUser int64, notifier *Notifier, ws *websocket.Conn) *
 
 func (nc *NotifyConnection) reader() {
 	defer nc.close()
-	nc.ws.SetReadDeadline(time.Now().Add(pongWait))
-	nc.ws.SetPongHandler(func(v string) error {
-		nc.ws.SetReadDeadline(time.Now().Add(pongWait))
+	_ = nc.ws.SetReadDeadline(time.Now().Add(pongWait))
+	nc.ws.SetPongHandler(func(_ string) error {
+		_ = nc.ws.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 	for {
@@ -112,13 +112,13 @@ func (nc *NotifyConnection) writer() {
 			if !ok {
 				return
 			}
-			nc.ws.SetWriteDeadline(time.Now().Add(writeWait))
+			_ = nc.ws.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := nc.ws.WriteMessage(websocket.TextMessage, m); err != nil {
 				log.Error().Err(err).Msg("send notification error")
 				return
 			}
 		case <-ticker.C:
-			nc.ws.SetWriteDeadline(time.Now().Add(writeWait))
+			_ = nc.ws.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := nc.ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				log.Error().Err(err).Msg("send ping error")
 				return

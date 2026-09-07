@@ -70,11 +70,7 @@ type anthropicResponse struct {
 func (p *AnthropicProvider) Complete(ctx context.Context, req CompletionReq) (*CompletionRes, error) {
 	tools := make([]anthropicTool, len(req.Tools))
 	for i, t := range req.Tools {
-		tools[i] = anthropicTool{
-			Name:        t.Name,
-			Description: t.Description,
-			InputSchema: t.InputSchema,
-		}
+		tools[i] = anthropicTool(t)
 	}
 
 	model := req.Model
