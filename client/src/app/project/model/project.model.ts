@@ -1,4 +1,4 @@
-export type ProjectInsert = Omit<Project, 'idProject'>;
+export type CreateProjectReq = Omit<Project, 'idProject'>;
 
 export interface Project {
     idProject: number;

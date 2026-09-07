@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Project } from 'src/app/project/model/project.model';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
-import { IssueSeverity } from '../../model/issue-severity.model';
+import { CreateIssueSeverityReq, IssueSeverity } from '../../model/issue-severity.model';
 import { SeverityApi } from '../../api/severity.api.service';
 
 export interface SeverityWindowData {
@@ -20,9 +20,14 @@ export class SeverityFormWindowComponent {
     public winCfg = inject<WindowConfig<SeverityWindowData>>(WindowConfig);
     private severityApi = inject(SeverityApi);
 
-    public onSave(severity: IssueSeverity): void {
-        const saver = severity.idSeverity
-            ? this.severityApi.update$(severity)
+    public onSave(severity: CreateIssueSeverityReq): void {
+        const existing = this.winCfg.data?.severity;
+        const saver = existing
+            ? this.severityApi.update$({
+                  ...severity,
+                  idSeverity: existing.idSeverity,
+                  protected: existing.protected
+              })
             : this.severityApi.insert$(severity);
         saver.subscribe(savedSeverity => this.winRef.close(savedSeverity));
     }

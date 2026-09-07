@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IssueState } from '../model/issue-state.model';
+import { CreateIssueStateReq, IssueState } from '../model/issue-state.model';
 import { StateUsage } from '../model/state-usage.model';
 
 @Injectable({
@@ -14,7 +14,7 @@ export class StateApi {
         return this.http.get<IssueState[]>(`/api/private/state`);
     }
 
-    public insert$(state: IssueState): Observable<IssueState> {
+    public insert$(state: CreateIssueStateReq): Observable<IssueState> {
         return this.http.post<IssueState>(`/api/private/state`, state);
     }
 

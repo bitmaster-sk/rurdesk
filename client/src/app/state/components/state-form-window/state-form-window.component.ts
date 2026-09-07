@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { IssueState } from 'src/app/state/model/issue-state.model';
+import { CreateIssueStateReq, IssueState } from 'src/app/state/model/issue-state.model';
 import { Project } from 'src/app/project/model/project.model';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
@@ -20,8 +20,15 @@ export class StateFormWindowComponent {
     public winCfg = inject<WindowConfig<StateWindowData>>(WindowConfig);
     private stateApi = inject(StateApi);
 
-    public onSave(state: IssueState): void {
-        const saver = state.idState ? this.stateApi.update$(state) : this.stateApi.insert$(state);
+    public onSave(state: CreateIssueStateReq): void {
+        const existing = this.winCfg.data?.state;
+        const saver = existing
+            ? this.stateApi.update$({
+                  ...state,
+                  idState: existing.idState,
+                  protected: existing.protected
+              })
+            : this.stateApi.insert$(state);
         saver.subscribe(savedState => this.winRef.close(savedState));
     }
 

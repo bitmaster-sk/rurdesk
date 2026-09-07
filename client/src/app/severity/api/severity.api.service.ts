@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { IssueSeverity } from '../model/issue-severity.model';
+import { CreateIssueSeverityReq, IssueSeverity } from '../model/issue-severity.model';
 import { SeverityUsage } from '../model/severity-usage.model';
 
 @Injectable({
@@ -14,7 +14,7 @@ export class SeverityApi {
         return this.http.get<IssueSeverity[]>(`/api/private/severity`);
     }
 
-    public insert$(severity: IssueSeverity): Observable<IssueSeverity> {
+    public insert$(severity: CreateIssueSeverityReq): Observable<IssueSeverity> {
         return this.http.post<IssueSeverity>(`/api/private/severity`, severity);
     }
 

@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
-import { Track, TrackInsert, TrackUpdate } from './model/track.model';
+import { Track, CreateTrackReq, TrackUpdate } from './model/track.model';
 import { Tracker } from './model/tracker.model';
 
 @Injectable({
@@ -99,7 +99,7 @@ export class TrackerService {
             .pipe(map(tracks => this.toTracks(tracks)));
     }
 
-    public insertTrack(track: TrackInsert): Observable<Track> {
+    public insertTrack(track: CreateTrackReq): Observable<Track> {
         return this.http.post<Track>('/api/private/track', track).pipe(
             map(savedTrack => this.toTrack(savedTrack)),
             tap(() => this.tracksChange$.next(true))

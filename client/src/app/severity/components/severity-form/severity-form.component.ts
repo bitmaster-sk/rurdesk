@@ -6,8 +6,8 @@ import {
     NonNullableFormBuilder,
     Validators
 } from '@angular/forms';
+import { CreateIssueSeverityReq, IssueSeverity } from '../../model/issue-severity.model';
 import { SeverityColors } from '../../constants/severity-colors';
-import { IssueSeverity } from '../../model/issue-severity.model';
 
 interface SeverityForm {
     idSeverity: FormControl<number | null>;
@@ -26,7 +26,7 @@ interface SeverityForm {
 export class SeverityFormComponent implements OnInit {
     public readonly severity = input.required<Partial<IssueSeverity>>();
 
-    public readonly save = output<IssueSeverity>();
+    public readonly save = output<CreateIssueSeverityReq>();
 
     public readonly cancelled = output<void>();
 
@@ -53,7 +53,13 @@ export class SeverityFormComponent implements OnInit {
     }
 
     public onSave(): void {
-        this.save.emit(this.form.getRawValue() as IssueSeverity);
+        const v = this.form.getRawValue();
+        this.save.emit({
+            idProject: v.idProject ?? 0,
+            title: v.title,
+            color: v.color,
+            orderRank: v.orderRank ?? 0
+        });
     }
 
     public onCancel(): void {

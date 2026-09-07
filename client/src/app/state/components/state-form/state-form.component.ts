@@ -6,7 +6,7 @@ import {
     NonNullableFormBuilder,
     Validators
 } from '@angular/forms';
-import { IssueState } from 'src/app/state/model/issue-state.model';
+import { CreateIssueStateReq, IssueState } from 'src/app/state/model/issue-state.model';
 
 interface StateForm {
     idProject: FormControl<number | null>;
@@ -25,7 +25,7 @@ interface StateForm {
 export class StateFormComponent implements OnInit {
     public readonly state = input.required<Partial<IssueState>>();
 
-    public readonly save = output<IssueState>();
+    public readonly save = output<CreateIssueStateReq>();
 
     public readonly cancelled = output<void>();
 
@@ -49,7 +49,14 @@ export class StateFormComponent implements OnInit {
     }
 
     public onSave(): void {
-        this.save.emit(this.form.getRawValue() as IssueState);
+        const v = this.form.getRawValue();
+        this.save.emit({
+            idProject: v.idProject ?? 0,
+            name: v.name,
+            start: v.start,
+            final: v.final,
+            orderRank: v.orderRank ?? 0
+        });
     }
 
     public onCancel(): void {

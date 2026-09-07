@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { User } from '../auth/model/user.model';
-import { Project, ProjectInsert } from './model/project.model';
+import { Project, CreateProjectReq } from './model/project.model';
 
 @Injectable({
     providedIn: 'root'
@@ -18,7 +18,7 @@ export class ProjectService {
         return this.http.get<Project>(`/api/private/project/${idProject}`);
     }
 
-    public insertProject(project: ProjectInsert): Observable<Project> {
+    public insertProject(project: CreateProjectReq): Observable<Project> {
         return this.http.post<Project>('/api/private/project', project);
     }
 
