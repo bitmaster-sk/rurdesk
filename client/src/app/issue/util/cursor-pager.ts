@@ -9,6 +9,7 @@ export class CursorPager {
     public readonly items = signal<Issue[]>([]);
     public readonly total = signal(0);
     public readonly isLoading = signal(false);
+    public readonly hasLoaded = signal(false);
     private readonly cursor = signal<string | null>(null);
 
     // Bumped by every request that invalidates the ones before it. A response
@@ -51,6 +52,7 @@ export class CursorPager {
                 this.items.set(page.items);
                 this.cursor.set(page.nextCursor);
                 this.total.set(page.total);
+                this.hasLoaded.set(true);
                 this.isLoading.set(false);
             },
             error: () => this.finishIfCurrent(generation)
@@ -79,6 +81,7 @@ export class CursorPager {
                 this.items.update(current => (isFirst ? page.items : [...current, ...page.items]));
                 this.cursor.set(page.nextCursor);
                 this.total.set(page.total);
+                this.hasLoaded.set(true);
                 this.isLoading.set(false);
             },
             error: () => this.finishIfCurrent(generation)

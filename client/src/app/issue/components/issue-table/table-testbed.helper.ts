@@ -114,6 +114,7 @@ export function configureTableTestBed(): TableMocks {
         rows: signal<any[]>([]),
         total: signal(0),
         isLoading: signal(false),
+        hasLoaded: signal(false),
         canLoadMore: vi.fn(() => false),
         insertRelation$: vi.fn(() => ({ pipe: vi.fn(() => ({ subscribe: vi.fn() })) })),
         loadRelationsFor: vi.fn()

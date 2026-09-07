@@ -106,7 +106,7 @@
                 </thead>
 
                 <tbody uiFlipList>
-                    @if (isLoading() && rows().length === 0) {
+                    @if (!hasLoaded() || (isLoading() && rows().length === 0)) {
                         <tr class="table-loading-row">
                             <td [attr.colspan]="colCount()">
                                 <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />

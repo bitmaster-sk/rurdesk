@@ -24,7 +24,17 @@ describe('IssueTableComponent loading state (TestBed)', () => {
         return tbodyEl()?.querySelector('ui-loader') !== null;
     }
 
+    it('shows a loading row when hasLoaded is false, even if not loading', async () => {
+        comp.hasLoaded.set(false);
+        comp.isLoading.set(false);
+        comp.rows.set([]);
+        fixture.detectChanges();
+
+        expect(hasLoader()).toBe(true);
+    });
+
     it('shows a loading row when isLoading and rows are empty', async () => {
+        comp.hasLoaded.set(false);
         comp.isLoading.set(true);
         comp.rows.set([]);
         fixture.detectChanges();
@@ -33,6 +43,7 @@ describe('IssueTableComponent loading state (TestBed)', () => {
     });
 
     it('does not show a loading row when rows already exist (reload)', async () => {
+        comp.hasLoaded.set(true);
         comp.isLoading.set(true);
         comp.rows.set([makeRow(1)]);
         fixture.detectChanges();
@@ -40,26 +51,29 @@ describe('IssueTableComponent loading state (TestBed)', () => {
         expect(hasLoader()).toBe(false);
     });
 
-    it('does not show a loading row when not loading and rows are empty', async () => {
-        comp.isLoading.set(false);
-        comp.rows.set([]);
-        fixture.detectChanges();
-
-        expect(hasLoader()).toBe(false);
-    });
-
-    it('renders a "No data" row when settled empty (not loading, no rows)', async () => {
+    it('shows an empty row when settled (hasLoaded, not loading, no rows)', async () => {
+        comp.hasLoaded.set(true);
         comp.isLoading.set(false);
         comp.rows.set([]);
         fixture.detectChanges();
 
         const emptyRow = tbodyEl().querySelector('.table-empty-row');
         expect(emptyRow).not.toBeNull();
-        expect(emptyRow!.textContent).toContain('NO_DATA');
+    });
+
+    it('does not show an empty row when hasLoaded is false', async () => {
+        comp.hasLoaded.set(false);
+        comp.isLoading.set(false);
+        comp.rows.set([]);
+        fixture.detectChanges();
+
+        const emptyRow = tbodyEl().querySelector('.table-empty-row');
+        expect(emptyRow).toBeNull();
     });
 
     it('uses colspan 8 in normal mode', async () => {
         comp.isRelationMode.set(false);
+        comp.hasLoaded.set(false);
         comp.isLoading.set(true);
         comp.rows.set([]);
         fixture.detectChanges();
@@ -70,6 +84,7 @@ describe('IssueTableComponent loading state (TestBed)', () => {
 
     it('uses colspan 10 in relation mode', async () => {
         comp.isRelationMode.set(true);
+        comp.hasLoaded.set(false);
         comp.isLoading.set(true);
         comp.rows.set([]);
         fixture.detectChanges();

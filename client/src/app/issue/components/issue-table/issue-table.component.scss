@@ -189,16 +189,13 @@ tr.row--pulsed {
     }
 }
 
-// Full-width placeholder row shown while the first page is still in flight
-// (isLoading && rows empty). Centred spinner reads as "loading", not "empty".
 .table-loading-row td {
     text-align: center;
-    padding: var(--ui-space-xl, 2rem);
+    padding: var(--ui-space-xl);
 }
 
-// Settled empty state: the fetch finished but no rows matched the filter.
 .table-empty-row td {
     text-align: center;
-    padding: var(--ui-space-l, 1.5rem);
+    padding: var(--ui-space-l);
     color: var(--ui-color-text-muted);
 }
