@@ -2,9 +2,10 @@
 # Reject pushes to branches that don't match the agent pattern.
 while read local_ref local_sha remote_ref remote_sha; do
   branch="${remote_ref#refs/heads/}"
-  if ! [[ "$branch" =~ ^agent/b[0-9]+/i[0-9]+/[0-9]+$ ]]; then
+  if ! [[ "$branch" =~ ^agent/a[0-9]+/i[0-9]+/[0-9]+$ ]]; then
     echo "ERROR: Branch '$branch' rejected."
-    echo "Agent branches must match: agent/b<botId>/i<issueId>/<timestamp>"
+    echo "Agent branches must match: agent/a<agentId>/i<issueId>/<timestamp>"
+    echo "This is a local pre-push hook (.git/hooks/pre-push), not a server rule."
     exit 1
   fi
 done

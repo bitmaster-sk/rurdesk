@@ -234,7 +234,8 @@ func runGitQuiet(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// GenerateBranchName returns a branch name matching the agent pattern.
+// GenerateBranchName returns the branch name for a run. It must keep matching
+// the pattern in git-hooks/pre-push, or the agent cannot push.
 func GenerateBranchName(idUserAgent, idIssue int64) string {
 	return fmt.Sprintf("agent/a%d/i%d/%d", idUserAgent, idIssue, time.Now().Unix())
 }
