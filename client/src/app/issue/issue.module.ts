@@ -34,6 +34,7 @@ import { IssueQuickActionsComponent } from './components/issue-quick-actions/iss
 import { IssueKanbanSwimlaneComponent } from './components/issue-kanban/components/issue-kanban-swimlane/issue-kanban-swimlane.component';
 import { SprintTabStripComponent } from './components/sprint-tab-strip/sprint-tab-strip.component';
 import { SprintHealthStripComponent } from './components/sprint-health-strip/sprint-health-strip.component';
+import { CdkScrollableModule } from '@angular/cdk/scrolling';
 import { SprintDialogComponent } from './components/sprint-dialog/sprint-dialog.component';
 import { IssueKanbanColumnsComponent } from './components/issue-kanban/components/issue-kanban-columns/issue-kanban-columns.component';
 import { QualityBadgeComponent } from './components/quality-badge/quality-badge.component';
@@ -174,6 +175,7 @@ import { AgentModule } from '../agent/agent.module';
         BaseChartDirective,
         SeverityModule,
         UiModule,
+        CdkScrollableModule,
         AgentModule
     ],
     providers: [

@@ -10,6 +10,8 @@ import { UiModule } from '../../ui.module';
         <ui-popover
             #pop
             [panelClass]="panelClass"
+            [maxHeight]="maxHeight"
+            [growAfterOpen]="growAfterOpen"
             [dismissable]="dismissable"
             (closed)="hideCount = hideCount + 1"
         >
@@ -19,6 +21,8 @@ import { UiModule } from '../../ui.module';
 })
 class HostComponent {
     public panelClass = '';
+    public maxHeight: number | string | null = null;
+    public growAfterOpen = false;
     public dismissable = true;
     public hideCount = 0;
 }
@@ -108,6 +112,24 @@ describe('UiPopoverComponent (browser)', () => {
         openButton(fixture.nativeElement).click();
         fixture.detectChanges();
         expect(document.querySelector('.ui-popover.my-panel')).not.toBeNull();
+    });
+
+    it('applies maxHeight to the overlay pane when provided', () => {
+        const fixture = setup(host => (host.maxHeight = '50vh'));
+        openButton(fixture.nativeElement).click();
+        fixture.detectChanges();
+        const pane = document.querySelector('.cdk-overlay-pane') as HTMLElement;
+        expect(pane).not.toBeNull();
+        expect(pane.style.maxHeight).toBe('50vh');
+    });
+
+    it('does not set maxHeight on the overlay pane when not provided', () => {
+        const fixture = setup();
+        openButton(fixture.nativeElement).click();
+        fixture.detectChanges();
+        const pane = document.querySelector('.cdk-overlay-pane') as HTMLElement;
+        expect(pane).not.toBeNull();
+        expect(pane.style.maxHeight).toBeFalsy();
     });
 
     it('does not dismiss when clicking inside the panel', () => {
