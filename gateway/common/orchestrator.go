@@ -169,7 +169,7 @@ func (o *Orchestrator) runStage(task Task) {
 	} else {
 		branch := GenerateBranchName(task.IdUserAgent, task.IdIssue)
 		task.Branch = branch
-		path, err := CreateWorktree(repoPath, branch, task.IdRun)
+		path, err := CreateWorktree(repoPath, o.cfg.RepoBranchBase, branch, task.IdRun)
 		if err != nil {
 			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
 			o.failTask(task, "worktree_error", err.Error())

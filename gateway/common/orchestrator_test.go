@@ -34,17 +34,24 @@ func initGitRepo(t *testing.T, dir string) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir repo: %v", err)
 	}
+	originPath := dir + ".origin.git"
+	run := func(workDir string, args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = workDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v (in %s): %v\n%s", args, workDir, err, out)
+		}
+	}
+	run(dir, "init", "--bare", "-b", "main", originPath)
 	for _, args := range [][]string{
-		{"init"},
+		{"init", "-b", "main"},
 		{"config", "user.email", "test@test"},
 		{"config", "user.name", "test"},
 		{"commit", "--allow-empty", "-m", "init"},
+		{"remote", "add", "origin", originPath},
+		{"push", "-u", "origin", "main"},
 	} {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
+		run(dir, args...)
 	}
 }
 
@@ -57,9 +64,10 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
 
 	cfg := &Config{
-		WorkspaceBase: workspaceBase,
-		RepoUrl:       repoURL,
-		MaxConcurrent: 1,
+		WorkspaceBase:  workspaceBase,
+		RepoUrl:        repoURL,
+		RepoBranchBase: "main",
+		MaxConcurrent:  1,
 	}
 	agent := &blockingAgent{entered: make(chan int64, 3), release: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())

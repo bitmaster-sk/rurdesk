@@ -218,6 +218,133 @@ func TestCloneRepo_MismatchedBaseBranch(t *testing.T) {
 	}
 }
 
+func newGitEnv(t *testing.T) string {
+	t.Helper()
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+	t.Setenv("GIT_AUTHOR_NAME", "test")
+	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
+	t.Setenv("GIT_COMMITTER_NAME", "test")
+	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
+
+	tmp := t.TempDir()
+	hookFixture := filepath.Join(tmp, "pre-push")
+	if err := os.WriteFile(hookFixture, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	orig := hookSourcePath
+	hookSourcePath = hookFixture
+	t.Cleanup(func() { hookSourcePath = orig })
+	return tmp
+}
+
+func seedOrigin(t *testing.T, tmp, defaultBranch string) (originPath, seedPath string) {
+	t.Helper()
+	originPath = filepath.Join(tmp, "origin.git")
+	git(t, tmp, "init", "--bare", "-b", defaultBranch, originPath)
+	seedPath = filepath.Join(tmp, "seed")
+	git(t, tmp, "init", "-b", defaultBranch, seedPath)
+	if err := os.WriteFile(filepath.Join(seedPath, "README.md"), []byte("v1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, seedPath, "add", ".")
+	git(t, seedPath, "commit", "-m", "init")
+	git(t, seedPath, "remote", "add", "origin", originPath)
+	git(t, seedPath, "push", "origin", defaultBranch)
+	return originPath, seedPath
+}
+
+func headSha(t *testing.T, dir string) string {
+	t.Helper()
+	out, err := runGitOutput(dir, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatalf("rev-parse HEAD in %s: %v", dir, err)
+	}
+	return strings.TrimSpace(out)
+}
+
+func TestCreateWorktree_BranchesFromCurrentOriginNotStartupSnapshot(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, seed := seedOrigin(t, tmp, "main")
+
+	cfg := &Config{
+		WorkspaceBase:  filepath.Join(tmp, "ws"),
+		RepoUrl:        originPath,
+		RepoBranchBase: "main",
+	}
+	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+	if err := CloneRepo(cfg); err != nil {
+		t.Fatalf("CloneRepo: %v", err)
+	}
+
+	if err := os.WriteFile(filepath.Join(seed, "merged.txt"), []byte("merged PR\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, seed, "add", ".")
+	git(t, seed, "commit", "-m", "advance main after gateway start")
+	git(t, seed, "push", "origin", "main")
+	want := headSha(t, seed)
+
+	worktreePath, err := CreateWorktree(repoPath, cfg.RepoBranchBase, "agent/a1/i1/1", 1)
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	if got := headSha(t, worktreePath); got != want {
+		t.Errorf("worktree HEAD = %s, want %s (origin/main as it is now, not at gateway start)", got, want)
+	}
+	assertFile(t, filepath.Join(worktreePath, "merged.txt"), "merged PR\n")
+}
+
+func TestCloneRepo_DetectsDefaultBranchWhenBaseUnset(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "master")
+
+	cfg := &Config{
+		WorkspaceBase: filepath.Join(tmp, "ws"),
+		RepoUrl:       originPath,
+	}
+
+	if err := CloneRepo(cfg); err != nil {
+		t.Fatalf("CloneRepo on a repo whose default branch is master: %v", err)
+	}
+	if cfg.RepoBranchBase != "master" {
+		t.Errorf("cfg.RepoBranchBase = %q, want master (detected from origin HEAD)", cfg.RepoBranchBase)
+	}
+}
+
+func TestCloneRepo_ExplicitBaseBranchWinsOverDetection(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, seed := seedOrigin(t, tmp, "main")
+
+	git(t, seed, "checkout", "-b", "develop")
+	if err := os.WriteFile(filepath.Join(seed, "only-on-develop.txt"), []byte("dev\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, seed, "add", ".")
+	git(t, seed, "commit", "-m", "develop only")
+	git(t, seed, "push", "origin", "develop")
+
+	cfg := &Config{
+		WorkspaceBase:  filepath.Join(tmp, "ws"),
+		RepoUrl:        originPath,
+		RepoBranchBase: "develop",
+	}
+	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+	if err := CloneRepo(cfg); err != nil {
+		t.Fatalf("CloneRepo: %v", err)
+	}
+	if cfg.RepoBranchBase != "develop" {
+		t.Errorf("cfg.RepoBranchBase = %q, want develop (explicit override kept)", cfg.RepoBranchBase)
+	}
+
+	worktreePath, err := CreateWorktree(repoPath, cfg.RepoBranchBase, "agent/a1/i2/2", 2)
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	assertFile(t, filepath.Join(worktreePath, "only-on-develop.txt"), "dev\n")
+}
+
 func assertFile(t *testing.T, path, want string) {
 	t.Helper()
 	got, err := os.ReadFile(path)
