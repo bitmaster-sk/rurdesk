@@ -10,9 +10,6 @@ export interface ApiErrorBody {
 
 export abstract class ApiError {
     public static translateKeyOf(error: unknown): string | null {
-        // Read translateKey independently of code/message: the frontend only uses
-        // this field for the toast, and a wrong-typed code must not discard a
-        // valid translateKey (the user would see a generic message instead).
         if (!ApiError.isRecord(error)) {
             return null;
         }
