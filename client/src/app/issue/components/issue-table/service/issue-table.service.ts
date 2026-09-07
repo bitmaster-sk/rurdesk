@@ -72,6 +72,7 @@ export class IssueTableService {
 
     public readonly total = this.pager.total;
     public readonly isLoading = this.pager.isLoading;
+    public readonly hasLoaded = this.pager.hasLoaded;
 
     public readonly rows = computed<IssueTableRow[]>(() => {
         const severities = this.severities();

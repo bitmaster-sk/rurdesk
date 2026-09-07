@@ -126,6 +126,8 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public readonly isLoading = this.issueTableService.isLoading;
 
+    public readonly hasLoaded = this.issueTableService.hasLoaded;
+
     // Drag state
     public isDragging = signal(false);
 
