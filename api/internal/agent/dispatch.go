@@ -20,7 +20,7 @@ var retryBackoffs = []time.Duration{5 * time.Second, 15 * time.Second, 45 * time
 type Dispatcher struct {
 	agentRunRepo *repository.AgentRunRepository
 	taskRepo     *repository.AgentTaskRepository
-	botGwRepo    *repository.BotGatewayRepository
+	agentGwRepo  *repository.AgentGatewayRepository
 	issueRepo    *repository.IssueRepository
 	messageRepo  *repository.MessageRepository
 	projectRepo  *repository.ProjectRepository
@@ -34,7 +34,7 @@ type Dispatcher struct {
 func NewDispatcher(
 	agentRunRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
-	botGwRepo *repository.BotGatewayRepository,
+	agentGwRepo *repository.AgentGatewayRepository,
 	issueRepo *repository.IssueRepository,
 	messageRepo *repository.MessageRepository,
 	projectRepo *repository.ProjectRepository,
@@ -47,7 +47,7 @@ func NewDispatcher(
 	return &Dispatcher{
 		agentRunRepo: agentRunRepo,
 		taskRepo:     taskRepo,
-		botGwRepo:    botGwRepo,
+		agentGwRepo:  agentGwRepo,
 		issueRepo:    issueRepo,
 		messageRepo:  messageRepo,
 		projectRepo:  projectRepo,
@@ -106,7 +106,7 @@ func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun)
 }
 
 func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, event WebhookEvent) error {
-	gateway, err := d.botGwRepo.LoadByBotUser(ctx, run.IdUserBot)
+	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserBot)
 	if err != nil || gateway == nil {
 		return fmt.Errorf("no gateway configured for bot %d", run.IdUserBot)
 	}
@@ -132,9 +132,9 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	if err != nil {
 		return nil, fmt.Errorf("loading project: %w", err)
 	}
-	bot, err := d.userRepo.LoadUser(ctx, run.IdUserBot)
+	agent, err := d.userRepo.LoadUser(ctx, run.IdUserBot)
 	if err != nil {
-		return nil, fmt.Errorf("loading bot user: %w", err)
+		return nil, fmt.Errorf("loading agent user: %w", err)
 	}
 
 	messages, err := d.messageRepo.LoadIssueMessages(ctx, run.IdIssue, 0, nil)
@@ -163,7 +163,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	bundle := map[string]any{
 		"issue":             issue,
 		"project":           project,
-		"bot":               bot,
+		"bot":               agent,
 		"reviewThread":      reviewThread(messages),
 		"approvedDesign":    artifacts.ApprovedDesign,
 		"approvedImplPlan":  artifacts.ApprovedImplPlan,

@@ -33,7 +33,7 @@ func NewGatewayClient() *GatewayClient {
 	}
 }
 
-func (c *GatewayClient) SendEvent(ctx context.Context, gateway *model.BotGateway, event WebhookEvent) error {
+func (c *GatewayClient) SendEvent(ctx context.Context, gateway *model.AgentGateway, event WebhookEvent) error {
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshalling event: %w", err)

@@ -46,7 +46,7 @@ type Notice struct {
 	Subject NoticeSubject `json:"subject"`
 	Action  NoticeAction  `json:"action"`
 	Payload any           `json:"payload"`
-	Source  string        `json:"source,omitempty"` // "bot" when author is_bot=true
+	Source  string        `json:"source,omitempty"` // "agent" when the author is an agent user (users.user.is_bot)
 }
 
 type NotifyConnection struct {

@@ -8,7 +8,7 @@ import (
 	mcpsdk "github.com/mark3labs/mcp-go/server"
 )
 
-// registerPlanTools registers the sole bot-only tool that ends a stage
+// registerPlanTools registers the sole agent-only tool that ends a stage
 // attempt. Available in every stage subset since every productive stage
 // completes through it.
 func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage string) {
