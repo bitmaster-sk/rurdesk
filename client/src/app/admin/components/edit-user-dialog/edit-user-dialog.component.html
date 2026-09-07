@@ -26,8 +26,8 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <input type="checkbox" uiToggle id="eu-isbot" formControlName="isBot" />
-            <label for="eu-isbot">{{ 'ADMIN.IS_BOT' | translate }}</label>
+            <input type="checkbox" uiToggle id="eu-isagent" formControlName="isBot" />
+            <label for="eu-isagent">{{ 'ADMIN.IS_AGENT' | translate }}</label>
         </div>
 
         @if (!isBot()) {
@@ -41,16 +41,18 @@
             </div>
         } @else if (gateway()) {
             <div class="flex flex-col gap-1">
-                <label for="eu-gateway-url">{{ 'API_KEY.GATEWAY_URL' | translate }}</label>
+                <label for="eu-gateway-url">{{ 'AGENT_API_KEY.GATEWAY_URL' | translate }}</label>
                 <input
                     uiInput
                     id="eu-gateway-url"
                     formControlName="gatewayUrl"
-                    [placeholder]="'API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
+                    [placeholder]="'AGENT_API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
                 />
             </div>
         } @else {
-            <small class="ui-color-text-muted">{{ 'API_KEY.GATEWAY_NONE' | translate }}</small>
+            <small class="ui-color-text-muted">
+                {{ 'AGENT_API_KEY.GATEWAY_NONE' | translate }}
+            </small>
         }
     </form>
 

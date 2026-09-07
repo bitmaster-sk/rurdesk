@@ -14,11 +14,13 @@ import { forkJoin, map } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
 import { AdminApi } from '../../api/admin.api.service';
-import { AdminUpdateUserReq, AdminUser, BotGateway } from '../../model/admin-user.model';
+import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
+import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
+import { AgentGateway } from '../../model/agent-gateway.model';
 
 /**
  * EditUserDialogComponent edits an existing user — same shape as create but the
- * bot flag is fixed (shown read-only). A bot edits only its name; a human also
+ * agent flag is fixed (shown read-only). An agent edits only its name; a human also
  * edits email and the admin flag. Password is never changed here.
  */
 @Component({
@@ -30,6 +32,7 @@ import { AdminUpdateUserReq, AdminUser, BotGateway } from '../../model/admin-use
 export class EditUserDialogComponent {
     private readonly fb = inject(FormBuilder);
     private readonly adminApi = inject(AdminApi);
+    private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
 
     public readonly user = input<AdminUser | null>(null);
@@ -38,13 +41,13 @@ export class EditUserDialogComponent {
 
     protected readonly isSaving = signal(false);
     protected readonly isBot = computed(() => this.user()?.isBot ?? false);
-    // The bot's existing gateway, loaded on open. null = bot has none yet
+    // The agent's existing gateway, loaded on open. null = agent has none yet
     // (URL is then managed in the keys window, not here).
-    protected readonly gateway = signal<BotGateway | null>(null);
+    protected readonly gateway = signal<AgentGateway | null>(null);
 
     protected readonly form = this.fb.group({
         name: ['', [Validators.required, Validators.maxLength(250)]],
-        // Read-only — the bot flag can't change after creation.
+        // Read-only — the agent flag can't change after creation.
         isBot: [{ value: false, disabled: true }],
         email: ['', [Validators.email, Validators.maxLength(250)]],
         isAdmin: [false],
@@ -73,7 +76,7 @@ export class EditUserDialogComponent {
                 email.clearValidators();
                 // Gateway URL is editable only once the gateway exists; required then.
                 this.gateway.set(null);
-                this.adminApi.getBotGateway$(user.idUser).subscribe(gw => {
+                this.agentGatewayApi.load$(user.idUser).subscribe(gw => {
                     this.gateway.set(gw);
                     if (gw) {
                         gatewayUrl.setValue(gw.gatewayUrl);
@@ -112,7 +115,7 @@ export class EditUserDialogComponent {
                   colorAvatarBg: value.colorAvatarBg!
               };
 
-        // For a bot with an existing gateway, save a changed URL alongside the name.
+        // For an agent with an existing gateway, save a changed URL alongside the name.
         const gw = this.gateway();
         const newUrl = value.gatewayUrl!.trim();
         const calls: ReturnType<AdminApi['updateUser$']>[] = [
@@ -120,8 +123,8 @@ export class EditUserDialogComponent {
         ];
         if (user.isBot && gw && newUrl && newUrl !== gw.gatewayUrl) {
             calls.push(
-                this.adminApi
-                    .updateBotGatewayUrl$(user.idUser, { gatewayUrl: newUrl })
+                this.agentGatewayApi
+                    .update$(user.idUser, { gatewayUrl: newUrl })
                     .pipe(map(() => void 0))
             );
         }

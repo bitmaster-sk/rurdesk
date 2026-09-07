@@ -50,7 +50,10 @@
                                 <td>{{ user.email }}</td>
                                 <td>
                                     @if (user.isBot) {
-                                        <ui-tag [value]="'ADMIN.BOT' | translate" severity="info" />
+                                        <ui-tag
+                                            [value]="'ADMIN.AGENT' | translate"
+                                            severity="info"
+                                        />
                                     }
                                     @if (user.isAdmin) {
                                         <ui-tag
@@ -89,7 +92,7 @@
                                             variant="text"
                                             severity="secondary"
                                             size="small"
-                                            [uiTooltip]="'API_KEY.TITLE' | translate"
+                                            [uiTooltip]="'AGENT_API_KEY.TITLE' | translate"
                                             uiTooltipPosition="top"
                                             (click)="onOpenKeys(user)"
                                         >
@@ -136,8 +139,8 @@
 
 <app-create-user-dialog [(visible)]="showCreate" (created)="onUserCreated($event)" />
 <app-edit-user-dialog [user]="editUser()" [(visible)]="showEdit" (updated)="onUserUpdated()" />
-<app-bot-keys-dialog
-    [bot]="keysBot()"
+<app-agent-keys-dialog
+    [agent]="keysAgent()"
     [presetRevealedKey]="keysPresetKey()"
     [presetRevealedGatewayToken]="keysPresetGatewayToken()"
     [(visible)]="showKeys"

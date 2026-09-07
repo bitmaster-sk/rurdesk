@@ -4,15 +4,16 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClipboardService } from 'src/app/core/clipboard.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { AdminApi } from '../../api/admin.api.service';
-import { BotKeysDialogComponent } from './bot-keys-dialog.component';
+import { AgentApiKeyApi } from '../../api/agent-api-key.api.service';
+import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
+import { AgentKeysDialogComponent } from './agent-keys-dialog.component';
 
-interface BotKeysDialogInternals {
+interface AgentKeysDialogInternals {
     onCopy(): void;
     onCopyGatewayToken(): void;
 }
 
-describe('BotKeysDialogComponent — token copy feedback (browser)', () => {
+describe('AgentKeysDialogComponent — token copy feedback (browser)', () => {
     let copy: ReturnType<typeof vi.fn>;
     let showSuccess: ReturnType<typeof vi.fn>;
     let showError: ReturnType<typeof vi.fn>;
@@ -23,32 +24,33 @@ describe('BotKeysDialogComponent — token copy feedback (browser)', () => {
         showError = vi.fn();
 
         await TestBed.configureTestingModule({
-            declarations: [BotKeysDialogComponent],
+            declarations: [AgentKeysDialogComponent],
             imports: [ReactiveFormsModule],
             providers: [
                 {
-                    provide: AdminApi,
-                    useValue: {
-                        getBotKey$: () => of(null),
-                        getBotGateway$: () => of(null)
-                    }
+                    provide: AgentApiKeyApi,
+                    useValue: { load$: () => of(null) }
+                },
+                {
+                    provide: AgentGatewayApi,
+                    useValue: { load$: () => of(null) }
                 },
                 { provide: ToastNotificationService, useValue: { showSuccess, showError } },
                 { provide: ClipboardService, useValue: { copy } }
             ]
         })
-            .overrideComponent(BotKeysDialogComponent, { set: { template: '' } })
+            .overrideComponent(AgentKeysDialogComponent, { set: { template: '' } })
             .compileComponents();
     });
 
     function open(revealedKey: string | null, revealedGatewayToken: string | null) {
-        const fixture = TestBed.createComponent(BotKeysDialogComponent);
-        fixture.componentRef.setInput('bot', { idUser: 1, name: 'bot' });
+        const fixture = TestBed.createComponent(AgentKeysDialogComponent);
+        fixture.componentRef.setInput('agent', { idUser: 1, name: 'ci-agent' });
         fixture.componentRef.setInput('presetRevealedKey', revealedKey);
         fixture.componentRef.setInput('presetRevealedGatewayToken', revealedGatewayToken);
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();
-        return fixture.componentInstance as unknown as BotKeysDialogInternals;
+        return fixture.componentInstance as unknown as AgentKeysDialogInternals;
     }
 
     it('copies the revealed API key and confirms success', async () => {
@@ -56,7 +58,7 @@ describe('BotKeysDialogComponent — token copy feedback (browser)', () => {
         await Promise.resolve();
 
         expect(copy).toHaveBeenCalledWith('rd_secret_key');
-        expect(showSuccess).toHaveBeenCalledWith('API_KEY.COPIED');
+        expect(showSuccess).toHaveBeenCalledWith('AGENT_API_KEY.COPIED');
         expect(showError).not.toHaveBeenCalled();
     });
 
@@ -65,7 +67,7 @@ describe('BotKeysDialogComponent — token copy feedback (browser)', () => {
         await Promise.resolve();
 
         expect(copy).toHaveBeenCalledWith('rd_gateway_token');
-        expect(showSuccess).toHaveBeenCalledWith('API_KEY.COPIED');
+        expect(showSuccess).toHaveBeenCalledWith('AGENT_API_KEY.COPIED');
     });
 
     it('tells the user to copy manually when the clipboard is unavailable', async () => {
@@ -75,7 +77,7 @@ describe('BotKeysDialogComponent — token copy feedback (browser)', () => {
         await Promise.resolve();
         await Promise.resolve();
 
-        expect(showError).toHaveBeenCalledWith('API_KEY.COPY_FAILED');
+        expect(showError).toHaveBeenCalledWith('AGENT_API_KEY.COPY_FAILED');
         expect(showSuccess).not.toHaveBeenCalled();
     });
 

@@ -1,17 +1,17 @@
 <ui-dialog
     [visible]="visible()"
     (visibleChange)="$event ? visible.set(true) : onClose()"
-    [header]="(bot()?.name ?? '') + ' — ' + ('API_KEY.TITLE' | translate)"
+    [header]="(agent()?.name ?? '') + ' — ' + ('AGENT_API_KEY.TITLE' | translate)"
     width="56rem"
 >
-    <!-- Gateway → Tracker token (the bot's API key) -->
+    <!-- Gateway → Tracker token (the agent's API key) -->
     <div class="cred-card">
         <div class="cred-card__head">
-            <h4 class="cred-card__title">{{ 'API_KEY.KEYS_SECTION' | translate }}</h4>
+            <h4 class="cred-card__title">{{ 'AGENT_API_KEY.KEYS_SECTION' | translate }}</h4>
             @if (key()) {
                 <div class="cred-card__actions">
                     <ui-button
-                        [label]="'API_KEY.REGENERATE' | translate"
+                        [label]="'AGENT_API_KEY.REGENERATE' | translate"
                         severity="secondary"
                         size="small"
                         [loading]="isKeyBusy()"
@@ -23,10 +23,10 @@
                         severity="danger"
                         variant="text"
                         size="small"
-                        [uiTooltip]="'API_KEY.DELETE' | translate"
+                        [uiTooltip]="'AGENT_API_KEY.DELETE' | translate"
                         uiTooltipPosition="top"
                         uiConfirm
-                        [confirmText]="'API_KEY.REVOKE_CONFIRM' | translate"
+                        [confirmText]="'AGENT_API_KEY.REVOKE_CONFIRM' | translate"
                         (confirmed)="onConfirmDeleteKey()"
                     >
                         <tabler-icon icon="trash" [size]="14" />
@@ -38,12 +38,12 @@
         @if (revealedKey(); as rk) {
             <div class="secret-notice">
                 <tabler-icon class="ti" icon="alert-triangle" [size]="16" />
-                <span>{{ 'API_KEY.KEY_SHOWN_ONCE' | translate }}</span>
+                <span>{{ 'AGENT_API_KEY.KEY_SHOWN_ONCE' | translate }}</span>
             </div>
             <div class="secret-code">
                 <code>{{ rk }}</code>
                 <ui-button
-                    [label]="'API_KEY.COPY_KEY' | translate"
+                    [label]="'AGENT_API_KEY.COPY_KEY' | translate"
                     severity="secondary"
                     size="small"
                     (click)="onCopy()"
@@ -56,22 +56,22 @@
         @if (key(); as k) {
             <div class="cred-meta">
                 <span>
-                    <b>{{ 'API_KEY.CREATED_AT' | translate }}:</b>
+                    <b>{{ 'AGENT_API_KEY.CREATED_AT' | translate }}:</b>
                     {{ k.createdAt | date: 'short' }}
                 </span>
                 <span>
-                    <b>{{ 'API_KEY.LAST_USED' | translate }}:</b>
+                    <b>{{ 'AGENT_API_KEY.LAST_USED' | translate }}:</b>
                     {{
                         k.lastUsedAt
                             ? (k.lastUsedAt | date: 'short')
-                            : ('API_KEY.NEVER' | translate)
+                            : ('AGENT_API_KEY.NEVER' | translate)
                     }}
                 </span>
             </div>
         } @else {
-            <p class="cred-empty">{{ 'API_KEY.NO_KEYS' | translate }}</p>
+            <p class="cred-empty">{{ 'AGENT_API_KEY.NO_KEYS' | translate }}</p>
             <ui-button
-                [label]="'API_KEY.CREATE' | translate"
+                [label]="'AGENT_API_KEY.CREATE' | translate"
                 size="small"
                 [loading]="isKeyBusy()"
                 (click)="onCreateKey()"
@@ -84,11 +84,11 @@
     <!-- Tracker → Gateway token (the webhook secret) -->
     <div class="cred-card">
         <div class="cred-card__head">
-            <h4 class="cred-card__title">{{ 'API_KEY.GATEWAY_SECTION' | translate }}</h4>
+            <h4 class="cred-card__title">{{ 'AGENT_API_KEY.GATEWAY_SECTION' | translate }}</h4>
             @if (gateway()) {
                 <div class="cred-card__actions">
                     <ui-button
-                        [label]="'API_KEY.GATEWAY_REGENERATE' | translate"
+                        [label]="'AGENT_API_KEY.GATEWAY_REGENERATE' | translate"
                         severity="secondary"
                         size="small"
                         [loading]="isGatewayBusy()"
@@ -100,10 +100,10 @@
                         severity="danger"
                         variant="text"
                         size="small"
-                        [uiTooltip]="'API_KEY.GATEWAY_DELETE' | translate"
+                        [uiTooltip]="'AGENT_API_KEY.GATEWAY_DELETE' | translate"
                         uiTooltipPosition="top"
                         uiConfirm
-                        [confirmText]="'API_KEY.GATEWAY_DELETE_CONFIRM' | translate"
+                        [confirmText]="'AGENT_API_KEY.GATEWAY_DELETE_CONFIRM' | translate"
                         (confirmed)="onConfirmDeleteGateway()"
                     >
                         <tabler-icon icon="trash" [size]="14" />
@@ -115,12 +115,12 @@
         @if (revealedGatewayToken(); as rt) {
             <div class="secret-notice">
                 <tabler-icon class="ti" icon="alert-triangle" [size]="16" />
-                <span>{{ 'API_KEY.GATEWAY_TOKEN_SHOWN_ONCE' | translate }}</span>
+                <span>{{ 'AGENT_API_KEY.GATEWAY_TOKEN_SHOWN_ONCE' | translate }}</span>
             </div>
             <div class="secret-code">
                 <code>{{ rt }}</code>
                 <ui-button
-                    [label]="'API_KEY.COPY_KEY' | translate"
+                    [label]="'AGENT_API_KEY.COPY_KEY' | translate"
                     severity="secondary"
                     size="small"
                     (click)="onCopyGatewayToken()"
@@ -133,26 +133,26 @@
         @if (gateway(); as gw) {
             <div class="cred-meta">
                 <span>
-                    <b>{{ 'API_KEY.GATEWAY_URL' | translate }}:</b>
+                    <b>{{ 'AGENT_API_KEY.GATEWAY_URL' | translate }}:</b>
                     {{ gw.gatewayUrl }}
                 </span>
                 <span>
-                    <b>{{ 'API_KEY.CREATED_AT' | translate }}:</b>
+                    <b>{{ 'AGENT_API_KEY.CREATED_AT' | translate }}:</b>
                     {{ gw.createdAt | date: 'short' }}
                 </span>
             </div>
         } @else {
-            <p class="cred-empty">{{ 'API_KEY.GATEWAY_NONE' | translate }}</p>
+            <p class="cred-empty">{{ 'AGENT_API_KEY.GATEWAY_NONE' | translate }}</p>
             <form class="flex gap-2" [formGroup]="gatewayForm" (ngSubmit)="onCreateGateway()">
                 <input
                     uiInput
                     formControlName="gatewayUrl"
-                    [placeholder]="'API_KEY.GATEWAY_URL' | translate"
+                    [placeholder]="'AGENT_API_KEY.GATEWAY_URL' | translate"
                     class="flex-1"
                 />
                 <ui-button
                     type="submit"
-                    [label]="'API_KEY.GATEWAY_CREATE' | translate"
+                    [label]="'AGENT_API_KEY.GATEWAY_CREATE' | translate"
                     size="small"
                     [loading]="isGatewayBusy()"
                     [disabled]="gatewayForm.invalid"
@@ -164,6 +164,10 @@
     </div>
 
     <ng-template #footer>
-        <ui-button [label]="'API_KEY.CLOSE' | translate" severity="secondary" (click)="onClose()" />
+        <ui-button
+            [label]="'AGENT_API_KEY.CLOSE' | translate"
+            severity="secondary"
+            (click)="onClose()"
+        />
     </ng-template>
 </ui-dialog>

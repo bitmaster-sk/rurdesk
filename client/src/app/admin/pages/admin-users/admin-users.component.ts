@@ -20,10 +20,10 @@ export class AdminUsersComponent implements OnInit {
     protected readonly showCreate = signal(false);
     protected readonly editUser = signal<AdminUser | null>(null);
     protected readonly showEdit = signal(false);
-    protected readonly keysBot = signal<AdminUser | null>(null);
+    protected readonly keysAgent = signal<AdminUser | null>(null);
     protected readonly showKeys = signal(false);
     // Seed the keys window with the tokens minted during one-shot creation so
-    // they are revealed once; null when managing an existing bot.
+    // they are revealed once; null when managing an existing agent.
     protected readonly keysPresetKey = signal<string | null>(null);
     protected readonly keysPresetGatewayToken = signal<string | null>(null);
 
@@ -41,10 +41,10 @@ export class AdminUsersComponent implements OnInit {
 
     protected onUserCreated(event: UserCreatedEvent): void {
         this.loadUsers();
-        // A bot lands straight in its keys window with the freshly-minted tokens
+        // An agent lands straight in its keys window with the freshly-minted tokens
         // revealed once. Human users have no keys — nothing more to show.
         if (event.user.isBot) {
-            this.keysBot.set(event.user);
+            this.keysAgent.set(event.user);
             this.keysPresetKey.set(event.user.rawKey ?? null);
             this.keysPresetGatewayToken.set(event.gatewayToken);
             this.showKeys.set(true);
@@ -77,7 +77,7 @@ export class AdminUsersComponent implements OnInit {
     }
 
     protected onOpenKeys(user: AdminUser): void {
-        this.keysBot.set(user);
+        this.keysAgent.set(user);
         this.keysPresetKey.set(null);
         this.keysPresetGatewayToken.set(null);
         this.showKeys.set(true);

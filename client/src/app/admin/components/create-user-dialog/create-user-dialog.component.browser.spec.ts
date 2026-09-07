@@ -28,8 +28,8 @@ describe('CreateUserDialogComponent — isBot validator wiring (browser)', () =>
     it('turning isBot on clears email requirement and makes gatewayUrl required', () => {
         const f = form();
         f.controls['isBot'].setValue(true);
-        expect(f.controls['email'].valid).toBe(true); // empty email OK for a bot
-        expect(f.controls['gatewayUrl'].valid).toBe(false); // required for a bot
+        expect(f.controls['email'].valid).toBe(true); // empty email OK for an agent
+        expect(f.controls['gatewayUrl'].valid).toBe(false); // required for an agent
     });
 
     it('turning isBot off requires email/password and clears gatewayUrl requirement', () => {

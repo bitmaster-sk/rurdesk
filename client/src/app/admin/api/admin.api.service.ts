@@ -5,12 +5,7 @@ import {
     AdminCreateUserReq,
     AdminCreateUserRes,
     AdminUpdateUserReq,
-    AdminUser,
-    BotApiKey,
-    BotGateway,
-    CreateBotGatewayReq,
-    CreateBotGatewayRes,
-    CreateBotKeyRes
+    AdminUser
 } from '../model/admin-user.model';
 import { Team } from '../../team/model/team.model';
 import { User } from '../../auth/model/user.model';
@@ -43,71 +38,6 @@ export class AdminApi {
 
     public deleteUser$(idUser: number): Observable<void> {
         return this.http.delete<void>(`/api/private/admin/user/${idUser}`);
-    }
-
-    public getBotKey$(idUser: number): Observable<BotApiKey | null> {
-        return this.http.get<BotApiKey | null>(`/api/private/admin/user/${idUser}/api-key`, {
-            context: RequestContext.disableErrorToast()
-        });
-    }
-
-    public createBotKey$(idUser: number, name: string): Observable<CreateBotKeyRes> {
-        return this.http.post<CreateBotKeyRes>(
-            `/api/private/admin/user/${idUser}/api-key`,
-            {
-                name
-            },
-            { context: RequestContext.disableErrorToast() }
-        );
-    }
-
-    public regenerateBotKey$(idUser: number): Observable<CreateBotKeyRes> {
-        return this.http.post<CreateBotKeyRes>(
-            `/api/private/admin/user/${idUser}/api-key/token`,
-            {},
-            { context: RequestContext.disableErrorToast() }
-        );
-    }
-
-    public deleteBotKey$(idUser: number): Observable<void> {
-        return this.http.delete<void>(`/api/private/admin/user/${idUser}/api-key`, {
-            context: RequestContext.disableErrorToast()
-        });
-    }
-
-    public getBotGateway$(idUser: number): Observable<BotGateway | null> {
-        return this.http.get<BotGateway | null>(`/api/private/admin/user/${idUser}/gateway`, {
-            context: RequestContext.disableErrorToast()
-        });
-    }
-
-    public createBotGateway$(
-        idUser: number,
-        req: CreateBotGatewayReq
-    ): Observable<CreateBotGatewayRes> {
-        return this.http.post<CreateBotGatewayRes>(
-            `/api/private/admin/user/${idUser}/gateway`,
-            req,
-            { context: RequestContext.disableErrorToast() }
-        );
-    }
-
-    public updateBotGatewayUrl$(idUser: number, req: CreateBotGatewayReq): Observable<BotGateway> {
-        return this.http.patch<BotGateway>(`/api/private/admin/user/${idUser}/gateway`, req);
-    }
-
-    public regenerateGatewayToken$(idUser: number): Observable<CreateBotGatewayRes> {
-        return this.http.post<CreateBotGatewayRes>(
-            `/api/private/admin/user/${idUser}/gateway/token`,
-            {},
-            { context: RequestContext.disableErrorToast() }
-        );
-    }
-
-    public deleteBotGateway$(idUser: number): Observable<void> {
-        return this.http.delete<void>(`/api/private/admin/user/${idUser}/gateway`, {
-            context: RequestContext.disableErrorToast()
-        });
     }
 
     public createTeam$(team: { name: string; color: string }): Observable<Team> {

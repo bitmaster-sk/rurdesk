@@ -10,44 +10,48 @@ import {
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { ClipboardService } from '../../../core/clipboard.service';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
-import { AdminApi } from '../../api/admin.api.service';
-import { AdminUser, BotApiKey, BotGateway } from '../../model/admin-user.model';
+import { AgentApiKeyApi } from '../../api/agent-api-key.api.service';
+import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
+import { AdminUser } from '../../model/admin-user.model';
+import { AgentApiKey } from '../../model/agent-api-key.model';
+import { AgentGateway } from '../../model/agent-gateway.model';
 
 const DEFAULT_KEY_NAME = 'default';
 
 /**
- * BotKeysDialogComponent manages one bot's two credentials. Both follow the same
+ * AgentKeysDialogComponent manages one agent's two credentials. Both follow the same
  * single-credential model: register/create when none exists, then regenerate
  * (rotate in place) or delete. A freshly minted token is shown once inline — it
  * cannot be retrieved later.
  *
- * - Gateway → Tracker token (the bot's API key).
- * - Tracker → Gateway token (the bot's gateway webhook secret).
+ * - Gateway → Tracker token (the agent's API key).
+ * - Tracker → Gateway token (the agent's gateway webhook secret).
  */
 @Component({
-    selector: 'app-bot-keys-dialog',
-    templateUrl: './bot-keys-dialog.component.html',
-    styleUrls: ['./bot-keys-dialog.component.scss'],
+    selector: 'app-agent-keys-dialog',
+    templateUrl: './agent-keys-dialog.component.html',
+    styleUrls: ['./agent-keys-dialog.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class BotKeysDialogComponent {
-    private readonly adminApi = inject(AdminApi);
+export class AgentKeysDialogComponent {
+    private readonly agentKeyApi = inject(AgentApiKeyApi);
+    private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
     private readonly clipboard = inject(ClipboardService);
 
-    public readonly bot = input<AdminUser | null>(null);
+    public readonly agent = input<AdminUser | null>(null);
     public readonly visible = model<boolean>(false);
-    // Tokens freshly minted during one-shot bot creation, revealed once when the
-    // dialog opens straight after create. Null when opened to manage an existing bot.
+    // Tokens freshly minted during one-shot agent creation, revealed once when the
+    // dialog opens straight after create. Null when opened to manage an existing agent.
     public readonly presetRevealedKey = input<string | null>(null);
     public readonly presetRevealedGatewayToken = input<string | null>(null);
 
-    protected readonly key = signal<BotApiKey | null>(null);
+    protected readonly key = signal<AgentApiKey | null>(null);
     protected readonly isKeyBusy = signal(false);
     protected readonly revealedKey = signal<string | null>(null);
 
-    protected readonly gateway = signal<BotGateway | null>(null);
+    protected readonly gateway = signal<AgentGateway | null>(null);
     protected readonly isGatewayBusy = signal(false);
     protected readonly revealedGatewayToken = signal<string | null>(null);
 
@@ -60,7 +64,7 @@ export class BotKeysDialogComponent {
 
     public constructor() {
         effect(() => {
-            if (this.visible() && this.bot()) {
+            if (this.visible() && this.agent()) {
                 this.loadKey();
                 this.loadGateway();
                 this.revealedKey.set(this.presetRevealedKey());
@@ -70,29 +74,29 @@ export class BotKeysDialogComponent {
     }
 
     private loadKey(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
-        this.adminApi.getBotKey$(bot.idUser).subscribe(key => this.key.set(key));
+        this.agentKeyApi.load$(agent.idUser).subscribe(key => this.key.set(key));
     }
 
     private loadGateway(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
-        this.adminApi.getBotGateway$(bot.idUser).subscribe(gw => this.gateway.set(gw));
+        this.agentGatewayApi.load$(agent.idUser).subscribe(gw => this.gateway.set(gw));
     }
 
     protected onCreateKey(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
         this.isKeyBusy.set(true);
         // The token name is not editable from the UI — mint with a fixed default.
-        this.adminApi.createBotKey$(bot.idUser, DEFAULT_KEY_NAME).subscribe({
+        this.agentKeyApi.insert$(agent.idUser, DEFAULT_KEY_NAME).subscribe({
             next: res => {
                 const { rawKey, ...key } = res;
                 this.key.set(key);
@@ -101,18 +105,18 @@ export class BotKeysDialogComponent {
             },
             error: () => {
                 this.isKeyBusy.set(false);
-                this.sToast.showError('API_KEY.CREATE_FAILED');
+                this.sToast.showError('AGENT_API_KEY.CREATE_FAILED');
             }
         });
     }
 
     protected onRegenerateKey(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
         this.isKeyBusy.set(true);
-        this.adminApi.regenerateBotKey$(bot.idUser).subscribe({
+        this.agentKeyApi.regenerate$(agent.idUser).subscribe({
             next: res => {
                 const { rawKey, ...key } = res;
                 this.key.set(key);
@@ -121,22 +125,22 @@ export class BotKeysDialogComponent {
             },
             error: () => {
                 this.isKeyBusy.set(false);
-                this.sToast.showError('API_KEY.REGENERATE_FAILED');
+                this.sToast.showError('AGENT_API_KEY.REGENERATE_FAILED');
             }
         });
     }
 
     protected onConfirmDeleteKey(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
-        this.adminApi.deleteBotKey$(bot.idUser).subscribe({
+        this.agentKeyApi.revoke$(agent.idUser).subscribe({
             next: () => {
                 this.key.set(null);
                 this.revealedKey.set(null);
             },
-            error: () => this.sToast.showError('API_KEY.REVOKE_FAILED')
+            error: () => this.sToast.showError('AGENT_API_KEY.REVOKE_FAILED')
         });
     }
 
@@ -148,14 +152,14 @@ export class BotKeysDialogComponent {
     }
 
     protected onCreateGateway(): void {
-        const bot = this.bot();
-        if (!bot || this.gatewayForm.invalid) {
+        const agent = this.agent();
+        if (!agent || this.gatewayForm.invalid) {
             this.gatewayForm.markAllAsTouched();
             return;
         }
         this.isGatewayBusy.set(true);
-        this.adminApi
-            .createBotGateway$(bot.idUser, {
+        this.agentGatewayApi
+            .insert$(agent.idUser, {
                 gatewayUrl: this.gatewayForm.controls.gatewayUrl.value.trim()
             })
             .subscribe({
@@ -167,40 +171,40 @@ export class BotKeysDialogComponent {
                 },
                 error: () => {
                     this.isGatewayBusy.set(false);
-                    this.sToast.showError('API_KEY.GATEWAY_CREATE_FAILED');
+                    this.sToast.showError('AGENT_API_KEY.GATEWAY_CREATE_FAILED');
                 }
             });
     }
 
     protected onRegenerateGatewayToken(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
         this.isGatewayBusy.set(true);
-        this.adminApi.regenerateGatewayToken$(bot.idUser).subscribe({
+        this.agentGatewayApi.regenerateToken$(agent.idUser).subscribe({
             next: res => {
                 this.revealedGatewayToken.set(res.trackerToGatewayToken);
                 this.isGatewayBusy.set(false);
             },
             error: () => {
                 this.isGatewayBusy.set(false);
-                this.sToast.showError('API_KEY.GATEWAY_REGENERATE_FAILED');
+                this.sToast.showError('AGENT_API_KEY.GATEWAY_REGENERATE_FAILED');
             }
         });
     }
 
     protected onConfirmDeleteGateway(): void {
-        const bot = this.bot();
-        if (!bot) {
+        const agent = this.agent();
+        if (!agent) {
             return;
         }
-        this.adminApi.deleteBotGateway$(bot.idUser).subscribe({
+        this.agentGatewayApi.delete$(agent.idUser).subscribe({
             next: () => {
                 this.gateway.set(null);
                 this.revealedGatewayToken.set(null);
             },
-            error: () => this.sToast.showError('API_KEY.GATEWAY_DELETE_FAILED')
+            error: () => this.sToast.showError('AGENT_API_KEY.GATEWAY_DELETE_FAILED')
         });
     }
 
@@ -214,9 +218,9 @@ export class BotKeysDialogComponent {
     private copyToClipboard(text: string): void {
         void this.clipboard.copy(text).then(isCopied => {
             if (isCopied) {
-                this.sToast.showSuccess('API_KEY.COPIED');
+                this.sToast.showSuccess('AGENT_API_KEY.COPIED');
             } else {
-                this.sToast.showError('API_KEY.COPY_FAILED');
+                this.sToast.showError('AGENT_API_KEY.COPY_FAILED');
             }
         });
     }
