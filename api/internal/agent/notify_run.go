@@ -142,10 +142,10 @@ func BroadcastIssueSnapshot(
 	}
 }
 
-// BroadcastMrStatusUpdate sends a lightweight SubjectMrStatus notice scoped to
-// project members whenever an open manual MR's CI/approval/head changes. Unlike
-// BroadcastIssueUpdate it does not reload the full issue; the payload already
-// carries everything the detail badge needs.
+// BroadcastMrStatusUpdate sends a SubjectMrStatus notice to project members
+// when an open MR's CI/approval/head changes, and once when it merges or
+// closes. The payload holds everything the badge needs, so the client never
+// refetches the status.
 func BroadcastMrStatusUpdate(
 	ctx context.Context,
 	notifier *notify.Notifier,

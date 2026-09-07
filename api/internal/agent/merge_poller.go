@@ -116,6 +116,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				continue
 			}
 			p.notifyRunUpdate(updated)
+			p.broadcastRunMrStatus(ctx, run, status)
 			merged++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to done")
 
@@ -129,6 +130,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				log.Error().Err(setErr).Int64("idRun", run.IdRun).Msg("merge poller: failed to set error message")
 			}
 			p.notifyRunUpdate(updated)
+			p.broadcastRunMrStatus(ctx, run, status)
 			closed++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
 
@@ -151,6 +153,23 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 
 func (p *MergePoller) notifyRunUpdate(run *model.AgentRun) {
 	BroadcastRunUpdate(context.Background(), p.notifier, p.projectRepo, p.agentRunRepo, p.agentTaskRepo, run)
+}
+
+// broadcastRunMrStatus sends the final MR status of a run whose PR merged or
+// closed. The run notice carries no MR state, so the badge needs this one.
+func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.AgentRun, status *githost.Status) {
+	issue, err := p.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &run.IdIssue})
+	if err != nil || issue == nil {
+		log.Debug().Err(err).Int64("idRun", run.IdRun).Int64("idIssue", run.IdIssue).
+			Msg("merge poller: issue load failed, skipping mr status broadcast")
+		return
+	}
+
+	p.lastMrStatusLock.Lock()
+	delete(p.lastMrStatus, issue.IdIssue)
+	p.lastMrStatusLock.Unlock()
+
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, issue, status)
 }
 
 func (p *MergePoller) hostFor(ctx context.Context, encKey []byte, idGitIntegration, idProject int64) (githost.GitHost, error) {
@@ -281,6 +300,9 @@ func (p *MergePoller) HandleManualMrStatus(ctx context.Context, iss *model.Issue
 	if !final {
 		p.transitioner.Transition(ctx, iss.IdProject, iss.IdIssue, event)
 	}
+	// Unconditional: the caller already dropped this issue from lastMrStatus,
+	// so the change-gated broadcast would never fire here.
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, iss, status)
 	BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, iss.IdIssue)
 }
 

@@ -383,6 +383,52 @@ func (s *MergePollerTransitionSuite) Test_ManualMr_Closed_FinalState_OnlyStamps(
 	s.Equal("closed", *mrState)
 }
 
+func (s *MergePollerTransitionSuite) mergedMrStatusNotices(idIssue int64) []model.MrStatusNotice {
+	var out []model.MrStatusNotice
+	for _, notice := range s.drainMrStatusNotices() {
+		payload, ok := notice.Payload.(model.MrStatusNotice)
+		if ok && payload.IdIssue == idIssue {
+			out = append(out, payload)
+		}
+	}
+	return out
+}
+
+func (s *MergePollerTransitionSuite) Test_MergedRun_EmitsTerminalMrStatus() {
+	s.mapEvents(fmt.Sprintf(`{"event":"done","idState":%d}`, s.IdStateDone))
+	defer s.clearEventMap()
+
+	iss := s.createIssue("merged run mr status issue")
+	s.prState["306"] = "merged"
+	s.linkManualMr(iss.IdIssue, "306")
+	idRun := s.insertPrOpenRun(iss.IdIssue, "306")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().NotEmpty(notices, "a merged PR must reach the detail badge over the socket, not via a refetch")
+	s.Equal("merged", notices[0].State)
+	s.Equal("306", notices[0].IdMr)
+	s.Equal(s.IdGitIntegration, notices[0].IdGitIntegration)
+}
+
+func (s *MergePollerTransitionSuite) Test_ManualMr_Merged_EmitsTerminalMrStatus() {
+	s.mapEvents(fmt.Sprintf(`{"event":"done","idState":%d}`, s.IdStateDone))
+	defer s.clearEventMap()
+
+	iss := s.createIssue("manual merged mr status issue")
+	s.prState["307"] = "merged"
+	s.linkManualMr(iss.IdIssue, "307")
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().NotEmpty(notices)
+	s.Equal("merged", notices[0].State)
+	s.Equal("307", notices[0].IdMr)
+}
+
 func TestMergePollerTransitionSuite(t *testing.T) {
 	suite.Run(t, new(MergePollerTransitionSuite))
 }
