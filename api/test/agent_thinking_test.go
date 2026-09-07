@@ -114,7 +114,7 @@ func (s *AgentThinkingSuite) insertRunWithActiveTask() (idRun int64, idTask int6
 
 	err = s.App.Pool.QueryRow(context.Background(), `
 		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status, last_heartbeat_at)
-		VALUES ($1, $2, 'implementation', 1, 'active', now() - interval '5 minutes')
+		VALUES ($1, $2, 'design', 1, 'active', now() - interval '5 minutes')
 		RETURNING id_task`,
 		idRun, s.AgentUserID,
 	).Scan(&idTask)
@@ -312,7 +312,7 @@ func (s *AgentThinkingSuite) Test_BatchIsBroadcastAsDelta() {
 			continue
 		}
 		s.Equal(idRun, notice.Payload.IdRun)
-		s.Equal("implementation", notice.Payload.Stage)
+		s.Equal("design", notice.Payload.Stage)
 		s.Equal(3, notice.Payload.Seq)
 		s.Require().Len(notice.Payload.Events, 1)
 		s.Equal("thinking", notice.Payload.Events[0].Kind)

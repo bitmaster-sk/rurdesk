@@ -727,6 +727,12 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	}
 	reconcile := task.Status == constants.TaskStatusFailed
 
+	if isImplementationWithoutPr(run, task, &body) {
+		_ = c.Error(errs.ErrImplementationNoBranch)
+		c.Status(errs.ErrImplementationNoBranch.HttpStatus())
+		return
+	}
+
 	// Resolve the PR OUTSIDE the DB transaction — it makes git-host HTTP calls
 	// and must not hold a transaction open. A host failure converts to an
 	// `errored` outcome so the normal failure path records it.
@@ -1123,6 +1129,16 @@ type prComputed struct {
 	prUrl            string
 	hostType         string
 	idGitIntegration int64
+}
+
+func isImplementationWithoutPr(run *model.AgentRun, task *model.AgentTask, body *model.CompleteStageReq) bool {
+	if task.Stage != constants.StageImplementation || body.Outcome != constants.StageOutcomeOutputSubmitted {
+		return false
+	}
+	if body.BranchName != "" || body.PrUrl != "" {
+		return false
+	}
+	return run.PrId == nil || *run.PrId == ""
 }
 
 // resolvePrForCompletion resolves PR identity for an implementation completion,

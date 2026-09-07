@@ -108,7 +108,7 @@ func (s *AgentThinkingPersistenceSuite) insertRunWithActiveTask() (idRun int64, 
 
 	err := s.App.Pool.QueryRow(context.Background(), `
 		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
-		SELECT id_issue, $1, $2, 'in_progress', '{"stages":[{"name":"implementation","skippable":false,"skip":false}]}'
+		SELECT id_issue, $1, $2, 'in_progress', '{"stages":[{"name":"design","skippable":false,"skip":false}]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,
 		s.AgentUserID, s.IdProject, s.IdIssuePublic,
@@ -117,7 +117,7 @@ func (s *AgentThinkingPersistenceSuite) insertRunWithActiveTask() (idRun int64, 
 
 	err = s.App.Pool.QueryRow(context.Background(), `
 		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status, started_at)
-		VALUES ($1, $2, 'implementation', 1, 'active', now())
+		VALUES ($1, $2, 'design', 1, 'active', now())
 		RETURNING id_task`,
 		idRun, s.AgentUserID,
 	).Scan(&idTask)
@@ -150,7 +150,7 @@ func (s *AgentThinkingPersistenceSuite) chunkCount(idTask int64) int {
 
 func (s *AgentThinkingPersistenceSuite) readStage(idRun int64) model.AgentThinkingRes {
 	res := Request(s.T(), s.App, "GET",
-		fmt.Sprintf("/api/private/agent/run/%d/thinking?stage=implementation", idRun), "", s.Token)
+		fmt.Sprintf("/api/private/agent/run/%d/thinking?stage=design", idRun), "", s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 	body, _ := io.ReadAll(res.Body)
 	var readRes model.AgentThinkingRes

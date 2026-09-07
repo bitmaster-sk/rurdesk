@@ -481,6 +481,64 @@ func (s *AgentReconcileSuite) Test_04f_ReconcileCasUniqueViolationIsPhaseMismatc
 	s.Equal("failed", s.loadRun(failedRun).Phase)
 }
 
+// T9a: an implementation output_submitted with no branch on a PR-less run is refused.
+func (s *AgentReconcileSuite) Test_09a_ImplementationWithoutBranchRefused() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	res := s.complete(idTask, "implementation", "output_submitted", "pull_request_pushed", "")
+	s.Require().Equal(http.StatusConflict, res.StatusCode)
+
+	s.Equal(0, int(s.createPRCalls.Load()))
+	run := s.loadRun(idRun)
+	s.Equal("in_progress", run.Phase, "run must stay in its original phase")
+	s.Nil(run.PrId)
+	s.Equal("active", s.loadTask(idTask).Status, "the attempt stays open so the agent can retry")
+}
+
+// T9b: the same guard covers review_reply, which is legitimate only once a PR exists.
+func (s *AgentReconcileSuite) Test_09b_ReviewReplyWithoutPrRefused() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	res := s.complete(idTask, "implementation", "output_submitted", "review_reply", "")
+	s.Require().Equal(http.StatusConflict, res.StatusCode)
+
+	s.Equal(0, int(s.createPRCalls.Load()))
+	s.Equal("in_progress", s.loadRun(idRun).Phase)
+	s.Nil(s.loadRun(idRun).PrId)
+}
+
+// T9c: review_reply on a run that already has a PR passes, opening no second PR.
+func (s *AgentReconcileSuite) Test_09c_ReviewReplyWithExistingPrAccepted() {
+	idRun := s.insertPrOpenRunWithPr()
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	res := s.complete(idTask, "implementation", "output_submitted", "review_reply", "")
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	s.Equal(0, int(s.createPRCalls.Load()), "answering a review opens no second PR")
+	run := s.loadRun(idRun)
+	s.Equal("pr_open", run.Phase)
+	s.Require().NotNil(run.PrId)
+	s.Equal("7", *run.PrId, "existing PR id unchanged")
+	s.Equal("completed", s.loadTask(idTask).Status)
+}
+
+// T9d: the guard must not swallow a branchless implementation `errored`.
+func (s *AgentReconcileSuite) Test_09d_ErroredWithoutBranchStillRecorded() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	body := `{"outcome":"errored","errorReason":"build_failed","errorDetail":"compile error"}`
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/agent/task/%d/complete", idTask), body, s.AgentToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	s.Equal("failed", s.loadRun(idRun).Phase)
+	s.Equal("failed", s.loadTask(idTask).Status)
+}
+
 func Test_RunAgentReconcileSuite(t *testing.T) {
 	suite.Run(t, new(AgentReconcileSuite))
 }

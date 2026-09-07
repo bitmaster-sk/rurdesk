@@ -768,6 +768,7 @@
         "unauthorized": "You are not authorized. Please log in.",
         "not_found": "The requested resource was not found.",
         "task_not_running_by_agent": "No agent is working on this task right now.",
+        "implementation_no_branch": "The agent finished the implementation without pushing a branch, so no pull request could be opened.",
         "relation_cycle": "This relation would create a cycle.",
         "sprint_window": "A cycle must end after it starts.",
         "bad_request": "Invalid request. Please check your input.",

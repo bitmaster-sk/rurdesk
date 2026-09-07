@@ -143,6 +143,7 @@ var (
 	ErrRunHasPr               = newErr("RUN_HAS_PR", "cannot restart a run that already has a pull request; continue or close it instead", "error.run_has_pr", http.StatusUnprocessableEntity)
 	ErrTaskNotFound           = newErr("TASK_NOT_FOUND", "task not found", "error.task_not_found", http.StatusUnprocessableEntity)
 	ErrTaskNotRunningByAgent  = newErr("TASK_NOT_RUNNING_BY_AGENT", "agent task is not being executed by an agent", "error.task_not_running_by_agent", http.StatusConflict)
+	ErrImplementationNoBranch = newErr("IMPLEMENTATION_NO_BRANCH", "implementation output_submitted needs branch_name until the run has a pull request; push your work and pass the branch you pushed to", "error.implementation_no_branch", http.StatusConflict)
 
 	// ── Issue / message conflicts ──────────────────────────────────────────
 
