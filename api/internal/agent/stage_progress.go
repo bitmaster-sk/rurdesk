@@ -66,7 +66,7 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		}
 
 		prog.AttemptNo = task.AttemptNo
-		prog.IdUserBot = task.IdUserBot
+		prog.IdUserAgent = task.IdUserAgent
 		prog.IdResultMessage = task.IdResultMessage
 		prog.ThinkingTail = task.ThinkingTail
 		prog.HasThinking = task.HasThinking

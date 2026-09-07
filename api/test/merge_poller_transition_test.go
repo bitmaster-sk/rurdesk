@@ -27,7 +27,7 @@ type MergePollerTransitionSuite struct {
 	IdStateFailed    int64
 	IdStateFinal     int64
 	IdGitIntegration int64
-	BotUserID        int64
+	AgentUserID      int64
 	poller           *agent.MergePoller
 	gitHub           *httptest.Server
 	// prState is what the fake GitHub serves, keyed by pull request id.
@@ -69,17 +69,17 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 
 	Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"mptransbot","email":"mptransbot@test.sk","password":"kreslo"}`, s.OwnerToken)
-	botLoginRes := Request(s.T(), s.App, "POST", "/api/public/login",
+	agentLoginRes := Request(s.T(), s.App, "POST", "/api/public/login",
 		`{"email":"mptransbot@test.sk","password":"kreslo"}`, "")
-	s.Require().Equal(http.StatusOK, botLoginRes.StatusCode)
-	var botTk struct{ Token string }
-	json.NewDecoder(botLoginRes.Body).Decode(&botTk)
-	var botUser model.User
-	botRes := Request(s.T(), s.App, "GET", "/api/private/user", "", botTk.Token)
-	json.NewDecoder(botRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	s.Require().Equal(http.StatusOK, agentLoginRes.StatusCode)
+	var agentTk struct{ Token string }
+	json.NewDecoder(agentLoginRes.Body).Decode(&agentTk)
+	var agentUser model.User
+	agentRes := Request(s.T(), s.App, "GET", "/api/private/user", "", agentTk.Token)
+	json.NewDecoder(agentRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
 	s.poller = agent.NewMergePoller(
@@ -121,7 +121,7 @@ func (s *MergePollerTransitionSuite) TearDownSuite() {
 	}
 	ctx := context.Background()
 	s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", s.IdProject) //nolint:errcheck
-	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.BotUserID)          //nolint:errcheck
+	s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)        //nolint:errcheck
 }
 
 func (s *MergePollerTransitionSuite) createState(name string, start, final bool) int64 {
@@ -161,10 +161,10 @@ func (s *MergePollerTransitionSuite) createIssue(title string) model.Issue {
 func (s *MergePollerTransitionSuite) insertPrOpenRun(idIssue int64, prId string) int64 {
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan, pr_id, id_git_integration)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan, pr_id, id_git_integration)
 		VALUES ($1, $2, $3, 'pr_open', '{"stages":[]}', $4, $5)
 		RETURNING id_run
-	`, idIssue, s.BotUserID, s.IdProject, prId, s.IdGitIntegration).Scan(&idRun)
+	`, idIssue, s.AgentUserID, s.IdProject, prId, s.IdGitIntegration).Scan(&idRun)
 	s.Require().NoError(err)
 	return idRun
 }

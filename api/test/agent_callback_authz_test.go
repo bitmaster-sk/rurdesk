@@ -15,16 +15,16 @@ import (
 // AgentCallbackAuthzSuite pins the authorization boundary on the gateway
 // callbacks. They live in the ordinary authenticated route group, so the only
 // thing standing between a logged-in user and another project's agent run is the
-// per-handler bot-ownership check. A regression here lets any user complete
+// per-handler agent-ownership check. A regression here lets any user complete
 // stages, post messages authored as the agent, and trigger PR creation on runs
 // they do not own — so each callback is asserted individually rather than
 // trusting a shared middleware.
 type AgentCallbackAuthzSuite struct {
 	suite.Suite
 	App           *issue.Application
-	Token         string // ordinary (non-bot) user: the attacker in these tests
-	BotApiKey     string
-	BotUserID     int64
+	Token         string // ordinary (non-agent) user: the attacker in these tests
+	AgentApiKey   string
+	AgentUserID   int64
 	IdProject     int64
 	IdIssuePublic int64
 }
@@ -40,25 +40,25 @@ func (s *AgentCallbackAuthzSuite) SetupSuite() {
 	s.Require().Equal(http.StatusOK, loginRes.StatusCode)
 	var tk struct{ Token string }
 	json.NewDecoder(loginRes.Body).Decode(&tk)
-	botToken := tk.Token
+	agentToken := tk.Token
 
-	botUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", botToken)
-	var botUser model.User
-	json.NewDecoder(botUserRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	agentUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", agentToken)
+	var agentUser model.User
+	json.NewDecoder(agentUserRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 
 	_, err := s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
-	s.App.Cache.Del(context.Background(), botToken)
+	s.App.Cache.Del(context.Background(), agentToken)
 
 	keyRes := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/api-key", s.BotUserID),
+		fmt.Sprintf("/api/private/admin/user/%d/api-key", s.AgentUserID),
 		`{"name":"authz-bot-key"}`, s.Token)
 	s.Require().Equal(http.StatusOK, keyRes.StatusCode)
 	var apiKey model.CreateApiKeyRes
 	json.NewDecoder(keyRes.Body).Decode(&apiKey)
-	s.BotApiKey = apiKey.RawKey
+	s.AgentApiKey = apiKey.RawKey
 
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"authz-test-project","color":"#ccbbaa"}`, s.Token)
@@ -71,7 +71,7 @@ func (s *AgentCallbackAuthzSuite) SetupSuite() {
 
 	Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.BotUserID), s.Token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)
 
 	issueRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
@@ -87,7 +87,7 @@ func (s *AgentCallbackAuthzSuite) TearDownSuite() {
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+		"DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 // purgeRuns clears the project's runs. Tasks go first: they reference the run,
@@ -106,25 +106,25 @@ func (s *AgentCallbackAuthzSuite) purgeRuns() {
 	s.Require().NoError(err)
 }
 
-// insertRunWithActiveTask creates a run owned by the bot plus one active task on
+// insertRunWithActiveTask creates a run owned by the agent plus one active task on
 // it, the state the gateway callbacks expect to address.
 func (s *AgentCallbackAuthzSuite) insertRunWithActiveTask() (idRun int64, idTask int64) {
 	s.purgeRuns()
 
 	err := s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.run(id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run(id_issue, id_user_agent, id_project, phase, stage_plan)
 		SELECT id_issue, $1, $2, 'in_progress', '{"stages":[]}'
 		FROM issues.issue WHERE id_issue_public = $3 AND id_project = $2
 		RETURNING id_run`,
-		s.BotUserID, s.IdProject, s.IdIssuePublic,
+		s.AgentUserID, s.IdProject, s.IdIssuePublic,
 	).Scan(&idRun)
 	s.Require().NoError(err)
 
 	err = s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.task(id_run, id_user_bot, stage, attempt_no, status)
+		INSERT INTO agent.task(id_run, id_user_agent, stage, attempt_no, status)
 		VALUES ($1, $2, 'implementation', 1, 'active')
 		RETURNING id_task`,
-		idRun, s.BotUserID,
+		idRun, s.AgentUserID,
 	).Scan(&idTask)
 	s.Require().NoError(err)
 
@@ -133,7 +133,7 @@ func (s *AgentCallbackAuthzSuite) insertRunWithActiveTask() (idRun int64, idTask
 
 // Test_ForeignUserCannotDriveRun is the regression guard: every gateway callback
 // must reject a perfectly valid session belonging to someone who is not the
-// run's bot. The user here is the project's own admin — proving that project
+// run's agent. The user here is the project's own admin — proving that project
 // membership, and even ownership, is not sufficient.
 func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
 	idRun, idTask := s.insertRunWithActiveTask()
@@ -190,7 +190,7 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
 func (s *AgentCallbackAuthzSuite) Test_UnknownTaskIsNotFound() {
 	res := Request(s.T(), s.App, "POST",
 		"/api/private/agent/task/99999999/thinking",
-		`{"seq":1,"events":[{"kind":"thinking","text":"nowhere","at":1}]}`, s.BotApiKey)
+		`{"seq":1,"events":[{"kind":"thinking","text":"nowhere","at":1}]}`, s.AgentApiKey)
 
 	s.Equal(http.StatusNotFound, res.StatusCode)
 }
@@ -218,21 +218,21 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotCompleteStage_LeavesRunU
 	s.Equal("active", status, "the rejected call must not close the task")
 }
 
-// Test_OwningBotStillWorks guards the other direction: the ownership check must
+// Test_OwningAgentStillWorks guards the other direction: the ownership check must
 // not lock out the gateway it exists to protect.
-func (s *AgentCallbackAuthzSuite) Test_OwningBotStillWorks() {
+func (s *AgentCallbackAuthzSuite) Test_OwningAgentStillWorks() {
 	idRun, idTask := s.insertRunWithActiveTask()
 
 	beat := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/agent/task/%d/heartbeat", idTask), "", s.BotApiKey)
+		fmt.Sprintf("/api/private/agent/task/%d/heartbeat", idTask), "", s.AgentApiKey)
 	s.Equal(http.StatusOK, beat.StatusCode, "the run's own bot must be able to heartbeat")
 
 	stats := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/agent/task/%d/stats", idTask), `{"tokensUsed":42}`, s.BotApiKey)
+		fmt.Sprintf("/api/private/agent/task/%d/stats", idTask), `{"tokensUsed":42}`, s.AgentApiKey)
 	s.Equal(http.StatusOK, stats.StatusCode, "the run's own bot must be able to report stats")
 
 	repo := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/agent/run/%d/repo", idRun), `{"repoPath":"owner/repo"}`, s.BotApiKey)
+		fmt.Sprintf("/api/private/agent/run/%d/repo", idRun), `{"repoPath":"owner/repo"}`, s.AgentApiKey)
 	s.Equal(http.StatusOK, repo.StatusCode, "the run's own bot must be able to report its repo")
 }
 

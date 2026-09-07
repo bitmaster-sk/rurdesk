@@ -33,8 +33,8 @@ func (s *AdminSuite) Test_CreateUser_DefaultsToRandomAvatarColor() {
 	s.Regexp(`^#[0-9a-fA-F]{6}$`, out.ColorAvatarBg, "omitted colour must fall back to a random hex")
 }
 
-func (s *AdminSuite) Test_CreateBot_HonorsSuppliedAvatarColor() {
-	body := `{"name":"Colored Bot","isBot":true,"colorAvatarBg":"#abcdef"}`
+func (s *AdminSuite) Test_CreateAgent_HonorsSuppliedAvatarColor() {
+	body := `{"name":"Colored Bot","isAgent":true,"colorAvatarBg":"#abcdef"}`
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 

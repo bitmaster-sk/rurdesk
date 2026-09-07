@@ -130,9 +130,9 @@ func TestDrainEventsDetectsCompleteStage(t *testing.T) {
 func TestWriteMCPSettings(t *testing.T) {
 	configDir := t.TempDir()
 	const mcpURL = "http://issue.proxy/mcp/plan/sse"
-	const botKey = "deadbeef"
+	const agentKey = "deadbeef"
 
-	path, err := writeMCPSettings(configDir, mcpURL, botKey)
+	path, err := writeMCPSettings(configDir, mcpURL, agentKey)
 	if err != nil {
 		t.Fatalf("writeMCPSettings: %v", err)
 	}
@@ -173,8 +173,8 @@ func TestWriteMCPSettings(t *testing.T) {
 	if tracker.URL != mcpURL {
 		t.Errorf("url = %q, want %q", tracker.URL, mcpURL)
 	}
-	if got := tracker.Headers["Authorization"]; got != "Bearer "+botKey {
-		t.Errorf("Authorization = %q, want %q", got, "Bearer "+botKey)
+	if got := tracker.Headers["Authorization"]; got != "Bearer "+agentKey {
+		t.Errorf("Authorization = %q, want %q", got, "Bearer "+agentKey)
 	}
 }
 
@@ -264,7 +264,7 @@ func TestRunWithStubBinary(t *testing.T) {
 
 			cfg := &common.Config{
 				TrackerMCPUrl: "http://issue.proxy/mcp/sse",
-				BotApiKey:     "deadbeef",
+				AgentApiKey:   "deadbeef",
 				ClaudeCode: &common.ClaudeCodeConfig{
 					MaxTurnsPlan:      25,
 					MaxTurnsImplement: 60,
@@ -308,7 +308,7 @@ func TestRunWithStubBinary(t *testing.T) {
 			if stats.DurationMs < 0 {
 				t.Errorf("DurationMs = %d, want >= 0", stats.DurationMs)
 			}
-			// The MCP config carries the bot's bearer token and the agent
+			// The MCP config carries the agent's bearer token and the agent
 			// commits from this worktree, so the run must leave nothing
 			// token-bearing behind for `git add -A` to pick up.
 			entries, readErr := os.ReadDir(worktree)

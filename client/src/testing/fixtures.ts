@@ -52,17 +52,17 @@ export abstract class Fixtures {
             name: 'Ada',
             email: 'ada@test.sk',
             colorAvatarBg: '#123456',
-            isBot: false,
+            isAgent: false,
             ...overrides
         };
     }
 
-    public static bot(overrides: Partial<User> = {}): User {
+    public static agent(overrides: Partial<User> = {}): User {
         return Fixtures.user({
             idUser: 8,
-            name: 'ci-bot',
-            email: 'ci-bot@test.sk',
-            isBot: true,
+            name: 'ci-agent',
+            email: 'ci-agent@test.sk',
+            isAgent: true,
             ...overrides
         });
     }
@@ -86,7 +86,7 @@ export abstract class Fixtures {
             idRun: 55,
             idIssue: 10,
             idProject: 7,
-            idUserBot: 8,
+            idUserAgent: 8,
             idGitIntegration: null,
             phase: AgentPhase.Queued,
             stagePlan: { stages: [] },

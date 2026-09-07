@@ -13,7 +13,7 @@ describe('UserSettingsPage — avatar colour (browser)', () => {
         name: 'tester',
         email: 't@t.sk',
         colorAvatarBg: '#112233',
-        isBot: false,
+        isAgent: false,
         isAdmin: false
     };
 

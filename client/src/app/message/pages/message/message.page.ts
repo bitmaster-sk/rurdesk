@@ -352,7 +352,7 @@ export class MessagePage implements OnInit, OnDestroy {
                 nameKey: 'DIRECT.CHATS',
                 icon: 'user',
                 conversations: users
-                    .filter(u => !u.isBot)
+                    .filter(u => !u.isAgent)
                     .map(u => ({
                         idRecipient: currentUserId,
                         idCreator: u.idUser,

@@ -24,7 +24,7 @@ type MergePollerManualSuite struct {
 	IdStateInProg    int64
 	IdStateDone      int64
 	IdGitIntegration int64
-	BotUserID        int64
+	AgentUserID      int64
 	poller           *agent.MergePoller
 }
 
@@ -51,17 +51,17 @@ func (s *MergePollerManualSuite) SetupSuite() {
 
 	Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"mpmbot","email":"mpmbot@test.sk","password":"kreslo"}`, s.OwnerToken)
-	botLoginRes := Request(s.T(), s.App, "POST", "/api/public/login",
+	agentLoginRes := Request(s.T(), s.App, "POST", "/api/public/login",
 		`{"email":"mpmbot@test.sk","password":"kreslo"}`, "")
-	s.Require().Equal(http.StatusOK, botLoginRes.StatusCode)
-	var botTk struct{ Token string }
-	json.NewDecoder(botLoginRes.Body).Decode(&botTk)
-	var botUser model.User
-	botRes := Request(s.T(), s.App, "GET", "/api/private/user", "", botTk.Token)
-	json.NewDecoder(botRes.Body).Decode(&botUser)
-	s.BotUserID = botUser.IdUser
+	s.Require().Equal(http.StatusOK, agentLoginRes.StatusCode)
+	var agentTk struct{ Token string }
+	json.NewDecoder(agentLoginRes.Body).Decode(&agentTk)
+	var agentUser model.User
+	agentRes := Request(s.T(), s.App, "GET", "/api/private/user", "", agentTk.Token)
+	json.NewDecoder(agentRes.Body).Decode(&agentUser)
+	s.AgentUserID = agentUser.IdUser
 	_, err = s.App.Pool.Exec(context.Background(),
-		"UPDATE users.user SET is_bot = TRUE WHERE id_user = $1", s.BotUserID)
+		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
 	s.poller = agent.NewMergePoller(
@@ -80,7 +80,7 @@ func (s *MergePollerManualSuite) TearDownSuite() {
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.IdProject)
 	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM users.user WHERE id_user = $1", s.BotUserID)
+		"DELETE FROM users.user WHERE id_user = $1", s.AgentUserID)
 }
 
 func (s *MergePollerManualSuite) createState(name string, start, final bool) int64 {
@@ -242,10 +242,10 @@ func (s *MergePollerManualSuite) Test_LoadIssuesWithOpenMr_SkipsProcessedAndRunO
 	s.linkMr(issC.IdIssue, "203")
 	var idRun int64
 	err := s.App.Pool.QueryRow(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, phase, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'pr_open', '{"stages":[]}')
 		RETURNING id_run
-	`, issC.IdIssue, s.BotUserID, s.IdProject).Scan(&idRun)
+	`, issC.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 	defer func() {
 		s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck

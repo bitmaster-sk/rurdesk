@@ -2,9 +2,9 @@ package model
 
 import "time"
 
-type BotGateway struct {
-	IdBotGateway  int64     `json:"idBotGateway"  db:"id_bot_gateway"`
-	IdUserBot     int64     `json:"idUserBot"     db:"id_user_bot"`
+type AgentGateway struct {
+	IdGateway     int64     `json:"idGateway"  db:"id_gateway"`
+	IdUserAgent   int64     `json:"idUserAgent"     db:"id_user_agent"`
 	GatewayUrl    string    `json:"gatewayUrl"    db:"gateway_url"`
 	MaxConcurrent int       `json:"maxConcurrent" db:"max_concurrent"`
 	WebhookSecret []byte    `json:"-"             db:"webhook_secret"`
@@ -12,13 +12,13 @@ type BotGateway struct {
 	CreatedAt     time.Time `json:"createdAt"     db:"created_at"`
 }
 
-type CreateBotGatewayReq struct {
+type CreateAgentGatewayReq struct {
 	GatewayUrl string `json:"gatewayUrl" binding:"required,url"`
 }
 
-// CreateBotGatewayRes carries the tracker→gateway webhook signing secret,
+// CreateAgentGatewayRes carries the tracker→gateway webhook signing secret,
 // shown once and never retrievable again.
-type CreateBotGatewayRes struct {
-	BotGateway
+type CreateAgentGatewayRes struct {
+	AgentGateway
 	TrackerToGatewayToken string `json:"trackerToGatewayToken"`
 }

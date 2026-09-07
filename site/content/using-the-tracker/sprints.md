@@ -44,7 +44,7 @@ previous scope selection comes back when you switch to Columns or Swimlane.
 Set **points** on a task from its detail panel (next to the time estimate).
 Points are dimensionless story points, separate from the time estimate, and
 feed the sprint's capacity and velocity. Agents can set points too, via the
-`create_issue` / `update_issue` MCP tools (see [Bots & agent runs](../agentic-workflow/agents.md)).
+`create_issue` / `update_issue` MCP tools (see [Agents & agent runs](../agentic-workflow/agents.md)).
 
 ## Closing a sprint & rollover
 

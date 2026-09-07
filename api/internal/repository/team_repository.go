@@ -107,7 +107,7 @@ func (r *TeamRepository) LoadTeam(ctx context.Context, idTeam int64) (*model.Tea
 func (r *TeamRepository) LoadTeamsMembers(ctx context.Context, idsTeam []int64) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT DISTINCT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.is_bot
+		SELECT DISTINCT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.is_agent
 		FROM
 			users.team tem
 			INNER JOIN users.user_team ute ON tem.id_team = ute.id_team

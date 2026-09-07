@@ -94,16 +94,16 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     );
 
     public readonly agentCreator = computed<User | null>(() => {
-        const idUserBot = this.agentRun()?.idUserBot;
-        if (idUserBot == null) {
+        const idUserAgent = this.agentRun()?.idUserAgent;
+        if (idUserAgent == null) {
             return null;
         }
-        const member = this.usersMap().get(idUserBot);
+        const member = this.usersMap().get(idUserAgent);
         if (member) {
             return member;
         }
         for (const item of [...this.displayItems()].reverse()) {
-            if (item.type === 'comment' && item.data.creator.idUser === idUserBot) {
+            if (item.type === 'comment' && item.data.creator.idUser === idUserAgent) {
                 return item.data.creator;
             }
         }
@@ -127,7 +127,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     // idMessage of the most recent plan-kind comment in the thread. Used by the
     // template to scope the Approve button to a single comment even after a
     // revision adds another plan message — without this, every plan-prefixed
-    // bot message in history would render Approve while the run is awaiting
+    // agent message in history would render Approve while the run is awaiting
     // approval.
     public readonly idLatestPlanMessage = computed<number | null>(() => {
         let latestId: number | null = null;

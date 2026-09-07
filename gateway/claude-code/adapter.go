@@ -66,7 +66,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	defer os.RemoveAll(mcpConfigDir)
 
 	mcpURL := common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage)
-	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, a.cfg.BotApiKey)
+	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, a.cfg.AgentApiKey)
 	if err != nil {
 		return stats, fmt.Errorf("writing claude MCP settings: %w", err)
 	}
@@ -474,14 +474,14 @@ func childEnv(oauthToken string) []string {
 }
 
 // writeMCPSettings writes <dir>/mcp.json with the "tracker" MCP server entry
-// (stage-scoped SSE endpoint, bot key as an Authorization: Bearer header — the
+// (stage-scoped SSE endpoint, agent key as an Authorization: Bearer header — the
 // tracker API strips the prefix and matches by shape) and returns its path for
 // --mcp-config.
 //
-// dir MUST be outside the worktree: the file holds the bot's bearer token in
+// dir MUST be outside the worktree: the file holds the agent's bearer token in
 // cleartext and the agent commits from the worktree, so `git add -A` would push
 // it to the user's remote.
-func writeMCPSettings(dir, mcpURL, botKey string) (string, error) {
+func writeMCPSettings(dir, mcpURL, agentKey string) (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("creating MCP config dir: %w", err)
 	}
@@ -491,7 +491,7 @@ func writeMCPSettings(dir, mcpURL, botKey string) (string, error) {
 				"type": "sse",
 				"url":  mcpURL,
 				"headers": map[string]string{
-					"Authorization": "Bearer " + botKey,
+					"Authorization": "Bearer " + agentKey,
 				},
 			},
 		},

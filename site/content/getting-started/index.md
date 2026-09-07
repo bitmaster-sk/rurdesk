@@ -47,9 +47,9 @@ proxy / API / client containers you may see in the repository's
 
 1. [Installation](./installation.md) — bring the stack up with Docker Compose, first run
 2. [Configuration](./configuration.md) — environment variables, AI provider, database, cache
-3. [User management](./user-management.md) — accounts, admins, bots, API keys, project roles
+3. [User management](./user-management.md) — accounts, admins, agents, API keys, project roles
 4. [Features](./features.md) — tasks, views, relations, tracker, and the AI features
-5. [Agents](./agents.md) — add a bot, wire a gateway, run the agent workflow
+5. [Agents](./agents.md) — add an agent, wire a gateway, run the agent workflow
 6. [Agent Gateway](./gateway.md) — deploy and configure the Goose coding-agent gateway
 7. [Git integration](./git-integration.md) — connect repositories, PR/MR diffs inline
 

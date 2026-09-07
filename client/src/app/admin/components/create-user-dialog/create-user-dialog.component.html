@@ -26,11 +26,11 @@
         </div>
 
         <div class="flex items-center gap-2">
-            <input type="checkbox" uiToggle id="cu-isbot" formControlName="isBot" />
-            <label for="cu-isbot">{{ 'ADMIN.IS_BOT' | translate }}</label>
+            <input type="checkbox" uiToggle id="cu-isagent" formControlName="isAgent" />
+            <label for="cu-isagent">{{ 'ADMIN.IS_AGENT' | translate }}</label>
         </div>
 
-        @if (!form.controls.isBot.value) {
+        @if (!form.controls.isAgent.value) {
             <div class="flex flex-col gap-1">
                 <label for="cu-email">{{ 'ADMIN.EMAIL' | translate }}</label>
                 <input uiInput id="cu-email" type="email" formControlName="email" />
@@ -45,15 +45,15 @@
             </div>
         } @else {
             <div class="flex flex-col gap-1">
-                <label for="cu-gateway-url">{{ 'API_KEY.GATEWAY_URL' | translate }}</label>
+                <label for="cu-gateway-url">{{ 'AGENT_API_KEY.GATEWAY_URL' | translate }}</label>
                 <input
                     uiInput
                     id="cu-gateway-url"
                     formControlName="gatewayUrl"
-                    [placeholder]="'API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
+                    [placeholder]="'AGENT_API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
                 />
                 <small class="ui-color-text-muted">
-                    {{ 'API_KEY.GATEWAY_URL_HINT' | translate }}
+                    {{ 'AGENT_API_KEY.GATEWAY_URL_HINT' | translate }}
                 </small>
             </div>
         }

@@ -120,9 +120,9 @@ The gateway refuses to start without all five:
 | Var                        | Purpose                                                                                                                                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status, heartbeats, recovery). |
-| `GATEWAY_TO_TRACKER_TOKEN` | The bot's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (bot credentials).                                                                                                                           |
-| `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the bot's gateway** (see [Agents](./agents.md)).                                                                                  |
-| `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another bot for a second repo.                                                                                                                       |
+| `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (agent credentials).                                                                                                                           |
+| `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the agent's gateway** (see [Agents](./agents.md)).                                                                                  |
+| `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another agent for a second repo.                                                                                                                       |
 | `GIT_ACCESS_TOKEN`         | PAT/app token with read+write on `REPO_URL`; injected into the remote URL so the agent can **push branches**. See [token scopes](#gitaccesstoken-scopes).                                                                                                                              |
 
 ### `GIT_ACCESS_TOKEN` scopes
@@ -186,7 +186,7 @@ services:
         restart: unless-stopped
         environment:
             TRACKER_URL: http://rurdesk:1000
-            GATEWAY_TO_TRACKER_TOKEN: "" # CHANGE ME (Admin → bot user → Bot credentials)
+            GATEWAY_TO_TRACKER_TOKEN: "" # CHANGE ME (Admin → agent user → Agent credentials)
             TRACKER_TO_GATEWAY_TOKEN: "" # CHANGE ME (… → Register gateway)
             REPO_URL: https://github.com/your-org/your-repo.git
             GIT_ACCESS_TOKEN: "" # CHANGE ME (GitHub/GitLab PAT)
@@ -239,12 +239,12 @@ volumes:
 
 ## Wiring it to the tracker
 
-The tracker side needs the bot's **gateway record** pointing at this container,
+The tracker side needs the agent's **gateway record** pointing at this container,
 with the **matching `TRACKER_TO_GATEWAY_TOKEN` and `GATEWAY_TO_TRACKER_TOKEN`**.
 The webhook target is the gateway's `/event` endpoint, e.g.
 `http://gateway-goose:9090/event`.
 
-Register it from the bot's credentials dialog in the admin UI — see
+Register it from the agent's credentials dialog in the admin UI — see
 [Agents](./agents.md). The `TRACKER_TO_GATEWAY_TOKEN` is shown **once** at
 creation time; copy it into the gateway's env (regenerate it if lost).
 
@@ -267,7 +267,7 @@ GET /health → {"ok":true}
 2. `docker compose logs -f gateway-goose` — expect `gateway starting` /
    `gateway listening`. An early `gateway recovery report failed` is fine if the
    API hasn't fully come up yet.
-3. Trigger a `stage_execute` event (assign a task to the bot — see
+3. Trigger a `stage_execute` event (assign a task to the agent — see
    [Agents](./agents.md)). Logs should show `starting goose` followed by
    structured `goose stream` records (the claude adapter logs `agent event`
    instead).

@@ -34,7 +34,7 @@ func NewSweep(
 }
 
 // RunCrashRecovery fails every active task on startup and its parent run
-// (FailRun, reason "crash_recovery"), freeing the bot's scheduler gate after
+// (FailRun, reason "crash_recovery"), freeing the agent's scheduler gate after
 // an API restart. A still-live gateway later reporting complete_stage for
 // such a task is reconciled, not rejected — the controller accepts a late
 // completion whose error_reason is in the recoverable allowlist.

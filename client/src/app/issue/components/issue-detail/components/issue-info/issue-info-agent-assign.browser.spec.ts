@@ -30,11 +30,11 @@ const ISSUE = {
 const RUN: AgentRun = Fixtures.agentRun();
 
 /**
- * The dock assigns the bot server-side. issue-info autosaves the whole form on
+ * The dock assigns the agent server-side. issue-info autosaves the whole form on
  * every change, so if the control kept the old assignee, the next edit of any
- * field would PATCH it back and un-assign the bot.
+ * field would PATCH it back and un-assign the agent.
  */
-describe('IssueInfoComponent — bot assigned from the dock (browser)', () => {
+describe('IssueInfoComponent — agent assigned from the dock (browser)', () => {
     let issueService: { updateIssue: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
@@ -77,7 +77,7 @@ describe('IssueInfoComponent — bot assigned from the dock (browser)', () => {
         return fixture;
     }
 
-    it('syncs the assignee control without saving, so later edits keep the bot', () => {
+    it('syncs the assignee control without saving, so later edits keep the agent', () => {
         const fixture = setup();
         const component = fixture.componentInstance as unknown as {
             onAgentRunCreated: (run: AgentRun) => void;
@@ -91,7 +91,7 @@ describe('IssueInfoComponent — bot assigned from the dock (browser)', () => {
         expect(component.assignedToControl.value).toBe(8);
         expect(issueService.updateIssue).not.toHaveBeenCalled();
 
-        // A later edit of an unrelated field must carry the bot, not the stale null.
+        // A later edit of an unrelated field must carry the agent, not the stale null.
         component.form.patchValue({ title: 'renamed' });
         fixture.detectChanges();
 

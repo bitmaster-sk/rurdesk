@@ -59,7 +59,7 @@ key is rejected on the very next request, not after a cache delay.
   incident.
 - A key never carries administrator rights, even when you are an administrator. Requests
   to the admin endpoints are refused. This is deliberate: with admin rights a leaked key
-  could create a bot and mint that bot's key, which is the same self-perpetuation the
+  could create an agent and mint that agent's key, which is the same self-perpetuation the
   rule above prevents. Use the web interface for admin work.
 - A key cannot raise its own rate limit. Keys run at the standard per-user limit.
 - The number of keys per user is capped. An administrator sets the cap under

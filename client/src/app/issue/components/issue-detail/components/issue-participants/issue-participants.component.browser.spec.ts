@@ -30,7 +30,7 @@ const makeParticipant = (
     idUser: 1,
     name: 'Me',
     colorAvatarBg: '#000',
-    isBot: false,
+    isAgent: false,
     source: ParticipantSource.Creator,
     hasNotificationsEnabled: true,
     ...overrides
@@ -135,14 +135,14 @@ describe('IssueParticipantsComponent — role badges', () => {
         expect(badge?.classList.contains('role-badge--creator')).toBe(true);
     });
 
-    it('assigns bot badge class when isBot is true regardless of source', async () => {
+    it('assigns bot badge class when isAgent is true regardless of source', async () => {
         const { fixture } = await setup({
             participants: [
-                makeParticipant({ idUser: 1, isBot: true, source: ParticipantSource.Creator })
+                makeParticipant({ idUser: 1, isAgent: true, source: ParticipantSource.Creator })
             ],
             currentUserId: 99
         });
         const badge = fixture.nativeElement.querySelector('.role-badge');
-        expect(badge?.classList.contains('role-badge--bot')).toBe(true);
+        expect(badge?.classList.contains('role-badge--agent')).toBe(true);
     });
 });

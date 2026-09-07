@@ -46,7 +46,7 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 	)
 	server.AddTool(
 		mcpgo.NewTool("get_my_issues",
-			mcpgo.WithDescription("List non-final issues assigned to the caller (the bot's current workload)"),
+			mcpgo.WithDescription("List non-final issues assigned to the caller (the agent's current workload)"),
 			mcpgo.WithNumber("project_id", mcpgo.Description("Optional project filter")),
 			mcpgo.WithNumber("limit", mcpgo.Description("Max results (default 50, max 200)")),
 			mcpgo.WithNumber("offset", mcpgo.Description("Skip N results")),

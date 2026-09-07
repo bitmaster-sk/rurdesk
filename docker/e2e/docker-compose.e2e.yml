@@ -42,8 +42,8 @@ services:
             dockerfile: docker/e2e/Dockerfile.stub-gateway
         container_name: e2e_stub_gateway
         restart: "no"
-        # The bot does not exist when this starts, so its tokens arrive at
-        # runtime on /configure — the test posts them after creating the bot.
+        # The agent does not exist when this starts, so its tokens arrive at
+        # runtime on /configure — the test posts them after creating the agent.
         environment:
             TRACKER_URL: http://tracker:1000
             LISTEN_PORT: "9090"

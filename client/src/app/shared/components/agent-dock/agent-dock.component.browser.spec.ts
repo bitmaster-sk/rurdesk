@@ -17,7 +17,7 @@ import { ProjectSkill } from '../../../project/model/project-skill.model';
 import { Skill } from '../../model/skill.model';
 import { AgentDockComponent, AgentDockKind } from './agent-dock.component';
 
-const BOT: User = Fixtures.bot();
+const AGENT: User = Fixtures.agent();
 const SKILLS: Skill[] = [
     Fixtures.skill({ idSkill: 1, name: 'Verification rules' }),
     Fixtures.skill({ idSkill: 2, name: 'TDD' })
@@ -26,7 +26,7 @@ const DEFAULTS: ProjectSkill[] = [{ idProject: 7, idSkill: 1, stage: AgentStage.
 const RUN: AgentRun = Fixtures.agentRun();
 
 const WORKLOAD: AgentOverview = {
-    idUserBot: 8,
+    idUserAgent: 8,
     isBusy: true,
     current: { idIssuePublic: 42, stage: AgentStage.Design },
     queueCount: 3,
@@ -79,7 +79,7 @@ describe('AgentDockComponent (browser)', () => {
         }).compileComponents();
 
         const fixture = TestBed.createComponent(AgentDockComponent);
-        fixture.componentRef.setInput('agent', BOT);
+        fixture.componentRef.setInput('agent', AGENT);
         fixture.componentRef.setInput('kind', kind);
         fixture.componentRef.setInput('idProject', 7);
         fixture.componentRef.setInput('idIssuePublic', 42);
@@ -115,7 +115,7 @@ describe('AgentDockComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(7, 42, {
-            idUserBot: 8,
+            idUserAgent: 8,
             idsSkillByStage: { implementation: [1], design: [2] }
         });
         expect(assigned).toHaveBeenCalledWith(RUN);
@@ -147,7 +147,7 @@ describe('AgentDockComponent (browser)', () => {
         expect(skillApi.load$).not.toHaveBeenCalled();
     });
 
-    it('info mode says so when the bot is running nothing here', async () => {
+    it('info mode says so when the agent is running nothing here', async () => {
         const fixture = await setup(AgentDockKind.Info, {
             ...WORKLOAD,
             current: null,

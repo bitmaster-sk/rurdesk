@@ -29,7 +29,7 @@ type MessageController struct {
 	issueRepo       *repository.IssueRepository
 	agentRunRepo    *repository.AgentRunRepository
 	agentTaskRepo   *repository.AgentTaskRepository
-	botGwRepo       *repository.BotGatewayRepository
+	agentGwRepo     *repository.AgentGatewayRepository
 	participantRepo *repository.IssueParticipantRepository
 	dispatcher      *agent.Dispatcher
 	notifier        *notify.Notifier
@@ -67,13 +67,13 @@ func NewMessageController(
 func (mc *MessageController) WithAgentRun(
 	agentRunRepo *repository.AgentRunRepository,
 	agentTaskRepo *repository.AgentTaskRepository,
-	botGwRepo *repository.BotGatewayRepository,
+	agentGwRepo *repository.AgentGatewayRepository,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
 ) *MessageController {
 	mc.agentRunRepo = agentRunRepo
 	mc.agentTaskRepo = agentTaskRepo
-	mc.botGwRepo = botGwRepo
+	mc.agentGwRepo = agentGwRepo
 	mc.dispatcher = dispatcher
 	mc.notifier = notifier
 	return mc
@@ -227,15 +227,15 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	// Bots may not call POST /message on an issue while the run is paused on the
+	// Agents may not call POST /message on an issue while the run is paused on the
 	// user (awaiting_approval or awaiting_input) — plan submissions go through
 	// submit_plan, clarifications through request_clarification. A raw
 	// post_issue_message in a paused phase indicates a misbehaving model.
-	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil && user.IsBot {
+	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil && user.IsAgent {
 		activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, dto.IdRecipient)
-		if err == nil && activeRun != nil && activeRun.IdUserBot == user.IdUser &&
+		if err == nil && activeRun != nil && activeRun.IdUserAgent == user.IdUser &&
 			(activeRun.Phase == constants.PhaseAwaitingApproval || activeRun.Phase == constants.PhaseAwaitingInput) {
-			_ = c.Error(errs.ErrBotPostWhileRunPaused)
+			_ = c.Error(errs.ErrAgentPostWhileRunPaused)
 			c.Status(http.StatusConflict)
 			return
 		}
@@ -333,8 +333,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 
 	// Send notifications outside the transaction
 	source := ""
-	if isBot, err := mc.userRepo.IsBotUser(ctx, user.IdUser); err == nil && isBot {
-		source = "bot"
+	if isAgent, err := mc.userRepo.IsAgentUser(ctx, user.IdUser); err == nil && isAgent {
+		source = "agent"
 	}
 
 	switch dto.IdMessageRecipientType {
@@ -412,7 +412,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 			}
 
 			// Persistent notifications: send ONLY to notifiable participants
-			// (enabled=true, not a bot), skipping the comment author. Runs
+			// (enabled=true, not an agent), skipping the comment author. Runs
 			// regardless of whether the WS-only members load above succeeded.
 			notifiableIds, notifiableErr := mc.participantRepo.NotifiableUserIds(ctx, dto.IdRecipient)
 			if notifiableErr != nil {
@@ -541,8 +541,8 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 	updatedMsg.IdMessageRecipientType = recipientType
 
 	updateSource := ""
-	if isBot, err := mc.userRepo.IsBotUser(ctx, user.IdUser); err == nil && isBot {
-		updateSource = "bot"
+	if isAgent, err := mc.userRepo.IsAgentUser(ctx, user.IdUser); err == nil && isAgent {
+		updateSource = "agent"
 	}
 
 	switch recipientType {
@@ -611,11 +611,11 @@ func truncate(s string, max int) string {
 // handleAgentRunHook reacts to a user comment on an issue with an active agent
 // run in a passive phase (awaiting_approval or awaiting_input): it enqueues a
 // new agent_task for the same stage as the last completed task and returns
-// the run to queued so the scheduler picks it up. Bot-authored plan/
+// the run to queued so the scheduler picks it up. Agent-authored plan/
 // clarification messages do NOT come through here — those go through
 // submit_plan / request_clarification, which own their own phase transitions.
 func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *model.User, msg *model.Message, idIssue int64) {
-	if author.IsBot {
+	if author.IsAgent {
 		return
 	}
 	if msg.MessageKind != constants.MessageKindComment {
@@ -646,7 +646,7 @@ func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *mod
 	}
 
 	attemptNo := agent.ResolveNextAttemptNo(tasks, lastCompleted.Stage)
-	if _, err := mc.agentTaskRepo.Insert(ctx, activeRun.IdRun, activeRun.IdUserBot, lastCompleted.Stage, attemptNo); err != nil {
+	if _, err := mc.agentTaskRepo.Insert(ctx, activeRun.IdRun, activeRun.IdUserAgent, lastCompleted.Stage, attemptNo); err != nil {
 		return
 	}
 	idUser := author.IdUser

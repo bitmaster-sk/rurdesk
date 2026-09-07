@@ -17,7 +17,7 @@ import (
 )
 
 // ErrInvalidPassword is returned when the current password does not match
-// (or the user cannot use password auth at all, e.g. bots).
+// (or the user cannot use password auth at all, e.g. agents).
 var ErrInvalidPassword = errors.New("invalid password")
 
 const bootstrapLockKey int64 = 2 << 48
@@ -134,13 +134,13 @@ func (s *UserService) Update(ctx context.Context, token string, user model.User,
 
 // ChangePassword verifies the current password and replaces it, then invalidates every
 // other session of the user (keepToken — the caller's current session — stays alive) so
-// a leaked pre-change token cannot outlive the change. Bots are rejected: API keys only.
+// a leaked pre-change token cannot outlive the change. Agents are rejected: API keys only.
 func (s *UserService) ChangePassword(ctx context.Context, idUser int64, currentPassword, newPassword, keepToken string) error {
 	user, err := s.userRepo.LoadUser(ctx, idUser)
 	if err != nil {
 		return fmt.Errorf("loading user %d: %w", idUser, err)
 	}
-	if user.IsBot {
+	if user.IsAgent {
 		return ErrInvalidPassword
 	}
 	if password.Compare(user.Password, currentPassword) != nil {
