@@ -44,4 +44,9 @@ export class ProjectFormWindowComponent {
             ? this.sProject.updateProject(project)
             : this.sProject.insertProject(project);
     }
+
+    /** Partial: opening the window for a new project supplies a bare draft. */
+    public get project(): Partial<Project> {
+        return this.winCfg.data?.project ?? {};
+    }
 }
