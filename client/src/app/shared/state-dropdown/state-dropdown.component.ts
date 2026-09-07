@@ -76,7 +76,12 @@ export class StateDropdownComponent implements ControlValueAccessor, OnChanges {
             this.pendingMultiIds = ids;
             this.multiValue = (this.states ?? []).filter(s => ids.includes(s.idState));
         } else {
-            this.value = typeof value === 'number' ? value : null;
+            this.value =
+                typeof value === 'number'
+                    ? value
+                    : typeof value === 'string' && value !== '' && Number.isFinite(Number(value))
+                      ? Number(value)
+                      : null;
         }
         this.cdr.markForCheck();
     }
