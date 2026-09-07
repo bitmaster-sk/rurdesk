@@ -12,8 +12,3 @@
     // fixed-size avatar squash; tight containers clip it via overflow instead
     flex-shrink: 0;
 }
-
-img {
-    display: block;
-    flex-shrink: 0;
-}

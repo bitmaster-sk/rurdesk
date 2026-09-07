@@ -37,7 +37,6 @@ type UserDropdownValue = number | number[] | null;
 export class UserDropdownComponent implements ControlValueAccessor {
     public readonly multi = input(false);
     public readonly filter = input(false);
-    public readonly appendTo = input<string | null>(null);
     public readonly users = input<User[]>([]);
     public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
 

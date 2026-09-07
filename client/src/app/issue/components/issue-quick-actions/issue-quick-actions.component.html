@@ -60,7 +60,6 @@
                             <app-user-dropdown
                                 [users]="users()"
                                 [filter]="true"
-                                appendTo="body"
                                 [ngModel]="issue()!.assignedTo"
                                 (ngModelChange)="onAssigneeChange($event)"
                             ></app-user-dropdown>
