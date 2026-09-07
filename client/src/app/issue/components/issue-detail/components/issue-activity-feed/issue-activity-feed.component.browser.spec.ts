@@ -177,12 +177,12 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         const comp = fixture.componentInstance;
         expect(comp.agentCreator()).toBeNull();
 
-        const bot = makeUser(7, 'Kimi');
+        const agent = makeUser(7, 'Kimi');
         (comp as unknown as { usersMap: { set: (m: Map<number, User>) => void } }).usersMap.set(
-            new Map([[7, bot]])
+            new Map([[7, agent]])
         );
 
-        expect(comp.agentCreator()).toBe(bot);
+        expect(comp.agentCreator()).toBe(agent);
     });
 
     it('offers only the comment and time chips', () => {

@@ -127,7 +127,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     // idMessage of the most recent plan-kind comment in the thread. Used by the
     // template to scope the Approve button to a single comment even after a
     // revision adds another plan message — without this, every plan-prefixed
-    // bot message in history would render Approve while the run is awaiting
+    // agent message in history would render Approve while the run is awaiting
     // approval.
     public readonly idLatestPlanMessage = computed<number | null>(() => {
         let latestId: number | null = null;

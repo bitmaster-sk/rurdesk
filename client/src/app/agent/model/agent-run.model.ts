@@ -30,7 +30,7 @@ export interface AgentStageProgress {
     status: AgentStageStatus;
     note?: string; // semantic token: no_clarifications | submitted | pr_opened
     attemptNo?: number;
-    idUserBot?: number; // which bot executed this stage (provenance)
+    idUserBot?: number; // which agent executed this stage (provenance)
     at?: string | null; // finishedAt (done/failed) or startedAt (active)
     approvedAt?: string | null;
     errorReason?: string | null; // stable code (AGENT.ERROR.*), set on a failed stage

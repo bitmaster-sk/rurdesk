@@ -57,11 +57,11 @@ export abstract class Fixtures {
         };
     }
 
-    public static bot(overrides: Partial<User> = {}): User {
+    public static agent(overrides: Partial<User> = {}): User {
         return Fixtures.user({
             idUser: 8,
-            name: 'ci-bot',
-            email: 'ci-bot@test.sk',
+            name: 'ci-agent',
+            email: 'ci-agent@test.sk',
             isBot: true,
             ...overrides
         });

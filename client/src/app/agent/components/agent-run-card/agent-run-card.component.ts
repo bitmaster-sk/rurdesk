@@ -39,7 +39,7 @@ interface TimelineRow {
     glyph: string; // tabler icon name for the status
     noteKey: string | null; // i18n key for the outcome note
     attemptNo: number | null;
-    botName: string | null; // executor bot — only surfaced when a hand-off occurred
+    agentName: string | null; // executor agent — only surfaced when a hand-off occurred
     at: string | null;
     approvedAt: string | null;
 }
@@ -166,13 +166,13 @@ export class AgentRunCardComponent {
 
     protected readonly timeline = computed<TimelineRow[]>(() => {
         const stages = this.run()?.stages ?? [];
-        // Bot provenance is only meaningful after a hand-off — i.e. when more
-        // than one distinct bot executed stages. For single-bot runs the label
+        // Agent provenance is only meaningful after a hand-off — i.e. when more
+        // than one distinct agent executed stages. For single-agent runs the label
         // would be noise, so we suppress it.
-        const distinctBots = new Set(
+        const distinctAgents = new Set(
             stages.map(s => s.idUserBot).filter((id): id is number => id != null)
         );
-        const showBot = distinctBots.size > 1;
+        const showAgent = distinctAgents.size > 1;
         const users = this.usersMap();
         return stages.map((s: AgentStageProgress) => ({
             label: this.stageLabel[s.stage] ?? s.stage,
@@ -181,7 +181,8 @@ export class AgentRunCardComponent {
             glyph: STAGE_STATUS_GLYPH[s.status] ?? 'circle',
             noteKey: s.note ? (STAGE_NOTE_KEY[s.note] ?? null) : null,
             attemptNo: s.attemptNo && s.attemptNo > 1 ? s.attemptNo : null,
-            botName: showBot && s.idUserBot != null ? (users.get(s.idUserBot)?.name ?? null) : null,
+            agentName:
+                showAgent && s.idUserBot != null ? (users.get(s.idUserBot)?.name ?? null) : null,
             at: s.at ?? null,
             approvedAt: s.approvedAt ?? null
         }));

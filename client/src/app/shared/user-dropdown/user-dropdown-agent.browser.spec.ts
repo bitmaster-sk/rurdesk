@@ -13,7 +13,7 @@ import { UserDropdownComponent } from './user-dropdown.component';
 
 const ADA: User = Fixtures.user({ idUser: 1, name: 'Ada' });
 const ZOE: User = Fixtures.user({ idUser: 2, name: 'Zoe' });
-const BOT: User = Fixtures.bot();
+const AGENT: User = Fixtures.agent();
 const RUN: AgentRun = Fixtures.agentRun();
 
 const OVERVIEW: AgentOverview[] = [
@@ -61,7 +61,7 @@ abstract class Dom {
     }
 }
 
-describe('UserDropdownComponent bot features (browser)', () => {
+describe('UserDropdownComponent agent features (browser)', () => {
     let agentRunApi: { agentsOverview$: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
@@ -86,17 +86,17 @@ describe('UserDropdownComponent bot features (browser)', () => {
             .compileComponents();
     });
 
-    function setup(users: User[] = [BOT, ZOE, ADA]) {
+    function setup(users: User[] = [AGENT, ZOE, ADA]) {
         const fixture = TestBed.createComponent(HostComponent);
         fixture.componentInstance.users.set(users);
         fixture.detectChanges();
         return fixture;
     }
 
-    it('sorts bots after humans, by name inside each group', () => {
+    it('sorts agents after humans, by name inside each group', () => {
         const fixture = setup();
 
-        expect(Dom.names(fixture)).toEqual(['Ada', 'Zoe', 'ci-bot']);
+        expect(Dom.names(fixture)).toEqual(['Ada', 'Zoe', 'ci-agent']);
     });
 
     it('renders members that arrive after the first render', () => {
@@ -106,10 +106,10 @@ describe('UserDropdownComponent bot features (browser)', () => {
         const fixture = setup([]);
         expect(Dom.names(fixture)).toEqual([]);
 
-        fixture.componentInstance.users.set([BOT, ADA]);
+        fixture.componentInstance.users.set([AGENT, ADA]);
         fixture.detectChanges();
 
-        expect(Dom.names(fixture)).toEqual(['Ada', 'ci-bot']);
+        expect(Dom.names(fixture)).toEqual(['Ada', 'ci-agent']);
     });
 
     it('loads the workload only when the panel opens', () => {

@@ -143,6 +143,6 @@ describe('IssueParticipantsComponent — role badges', () => {
             currentUserId: 99
         });
         const badge = fixture.nativeElement.querySelector('.role-badge');
-        expect(badge?.classList.contains('role-badge--bot')).toBe(true);
+        expect(badge?.classList.contains('role-badge--agent')).toBe(true);
     });
 });
