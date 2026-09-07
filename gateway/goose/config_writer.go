@@ -62,15 +62,15 @@ func gooseConfigDir() string {
 }
 
 // writeGooseConfig writes <configDir>/config.yaml with the tracker streamable-
-// HTTP MCP server pointed at mcpURL and carrying the literal bot bearer token.
+// HTTP MCP server pointed at mcpURL and carrying the literal agent bearer token.
 // Called once per run (the URL differs by stage), overwriting any previous
 // config. Mode 0o600 since the file holds the bearer token.
-func writeGooseConfig(configDir, mcpURL, botKey string) (string, error) {
+func writeGooseConfig(configDir, mcpURL, agentKey string) (string, error) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", fmt.Errorf("creating goose config dir: %w", err)
 	}
 	path := filepath.Join(configDir, "config.yaml")
-	content := fmt.Sprintf(gooseConfigTemplate, mcpURL, botKey)
+	content := fmt.Sprintf(gooseConfigTemplate, mcpURL, agentKey)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("writing goose config.yaml: %w", err)
 	}

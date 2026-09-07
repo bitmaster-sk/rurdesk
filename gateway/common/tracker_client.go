@@ -155,7 +155,7 @@ func (tc *TrackerClient) signRequest(req *http.Request, body []byte) {
 	mac.Write([]byte(payload))
 	sig := fmt.Sprintf("t=%d,v1=%s", ts, hex.EncodeToString(mac.Sum(nil)))
 
-	req.Header.Set("Authorization", tc.cfg.BotApiKey)
+	req.Header.Set("Authorization", tc.cfg.AgentApiKey)
 	req.Header.Set("X-Tracker-Signature", sig)
 	req.Header.Set("X-Tracker-Event-Id", fmt.Sprintf("%d", time.Now().UnixNano()))
 }

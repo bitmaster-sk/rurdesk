@@ -49,7 +49,7 @@ func main() {
 	// a tracker not yet up at gateway start still gets the signal promptly,
 	// instead of waiting ~10min for the heartbeat sweep. GatewayRecovered is
 	// idempotent except in one window: if the first call succeeded but its
-	// response was lost, the retry's FailActiveForBot could fail a task
+	// response was lost, the retry's FailActiveForAgent could fail a task
 	// dispatched since then. Accepted for now. Stops on first success, on
 	// shutdown, or after the attempt cap (heartbeat sweep is the backstop);
 	// never blocks server start.
