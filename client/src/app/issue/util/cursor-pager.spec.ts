@@ -3,17 +3,14 @@ import { Subject, of, throwError } from 'rxjs';
 import { CursorPager } from './cursor-pager';
 import { IssuesPage } from '../model/issues-page.model';
 import { Issue } from '../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 
-const issue = (idIssuePublic: number): Issue => ({
-    idIssue: idIssuePublic,
-    idIssuePublic,
-    idProject: 1,
-    idState: null,
-    idSeverity: null,
-    title: `Issue ${idIssuePublic}`,
-    description: '',
-    tracked: 0
-});
+const issue = (idIssuePublic: number): Issue =>
+    Fixtures.issue({
+        idIssue: idIssuePublic,
+        idIssuePublic,
+        title: `Issue ${idIssuePublic}`
+    });
 
 const page = (ids: number[], next: string | null, total: number): IssuesPage => ({
     items: ids.map(issue),
@@ -100,6 +97,27 @@ describe('CursorPager', () => {
 
         pager.reset();
         expect(pager.items().map(i => i.idIssuePublic)).toEqual([1, 2]);
+    });
+
+    it('reports hasLoaded only once a first page has arrived', () => {
+        const pager = new CursorPager(() => of(page([1, 2], null, 2)));
+        expect(pager.hasLoaded()).toBe(false);
+
+        pager.reset();
+
+        expect(pager.hasLoaded()).toBe(true);
+    });
+
+    // The table shows its loading row until hasLoaded flips, so a failed first
+    // request that left it false would spin forever.
+    it('reports hasLoaded when the first page fails', () => {
+        const pager = new CursorPager(() => throwError(() => new Error('boom')));
+
+        pager.reset();
+
+        expect(pager.hasLoaded()).toBe(true);
+        expect(pager.isLoading()).toBe(false);
+        expect(pager.items()).toEqual([]);
     });
 
     // A filter or sort change resets the pager; a loadMore already in flight must

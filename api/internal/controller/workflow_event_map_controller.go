@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -32,6 +33,7 @@ func NewWorkflowEventMapController(
 func (ctrl *WorkflowEventMapController) GetMappings(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -40,7 +42,7 @@ func (ctrl *WorkflowEventMapController) GetMappings(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -58,6 +60,7 @@ func (ctrl *WorkflowEventMapController) GetMappings(c *gin.Context) {
 func (ctrl *WorkflowEventMapController) ReplaceMappings(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
+		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -66,7 +69,7 @@ func (ctrl *WorkflowEventMapController) ReplaceMappings(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanManageWorkflowEventMap(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -90,7 +93,8 @@ func (ctrl *WorkflowEventMapController) ReplaceMappings(c *gin.Context) {
 		}
 		state, stateErr := ctrl.stateRepo.LoadState(ctx, idProject, *entry.IdState)
 		if stateErr != nil || state == nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "state not found or does not belong to this project"})
+			_ = c.Error(errs.ErrBadRequest.WithMessage("state not found or does not belong to this project"))
+			c.Status(http.StatusBadRequest)
 			return
 		}
 	}

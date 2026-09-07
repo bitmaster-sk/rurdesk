@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -11,20 +12,23 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/viper"
 )
 
 // MergePoller polls GitHost.GetMergeRequestStatus for runs in pr_open phase,
 // advancing them to merged or failed based on PR state. Runs as a background
 // goroutine on a 60s interval.
 type MergePoller struct {
-	agentRunRepo  *repository.AgentRunRepository
-	agentTaskRepo *repository.AgentTaskRepository
-	projectRepo   *repository.ProjectRepository
-	gitIntRepo    *repository.GitIntegrationRepository
-	issueRepo     *repository.IssueRepository
-	stateRepo     *repository.StateRepository
-	mirror        *WorkflowEventMirror
-	notifier      *notify.Notifier
+	agentRunRepo     *repository.AgentRunRepository
+	agentTaskRepo    *repository.AgentTaskRepository
+	projectRepo      *repository.ProjectRepository
+	gitIntRepo       *repository.GitIntegrationRepository
+	issueRepo        *repository.IssueRepository
+	stateRepo        *repository.StateRepository
+	transitioner     *PhaseStateTransitioner
+	notifier         *notify.Notifier
+	lastMrStatus     map[int64]*githost.Status
+	lastMrStatusLock sync.Mutex
 }
 
 func NewMergePoller(
@@ -34,23 +38,29 @@ func NewMergePoller(
 	gitIntRepo *repository.GitIntegrationRepository,
 	issueRepo *repository.IssueRepository,
 	stateRepo *repository.StateRepository,
-	mirror *WorkflowEventMirror,
+	transitioner *PhaseStateTransitioner,
 	notifier *notify.Notifier,
 ) *MergePoller {
 	return &MergePoller{
-		agentRunRepo:  agentRunRepo,
-		agentTaskRepo: agentTaskRepo,
-		projectRepo:   projectRepo,
-		gitIntRepo:    gitIntRepo,
-		issueRepo:     issueRepo,
-		stateRepo:     stateRepo,
-		mirror:        mirror,
-		notifier:      notifier,
+		agentRunRepo:     agentRunRepo,
+		agentTaskRepo:    agentTaskRepo,
+		projectRepo:      projectRepo,
+		gitIntRepo:       gitIntRepo,
+		issueRepo:        issueRepo,
+		stateRepo:        stateRepo,
+		transitioner:     transitioner,
+		notifier:         notifier,
+		lastMrStatus:     make(map[int64]*githost.Status),
+		lastMrStatusLock: sync.Mutex{},
 	}
 }
 
 func (p *MergePoller) Start(ctx context.Context) {
-	ticker := time.NewTicker(60 * time.Second)
+	interval := viper.GetDuration("MERGE_POLL_INTERVAL")
+	if interval <= 0 {
+		interval = constants.DefaultMergePollInterval
+	}
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -106,7 +116,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				continue
 			}
 			p.notifyRunUpdate(updated)
-			BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, run.IdIssue)
+			p.broadcastRunMrStatus(ctx, run, status)
 			merged++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to done")
 
@@ -120,7 +130,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 				log.Error().Err(setErr).Int64("idRun", run.IdRun).Msg("merge poller: failed to set error message")
 			}
 			p.notifyRunUpdate(updated)
-			BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, run.IdIssue)
+			p.broadcastRunMrStatus(ctx, run, status)
 			closed++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
 
@@ -143,6 +153,23 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 
 func (p *MergePoller) notifyRunUpdate(run *model.AgentRun) {
 	BroadcastRunUpdate(context.Background(), p.notifier, p.projectRepo, p.agentRunRepo, p.agentTaskRepo, run)
+}
+
+// broadcastRunMrStatus sends the final MR status of a run whose PR merged or
+// closed. The run notice carries no MR state, so the badge needs this one.
+func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.AgentRun, status *githost.Status) {
+	issue, err := p.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &run.IdIssue})
+	if err != nil || issue == nil {
+		log.Debug().Err(err).Int64("idRun", run.IdRun).Int64("idIssue", run.IdIssue).
+			Msg("merge poller: issue load failed, skipping mr status broadcast")
+		return
+	}
+
+	p.lastMrStatusLock.Lock()
+	delete(p.lastMrStatus, issue.IdIssue)
+	p.lastMrStatusLock.Unlock()
+
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, issue, status)
 }
 
 func (p *MergePoller) hostFor(ctx context.Context, encKey []byte, idGitIntegration, idProject int64) (githost.GitHost, error) {
@@ -191,7 +218,15 @@ func (p *MergePoller) pollManualMrs(ctx context.Context, encKey []byte) {
 					Msg("merge poller: manual mr status")
 				continue
 			}
-			p.HandleManualMrStatus(ctx, iss, status)
+			if status.State != constants.MrStateOpen {
+				p.lastMrStatusLock.Lock()
+				delete(p.lastMrStatus, iss.IdIssue)
+				p.lastMrStatusLock.Unlock()
+
+				p.HandleManualMrStatus(ctx, iss, status)
+				continue
+			}
+			p.broadcastMrStatusIfChanged(ctx, iss, status)
 		}
 
 		processed += len(issues)
@@ -213,32 +248,62 @@ func (p *MergePoller) pollManualMrs(ctx context.Context, encKey []byte) {
 	}
 }
 
-// HandleManualMrStatus stamps a terminal PR outcome exactly once and, on merge,
-// emits the done event so the workflow mapping moves the task — unless the task
-// already sits in a final state (pre-existing merges must not reopen closed work).
+// broadcastMrStatusIfChanged emits a SubjectMrStatus notice only when the
+// latest host status differs from the last one we broadcast for this issue.
+// A process restart loses the cache, so the next poll that sees a status simply
+// rebroadcasts once. Memory-only caching is enough: no database write is
+// needed and the poller is already the authoritative reader.
+func (p *MergePoller) broadcastMrStatusIfChanged(ctx context.Context, iss *model.Issue, status *githost.Status) {
+	p.lastMrStatusLock.Lock()
+
+	last := p.lastMrStatus[iss.IdIssue]
+	if last != nil && last.CiStatus == status.CiStatus && last.Approved == status.Approved && last.HeadSHA == status.HeadSHA {
+		p.lastMrStatusLock.Unlock()
+		return
+	}
+
+	p.lastMrStatus[iss.IdIssue] = &githost.Status{
+		State:    status.State,
+		Approved: status.Approved,
+		CiStatus: status.CiStatus,
+		WebUrl:   status.WebUrl,
+		HeadSHA:  status.HeadSHA,
+	}
+	p.lastMrStatusLock.Unlock()
+
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, iss, status)
+}
+
+// HandleManualMrStatus stamps a terminal PR outcome once and emits done on merge or failed on a close without merge.
 func (p *MergePoller) HandleManualMrStatus(ctx context.Context, iss *model.Issue, status *githost.Status) {
+	var event string
 	switch status.State {
 	case "merged":
-		final, err := p.isFinalState(ctx, iss)
-		if err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).
-				Msg("merge poller: checking final state before stamping merge")
-			return
-		}
-		if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, "merged"); err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).Msg("merge poller: set mr_state merged")
-			return
-		}
-		if final {
-			return
-		}
-		p.mirror.ApplyMirror(ctx, iss.IdProject, iss.IdIssue, constants.PhaseDone)
-		BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, iss.IdIssue)
+		event = constants.PhaseDone
 	case "closed":
-		if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, "closed"); err != nil {
-			log.Error().Err(err).Int64("idIssue", iss.IdIssue).Msg("merge poller: set mr_state closed")
-		}
+		event = constants.PhaseFailed
+	default:
+		return
 	}
+
+	final, err := p.isFinalState(ctx, iss)
+	if err != nil {
+		log.Error().Err(err).Int64("idIssue", iss.IdIssue).
+			Msg("merge poller: checking final state before stamping manual mr outcome")
+		return
+	}
+	if err := p.issueRepo.SetMrState(ctx, iss.IdIssue, status.State); err != nil {
+		log.Error().Err(err).Int64("idIssue", iss.IdIssue).Str("mrState", status.State).
+			Msg("merge poller: set mr_state")
+		return
+	}
+	if !final {
+		p.transitioner.Transition(ctx, iss.IdProject, iss.IdIssue, event)
+	}
+	// Unconditional: the caller already dropped this issue from lastMrStatus,
+	// so the change-gated broadcast would never fire here.
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, iss, status)
+	BroadcastIssueUpdate(ctx, p.notifier, p.issueRepo, p.projectRepo, iss.IdIssue)
 }
 
 // isFinalState reports whether iss currently sits in a final state. A load

@@ -15,12 +15,7 @@ import { DestroyRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { startOfDay } from 'date-fns';
-import {
-    UI_DATETIME_PATTERN,
-    UI_DATE_PATTERN,
-    uiFormatDate,
-    uiParseDate
-} from '../util/ui-date-format';
+import { UI_DATETIME_PATTERN, UI_DATE_PATTERN, UiDate } from '../util/ui-date';
 
 // Type-only imports (no runtime cost — flatpickr itself is loaded lazily).
 type FlatpickrInstance = import('flatpickr/dist/types/instance').Instance;
@@ -154,8 +149,8 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
             time_24hr: false, // locale/12h
             mode: isRange ? 'range' : 'single',
             inline: this.inline(),
-            formatDate: (date: Date) => uiFormatDate(date, pattern),
-            parseDate: (str: string) => uiParseDate(str, pattern),
+            formatDate: (date: Date) => UiDate.format(date, pattern),
+            parseDate: (str: string) => UiDate.parse(str, pattern),
             onChange: (selectedDates: Date[]) => this.zone.run(() => this.emit(selectedDates)),
             onClose: (selectedDates: Date[]) =>
                 this.zone.run(() => this.handleClose(selectedDates)),

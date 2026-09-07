@@ -1,5 +1,6 @@
 import { GanttCascadeService } from './gantt-cascade.service';
 import { Issue } from '../../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
@@ -14,18 +15,13 @@ describe('GanttCascadeService', () => {
     });
 
     function makeIssue(id: number, scheduledAt: string, estimated: number): Issue {
-        return {
+        return Fixtures.issue({
             idIssue: id,
             idIssuePublic: id,
-            idProject: 1,
-            idState: null,
-            idSeverity: null,
             title: `Issue ${id}`,
-            description: '',
-            tracked: 0,
             estimated,
             scheduledAt: new Date(scheduledAt)
-        };
+        });
     }
 
     function makeRelation(

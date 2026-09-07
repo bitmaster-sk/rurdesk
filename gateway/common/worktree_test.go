@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -248,5 +249,41 @@ func TestRepoSlugFromURL(t *testing.T) {
 				t.Errorf("RepoSlugFromURL(%q) = %q, want %q", tc.url, got, tc.want)
 			}
 		})
+	}
+}
+
+// prePushBranchPattern reads the branch regex from the hook file itself.
+func prePushBranchPattern(t *testing.T) string {
+	t.Helper()
+	hook, err := os.ReadFile(filepath.Join("git-hooks", "pre-push"))
+	if err != nil {
+		t.Fatalf("reading pre-push hook: %v", err)
+	}
+	for _, line := range strings.Split(string(hook), "\n") {
+		_, rest, found := strings.Cut(line, "=~ ")
+		if !found {
+			continue
+		}
+		pattern, _, ok := strings.Cut(rest, " ]]")
+		if !ok {
+			continue
+		}
+		return pattern
+	}
+	t.Fatal("no branch pattern (=~ ...) found in git-hooks/pre-push")
+	return ""
+}
+
+func TestGenerateBranchName_MatchesPrePushHook(t *testing.T) {
+	pattern := prePushBranchPattern(t)
+	matcher := regexp.MustCompile(pattern)
+
+	branch := GenerateBranchName(2, 30)
+	if !matcher.MatchString(branch) {
+		t.Errorf("GenerateBranchName(2, 30) = %q, which the pre-push hook pattern %q rejects", branch, pattern)
+	}
+
+	if matcher.MatchString("agent/b2/i30/1788794379") {
+		t.Errorf("pre-push pattern %q still accepts the legacy agent/b prefix", pattern)
 	}
 }

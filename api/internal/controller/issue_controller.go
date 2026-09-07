@@ -11,6 +11,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
@@ -33,7 +34,7 @@ type IssueController struct {
 	gitIntRepo          *repository.GitIntegrationRepository
 	agentRunRepo        *repository.AgentRunRepository
 	agentTaskRepo       *repository.AgentTaskRepository
-	botGwRepo           *repository.BotGatewayRepository
+	agentGwRepo         *repository.AgentGatewayRepository
 	projectSkillService *service.ProjectSkillService
 	participantRepo     *repository.IssueParticipantRepository
 	dispatcher          *agent.Dispatcher
@@ -78,7 +79,7 @@ func (ic *IssueController) WithGitIntRepo(repo *repository.GitIntegrationReposit
 func (ic *IssueController) WithAgentRun(
 	agentRunRepo *repository.AgentRunRepository,
 	agentTaskRepo *repository.AgentTaskRepository,
-	botGwRepo *repository.BotGatewayRepository,
+	agentGwRepo *repository.AgentGatewayRepository,
 	projectSkillService *service.ProjectSkillService,
 	stagePlan *service.StagePlanService,
 	dispatcher *agent.Dispatcher,
@@ -86,7 +87,7 @@ func (ic *IssueController) WithAgentRun(
 ) *IssueController {
 	ic.agentRunRepo = agentRunRepo
 	ic.agentTaskRepo = agentTaskRepo
-	ic.botGwRepo = botGwRepo
+	ic.agentGwRepo = agentGwRepo
 	ic.projectSkillService = projectSkillService
 	ic.stagePlan = stagePlan
 	ic.dispatcher = dispatcher
@@ -106,7 +107,7 @@ func (ic *IssueController) GetIssues(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -184,7 +185,7 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ic.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -201,17 +202,17 @@ func (ic *IssueController) GetIssue(c *gin.Context) {
 func (ic *IssueController) validateIssueRefsInProject(ctx context.Context, idProject int64, idState, idSeverity, idIssueType *int64) error {
 	if idState != nil {
 		if _, err := ic.stateRepo.LoadState(ctx, idProject, *idState); err != nil {
-			return errStateNotInProject
+			return errs.ErrStateNotInProject
 		}
 	}
 	if idSeverity != nil {
 		if _, err := ic.severityRepo.LoadSeverity(ctx, idProject, *idSeverity); err != nil {
-			return errSeverityNotInProject
+			return errs.ErrSeverityNotInProject
 		}
 	}
 	if idIssueType != nil {
 		if _, err := ic.issueTypeRepo.LoadIssueType(ctx, idProject, *idIssueType); err != nil {
-			return errIssueTypeNotInProject
+			return errs.ErrIssueTypeNotInProject
 		}
 	}
 	return nil
@@ -259,11 +260,11 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 	var result *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanCreateIssue(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if dto.AssignedTo != nil {
 			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo, dto.IdProject) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity, dto.IdIssueType); err != nil {
@@ -299,12 +300,12 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		}
 		return nil
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -325,10 +326,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		return
 	}
 
-	// No prior assignee, so handleBotAssignment takes its first-assignment path
-	// when the new issue is bot-assigned.
+	// No prior assignee, so handleAgentAssignment takes its first-assignment path
+	// when the new issue is agent-assigned.
 	if ic.dispatcher != nil && result != nil {
-		ic.handleBotAssignment(ctx, &model.Issue{}, result)
+		ic.handleAgentAssignment(ctx, &model.Issue{}, result)
 	}
 
 	// Broadcast so other project members' open views pick it up live.
@@ -374,11 +375,11 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	var oldIssue *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		if dto.AssignedTo.Value != nil {
 			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
-				return errForbidden
+				return errs.ErrForbidden
 			}
 		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value, dto.IdIssueType.Value); err != nil {
@@ -396,7 +397,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 
 		// Both-or-neither: MR link fields must move together.
 		if (idGitIntegration == nil) != (mrId == nil) {
-			return errInvalidMrLink
+			return errs.ErrInvalidMrLink
 		}
 		if dto.IdGitIntegration.IsDefined && dto.IdGitIntegration.Value != nil && ic.gitIntRepo != nil {
 			gi, loadErr := ic.gitIntRepo.LoadByID(ctx, *dto.IdGitIntegration.Value, dto.IdProject)
@@ -404,17 +405,17 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return loadErr
 			}
 			if gi == nil {
-				return errGitIntegrationNotFound
+				return errs.ErrGitIntegrationNotFound
 			}
 		}
 
-		// A bot with no configured gateway can't be assigned.
-		if ic.botGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
+		// An agent with no configured gateway can't be assigned.
+		if ic.agentGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
 			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
-			if loadErr == nil && assignee.IsBot {
-				gw, gwErr := ic.botGwRepo.LoadByBotUser(ctx, assignee.IdUser)
+			if loadErr == nil && assignee.IsAgent {
+				gw, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
-					return errBotNoGateway
+					return errs.ErrAgentNoGateway
 				}
 			}
 		}
@@ -443,28 +444,28 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 		return nil
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errInvalidMrLink {
-		_ = c.Error(errInvalidMrLink)
+	if err == errs.ErrInvalidMrLink {
+		_ = c.Error(errs.ErrInvalidMrLink)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errGitIntegrationNotFound {
-		_ = c.Error(errGitIntegrationNotFound)
+	if err == errs.ErrGitIntegrationNotFound {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if err == errBotNoGateway {
-		_ = c.Error(errBotNoGateway)
+	if err == errs.ErrAgentNoGateway {
+		_ = c.Error(errs.ErrAgentNoGateway)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -483,7 +484,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	}
 
 	if ic.dispatcher != nil && oldIssue != nil {
-		ic.handleBotAssignment(ctx, oldIssue, result)
+		ic.handleAgentAssignment(ctx, oldIssue, result)
 	}
 
 	// An assignee change may have added a participant inside the tx above;
@@ -515,12 +516,14 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 
 	var dto model.CreateAgentRunReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
 		return
 	}
 	for stage := range dto.IdsSkillByStage {
 		if !constants.IsSkillStage(stage) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "unknown stage: " + stage})
+			_ = c.Error(errs.ErrBadRequest.WithMessage("unknown stage: " + stage))
+			c.Status(http.StatusBadRequest)
 			return
 		}
 	}
@@ -528,7 +531,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -540,32 +543,32 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 	if issue == nil {
-		_ = c.Error(errNotFound)
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
 
-	bot, err := ic.userRepo.LoadUser(ctx, dto.IdUserBot)
-	if err != nil || bot == nil {
-		_ = c.Error(errNotFound)
+	agentUser, err := ic.userRepo.LoadUser(ctx, dto.IdUserAgent)
+	if err != nil || agentUser == nil {
+		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
 	}
-	if !bot.IsBot {
-		_ = c.Error(errNotABot)
+	if !agentUser.IsAgent {
+		_ = c.Error(errs.ErrNotAnAgent)
 		c.Status(http.StatusBadRequest)
 		return
 	}
 	// Same gate as the EditIssue assignee path: without it this endpoint could
 	// hand a project's issue to an agent that cannot even read the project.
-	if !ic.acl.CanReadProject(ctx, bot.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+	if !ic.acl.CanReadProject(ctx, agentUser.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	gateway, gwErr := ic.botGwRepo.LoadByBotUser(ctx, bot.IdUser)
+	gateway, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, agentUser.IdUser)
 	if gwErr != nil || gateway == nil {
-		_ = c.Error(errBotNoGateway)
+		_ = c.Error(errs.ErrAgentNoGateway)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -577,7 +580,8 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		return
 	}
 	if existing != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run; hand it over by changing the assignee instead"})
+		_ = c.Error(errs.ErrIssueHasActiveRun)
+		c.Status(http.StatusConflict)
 		return
 	}
 
@@ -588,7 +592,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	var updated *model.Issue
 	var run *model.AgentRun
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
-		issue.AssignedTo = &bot.IdUser
+		issue.AssignedTo = &agentUser.IdUser
 		issue.UpdateBy = user.IdUser
 
 		var txErr error
@@ -596,21 +600,22 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		if txErr != nil {
 			return txErr
 		}
-		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, bot.IdUser, "assignee", &user.IdUser); txErr != nil {
+		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, agentUser.IdUser, "assignee", &user.IdUser); txErr != nil {
 			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
 		}
 		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage)
 		if txErr != nil {
 			return txErr
 		}
-		run, txErr = ic.agentRunRepo.Insert(ctx, issue.IdIssue, bot.IdUser, idProject, stagePlan)
+		run, txErr = ic.agentRunRepo.Insert(ctx, issue.IdIssue, agentUser.IdUser, idProject, stagePlan)
 		return txErr
 	})
 	if err != nil {
 		// The partial unique index backstops a race with the EditIssue path.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			c.JSON(http.StatusConflict, gin.H{"error": "issue already has an active run"})
+			_ = c.Error(errs.ErrIssueHasActiveRun.WithMessage("issue already has an active run"))
+			c.Status(http.StatusConflict)
 			return
 		}
 		_ = c.Error(err)
@@ -629,32 +634,32 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	c.JSON(http.StatusOK, run)
 }
 
-func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, newIssue *model.Issue) {
+func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, newIssue *model.Issue) {
 	if int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) {
 		return
 	}
 
 	// An assignee change never cancels the run — completed stages are kept for
 	// resume/hand-off. The scheduler gates on issue.assigned_to ==
-	// run.id_user_bot, so a run parks when the issue leaves its bot and resumes
+	// run.id_user_agent, so a run parks when the issue leaves its agentUser and resumes
 	// when it returns (or is re-pointed below). Only Cancel truly cancels a run.
 	existing, _ := ic.agentRunRepo.LoadActiveByIssue(ctx, newIssue.IdIssue)
 
-	// Moving away from a bot aborts its in-flight stage: the gateway subprocess
+	// Moving away from an agentUser aborts its in-flight stage: the gateway subprocess
 	// stops and the half-finished stage is discarded (redone by whoever picks
 	// the run up next). Completed stages and the run phase are untouched.
 	if oldIssue.AssignedTo != nil && existing != nil {
 		oldUser, err := ic.userRepo.LoadUser(ctx, *oldIssue.AssignedTo)
-		if err == nil && oldUser.IsBot {
-			_ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
-			runForAbort := existing // still points at the old bot
+		if err == nil && oldUser.IsAgent {
+			_, _ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			runForAbort := existing // still points at the old agent
 			go func() {
 				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort)
 			}()
 		}
 	}
 
-	// New assignee isn't a bot — nothing to route; the gate parks the run.
+	// New assignee isn't an agentUser — nothing to route; the gate parks the run.
 	if newIssue.AssignedTo == nil {
 		if existing != nil {
 			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
@@ -662,15 +667,15 @@ func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, ne
 		return
 	}
 	newUser, err := ic.userRepo.LoadUser(ctx, *newIssue.AssignedTo)
-	if err != nil || !newUser.IsBot {
+	if err != nil || !newUser.IsAgent {
 		if existing != nil {
 			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
 		return
 	}
-	gateway, err := ic.botGwRepo.LoadByBotUser(ctx, newUser.IdUser)
+	gateway, err := ic.agentGwRepo.LoadByAgentUser(ctx, newUser.IdUser)
 	if err != nil || gateway == nil {
-		// Bot has no gateway — can't route; broadcast so the client sees the
+		// Agent has no gateway — can't route; broadcast so the client sees the
 		// run parked instead of silently dropping the update.
 		if existing != nil {
 			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
@@ -678,12 +683,12 @@ func (ic *IssueController) handleBotAssignment(ctx context.Context, oldIssue, ne
 		return
 	}
 
-	// Resume/hand-off: re-point the existing non-terminal run to the new bot,
+	// Resume/hand-off: re-point the existing non-terminal run to the new agent,
 	// keeping completed stages; the scheduler dispatches the next stage.
 	if existing != nil {
 		updated := existing
-		if existing.IdUserBot != newUser.IdUser {
-			if reassigned, rerr := ic.agentRunRepo.ReassignBot(ctx, existing.IdRun, newUser.IdUser); rerr == nil && reassigned != nil {
+		if existing.IdUserAgent != newUser.IdUser {
+			if reassigned, rerr := ic.agentRunRepo.ReassignAgent(ctx, existing.IdRun, newUser.IdUser); rerr == nil && reassigned != nil {
 				updated = reassigned
 			}
 		}
@@ -731,7 +736,7 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 	var deletedIssue *model.Issue
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		if !ic.acl.CanDeleteIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		issue, loadErr := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
 		if loadErr == nil {
@@ -739,8 +744,8 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 		}
 		return ic.issueRepo.DeleteIssue(ctx, idProject, idIssuePublic)
 	})
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -777,8 +782,8 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	var results []*model.Issue
 	// Issues whose participant list changed (assignee added) — broadcast after commit.
 	var participantChangedIssueIds []int64
-	// Old assignee per issue, captured before the update so post-commit bot
-	// routing sees a truthful "old" side (re-specifying the same bot must not
+	// Old assignee per issue, captured before the update so post-commit agent
+	// routing sees a truthful "old" side (re-specifying the same agent must not
 	// spawn a new run).
 	oldAssignedByPublic := make(map[int64]*int64)
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
@@ -787,7 +792,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			delete(oldAssignedByPublic, k)
 		}
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 
 		for _, entry := range dto.Issues {
@@ -847,12 +852,12 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		return nil
 	})
 
-	if err == errForbidden {
-		_ = c.Error(errForbidden)
+	if err == errs.ErrForbidden {
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errStateNotInProject || err == errSeverityNotInProject || err == errIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -873,7 +878,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	}
 
 	// Reuses single-issue routing with the captured old assignee so an
-	// unchanged bot assignment is a no-op rather than a duplicate run.
+	// unchanged agent assignment is a no-op rather than a duplicate run.
 	if ic.dispatcher != nil {
 		for _, newIssue := range results {
 			oldAssigned, changed := oldAssignedByPublic[newIssue.IdIssuePublic]
@@ -885,7 +890,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 				IdProject:  newIssue.IdProject,
 				AssignedTo: oldAssigned,
 			}
-			ic.handleBotAssignment(ctx, oldIssue, newIssue)
+			ic.handleAgentAssignment(ctx, oldIssue, newIssue)
 		}
 	}
 
@@ -974,7 +979,7 @@ func parseWithinParam(c *gin.Context, key string) (time.Duration, error) {
 	}
 	within, err := urlutil.ParsePositiveDuration(raw)
 	if err != nil {
-		return 0, errInvalidWithin
+		return 0, errs.ErrInvalidWithin
 	}
 	return within, nil
 }
@@ -990,8 +995,8 @@ func (ic *IssueController) sendIssueNotifications(
 	idIssuePublic := newIssue.IdIssuePublic
 
 	source := ""
-	if isBot, err := ic.userRepo.IsBotUser(ctx, actor.IdUser); err == nil && isBot {
-		source = "bot"
+	if isAgent, err := ic.userRepo.IsAgentUser(ctx, actor.IdUser); err == nil && isAgent {
+		source = "agent"
 	}
 
 	base := &model.CreateNotificationReq{

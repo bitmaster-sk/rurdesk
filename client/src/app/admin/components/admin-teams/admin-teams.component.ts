@@ -124,8 +124,8 @@ export class AdminTeamsComponent implements OnInit {
         ) {
             return;
         }
+        this.selectedTeam.set(team);
         this.onAddMember(user, team);
-        this.onSelectTeam(team);
     }
 
     /** Drop target on the members table — adds the dragged user to the selected team */

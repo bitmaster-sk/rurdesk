@@ -1,5 +1,5 @@
 @let usersMapValue = usersMap();
-<div class="issue-info p-2">
+<div class="issue-info p-2" cdkScrollable>
     <div class="grid grid-cols-12 gap-1" [formGroup]="form">
         <div class="col-span-12 grid grid-cols-12 gap-1 m-0 p-0">
             <div class="col-span-10 pr-0 ui-field">
@@ -47,6 +47,7 @@
                     [states]="states()"
                     formControlName="idState"
                     inputId="issue-state"
+                    data-testid="issue-state"
                 ></app-state-dropdown>
             </div>
 

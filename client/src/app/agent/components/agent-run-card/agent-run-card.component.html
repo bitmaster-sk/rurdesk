@@ -112,6 +112,8 @@
                         <ui-popover
                             #skillsPopover
                             panelClass="run-skills-panel"
+                            maxHeight="60vh"
+                            [growAfterOpen]="true"
                             (closed)="onSkillsPopoverClosed()"
                         >
                             <div class="run-skills flex flex-col gap-3 p-3">
@@ -217,9 +219,9 @@
                                                     · {{ row.noteKey | translate }}
                                                 </span>
                                             }
-                                            @if (row.botName) {
+                                            @if (row.agentName) {
                                                 <span class="ui-color-text-muted">
-                                                    · {{ row.botName }}
+                                                    · {{ row.agentName }}
                                                 </span>
                                             }
                                         </div>

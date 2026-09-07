@@ -13,7 +13,7 @@ interface TypeChip {
     labelKey: string;
 }
 
-const TYPE_CHIPS: Record<string, TypeChip> = {
+const TYPE_CHIPS: Record<NotificationType, TypeChip> = {
     [NotificationType.Comment]: {
         icon: 'message',
         colorClass: 'notif-card-badge__comment',
@@ -56,12 +56,6 @@ const TYPE_CHIPS: Record<string, TypeChip> = {
     }
 };
 
-const DEFAULT_CHIP: TypeChip = {
-    icon: 'bell',
-    colorClass: 'notif-card-badge__comment',
-    labelKey: ''
-};
-
 @Component({
     selector: 'app-notification-card',
     templateUrl: './notification-card.component.html',
@@ -78,9 +72,7 @@ export class NotificationCardComponent {
 
     protected readonly NotificationType = NotificationType;
 
-    protected readonly chip = computed<TypeChip>(
-        () => TYPE_CHIPS[this.notification().type] ?? DEFAULT_CHIP
-    );
+    protected readonly chip = computed<TypeChip>(() => TYPE_CHIPS[this.notification().type]);
 
     protected readonly relativeTime = computed<string>(() =>
         formatDistanceToNow(new Date(this.notification().createdAt), {

@@ -105,7 +105,7 @@ start without all five. The other adapters share this exact contract.
 | Var                        | Purpose                                                                                                                                                                                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
-| `GATEWAY_TO_TRACKER_TOKEN` | The bot's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (bot credentials).                                                                                                                      |
+| `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (agent credentials).                                                                                                                      |
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
 | `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup; per-run worktrees are checked out from that clone. One repo per gateway — see the note below.                                                                                                                                                  |
 | `GIT_ACCESS_TOKEN`         | Personal access token / app token with contents read+write on `REPO_URL`. Injected into the remote URL so the per-run agent can push branches back. Only **push** is needed — the tracker (API) opens the PR/MR via the project's git-integration token, not this one.                                                          |
@@ -115,7 +115,7 @@ start without all five. The other adapters share this exact contract.
 > repo the gateway reports back (`ReportRunRepo`). Nothing today records which
 > repo a given *issue* belongs to, so the gateway cannot choose per task — it
 > always works in `REPO_URL`. To cover a second repo, run a second gateway with
-> its own bot.
+> its own agent.
 
 ### Optional environment variables
 
@@ -135,7 +135,7 @@ start without all five. The other adapters share this exact contract.
 
 ### docker-compose snippet
 
-The dev compose ships three of these, one per bot: `gateway-goose-qwen-local`,
+The dev compose ships three of these, one per agent: `gateway-goose-qwen-local`,
 `gateway-goose-qwen-cloud` and `gateway-goose-kimi-cloud`. They all run the same
 image and differ only in their env file. One of them, verbatim:
 

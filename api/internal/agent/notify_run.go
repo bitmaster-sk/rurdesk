@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -138,6 +139,53 @@ func BroadcastIssueSnapshot(
 		Subject: notify.SubjectIssue,
 		Action:  action,
 		Payload: issue,
+	}
+}
+
+// BroadcastMrStatusUpdate sends a SubjectMrStatus notice to project members
+// when an open MR's CI/approval/head changes, and once when it merges or
+// closes. The payload holds everything the badge needs, so the client never
+// refetches the status.
+func BroadcastMrStatusUpdate(
+	ctx context.Context,
+	notifier *notify.Notifier,
+	projectRepo projectMemberLoader,
+	issue *model.Issue,
+	status *githost.Status,
+) {
+	if notifier == nil || issue == nil || status == nil {
+		return
+	}
+	if issue.IdGitIntegration == nil || issue.MrId == nil {
+		return
+	}
+
+	members, err := projectRepo.LoadProjectsMembers(ctx, []int64{issue.IdProject})
+	if err != nil || len(members) == 0 {
+		log.Debug().Err(err).Int64("idIssue", issue.IdIssue).Int64("idProject", issue.IdProject).Int("members", len(members)).
+			Msg("BroadcastMrStatusUpdate: no project members resolved, skipping to avoid global broadcast")
+		return
+	}
+
+	idsUser := make([]int64, len(members))
+	for i, m := range members {
+		idsUser[i] = m.IdUser
+	}
+
+	notifier.Send <- &notify.Notice{
+		IdsUser: idsUser,
+		Subject: notify.SubjectMrStatus,
+		Action:  notify.ActionUpdate,
+		Payload: model.MrStatusNotice{
+			IdIssue:          issue.IdIssue,
+			IdGitIntegration: *issue.IdGitIntegration,
+			IdMr:             *issue.MrId,
+			State:            status.State,
+			Approved:         status.Approved,
+			CiStatus:         status.CiStatus,
+			WebUrl:           status.WebUrl,
+			HeadSHA:          status.HeadSHA,
+		},
 	}
 }
 

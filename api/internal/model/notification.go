@@ -36,7 +36,7 @@ type CreateNotificationReq struct {
 	RefTitle      string
 	RefPublicId   *int64
 	Body          any
-	Source        string // "bot" when the acting user has is_bot=true
+	Source        string // "agent" when the acting user has is_agent=true
 }
 
 type NotificationListFilter struct {

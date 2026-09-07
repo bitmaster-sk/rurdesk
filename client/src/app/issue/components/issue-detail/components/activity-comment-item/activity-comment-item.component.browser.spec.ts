@@ -1,4 +1,4 @@
-import { Component, Pipe, PipeTransform, input, output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
@@ -21,13 +21,6 @@ function awaitingApprovalRun(approvedMockupRef: string | null = null): AgentRun 
         phase: AgentPhase.AwaitingApproval,
         approvedMockupRef
     } as unknown as AgentRun;
-}
-
-@Pipe({ name: 'emoji', standalone: false })
-class StubEmojiPipe implements PipeTransform {
-    public transform(v: string): string {
-        return v;
-    }
 }
 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
@@ -105,8 +98,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
                 ActivityCommentItemComponent,
                 MessageBodyComponent,
                 MockupCardComponent,
-                MentionChipComponent,
-                StubEmojiPipe
+                MentionChipComponent
             ]
         }).compileComponents();
     });
@@ -196,8 +188,7 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
                 ActivityCommentItemComponent,
                 MessageBodyComponent,
                 MockupCardComponent,
-                MentionChipComponent,
-                StubEmojiPipe
+                MentionChipComponent
             ]
         }).compileComponents();
     });

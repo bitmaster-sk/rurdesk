@@ -18,12 +18,12 @@ type NotifFilter =
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class NotificationCenterComponent {
-    private store = inject(NotificationStore);
-    private notifApi = inject(NotificationApi);
+    private readonly store = inject(NotificationStore);
+    private readonly notifApi = inject(NotificationApi);
 
     protected readonly NotificationType = NotificationType;
 
-    private _activeFilter = signal<NotifFilter>({ type: 'all' });
+    private readonly _activeFilter = signal<NotifFilter>({ type: 'all' });
     protected readonly activeFilter = this._activeFilter.asReadonly();
 
     protected sidebarGroups = this.store.groupedByProject;

@@ -63,6 +63,37 @@ describe('CommandPaletteService', () => {
         ); // translate echoes key when unloaded
         svc.close();
     });
+    it('maps every mode prefix to its mode', () => {
+        const svc = TestBed.inject(CommandPaletteService);
+        svc.setContext({ idProject: 1, issue: null });
+        const modeOf = (prefill: string): string | undefined => {
+            svc.open(prefill);
+            tick();
+            const label = document.querySelector('.palette__mode')?.textContent ?? undefined;
+            svc.close();
+            return label;
+        };
+        expect(modeOf('> set')).toContain('COMMAND.MODE.COMMANDS');
+        expect(modeOf('@petra')).toContain('COMMAND.MODE.PEOPLE');
+        expect(modeOf('#428')).toContain('COMMAND.MODE.ISSUES');
+        expect(modeOf('login bug')).toContain('COMMAND.MODE.ALL');
+    });
+    it('keeps the mode filter but no text filter for a lone prefix', () => {
+        const svc = TestBed.inject(CommandPaletteService);
+        svc.setContext({ idProject: 1, issue: null });
+        svc.open('>');
+        tick();
+        expect(document.querySelector('[data-item="a"]')).not.toBeNull();
+        svc.close();
+    });
+    it('ignores whitespace around the query', () => {
+        const svc = TestBed.inject(CommandPaletteService);
+        svc.setContext({ idProject: 1, issue: null });
+        svc.open('  Alpha ');
+        tick();
+        expect(document.querySelector('[data-item="a"]')).not.toBeNull();
+        svc.close();
+    });
     it('does not offer create in a mode the create command does not target', () => {
         // register a create provider scoped to all/issues only
         TestBed.inject(CommandRegistryService).register({

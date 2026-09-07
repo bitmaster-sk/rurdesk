@@ -106,224 +106,245 @@
                 </thead>
 
                 <tbody uiFlipList>
-                    @for (row of rows(); track row.issue.idIssuePublic; let i = $index) {
-                        <tr
-                            #rowRef
-                            [attr.data-flip-id]="row.issue.idIssuePublic"
-                            [tabindex]="highlightedIndex() === i ? 0 : -1"
-                            [class.row--active]="highlightedIndex() === i"
-                            [class.row--pulsed]="pulsedIds().has(row.issue.idIssuePublic)"
-                            (keydown.enter)="onOpenHighlighted(row.issue)"
-                            (contextmenu)="onContextMenu($event, row.issue)"
-                            (dragenter)="onDragEnter($event, row.issue)"
-                            (dragleave)="onDragLeave($event)"
-                            (dragover)="$event.preventDefault()"
-                            (dragend)="onDragEnd()"
-                            [class.relation-drag-source]="
-                                draggingFromIssue()?.idIssuePublic === row.issue.idIssuePublic
-                            "
-                        >
-                            @if (isRelationMode()) {
-                                <td class="drag-col">
-                                    <span
-                                        class="drag-handle"
-                                        draggable="true"
-                                        (dragstart)="onDragStart($event, row.issue)"
-                                    >
-                                        <tabler-icon icon="grip-vertical" [size]="16" />
-                                    </span>
-                                </td>
-                            }
-                            <td class="id-col ui-color-text-muted">
-                                #{{ row.issue.idIssuePublic }}
+                    @if (!hasLoaded() || (isLoading() && rows().length === 0)) {
+                        <tr class="table-loading-row">
+                            <td [attr.colspan]="colCount()">
+                                <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />
                             </td>
-                            <td>
-                                <span class="title-cell">
-                                    <a
-                                        [routerLink]="[
-                                            '/project',
-                                            row.issue.idProject,
-                                            'issue',
-                                            row.issue.idIssuePublic
-                                        ]"
-                                    >
-                                        {{ row.issue.title }}
-                                    </a>
-                                    @if (isRelationMode() && (row.issue.relationCount ?? 0) > 0) {
-                                        <button
-                                            type="button"
-                                            class="relation-badge"
-                                            [attr.aria-expanded]="
-                                                isRelationsExpanded(row.issue.idIssuePublic)
-                                            "
-                                            [attr.aria-label]="
-                                                'RELATION.TOGGLE'
-                                                    | translate: { count: row.issue.relationCount }
-                                            "
-                                            (click)="onToggleRelations(row.issue.idIssuePublic)"
-                                        >
-                                            <tabler-icon icon="link" [size]="12" />
-                                            {{ row.issue.relationCount }}
-                                        </button>
-                                    }
-                                </span>
-                            </td>
-                            <td data-testid="issue-type-cell">
-                                @if (row.issueType) {
-                                    <app-issue-type-badge
-                                        [issueType]="row.issueType"
-                                        size="s"
-                                    ></app-issue-type-badge>
-                                } @else {
-                                    <span class="ui-color-text-muted">
-                                        {{ 'NONE' | translate }}
-                                    </span>
-                                }
-                            </td>
-                            <td>
-                                <div class="flex items-center gap-1">
-                                    <app-severity-circle
-                                        [color]="row.severity?.color"
-                                    ></app-severity-circle>
-                                    <span>{{ row.severity?.title ?? ('NONE' | translate) }}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <app-state-badge [state]="row.state" size="s"></app-state-badge>
-                            </td>
-                            <td>
-                                <span class="flex items-center gap-1">
-                                    @if (row.assigned) {
-                                        <app-avatar
-                                            [height]="1.75"
-                                            [width]="1.75"
-                                            [name]="row.assigned.name"
-                                            [bgColor]="row.assigned.colorAvatarBg"
-                                        ></app-avatar>
-                                        <span>{{ row.assigned.name }}</span>
-                                    } @else {
-                                        <span class="unknown-avatar">?</span>
-                                        <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
-                                    }
-                                </span>
-                            </td>
-                            <td>
-                                {{ row.issue.updateAt | date: 'mediumDate' }}&nbsp;{{
-                                    row.issue.updateAt | date: 'shortTime'
-                                }}
-                            </td>
-                            <td class="text-center">
-                                <app-quality-badge
-                                    [score]="row.issue.qualityScore"
-                                ></app-quality-badge>
-                            </td>
-                            @if (isRelationMode()) {
-                                <td class="action-column"></td>
-                            }
                         </tr>
-
-                        @if (isDragging() && idIssueDragOver() === row.issue.idIssuePublic) {
+                    } @else if (rows().length === 0) {
+                        <tr class="table-empty-row">
+                            <td [attr.colspan]="colCount()">
+                                {{ 'NO_DATA' | translate }}
+                            </td>
+                        </tr>
+                    } @else {
+                        @for (row of rows(); track row.issue.idIssuePublic; let i = $index) {
                             <tr
-                                class="drop-zone-row"
-                                (dragenter)="clearDragLeaveTimer()"
+                                #rowRef
+                                [attr.data-flip-id]="row.issue.idIssuePublic"
+                                [tabindex]="highlightedIndex() === i ? 0 : -1"
+                                [class.row--active]="highlightedIndex() === i"
+                                [class.row--pulsed]="pulsedIds().has(row.issue.idIssuePublic)"
+                                (keydown.enter)="onOpenHighlighted(row.issue)"
+                                (contextmenu)="onContextMenu($event, row.issue)"
+                                (dragenter)="onDragEnter($event, row.issue)"
                                 (dragleave)="onDragLeave($event)"
                                 (dragover)="$event.preventDefault()"
+                                (dragend)="onDragEnd()"
+                                [class.relation-drag-source]="
+                                    draggingFromIssue()?.idIssuePublic === row.issue.idIssuePublic
+                                "
                             >
-                                <td [attr.colspan]="colCount()">
-                                    <app-issue-table-drop-zone
-                                        [targetIssue]="row.issue"
-                                        (relationDrop)="onDropZone($event)"
-                                        (zoneEnter)="clearDragLeaveTimer()"
-                                    ></app-issue-table-drop-zone>
-                                </td>
-                            </tr>
-                        }
-
-                        @if (!isDragging() && idsExtendedIssue().has(row.issue.idIssuePublic)) {
-                            @for (
-                                rel of row.relations;
-                                track rel.idIssueRelation;
-                                let isLast = $last
-                            ) {
-                                <tr class="relation-row" [class.relation-row--last]="isLast">
-                                    @if (isRelationMode()) {
-                                        <td class="drag-col tree-line"></td>
-                                    }
-                                    <td class="id-col ui-color-text-muted">
-                                        #{{ rel.ref.idIssuePublic }}
-                                    </td>
-                                    <td>
-                                        <span class="relation-label-text">
-                                            {{ rel.labelKey | translate }}
+                                @if (isRelationMode()) {
+                                    <td class="drag-col">
+                                        <span
+                                            class="drag-handle"
+                                            draggable="true"
+                                            (dragstart)="onDragStart($event, row.issue)"
+                                        >
+                                            <tabler-icon icon="grip-vertical" [size]="16" />
                                         </span>
+                                    </td>
+                                }
+                                <td class="id-col ui-color-text-muted">
+                                    #{{ row.issue.idIssuePublic }}
+                                </td>
+                                <td>
+                                    <span class="title-cell">
                                         <a
                                             [routerLink]="[
                                                 '/project',
-                                                idProject,
+                                                row.issue.idProject,
                                                 'issue',
-                                                rel.ref.idIssuePublic
+                                                row.issue.idIssuePublic
                                             ]"
                                         >
-                                            {{ rel.ref.title }}
+                                            {{ row.issue.title }}
                                         </a>
-                                    </td>
-                                    <td></td>
-                                    <td>
-                                        <div class="flex items-center gap-1">
-                                            @if (rel.severity) {
-                                                <app-severity-circle
-                                                    [color]="rel.severity.color"
-                                                ></app-severity-circle>
-                                                <span>{{ rel.severity.title }}</span>
-                                            } @else {
-                                                <app-severity-circle></app-severity-circle>
-                                                <span>{{ 'NONE' | translate }}</span>
-                                            }
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <app-state-badge
-                                            [state]="rel.state"
+                                        @if (
+                                            isRelationMode() && (row.issue.relationCount ?? 0) > 0
+                                        ) {
+                                            <button
+                                                type="button"
+                                                class="relation-badge"
+                                                [attr.aria-expanded]="
+                                                    isRelationsExpanded(row.issue.idIssuePublic)
+                                                "
+                                                [attr.aria-label]="
+                                                    'RELATION.TOGGLE'
+                                                        | translate
+                                                            : { count: row.issue.relationCount }
+                                                "
+                                                (click)="onToggleRelations(row.issue.idIssuePublic)"
+                                            >
+                                                <tabler-icon icon="link" [size]="12" />
+                                                {{ row.issue.relationCount }}
+                                            </button>
+                                        }
+                                    </span>
+                                </td>
+                                <td data-testid="issue-type-cell">
+                                    @if (row.issueType) {
+                                        <app-issue-type-badge
+                                            [issueType]="row.issueType"
                                             size="s"
-                                        ></app-state-badge>
-                                    </td>
-                                    <td>
-                                        <span class="flex items-center gap-1">
-                                            @if (rel.assigned) {
-                                                <app-avatar
-                                                    [height]="1.75"
-                                                    [width]="1.75"
-                                                    [name]="rel.assigned.name"
-                                                    [bgColor]="rel.assigned.colorAvatarBg"
-                                                ></app-avatar>
-                                                <span>{{ rel.assigned.name }}</span>
-                                            } @else {
-                                                <span class="unknown-avatar">?</span>
-                                                <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
-                                            }
+                                        ></app-issue-type-badge>
+                                    } @else {
+                                        <span class="ui-color-text-muted">
+                                            {{ 'NONE' | translate }}
                                         </span>
-                                    </td>
-                                    <td>
-                                        {{ rel.ref.updateAt | date: 'mediumDate' }}&nbsp;{{
-                                            rel.ref.updateAt | date: 'shortTime'
-                                        }}
-                                    </td>
-                                    <td class="text-center">
-                                        <app-quality-badge
-                                            [score]="rel.ref.qualityScore"
-                                        ></app-quality-badge>
-                                    </td>
-                                    <td class="action-column">
-                                        <ui-button
-                                            variant="text"
-                                            severity="danger"
-                                            size="small"
-                                            (click)="onDeleteRelation(row.issue, rel)"
-                                        >
-                                            <tabler-icon icon="x" [size]="14" />
-                                        </ui-button>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1">
+                                        <app-severity-circle
+                                            [color]="row.severity?.color"
+                                        ></app-severity-circle>
+                                        <span>
+                                            {{ row.severity?.title ?? ('NONE' | translate) }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <app-state-badge [state]="row.state" size="s"></app-state-badge>
+                                </td>
+                                <td>
+                                    <span class="flex items-center gap-1">
+                                        @if (row.assigned) {
+                                            <app-avatar
+                                                [height]="1.75"
+                                                [width]="1.75"
+                                                [name]="row.assigned.name"
+                                                [bgColor]="row.assigned.colorAvatarBg"
+                                            ></app-avatar>
+                                            <span>{{ row.assigned.name }}</span>
+                                        } @else {
+                                            <span class="unknown-avatar">?</span>
+                                            <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td>
+                                    {{ row.issue.updateAt | date: 'mediumDate' }}&nbsp;{{
+                                        row.issue.updateAt | date: 'shortTime'
+                                    }}
+                                </td>
+                                <td class="text-center">
+                                    <app-quality-badge
+                                        [score]="row.issue.qualityScore"
+                                    ></app-quality-badge>
+                                </td>
+                                @if (isRelationMode()) {
+                                    <td class="action-column"></td>
+                                }
+                            </tr>
+
+                            @if (isDragging() && idIssueDragOver() === row.issue.idIssuePublic) {
+                                <tr
+                                    class="drop-zone-row"
+                                    (dragenter)="clearDragLeaveTimer()"
+                                    (dragleave)="onDragLeave($event)"
+                                    (dragover)="$event.preventDefault()"
+                                >
+                                    <td [attr.colspan]="colCount()">
+                                        <app-issue-table-drop-zone
+                                            [targetIssue]="row.issue"
+                                            (relationDrop)="onDropZone($event)"
+                                            (zoneEnter)="clearDragLeaveTimer()"
+                                        ></app-issue-table-drop-zone>
                                     </td>
                                 </tr>
+                            }
+
+                            @if (!isDragging() && idsExtendedIssue().has(row.issue.idIssuePublic)) {
+                                @for (
+                                    rel of row.relations;
+                                    track rel.idIssueRelation;
+                                    let isLast = $last
+                                ) {
+                                    <tr class="relation-row" [class.relation-row--last]="isLast">
+                                        @if (isRelationMode()) {
+                                            <td class="drag-col tree-line"></td>
+                                        }
+                                        <td class="id-col ui-color-text-muted">
+                                            #{{ rel.ref.idIssuePublic }}
+                                        </td>
+                                        <td>
+                                            <span class="relation-label-text">
+                                                {{ rel.labelKey | translate }}
+                                            </span>
+                                            <a
+                                                [routerLink]="[
+                                                    '/project',
+                                                    idProject,
+                                                    'issue',
+                                                    rel.ref.idIssuePublic
+                                                ]"
+                                            >
+                                                {{ rel.ref.title }}
+                                            </a>
+                                        </td>
+                                        <td></td>
+                                        <td>
+                                            <div class="flex items-center gap-1">
+                                                @if (rel.severity) {
+                                                    <app-severity-circle
+                                                        [color]="rel.severity.color"
+                                                    ></app-severity-circle>
+                                                    <span>{{ rel.severity.title }}</span>
+                                                } @else {
+                                                    <app-severity-circle></app-severity-circle>
+                                                    <span>{{ 'NONE' | translate }}</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <app-state-badge
+                                                [state]="rel.state"
+                                                size="s"
+                                            ></app-state-badge>
+                                        </td>
+                                        <td>
+                                            <span class="flex items-center gap-1">
+                                                @if (rel.assigned) {
+                                                    <app-avatar
+                                                        [height]="1.75"
+                                                        [width]="1.75"
+                                                        [name]="rel.assigned.name"
+                                                        [bgColor]="rel.assigned.colorAvatarBg"
+                                                    ></app-avatar>
+                                                    <span>{{ rel.assigned.name }}</span>
+                                                } @else {
+                                                    <span class="unknown-avatar">?</span>
+                                                    <span>
+                                                        {{ 'KANBAN.UNASSIGNED' | translate }}
+                                                    </span>
+                                                }
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {{ rel.ref.updateAt | date: 'mediumDate' }}&nbsp;{{
+                                                rel.ref.updateAt | date: 'shortTime'
+                                            }}
+                                        </td>
+                                        <td class="text-center">
+                                            <app-quality-badge
+                                                [score]="rel.ref.qualityScore"
+                                            ></app-quality-badge>
+                                        </td>
+                                        <td class="action-column">
+                                            <ui-button
+                                                variant="text"
+                                                severity="danger"
+                                                size="small"
+                                                (click)="onDeleteRelation(row.issue, rel)"
+                                            >
+                                                <tabler-icon icon="x" [size]="14" />
+                                            </ui-button>
+                                        </td>
+                                    </tr>
+                                }
                             }
                         }
                     }

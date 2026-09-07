@@ -127,14 +127,11 @@
             line-height: 1.2;
         }
 
-        &__body {
-            padding: var(--ui-space-m);
-        }
-
         // Body content when no PR/MR is linked. Mirrors `.quality-panel__empty`
         // so the unlinked-state hint reads as a sibling-empty-state rather than
         // a different panel.
         &__empty {
+            padding: var(--ui-space-m);
             color: var(--ui-color-text-muted);
             font-size: var(--font-size-s);
             line-height: 1.5;

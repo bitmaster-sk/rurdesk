@@ -100,7 +100,7 @@ export class AgentDockComponent implements OnInit {
 
     protected onAssign(): void {
         const body: CreateAgentRunReq = {
-            idUserBot: this.agent().idUser,
+            idUserAgent: this.agent().idUser,
             idsSkillByStage: this.idsSkillByStage()
         };
         this.isAssigning.set(true);

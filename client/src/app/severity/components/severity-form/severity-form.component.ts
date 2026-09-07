@@ -6,8 +6,8 @@ import {
     NonNullableFormBuilder,
     Validators
 } from '@angular/forms';
-import { randomSeverityColor } from '../../constants/severity-colors';
 import { CreateIssueSeverityReq, IssueSeverity } from '../../model/issue-severity.model';
+import { SeverityColors } from '../../constants/severity-colors';
 
 interface SeverityForm {
     idSeverity: FormControl<number | null>;
@@ -45,7 +45,7 @@ export class SeverityFormComponent implements OnInit {
             ]),
             // A new severity starts on a palette colour: an empty <input type="color">
             // renders black and blocks the required validator.
-            color: this.nfb.control(this.severity().color ?? randomSeverityColor(), [
+            color: this.nfb.control(this.severity().color ?? SeverityColors.random(), [
                 Validators.required
             ]),
             orderRank: this.fb.control<number | null>(this.severity().orderRank ?? null)

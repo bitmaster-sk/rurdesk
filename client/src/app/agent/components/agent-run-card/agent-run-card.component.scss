@@ -317,3 +317,8 @@
     opacity: 0.5;
     cursor: default;
 }
+
+.run-skills-panel.ui-popover {
+    max-height: 60vh;
+    overflow-y: auto;
+}

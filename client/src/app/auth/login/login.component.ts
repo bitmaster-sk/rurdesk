@@ -38,6 +38,9 @@ export class LoginComponent implements OnInit {
     }
 
     public onLogin(): void {
+        if (this.form.invalid) {
+            return;
+        }
         this.hasFailed.set(false);
         const { email, password, hasExtendedSessionLifetime } = this.form.value;
         this.authApi
@@ -51,10 +54,12 @@ export class LoginComponent implements OnInit {
     private buildForm(): FormGroup<LoginForm> {
         return this.fb.group<LoginForm>({
             email: this.fb.control<string | null>(null, [
+                Validators.required,
                 Validators.email,
                 Validators.maxLength(250)
             ]),
             password: this.fb.control<string | null>(null, [
+                Validators.required,
                 Validators.minLength(5),
                 Validators.maxLength(100)
             ]),

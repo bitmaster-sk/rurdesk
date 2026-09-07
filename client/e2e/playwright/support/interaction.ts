@@ -61,8 +61,14 @@ export abstract class Interaction {
     }
 
     public static async createUserApiKey(page: Page, name: string): Promise<string> {
+        // Waits on the new row, not on the revealed panel: an earlier key leaves that
+        // panel open, so it would already be visible before this key is created.
+        const rows = page.getByTestId('user-api-key-row');
+        const rowsBefore = await rows.count();
+
         await page.getByTestId('user-api-key-name').fill(name);
         await page.getByTestId('user-api-key-create').click();
+        await expect(rows).toHaveCount(rowsBefore + 1);
 
         const revealed = page.getByTestId('user-api-key-revealed');
         await expect(revealed).toBeVisible();

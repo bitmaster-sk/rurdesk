@@ -45,7 +45,8 @@ func New(
 	myIssuesCtrl *controller.MyIssuesController,
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
-	botGwCtrl *controller.BotGatewayController,
+	agentThinkingCtrl *controller.AgentThinkingController,
+	agentGwCtrl *controller.AgentGatewayController,
 	workflowEventMapCtrl *controller.WorkflowEventMapController,
 	skillCtrl *controller.SkillController,
 	projectSkillCtrl *controller.ProjectSkillController,
@@ -114,12 +115,12 @@ func New(
 	admin.DELETE("/skills/:idSkill", skillCtrl.Delete)
 	admin.POST("/skills/:idSkill/restore", skillCtrl.Restore)
 
-	// Bot gateway (1:1 with bot user)
-	admin.GET("/user/:idUser/gateway", botGwCtrl.GetBotGateway)
-	admin.POST("/user/:idUser/gateway", botGwCtrl.CreateBotGateway)
-	admin.PATCH("/user/:idUser/gateway", botGwCtrl.UpdateBotGateway)
-	admin.POST("/user/:idUser/gateway/token", botGwCtrl.RegenerateGatewayToken)
-	admin.DELETE("/user/:idUser/gateway", botGwCtrl.DeleteBotGateway)
+	// Agent gateway (1:1 with agent user)
+	admin.GET("/user/:idUser/gateway", agentGwCtrl.GetAgentGateway)
+	admin.POST("/user/:idUser/gateway", agentGwCtrl.CreateAgentGateway)
+	admin.PATCH("/user/:idUser/gateway", agentGwCtrl.UpdateAgentGateway)
+	admin.POST("/user/:idUser/gateway/token", agentGwCtrl.RegenerateGatewayToken)
+	admin.DELETE("/user/:idUser/gateway", agentGwCtrl.DeleteAgentGateway)
 
 	// Team — management is instance-admin only
 	admin.POST("/team", teamCtrl.CreateTeam)
@@ -269,19 +270,21 @@ func New(
 	pri.POST("/agent/run/:idRun/continue", agentRunCtrl.Continue)
 	pri.POST("/agent/run/:idRun/restart", agentRunCtrl.Restart)
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
+	pri.GET("/agent/run/:idRun/thinking", agentThinkingCtrl.Get)
 	pri.GET("/agent/run/:idRun/skills", agentRunCtrl.GetSkills)
 	pri.PATCH("/agent/run/:idRun/skills", agentRunCtrl.PatchSkills)
 	pri.GET("/project/:idProject/agent/runs", agentRunCtrl.GetRunsByProject)
 	pri.GET("/project/:idProject/issue/:idIssuePublic/agent/run", agentRunCtrl.GetRunByIssue)
 
 	// Gateway-facing callbacks. These share the ordinary authenticated group —
-	// middleware.Auth accepts user JWTs and bot API keys alike — so each handler
-	// authorizes itself against the run's own bot (requireRunBot/requireTaskBot).
+	// middleware.Auth accepts user JWTs and agent API keys alike — so each handler
+	// authorizes itself against the run's own agent (agent.TaskService).
 	// Do not add a callback here without that check.
 	pri.POST("/agent/run/:idRun/repo", agentRunCtrl.ReportRunRepo)
 	pri.POST("/agent/task/:idTask/complete", agentRunCtrl.CompleteStage)
 	pri.POST("/agent/task/:idTask/heartbeat", agentRunCtrl.TaskHeartbeat)
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)
+	pri.POST("/agent/task/:idTask/thinking", agentThinkingCtrl.Create)
 	pri.POST("/agent/gateway/recovered", agentRunCtrl.GatewayRecovered)
 
 	// Workflow event→state map (project owner only)

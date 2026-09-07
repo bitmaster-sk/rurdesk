@@ -13,7 +13,7 @@ import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 import { User } from 'src/app/auth/model/user.model';
-import { extractMessageSegments } from 'src/app/shared/mention/extract-message-segments';
+import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 
 @Component({
     selector: 'app-activity-comment-item',
@@ -52,7 +52,8 @@ export class ActivityCommentItemComponent {
         [MessageKind.Design]: 'ruler',
         [MessageKind.ImplementationPlan]: 'list-check',
         [MessageKind.PullRequestPushed]: 'code',
-        [MessageKind.ImplementationDone]: 'flag'
+        [MessageKind.ImplementationDone]: 'flag',
+        [MessageKind.ReviewReply]: 'message-reply'
     };
 
     protected readonly kindTitleKey: Record<string, string> = {
@@ -61,7 +62,8 @@ export class ActivityCommentItemComponent {
         [MessageKind.Design]: 'AGENT.KIND.DESIGN',
         [MessageKind.ImplementationPlan]: 'AGENT.KIND.IMPLEMENTATION_PLAN',
         [MessageKind.PullRequestPushed]: 'AGENT.KIND.PULL_REQUEST_PUSHED',
-        [MessageKind.ImplementationDone]: 'AGENT.KIND.IMPLEMENTATION_DONE'
+        [MessageKind.ImplementationDone]: 'AGENT.KIND.IMPLEMENTATION_DONE',
+        [MessageKind.ReviewReply]: 'AGENT.KIND.REVIEW_REPLY'
     };
 
     protected readonly kindHeaderTitle = computed(
@@ -99,7 +101,7 @@ export class ActivityCommentItemComponent {
     // so a malformed/unclosed fence can never hide the global approve while
     // rendering zero cards — which would leave the run unapprovable.
     protected readonly hasMockups = computed(() =>
-        extractMessageSegments(this.message().message).some(s => s.type === 'mockup')
+        MessageSegmentParser.parse(this.message().message).some(s => s.type === 'mockup')
     );
 
     protected readonly showApproveActions = computed(

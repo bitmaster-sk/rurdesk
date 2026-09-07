@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { QualityReport } from '../model/quality.model';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 
 @Injectable({ providedIn: 'root' })
 export class QualityApi {
@@ -36,7 +36,7 @@ export class QualityApi {
     public getQuality$(idProject: number, idIssuePublic: number): Observable<QualityReport> {
         return this.http.get<QualityReport>(
             `/api/private/project/${idProject}/issue/${idIssuePublic}/quality`,
-            { context: silentErrors() }
+            { context: RequestContext.disableErrorToast() }
         );
     }
 }

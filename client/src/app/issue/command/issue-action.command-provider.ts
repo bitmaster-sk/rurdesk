@@ -8,7 +8,7 @@ import {
     CommandProvider,
     Translator
 } from '../../core/command/command.model';
-import { buildIssueActionCommands, buildIssueCloneCommand } from './issue-action.commands';
+import { IssueActionCommands } from './issue-action.commands';
 import { IssueService } from '../issue.service';
 import { StateStore } from '../../state/store/state.store';
 import { SeverityStore } from '../../severity/store/severity.store';
@@ -35,7 +35,7 @@ export class IssueActionCommandProvider implements CommandProvider {
         const commands: Command[] = [];
         if (this.acl.canUpdateIssue()) {
             commands.push(
-                ...buildIssueActionCommands(
+                ...IssueActionCommands.build(
                     ctx,
                     {
                         states: this.states(),
@@ -48,7 +48,7 @@ export class IssueActionCommandProvider implements CommandProvider {
                 )
             );
         }
-        const clone = buildIssueCloneCommand(
+        const clone = IssueActionCommands.buildClone(
             ctx,
             this.acl.canCreateIssue(),
             () => this.clone(ctx),

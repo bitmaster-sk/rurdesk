@@ -5,7 +5,7 @@ type IssueParticipant struct {
 	IdUser                  int64  `json:"idUser"                  db:"id_user"`
 	Name                    string `json:"name"                    db:"name"`
 	ColorAvatarBg           string `json:"colorAvatarBg"           db:"color_avatar_bg"`
-	IsBot                   bool   `json:"isBot"                   db:"is_bot"`
+	IsAgent                 bool   `json:"isAgent"                   db:"is_agent"`
 	Source                  string `json:"source"                  db:"source"`
 	HasNotificationsEnabled bool   `json:"hasNotificationsEnabled" db:"has_notifications_enabled"`
 }

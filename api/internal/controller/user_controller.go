@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"net/http"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/password"
@@ -78,7 +79,7 @@ func (uc *UserController) Register(c *gin.Context) {
 		return
 	}
 	if !created {
-		_ = c.Error(errRegistrationClosed)
+		_ = c.Error(errs.ErrRegistrationClosed)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -123,7 +124,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 }
 
 // ChangePassword lets a user replace their own password after verifying the
-// current one. Bots are rejected by the service (API-key auth only).
+// current one. Agents are rejected by the service (API-key auth only).
 func (uc *UserController) ChangePassword(c *gin.Context) {
 	var req model.ChangePasswordReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -170,7 +171,7 @@ func (uc *UserController) ListUsers(c *gin.Context) {
 }
 
 // randomAvatarColor generates the default avatar background — a pleasant, evenly
-// distributed HCL colour with high-ish luminance. Shared by every user/bot
+// distributed HCL colour with high-ish luminance. Shared by every user/agent
 // creation path so the formula lives in one place.
 func randomAvatarColor() string {
 	return colorful.Hcl(rand.Float64()*360, rand.Float64(), 0.6+rand.Float64()*0.4).Hex()

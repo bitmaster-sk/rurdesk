@@ -3,7 +3,7 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { of, throwError } from 'rxjs';
 import { ErrorInterceptor } from './error.interceptor';
-import { silentErrors } from './http-error-context';
+import { RequestContext } from './request-context';
 import { ToastNotificationService } from './toast-notification.service';
 
 function build() {
@@ -22,7 +22,11 @@ function build() {
 
 function run(interceptor: ErrorInterceptor, error: HttpErrorResponse, silent = false) {
     const next = { handle: () => throwError(() => error) } as unknown as HttpHandler;
-    const req = new HttpRequest('GET', '/x', silent ? { context: silentErrors() } : {});
+    const req = new HttpRequest(
+        'GET',
+        '/x',
+        silent ? { context: RequestContext.disableErrorToast() } : {}
+    );
     let caught: unknown;
     interceptor.intercept(req, next).subscribe({ error: e => (caught = e) });
     return caught;

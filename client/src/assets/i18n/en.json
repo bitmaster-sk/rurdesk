@@ -154,14 +154,15 @@
             "DESIGN": "Design",
             "IMPLEMENTATION_PLAN": "Implementation plan",
             "PULL_REQUEST_PUSHED": "PR push",
-            "IMPLEMENTATION_DONE": "Implementation done"
+            "IMPLEMENTATION_DONE": "Implementation done",
+            "REVIEW_REPLY": "Review reply"
         },
         "BANNER": {
             "FAILED_TITLE": "Agent run failed",
             "CONTINUE_HINT": "Click Continue to redo the current stage"
         },
         "CARD": {
-            "AWAITING_INPUT_HINT": "Bot is waiting for your reply — answer in the thread below."
+            "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below."
         },
         "TIMELINE": {
             "STATUS": {
@@ -181,7 +182,7 @@
             "ATTEMPT": "attempt {{n}}"
         },
         "CLARIFICATION": {
-            "BADGE": "Question from bot"
+            "BADGE": "Question from agent"
         },
         "SKILLS": {
             "TITLE": "Agent skills",
@@ -197,6 +198,13 @@
             "RACE_ERROR": "This stage just started; skills were not changed",
             "LOAD_ERROR": "Failed to load run skills",
             "SAVE_ERROR": "Failed to save run skills"
+        },
+        "THINKING": {
+            "WORKING": "Agent is working",
+            "GAP": "Some of the thinking did not reach this view.",
+            "TRUNCATED": "The rest of the thinking was dropped at the per-stage limit.",
+            "LABEL": "Thinking",
+            "TAIL_ONLY": "last thoughts only"
         }
     },
     "WORKFLOW": {
@@ -296,7 +304,9 @@
         "KANBAN_PAGE_SIZE": "Kanban page size",
         "GANTT_BACKLOG_PAGE_SIZE": "Gantt backlog page size",
         "SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
-        "USER_API_KEY_LIMIT": "API keys per user"
+        "USER_API_KEY_LIMIT": "API keys per user",
+        "IS_AGENT_THINKING_PERSISTED": "Keep the full agent thinking",
+        "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)"
     },
     "CANCEL": "Cancel",
     "BACK": "Back",
@@ -619,7 +629,7 @@
             "ROLE": {
                 "CREATOR": "Author",
                 "ASSIGNEE": "Assignee",
-                "BOT": "Bot",
+                "AGENT": "Agent",
                 "COMMENT": "Commented",
                 "MENTION": "Mentioned",
                 "MANUAL": "Added"
@@ -734,7 +744,7 @@
         "RECORDS": "Track records",
         "CONFIRM.DELETE": "Do you really want to delete this track record?",
         "TIME": "Tracked time",
-        "LAST.7.DAYS": "Tracked last 7 days",
+        "RANGE_LABEL": "{{ from }} \u2013 {{ to }}",
         "SUBMIT": "Submit tracked time",
         "STOP": "Stop tracking",
         "START": "Start tracking",
@@ -757,6 +767,8 @@
         "forbidden": "You don't have permission to perform this action.",
         "unauthorized": "You are not authorized. Please log in.",
         "not_found": "The requested resource was not found.",
+        "task_not_running_by_agent": "No agent is working on this task right now.",
+        "implementation_no_branch": "The agent finished the implementation without pushing a branch, so no pull request could be opened.",
         "relation_cycle": "This relation would create a cycle.",
         "sprint_window": "A cycle must end after it starts.",
         "bad_request": "Invalid request. Please check your input.",
@@ -773,10 +785,10 @@
         "saved_view_config_invalid": "This view's configuration could not be saved.",
         "saved_view_bad_sort": "This view sorts by a column that no longer exists.",
         "last_admin": "Cannot remove the last instance admin.",
-        "bot_admin": "Bots cannot be admins.",
+        "agent_admin": "Agents cannot be admins.",
         "user_has_agent_activity": "This user has agent history and cannot be deleted.",
         "user_has_authored_content": "This user created or edited issues and cannot be deleted.",
-        "not_a_bot": "API keys can only be managed for bots.",
+        "not_an_agent": "API keys can only be managed for agents.",
         "registration_closed": "Registration is closed. Ask an admin to create your account.",
         "conflict": "Conflict",
         "state_in_use": "This state is still in use — choose where to move its references",
@@ -788,7 +800,17 @@
         "issue_type_protected": "This type is protected and cannot be deleted",
         "sprint_closed": "That cycle is already closed.",
         "api_key_limit_reached": "You have reached your API key limit. Revoke one to create another.",
-        "api_key_self_manage": "API keys cannot be managed with an API key. Sign in through the browser."
+        "api_key_self_manage": "API keys cannot be managed with an API key. Sign in through the browser.",
+        "run_not_awaiting_approval": "The run is not awaiting approval.",
+        "phase_mismatch": "The run phase changed unexpectedly. Please refresh and try again.",
+        "run_terminal": "This run is already finished.",
+        "run_continue_invalid": "Continue is only valid on failed or cancelled runs.",
+        "no_stage_to_continue": "There is no next stage to continue to.",
+        "run_has_pr": "This run already has a pull request. Continue or close it instead.",
+        "task_not_found": "Task not found.",
+        "issue_has_active_run": "This issue already has an active run. Change the assignee to hand it over.",
+        "agent_post_while_run_paused": "The agent cannot post while the run is paused.",
+        "invalid_project_builder_refs": "Some cross-references in the project plan are invalid."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
@@ -826,8 +848,8 @@
             "QUALITY_SCORED": "Quality"
         }
     },
-    "API_KEY": {
-        "TITLE": "Bot credentials",
+    "AGENT_API_KEY": {
+        "TITLE": "Agent credentials",
         "KEYS_SECTION": "Gateway → Tracker token",
         "NAME": "Token name",
         "CREATE": "Create token",
@@ -851,11 +873,11 @@
         "GATEWAY_SECTION": "Tracker → Gateway token",
         "GATEWAY_URL": "Gateway URL",
         "GATEWAY_URL_PLACEHOLDER": "https://gateway.internal:8080",
-        "GATEWAY_URL_HINT": "Where the tracker sends stage webhooks. The Tracker → Gateway token is created with the bot.",
+        "GATEWAY_URL_HINT": "Where the tracker sends stage webhooks. The Tracker → Gateway token is created with the agent.",
         "GATEWAY_CREATE": "Register gateway",
         "GATEWAY_REGENERATE": "Regenerate token",
         "GATEWAY_DELETE": "Delete",
-        "GATEWAY_DELETE_CONFIRM": "Delete this gateway? The tracker will stop dispatching runs to this bot.",
+        "GATEWAY_DELETE_CONFIRM": "Delete this gateway? The tracker will stop dispatching runs to this agent.",
         "GATEWAY_TOKEN_SHOWN_ONCE": "Copy this token now — it won't be shown again. Set it as TRACKER_TO_GATEWAY_TOKEN in the gateway environment.",
         "GATEWAY_NONE": "No gateway registered yet.",
         "GATEWAY_CREATE_FAILED": "Registering the gateway failed",
@@ -871,10 +893,10 @@
         "EMAIL": "Email",
         "PASSWORD": "Password",
         "TYPE": "Type",
-        "BOT": "Bot",
+        "AGENT": "Agent",
         "ADMIN": "Admin",
         "USER": "User",
-        "IS_BOT": "Is bot",
+        "IS_AGENT": "Is agent",
         "IS_ADMIN": "Is admin",
         "PROMOTE": "Make admin",
         "DEMOTE": "Remove admin",
@@ -902,6 +924,7 @@
     "GIT_INTEGRATION": {
         "SINGULAR": "Git Integration",
         "PLURAL": "Git Integrations",
+        "CONFIRM_DELETE": "Delete this integration? Linked merge requests will stop syncing.",
         "NEW": "New integration",
         "ADD": "Add integration",
         "EDIT": "Edit integration",

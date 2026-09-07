@@ -4,7 +4,7 @@ export interface AgentRun {
     idRun: number;
     idIssue: number;
     idProject: number;
-    idUserBot: number;
+    idUserAgent: number;
     idGitIntegration: number | null;
     phase: AgentPhase;
     stagePlan: StagePlan;
@@ -30,11 +30,14 @@ export interface AgentStageProgress {
     status: AgentStageStatus;
     note?: string; // semantic token: no_clarifications | submitted | pr_opened
     attemptNo?: number;
-    idUserBot?: number; // which bot executed this stage (provenance)
+    idUserAgent?: number; // which agent executed this stage (provenance)
     at?: string | null; // finishedAt (done/failed) or startedAt (active)
     approvedAt?: string | null;
     errorReason?: string | null; // stable code (AGENT.ERROR.*), set on a failed stage
     errorDetail?: string | null; // raw provider/agent message
+    idResultMessage?: number | null; // the message this stage produced
+    thinkingTail?: string | null; // the last thoughts of the stage
+    hasThinking?: boolean; // full thinking is stored and readable
 }
 
 export interface StagePlan {
@@ -68,6 +71,6 @@ export interface RunStats {
 }
 
 export interface CreateAgentRunReq {
-    idUserBot: number;
+    idUserAgent: number;
     idsSkillByStage: Record<string, number[]>;
 }

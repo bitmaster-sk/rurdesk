@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { silentErrors } from 'src/app/core/http-error-context';
+import { RequestContext } from 'src/app/core/request-context';
 
 export interface GanttReorderRequest {
     movedId: number;
@@ -14,7 +14,7 @@ export class GanttOrderApi {
 
     public reorder$(idProject: number, body: GanttReorderRequest): Observable<void> {
         return this.http.put<void>(`/api/private/project/${idProject}/gantt-order`, body, {
-            context: silentErrors()
+            context: RequestContext.disableErrorToast()
         });
     }
 }

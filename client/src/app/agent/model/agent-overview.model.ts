@@ -6,7 +6,7 @@ export interface AgentCurrentRun {
 }
 
 export interface AgentOverview {
-    idUserBot: number;
+    idUserAgent: number;
     isBusy: boolean;
     current: AgentCurrentRun | null;
     queueCount: number;

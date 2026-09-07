@@ -33,7 +33,7 @@ func (s *AdminSuite) Test_FirstUser_IsAdmin() {
 	var u model.User
 	s.Nil(json.NewDecoder(res.Body).Decode(&u))
 	s.True(u.IsAdmin, "the first registered user must be the bootstrap admin")
-	s.False(u.IsBot)
+	s.False(u.IsAgent)
 }
 
 func (s *AdminSuite) Test_ListUsers_AsAdmin() {
@@ -88,14 +88,14 @@ func (s *AdminSuite) Test_CreateHuman_WithProject_AssignsRole() {
 	s.Contains(readBody(s.T(), members), "bob@test.sk")
 }
 
-func (s *AdminSuite) Test_CreateBot_MintsKey_AndAuthenticates() {
-	body := `{"name":"CI Bot","isBot":true}`
+func (s *AdminSuite) Test_CreateAgent_MintsKey_AndAuthenticates() {
+	body := `{"name":"CI Bot","isAgent":true}`
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 
 	var out model.AdminCreateUserRes
 	s.Nil(json.NewDecoder(res.Body).Decode(&out))
-	s.True(out.IsBot)
+	s.True(out.IsAgent)
 	s.Contains(out.Email, "@")
 	s.NotEmpty(out.RawKey, "bot must receive a raw key once")
 
@@ -103,8 +103,8 @@ func (s *AdminSuite) Test_CreateBot_MintsKey_AndAuthenticates() {
 	s.Equal(http.StatusOK, authed.StatusCode)
 }
 
-func (s *AdminSuite) Test_CreateBot_CannotPasswordLogin() {
-	body := `{"name":"NoLogin Bot","isBot":true}`
+func (s *AdminSuite) Test_CreateAgent_CannotPasswordLogin() {
+	body := `{"name":"NoLogin Bot","isAgent":true}`
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 	var out model.AdminCreateUserRes
@@ -115,10 +115,10 @@ func (s *AdminSuite) Test_CreateBot_CannotPasswordLogin() {
 	s.Equal(http.StatusUnauthorized, login.StatusCode)
 }
 
-func (s *AdminSuite) Test_CreateBot_EmailCollision_Suffixed() {
+func (s *AdminSuite) Test_CreateAgent_EmailCollision_Suffixed() {
 	mk := func() model.AdminCreateUserRes {
 		res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-			`{"name":"dup bot","isBot":true}`, s.AdminToken)
+			`{"name":"dup bot","isAgent":true}`, s.AdminToken)
 		s.Equal(http.StatusOK, res.StatusCode)
 		var out model.AdminCreateUserRes
 		s.Nil(json.NewDecoder(res.Body).Decode(&out))
@@ -162,9 +162,9 @@ func (s *AdminSuite) Test_GuardLastAdmin_BlocksSelfDemote() {
 	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
 }
 
-func (s *AdminSuite) Test_BotCannotBecomeAdmin() {
+func (s *AdminSuite) Test_AgentCannotBecomeAdmin() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"admin bot","isBot":true}`, s.AdminToken)
+		`{"name":"admin bot","isAgent":true}`, s.AdminToken)
 	var out model.AdminCreateUserRes
 	s.Nil(json.NewDecoder(res.Body).Decode(&out))
 
@@ -175,7 +175,7 @@ func (s *AdminSuite) Test_BotCannotBecomeAdmin() {
 
 func (s *AdminSuite) Test_DeleteUser_RemovesKeysAndMemberships() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"delbot","isBot":true}`, s.AdminToken)
+		`{"name":"delbot","isAgent":true}`, s.AdminToken)
 	var out model.AdminCreateUserRes
 	s.Nil(json.NewDecoder(res.Body).Decode(&out))
 
@@ -200,9 +200,9 @@ func (s *AdminSuite) Test_DeleteUser_WithAgentRun_409() {
 	adminID := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
 
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"agent bot","isBot":true}`, s.AdminToken)
-	var bot model.AdminCreateUserRes
-	s.Nil(json.NewDecoder(res.Body).Decode(&bot))
+		`{"name":"agent bot","isAgent":true}`, s.AdminToken)
+	var agent model.AdminCreateUserRes
+	s.Nil(json.NewDecoder(res.Body).Decode(&agent))
 
 	ctx := context.Background()
 	var idIssue int64
@@ -212,13 +212,13 @@ func (s *AdminSuite) Test_DeleteUser_WithAgentRun_409() {
 		idProject, adminID).Scan(&idIssue)
 	s.Require().Nil(err)
 	_, err = s.App.Pool.Exec(ctx, `
-		INSERT INTO agent.run (id_issue, id_user_bot, id_project, stage_plan)
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, stage_plan)
 		VALUES ($1, $2, $3, '{"stages":[]}'::jsonb)`,
-		idIssue, bot.IdUser, idProject)
+		idIssue, agent.IdUser, idProject)
 	s.Require().Nil(err)
 
 	del := Request(s.T(), s.App, "DELETE",
-		fmt.Sprintf("/api/private/admin/user/%d", bot.IdUser), "", s.AdminToken)
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), "", s.AdminToken)
 	s.Equal(http.StatusConflict, del.StatusCode, "deleting a bot with agent history must 409")
 }
 
@@ -283,32 +283,32 @@ func (s *AdminSuite) Test_DeleteUser_OnlyAssigned_UnassignsAndSucceeds() {
 // rotation happens via the regenerate endpoint, not by adding keys.
 func (s *AdminSuite) Test_AgentApiKey_SecondKeyRejected() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"keys bot","isBot":true}`, s.AdminToken)
-	var bot model.AdminCreateUserRes
-	s.Nil(json.NewDecoder(res.Body).Decode(&bot))
-	s.NotEmpty(bot.RawKey, "bot creation mints the initial key")
+		`{"name":"keys bot","isAgent":true}`, s.AdminToken)
+	var agent model.AdminCreateUserRes
+	s.Nil(json.NewDecoder(res.Body).Decode(&agent))
+	s.NotEmpty(agent.RawKey, "bot creation mints the initial key")
 
-	// A second key is rejected — one key per bot.
+	// A second key is rejected — one key per agent.
 	mint := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/api-key", bot.IdUser),
+		fmt.Sprintf("/api/private/admin/user/%d/api-key", agent.IdUser),
 		`{"name":"deploy"}`, s.AdminToken)
 	s.Equal(http.StatusConflict, mint.StatusCode, "a bot may hold only one key")
 
 	// The initial key still authenticates.
 	s.Equal(http.StatusOK,
-		Request(s.T(), s.App, "GET", "/api/private/user", "", bot.RawKey).StatusCode,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
 		"the minted key must authenticate")
 }
 
 // Test_GetAgentApiKey verifies the single-key GET endpoint returns the agent's one key.
 func (s *AdminSuite) Test_GetAgentApiKey() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"list keys bot","isBot":true}`, s.AdminToken)
-	var bot model.AdminCreateUserRes
-	s.Nil(json.NewDecoder(res.Body).Decode(&bot))
+		`{"name":"list keys bot","isAgent":true}`, s.AdminToken)
+	var agent model.AdminCreateUserRes
+	s.Nil(json.NewDecoder(res.Body).Decode(&agent))
 
 	get := Request(s.T(), s.App, "GET",
-		fmt.Sprintf("/api/private/admin/user/%d/api-key", bot.IdUser), "", s.AdminToken)
+		fmt.Sprintf("/api/private/admin/user/%d/api-key", agent.IdUser), "", s.AdminToken)
 	s.Equal(http.StatusOK, get.StatusCode)
 	var key model.ApiKey
 	s.Nil(json.NewDecoder(get.Body).Decode(&key))
@@ -385,32 +385,32 @@ func (s *AdminSuite) Test_DeleteUser_InvalidatesSession() {
 		"a deleted user's session must be invalidated")
 }
 
-func (s *AdminSuite) Test_DeleteBot_PurgesApiKeyCache() {
+func (s *AdminSuite) Test_DeleteAgent_PurgesApiKeyCache() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"cached bot","isBot":true}`, s.AdminToken)
-	var bot model.AdminCreateUserRes
-	s.Require().Nil(json.NewDecoder(res.Body).Decode(&bot))
+		`{"name":"cached bot","isAgent":true}`, s.AdminToken)
+	var agent model.AdminCreateUserRes
+	s.Require().Nil(json.NewDecoder(res.Body).Decode(&agent))
 
 	// use the key once → warms the 5-minute auth cache
 	s.Require().Equal(http.StatusOK,
-		Request(s.T(), s.App, "GET", "/api/private/user", "", bot.RawKey).StatusCode)
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode)
 
 	del := Request(s.T(), s.App, "DELETE",
-		fmt.Sprintf("/api/private/admin/user/%d", bot.IdUser), "", s.AdminToken)
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), "", s.AdminToken)
 	s.Require().Equal(http.StatusOK, del.StatusCode)
 
 	// without the cache purge this would still return 200 until the TTL expired
 	s.Equal(http.StatusUnauthorized,
-		Request(s.T(), s.App, "GET", "/api/private/user", "", bot.RawKey).StatusCode,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
 		"a deleted bot's cached key session must be purged immediately")
 }
 
-// Test_CreateBot_FailedAssign_RollsBackBot pins atomicity: when the project
-// assignment fails (bots cannot be owners), the half-created bot must be rolled back.
-func (s *AdminSuite) Test_CreateBot_FailedAssign_RollsBackBot() {
+// Test_CreateAgent_FailedAssign_RollsBackAgent pins atomicity: when the project
+// assignment fails (agents cannot be owners), the half-created agent must be rolled back.
+func (s *AdminSuite) Test_CreateAgent_FailedAssign_RollsBackAgent() {
 	idProject := createProject(s.T(), s.App, s.AdminToken, "tx-rollback-project")
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		fmt.Sprintf(`{"name":"tx rollback bot","isBot":true,"idProject":%d,"role":"owner"}`, idProject),
+		fmt.Sprintf(`{"name":"tx rollback bot","isAgent":true,"idProject":%d,"role":"owner"}`, idProject),
 		s.AdminToken)
 	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
 

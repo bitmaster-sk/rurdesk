@@ -18,21 +18,23 @@ import { HostType } from 'src/app/project/model/git-integration.model';
  *   - GitLab: `{base}/{repo}/-/merge_requests/{mrId}/diffs`
  *   - Gitea:  `{base}/{repo}/pulls/{mrId}/files`
  */
-export function buildGitHostMrFilesUrl(
-    hostType: HostType,
-    baseUrl: string,
-    repoPath: string,
-    mrId: string
-): string {
-    const base = baseUrl.replace(/\/+$/, '');
-    const repo = repoPath.replace(/^\/+|\/+$/g, '');
-    const id = encodeURIComponent(mrId);
-    switch (hostType) {
-        case HostType.GitHub:
-            return `${base}/${repo}/pull/${id}/files`;
-        case HostType.GitLab:
-            return `${base}/${repo}/-/merge_requests/${id}/diffs`;
-        case HostType.Gitea:
-            return `${base}/${repo}/pulls/${id}/files`;
+export abstract class GitHostUrl {
+    public static buildMrFilesUrl(
+        hostType: HostType,
+        baseUrl: string,
+        repoPath: string,
+        mrId: string
+    ): string {
+        const base = baseUrl.replace(/\/+$/, '');
+        const repo = repoPath.replace(/^\/+|\/+$/g, '');
+        const id = encodeURIComponent(mrId);
+        switch (hostType) {
+            case HostType.GitHub:
+                return `${base}/${repo}/pull/${id}/files`;
+            case HostType.GitLab:
+                return `${base}/${repo}/-/merge_requests/${id}/diffs`;
+            case HostType.Gitea:
+                return `${base}/${repo}/pulls/${id}/files`;
+        }
     }
 }

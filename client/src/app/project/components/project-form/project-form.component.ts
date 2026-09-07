@@ -27,7 +27,7 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     /** Auto-save status shown as an inline chip on the name field (settings). */
     public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
 
-    public readonly project = input.required<Project>();
+    public readonly project = input.required<Partial<Project>>();
 
     public readonly save = output<Project>();
 
@@ -86,6 +86,12 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
     }
 
     private editedProject(): Project {
-        return { ...this.project(), name: this.form.controls.name.value };
+        const source = this.project();
+        return {
+            ...source,
+            idProject: source.idProject ?? 0,
+            color: source.color ?? '',
+            name: this.form.controls.name.value
+        };
     }
 }

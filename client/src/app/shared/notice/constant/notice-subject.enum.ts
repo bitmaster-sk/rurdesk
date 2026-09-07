@@ -6,5 +6,7 @@ export enum NoticeSubject {
     Relation = 'relation',
     AgentRun = 'agent_run',
     AgentStats = 'agent_stats',
-    Participant = 'issue_participant'
+    AgentThinking = 'agent_thinking',
+    Participant = 'issue_participant',
+    MrStatus = 'mr_status'
 }

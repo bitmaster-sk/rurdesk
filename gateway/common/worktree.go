@@ -25,7 +25,7 @@ var hookSourcePath = "/etc/git-hooks/pre-push"
 // One repo per gateway: a run's worktree and the repo it reports back to the
 // tracker both come from this clone. A project may hold several git
 // integrations, but nothing today says which repo a given issue belongs to, so
-// serving more than one repo means running another gateway with another bot.
+// serving more than one repo means running another gateway with another agent.
 func CloneRepo(cfg *Config) error {
 	if err := os.MkdirAll(cfg.WorkspaceBase, 0o755); err != nil {
 		return fmt.Errorf("creating workspace base: %w", err)
@@ -234,9 +234,10 @@ func runGitQuiet(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// GenerateBranchName returns a branch name matching the agent pattern.
-func GenerateBranchName(idUserBot, idIssue int64) string {
-	return fmt.Sprintf("agent/b%d/i%d/%d", idUserBot, idIssue, time.Now().Unix())
+// GenerateBranchName returns the branch name for a run. It must keep matching
+// the pattern in git-hooks/pre-push, or the agent cannot push.
+func GenerateBranchName(idUserAgent, idIssue int64) string {
+	return fmt.Sprintf("agent/a%d/i%d/%d", idUserAgent, idIssue, time.Now().Unix())
 }
 
 // RepoPathFromURL returns the local filesystem path for a given repo URL.

@@ -1,8 +1,6 @@
-@if (winCfg.data?.project; as project) {
-    <app-project-form
-        [project]="project"
-        (save)="onSave($event)"
-        (saveGenerate)="onSaveGenerate($event)"
-        (cancelled)="onCancel()"
-    ></app-project-form>
-}
+<app-project-form
+    [project]="project"
+    (save)="onSave($event)"
+    (saveGenerate)="onSaveGenerate($event)"
+    (cancelled)="onCancel()"
+></app-project-form>

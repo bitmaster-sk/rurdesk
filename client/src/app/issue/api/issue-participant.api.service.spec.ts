@@ -8,7 +8,7 @@ const mockParticipant: IssueParticipantModel = {
     idUser: 1,
     name: 'Alice',
     colorAvatarBg: '#aabbcc',
-    isBot: false,
+    isAgent: false,
     source: ParticipantSource.Creator,
     hasNotificationsEnabled: true
 };

@@ -46,7 +46,7 @@ func NewScheduler(
 }
 
 // Start runs the scheduler loop until ctx is cancelled, ticking every second
-// and claiming at most one pending dispatch per bot user per tick.
+// and claiming at most one pending dispatch per agent user per tick.
 func (s *Scheduler) Start(ctx context.Context) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -67,24 +67,24 @@ func (s *Scheduler) TickOnce(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	bots, err := s.runRepo.LoadActiveBotIds(ctx)
+	agents, err := s.runRepo.LoadActiveAgentIds(ctx)
 	if err != nil {
-		return fmt.Errorf("loading active bots: %w", err)
+		return fmt.Errorf("loading active agents: %w", err)
 	}
-	for _, idBot := range bots {
-		if err := s.dispatchOneForBot(ctx, idBot); err != nil {
-			log.Error().Err(err).Int64("idUserBot", idBot).Msg("scheduler: dispatch error")
+	for _, idAgent := range agents {
+		if err := s.dispatchOneForAgent(ctx, idAgent); err != nil {
+			log.Error().Err(err).Int64("idUserAgent", idAgent).Msg("scheduler: dispatch error")
 		}
 	}
 	return nil
 }
 
-// dispatchOneForBot picks the highest-priority eligible run for this bot and
-// dispatches one stage attempt. Skips if the bot already has an active task —
+// dispatchOneForAgent picks the highest-priority eligible run for this agent and
+// dispatches one stage attempt. Skips if the agent already has an active task —
 // stages are atomic, so the scheduler waits for it to finish before claiming
 // the next.
-func (s *Scheduler) dispatchOneForBot(ctx context.Context, idUserBot int64) error {
-	hasActive, err := s.taskRepo.BotHasActiveTask(ctx, idUserBot)
+func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) error {
+	hasActive, err := s.taskRepo.BotHasActiveTask(ctx, idUserAgent)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (s *Scheduler) dispatchOneForBot(ctx context.Context, idUserBot int64) erro
 		return nil
 	}
 
-	run, err := s.runRepo.LoadNextEligible(ctx, idUserBot)
+	run, err := s.runRepo.LoadNextEligible(ctx, idUserAgent)
 	if err != nil {
 		return fmt.Errorf("loading next eligible run: %w", err)
 	}
@@ -108,7 +108,7 @@ func (s *Scheduler) dispatchOneForBot(ctx context.Context, idUserBot int64) erro
 	// A pending task can already exist (a revision or other re-queue created
 	// it directly). Dispatch it — ResolveNextStage may miss it if its stage
 	// already shows completed, and without this the run stays queued
-	// forever, shadowing newer runs for the same bot.
+	// forever, shadowing newer runs for the same agent.
 	if pending := latestPendingTask(existing); pending != nil {
 		return s.activateAndDispatch(ctx, run, pending)
 	}
@@ -132,7 +132,7 @@ func (s *Scheduler) dispatchOneForBot(ctx context.Context, idUserBot int64) erro
 	}
 
 	attemptNo := ResolveNextAttemptNo(existing, stage)
-	task, err := s.taskRepo.Insert(ctx, run.IdRun, run.IdUserBot, stage, attemptNo)
+	task, err := s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, stage, attemptNo)
 	if err != nil {
 		return err
 	}

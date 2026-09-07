@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
+	"github.com/bitmaster-sk/rurdesk/gateway/goose/toolcall"
 	"github.com/rs/zerolog/log"
 )
 
@@ -32,7 +33,17 @@ func logStreamEvent(ev streamEvent, idRun int64) {
 	case "text":
 		log.Info().Int64("idRun", idRun).Str("phase", "text").Int("chars", ev.Chars).Str("text", ev.Text).Msg("goose stream")
 	case "tool":
-		log.Info().Int64("idRun", idRun).Str("phase", "tool").Str("tool", ev.Tool).Msg("goose stream")
+		log.Info().Int64("idRun", idRun).Str("phase", "tool").Str("tool", ev.Tool).Str("detail", ev.ToolDetail).Msg("goose stream")
+	}
+}
+
+// Answer text is skipped: it already becomes the stage's output message.
+func queueThinkingEvent(ev streamEvent, batcher *common.ThinkingBatcher) {
+	switch ev.Kind {
+	case "thinking":
+		batcher.Add(common.ThinkingEvent{Kind: common.ThinkingKindThinking, Text: ev.Text})
+	case "tool":
+		batcher.Add(common.ThinkingEvent{Kind: common.ThinkingKindTool, Tool: ev.Tool, Text: ev.ToolDetail})
 	}
 }
 
@@ -46,10 +57,11 @@ const flushChars = 200
 // adapter's emit callback turns these into zerolog lines; tests collect them
 // to assert the grouping.
 type streamEvent struct {
-	Kind  string // "thinking" | "text" | "tool"
-	Text  string // coalesced text for thinking/text kinds
-	Chars int    // len(Text), for the log
-	Tool  string // tool name for the "tool" kind
+	Kind       string // "thinking" | "text" | "tool"
+	Text       string // coalesced text for thinking/text kinds
+	Chars      int    // len(Text), for the log
+	Tool       string // tool name for the "tool" kind
+	ToolDetail string // the argument that identifies the call (command, path, …)
 }
 
 // streamResult holds the run outcome (status, tokens, toolCalls, provErr)
@@ -148,16 +160,16 @@ func (a *streamAggregator) handleMessage(sl streamLine) {
 			if isTurnLimitSentinel(block.Text) {
 				a.turnLimitHit = true
 			}
-		case isToolRequestType(block.Type):
+		case toolcall.IsToolCall(block.Type):
 			a.flush() // close the current text/thinking group first
 			a.toolCnt++
-			name := toolNameFromRaw(block.ToolCall)
+			call := toolcall.Parse(block.ToolCall)
 			// Tracker exposes the tool namespaced (e.g. `tracker__complete_stage`),
 			// so match on the suffix rather than an exact name.
-			if strings.Contains(name, "complete_stage") {
+			if strings.Contains(call.Name, "complete_stage") {
 				a.sawCompleteStage = true
 			}
-			a.emit(streamEvent{Kind: "tool", Tool: name})
+			a.emit(streamEvent{Kind: "tool", Tool: call.Name, ToolDetail: call.Detail})
 		}
 	}
 }
@@ -197,23 +209,6 @@ func (a *streamAggregator) finish() streamResult {
 		res.provErr = classifyProviderError(text)
 	}
 	return res
-}
-
-// toolNameFromRaw pulls the tool name out of a toolRequest's toolCall block
-// ({"value":{"name":"write"}}), returning "" if the shape is unexpected.
-func toolNameFromRaw(raw json.RawMessage) string {
-	if len(raw) == 0 {
-		return ""
-	}
-	var tc struct {
-		Value struct {
-			Name string `json:"name"`
-		} `json:"value"`
-	}
-	if err := json.Unmarshal(raw, &tc); err != nil {
-		return ""
-	}
-	return tc.Value.Name
 }
 
 // isTurnLimitSentinel returns true when text contains goose's turn-limit

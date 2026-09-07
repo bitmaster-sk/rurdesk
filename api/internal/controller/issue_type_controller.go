@@ -74,7 +74,7 @@ func (itc *IssueTypeController) CreateIssueType(c *gin.Context) {
 	var issueType *model.IssueType
 	err := extctx.RunInTx(ctx, itc.pool, func(ctx context.Context) error {
 		if !itc.acl.CanCreateIssueType(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		var err error
 		issueType, err = itc.issueTypeRepo.InsertIssueType(ctx, &model.IssueType{
@@ -83,7 +83,7 @@ func (itc *IssueTypeController) CreateIssueType(c *gin.Context) {
 		})
 		return err
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -118,7 +118,7 @@ func (itc *IssueTypeController) EditIssueType(c *gin.Context) {
 	var issueType *model.IssueType
 	err = extctx.RunInTx(ctx, itc.pool, func(ctx context.Context) error {
 		if !itc.acl.CanUpdateIssueType(ctx, user.IdUser, dto.IdProject) {
-			return errForbidden
+			return errs.ErrForbidden
 		}
 		var err error
 		issueType, err = itc.issueTypeRepo.LoadIssueType(ctx, dto.IdProject, dto.IdIssueType)
@@ -134,7 +134,7 @@ func (itc *IssueTypeController) EditIssueType(c *gin.Context) {
 		}
 		return itc.issueTypeRepo.MoveIssueType(ctx, issueType)
 	})
-	if err == errForbidden {
+	if err == errs.ErrForbidden {
 		_ = c.Error(err)
 		c.Status(http.StatusForbidden)
 		return
@@ -160,7 +160,7 @@ func (itc *IssueTypeController) GetIssueTypeUsage(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !itc.acl.CanDeleteIssueType(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -181,7 +181,7 @@ func (itc *IssueTypeController) DeleteIssueType(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !itc.acl.CanDeleteIssueType(ctx, user.IdUser, idProject) {
-		_ = c.Error(errForbidden)
+		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
 		return
 	}

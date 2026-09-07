@@ -9,6 +9,7 @@ import { AuthTokenStore } from 'src/app/auth/store/auth-token.store';
 import { IssueParticipantModel } from 'src/app/issue/model/issue-participant.model';
 import { NoticeSubject } from './constant/notice-subject.enum';
 import { NoticeAction } from './constant/notice-action.enum';
+import { MrStatusNotice } from './model/mr-status-notice.model';
 import { Notice } from './model/notice.model';
 
 @Injectable({
@@ -44,12 +45,18 @@ export class NoticeService {
     private agentStatsSubject = new Subject<Notice<unknown>>();
     public agentStats$: Observable<Notice<unknown>> = this.agentStatsSubject.asObservable();
 
+    private agentThinkingSubject = new Subject<Notice<unknown>>();
+    public agentThinking$: Observable<Notice<unknown>> = this.agentThinkingSubject.asObservable();
+
     private participantSubject = new Subject<
         Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
     >();
     public participant$: Observable<
         Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
     > = this.participantSubject.asObservable();
+
+    private mrStatusSubject = new Subject<Notice<MrStatusNotice>>();
+    public mrStatus$: Observable<Notice<MrStatusNotice>> = this.mrStatusSubject.asObservable();
 
     private socket: WebSocket | null = null;
 
@@ -156,10 +163,16 @@ export class NoticeService {
             case NoticeSubject.AgentStats:
                 this.agentStatsSubject.next(notice);
                 break;
+            case NoticeSubject.AgentThinking:
+                this.agentThinkingSubject.next(notice);
+                break;
             case NoticeSubject.Participant:
                 this.participantSubject.next(
                     notice as Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
                 );
+                break;
+            case NoticeSubject.MrStatus:
+                this.mrStatusSubject.next(notice as Notice<MrStatusNotice>);
                 break;
             default:
                 console.warn('unsupported notice');

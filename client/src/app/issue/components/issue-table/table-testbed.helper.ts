@@ -17,23 +17,14 @@ import { CommandPaletteService } from 'src/app/core/command/command-palette.serv
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Issue } from '../../model/issue.model';
+import { Fixtures } from 'src/testing/fixtures';
 import { UiModule } from 'src/app/ui/ui.module';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 
 import { signal } from '@angular/core';
 
 export function makeIssue(over: Partial<Issue> = {}): Issue {
-    return {
-        idIssue: 1,
-        idIssuePublic: 1,
-        idProject: 5,
-        title: 'T',
-        description: '',
-        idState: null,
-        idSeverity: null,
-        tracked: 0,
-        ...over
-    };
+    return Fixtures.issue({ idProject: 5, title: 'T', ...over });
 }
 
 export function mockSub<T = unknown>() {
@@ -114,6 +105,7 @@ export function configureTableTestBed(): TableMocks {
         rows: signal<any[]>([]),
         total: signal(0),
         isLoading: signal(false),
+        hasLoaded: signal(false),
         canLoadMore: vi.fn(() => false),
         insertRelation$: vi.fn(() => ({ pipe: vi.fn(() => ({ subscribe: vi.fn() })) })),
         loadRelationsFor: vi.fn()

@@ -31,10 +31,10 @@ func main() {
 
 	setupLogger(cfg.LogLevel)
 
-	agentAdapter := selectAdapter(cfg)
+	trackerClient := common.NewTrackerClient(cfg)
+	agentAdapter := selectAdapter(cfg, trackerClient)
 	dedup := common.NewDedupCache(24 * time.Hour)
 	state := common.NewState()
-	trackerClient := common.NewTrackerClient(cfg)
 	orchestrator := common.NewOrchestrator(cfg, agentAdapter, trackerClient, state)
 
 	if err := common.CloneRepo(cfg); err != nil {
@@ -49,7 +49,7 @@ func main() {
 	// a tracker not yet up at gateway start still gets the signal promptly,
 	// instead of waiting ~10min for the heartbeat sweep. GatewayRecovered is
 	// idempotent except in one window: if the first call succeeded but its
-	// response was lost, the retry's FailActiveForBot could fail a task
+	// response was lost, the retry's FailActiveForAgent could fail a task
 	// dispatched since then. Accepted for now. Stops on first success, on
 	// shutdown, or after the attempt cap (heartbeat sweep is the backstop);
 	// never blocks server start.
@@ -117,12 +117,12 @@ func setupLogger(level string) {
 	log.Info().Str("requestedLevel", level).Str("effectiveLevel", l.String()).Msg("logger configured")
 }
 
-func selectAdapter(cfg *common.Config) common.Agent {
+func selectAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) common.Agent {
 	switch cfg.AdapterType {
 	case "claude-code":
 		return claudecode.NewClaudeCodeAdapter(cfg)
 	case "goose":
-		return goose.NewGooseAdapter(cfg)
+		return goose.NewGooseAdapter(cfg, thinkingSender)
 	default:
 		log.Fatal().Str("adapter", cfg.AdapterType).Msg("unknown adapter type")
 		return nil
