@@ -31,14 +31,14 @@ describe('IssueParticipantApi', () => {
 
     it('list$ GETs /api/private/project/:idProject/issue/:idIssuePublic/participant', () => {
         let res: IssueParticipantModel[] | undefined;
-        service.list$(10, 42).subscribe(r => (res = r));
+        service.load$(10, 42).subscribe(r => (res = r));
 
         expect(get).toHaveBeenCalledWith('/api/private/project/10/issue/42/participant');
         expect(res).toEqual([mockParticipant]);
     });
 
     it('add$ POSTs to /api/private/project/:idProject/issue/:idIssuePublic/participant with idUser', () => {
-        service.add$(10, 42, 7).subscribe();
+        service.insert$(10, 42, 7).subscribe();
 
         expect(post).toHaveBeenCalledWith('/api/private/project/10/issue/42/participant', {
             idUser: 7

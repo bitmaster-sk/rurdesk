@@ -14,7 +14,7 @@ import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { Issue } from '../../../model/issue.model';
 import { CreateIssueRelationDto, ReadIssueRelationDto } from '../../../model/issue-relation.model';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
@@ -39,7 +39,7 @@ const RELATION_LABEL_KEYS: Record<string, string> = {
 
 @Injectable()
 export class IssueTableService {
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly stateStore = inject(StateStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly severityStore = inject(SeverityStore);
@@ -63,11 +63,7 @@ export class IssueTableService {
     private readonly relationsMap = signal<Map<number, IssueRelationRow[]>>(new Map());
 
     private readonly pager = new CursorPager((cursor, limit) =>
-        this.issueService.loadIssuesPage$(
-            this.currentFilter!,
-            limit ?? this.settings.tablePageSize(),
-            cursor
-        )
+        this.issueApi.loadPage$(this.currentFilter!, limit ?? this.settings.tablePageSize(), cursor)
     );
 
     public readonly total = this.pager.total;

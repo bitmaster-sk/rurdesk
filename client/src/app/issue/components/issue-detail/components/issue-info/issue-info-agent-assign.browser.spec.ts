@@ -13,7 +13,7 @@ import { Fixtures } from 'src/testing/fixtures';
 import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { IssueService } from '../../../../issue.service';
+import { IssueApi } from '../../../../api/issue.api.service';
 import { Issue } from '../../../../model/issue.model';
 import { IssueInfoComponent } from './issue-info.component';
 
@@ -35,15 +35,15 @@ const RUN: AgentRun = Fixtures.agentRun();
  * field would PATCH it back and un-assign the agent.
  */
 describe('IssueInfoComponent — agent assigned from the dock (browser)', () => {
-    let issueService: { updateIssue: ReturnType<typeof vi.fn> };
+    let issueApi: { update$: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
-        issueService = { updateIssue: vi.fn().mockReturnValue(of(ISSUE)) };
+        issueApi = { update$: vi.fn().mockReturnValue(of(ISSUE)) };
 
         await TestBed.configureTestingModule({
             declarations: [IssueInfoComponent],
             providers: [
-                { provide: IssueService, useValue: issueService },
+                { provide: IssueApi, useValue: issueApi },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
@@ -59,7 +59,7 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
                 { provide: PinApi, useValue: { insert$: () => NEVER } },
                 {
                     provide: MrDiffApi,
-                    useValue: { getStatus$: () => NEVER, getDiff$: () => NEVER }
+                    useValue: { loadStatus$: () => NEVER, load$: () => NEVER }
                 },
                 { provide: GitIntegrationApi, useValue: { loadOne$: () => NEVER } },
                 { provide: Router, useValue: { navigate: vi.fn() } }
@@ -89,13 +89,13 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
         fixture.detectChanges();
 
         expect(component.assignedToControl.value).toBe(8);
-        expect(issueService.updateIssue).not.toHaveBeenCalled();
+        expect(issueApi.update$).not.toHaveBeenCalled();
 
         // A later edit of an unrelated field must carry the agent, not the stale null.
         component.form.patchValue({ title: 'renamed' });
         fixture.detectChanges();
 
-        const saved = issueService.updateIssue.mock.calls.at(-1)?.[0] as Issue | undefined;
+        const saved = issueApi.update$.mock.calls.at(-1)?.[0] as Issue | undefined;
         expect(saved?.assignedTo).toBe(8);
     });
 });

@@ -9,7 +9,7 @@ import { IssueCalendarComponent } from './issue-calendar.component';
 import { IssueCalendarService } from './service/issue-calendar.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { ProjectStore } from 'src/app/project/project.store';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
@@ -65,7 +65,7 @@ export interface CalendarMocks {
     issueCalendarServiceMock: any;
     issueFilterStoreMock: any;
     projectStoreMock: any;
-    sIssueMock: any;
+    issueApiMock: any;
     commandPaletteMock: any;
     noticeServiceMock: any;
     i18nMock: any;
@@ -104,8 +104,8 @@ export function configureCalendarTestBed(
         project$: of({ idProject: 10 })
     };
 
-    const sIssueMock = {
-        updateIssue: vi.fn(() => mockSub())
+    const issueApiMock = {
+        update$: vi.fn(() => mockSub())
     };
 
     const commandPaletteMock = {
@@ -126,7 +126,7 @@ export function configureCalendarTestBed(
             { provide: IssueCalendarService, useValue: issueCalendarServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
             { provide: ProjectStore, useValue: projectStoreMock },
-            { provide: IssueService, useValue: sIssueMock },
+            { provide: IssueApi, useValue: issueApiMock },
             { provide: IssueToolbarService, useValue: { register: vi.fn(), clear: vi.fn() } },
             { provide: NoticeService, useValue: noticeServiceMock },
             { provide: CommandPaletteService, useValue: commandPaletteMock },
@@ -153,7 +153,7 @@ export function configureCalendarTestBed(
         issueCalendarServiceMock,
         issueFilterStoreMock,
         projectStoreMock,
-        sIssueMock,
+        issueApiMock,
         commandPaletteMock,
         noticeServiceMock,
         i18nMock

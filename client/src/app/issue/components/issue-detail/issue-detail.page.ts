@@ -15,7 +15,8 @@ import { BrowserTitleService } from 'src/app/core/browser-title.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
+import { IssueConverter } from '../../converter/issue.converter';
 import { Issue, CreateIssueReq } from '../../model/issue.model';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
@@ -30,7 +31,7 @@ import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 })
 export class IssueDetailPage implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
-    private readonly sIssue = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly projectStore = inject(ProjectStore);
     private readonly notice = inject(NoticeService);
     private readonly browserTitle = inject(BrowserTitleService);
@@ -62,7 +63,7 @@ export class IssueDetailPage implements OnDestroy {
                         of(initial),
                         this.notice.issue$.pipe(
                             filter(n => n.payload?.idIssue === initial.idIssue),
-                            map(n => this.sIssue.toIssue(n.payload))
+                            map(n => IssueConverter.toIssue(n.payload))
                         )
                     )
                 )
@@ -142,7 +143,7 @@ export class IssueDetailPage implements OnDestroy {
 
     private loadIssue(params: IssueDetailPageParams): Observable<Issue> {
         if (params.idIssuePublic !== null) {
-            return this.sIssue.loadIssue(params.idProject, params.idIssuePublic);
+            return this.issueApi.loadOne$(params.idProject, params.idIssuePublic);
         }
         // idIssue/idIssuePublic stay absent on purpose — the form reads their absence as "new issue".
         const draft: CreateIssueReq = {

@@ -27,7 +27,7 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue } from '../../model/issue.model';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ClipboardService } from 'src/app/core/clipboard.service';
 
@@ -47,7 +47,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     private readonly severityStore = inject(SeverityStore);
     private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly memberStore = inject(ProjectMemberStore);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly toast = inject(ToastNotificationService);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly clipboard = inject(ClipboardService);
@@ -230,7 +230,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
         const previous = this.issue();
         if (!previous) return;
         this.issue.set({ ...previous, ...over });
-        this.issueService.updateIssue({ ...previous, ...over }).subscribe({
+        this.issueApi.update$({ ...previous, ...over }).subscribe({
             next: () => this.issueFilterStore.refresh(),
             error: () => {
                 this.issue.set(previous);
@@ -270,7 +270,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     protected onDelete(): void {
         const issue = this.issue();
         if (!issue) return;
-        this.issueService.deleteIssue(issue.idProject, issue.idIssuePublic).subscribe(() => {
+        this.issueApi.delete$(issue.idProject, issue.idIssuePublic).subscribe(() => {
             this.issueFilterStore.refresh();
         });
         this.hide();

@@ -12,7 +12,7 @@ import { StateStore } from 'src/app/state/store/state.store';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { Issue } from '../../../model/issue.model';
 import { IssueGroup } from '../../../model/issues-page.model';
 import { KanbanColumn } from '../entity/kanban-column.entity';
@@ -29,7 +29,7 @@ interface StoreMaps {
 
 @Injectable()
 export class IssueKanbanService {
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly stateStore = inject(StateStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly severityStore = inject(SeverityStore);
@@ -72,7 +72,7 @@ export class IssueKanbanService {
     public readonly columns$ = this.issueFilterStore.actualFilterChange$.pipe(
         switchMap(({ filter, refresh }) =>
             forkJoin([
-                this.issueService.loadIssuesGrouped$(
+                this.issueApi.loadGrouped$(
                     filter,
                     'state',
                     refresh ? this.columnExtent() : this.settings.kanbanPageSize()
@@ -93,7 +93,7 @@ export class IssueKanbanService {
     public readonly swimlaneRows$ = this.issueFilterStore.actualFilterChange$.pipe(
         switchMap(({ filter, refresh }) =>
             forkJoin([
-                this.issueService.loadIssuesGrouped$(
+                this.issueApi.loadGrouped$(
                     filter,
                     'state,assignedTo',
                     refresh ? this.swimlaneExtent() : this.settings.kanbanPageSize()
@@ -152,8 +152,8 @@ export class IssueKanbanService {
                 .map(c => (c.state.idState === idState ? { ...c, loading: true } : c))
         );
 
-        this.issueService
-            .loadIssuesPage$(colFilter, this.settings.kanbanPageSize(), column.cursor)
+        this.issueApi
+            .loadPage$(colFilter, this.settings.kanbanPageSize(), column.cursor)
             .subscribe({
                 next: page => {
                     const newTiles = page.items.map(issue => this.toTile(issue, this.ctx!));
@@ -206,34 +206,32 @@ export class IssueKanbanService {
             }))
         );
 
-        this.issueService
-            .loadIssuesPage$(cellFilter, this.settings.kanbanPageSize(), cell.cursor)
-            .subscribe({
-                next: page => {
-                    const newTiles = page.items.map(issue => this.toTile(issue, this.ctx!));
-                    const rows = this.swimlaneSubject.getValue().map(row => ({
-                        ...row,
-                        cells: row.cells.map(c =>
-                            matches(c)
-                                ? {
-                                      ...c,
-                                      tiles: [...c.tiles, ...newTiles],
-                                      cursor: page.nextCursor,
-                                      loading: false
-                                  }
-                                : c
-                        )
-                    }));
-                    this.swimlaneSubject.next(rows);
-                },
-                error: () =>
-                    this.swimlaneSubject.next(
-                        this.swimlaneSubject.getValue().map(row => ({
-                            ...row,
-                            cells: row.cells.map(c => (matches(c) ? { ...c, loading: false } : c))
-                        }))
+        this.issueApi.loadPage$(cellFilter, this.settings.kanbanPageSize(), cell.cursor).subscribe({
+            next: page => {
+                const newTiles = page.items.map(issue => this.toTile(issue, this.ctx!));
+                const rows = this.swimlaneSubject.getValue().map(row => ({
+                    ...row,
+                    cells: row.cells.map(c =>
+                        matches(c)
+                            ? {
+                                  ...c,
+                                  tiles: [...c.tiles, ...newTiles],
+                                  cursor: page.nextCursor,
+                                  loading: false
+                              }
+                            : c
                     )
-            });
+                }));
+                this.swimlaneSubject.next(rows);
+            },
+            error: () =>
+                this.swimlaneSubject.next(
+                    this.swimlaneSubject.getValue().map(row => ({
+                        ...row,
+                        cells: row.cells.map(c => (matches(c) ? { ...c, loading: false } : c))
+                    }))
+                )
+        });
     }
 
     /**

@@ -103,7 +103,7 @@ export class QualityPanelComponent implements OnInit {
     }
 
     private loadCached(idIssue: number): void {
-        this.qualityApi.getQuality$(this.idProject(), idIssue).subscribe({
+        this.qualityApi.load$(this.idProject(), idIssue).subscribe({
             next: report => {
                 this.report.set(report);
             },

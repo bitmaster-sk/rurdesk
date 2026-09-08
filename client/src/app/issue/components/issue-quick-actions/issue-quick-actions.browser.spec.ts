@@ -14,7 +14,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { UiModule } from 'src/app/ui/ui.module';
 import { Issue } from '../../model/issue.model';
@@ -114,16 +114,16 @@ async function createFixture(
         states?: IssueState[];
         severities?: IssueSeverity[];
         users?: User[];
-        issueService?: any;
+        issueApi?: any;
     } = {}
 ) {
     const states = overrides.states ?? [stateA, stateB];
     const severities = overrides.severities ?? [severityA];
     const users = overrides.users ?? [alice, bob];
 
-    const issueServiceMock = overrides.issueService ?? {
-        updateIssue: vi.fn(() => mockSub()),
-        deleteIssue: vi.fn(() => mockSub())
+    const issueApiMock = overrides.issueApi ?? {
+        update$: vi.fn(() => mockSub()),
+        delete$: vi.fn(() => mockSub())
     };
 
     const toastMock = { showError: vi.fn(), showSuccess: vi.fn() };
@@ -175,7 +175,7 @@ async function createFixture(
                 provide: ProjectMemberStore,
                 useValue: { users$: of(users), usersMap$: of(new Map()) }
             },
-            { provide: IssueService, useValue: issueServiceMock },
+            { provide: IssueApi, useValue: issueApiMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
             { provide: ToastNotificationService, useValue: toastMock },
             provideRouter([]),
@@ -190,18 +190,18 @@ async function createFixture(
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
-    return { fixture, comp, issueServiceMock, issueFilterStoreMock, toastMock };
+    return { fixture, comp, issueApiMock, issueFilterStoreMock, toastMock };
 }
 
 describe('IssueQuickActionsComponent (TestBed)', () => {
     let comp: any;
-    let issueServiceMock: any;
+    let issueApiMock: any;
     let issueFilterStoreMock: any;
 
     beforeEach(async () => {
         const result = await createFixture();
         comp = result.comp;
-        issueServiceMock = result.issueServiceMock;
+        issueApiMock = result.issueApiMock;
         issueFilterStoreMock = result.issueFilterStoreMock;
     });
 
@@ -276,17 +276,17 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
     // onStateChange
     // =========================================================================
 
-    it('onStateChange updates issue and calls issueService.updateIssue', () => {
+    it('onStateChange updates issue and calls issueApi.update$', () => {
         comp.issue.set(makeIssue({ idState: 1 }));
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onStateChange(2);
         expect(comp.issue().idState).toBe(2);
-        expect(issueServiceMock.updateIssue).toHaveBeenCalled();
+        expect(issueApiMock.update$).toHaveBeenCalled();
     });
 
     it('rolls the issue back when the save fails', () => {
         const sub = mockSub();
-        issueServiceMock.updateIssue.mockReturnValueOnce(sub);
+        issueApiMock.update$.mockReturnValueOnce(sub);
         const original = makeIssue({ idState: 1 });
         comp.issue.set(original);
         comp.onStateChange(2);
@@ -300,40 +300,40 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
     it('onStateChange with no issue: no-op', () => {
         comp.issue.set(null);
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onStateChange(2);
-        expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+        expect(issueApiMock.update$).not.toHaveBeenCalled();
     });
 
     // =========================================================================
     // onSeverityChange
     // =========================================================================
 
-    it('onSeverityChange updates issue and calls issueService.updateIssue', () => {
+    it('onSeverityChange updates issue and calls issueApi.update$', () => {
         comp.issue.set(makeIssue({ idSeverity: 1 }));
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onSeverityChange(2);
         expect(comp.issue().idSeverity).toBe(2);
-        expect(issueServiceMock.updateIssue).toHaveBeenCalled();
+        expect(issueApiMock.update$).toHaveBeenCalled();
     });
 
     it('onSeverityChange with no issue: no-op', () => {
         comp.issue.set(null);
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onSeverityChange(2);
-        expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+        expect(issueApiMock.update$).not.toHaveBeenCalled();
     });
 
     // =========================================================================
     // onAssigneeChange
     // =========================================================================
 
-    it('onAssigneeChange updates issue and calls issueService.updateIssue', () => {
+    it('onAssigneeChange updates issue and calls issueApi.update$', () => {
         comp.issue.set(makeIssue({ assignedTo: 10 }));
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onAssigneeChange(20);
         expect(comp.issue().assignedTo).toBe(20);
-        expect(issueServiceMock.updateIssue).toHaveBeenCalled();
+        expect(issueApiMock.update$).toHaveBeenCalled();
     });
 
     it('onAssigneeChange to null: clears assignee', () => {
@@ -344,9 +344,9 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
     it('onAssigneeChange with no issue: no-op', () => {
         comp.issue.set(null);
-        issueServiceMock.updateIssue.mockClear();
+        issueApiMock.update$.mockClear();
         comp.onAssigneeChange(20);
-        expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+        expect(issueApiMock.update$).not.toHaveBeenCalled();
     });
 
     // =========================================================================
@@ -363,9 +363,9 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
         it('no scheduledAt: no-op', () => {
             comp.issue.set(makeIssue({ scheduledAt: null }));
-            issueServiceMock.updateIssue.mockClear();
+            issueApiMock.update$.mockClear();
             comp.onPreviousDay();
-            expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(issueApiMock.update$).not.toHaveBeenCalled();
         });
     });
 
@@ -379,9 +379,9 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
         it('no scheduledAt: no-op', () => {
             comp.issue.set(makeIssue({ scheduledAt: null }));
-            issueServiceMock.updateIssue.mockClear();
+            issueApiMock.update$.mockClear();
             comp.onNextDay();
-            expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(issueApiMock.update$).not.toHaveBeenCalled();
         });
     });
 
@@ -396,9 +396,9 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
         it('with no issue: no-op', () => {
             comp.issue.set(null);
-            issueServiceMock.updateIssue.mockClear();
+            issueApiMock.update$.mockClear();
             comp.onToday();
-            expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(issueApiMock.update$).not.toHaveBeenCalled();
         });
     });
 
@@ -430,16 +430,16 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
 
         it('with no issue: no-op', () => {
             comp.issue.set(null);
-            issueServiceMock.updateIssue.mockClear();
+            issueApiMock.update$.mockClear();
             comp.onPickDate(new Date());
-            expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(issueApiMock.update$).not.toHaveBeenCalled();
         });
 
         it('with null date: no-op', () => {
             comp.issue.set(makeIssue({ scheduledAt: new Date('2025-01-15T00:00:00Z') }));
-            issueServiceMock.updateIssue.mockClear();
+            issueApiMock.update$.mockClear();
             comp.onPickDate(null as any);
-            expect(issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(issueApiMock.update$).not.toHaveBeenCalled();
         });
     });
 
@@ -496,19 +496,19 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
     // onDelete
     // =========================================================================
 
-    it('onDelete calls issueService.deleteIssue and refreshes', () => {
+    it('onDelete calls issueApi.delete$ and refreshes', () => {
         comp.issue.set(makeIssue({ idProject: 5, idIssuePublic: 42 }));
-        issueServiceMock.deleteIssue.mockClear();
+        issueApiMock.delete$.mockClear();
         issueFilterStoreMock.refresh.mockClear();
         comp.onDelete();
-        expect(issueServiceMock.deleteIssue).toHaveBeenCalledWith(5, 42);
+        expect(issueApiMock.delete$).toHaveBeenCalledWith(5, 42);
     });
 
     it('onDelete with no issue: no-op', () => {
         comp.issue.set(null);
-        issueServiceMock.deleteIssue.mockClear();
+        issueApiMock.delete$.mockClear();
         comp.onDelete();
-        expect(issueServiceMock.deleteIssue).not.toHaveBeenCalled();
+        expect(issueApiMock.delete$).not.toHaveBeenCalled();
     });
 
     // =========================================================================

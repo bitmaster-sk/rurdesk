@@ -25,7 +25,7 @@ import interactionPlugin, { EventResizeDoneArg } from '@fullcalendar/interaction
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { FullCalendarComponent } from '@fullcalendar/angular';
 import { CalendarOptions } from '@fullcalendar/core';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { startOfMonth, endOfMonth, add } from 'date-fns';
 import { ProjectStore } from 'src/app/project/project.store';
 import { first } from 'rxjs/operators';
@@ -67,7 +67,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     private readonly zone = inject(NgZone);
     private readonly router = inject(Router);
-    private readonly sIssue = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly projectStore = inject(ProjectStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly savedViewStore = inject(SavedViewStore);
@@ -522,7 +522,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             seconds: Math.trunc(evt.endDelta.milliseconds / 1000)
         });
         issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
-        this.sIssue.updateIssue(issue).subscribe({
+        this.issueApi.update$(issue).subscribe({
             error: () => {
                 evt.revert();
             }
@@ -549,7 +549,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                 seconds: Math.trunc(evt.delta.milliseconds / 1000)
             });
         }
-        this.sIssue.updateIssue(issue).subscribe({
+        this.issueApi.update$(issue).subscribe({
             error: () => {
                 evt.revert();
             }

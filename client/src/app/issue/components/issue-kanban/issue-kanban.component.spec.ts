@@ -4,7 +4,7 @@ import { EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { IssueKanbanComponent } from './issue-kanban.component';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { IssueKanbanService } from './service/issue-kanban.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { IssueToolbarService } from '../../issue-toolbar.service';
@@ -143,7 +143,7 @@ function makeCellDropEvent(
 
 interface Harness {
     component: IssueKanbanComponent;
-    updateIssue: ReturnType<typeof vi.fn>;
+    update$: ReturnType<typeof vi.fn>;
     assignIssue: ReturnType<typeof vi.fn>;
     refresh: ReturnType<typeof vi.fn>;
     showError: ReturnType<typeof vi.fn>;
@@ -177,7 +177,7 @@ function setup(
     project: { idProject: number } | null = { idProject: 1 },
     issueNotices: Observable<Notice<Issue>> = EMPTY
 ): Harness {
-    const updateIssue = vi.fn().mockReturnValue(of(undefined as never));
+    const update$ = vi.fn().mockReturnValue(of(undefined as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
     const refresh = vi.fn();
     const showError = vi.fn();
@@ -192,7 +192,7 @@ function setup(
     const injector = Injector.create({
         providers: [
             { provide: DestroyRef, useValue: { onDestroy: () => () => undefined } },
-            { provide: IssueService, useValue: { updateIssue } },
+            { provide: IssueApi, useValue: { update$ } },
             {
                 provide: IssueKanbanService,
                 useValue: { columns$: of([]), swimlaneRows$: of([]), states$: of([]) }
@@ -252,7 +252,7 @@ function setup(
     });
     return {
         component,
-        updateIssue,
+        update$,
         assignIssue,
         refresh,
         showError,
@@ -473,8 +473,8 @@ describe('IssueKanbanComponent — onStateChange (columns)', () => {
             makeColumnDropEvent(makeColumn(stateA, [tile]), makeColumn(stateB, []))
         );
 
-        expect(h.updateIssue).toHaveBeenCalledTimes(1);
-        expect(h.updateIssue).toHaveBeenCalledWith(
+        expect(h.update$).toHaveBeenCalledTimes(1);
+        expect(h.update$).toHaveBeenCalledWith(
             expect.objectContaining({ idState: stateB.idState, state: stateB })
         );
     });
@@ -493,7 +493,7 @@ describe('IssueKanbanComponent — onStateChange (columns)', () => {
 
     it('on error: refreshes the board', () => {
         const h = setup();
-        h.updateIssue.mockReturnValue(throwError(() => new Error('403')));
+        h.update$.mockReturnValue(throwError(() => new Error('403')));
         const tile = makeTile({ idState: 1, state: stateA });
 
         handlers(h.component).onStateChange(
@@ -512,8 +512,8 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
-        expect(h.updateIssue).toHaveBeenCalledTimes(1);
-        expect(h.updateIssue).toHaveBeenCalledWith(
+        expect(h.update$).toHaveBeenCalledTimes(1);
+        expect(h.update$).toHaveBeenCalledWith(
             expect.objectContaining({ idState: stateB.idState, state: stateB })
         );
     });
@@ -525,8 +525,8 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
-        expect(h.updateIssue).toHaveBeenCalledTimes(1);
-        expect(h.updateIssue).toHaveBeenCalledWith(
+        expect(h.update$).toHaveBeenCalledTimes(1);
+        expect(h.update$).toHaveBeenCalledWith(
             expect.objectContaining({ assignedTo: bob.idUser, assignedToUser: bob })
         );
     });
@@ -538,7 +538,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
 
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
-        expect(h.updateIssue).not.toHaveBeenCalled();
+        expect(h.update$).not.toHaveBeenCalled();
     });
 
     it('on success: does not refresh the board nor show a toast', () => {
@@ -554,7 +554,7 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
 
     it('on error: refreshes the board', () => {
         const h = setup();
-        h.updateIssue.mockReturnValue(throwError(() => new Error('409')));
+        h.update$.mockReturnValue(throwError(() => new Error('409')));
         const tile = makeTile({ idState: 1, state: stateA });
         const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
 

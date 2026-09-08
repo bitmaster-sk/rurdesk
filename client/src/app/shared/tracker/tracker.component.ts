@@ -10,7 +10,7 @@ import { Project } from 'src/app/project/model/project.model';
 import { DurationConverter } from '../duration/duration.converter';
 import { DurationParser } from '../duration/duration.parser';
 import { DurationValidator } from '../duration/duration.validator';
-import { IssueService } from 'src/app/issue/issue.service';
+import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Track } from './model/track.model';
 
 @Component({
@@ -21,7 +21,7 @@ import { Track } from './model/track.model';
 })
 export class TrackerComponent {
     private readonly trackerService = inject(TrackerService);
-    private readonly sIssue = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
 
     public global = input<boolean>(false);
 
@@ -70,7 +70,7 @@ export class TrackerComponent {
         this.trackerService.tracker$.pipe(
             distinctUntilChanged((x, y) => x?.idIssue === y?.idIssue),
             filter((tracker): tracker is Tracker => !!tracker?.idTracker),
-            switchMap(tracker => this.sIssue.loadIssue(tracker.idProject, tracker.idIssuePublic))
+            switchMap(tracker => this.issueApi.loadOne$(tracker.idProject, tracker.idIssuePublic))
         ),
         { initialValue: null }
     );

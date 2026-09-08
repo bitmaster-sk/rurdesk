@@ -57,7 +57,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
 
     it('timed → timed: shifts scheduledAt by delta, calls updateIssue', () => {
         const sub = mockSub();
-        mocks.sIssueMock.updateIssue.mockReturnValue(sub);
+        mocks.issueApiMock.update$.mockReturnValue(sub);
         const issue = makeIssue({ scheduledAt: new Date('2025-01-15T09:00:00Z'), estimated: 3600 });
 
         comp.onCalendarEventDrop(
@@ -72,7 +72,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.scheduledAt).toEqual(
             add(new Date('2025-01-15T09:00:00Z'), { days: 1, months: 0, years: 0, seconds: 0 })
         );
@@ -93,7 +93,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.scheduledAt).toEqual(
             add(new Date('2025-01-15T09:00:00Z'), { seconds: 1800 })
         );
@@ -114,7 +114,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.scheduledAt).toEqual(new Date('2025-01-16T10:00:00Z'));
         expect(passedIssue.estimated).toBe(3600);
     });
@@ -130,13 +130,13 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.estimated).toBeNull();
     });
 
     it('on API error: calls revert', () => {
         const sub = mockSub();
-        mocks.sIssueMock.updateIssue.mockReturnValue(sub);
+        mocks.issueApiMock.update$.mockReturnValue(sub);
         const revertSpy = vi.fn();
         const issue = makeIssue({ scheduledAt: new Date('2025-01-15T09:00:00Z'), estimated: 3600 });
 
@@ -166,7 +166,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
         );
 
         expect(issue.scheduledAt).toEqual(originalScheduledAt);
-        expect(mocks.sIssueMock.updateIssue.mock.calls[0][0]).not.toBe(issue);
+        expect(mocks.issueApiMock.update$.mock.calls[0][0]).not.toBe(issue);
     });
 
     it('without scheduledAt: reverts without updating', () => {
@@ -184,7 +184,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
         );
 
         expect(revertSpy).toHaveBeenCalled();
-        expect(mocks.sIssueMock.updateIssue).not.toHaveBeenCalled();
+        expect(mocks.issueApiMock.update$).not.toHaveBeenCalled();
     });
 });
 
@@ -201,7 +201,7 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
 
     it('with valid end delta: adds deltaSeconds to estimated, calls updateIssue', () => {
         const sub = mockSub();
-        mocks.sIssueMock.updateIssue.mockReturnValue(sub);
+        mocks.issueApiMock.update$.mockReturnValue(sub);
         const issue = makeIssue({ estimated: 3600 });
 
         comp.onCalendarEventResize(
@@ -213,7 +213,7 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         const expectedDelta = DurationConverter.durationToSeconds({ days: 1, seconds: 0 });
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.estimated).toBe(3600 + expectedDelta);
         expect(issue.estimated).toBe(3600);
     });
@@ -229,7 +229,7 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.estimated).toBe(3600 + 5400);
     });
 
@@ -247,7 +247,7 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         expect(revertSpy).toHaveBeenCalled();
-        expect(mocks.sIssueMock.updateIssue).not.toHaveBeenCalled();
+        expect(mocks.issueApiMock.update$).not.toHaveBeenCalled();
     });
 
     it('with startDelta milliseconds only (non-zero): reverts', () => {
@@ -278,13 +278,13 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         const expectedDelta = DurationConverter.durationToSeconds({ days: -1, seconds: 0 });
-        const passedIssue = mocks.sIssueMock.updateIssue.mock.calls[0][0];
+        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
         expect(passedIssue.estimated).toBe(7200 + expectedDelta);
     });
 
     it('on API error: calls revert', () => {
         const sub = mockSub();
-        mocks.sIssueMock.updateIssue.mockReturnValue(sub);
+        mocks.issueApiMock.update$.mockReturnValue(sub);
         const revertSpy = vi.fn();
         const issue = makeIssue({ estimated: 3600 });
 
@@ -314,6 +314,6 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         expect(issue.estimated).toBe(originalEstimated);
-        expect(mocks.sIssueMock.updateIssue.mock.calls[0][0]).not.toBe(issue);
+        expect(mocks.issueApiMock.update$.mock.calls[0][0]).not.toBe(issue);
     });
 });

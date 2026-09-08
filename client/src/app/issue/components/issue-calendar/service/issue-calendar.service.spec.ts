@@ -2,7 +2,7 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { EventInput } from '@fullcalendar/core';
 import { of } from 'rxjs';
 import { IssueCalendarService } from './issue-calendar.service';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { StateStore } from 'src/app/state/store/state.store';
@@ -17,7 +17,7 @@ function makeIssue(over: Partial<Issue>): Issue {
 function buildService(issues: Issue[]): IssueCalendarService {
     const injector = Injector.create({
         providers: [
-            { provide: IssueService, useValue: { loadIssues: () => of(issues) } },
+            { provide: IssueApi, useValue: { load$: () => of(issues) } },
             { provide: SeverityStore, useValue: { severitiesMapByProject$: () => of(new Map()) } },
             { provide: ProjectMemberStore, useValue: { usersMap$: of(new Map()) } },
             { provide: StateStore, useValue: { statesMapByProject$: () => of(new Map()) } },

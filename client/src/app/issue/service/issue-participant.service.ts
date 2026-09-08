@@ -43,7 +43,7 @@ export class IssueParticipantService {
         this._loadedIdIssue = idIssue;
         this._participants.set([]);
         this.api
-            .list$(idProject, idIssuePublic)
+            .load$(idProject, idIssuePublic)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(list => {
                 this._participants.set(list);
@@ -51,7 +51,7 @@ export class IssueParticipantService {
     }
 
     public add$(idProject: number, idIssuePublic: number, idUser: number): Observable<void> {
-        return this.api.add$(idProject, idIssuePublic, idUser);
+        return this.api.insert$(idProject, idIssuePublic, idUser);
     }
 
     public setMyNotifications$(

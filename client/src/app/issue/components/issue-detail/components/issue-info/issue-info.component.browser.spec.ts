@@ -12,7 +12,7 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { IssueService } from '../../../../issue.service';
+import { IssueApi } from '../../../../api/issue.api.service';
 import { Issue } from '../../../../model/issue.model';
 import { IssueInfoComponent } from './issue-info.component';
 import { CiStatus, MrState, MrStatus } from 'src/app/project/model/git-integration.model';
@@ -32,19 +32,19 @@ const ISSUE: Issue = {
 
 describe('IssueInfoComponent — live MR status notice (browser)', () => {
     let mrStatus$: Subject<unknown>;
-    let getStatus$: ReturnType<typeof vi.fn>;
+    let loadStatus$: ReturnType<typeof vi.fn>;
     let getIntegration$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         mrStatus$ = new Subject<unknown>();
-        getStatus$ = vi.fn(() => NEVER);
+        loadStatus$ = vi.fn(() => NEVER);
         getIntegration$ = vi.fn(() => NEVER);
         await TestBed.configureTestingModule({
             declarations: [IssueInfoComponent],
             providers: [
                 {
-                    provide: IssueService,
-                    useValue: { updateIssue: vi.fn().mockReturnValue(of(ISSUE)) }
+                    provide: IssueApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of(ISSUE)) }
                 },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
@@ -58,7 +58,7 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 { provide: PinApi, useValue: { insert$: () => NEVER } },
                 {
                     provide: MrDiffApi,
-                    useValue: { getStatus$, getDiff$: () => NEVER }
+                    useValue: { loadStatus$, load$: () => NEVER }
                 },
                 { provide: GitIntegrationApi, useValue: { loadOne$: getIntegration$ } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
@@ -163,7 +163,7 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
 
         expect(component.mrStatus()).toBe(patched);
         expect(component.isPrPanelCollapsed()).toBe(false);
-        expect(getStatus$).toHaveBeenCalledTimes(1);
+        expect(loadStatus$).toHaveBeenCalledTimes(1);
         expect(getIntegration$).toHaveBeenCalledTimes(1);
     });
 
@@ -195,7 +195,7 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
             mrStatus: () => MrStatus | null;
         };
         expect(component.mrStatus()).toBeNull();
-        expect(getStatus$).toHaveBeenCalledTimes(2);
+        expect(loadStatus$).toHaveBeenCalledTimes(2);
         expect(getIntegration$).toHaveBeenCalledTimes(1);
     });
 });

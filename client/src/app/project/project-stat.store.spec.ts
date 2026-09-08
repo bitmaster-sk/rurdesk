@@ -1,7 +1,7 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ProjectStatStore } from './project-stat.store';
-import { IssueService } from '../issue/issue.service';
+import { IssueApi } from '../issue/api/issue.api.service';
 import { ProjectStore } from './project.store';
 import { StateStore } from '../state/store/state.store';
 import { SeverityStore } from '../severity/store/severity.store';
@@ -26,14 +26,14 @@ function issue(over: Partial<Issue>): Issue {
 }
 
 function buildStore(
-    issueService: IssueService,
+    issueApi: IssueApi,
     projectStore: ProjectStore,
     stateStore: StateStore,
     severityStore: SeverityStore
 ): ProjectStatStore {
     const injector = Injector.create({
         providers: [
-            { provide: IssueService, useValue: issueService },
+            { provide: IssueApi, useValue: issueApi },
             { provide: ProjectStore, useValue: projectStore },
             { provide: StateStore, useValue: stateStore },
             { provide: SeverityStore, useValue: severityStore }
@@ -44,7 +44,7 @@ function buildStore(
 
 function build(issues: Issue[]): ProjectStatStore {
     return buildStore(
-        { loadIssues: () => of(issues) } as unknown as IssueService,
+        { load$: () => of(issues) } as unknown as IssueApi,
         { project$: of({ idProject: 1 }) } as unknown as ProjectStore,
         { states$: of(states) } as unknown as StateStore,
         { severities$: of(severities) } as unknown as SeverityStore
@@ -93,18 +93,18 @@ describe('ProjectStatStore', () => {
     it('keeps updating after a failed issue fetch', () => {
         const project$ = new BehaviorSubject({ idProject: 1 });
         let failNext = true;
-        const issueService = {
-            loadIssues: () => {
+        const issueApi = {
+            load$: () => {
                 if (failNext) {
                     failNext = false;
                     return throwError(() => new Error('boom'));
                 }
                 return of([issue({ estimated: 3600, tracked: 1800 })]);
             }
-        } as unknown as IssueService;
+        } as unknown as IssueApi;
 
         const store = buildStore(
-            issueService,
+            issueApi,
             { project$ } as unknown as ProjectStore,
             { states$: of(states) } as unknown as StateStore,
             { severities$: of(severities) } as unknown as SeverityStore

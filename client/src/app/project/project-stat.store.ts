@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, EMPTY, combineLatest } from 'rxjs';
 import { catchError, filter, map, switchMap } from 'rxjs/operators';
-import { IssueService } from '../issue/issue.service';
+import { IssueApi } from '../issue/api/issue.api.service';
 import { Issue } from '../issue/model/issue.model';
 import { IssueSeverity } from '../severity/model/issue-severity.model';
 import { SeverityStore } from '../severity/store/severity.store';
@@ -23,7 +23,7 @@ interface ProjectStats {
     providedIn: 'root'
 })
 export class ProjectStatStore {
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly projectStore = inject(ProjectStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
@@ -75,8 +75,8 @@ export class ProjectStatStore {
                 ),
                 switchMap(
                     ([project, states, severities]: [Project, IssueState[], IssueSeverity[]]) =>
-                        this.issueService
-                            .loadIssues({
+                        this.issueApi
+                            .load$({
                                 idProject: project.idProject,
                                 idsSeverity: [],
                                 severityUnset: true,

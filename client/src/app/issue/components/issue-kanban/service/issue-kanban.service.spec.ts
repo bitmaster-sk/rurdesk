@@ -1,7 +1,7 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueKanbanService } from './issue-kanban.service';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { IssuesPage } from '../../../model/issues-page.model';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
@@ -98,9 +98,9 @@ function buildService(issues: Issue[], states: IssueState[], usersArr: User[]): 
         providers: [
             { provide: SettingsStore, useValue: { kanbanPageSize: () => 20 } },
             {
-                provide: IssueService,
+                provide: IssueApi,
                 useValue: {
-                    loadIssuesGrouped$: (_f: unknown, groupBy: string) =>
+                    loadGrouped$: (_f: unknown, groupBy: string) =>
                         of({ groups: buildGroups(issues, groupBy) })
                 }
             },
@@ -328,10 +328,10 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
             providers: [
                 { provide: SettingsStore, useValue: { kanbanPageSize: () => 20 } },
                 {
-                    provide: IssueService,
+                    provide: IssueApi,
                     useValue: {
                         // Initial load returns a full page (20) with a cursor so "Load more" is available.
-                        loadIssuesGrouped$: (_f: unknown, _groupBy: string, perGroup: number) => {
+                        loadGrouped$: (_f: unknown, _groupBy: string, perGroup: number) => {
                             groupedCalls.push(perGroup);
                             const count = Math.min(perGroup, 40);
                             return of({
@@ -345,7 +345,7 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
                                 ]
                             });
                         },
-                        loadIssuesPage$: () => pageObs
+                        loadPage$: () => pageObs
                     }
                 },
                 {

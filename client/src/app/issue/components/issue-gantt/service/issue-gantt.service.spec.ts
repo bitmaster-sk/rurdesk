@@ -4,7 +4,7 @@ import { IssueGanttService } from './issue-gantt.service';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { IssuesPage } from '../../../model/issues-page.model';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
@@ -39,10 +39,10 @@ function buildService(): IssueGanttService {
                 }
             },
             {
-                provide: IssueService,
+                provide: IssueApi,
                 useValue: {
-                    loadIssues: () => of([]),
-                    loadIssuesPage$: () => of({ items: [], nextCursor: null, total: 0 })
+                    load$: () => of([]),
+                    loadPage$: () => of({ items: [], nextCursor: null, total: 0 })
                 }
             },
             { provide: IssueRelationApi, useValue: { load$: () => of([]) } },
@@ -155,10 +155,10 @@ describe('IssueGanttService — Invalid Date filtering', () => {
                     }
                 },
                 {
-                    provide: IssueService,
+                    provide: IssueApi,
                     useValue: {
-                        loadIssues: () => of(issues),
-                        loadIssuesPage$: () => of({ items: [], nextCursor: null, total: 0 })
+                        load$: () => of(issues),
+                        loadPage$: () => of({ items: [], nextCursor: null, total: 0 })
                     }
                 },
                 { provide: IssueRelationApi, useValue: { load$: () => of([]) } },
@@ -230,10 +230,10 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
                 { provide: SettingsStore, useValue: { ganttBacklogPageSize: () => 30 } },
                 { provide: IssueFilterStore, useValue: store },
                 {
-                    provide: IssueService,
+                    provide: IssueApi,
                     useValue: {
-                        loadIssues: () => of([]),
-                        loadIssuesPage$: (_f: unknown, limit: number, cursor: string | null) => {
+                        load$: () => of([]),
+                        loadPage$: (_f: unknown, limit: number, cursor: string | null) => {
                             calls.push({ limit, cursor });
                             return of(pageResponder(limit, cursor));
                         }
