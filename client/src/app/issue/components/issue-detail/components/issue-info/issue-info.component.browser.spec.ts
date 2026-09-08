@@ -9,7 +9,7 @@ import { ProjectStore } from 'src/app/project/project.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IssueService } from '../../../../issue.service';
@@ -55,7 +55,7 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 },
                 { provide: ProjectStore, useValue: { project$: of({ idProject: 7, name: 'p' }) } },
                 { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
-                { provide: PinService, useValue: { insertPin: () => NEVER } },
+                { provide: PinApi, useValue: { insert$: () => NEVER } },
                 {
                     provide: MrDiffApi,
                     useValue: { getStatus$, getDiff$: () => NEVER }

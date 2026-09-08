@@ -1,16 +1,16 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { PinDestinationType } from './constant/pin-destination-type.enum';
-import { Pin } from './model/pin.model';
+import { PinDestinationType } from '../constant/pin-destination-type.enum';
+import { Pin } from '../model/pin.model';
 
 @Injectable({
     providedIn: 'root'
 })
-export class PinService {
+export class PinApi {
     private readonly http = inject(HttpClient);
 
-    public loadPins(
+    public load$(
         idPinDestination: number,
         idPinDestinationType: PinDestinationType
     ): Observable<Pin[]> {
@@ -20,11 +20,11 @@ export class PinService {
         return this.http.get<Pin[]>('/api/private/pin', { params });
     }
 
-    public insertPin(pin: Pin): Observable<Pin> {
+    public insert$(pin: Pin): Observable<Pin> {
         return this.http.post<Pin>('/api/private/pin', pin);
     }
 
-    public deletePin(idPin: number): Observable<void> {
+    public delete$(idPin: number): Observable<void> {
         return this.http.delete<void>(`/api/private/pin/${idPin}`);
     }
 }

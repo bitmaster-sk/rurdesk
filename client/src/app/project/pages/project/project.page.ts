@@ -3,7 +3,7 @@ import { ProjectStore } from '../../project.store';
 import { ProjectStatStore } from '../../project-stat.store';
 import { combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { distinctUntilChanged, map, switchMap, withLatestFrom } from 'rxjs/operators';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { PinView } from 'src/app/pin/entity/pin-view.entity';
@@ -25,7 +25,7 @@ export class ProjectPage implements OnInit {
 
     private readonly projectMemberStore = inject(ProjectMemberStore);
 
-    private readonly sPin = inject(PinService);
+    private readonly pinApi = inject(PinApi);
 
     private readonly severityStore = inject(SeverityStore);
 
@@ -122,7 +122,7 @@ export class ProjectPage implements OnInit {
         switchMap(project =>
             this.severityStore.severitiesMapByProject$(project.idProject).pipe(
                 switchMap(severities =>
-                    this.sPin.loadPins(project.idProject, PinDestinationType.PROJECT).pipe(
+                    this.pinApi.load$(project.idProject, PinDestinationType.PROJECT).pipe(
                         map(pins =>
                             pins
                                 .filter(p => !!p.issue)
@@ -158,6 +158,6 @@ export class ProjectPage implements OnInit {
     }
 
     public onDeletePin(pin: PinView): void {
-        this.sPin.deletePin(pin.idPin).subscribe(() => this._pinRefreshSignal$.next());
+        this.pinApi.delete$(pin.idPin).subscribe(() => this._pinRefreshSignal$.next());
     }
 }

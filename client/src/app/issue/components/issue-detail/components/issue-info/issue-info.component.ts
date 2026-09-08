@@ -48,7 +48,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -89,7 +89,7 @@ export class IssueInfoComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
     private readonly sIssue = inject(IssueService);
-    private readonly sPin = inject(PinService);
+    private readonly pinApi = inject(PinApi);
     private readonly authStore = inject(AuthStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
@@ -363,8 +363,8 @@ export class IssueInfoComponent implements OnInit {
             idPinDestinationType === PinDestinationType.PROJECT
                 ? issue.idProject
                 : this.authStore.getUser().idUser;
-        this.sPin
-            .insertPin({
+        this.pinApi
+            .insert$({
                 idPinDestination,
                 idPinDestinationType,
                 idIssue: issue.idIssue
