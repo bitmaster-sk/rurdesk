@@ -1,7 +1,7 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { createUser } from './support/user';
 import { tokenOf } from './support/sprint';
-import { assignAgent, createStubGatewayBot, GatewayScript } from './support/agent-bot';
+import { assignAgent, createStubGatewayAgent, GatewayScript } from './support/agent';
 import { Interaction } from './support/interaction';
 import { WorkflowEventMap } from './support/workflow-event-map';
 import { IssueNoticeLog } from './support/issue-notices';
@@ -66,14 +66,21 @@ async function setUpTransition(
         severity: 'Medium'
     });
 
-    const bot = await createStubGatewayBot(request, baseURL, adminToken, idProject, label, script);
+    const agent = await createStubGatewayAgent(
+        request,
+        baseURL,
+        adminToken,
+        idProject,
+        label,
+        script
+    );
     const idRun = await assignAgent(
         request,
         baseURL,
         userToken,
         idProject,
         idIssuePublic,
-        bot.idUser
+        agent.idUser
     );
 
     return { idProject, idIssuePublic, idRun, idState, userToken, stateName, notices };

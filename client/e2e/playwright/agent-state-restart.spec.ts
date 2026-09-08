@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { createUser } from './support/user';
 import { tokenOf } from './support/sprint';
-import { assignAgent, createStubGatewayBot } from './support/agent-bot';
+import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 import { WorkflowEventMap } from './support/workflow-event-map';
 
@@ -77,14 +77,20 @@ test.describe('workflow event state on restart', () => {
             severity: 'Medium'
         });
 
-        const bot = await createStubGatewayBot(request, baseURL!, adminToken, idProject, 'restart');
+        const agent = await createStubGatewayAgent(
+            request,
+            baseURL!,
+            adminToken,
+            idProject,
+            'restart'
+        );
         const idRun = await assignAgent(
             request,
             baseURL!,
             userToken,
             idProject,
             idIssuePublic,
-            bot.idUser
+            agent.idUser
         );
 
         await WorkflowEventMap.waitForRunPhase(
