@@ -34,7 +34,7 @@ export class UserPage implements OnInit {
     private readonly authStore = inject(AuthStore);
     private readonly pinApi = inject(PinApi);
     private readonly severityStore = inject(SeverityStore);
-    private readonly sTracker = inject(TrackerService);
+    private readonly trackerService = inject(TrackerService);
     private readonly datePipe = inject(DatePipe);
 
     private readonly _user$ = toObservable(this.authStore.user).pipe(
@@ -81,7 +81,7 @@ export class UserPage implements OnInit {
         )
     );
 
-    public tracks$: Observable<Track[]> = this.sTracker.tracks$;
+    public tracks$: Observable<Track[]> = this.trackerService.tracks$;
 
     public weekOffset = signal<number>(0);
 
@@ -109,7 +109,7 @@ export class UserPage implements OnInit {
         if (user === null) {
             return;
         }
-        this.sTracker.setTrackFilter({ idUser: user.idUser, ...range });
+        this.trackerService.setTrackFilter({ idUser: user.idUser, ...range });
     });
 
     public ngOnInit(): void {

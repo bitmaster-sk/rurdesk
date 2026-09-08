@@ -68,7 +68,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     };
 
     const stubTracker = {
-        loadTracks: () => NEVER
+        loadTracks$: () => NEVER
     };
 
     const stubNotice = {

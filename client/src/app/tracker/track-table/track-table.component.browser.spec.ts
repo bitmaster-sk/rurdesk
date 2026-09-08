@@ -26,7 +26,7 @@ describe('TrackTableComponent (browser)', () => {
                         tracks$: of([]),
                         totalTracked$: of(0),
                         tracksFilter$,
-                        deleteTrack: () => of(undefined)
+                        deleteTrack$: () => of(undefined)
                     }
                 },
                 { provide: UserApi, useValue: { load$: () => of([ME]) } }

@@ -24,7 +24,10 @@ describe('UserPage (browser)', () => {
             declarations: [UserPage],
             providers: [
                 { provide: AuthStore, useValue: { user } },
-                { provide: PinApi, useValue: { load$: loadPins, delete$: () => of(undefined) } },
+                {
+                    provide: PinApi,
+                    useValue: { load$: loadPins, delete$: () => of(undefined) }
+                },
                 { provide: SeverityStore, useValue: { severitiesMap$: of(new Map()) } },
                 { provide: TrackerService, useValue: { tracks$: of([]), setTrackFilter } }
             ]

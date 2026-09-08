@@ -14,21 +14,21 @@ import { UserApi } from 'src/app/user/api/user.api.service';
     standalone: false
 })
 export class TrackTableComponent implements OnInit {
-    private readonly sTracker = inject(TrackerService);
+    private readonly trackerService = inject(TrackerService);
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
 
     public users = new Map<number, User>();
 
-    public tracks$ = this.sTracker.tracks$;
+    public tracks$ = this.trackerService.tracks$;
 
-    public total$ = this.sTracker.totalTracked$;
+    public total$ = this.trackerService.totalTracked$;
 
     public _track$ = new Subject<TrackForm>();
 
     public track$ = merge(
         this._track$,
-        combineLatest([toObservable(this.authStore.user), this.sTracker.tracksFilter$]).pipe(
+        combineLatest([toObservable(this.authStore.user), this.trackerService.tracksFilter$]).pipe(
             map(([user, filter]) => {
                 if (!user || !filter) {
                     return null;
@@ -72,6 +72,6 @@ export class TrackTableComponent implements OnInit {
     }
 
     public onConfirmDeleteTrack(track: Track): void {
-        this.sTracker.deleteTrack(track.idTrack).subscribe();
+        this.trackerService.deleteTrack$(track.idTrack).subscribe();
     }
 }

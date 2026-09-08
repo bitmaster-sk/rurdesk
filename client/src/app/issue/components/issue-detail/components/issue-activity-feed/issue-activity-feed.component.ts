@@ -61,7 +61,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly i18n = inject(I18nService);
 
     private readonly sMessage = inject(MessageService);
-    private readonly sTracker = inject(TrackerService);
+    private readonly trackerService = inject(TrackerService);
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly authStore = inject(AuthStore);
@@ -212,7 +212,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
         const usersMap$ = this.projectMemberStore.usersMap$;
         const messages$ = this.sMessage.loadMessages(this.idIssue(), MessageRecipientType.issue);
-        const tracks$ = this.sTracker.loadTracks({ idIssue: this.idIssue() });
+        const tracks$ = this.trackerService.loadTracks$({ idIssue: this.idIssue() });
 
         combineLatest([messages$, tracks$, usersMap$])
             .pipe(first())
