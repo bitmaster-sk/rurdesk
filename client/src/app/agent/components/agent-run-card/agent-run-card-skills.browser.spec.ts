@@ -33,16 +33,16 @@ abstract class Dom {
 
 describe('AgentRunCardComponent — run skills (browser)', () => {
     let agentRunApi: {
-        getAgentRunSkills$: ReturnType<typeof vi.fn>;
-        patchAgentRunSkills$: ReturnType<typeof vi.fn>;
+        loadSkills$: ReturnType<typeof vi.fn>;
+        updateSkills$: ReturnType<typeof vi.fn>;
     };
     let skillApi: { load$: ReturnType<typeof vi.fn> };
     let toast: { showError: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         agentRunApi = {
-            getAgentRunSkills$: vi.fn().mockReturnValue(of(PAYLOAD)),
-            patchAgentRunSkills$: vi.fn().mockReturnValue(
+            loadSkills$: vi.fn().mockReturnValue(of(PAYLOAD)),
+            updateSkills$: vi.fn().mockReturnValue(
                 of([
                     { name: AgentStage.Design, idsSkill: [1], dispatched: true },
                     { name: AgentStage.Implementation, idsSkill: [2], dispatched: false }
@@ -108,7 +108,7 @@ describe('AgentRunCardComponent — run skills (browser)', () => {
         Dom.chip(fixture, '2:implementation').click();
         fixture.detectChanges();
 
-        expect(agentRunApi.patchAgentRunSkills$).toHaveBeenCalledWith(55, 'implementation', [2]);
+        expect(agentRunApi.updateSkills$).toHaveBeenCalledWith(55, 'implementation', [2]);
         expect(Dom.chip(fixture, '2:implementation').classList).toContain('on');
         expect(
             fixture.nativeElement.querySelector('[data-stage="implementation"]').textContent?.trim()
@@ -116,23 +116,19 @@ describe('AgentRunCardComponent — run skills (browser)', () => {
     });
 
     it('a 409 reloads the payload and warns that the stage just started', async () => {
-        agentRunApi.patchAgentRunSkills$ = vi
-            .fn()
-            .mockReturnValue(throwError(() => ({ status: 409 })));
+        agentRunApi.updateSkills$ = vi.fn().mockReturnValue(throwError(() => ({ status: 409 })));
         const fixture = await setup();
-        expect(agentRunApi.getAgentRunSkills$).toHaveBeenCalledTimes(1);
+        expect(agentRunApi.loadSkills$).toHaveBeenCalledTimes(1);
 
         Dom.chip(fixture, '2:implementation').click();
         fixture.detectChanges();
 
-        expect(agentRunApi.getAgentRunSkills$).toHaveBeenCalledTimes(2);
+        expect(agentRunApi.loadSkills$).toHaveBeenCalledTimes(2);
         expect(toast.showError).toHaveBeenCalledWith('AGENT.RUN_SKILLS.RACE_ERROR');
     });
 
     it('any other failure reports a plain save error', async () => {
-        agentRunApi.patchAgentRunSkills$ = vi
-            .fn()
-            .mockReturnValue(throwError(() => ({ status: 500 })));
+        agentRunApi.updateSkills$ = vi.fn().mockReturnValue(throwError(() => ({ status: 500 })));
         const fixture = await setup();
 
         Dom.chip(fixture, '2:implementation').click();

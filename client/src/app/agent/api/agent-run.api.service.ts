@@ -11,13 +11,13 @@ import { AgentRun, RunStats } from '../model/agent-run.model';
 export class AgentRunApi {
     private readonly http = inject(HttpClient);
 
-    public getRunByIssue$(idProject: number, idIssuePublic: number): Observable<AgentRun | null> {
+    public loadByIssue$(idProject: number, idIssuePublic: number): Observable<AgentRun | null> {
         return this.http.get<AgentRun | null>(
             `/api/private/project/${idProject}/issue/${idIssuePublic}/agent/run`
         );
     }
 
-    public getRunsByProject$(idProject: number): Observable<AgentRun[]> {
+    public loadByProject$(idProject: number): Observable<AgentRun[]> {
         return this.http.get<AgentRun[]>(`/api/private/project/${idProject}/agent/runs`);
     }
 
@@ -44,15 +44,15 @@ export class AgentRunApi {
         );
     }
 
-    public stats$(idRun: number): Observable<RunStats> {
+    public loadStats$(idRun: number): Observable<RunStats> {
         return this.http.get<RunStats>(`/api/private/agent/run/${idRun}/stats`);
     }
 
-    public getAgentRunSkills$(idRun: number): Observable<AgentRunStageSkills[]> {
+    public loadSkills$(idRun: number): Observable<AgentRunStageSkills[]> {
         return this.http.get<AgentRunStageSkills[]>(`/api/private/agent/run/${idRun}/skills`);
     }
 
-    public patchAgentRunSkills$(
+    public updateSkills$(
         idRun: number,
         stage: AgentStage,
         idsSkill: number[]
@@ -64,7 +64,7 @@ export class AgentRunApi {
         );
     }
 
-    public agentsOverview$(idProject: number): Observable<AgentOverview[]> {
+    public loadAgentsOverview$(idProject: number): Observable<AgentOverview[]> {
         return this.http.get<AgentOverview[]>(`/api/private/project/${idProject}/agents/overview`);
     }
 

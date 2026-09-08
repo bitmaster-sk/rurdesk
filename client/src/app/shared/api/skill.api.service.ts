@@ -11,7 +11,7 @@ export class SkillApi {
         return this.http.get<Skill[]>('/api/private/skills');
     }
 
-    public create$(body: CreateSkillReq): Observable<Skill> {
+    public insert$(body: CreateSkillReq): Observable<Skill> {
         return this.http.post<Skill>('/api/private/admin/skills', body);
     }
 

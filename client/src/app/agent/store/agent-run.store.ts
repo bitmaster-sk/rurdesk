@@ -112,7 +112,7 @@ export class AgentRunStore {
             return EMPTY;
         }
         this.isLoading.set(true);
-        return this.agentRunApi.getRunByIssue$(this.idProject, this.idIssuePublic).pipe(
+        return this.agentRunApi.loadByIssue$(this.idProject, this.idIssuePublic).pipe(
             // A transient fetch failure must not blank an already-shown run —
             // keep the current value. A real "no run" is a 204 (null body),
             // which is a success and still clears the panel.

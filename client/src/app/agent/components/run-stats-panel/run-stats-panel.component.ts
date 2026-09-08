@@ -44,7 +44,7 @@ export class RunStatsPanelComponent implements OnInit {
     });
 
     public ngOnInit(): void {
-        this.api.stats$(this.idRun()).subscribe(s => this.stats.set(s));
+        this.api.loadStats$(this.idRun()).subscribe(s => this.stats.set(s));
         this.noticeService.agentStats$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(notice => {

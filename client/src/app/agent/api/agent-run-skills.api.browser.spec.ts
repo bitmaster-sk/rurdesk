@@ -20,7 +20,7 @@ describe('AgentRunApi skills endpoints', () => {
     afterEach(() => http.verify());
 
     it('reads the per-run skills', () => {
-        api.getAgentRunSkills$(5).subscribe();
+        api.loadSkills$(5).subscribe();
 
         const request = http.expectOne('/api/private/agent/run/5/skills');
         expect(request.request.method).toBe('GET');
@@ -28,7 +28,7 @@ describe('AgentRunApi skills endpoints', () => {
     });
 
     it('patches one stage with the ids it should run with', () => {
-        api.patchAgentRunSkills$(5, AgentStage.Implementation, [1, 2]).subscribe();
+        api.updateSkills$(5, AgentStage.Implementation, [1, 2]).subscribe();
 
         const request = http.expectOne('/api/private/agent/run/5/skills');
         expect(request.request.method).toBe('PATCH');
@@ -37,7 +37,7 @@ describe('AgentRunApi skills endpoints', () => {
     });
 
     it('reads the agent workload overview per project', () => {
-        api.agentsOverview$(3).subscribe();
+        api.loadAgentsOverview$(3).subscribe();
 
         const request = http.expectOne('/api/private/project/3/agents/overview');
         expect(request.request.method).toBe('GET');

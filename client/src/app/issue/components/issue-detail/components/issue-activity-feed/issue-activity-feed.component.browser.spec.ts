@@ -98,7 +98,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
                 AgentThinkingRowStub
             ],
             providers: [
-                { provide: AgentThinkingApi, useValue: { loadStageThinking$: () => NEVER } },
+                { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
                 { provide: MessageService, useValue: stubMessage },
                 { provide: TrackerService, useValue: stubTracker },
                 { provide: NoticeService, useValue: stubNotice },

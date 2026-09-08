@@ -11,13 +11,13 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { AgentThinkingRowComponent } from './agent-thinking-row.component';
 
 describe('AgentThinkingRowComponent (browser)', () => {
-    let loadStageThinking$: ReturnType<typeof vi.fn>;
+    let load$: ReturnType<typeof vi.fn>;
     let notices: Subject<{ payload: AgentThinkingNotice }>;
     let store: AgentThinkingStore;
 
     beforeEach(async () => {
         notices = new Subject();
-        loadStageThinking$ = vi.fn().mockReturnValue(
+        load$ = vi.fn().mockReturnValue(
             of({
                 idRun: 5,
                 stage: 'design',
@@ -31,7 +31,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
             providers: [
                 AgentThinkingStore,
                 { provide: NoticeService, useValue: { agentThinking$: notices } },
-                { provide: AgentThinkingApi, useValue: { loadStageThinking$ } }
+                { provide: AgentThinkingApi, useValue: { load$ } }
             ]
         }).compileComponents();
         store = TestBed.inject(AgentThinkingStore);
@@ -76,7 +76,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
         const fixture = render({ stage: 'design', status: 'done', hasThinking: true });
 
         expect(body(fixture)).toBeNull();
-        expect(loadStageThinking$).not.toHaveBeenCalled();
+        expect(load$).not.toHaveBeenCalled();
     });
 
     it('fetches the stored thinking once on expand', () => {
@@ -87,14 +87,14 @@ describe('AgentThinkingRowComponent (browser)', () => {
 
         toggle(fixture);
         toggle(fixture);
-        expect(loadStageThinking$).toHaveBeenCalledTimes(1);
-        expect(loadStageThinking$).toHaveBeenCalledWith(5, 'design');
+        expect(load$).toHaveBeenCalledTimes(1);
+        expect(load$).toHaveBeenCalledWith(5, 'design');
     });
 
     // A finished stage must show the same name and argument the live stream
     // showed, not a bare tool name.
     it('shows the argument of a stored tool call', () => {
-        loadStageThinking$.mockReturnValue(
+        load$.mockReturnValue(
             of({
                 idRun: 5,
                 stage: 'design',
@@ -123,7 +123,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
     // Thinking that reads like a marker is prose the model wrote. Nothing parses
     // the stored form, so it can never be promoted into a tool step.
     it('renders arrow-prefixed stored thinking as a thought, not a tool call', () => {
-        loadStageThinking$.mockReturnValue(
+        load$.mockReturnValue(
             of({
                 idRun: 5,
                 stage: 'design',
@@ -149,7 +149,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
     // The marker is the API's own, so the reader is told the tail is missing
     // rather than seeing the stage simply stop.
     it('names the per-stage limit when a stage was truncated', () => {
-        loadStageThinking$.mockReturnValue(
+        load$.mockReturnValue(
             of({
                 idRun: 5,
                 stage: 'design',
@@ -189,7 +189,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
     // Marking the fetch done before it lands would strand the row empty for the
     // life of the component: no collapse and re-expand would ever try again.
     it('retries the fetch on the next expand after it failed', () => {
-        loadStageThinking$.mockReturnValueOnce(throwError(() => new Error('offline')));
+        load$.mockReturnValueOnce(throwError(() => new Error('offline')));
         const fixture = render({ stage: 'design', status: 'done', hasThinking: true });
 
         toggle(fixture);
@@ -197,7 +197,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
 
         toggle(fixture);
         toggle(fixture);
-        expect(loadStageThinking$).toHaveBeenCalledTimes(2);
+        expect(load$).toHaveBeenCalledTimes(2);
         expect(body(fixture).textContent).toContain('the full thinking');
     });
 
@@ -214,7 +214,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
 
         toggle(fixture);
         expect(body(fixture).textContent).toContain('only the tail survived');
-        expect(loadStageThinking$).not.toHaveBeenCalled();
+        expect(load$).not.toHaveBeenCalled();
 
         toggle(fixture);
         fixture.componentRef.setInput('stage', {
@@ -224,7 +224,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
         });
         toggle(fixture);
 
-        expect(loadStageThinking$).toHaveBeenCalledTimes(1);
+        expect(load$).toHaveBeenCalledTimes(1);
         expect(body(fixture).textContent).toContain('the full thinking');
     });
 
@@ -242,13 +242,13 @@ describe('AgentThinkingRowComponent (browser)', () => {
 
         toggle(fixture);
         expect(body(fixture).textContent).toContain('only the tail survived');
-        expect(loadStageThinking$).not.toHaveBeenCalled();
+        expect(load$).not.toHaveBeenCalled();
     });
 
     // A reload leaves the reader mid-stage, and the stream only carries what
     // comes next, so the row asks for what the stage has thought so far.
     it('replays the stored thinking of a running stage it joined mid-stream', () => {
-        loadStageThinking$.mockReturnValue(
+        load$.mockReturnValue(
             of({
                 idRun: 5,
                 idTask: 1,
@@ -260,7 +260,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
         );
         const fixture = renderLive();
 
-        expect(loadStageThinking$).toHaveBeenCalledWith(5, 'implementation');
+        expect(load$).toHaveBeenCalledWith(5, 'implementation');
         emit([{ kind: AgentThinkingKind.Thinking, text: ' and what came after', at: 2 }], 4);
         fixture.detectChanges();
 
@@ -274,7 +274,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
         expect(
             fixture.nativeElement.querySelector('[data-testid="agent-thinking-working"]')
         ).not.toBeNull();
-        expect(loadStageThinking$).toHaveBeenCalledTimes(1);
+        expect(load$).toHaveBeenCalledTimes(1);
 
         emit([{ kind: AgentThinkingKind.Thinking, text: 'weighing the tokenizer', at: 1 }]);
         emit([{ kind: AgentThinkingKind.Thinking, text: ' and the tests', at: 2 }], 2);
