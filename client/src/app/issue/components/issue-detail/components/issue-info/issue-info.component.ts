@@ -36,7 +36,7 @@ import { ElementRef, OnInit } from '@angular/core';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Project } from 'src/app/project/model/project.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import { IssueService } from '../../../../issue.service';
+import { IssueApi } from '../../../../api/issue.api.service';
 import { Issue } from '../../../../model/issue.model';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
@@ -48,7 +48,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -88,8 +88,8 @@ export class IssueInfoComponent implements OnInit {
 
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
-    private readonly sIssue = inject(IssueService);
-    private readonly sPin = inject(PinService);
+    private readonly issueApi = inject(IssueApi);
+    private readonly pinApi = inject(PinApi);
     private readonly authStore = inject(AuthStore);
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
@@ -288,7 +288,7 @@ export class IssueInfoComponent implements OnInit {
     }
 
     private loadGitIntegration(idProject: number, idGitIntegration: number): void {
-        this.gitIntegrationApi.get$(idProject, idGitIntegration).subscribe({
+        this.gitIntegrationApi.loadOne$(idProject, idGitIntegration).subscribe({
             next: integration => this.gitIntegration.set(integration),
             error: () => this.gitIntegration.set(null)
         });
@@ -301,7 +301,7 @@ export class IssueInfoComponent implements OnInit {
         if (isUpdate) {
             this.saveStatus.set(UiSaveState.Saving);
         }
-        const saver = isUpdate ? this.sIssue.updateIssue(issue) : this.sIssue.insertIssue(issue);
+        const saver = isUpdate ? this.issueApi.update$(issue) : this.issueApi.insert$(issue);
         saver.subscribe({
             next: savedIssue => {
                 if (isUpdate) {
@@ -363,8 +363,8 @@ export class IssueInfoComponent implements OnInit {
             idPinDestinationType === PinDestinationType.PROJECT
                 ? issue.idProject
                 : this.authStore.getUser().idUser;
-        this.sPin
-            .insertPin({
+        this.pinApi
+            .insert$({
                 idPinDestination,
                 idPinDestinationType,
                 idIssue: issue.idIssue
@@ -385,7 +385,7 @@ export class IssueInfoComponent implements OnInit {
             idGitIntegration: result?.idGitIntegration ?? null,
             mrId: result?.mrId ?? null
         };
-        this.sIssue.updateIssue(updated).subscribe(saved => {
+        this.issueApi.update$(updated).subscribe(saved => {
             this.currentIssue.set(saved);
             this.syncMrPanel(saved);
         });
@@ -414,7 +414,7 @@ export class IssueInfoComponent implements OnInit {
         const issue = this.currentIssue();
         if (!issue?.idGitIntegration || !issue.mrId || this.mrDiff()) return;
         this.isMrDiffLoading.set(true);
-        this.mrDiffApi.getDiff$(issue.idProject, issue.idGitIntegration, issue.mrId).subscribe({
+        this.mrDiffApi.load$(issue.idProject, issue.idGitIntegration, issue.mrId).subscribe({
             next: diff => {
                 this.mrDiff.set(diff);
                 this.isMrDiffLoading.set(false);
@@ -427,7 +427,7 @@ export class IssueInfoComponent implements OnInit {
         const issue = this.currentIssue();
         if (!issue) return;
         this.mrDiffApi
-            .getStatus$(issue.idProject, idGitIntegration, mrId)
+            .loadStatus$(issue.idProject, idGitIntegration, mrId)
             .subscribe(status => this.mrStatus.set(status));
     }
 

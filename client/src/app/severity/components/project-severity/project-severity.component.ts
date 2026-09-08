@@ -16,7 +16,7 @@ interface ProjectSeverityForm {
     idSeverityDefault: FormControl<number | null>;
 }
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { IssueSeverity } from '../../model/issue-severity.model';
 import { SeverityFormWindowComponent } from '../severity-form-window/severity-form-window.component';
@@ -43,7 +43,7 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
     private readonly i18n = inject(I18nService);
     private readonly fb = inject(FormBuilder);
     private readonly sSeverity = inject(SeverityApi);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly sWindow = inject(WindowService);
     private readonly severityStore = inject(SeverityStore);
 
@@ -88,7 +88,7 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
         const project: Project = cloneDeep(this.project());
         project.idSeverityDefault = this.form.value.idSeverityDefault ?? null;
         this.defaultSaveStatus.set(UiSaveState.Saving);
-        this.sProject.updateProject(project).subscribe({
+        this.projectApi.update$(project).subscribe({
             next: savedProject => {
                 this.project().idSeverityDefault = savedProject.idSeverityDefault;
                 this.defaultSaveStatus.set(UiSaveState.Saved);

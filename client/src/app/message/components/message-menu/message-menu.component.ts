@@ -17,14 +17,14 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { Message } from 'src/app/message/model/message.model';
-import { MessageService } from 'src/app/message/message.service';
+import { MessageUnreadStore } from 'src/app/message/store/message-unread.store';
 import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
 import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
-import { TeamService } from 'src/app/team/team.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
@@ -36,11 +36,11 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MessageMenuComponent implements OnInit, OnDestroy {
-    private readonly sMessage = inject(MessageService);
+    private readonly unreadStore = inject(MessageUnreadStore);
     private readonly authStore = inject(AuthStore);
-    private readonly sTeam = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly sNotice = inject(NoticeService);
 
     private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
@@ -49,7 +49,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly _teams = signal<Team[]>([]);
     private readonly _teammates = signal<User[]>([]);
 
-    private readonly unread = toSignal(this.sMessage.Unread, {
+    private readonly unread = toSignal(this.unreadStore.unread$, {
         initialValue: new Map<string, Message[]>()
     });
 
@@ -76,17 +76,17 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly subscriptions = new Subscription();
 
     public ngOnInit(): void {
-        this.sMessage.loadUnreadMessages().subscribe();
+        this.unreadStore.load();
 
-        this.sProject.loadProjects().subscribe(projects => {
+        this.projectApi.load$().subscribe(projects => {
             this._projects.set(projects);
         });
 
-        this.sTeam.loadMyTeams().subscribe(teams => {
+        this.teamApi.loadMy$().subscribe(teams => {
             this._teams.set(teams);
         });
 
-        this.userApi.loadUsers$().subscribe(users => {
+        this.userApi.load$().subscribe(users => {
             this._teammates.set(users.filter(u => !u.isAgent));
         });
 
@@ -97,7 +97,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
                         notice.payload.idMessageRecipientType !== MessageRecipientType.issue &&
                         notice.action !== NoticeAction.Update
                 )
-            ).subscribe(notice => this.sMessage.unreadPush([notice.payload]))
+            ).subscribe(notice => this.unreadStore.push([notice.payload]))
         );
     }
 

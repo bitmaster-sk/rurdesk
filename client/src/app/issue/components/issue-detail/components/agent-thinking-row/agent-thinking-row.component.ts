@@ -130,7 +130,7 @@ export class AgentThinkingRowComponent implements OnDestroy {
             );
             return;
         }
-        this.thinkingApi.loadStageThinking$(this.idRun(), this.stage().stage).subscribe({
+        this.thinkingApi.load$(this.idRun(), this.stage().stage).subscribe({
             next: res => this.storedEvents.set(res.events),
             error: () => (this.loadedAsTail = null)
         });
@@ -145,7 +145,7 @@ export class AgentThinkingRowComponent implements OnDestroy {
             return;
         }
         this.appliedStage = stage;
-        this.thinkingApi.loadStageThinking$(this.idRun(), stage).subscribe({
+        this.thinkingApi.load$(this.idRun(), stage).subscribe({
             next: res =>
                 this.store.applyStored(stage, res.idTask ?? 0, res.events, res.lastSeq ?? 0),
             error: () => (this.appliedStage = null)

@@ -15,7 +15,7 @@ import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueBulkApi } from '../../api/issue-bulk.api.service';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { IssueRelationApi } from '../../api/issue-relation.api.service';
 import { GanttOrderApi } from '../../api/gantt-order.api.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -136,7 +136,7 @@ export interface GanttMocks {
     issueFilterStoreMock: any;
     commandPaletteMock: any;
     bulkApiMock: any;
-    issueServiceMock: any;
+    issueApiMock: any;
     relationApiMock: any;
     ganttOrderApiMock: any;
     toastMock: any;
@@ -232,7 +232,7 @@ export function configureGanttTestBed(
     };
 
     const bulkApiMock = { update$: vi.fn(() => mockSub()) };
-    const issueServiceMock = { updateIssue: vi.fn(() => mockSub()) };
+    const issueApiMock = { update$: vi.fn(() => mockSub()) };
     const relationApiMock = { insert$: vi.fn(() => mockSub()), delete$: vi.fn(() => mockSub()) };
     const ganttOrderApiMock = { reorder$: vi.fn(() => mockSub()) };
     const toastMock = { showError: vi.fn() };
@@ -257,7 +257,7 @@ export function configureGanttTestBed(
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
             { provide: ProjectStore, useValue: projectStoreMock },
             { provide: IssueBulkApi, useValue: bulkApiMock },
-            { provide: IssueService, useValue: issueServiceMock },
+            { provide: IssueApi, useValue: issueApiMock },
             { provide: IssueRelationApi, useValue: relationApiMock },
             { provide: GanttOrderApi, useValue: ganttOrderApiMock },
             { provide: NoticeService, useValue: noticeServiceMock },
@@ -296,7 +296,7 @@ export function configureGanttTestBed(
         issueFilterStoreMock,
         commandPaletteMock,
         bulkApiMock,
-        issueServiceMock,
+        issueApiMock,
         relationApiMock,
         ganttOrderApiMock,
         toastMock,

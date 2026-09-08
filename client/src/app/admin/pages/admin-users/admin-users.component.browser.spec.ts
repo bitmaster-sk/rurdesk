@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { AdminUsersComponent } from './admin-users.component';
 
@@ -26,7 +26,7 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
         await TestBed.configureTestingModule({
             declarations: [AdminUsersComponent],
             providers: [
-                { provide: AdminApi, useValue: { listUsers$: () => of([user]) } },
+                { provide: AdminUserApi, useValue: { load$: () => of([user]) } },
                 { provide: ToastNotificationService, useValue: {} }
             ]
         })

@@ -33,7 +33,7 @@ export class QualityApi {
 
     // 404 is the normal answer for an issue nobody has quality-checked yet, so
     // this must not raise the global error toast.
-    public getQuality$(idProject: number, idIssuePublic: number): Observable<QualityReport> {
+    public load$(idProject: number, idIssuePublic: number): Observable<QualityReport> {
         return this.http.get<QualityReport>(
             `/api/private/project/${idProject}/issue/${idIssuePublic}/quality`,
             { context: RequestContext.disableErrorToast() }

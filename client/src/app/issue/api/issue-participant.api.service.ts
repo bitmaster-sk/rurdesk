@@ -11,11 +11,11 @@ export class IssueParticipantApi {
         return `/api/private/project/${idProject}/issue/${idIssuePublic}/participant`;
     }
 
-    public list$(idProject: number, idIssuePublic: number): Observable<IssueParticipantModel[]> {
+    public load$(idProject: number, idIssuePublic: number): Observable<IssueParticipantModel[]> {
         return this.http.get<IssueParticipantModel[]>(this.base(idProject, idIssuePublic));
     }
 
-    public add$(idProject: number, idIssuePublic: number, idUser: number): Observable<void> {
+    public insert$(idProject: number, idIssuePublic: number, idUser: number): Observable<void> {
         return this.http.post<void>(this.base(idProject, idIssuePublic), { idUser });
     }
 

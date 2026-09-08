@@ -22,7 +22,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
 import { first, map } from 'rxjs/operators';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
@@ -56,7 +56,7 @@ import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-a
 export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly projectStore = inject(ProjectStore);
 
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
 
     private readonly issueKanbanService = inject(IssueKanbanService);
 
@@ -518,7 +518,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.container.data.tiles.unshift(issue);
         this.shiftTotals(evt);
         this.refreshBurndown();
-        this.issueService.updateIssue(issue).subscribe({
+        this.issueApi.update$(issue).subscribe({
             error: () => {
                 this.issueFilterStore.refresh();
             }
@@ -546,7 +546,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.container.data.tiles.unshift(updated);
         this.shiftTotals(evt);
         this.refreshBurndown();
-        this.issueService.updateIssue(updated).subscribe({
+        this.issueApi.update$(updated).subscribe({
             error: () => {
                 this.issueFilterStore.refresh();
             }

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
-import { AdminApi } from '../../api/admin.api.service';
+import { SettingsApi } from 'src/app/core/settings/settings.api.service';
 import { VersionApi } from '../../api/version.api.service';
 import { AdminSettingsComponent } from './admin-settings.component';
 
@@ -17,14 +17,14 @@ describe('AdminSettingsComponent — build version (browser)', () => {
             declarations: [AdminSettingsComponent],
             providers: [
                 {
-                    provide: AdminApi,
+                    provide: SettingsApi,
                     useValue: {
-                        getSettings$: () =>
+                        load$: () =>
                             of({ tablePageSize: 50, kanbanPageSize: 20, ganttBacklogPageSize: 30 }),
-                        updateSettings$: () => of({})
+                        update$: () => of({})
                     }
                 },
-                { provide: VersionApi, useValue: { getVersion$: () => of(buildInfo) } }
+                { provide: VersionApi, useValue: { load$: () => of(buildInfo) } }
             ]
         })
             .overrideComponent(AdminSettingsComponent, {
@@ -70,20 +70,18 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
     };
 
     async function setup() {
-        const updateSettings$ = vi
-            .fn()
-            .mockReturnValue(of({ ...loaded, isAgentThinkingPersisted: true }));
+        const update$ = vi.fn().mockReturnValue(of({ ...loaded, isAgentThinkingPersisted: true }));
         await TestBed.configureTestingModule({
             imports: [ReactiveFormsModule],
             declarations: [AdminSettingsComponent],
             providers: [
                 {
-                    provide: AdminApi,
-                    useValue: { getSettings$: () => of(loaded), updateSettings$ }
+                    provide: SettingsApi,
+                    useValue: { load$: () => of(loaded), update$ }
                 },
                 {
                     provide: VersionApi,
-                    useValue: { getVersion$: () => of({ version: 'dev', commit: 'unknown' }) }
+                    useValue: { load$: () => of({ version: 'dev', commit: 'unknown' }) }
                 }
             ]
         })
@@ -98,7 +96,7 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         fixture.detectChanges();
         return {
             fixture,
-            updateSettings$,
+            update$,
             input: fixture.nativeElement.querySelector('.switch') as HTMLInputElement
         };
     }
@@ -110,13 +108,13 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
     });
 
     it('saves the flipped switch without waiting for a blur', async () => {
-        const { fixture, updateSettings$, input } = await setup();
+        const { fixture, update$, input } = await setup();
 
         input.click();
         fixture.detectChanges();
 
-        expect(updateSettings$).toHaveBeenCalledTimes(1);
-        expect(updateSettings$.mock.calls[0][0]).toMatchObject({
+        expect(update$).toHaveBeenCalledTimes(1);
+        expect(update$.mock.calls[0][0]).toMatchObject({
             isAgentThinkingPersisted: true
         });
     });

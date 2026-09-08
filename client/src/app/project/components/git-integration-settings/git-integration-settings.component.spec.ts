@@ -34,7 +34,7 @@ function setInput(inputSignal: unknown, value: unknown): void {
 function createComponent(opts: {
     project?: Project;
     integration?: GitIntegrationRes | null;
-    gitIntegrationApi: { create$: ReturnType<typeof vi.fn>; update$: ReturnType<typeof vi.fn> };
+    gitIntegrationApi: { insert$: ReturnType<typeof vi.fn>; update$: ReturnType<typeof vi.fn> };
 }): GitIntegrationSettingsComponent {
     const injector = Injector.create({
         providers: [
@@ -51,18 +51,18 @@ function createComponent(opts: {
 
 describe('GitIntegrationSettingsComponent', () => {
     let gitIntegrationApi: {
-        create$: ReturnType<typeof vi.fn>;
+        insert$: ReturnType<typeof vi.fn>;
         update$: ReturnType<typeof vi.fn>;
     };
 
     beforeEach(() => {
         gitIntegrationApi = {
-            create$: vi.fn().mockReturnValue(of(INTEGRATION)),
+            insert$: vi.fn().mockReturnValue(of(INTEGRATION)),
             update$: vi.fn().mockReturnValue(of(INTEGRATION))
         };
     });
 
-    it('create mode: calls create$ with all five fields including accessToken', () => {
+    it('create mode: calls insert$ with all five fields including accessToken', () => {
         const component = createComponent({ gitIntegrationApi });
         component['form'].setValue({
             name: 'New',
@@ -74,7 +74,7 @@ describe('GitIntegrationSettingsComponent', () => {
 
         component['onSave']();
 
-        expect(gitIntegrationApi.create$).toHaveBeenCalledWith(1, {
+        expect(gitIntegrationApi.insert$).toHaveBeenCalledWith(1, {
             name: 'New',
             hostType: HostType.GitHub,
             baseUrl: 'https://github.com',
@@ -140,7 +140,7 @@ describe('GitIntegrationSettingsComponent', () => {
 
         component['onSave']();
 
-        expect(gitIntegrationApi.create$).not.toHaveBeenCalled();
+        expect(gitIntegrationApi.insert$).not.toHaveBeenCalled();
         expect(gitIntegrationApi.update$).not.toHaveBeenCalled();
     });
 });

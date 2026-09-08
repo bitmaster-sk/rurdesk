@@ -4,7 +4,7 @@ import { BehaviorSubject, combineLatest, switchMap, map, shareReplay } from 'rxj
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { IssueRelationApi } from '../../../api/issue-relation.api.service';
 import { Issue } from '../../../model/issue.model';
 import { ExtendedIssue, IssueGuard } from '../../../model/extended-issue.model';
@@ -23,7 +23,7 @@ import { GanttOrderUtil } from './gantt-order.util';
 @Injectable()
 export class IssueGanttService {
     private readonly issueFilterStore = inject(IssueFilterStore);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly issueRelationApi = inject(IssueRelationApi);
     private readonly severityStore = inject(SeverityStore);
     private readonly issueTypeStore = inject(IssueTypeStore);
@@ -34,7 +34,7 @@ export class IssueGanttService {
 
     // Scheduled issues
     private readonly scheduledIssues$ = this.issueFilterStore.actualFilter$.pipe(
-        switchMap(filter => this.issueService.loadIssues(filter)),
+        switchMap(filter => this.issueApi.load$(filter)),
         shareReplay({ bufferSize: 1, refCount: true })
     );
 
@@ -81,7 +81,7 @@ export class IssueGanttService {
         const loaded = this.backlogIssues$.getValue().length;
         const limit = Math.max(loaded, this.settings.ganttBacklogPageSize());
         this.backlogLoading.set(true);
-        this.issueService.loadIssuesPage$(this.backlogFilter, limit, null).subscribe({
+        this.issueApi.loadPage$(this.backlogFilter, limit, null).subscribe({
             next: page => {
                 this.backlogIssues$.next(page.items);
                 this.backlogCursor = page.nextCursor;
@@ -97,8 +97,8 @@ export class IssueGanttService {
     private fetchBacklogPage(reset: boolean): void {
         if (!this.backlogFilter) return;
         this.backlogLoading.set(true);
-        this.issueService
-            .loadIssuesPage$(
+        this.issueApi
+            .loadPage$(
                 this.backlogFilter,
                 this.settings.ganttBacklogPageSize(),
                 reset ? null : this.backlogCursor

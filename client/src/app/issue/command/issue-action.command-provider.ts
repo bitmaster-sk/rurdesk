@@ -9,7 +9,7 @@ import {
     Translator
 } from '../../core/command/command.model';
 import { IssueActionCommands } from './issue-action.commands';
-import { IssueService } from '../issue.service';
+import { IssueApi } from '../api/issue.api.service';
 import { StateStore } from '../../state/store/state.store';
 import { SeverityStore } from '../../severity/store/severity.store';
 import { ProjectMemberStore } from '../../project/project-member.store';
@@ -21,7 +21,7 @@ import { Issue } from '../model/issue.model';
 @Injectable({ providedIn: 'root' })
 export class IssueActionCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly acl = inject(AclStore);
     private readonly authStore = inject(AuthStore);
     private readonly notice = inject(NoticeService);
@@ -62,16 +62,16 @@ export class IssueActionCommandProvider implements CommandProvider {
         if (!ctx.issue) return;
         // Emit the saved issue locally so an open task detail refreshes at once (the server does
         // not echo the acting client's own change back over the socket).
-        this.issueService
-            .updateIssue({ ...ctx.issue, ...over })
+        this.issueApi
+            .update$({ ...ctx.issue, ...over })
             .subscribe(saved => this.notice.emitIssue(saved));
     }
 
     private clone(ctx: CommandContext): void {
         const src = ctx.issue;
         if (!src || ctx.idProject == null) return;
-        this.issueService
-            .insertIssue({
+        this.issueApi
+            .insert$({
                 idProject: ctx.idProject,
                 title: this.t('ISSUE.COPY_SUFFIX', { title: src.title }),
                 description: src.description,

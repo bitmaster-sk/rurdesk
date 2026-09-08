@@ -8,11 +8,11 @@ import { IssueSearchCommandProvider } from '../../issue/command/issue-search.com
 import { IssueActionCommandProvider } from '../../issue/command/issue-action.command-provider';
 import { NavigationCommandProvider } from '../../project/command/navigation.command-provider';
 import { PeopleCommandProvider } from '../../project/command/people.command-provider';
-import { IssueService } from '../../issue/issue.service';
+import { IssueApi } from '../../issue/api/issue.api.service';
 import { StateStore } from '../../state/store/state.store';
 import { SeverityStore } from '../../severity/store/severity.store';
 import { AclStore } from '../../project/store/acl.store';
-import { ProjectService } from '../../project/project.service';
+import { ProjectApi } from '../../project/api/project.api.service';
 import { ProjectMemberStore } from '../../project/project-member.store';
 import { SessionService } from '../../auth/service/session.service';
 import { AuthStore } from '../../auth/store/auth.store';
@@ -35,22 +35,22 @@ const issues: Issue[] = [
 describe('IssueSearchCommandProvider', () => {
     function setup(opts: { states?: any[]; role?: Role; insert?: any } = {}) {
         const router = { navigate: vi.fn() };
-        const issueService = {
-            loadIssues: vi.fn(() => of(issues)),
-            insertIssue: opts.insert ?? vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }))
+        const issueApi = {
+            load$: vi.fn(() => of(issues)),
+            insert$: opts.insert ?? vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }))
         };
         TestBed.configureTestingModule({
             providers: [
                 IssueSearchCommandProvider,
                 AclStore,
                 { provide: Router, useValue: router },
-                { provide: IssueService, useValue: issueService },
+                { provide: IssueApi, useValue: issueApi },
                 { provide: StateStore, useValue: { states$: of(opts.states ?? []) } },
                 { provide: I18nService, useValue: t }
             ]
         });
         TestBed.inject(AclStore).setRole(opts.role ?? Role.Member);
-        return { provider: TestBed.inject(IssueSearchCommandProvider), router, issueService };
+        return { provider: TestBed.inject(IssueSearchCommandProvider), router, issueApi };
     }
 
     it('offers jump commands for the primed project', () => {
@@ -129,8 +129,10 @@ describe('NavigationCommandProvider', () => {
                 AclStore,
                 { provide: Router, useValue: router },
                 {
-                    provide: ProjectService,
-                    useValue: { loadProjects: vi.fn(() => of([{ idProject: 7, name: 'Website' }])) }
+                    provide: ProjectApi,
+                    useValue: {
+                        load$: vi.fn(() => of([{ idProject: 7, name: 'Website' }]))
+                    }
                 },
                 { provide: CommandPaletteService, useValue: { openHelp: vi.fn() } },
                 {
@@ -182,7 +184,10 @@ describe('IssueActionCommandProvider', () => {
                 IssueActionCommandProvider,
                 AclStore,
                 { provide: Router, useValue: router },
-                { provide: IssueService, useValue: { insertIssue, updateIssue } },
+                {
+                    provide: IssueApi,
+                    useValue: { insert$: insertIssue, update$: updateIssue }
+                },
                 { provide: StateStore, useValue: { states$: of(states) } },
                 { provide: SeverityStore, useValue: { severities$: of([]) } },
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
@@ -252,7 +257,7 @@ describe('PeopleCommandProvider', () => {
                 AclStore,
                 { provide: Router, useValue: router },
                 { provide: ProjectMemberStore, useValue: { users$: of([member]) } },
-                { provide: IssueService, useValue: { updateIssue } },
+                { provide: IssueApi, useValue: { update$: updateIssue } },
                 { provide: NoticeService, useValue: { emitIssue } },
                 { provide: I18nService, useValue: t }
             ]

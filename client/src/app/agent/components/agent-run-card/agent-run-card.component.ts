@@ -276,7 +276,7 @@ export class AgentRunCardComponent {
 
         this.setStageStatus(stage.name, UiSaveState.Saving);
         this.agentRunApi
-            .patchAgentRunSkills$(idRun, stage.name, next)
+            .updateSkills$(idRun, stage.name, next)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: payload => {
@@ -298,7 +298,7 @@ export class AgentRunCardComponent {
 
     private loadRunSkills(idRun: number): void {
         this.agentRunApi
-            .getAgentRunSkills$(idRun)
+            .loadSkills$(idRun)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: payload => {

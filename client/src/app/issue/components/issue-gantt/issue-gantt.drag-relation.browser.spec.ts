@@ -101,7 +101,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
     describe('onDragCompleted (SchedulingBacklog)', () => {
         it('with valid result inside canvas: calls updateIssue, resets on success', () => {
             const sub = mockSub();
-            mocks.issueServiceMock.updateIssue.mockReturnValue(sub);
+            mocks.issueApiMock.update$.mockReturnValue(sub);
             mocks.dragServiceMock.state.mockReturnValue({
                 mode: DragMode.SchedulingBacklog,
                 taskId: 1,
@@ -116,7 +116,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
 
             comp.onDragCompleted(DragMode.SchedulingBacklog);
 
-            expect(mocks.issueServiceMock.updateIssue).toHaveBeenCalled();
+            expect(mocks.issueApiMock.update$).toHaveBeenCalled();
             sub.handlers.next?.({});
             expect(mocks.issueFilterStoreMock.refresh).toHaveBeenCalled();
             expect(mocks.dragServiceMock.reset).toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
 
             comp.onDragCompleted(DragMode.SchedulingBacklog);
             expect(mocks.dragServiceMock.reset).toHaveBeenCalled();
-            expect(mocks.issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(mocks.issueApiMock.update$).not.toHaveBeenCalled();
         });
 
         it('without schedule result: resets without API call', () => {
@@ -152,7 +152,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
 
             comp.onDragCompleted(DragMode.SchedulingBacklog);
             expect(mocks.dragServiceMock.reset).toHaveBeenCalled();
-            expect(mocks.issueServiceMock.updateIssue).not.toHaveBeenCalled();
+            expect(mocks.issueApiMock.update$).not.toHaveBeenCalled();
         });
     });
 

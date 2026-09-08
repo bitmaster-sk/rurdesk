@@ -21,7 +21,7 @@ export class ProjectResolver implements Resolve<void> {
     public resolve(route: ActivatedRouteSnapshot, _state: RouterStateSnapshot): Observable<void> {
         const idProject = Number(route.paramMap.get('idProject'));
         this.projectStore.load(idProject);
-        return this.memberApi.getUserRole(idProject).pipe(
+        return this.memberApi.loadUserRole$(idProject).pipe(
             tap(res => this.aclStore.setRole(res.role)),
             catchError(() => {
                 this.aclStore.setRole(null);

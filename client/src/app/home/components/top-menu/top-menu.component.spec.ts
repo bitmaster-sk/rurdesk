@@ -3,7 +3,7 @@ import { of } from 'rxjs';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { TopMenuComponent } from './top-menu.component';
 import { AuthStore } from 'src/app/auth/store/auth.store';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { ProjectStore } from 'src/app/project/project.store';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
@@ -25,7 +25,7 @@ function setup(user: User) {
             // instant() echoes the key so assertions stay i18n-independent
             { provide: I18nService, useValue: { instant: (k: string) => k } },
             { provide: AuthStore, useValue: { user: signal(user) } },
-            { provide: ProjectService, useValue: { loadProjects: () => of([]) } },
+            { provide: ProjectApi, useValue: { load$: () => of([]) } },
             { provide: ProjectStore, useValue: { project$: of(null) } },
             { provide: WindowService, useValue: { open: () => ({ onClose: of() }) } },
             { provide: TrackerService, useValue: { isTracking$: of(false) } },

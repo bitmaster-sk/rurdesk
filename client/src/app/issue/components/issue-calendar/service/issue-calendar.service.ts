@@ -9,13 +9,13 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { Issue } from '../../../model/issue.model';
 import { IssueGuard } from '../../../model/extended-issue.model';
 
 @Injectable()
 export class IssueCalendarService {
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly severityStore = inject(SeverityStore);
     private readonly memberStore = inject(ProjectMemberStore);
     private readonly stateStore = inject(StateStore);
@@ -29,8 +29,8 @@ export class IssueCalendarService {
 
     public readonly events$ = this.issueFilterStore.actualFilter$.pipe(
         switchMap(filter =>
-            this.issueService
-                .loadIssues(filter)
+            this.issueApi
+                .load$(filter)
                 .pipe(
                     withLatestFrom(
                         this.severityStore.severitiesMapByProject$(filter.idProject),

@@ -3,13 +3,13 @@ import { TestBed } from '@angular/core/testing';
 import { UrlSegment } from '@angular/router';
 import { of, Observable } from 'rxjs';
 import { FirstProjectGuard } from './first-project.guard';
-import { ProjectService } from '../project/project.service';
+import { ProjectApi } from '../project/api/project.api.service';
 import { Project } from '../project/model/project.model';
 
 describe('FirstProjectGuard.canMatch', () => {
     function run(projects: Project[]): boolean {
         TestBed.configureTestingModule({
-            providers: [{ provide: ProjectService, useValue: { loadProjects: () => of(projects) } }]
+            providers: [{ provide: ProjectApi, useValue: { load$: () => of(projects) } }]
         });
         const result = TestBed.runInInjectionContext(() =>
             FirstProjectGuard.canMatch({}, [] as UrlSegment[])

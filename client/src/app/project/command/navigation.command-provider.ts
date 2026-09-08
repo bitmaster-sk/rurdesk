@@ -10,7 +10,7 @@ import {
     Translator
 } from '../../core/command/command.model';
 import { NavigationCommands } from './navigation.commands';
-import { ProjectService } from '../project.service';
+import { ProjectApi } from '../api/project.api.service';
 import { Project } from '../model/project.model';
 import { AclStore } from '../store/acl.store';
 import { CommandPaletteService } from '../../core/command/command-palette.service';
@@ -19,7 +19,7 @@ import { SessionService } from '../../auth/service/session.service';
 @Injectable({ providedIn: 'root' })
 export class NavigationCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
-    private readonly projectService = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly acl = inject(AclStore);
     private readonly palette = inject(CommandPaletteService);
     private readonly session = inject(SessionService);
@@ -29,7 +29,7 @@ export class NavigationCommandProvider implements CommandProvider {
     private projects: { idProject: number; name: string }[] = [];
 
     public prime(_ctx: CommandContext): Observable<unknown> {
-        return this.projectService.loadProjects().pipe(
+        return this.projectApi.load$().pipe(
             tap((list: Project[]) => {
                 this.projects = list.map(p => ({ idProject: p.idProject, name: p.name }));
             })

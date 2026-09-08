@@ -1,11 +1,16 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { AppSettings, SettingsApi } from './settings.api.service';
+import { AppSettings } from './model/app-settings.model';
+import { SettingsApi } from './settings.api.service';
 
+// Mirrors the server-side defaults in api/internal/constants/app_settings.go.
 const FALLBACK: AppSettings = {
     tablePageSize: 50,
     kanbanPageSize: 20,
     ganttBacklogPageSize: 30,
-    userApiKeyLimit: 10
+    sprintVelocityLimit: 10,
+    userApiKeyLimit: 10,
+    isAgentThinkingPersisted: true,
+    agentThinkingMaxKb: 1024
 };
 
 @Injectable({ providedIn: 'root' })
@@ -21,6 +26,6 @@ export class SettingsStore {
     public readonly userApiKeyLimit = (): number => this.settings().userApiKeyLimit;
 
     public load(): void {
-        this.api.getSettings$().subscribe(settings => this.settings.set(settings));
+        this.api.load$().subscribe(settings => this.settings.set(settings));
     }
 }

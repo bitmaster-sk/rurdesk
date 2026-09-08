@@ -70,7 +70,7 @@ describe('SprintAnalyticsStore', () => {
         vi.useFakeTimers();
         try {
             const store = setup({
-                loadSprintStats$: vi.fn(failingTimes(1)),
+                loadStats$: vi.fn(failingTimes(1)),
                 loadBacklogStats$: vi.fn()
             });
 
@@ -88,8 +88,8 @@ describe('SprintAnalyticsStore', () => {
     it('does not retry a cycle that is gone, since the answer cannot change', () => {
         vi.useFakeTimers();
         try {
-            const loadSprintStats$ = vi.fn(failingTimes(1, 404));
-            const store = setup({ loadSprintStats$, loadBacklogStats$: vi.fn() });
+            const loadStats$ = vi.fn(failingTimes(1, 404));
+            const store = setup({ loadStats$, loadBacklogStats$: vi.fn() });
 
             store.scopeAndReload(1, 5);
             vi.advanceTimersByTime(STATS_RETRY_MS * 5);
@@ -104,7 +104,7 @@ describe('SprintAnalyticsStore', () => {
         vi.useFakeTimers();
         try {
             const store = setup({
-                loadSprintStats$: vi.fn(failingTimes(2)),
+                loadStats$: vi.fn(failingTimes(2)),
                 loadBacklogStats$: vi.fn()
             });
 
@@ -137,9 +137,9 @@ describe('SprintAnalyticsStore', () => {
     });
 
     it('asks the backlog endpoint when the scope carries no sprint', () => {
-        const loadSprintStats$ = vi.fn().mockReturnValue(of(makeStats(3)));
+        const loadStats$ = vi.fn().mockReturnValue(of(makeStats(3)));
         const loadBacklogStats$ = vi.fn().mockReturnValue(of(makeStats(9)));
-        const store = setup({ loadSprintStats$, loadBacklogStats$ });
+        const store = setup({ loadStats$, loadBacklogStats$ });
 
         store.scopeAndReload(1, 5);
         expect(store.stats()?.donePoints).toBe(3);

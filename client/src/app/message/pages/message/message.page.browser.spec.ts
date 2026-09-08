@@ -12,9 +12,10 @@ import { MessagePage } from './message.page';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
-import { MessageService } from '../../message.service';
-import { ProjectService } from 'src/app/project/project.service';
-import { TeamService } from 'src/app/team/team.service';
+import { MessageApi } from '../../api/message.api.service';
+import { MessageUnreadStore } from '../../store/message-unread.store';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -112,25 +113,27 @@ describe('MessagePage mentionCandidates', () => {
                     useValue: { paramMap: paramMapSubject.asObservable() }
                 },
                 {
-                    provide: MessageService,
+                    provide: MessageApi,
                     useValue: {
-                        loadMessages: () => of([]),
-                        Unread: unreadSubject,
-                        insertReadMessage: () => of(null),
-                        unreadRemove: () => {}
+                        load$: () => of([]),
+                        markRead$: () => of(null)
                     }
                 },
                 {
-                    provide: ProjectService,
-                    useValue: { loadProjects: () => of(projects), loadMembers: () => of([]) }
+                    provide: MessageUnreadStore,
+                    useValue: { unread$: unreadSubject, remove: () => {} }
                 },
                 {
-                    provide: TeamService,
-                    useValue: { loadMyTeams: () => of([]) }
+                    provide: ProjectApi,
+                    useValue: { load$: () => of(projects), loadMembers$: () => of([]) }
+                },
+                {
+                    provide: TeamApi,
+                    useValue: { loadMy$: () => of([]) }
                 },
                 {
                     provide: UserApi,
-                    useValue: { loadUsers$: () => of([alice, bob, carol]) }
+                    useValue: { load$: () => of([alice, bob, carol]) }
                 },
                 {
                     provide: AuthStore,
@@ -189,7 +192,7 @@ describe('MessagePage mentionCandidates', () => {
         paramMapSubject.next(makeParamMap(2, MessageRecipientType.user));
 
         const page = createPage();
-        // allUsers is populated from userApi.loadUsers$() which returns [alice, bob, carol]
+        // allUsers is populated from userApi.load$() which returns [alice, bob, carol]
         expect(page.mentionCandidates()).toEqual([bob]);
     });
 

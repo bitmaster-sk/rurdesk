@@ -67,7 +67,7 @@ export class AdminSkillsComponent {
 
     protected onCreate(): void {
         this.skillApi
-            .create$({
+            .insert$({
                 name: this.uniqueDefaultName(),
                 description: '',
                 content: this.i18n.instant('SKILL.DEFAULT_CONTENT')

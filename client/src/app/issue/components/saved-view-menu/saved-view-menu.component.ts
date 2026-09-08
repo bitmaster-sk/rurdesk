@@ -211,7 +211,7 @@ export class SavedViewMenuComponent {
             return;
         }
         this.api
-            .create$(this.idProject(), {
+            .insert$(this.idProject(), {
                 name: value.name,
                 viewType: this.applyService.currentMode(),
                 config: this.liveConfig(),
@@ -251,7 +251,7 @@ export class SavedViewMenuComponent {
 
     private persist(view: SavedView, value: SavedViewFormValue, config: SavedViewConfig): void {
         this.api
-            .edit$(view.idSavedView, {
+            .update$(view.idSavedView, {
                 name: value.name,
                 viewType: view.viewType,
                 config,

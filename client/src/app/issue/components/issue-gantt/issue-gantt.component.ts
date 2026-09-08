@@ -35,7 +35,7 @@ import { GanttTimelineBodyComponent } from './components/gantt-timeline-body/gan
 import { Issue } from '../../model/issue.model';
 import { IssueBulkApi } from '../../api/issue-bulk.api.service';
 import { BulkEditIssueEntry } from '../../model/bulk-edit-issues.model';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueRelationDirection } from '../../constants/issue-relation-direction.enum';
@@ -93,7 +93,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     private readonly cascadeService = inject(GanttCascadeService);
     private readonly criticalPathService = inject(GanttCriticalPathService);
     private readonly bulkApi = inject(IssueBulkApi);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly relationApi = inject(IssueRelationApi);
     private readonly noticeService = inject(NoticeService);
     private readonly issueToolbarService = inject(IssueToolbarService);
@@ -684,7 +684,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 scheduledAt: result.scheduledAt,
                 estimated: result.estimated
             };
-            this.issueService.updateIssue(updated).subscribe({
+            this.issueApi.update$(updated).subscribe({
                 next: () => {
                     this.issueFilterStore.refresh();
                     this.dragService.reset();

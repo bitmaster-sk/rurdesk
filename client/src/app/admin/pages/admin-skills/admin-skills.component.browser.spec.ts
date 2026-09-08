@@ -50,7 +50,7 @@ abstract class Dom {
 describe('AdminSkillsComponent (browser)', () => {
     let api: {
         load$: ReturnType<typeof vi.fn>;
-        create$: ReturnType<typeof vi.fn>;
+        insert$: ReturnType<typeof vi.fn>;
         update$: ReturnType<typeof vi.fn>;
         delete$: ReturnType<typeof vi.fn>;
         restore$: ReturnType<typeof vi.fn>;
@@ -60,7 +60,7 @@ describe('AdminSkillsComponent (browser)', () => {
     beforeEach(() => {
         api = {
             load$: vi.fn().mockReturnValue(of([BUILTIN, EDITED, CUSTOM])),
-            create$: vi.fn().mockReturnValue(of(CUSTOM)),
+            insert$: vi.fn().mockReturnValue(of(CUSTOM)),
             update$: vi
                 .fn()
                 .mockImplementation((_idSkill: number, body: Record<string, string>) =>

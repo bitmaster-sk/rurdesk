@@ -158,7 +158,7 @@ export class SprintAnalyticsStore {
         const request$ =
             scope.idSprint === null
                 ? this.sprintApi.loadBacklogStats$(scope.idProject)
-                : this.sprintApi.loadSprintStats$(scope.idSprint);
+                : this.sprintApi.loadStats$(scope.idSprint);
         return request$.pipe(
             retry({
                 count: 1,

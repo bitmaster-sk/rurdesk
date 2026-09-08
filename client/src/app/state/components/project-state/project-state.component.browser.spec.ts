@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ProjectStateComponent } from './project-state.component';
 import { StateApi } from '../../api/state.api.service';
 import { StateStore } from '../../store/state.store';
-import { ProjectService } from '../../../project/project.service';
+import { ProjectApi } from '../../../project/api/project.api.service';
 import { WindowService } from '../../../shared/window/window.service';
 
 /**
@@ -44,8 +44,8 @@ describe('ProjectStateComponent reorder (browser)', () => {
                 { provide: StateApi, useValue: stateApi },
                 { provide: StateStore, useValue: { load: vi.fn() } },
                 {
-                    provide: ProjectService,
-                    useValue: { updateProject: vi.fn().mockReturnValue(of({})) }
+                    provide: ProjectApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
                 }
             ]
         });
@@ -110,8 +110,8 @@ describe('ProjectStateComponent delete flow (browser)', () => {
                 { provide: StateApi, useValue: stateApi },
                 { provide: StateStore, useValue: stateStore },
                 {
-                    provide: ProjectService,
-                    useValue: { updateProject: vi.fn().mockReturnValue(of({})) }
+                    provide: ProjectApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
                 }
             ]
         });

@@ -15,7 +15,7 @@ import { AroUser, AroTeam, ProjectMembersRes } from '../../model/project-members
 import { ProjectMemberApi } from '../../api/project-member.api.service';
 import { AclStore } from '../../store/acl.store';
 import { Role } from '../../../shared/constants/role.enum';
-import { TeamService } from '../../../team/team.service';
+import { TeamApi } from '../../../team/api/team.api.service';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
 import { UserApi } from '../../../user/api/user.api.service';
@@ -31,7 +31,7 @@ export class ProjectMembersComponent implements OnInit {
     public readonly project = input.required<Project>();
 
     private readonly memberApi = inject(ProjectMemberApi);
-    private readonly teamService = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     protected readonly aclStore = inject(AclStore);
 
@@ -84,17 +84,15 @@ export class ProjectMembersComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        combineLatest([this.userApi.loadUsers$(), this.teamService.loadTeams()]).subscribe(
-            ([users, teams]) => {
-                this.allUsers.set(users);
-                this.allTeams.set(teams);
-            }
-        );
+        combineLatest([this.userApi.load$(), this.teamApi.load$()]).subscribe(([users, teams]) => {
+            this.allUsers.set(users);
+            this.allTeams.set(teams);
+        });
         this.loadMembers();
     }
 
     protected loadMembers(): void {
-        this.memberApi.getMembers(this.project().idProject).subscribe({
+        this.memberApi.load$(this.project().idProject).subscribe({
             next: res => this.members.set(res)
         });
     }
@@ -109,7 +107,7 @@ export class ProjectMembersComponent implements OnInit {
 
     protected onAddUser(user: User): void {
         this.memberApi
-            .addUser(this.project().idProject, user.idUser, this.pendingUserRole())
+            .insertUser$(this.project().idProject, user.idUser, this.pendingUserRole())
             .subscribe(() => {
                 this.pendingUserRole.set(Role.Member);
                 this.addUserPop.hide();
@@ -127,7 +125,7 @@ export class ProjectMembersComponent implements OnInit {
 
     protected onUpdateUserRole(user: AroUser, role: Role): void {
         this.setUserRoleStatus(user.idUser, UiSaveState.Saving);
-        this.memberApi.updateUserRole(this.project().idProject, user.idUser, role).subscribe({
+        this.memberApi.updateUserRole$(this.project().idProject, user.idUser, role).subscribe({
             next: () => {
                 this.setUserRoleStatus(user.idUser, UiSaveState.Saved);
                 this.loadMembers();
@@ -146,13 +144,13 @@ export class ProjectMembersComponent implements OnInit {
 
     protected onRemoveUser(user: AroUser): void {
         this.memberApi
-            .removeUser(this.project().idProject, user.idUser)
+            .deleteUser$(this.project().idProject, user.idUser)
             .subscribe(() => this.loadMembers());
     }
 
     protected onAddTeam(team: Team): void {
         this.memberApi
-            .addTeam(this.project().idProject, team.idTeam, this.pendingTeamRole())
+            .insertTeam$(this.project().idProject, team.idTeam, this.pendingTeamRole())
             .subscribe(() => {
                 this.pendingTeamRole.set(Role.Member);
                 this.addTeamPop.hide();
@@ -162,7 +160,7 @@ export class ProjectMembersComponent implements OnInit {
 
     protected onUpdateTeamRole(team: AroTeam, role: Role): void {
         this.setTeamRoleStatus(team.idTeam, UiSaveState.Saving);
-        this.memberApi.updateTeamRole(this.project().idProject, team.idTeam, role).subscribe({
+        this.memberApi.updateTeamRole$(this.project().idProject, team.idTeam, role).subscribe({
             next: () => {
                 this.setTeamRoleStatus(team.idTeam, UiSaveState.Saved);
                 this.loadMembers();
@@ -173,13 +171,13 @@ export class ProjectMembersComponent implements OnInit {
 
     protected onRemoveTeam(team: AroTeam): void {
         this.memberApi
-            .removeTeam(this.project().idProject, team.idTeam)
+            .deleteTeam$(this.project().idProject, team.idTeam)
             .subscribe(() => this.loadMembers());
     }
 
     protected onOverrideUser(user: AroUser): void {
         this.memberApi
-            .addUser(this.project().idProject, user.idUser, user.role)
+            .insertUser$(this.project().idProject, user.idUser, user.role)
             .subscribe(() => this.loadMembers());
     }
 

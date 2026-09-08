@@ -21,11 +21,11 @@ function makeSprint(over: Partial<Sprint>): Sprint {
 
 function makeStore(sprints: Sprint[]): {
     store: SprintStore;
-    api: { loadByProject$: ReturnType<typeof vi.fn>; create$: ReturnType<typeof vi.fn> };
+    api: { loadByProject$: ReturnType<typeof vi.fn>; insert$: ReturnType<typeof vi.fn> };
 } {
     const api = {
         loadByProject$: vi.fn().mockReturnValue(of(sprints)),
-        create$: vi.fn().mockReturnValue(of(sprints[0] ?? null))
+        insert$: vi.fn().mockReturnValue(of(sprints[0] ?? null))
     };
     const injector = Injector.create({ providers: [{ provide: SprintApi, useValue: api }] });
     const store = runInInjectionContext(injector, () => new SprintStore());

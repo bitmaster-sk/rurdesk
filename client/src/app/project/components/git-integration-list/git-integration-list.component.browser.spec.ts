@@ -24,17 +24,17 @@ const makeIntegration = (idGitIntegration: number, hostType: HostType): GitInteg
 
 describe('GitIntegrationListComponent', () => {
     let fixture: ComponentFixture<GitIntegrationListComponent>;
-    let api: { list$: ReturnType<typeof vi.fn>; delete$: ReturnType<typeof vi.fn> };
+    let api: { load$: ReturnType<typeof vi.fn>; delete$: ReturnType<typeof vi.fn> };
 
     function setup(integrations: GitIntegrationRes[]): void {
-        api.list$.mockReturnValue(of(integrations));
+        api.load$.mockReturnValue(of(integrations));
         fixture = TestBed.createComponent(GitIntegrationListComponent);
         fixture.componentRef.setInput('project', { idProject: 1 });
         fixture.detectChanges();
     }
 
     beforeEach(() => {
-        api = { list$: vi.fn(), delete$: vi.fn() };
+        api = { load$: vi.fn(), delete$: vi.fn() };
 
         TestBed.configureTestingModule({
             declarations: [GitIntegrationListComponent],
@@ -91,7 +91,7 @@ describe('GitIntegrationListComponent — delete confirmation (browser)', () => 
                 {
                     provide: GitIntegrationApi,
                     useValue: {
-                        list$: vi.fn().mockReturnValue(of([makeIntegration(1, HostType.GitHub)])),
+                        load$: vi.fn().mockReturnValue(of([makeIntegration(1, HostType.GitHub)])),
                         delete$: deleteFn
                     }
                 },

@@ -10,7 +10,7 @@ import { Project } from 'src/app/project/model/project.model';
 import { DurationConverter } from '../duration/duration.converter';
 import { DurationParser } from '../duration/duration.parser';
 import { DurationValidator } from '../duration/duration.validator';
-import { IssueService } from 'src/app/issue/issue.service';
+import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Track } from './model/track.model';
 
 @Component({
@@ -20,8 +20,8 @@ import { Track } from './model/track.model';
     standalone: false
 })
 export class TrackerComponent {
-    private readonly sTracker = inject(TrackerService);
-    private readonly sIssue = inject(IssueService);
+    private readonly trackerService = inject(TrackerService);
+    private readonly issueApi = inject(IssueApi);
 
     public global = input<boolean>(false);
 
@@ -33,9 +33,9 @@ export class TrackerComponent {
 
     public trackAdded = output<Track>();
 
-    private tracker = toSignal(this.sTracker.tracker$, { initialValue: null });
+    private tracker = toSignal(this.trackerService.tracker$, { initialValue: null });
 
-    public isTracking = toSignal(this.sTracker.isTracking$, {
+    public isTracking = toSignal(this.trackerService.isTracking$, {
         initialValue: undefined
     });
 
@@ -55,7 +55,7 @@ export class TrackerComponent {
     });
 
     public liveTracker = toSignal(
-        combineLatest([this.sTracker.tracker$, timer(0, 1000)]).pipe(
+        combineLatest([this.trackerService.tracker$, timer(0, 1000)]).pipe(
             map(([tracker]) => tracker),
             filter(tracker => tracker !== null),
             map(tracker => ({
@@ -67,10 +67,10 @@ export class TrackerComponent {
     );
 
     public trackerIssue = toSignal(
-        this.sTracker.tracker$.pipe(
+        this.trackerService.tracker$.pipe(
             distinctUntilChanged((x, y) => x?.idIssue === y?.idIssue),
             filter((tracker): tracker is Tracker => !!tracker?.idTracker),
-            switchMap(tracker => this.sIssue.loadIssue(tracker.idProject, tracker.idIssuePublic))
+            switchMap(tracker => this.issueApi.loadOne$(tracker.idProject, tracker.idIssuePublic))
         ),
         { initialValue: null }
     );
@@ -88,10 +88,12 @@ export class TrackerComponent {
         const seconds = DurationConverter.durationToSeconds(
             DurationParser.stringToDuration(this.trackedControl.value ?? '')
         );
-        this.sTracker.insertTrack({ idIssue: issue.idIssue, tracked: seconds }).subscribe(track => {
-            this.trackedControl.reset();
-            this.trackAdded.emit(track);
-        });
+        this.trackerService
+            .insertTrack$({ idIssue: issue.idIssue, tracked: seconds })
+            .subscribe(track => {
+                this.trackedControl.reset();
+                this.trackAdded.emit(track);
+            });
     }
 
     public onStartTracker(): void {
@@ -100,16 +102,16 @@ export class TrackerComponent {
         if (!issue || !project) {
             return;
         }
-        this.sTracker.insertTracker(project.idProject, issue.idIssuePublic).subscribe();
+        this.trackerService.insertTracker$(project.idProject, issue.idIssuePublic).subscribe();
     }
 
     public onSubmitTracker(tracker: Tracker): void {
-        this.sTracker
-            .submitTracker(tracker.idTracker)
+        this.trackerService
+            .submitTracker$(tracker.idTracker)
             .subscribe(track => this.trackAdded.emit(track));
     }
 
     public onStopTracker(tracker: Tracker): void {
-        this.sTracker.deleteTracker(tracker.idTracker).subscribe();
+        this.trackerService.deleteTracker$(tracker.idTracker).subscribe();
     }
 }

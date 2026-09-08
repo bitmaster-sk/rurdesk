@@ -29,7 +29,7 @@ function makeRun(idRun: number, idIssue = 10): AgentRun {
 }
 
 interface ApiMock {
-    getRunByIssue$?: ReturnType<typeof vi.fn>;
+    loadByIssue$?: ReturnType<typeof vi.fn>;
     approve$?: ReturnType<typeof vi.fn>;
     restart$?: ReturnType<typeof vi.fn>;
 }
@@ -53,12 +53,12 @@ function build(
 describe('AgentRunStore', () => {
     it('loadForIssue fetches the run and clears loading', () => {
         const run = makeRun(5);
-        const getRunByIssue$ = vi.fn().mockReturnValue(of(run));
-        const store = build({ getRunByIssue$ }, new Subject());
+        const loadByIssue$ = vi.fn().mockReturnValue(of(run));
+        const store = build({ loadByIssue$ }, new Subject());
 
         store.loadForIssue(1, 2, 10);
 
-        expect(getRunByIssue$).toHaveBeenCalledWith(1, 2);
+        expect(loadByIssue$).toHaveBeenCalledWith(1, 2);
         expect(store.run()).toBe(run);
         expect(store.isLoading()).toBe(false);
     });
@@ -66,7 +66,7 @@ describe('AgentRunStore', () => {
     it('approve sends the current run id and stores the updated run', () => {
         const updated = makeRun(5);
         const api: ApiMock = {
-            getRunByIssue$: vi.fn().mockReturnValue(of(makeRun(5))),
+            loadByIssue$: vi.fn().mockReturnValue(of(makeRun(5))),
             approve$: vi.fn().mockReturnValue(of(updated))
         };
         const store = build(api, new Subject());
@@ -81,7 +81,7 @@ describe('AgentRunStore', () => {
     it('approve passes the chosen mockup ref to the api', () => {
         const updated = makeRun(5);
         const api: ApiMock = {
-            getRunByIssue$: vi.fn().mockReturnValue(of(makeRun(5))),
+            loadByIssue$: vi.fn().mockReturnValue(of(makeRun(5))),
             approve$: vi.fn().mockReturnValue(of(updated))
         };
         const store = build(api, new Subject());
@@ -94,7 +94,7 @@ describe('AgentRunStore', () => {
 
     it('patches the run from a notice with a matching idRun', () => {
         const agentRun$ = new Subject<{ payload: AgentRun | null }>();
-        const store = build({ getRunByIssue$: vi.fn().mockReturnValue(of(makeRun(5))) }, agentRun$);
+        const store = build({ loadByIssue$: vi.fn().mockReturnValue(of(makeRun(5))) }, agentRun$);
         store.loadForIssue(1, 2, 10);
 
         const patched = makeRun(5);
@@ -105,7 +105,7 @@ describe('AgentRunStore', () => {
     it('ignores a notice for a different run', () => {
         const agentRun$ = new Subject<{ payload: AgentRun | null }>();
         const initial = makeRun(5);
-        const store = build({ getRunByIssue$: vi.fn().mockReturnValue(of(initial)) }, agentRun$);
+        const store = build({ loadByIssue$: vi.fn().mockReturnValue(of(initial)) }, agentRun$);
         store.loadForIssue(1, 2, 10);
 
         agentRun$.next({ payload: makeRun(99) });
@@ -113,25 +113,25 @@ describe('AgentRunStore', () => {
     });
 
     it('restart on a run with a PR (409) shows the has-PR toast and refetches', () => {
-        const getRunByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
+        const loadByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
         const restart$ = vi.fn().mockReturnValue(throwError(() => ({ status: 409 })));
         const toast = { showError: vi.fn() };
-        const store = build({ getRunByIssue$, restart$ }, new Subject(), toast);
+        const store = build({ loadByIssue$, restart$ }, new Subject(), toast);
         store.loadForIssue(1, 2, 10);
-        getRunByIssue$.mockClear();
+        loadByIssue$.mockClear();
 
         store.restart();
 
         expect(restart$).toHaveBeenCalledWith(5);
         expect(toast.showError).toHaveBeenCalledWith('AGENT.RESTART_HAS_PR');
-        expect(getRunByIssue$).toHaveBeenCalledTimes(1); // refetch to resync the card
+        expect(loadByIssue$).toHaveBeenCalledTimes(1); // refetch to resync the card
     });
 
     it('restart failure (non-409) shows the generic toast', () => {
-        const getRunByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
+        const loadByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
         const restart$ = vi.fn().mockReturnValue(throwError(() => ({ status: 500 })));
         const toast = { showError: vi.fn() };
-        const store = build({ getRunByIssue$, restart$ }, new Subject(), toast);
+        const store = build({ loadByIssue$, restart$ }, new Subject(), toast);
         store.loadForIssue(1, 2, 10);
 
         store.restart();
@@ -140,16 +140,16 @@ describe('AgentRunStore', () => {
     });
 
     it('restart success refetches and shows no toast', () => {
-        const getRunByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
+        const loadByIssue$ = vi.fn().mockReturnValue(of(makeRun(5)));
         const restart$ = vi.fn().mockReturnValue(of({ oldIdRun: 5, newIdRun: 6 }));
         const toast = { showError: vi.fn() };
-        const store = build({ getRunByIssue$, restart$ }, new Subject(), toast);
+        const store = build({ loadByIssue$, restart$ }, new Subject(), toast);
         store.loadForIssue(1, 2, 10);
-        getRunByIssue$.mockClear();
+        loadByIssue$.mockClear();
 
         store.restart();
 
         expect(toast.showError).not.toHaveBeenCalled();
-        expect(getRunByIssue$).toHaveBeenCalledTimes(1);
+        expect(loadByIssue$).toHaveBeenCalledTimes(1);
     });
 });

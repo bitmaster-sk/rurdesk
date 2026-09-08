@@ -51,9 +51,9 @@ describe('QualityApi', () => {
         expect(res).toEqual(mockReport);
     });
 
-    it('getQuality$ GETs /api/private/project/:id/issue/:id/quality', () => {
+    it('load$ GETs /api/private/project/:id/issue/:id/quality', () => {
         let res: QualityReport | undefined;
-        service.getQuality$(1, 42).subscribe(r => (res = r));
+        service.load$(1, 42).subscribe(r => (res = r));
 
         expect(get).toHaveBeenCalledWith(
             '/api/private/project/1/issue/42/quality',

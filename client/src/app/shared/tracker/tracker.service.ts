@@ -1,8 +1,9 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
+import { TrackApi } from './api/track.api.service';
+import { TrackerApi } from './api/tracker.api.service';
 import { Track, CreateTrackReq, TrackUpdate } from './model/track.model';
 import { Tracker } from './model/tracker.model';
 
@@ -10,7 +11,9 @@ import { Tracker } from './model/tracker.model';
     providedIn: 'root'
 })
 export class TrackerService {
-    private readonly http = inject(HttpClient);
+    private readonly trackerApi = inject(TrackerApi);
+
+    private readonly trackApi = inject(TrackApi);
 
     private readonly _localTracker$ = new ReplaySubject<Tracker | null>(1);
 
@@ -35,7 +38,7 @@ export class TrackerService {
     ]).pipe(
         map(([tracksFilter]) => tracksFilter),
         filter(tracksFilter => tracksFilter != null),
-        switchMap(tracksFilter => this.loadTracks(tracksFilter)),
+        switchMap(tracksFilter => this.loadTracks$(tracksFilter)),
         shareReplay(1)
     );
 
@@ -43,23 +46,18 @@ export class TrackerService {
         map(tracks => tracks.reduce((sum, curr) => sum + (curr.tracked ?? 0), 0))
     );
 
-    public loadTracker(): Observable<Tracker> {
-        return this.http.get<Tracker>('/api/private/tracker').pipe(
-            map(tracker => this.toTracker(tracker)),
-            tap(tracker => this._localTracker$.next(tracker))
-        );
+    public loadTracker$(): Observable<Tracker> {
+        return this.trackerApi.load$().pipe(tap(tracker => this._localTracker$.next(tracker)));
     }
 
-    public insertTracker(idProject: number, idIssuePublic: number): Observable<Tracker> {
-        return this.http.post<Tracker>(`/api/private/tracker`, { idProject, idIssuePublic }).pipe(
-            map(tracker => this.toTracker(tracker)),
-            tap(tracker => this._localTracker$.next(tracker))
-        );
+    public insertTracker$(idProject: number, idIssuePublic: number): Observable<Tracker> {
+        return this.trackerApi
+            .insert$(idProject, idIssuePublic)
+            .pipe(tap(tracker => this._localTracker$.next(tracker)));
     }
 
-    public submitTracker(idTracker: number): Observable<Track> {
-        return this.http.patch<Track>(`/api/private/tracker/${idTracker}/submit`, {}).pipe(
-            map(savedTrack => this.toTrack(savedTrack)),
+    public submitTracker$(idTracker: number): Observable<Track> {
+        return this.trackerApi.submit$(idTracker).pipe(
             tap(() => {
                 this._localTracker$.next(null);
                 this.tracksChange$.next(true);
@@ -67,70 +65,27 @@ export class TrackerService {
         );
     }
 
-    public deleteTracker(idTracker: number): Observable<void> {
-        return this.http
-            .delete<void>(`/api/private/tracker/${idTracker}`, {})
-            .pipe(tap(() => this._localTracker$.next(null)));
+    public deleteTracker$(idTracker: number): Observable<void> {
+        return this.trackerApi.delete$(idTracker).pipe(tap(() => this._localTracker$.next(null)));
     }
 
     public setTrackFilter(trackFilter: TrackFilter): void {
         this._tracksFilter$.next(trackFilter);
     }
 
-    public loadTracks(trackFilter: TrackFilter): Observable<Track[]> {
-        let params = new HttpParams();
-        if (trackFilter.idIssue) {
-            params = params.set('idIssue', `${trackFilter.idIssue}`);
-        }
-        if (trackFilter.idProject) {
-            params = params.set('idProject', `${trackFilter.idProject}`);
-        }
-        if (trackFilter.idUser) {
-            params = params.set('idUser', `${trackFilter.idUser}`);
-        }
-        if (trackFilter.from) {
-            params = params.set('startFrom', trackFilter.from.toISOString());
-        }
-        if (trackFilter.to) {
-            params = params.set('startTo', trackFilter.to.toISOString());
-        }
-        return this.http
-            .get<Track[]>('/api/private/track', { params })
-            .pipe(map(tracks => this.toTracks(tracks)));
+    public loadTracks$(trackFilter: TrackFilter): Observable<Track[]> {
+        return this.trackApi.load$(trackFilter);
     }
 
-    public insertTrack(track: CreateTrackReq): Observable<Track> {
-        return this.http.post<Track>('/api/private/track', track).pipe(
-            map(savedTrack => this.toTrack(savedTrack)),
-            tap(() => this.tracksChange$.next(true))
-        );
+    public insertTrack$(track: CreateTrackReq): Observable<Track> {
+        return this.trackApi.insert$(track).pipe(tap(() => this.tracksChange$.next(true)));
     }
 
-    public updateTrack(track: TrackUpdate): Observable<Track> {
-        return this.http.patch<Track>(`/api/private/track/${track.idTrack}`, track).pipe(
-            map(savedTrack => this.toTrack(savedTrack)),
-            tap(() => this.tracksChange$.next(true))
-        );
+    public updateTrack$(track: TrackUpdate): Observable<Track> {
+        return this.trackApi.update$(track).pipe(tap(() => this.tracksChange$.next(true)));
     }
 
-    public deleteTrack(idTrack: number): Observable<void> {
-        return this.http
-            .delete<void>(`/api/private/track/${idTrack}`)
-            .pipe(tap(() => this.tracksChange$.next(true)));
-    }
-
-    private toTracks(tracks: Track[]): Track[] {
-        return tracks.map(track => this.toTrack(track));
-    }
-
-    private toTrack(track: Track): Track {
-        track.startAt = track.startAt ? new Date(track.startAt) : null;
-        track.endAt = track.endAt ? new Date(track.endAt) : null;
-        return track;
-    }
-
-    private toTracker(tracker: Tracker): Tracker {
-        tracker.startAt = new Date(tracker.startAt);
-        return tracker;
+    public deleteTrack$(idTrack: number): Observable<void> {
+        return this.trackApi.delete$(idTrack).pipe(tap(() => this.tracksChange$.next(true)));
     }
 }

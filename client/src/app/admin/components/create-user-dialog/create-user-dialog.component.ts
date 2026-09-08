@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import {
     AdminCreateUserReq,
@@ -25,7 +25,7 @@ import {
 })
 export class CreateUserDialogComponent {
     private readonly fb = inject(FormBuilder);
-    private readonly adminApi = inject(AdminApi);
+    private readonly adminUserApi = inject(AdminUserApi);
     private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
 
@@ -100,7 +100,7 @@ export class CreateUserDialogComponent {
         const gatewayUrl = value.isAgent ? (value.gatewayUrl ?? '').trim() : '';
 
         this.isSaving.set(true);
-        this.adminApi.createUser$(req).subscribe({
+        this.adminUserApi.insert$(req).subscribe({
             next: res => {
                 if (gatewayUrl) {
                     this.createGatewayThenFinish(res, gatewayUrl);

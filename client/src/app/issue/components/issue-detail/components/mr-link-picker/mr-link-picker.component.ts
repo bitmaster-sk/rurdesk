@@ -71,7 +71,7 @@ export class MrLinkPickerComponent implements OnInit {
         );
 
         this.gitIntegrationApi
-            .list$(this.idProject())
+            .load$(this.idProject())
             .subscribe(list => this.integrations.set(list));
     }
 

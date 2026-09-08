@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormControl, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ProjectService } from '../../../project/project.service';
+import { ProjectApi } from '../../../project/api/project.api.service';
 import { CreateProjectReq } from '../../../project/model/project.model';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 
@@ -13,7 +13,7 @@ import { ToastNotificationService } from '../../../core/toast-notification.servi
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class OnboardingFirstProjectComponent {
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly router = inject(Router);
     private readonly toast = inject(ToastNotificationService);
 
@@ -52,7 +52,7 @@ export class OnboardingFirstProjectComponent {
         // Project requires name + color (idProject/defaults optional). Empty color
         // matches the existing "+" dialog create — the API treats color as omitempty.
         const project: CreateProjectReq = { name, color: '' };
-        this.sProject.insertProject(project).subscribe({
+        this.projectApi.insert$(project).subscribe({
             next: saved => then(saved.idProject),
             error: () => {
                 this.isSubmitting.set(false);

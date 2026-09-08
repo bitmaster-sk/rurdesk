@@ -2,8 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
-import { TeamService } from '../../../team/team.service';
-import { AdminApi } from '../../api/admin.api.service';
+import { TeamApi } from '../../../team/api/team.api.service';
+import { AdminTeamApi } from '../../api/admin-team.api.service';
 import { AdminTeamsComponent } from './admin-teams.component';
 
 /**
@@ -23,19 +23,22 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         isAgent: false,
         isAdmin: false
     };
-    let addTeamMember$: ReturnType<typeof vi.fn>;
-    let listTeamMembers$: ReturnType<typeof vi.fn>;
+    let insertTeamMember$: ReturnType<typeof vi.fn>;
+    let loadTeamMembers$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
-        addTeamMember$ = vi.fn(() => of(void 0));
-        listTeamMembers$ = vi.fn(() => of([]));
+        insertTeamMember$ = vi.fn(() => of(void 0));
+        loadTeamMembers$ = vi.fn(() => of([]));
         await TestBed.configureTestingModule({
             declarations: [AdminTeamsComponent],
             providers: [
-                { provide: TeamService, useValue: { loadTeams: () => of([team]) } },
+                { provide: TeamApi, useValue: { load$: () => of([team]) } },
                 {
-                    provide: AdminApi,
-                    useValue: { listTeamMembers$, addTeamMember$ }
+                    provide: AdminTeamApi,
+                    useValue: {
+                        loadMembers$: loadTeamMembers$,
+                        insertMember$: insertTeamMember$
+                    }
                 }
             ]
         })
@@ -103,27 +106,27 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
 
     it('dropping a user on a team row adds them to that team', () => {
         drop(render(user).teamRow);
-        expect(addTeamMember$).toHaveBeenCalledWith(team.idTeam, user.idUser);
+        expect(insertTeamMember$).toHaveBeenCalledWith(team.idTeam, user.idUser);
     });
 
     it('dropping with no dragged user is a no-op', () => {
         drop(render(null).teamRow);
-        expect(addTeamMember$).not.toHaveBeenCalled();
+        expect(insertTeamMember$).not.toHaveBeenCalled();
     });
 
     it('dropping on the members panel with no selected team is a no-op', () => {
         drop(render(user).membersPanel);
-        expect(addTeamMember$).not.toHaveBeenCalled();
+        expect(insertTeamMember$).not.toHaveBeenCalled();
     });
 
-    it('fires listTeamMembers$ exactly once after a drop on a team row', () => {
+    it('fires loadTeamMembers$ exactly once after a drop on a team row', () => {
         const { teamRow } = render(user);
         drop(teamRow);
 
-        // addTeamMember$ resolves synchronously (of(void 0)), so the
+        // insertTeamMember$ resolves synchronously (of(void 0)), so the
         // success callback — which calls loadMembers — has already fired.
-        expect(addTeamMember$).toHaveBeenCalledWith(team.idTeam, user.idUser);
-        expect(listTeamMembers$).toHaveBeenCalledTimes(1);
-        expect(listTeamMembers$).toHaveBeenCalledWith(team.idTeam);
+        expect(insertTeamMember$).toHaveBeenCalledWith(team.idTeam, user.idUser);
+        expect(loadTeamMembers$).toHaveBeenCalledTimes(1);
+        expect(loadTeamMembers$).toHaveBeenCalledWith(team.idTeam);
     });
 });

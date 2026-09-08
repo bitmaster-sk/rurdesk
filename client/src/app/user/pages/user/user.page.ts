@@ -17,7 +17,7 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
 import { PinView } from 'src/app/pin/entity/pin-view.entity';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
@@ -32,9 +32,9 @@ import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 })
 export class UserPage implements OnInit {
     private readonly authStore = inject(AuthStore);
-    private readonly sPin = inject(PinService);
+    private readonly pinApi = inject(PinApi);
     private readonly severityStore = inject(SeverityStore);
-    private readonly sTracker = inject(TrackerService);
+    private readonly trackerService = inject(TrackerService);
     private readonly datePipe = inject(DatePipe);
 
     private readonly _user$ = toObservable(this.authStore.user).pipe(
@@ -50,7 +50,7 @@ export class UserPage implements OnInit {
             combineLatest([this.severityStore.severitiesMap$, this._user$]).pipe(
                 first(),
                 switchMap(([severities, user]) =>
-                    this.sPin.loadPins(user.idUser, PinDestinationType.USER).pipe(
+                    this.pinApi.load$(user.idUser, PinDestinationType.USER).pipe(
                         map(pins =>
                             pins
                                 .filter(p => !!p.issue)
@@ -81,7 +81,7 @@ export class UserPage implements OnInit {
         )
     );
 
-    public tracks$: Observable<Track[]> = this.sTracker.tracks$;
+    public tracks$: Observable<Track[]> = this.trackerService.tracks$;
 
     public weekOffset = signal<number>(0);
 
@@ -109,7 +109,7 @@ export class UserPage implements OnInit {
         if (user === null) {
             return;
         }
-        this.sTracker.setTrackFilter({ idUser: user.idUser, ...range });
+        this.trackerService.setTrackFilter({ idUser: user.idUser, ...range });
     });
 
     public ngOnInit(): void {
@@ -117,7 +117,7 @@ export class UserPage implements OnInit {
     }
 
     public onDeletePin(pin: PinView): void {
-        this.sPin.deletePin(pin.idPin).subscribe(() => this._pinRefreshSignal$.next());
+        this.pinApi.delete$(pin.idPin).subscribe(() => this._pinRefreshSignal$.next());
     }
 
     public previousWeek(): void {

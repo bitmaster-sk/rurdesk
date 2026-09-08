@@ -62,10 +62,10 @@ abstract class Dom {
 }
 
 describe('UserDropdownComponent agent features (browser)', () => {
-    let agentRunApi: { agentsOverview$: ReturnType<typeof vi.fn> };
+    let agentRunApi: { loadAgentsOverview$: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
-        agentRunApi = { agentsOverview$: vi.fn().mockReturnValue(of(OVERVIEW)) };
+        agentRunApi = { loadAgentsOverview$: vi.fn().mockReturnValue(of(OVERVIEW)) };
 
         await TestBed.configureTestingModule({
             imports: [ReactiveFormsModule, TranslateModule.forRoot()],
@@ -114,12 +114,12 @@ describe('UserDropdownComponent agent features (browser)', () => {
 
     it('loads the workload only when the panel opens', () => {
         const fixture = setup();
-        expect(agentRunApi.agentsOverview$).not.toHaveBeenCalled();
+        expect(agentRunApi.loadAgentsOverview$).not.toHaveBeenCalled();
 
         Dom.click(fixture, '.open');
         fixture.detectChanges();
 
-        expect(agentRunApi.agentsOverview$).toHaveBeenCalledWith(7);
+        expect(agentRunApi.loadAgentsOverview$).toHaveBeenCalledWith(7);
         expect(fixture.nativeElement.querySelector('.busy').textContent).toBe('true');
     });
 

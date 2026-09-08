@@ -3,7 +3,7 @@ import { of, Subject } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { IssueDetailPage } from './issue-detail.page';
-import { IssueService } from '../../issue.service';
+import { IssueApi } from '../../api/issue.api.service';
 import { ProjectStore } from 'src/app/project/project.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
@@ -31,8 +31,8 @@ describe('IssueDetailPage title', () => {
                     }
                 },
                 {
-                    provide: IssueService,
-                    useValue: { loadIssue: () => of(issue), toIssue: (x: Issue) => x }
+                    provide: IssueApi,
+                    useValue: { loadOne$: () => of(issue) }
                 },
                 { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
                 { provide: NoticeService, useValue: { issue$ } },
@@ -72,8 +72,8 @@ describe('IssueDetailPage title', () => {
         TestBed.configureTestingModule({
             providers: [
                 {
-                    provide: IssueService,
-                    useValue: { loadIssue: () => of(longIssue), toIssue: (x: Issue) => x }
+                    provide: IssueApi,
+                    useValue: { loadOne$: () => of(longIssue) }
                 }
             ]
         });

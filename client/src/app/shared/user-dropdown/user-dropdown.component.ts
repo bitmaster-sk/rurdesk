@@ -101,7 +101,7 @@ export class UserDropdownComponent implements ControlValueAccessor {
             return;
         }
         this.agentRunApi
-            .agentsOverview$(idProject)
+            .loadAgentsOverview$(idProject)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
                 next: all =>

@@ -27,7 +27,7 @@ describe('SkillApi', () => {
     });
 
     it('creates a skill with the whole body', () => {
-        api.create$({ name: 'n', description: 'd', content: 'c' }).subscribe();
+        api.insert$({ name: 'n', description: 'd', content: 'c' }).subscribe();
 
         const request = http.expectOne('/api/private/admin/skills');
         expect(request.request.method).toBe('POST');

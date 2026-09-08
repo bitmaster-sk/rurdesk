@@ -13,6 +13,6 @@ export class TeamMemberStore {
     public readonly users$ = this.users.asObservable().pipe(filter((u): u is User[] => u !== null));
 
     public load(idTeam: number): void {
-        this.api.list$(idTeam).subscribe(u => this.users.next(u));
+        this.api.load$(idTeam).subscribe(u => this.users.next(u));
     }
 }

@@ -2,15 +2,15 @@
 import { HttpClient, type HttpParams } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
-import { IssueService } from './issue.service';
-import { IssuesFilter } from './components/filter/issue-filter.entity';
-import { Issue } from './model/issue.model';
-import { IssuesPage } from './model/issues-page.model';
+import { IssueApi } from './issue.api.service';
+import { IssuesFilter } from '../components/filter/issue-filter.entity';
+import { Issue } from '../model/issue.model';
+import { IssuesPage } from '../model/issues-page.model';
 
 function build(getReturn: unknown) {
     const get = vi.fn().mockReturnValue(of(getReturn));
     const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: { get } }] });
-    const service = runInInjectionContext(injector, () => new IssueService());
+    const service = runInInjectionContext(injector, () => new IssueApi());
     return { service, get };
 }
 
@@ -30,11 +30,11 @@ const baseFilter = {
     assignedToUnset: false
 } as unknown as IssuesFilter;
 
-describe('IssueService.loadIssues', () => {
+describe('IssueApi.load$', () => {
     it('hits the project issue endpoint and serializes list params', () => {
         const { service, get } = build(page([]));
         service
-            .loadIssues({
+            .load$({
                 ...baseFilter,
                 idsSeverity: [1, 2],
                 orderColumn: 'updateAt'
@@ -59,7 +59,7 @@ describe('IssueService.loadIssues', () => {
             ])
         );
         let result: Issue[] = [];
-        service.loadIssues(baseFilter).subscribe(r => (result = r));
+        service.load$(baseFilter).subscribe(r => (result = r));
 
         expect(result.length).toBe(1);
         expect(result[0].createAt).toBeInstanceOf(Date);
@@ -68,11 +68,11 @@ describe('IssueService.loadIssues', () => {
     });
 });
 
-describe('IssueService.loadIssuesPage$', () => {
+describe('IssueApi.loadPage$', () => {
     it('forwards limit + cursor and keeps nextCursor/total', () => {
         const { service, get } = build(page([], 'abc', 42));
         let res!: IssuesPage;
-        service.loadIssuesPage$(baseFilter, 50, 'cur').subscribe(r => (res = r));
+        service.loadPage$(baseFilter, 50, 'cur').subscribe(r => (res = r));
 
         expect(res.nextCursor).toBe('abc');
         expect(res.total).toBe(42);
@@ -83,13 +83,13 @@ describe('IssueService.loadIssuesPage$', () => {
 
     it('omits the cursor param on the first page', () => {
         const { service, get } = build(page([]));
-        service.loadIssuesPage$(baseFilter, 50, null).subscribe();
+        service.loadPage$(baseFilter, 50, null).subscribe();
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         expect(options.params.has('cursor')).toBe(false);
     });
 });
 
-describe('IssueService.loadIssuesGrouped$', () => {
+describe('IssueApi.loadGrouped$', () => {
     it('sends groupBy + limit and maps group items', () => {
         const { service, get } = build({
             groups: [
@@ -102,7 +102,7 @@ describe('IssueService.loadIssuesGrouped$', () => {
             ]
         });
         let groups: { key: unknown; items: Issue[] }[] = [];
-        service.loadIssuesGrouped$(baseFilter, 'state', 20).subscribe(r => (groups = r.groups));
+        service.loadGrouped$(baseFilter, 'state', 20).subscribe(r => (groups = r.groups));
 
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         expect(options.params.get('groupBy')).toBe('state');
@@ -111,22 +111,10 @@ describe('IssueService.loadIssuesGrouped$', () => {
     });
 });
 
-describe('IssueService.toIssue', () => {
-    it('converts scheduledAt when present', () => {
-        const { service } = build(page([]));
-        const out = service.toIssue({
-            createAt: '2026-01-01T00:00:00Z',
-            updateAt: '2026-01-01T00:00:00Z',
-            scheduledAt: '2026-03-03T00:00:00Z'
-        } as unknown as Issue);
-        expect(out.scheduledAt).toBeInstanceOf(Date);
-    });
-});
-
-describe('IssueService issue-type params', () => {
+describe('IssueApi issue-type params', () => {
     const call = (filter: Partial<IssuesFilter>) => {
         const { service, get } = build(page([]));
-        service.loadIssues({ ...baseFilter, ...filter }).subscribe();
+        service.load$({ ...baseFilter, ...filter }).subscribe();
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         return options.params;
     };
@@ -145,10 +133,10 @@ describe('IssueService issue-type params', () => {
     });
 });
 
-describe('IssueService date params', () => {
+describe('IssueApi date params', () => {
     const call = (filter: Partial<IssuesFilter>) => {
         const { service, get } = build(page([]));
-        service.loadIssues({ ...baseFilter, ...filter }).subscribe();
+        service.load$({ ...baseFilter, ...filter }).subscribe();
         const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
         return options.params;
     };

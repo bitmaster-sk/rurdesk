@@ -19,17 +19,18 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
-import { TeamService } from 'src/app/team/team.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ConversationGroup } from '../../entity/conversation-group.entity';
-import { MessageService } from '../../message.service';
+import { MessageApi } from '../../api/message.api.service';
+import { MessageUnreadStore } from '../../store/message-unread.store';
 import { Message } from '../../model/message.model';
 import { MessageFormatter } from '../../formatter/message.formatter';
 import { MessageKeyConverter } from '../../converter/message-key.converter';
@@ -43,9 +44,10 @@ import { MessageKeyConverter } from '../../converter/message-key.converter';
 })
 export class MessagePage implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
-    private readonly sMessage = inject(MessageService);
-    private readonly sProject = inject(ProjectService);
-    private readonly sTeam = inject(TeamService);
+    private readonly messageApi = inject(MessageApi);
+    private readonly unreadStore = inject(MessageUnreadStore);
+    private readonly projectApi = inject(ProjectApi);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
     private readonly sNotice = inject(NoticeService);
@@ -94,7 +96,7 @@ export class MessagePage implements OnInit, OnDestroy {
         }
     });
 
-    private readonly unread = toSignal(this.sMessage.Unread, {
+    private readonly unread = toSignal(this.unreadStore.unread$, {
         initialValue: new Map<string, Message[]>()
     });
 
@@ -130,7 +132,7 @@ export class MessagePage implements OnInit, OnDestroy {
                         }
                     }),
                     switchMap(params =>
-                        this.sMessage.loadMessages(
+                        this.messageApi.load$(
                             Number(params.get('idRecipient')),
                             Number(params.get('idMessageRecipientType'))
                         )
@@ -145,11 +147,7 @@ export class MessagePage implements OnInit, OnDestroy {
 
         // recipients
         this.subscriptions.add(
-            combineLatest([
-                this.sProject.loadProjects(),
-                this.sTeam.loadMyTeams(),
-                this.userApi.loadUsers$()
-            ])
+            combineLatest([this.projectApi.load$(), this.teamApi.loadMy$(), this.userApi.load$()])
                 .pipe(
                     map(([projects, teams, users]) => ({
                         conversationGroups: this.toConversationGroups(projects, teams, users),
@@ -197,8 +195,8 @@ export class MessagePage implements OnInit, OnDestroy {
                 .pipe(
                     debounceTime(1000),
                     switchMap(({ idRecipient, idMessageRecipientType }) =>
-                        this.sMessage
-                            .insertReadMessage(idRecipient, idMessageRecipientType)
+                        this.messageApi
+                            .markRead$(idRecipient, idMessageRecipientType)
                             .pipe(map(() => ({ idRecipient, idMessageRecipientType })))
                     )
                 )
@@ -209,7 +207,7 @@ export class MessagePage implements OnInit, OnDestroy {
                             : idRecipient;
                     const creatorKey =
                         idMessageRecipientType === MessageRecipientType.user ? idRecipient : null;
-                    this.sMessage.unreadRemove(recipientKey, creatorKey, idMessageRecipientType);
+                    this.unreadStore.remove(recipientKey, creatorKey, idMessageRecipientType);
                     this.messages.update(msgs => msgs.map(m => ({ ...m, isRead: true })));
                 })
         );
@@ -245,8 +243,8 @@ export class MessagePage implements OnInit, OnDestroy {
         if (idMessageRecipientType === null) {
             return;
         }
-        this.sMessage
-            .insertMessage(this.idActiveRecipient(), idMessageRecipientType, message)
+        this.messageApi
+            .insert$(this.idActiveRecipient(), idMessageRecipientType, message)
             .subscribe(savedMessage => {
                 savedMessage.isRead = true;
                 this.messages.update(msgs =>
@@ -266,7 +264,7 @@ export class MessagePage implements OnInit, OnDestroy {
     }
 
     protected onEditSave(message: Message, newText: string): void {
-        this.sMessage.updateMessage(message.idMessage, newText).subscribe(updated => {
+        this.messageApi.update$(message.idMessage, newText).subscribe(updated => {
             this.messages.update(msgs =>
                 msgs.map(m =>
                     m.idMessage === updated.idMessage

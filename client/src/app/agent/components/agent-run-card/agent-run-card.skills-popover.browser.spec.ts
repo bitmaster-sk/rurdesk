@@ -49,8 +49,8 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
         catalogSubject = new Subject();
 
         const agentRunApiStub = {
-            getAgentRunSkills$: vi.fn(() => skillsSubject.asObservable()),
-            patchAgentRunSkills$: vi.fn(() => of(STAGE_SKILLS))
+            loadSkills$: vi.fn(() => skillsSubject.asObservable()),
+            updateSkills$: vi.fn(() => of(STAGE_SKILLS))
         };
 
         const skillApiStub = {

@@ -12,7 +12,7 @@ import {
 } from '../../core/command/command.model';
 import { IssueSearchCommands } from './issue-search.commands';
 import { IssueCreateCommands } from './issue-create.commands';
-import { IssueService } from '../issue.service';
+import { IssueApi } from '../api/issue.api.service';
 import { StateStore } from '../../state/store/state.store';
 import { AclStore } from '../../project/store/acl.store';
 import { Issue } from '../model/issue.model';
@@ -20,7 +20,7 @@ import { Issue } from '../model/issue.model';
 @Injectable({ providedIn: 'root' })
 export class IssueSearchCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly acl = inject(AclStore);
     private readonly i18n = inject(I18nService);
     private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
@@ -34,8 +34,8 @@ export class IssueSearchCommandProvider implements CommandProvider {
         const idProject = ctx.idProject;
         if (idProject == null) return of(null);
         if (this.cache && this.cache.idProject !== idProject) this.cache = null;
-        return this.issueService
-            .loadIssues({ idProject, orderColumn: 'createAt', orderDirection: 'desc' })
+        return this.issueApi
+            .load$({ idProject, orderColumn: 'createAt', orderDirection: 'desc' })
             .pipe(
                 tap((list: Issue[]) => {
                     this.cache = { idProject, issues: list };
@@ -76,8 +76,8 @@ export class IssueSearchCommandProvider implements CommandProvider {
         const defaultState =
             projectStates.find(s => s.start) ??
             [...projectStates].sort((a, b) => a.orderRank - b.orderRank)[0];
-        this.issueService
-            .insertIssue({
+        this.issueApi
+            .insert$({
                 idProject,
                 title,
                 description: title,

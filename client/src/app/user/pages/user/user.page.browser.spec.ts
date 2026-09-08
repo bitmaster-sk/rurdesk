@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { PinDestinationType } from 'src/app/pin/constant/pin-destination-type.enum';
-import { PinService } from 'src/app/pin/pin.service';
+import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { UserPage } from './user.page';
@@ -24,7 +24,10 @@ describe('UserPage (browser)', () => {
             declarations: [UserPage],
             providers: [
                 { provide: AuthStore, useValue: { user } },
-                { provide: PinService, useValue: { loadPins, deletePin: () => of(undefined) } },
+                {
+                    provide: PinApi,
+                    useValue: { load$: loadPins, delete$: () => of(undefined) }
+                },
                 { provide: SeverityStore, useValue: { severitiesMap$: of(new Map()) } },
                 { provide: TrackerService, useValue: { tracks$: of([]), setTrackFilter } }
             ]

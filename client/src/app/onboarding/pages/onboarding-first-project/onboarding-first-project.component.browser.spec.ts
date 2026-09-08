@@ -11,7 +11,7 @@ import {
     IconDeviceFloppy
 } from '@tabler/icons-angular';
 import { OnboardingFirstProjectComponent } from './onboarding-first-project.component';
-import { ProjectService } from '../../../project/project.service';
+import { ProjectApi } from '../../../project/api/project.api.service';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { UiModule } from '../../../ui/ui.module';
 
@@ -33,7 +33,7 @@ describe('OnboardingFirstProjectComponent', () => {
             imports: [TranslateModule.forRoot()],
             declarations: [OnboardingFirstProjectComponent],
             providers: [
-                { provide: ProjectService, useValue: { insertProject } },
+                { provide: ProjectApi, useValue: { insert$: insertProject } },
                 { provide: Router, useValue: { navigate } },
                 { provide: ToastNotificationService, useValue: { showError } }
             ]
@@ -112,7 +112,7 @@ describe('OnboardingFirstProjectComponent (template)', () => {
             declarations: [OnboardingFirstProjectComponent],
             providers: [
                 provideTablerIcons({ IconSparkles, IconDeviceFloppy }),
-                { provide: ProjectService, useValue: { insertProject: vi.fn() } },
+                { provide: ProjectApi, useValue: { insert$: vi.fn() } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
                 { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
             ]

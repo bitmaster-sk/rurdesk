@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter, tap } from 'rxjs/operators';
 import { Project } from './model/project.model';
-import { ProjectService } from './project.service';
+import { ProjectApi } from './api/project.api.service';
 
 @Injectable({
     providedIn: 'root'
@@ -14,17 +14,17 @@ export class ProjectStore {
         .asObservable()
         .pipe(filter((project): project is Project => !!project));
 
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
 
     public load(idProject: number): void {
         // A failure here leaves project$ never emitting; the global error toast
         // tells the user why the page behind the resolver stayed empty.
-        this.sProject.loadProject(idProject).subscribe(project => this.project.next(project));
+        this.projectApi.loadOne$(idProject).subscribe(project => this.project.next(project));
     }
 
     public update(project: Project): Observable<Project> {
-        return this.sProject
-            .updateProject(project)
+        return this.projectApi
+            .update$(project)
             .pipe(tap(savedProject => this.project.next(savedProject)));
     }
 }

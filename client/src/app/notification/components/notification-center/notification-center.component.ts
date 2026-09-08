@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { NotificationApi } from '../../api/notification.api';
+import { NotificationApi } from '../../api/notification.api.service';
 import { NotificationType } from '../../model/notification-type.enum';
 import { Notification, NotificationGroup } from '../../model/notification.model';
 import { NotificationStore } from '../../store/notification.store';
@@ -76,19 +76,19 @@ export class NotificationCenterComponent {
     protected onMarkAllAsRead(): void {
         const filter = this._activeFilter();
         const idProject = filter.type === 'project' ? filter.idProject : undefined;
-        this.notifApi.markAllRead(idProject).subscribe(() => {
+        this.notifApi.markReadAll$(idProject).subscribe(() => {
             this.store.markAllRead(idProject);
         });
     }
 
     protected onMarkAsRead(notification: Notification): void {
-        this.notifApi.markRead(notification.idNotification).subscribe(() => {
+        this.notifApi.markReadOne$(notification.idNotification).subscribe(() => {
             this.store.markRead(notification.idNotification);
         });
     }
 
     protected onDismiss(notification: Notification): void {
-        this.notifApi.delete(notification.idNotification).subscribe(() => {
+        this.notifApi.delete$(notification.idNotification).subscribe(() => {
             this.store.remove(notification.idNotification);
         });
     }

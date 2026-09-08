@@ -21,7 +21,7 @@ interface TrackEditForm {
 })
 export class TrackFormComponent implements OnInit, OnChanges {
     private readonly fb = inject(FormBuilder);
-    private readonly sTracker = inject(TrackerService);
+    private readonly trackerService = inject(TrackerService);
 
     @Input() public track: TrackForm | null = null;
 
@@ -54,8 +54,8 @@ export class TrackFormComponent implements OnInit, OnChanges {
         const idTrack = value.idTrack ?? 0;
         const saver =
             value.idTrack === null
-                ? this.sTracker.insertTrack({ idIssue, tracked, endAt: value.endAt ?? null })
-                : this.sTracker.updateTrack({
+                ? this.trackerService.insertTrack$({ idIssue, tracked, endAt: value.endAt ?? null })
+                : this.trackerService.updateTrack$({
                       idTrack,
                       idIssue,
                       tracked,

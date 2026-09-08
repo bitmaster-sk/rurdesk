@@ -17,7 +17,7 @@ import { combineLatest } from 'rxjs';
 import { filter, first } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
-import { MessageService } from 'src/app/message/message.service';
+import { MessageApi } from 'src/app/message/api/message.api.service';
 import { Message } from 'src/app/message/model/message.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -60,8 +60,8 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     private readonly i18n = inject(I18nService);
 
-    private readonly sMessage = inject(MessageService);
-    private readonly sTracker = inject(TrackerService);
+    private readonly messageApi = inject(MessageApi);
+    private readonly trackerService = inject(TrackerService);
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly authStore = inject(AuthStore);
@@ -211,8 +211,8 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         this.projectMemberStore.load(this.idProject());
 
         const usersMap$ = this.projectMemberStore.usersMap$;
-        const messages$ = this.sMessage.loadMessages(this.idIssue(), MessageRecipientType.issue);
-        const tracks$ = this.sTracker.loadTracks({ idIssue: this.idIssue() });
+        const messages$ = this.messageApi.load$(this.idIssue(), MessageRecipientType.issue);
+        const tracks$ = this.trackerService.loadTracks$({ idIssue: this.idIssue() });
 
         combineLatest([messages$, tracks$, usersMap$])
             .pipe(first())
@@ -275,8 +275,8 @@ export class IssueActivityFeedComponent implements AfterViewInit {
                   anchorLineEnd: anchor.lineEnd
               }
             : undefined;
-        this.sMessage
-            .insertMessage(this.idIssue(), MessageRecipientType.issue, text, anchorParam)
+        this.messageApi
+            .insert$(this.idIssue(), MessageRecipientType.issue, text, anchorParam)
             .subscribe(msg => {
                 msg.isRead = true;
                 const item: CommentTimelineItem = {
@@ -314,7 +314,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     }
 
     public onEditSave(message: Message, newText: string): void {
-        this.sMessage.updateMessage(message.idMessage, newText).subscribe(updated => {
+        this.messageApi.update$(message.idMessage, newText).subscribe(updated => {
             this.updateComment(updated);
             this.idMessageEdit.set(null);
         });

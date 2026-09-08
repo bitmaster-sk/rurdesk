@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { Project } from '../../model/project.model';
-import { ProjectService } from '../../project.service';
+import { ProjectApi } from '../../api/project.api.service';
 
 export interface ProjectWindowData {
     project?: Project;
@@ -19,7 +19,7 @@ export interface ProjectWindowData {
 export class ProjectFormWindowComponent {
     private readonly winRef = inject(WindowReference);
     public readonly winCfg = inject<WindowConfig<ProjectWindowData>>(WindowConfig);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly router = inject(Router);
 
     public onSave(project: Project): void {
@@ -41,8 +41,8 @@ export class ProjectFormWindowComponent {
 
     private saveProject(project: Project): Observable<Project> {
         return project.idProject
-            ? this.sProject.updateProject(project)
-            : this.sProject.insertProject(project);
+            ? this.projectApi.update$(project)
+            : this.projectApi.insert$(project);
     }
 
     /** Partial: opening the window for a new project supplies a bare draft. */

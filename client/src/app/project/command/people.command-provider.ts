@@ -11,14 +11,14 @@ import {
 import { PeopleCommands } from './people.commands';
 import { ProjectMemberStore } from '../project-member.store';
 import { AclStore } from '../store/acl.store';
-import { IssueService } from '../../issue/issue.service';
+import { IssueApi } from '../../issue/api/issue.api.service';
 import { NoticeService } from '../../shared/notice/notice.service';
 
 @Injectable({ providedIn: 'root' })
 export class PeopleCommandProvider implements CommandProvider {
     private readonly router = inject(Router);
     private readonly acl = inject(AclStore);
-    private readonly issueService = inject(IssueService);
+    private readonly issueApi = inject(IssueApi);
     private readonly notice = inject(NoticeService);
     private readonly i18n = inject(I18nService);
     private readonly t: Translator = (k, p) => this.i18n.instant(k, p);
@@ -38,8 +38,8 @@ export class PeopleCommandProvider implements CommandProvider {
         // intent there). Off a detail (list views), fall back to opening the table.
         if (ctx.issue && this.acl.canUpdateIssue()) {
             // Emit the saved task so an open detail's assignee select refreshes immediately.
-            this.issueService
-                .updateIssue({ ...ctx.issue, assignedTo: idUser })
+            this.issueApi
+                .update$({ ...ctx.issue, assignedTo: idUser })
                 .subscribe(saved => this.notice.emitIssue(saved));
             return;
         }

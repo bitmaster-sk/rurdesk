@@ -7,13 +7,13 @@ import { MrDiff, MrStatus } from '../../project/model/git-integration.model';
 export class MrDiffApi {
     private readonly http = inject(HttpClient);
 
-    public getDiff$(idProject: number, idGitIntegration: number, mrId: string): Observable<MrDiff> {
+    public load$(idProject: number, idGitIntegration: number, mrId: string): Observable<MrDiff> {
         return this.http.get<MrDiff>(
             `/api/private/project/${idProject}/git-integration/${idGitIntegration}/mr/${mrId}/diff`
         );
     }
 
-    public getStatus$(
+    public loadStatus$(
         idProject: number,
         idGitIntegration: number,
         mrId: string

@@ -2,7 +2,7 @@
 import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { IssueTableService } from './issue-table.service';
-import { IssueService } from '../../../issue.service';
+import { IssueApi } from '../../../api/issue.api.service';
 import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
@@ -38,10 +38,9 @@ function buildService(issues: Issue[], relations: ReadIssueRelationDto[] = []): 
             { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
             { provide: SettingsStore, useValue: { tablePageSize: () => 50 } },
             {
-                provide: IssueService,
+                provide: IssueApi,
                 useValue: {
-                    loadIssuesPage$: () =>
-                        of({ items: issues, nextCursor: null, total: issues.length })
+                    loadPage$: () => of({ items: issues, nextCursor: null, total: issues.length })
                 }
             },
             {
@@ -157,9 +156,9 @@ describe('IssueTableService — refresh keeps loaded pages', () => {
                 { provide: DestroyRef, useValue: { onDestroy: () => () => {} } },
                 { provide: SettingsStore, useValue: { tablePageSize: () => 50 } },
                 {
-                    provide: IssueService,
+                    provide: IssueApi,
                     useValue: {
-                        loadIssuesPage$: (_f: unknown, limit: number, cursor: string | null) => {
+                        loadPage$: (_f: unknown, limit: number, cursor: string | null) => {
                             calls.push({ limit, cursor });
                             return of(pageResponder(limit, cursor));
                         }

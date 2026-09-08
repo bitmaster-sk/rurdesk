@@ -15,7 +15,7 @@ interface AppMenuItem extends UiMenuItem {
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectFormWindowComponent } from 'src/app/project/components/project-form-window/project-form-window.component';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import orderBy from 'lodash-es/orderBy';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -35,7 +35,7 @@ export class TopMenuComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly i18n = inject(I18nService);
     private readonly authStore = inject(AuthStore);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly projectStore = inject(ProjectStore);
     private readonly sWindow = inject(WindowService);
 
@@ -100,7 +100,7 @@ export class TopMenuComponent implements OnInit {
     private readonly LAST_PROJECT_KEY = 'lastProjectId';
 
     public ngOnInit(): void {
-        this.sProject.loadProjects().subscribe(projects => {
+        this.projectApi.load$().subscribe(projects => {
             this.projects.set(projects);
             this.redirectToLastProject(projects);
         });

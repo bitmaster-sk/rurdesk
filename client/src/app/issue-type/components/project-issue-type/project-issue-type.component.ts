@@ -14,7 +14,7 @@ import { filter, map } from 'rxjs/operators';
 import cloneDeep from 'lodash-es/cloneDeep';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
@@ -43,7 +43,7 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
     private readonly i18n = inject(I18nService);
     private readonly fb = inject(NonNullableFormBuilder);
     private readonly sIssueType = inject(IssueTypeApi);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly sWindow = inject(WindowService);
     private readonly issueTypeStore = inject(IssueTypeStore);
 
@@ -86,7 +86,7 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
         const project: Project = cloneDeep(this.project());
         project.idIssueTypeDefault = this.idIssueTypeDefaultControl.value;
         this.defaultSaveStatus.set(UiSaveState.Saving);
-        this.sProject.updateProject(project).subscribe({
+        this.projectApi.update$(project).subscribe({
             next: savedProject => {
                 this.project().idIssueTypeDefault = savedProject.idIssueTypeDefault;
                 this.defaultSaveStatus.set(UiSaveState.Saved);
