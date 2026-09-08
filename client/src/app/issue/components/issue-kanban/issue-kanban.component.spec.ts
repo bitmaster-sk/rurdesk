@@ -205,10 +205,10 @@ function setup(
                     assignIssue$: assignIssue,
                     close$: () => of({ moved: 0 }),
                     loadByProject$: () => of(sprints),
-                    create$: () => of(sprints[0] ?? null),
-                    edit$: () => of(sprints[0] ?? null),
+                    insert$: () => of(sprints[0] ?? null),
+                    update$: () => of(sprints[0] ?? null),
                     delete$: () => of(undefined),
-                    loadSprintStats$: stats,
+                    loadStats$: stats,
                     loadBacklogStats$: backlogStats,
                     loadVelocity$: velocity
                 }

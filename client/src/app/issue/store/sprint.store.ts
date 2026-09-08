@@ -62,11 +62,11 @@ export class SprintStore {
     }
 
     public create(idProject: number, body: Partial<Sprint>): void {
-        this.sprintApi.create$(idProject, body).subscribe(() => this.load(idProject));
+        this.sprintApi.insert$(idProject, body).subscribe(() => this.load(idProject));
     }
 
     public edit(idProject: number, idSprint: number, body: Partial<Sprint>): void {
-        this.sprintApi.edit$(idSprint, body).subscribe(() => this.load(idProject));
+        this.sprintApi.update$(idSprint, body).subscribe(() => this.load(idProject));
     }
 
     public remove$(idProject: number, idSprint: number): Observable<void> {

@@ -11,11 +11,11 @@ export class SavedViewApi {
         return this.http.get<SavedView[]>(`/api/private/project/${idProject}/saved-view`);
     }
 
-    public create$(idProject: number, body: SavedViewReq): Observable<SavedView> {
+    public insert$(idProject: number, body: SavedViewReq): Observable<SavedView> {
         return this.http.post<SavedView>(`/api/private/project/${idProject}/saved-view`, body);
     }
 
-    public edit$(idSavedView: number, body: SavedViewReq): Observable<SavedView> {
+    public update$(idSavedView: number, body: SavedViewReq): Observable<SavedView> {
         return this.http.patch<SavedView>(`/api/private/saved-view/${idSavedView}`, body);
     }
 

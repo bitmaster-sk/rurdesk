@@ -42,7 +42,7 @@ class SavedViewDialogStub {}
 describe('SavedViewMenuComponent (browser)', () => {
     let apply: ReturnType<typeof vi.fn>;
     let markUrl: ReturnType<typeof vi.fn>;
-    let api: Record<'loadByProject$' | 'create$' | 'edit$' | 'delete$', ReturnType<typeof vi.fn>>;
+    let api: Record<'loadByProject$' | 'insert$' | 'update$' | 'delete$', ReturnType<typeof vi.fn>>;
     let store: SavedViewStore;
     let canUpdateProject: ReturnType<typeof signal<boolean>>;
     let canCreateIssue: ReturnType<typeof signal<boolean>>;
@@ -56,8 +56,8 @@ describe('SavedViewMenuComponent (browser)', () => {
         markUrl = vi.fn();
         api = {
             loadByProject$: vi.fn(() => of<SavedView[]>([])),
-            create$: vi.fn(() => of(view({ idSavedView: 42 }))),
-            edit$: vi.fn(() => of(view())),
+            insert$: vi.fn(() => of(view({ idSavedView: 42 }))),
+            update$: vi.fn(() => of(view())),
             delete$: vi.fn(() => of(undefined))
         };
 
@@ -201,7 +201,7 @@ describe('SavedViewMenuComponent (browser)', () => {
         page.component.onSaveCurrent();
         page.component.onDialogSaved({ name: 'Fresh', isShared: true });
 
-        expect(api.create$).toHaveBeenCalledWith(ID_PROJECT, {
+        expect(api.insert$).toHaveBeenCalledWith(ID_PROJECT, {
             name: 'Fresh',
             viewType: IssueViewMode.KANBAN,
             config: { v: 1, idsState: [3], orderColumn: 'title', orderDirection: 'asc' },
@@ -216,7 +216,7 @@ describe('SavedViewMenuComponent (browser)', () => {
         page.component.onSaveCurrent();
         page.component.onDialogSaved({ name: 'Board', isShared: false });
 
-        expect(api.create$.mock.calls[0][1].config.kanbanLayout).toBe('swimlane');
+        expect(api.insert$.mock.calls[0][1].config.kanbanLayout).toBe('swimlane');
     });
 
     it('marks a newly created view as applied and puts it in the URL', () => {
@@ -236,7 +236,7 @@ describe('SavedViewMenuComponent (browser)', () => {
         page.component.onRename(target);
         page.component.onDialogSaved({ name: 'Renamed', isShared: false });
 
-        expect(api.edit$).toHaveBeenCalledWith(1, {
+        expect(api.update$).toHaveBeenCalledWith(1, {
             name: 'Renamed',
             viewType: IssueViewMode.TABLE,
             config: { v: 1, idsState: [99] },
@@ -250,7 +250,7 @@ describe('SavedViewMenuComponent (browser)', () => {
 
         page.component.onToggleShared(target);
 
-        expect(api.edit$).toHaveBeenCalledWith(1, {
+        expect(api.update$).toHaveBeenCalledWith(1, {
             name: 'My bugs',
             viewType: IssueViewMode.TABLE,
             config: { v: 1, idsState: [99] },
@@ -266,7 +266,7 @@ describe('SavedViewMenuComponent (browser)', () => {
 
         page.component.onUpdateActive();
 
-        expect(api.edit$).toHaveBeenCalledWith(1, {
+        expect(api.update$).toHaveBeenCalledWith(1, {
             name: 'My bugs',
             viewType: IssueViewMode.TABLE,
             config: {
@@ -285,7 +285,7 @@ describe('SavedViewMenuComponent (browser)', () => {
 
         expect(page.component.canManageActive()).toBe(false);
         page.component.onUpdateActive();
-        expect(api.edit$).not.toHaveBeenCalled();
+        expect(api.update$).not.toHaveBeenCalled();
     });
 
     it('deleting reloads the list and drops the highlight and the URL param', () => {

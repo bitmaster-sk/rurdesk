@@ -14,11 +14,11 @@ export class SprintApi {
         return this.http.get<Sprint[]>(`/api/private/project/${idProject}/sprint`);
     }
 
-    public create$(idProject: number, body: Partial<Sprint>): Observable<Sprint> {
+    public insert$(idProject: number, body: Partial<Sprint>): Observable<Sprint> {
         return this.http.post<Sprint>(`/api/private/project/${idProject}/sprint`, body);
     }
 
-    public edit$(idSprint: number, body: Partial<Sprint>): Observable<Sprint> {
+    public update$(idSprint: number, body: Partial<Sprint>): Observable<Sprint> {
         return this.http.patch<Sprint>(`/api/private/sprint/${idSprint}`, body);
     }
 
@@ -41,7 +41,7 @@ export class SprintApi {
         );
     }
 
-    public loadSprintStats$(idSprint: number): Observable<SprintStats> {
+    public loadStats$(idSprint: number): Observable<SprintStats> {
         return this.http.get<SprintStats>(`/api/private/sprint/${idSprint}/stats`);
     }
 
