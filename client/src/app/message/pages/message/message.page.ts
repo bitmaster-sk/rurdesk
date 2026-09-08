@@ -25,7 +25,7 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
-import { TeamService } from 'src/app/team/team.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ConversationGroup } from '../../entity/conversation-group.entity';
@@ -45,7 +45,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
     private readonly sMessage = inject(MessageService);
     private readonly sProject = inject(ProjectService);
-    private readonly sTeam = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
     private readonly sNotice = inject(NoticeService);
@@ -147,7 +147,7 @@ export class MessagePage implements OnInit, OnDestroy {
         this.subscriptions.add(
             combineLatest([
                 this.sProject.loadProjects(),
-                this.sTeam.loadMyTeams(),
+                this.teamApi.loadMy$(),
                 this.userApi.load$()
             ])
                 .pipe(

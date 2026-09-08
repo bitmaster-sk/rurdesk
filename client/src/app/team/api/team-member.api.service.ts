@@ -7,7 +7,7 @@ import { User } from '../../auth/model/user.model';
 export class TeamMemberApi {
     private readonly http = inject(HttpClient);
 
-    public list$(idTeam: number): Observable<User[]> {
+    public load$(idTeam: number): Observable<User[]> {
         return this.http.get<User[]>(`/api/private/team/${idTeam}/members`);
     }
 }

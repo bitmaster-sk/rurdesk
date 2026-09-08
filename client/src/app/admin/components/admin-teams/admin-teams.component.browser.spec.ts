@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
-import { TeamService } from '../../../team/team.service';
+import { TeamApi } from '../../../team/api/team.api.service';
 import { AdminApi } from '../../api/admin.api.service';
 import { AdminTeamsComponent } from './admin-teams.component';
 
@@ -32,7 +32,7 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         await TestBed.configureTestingModule({
             declarations: [AdminTeamsComponent],
             providers: [
-                { provide: TeamService, useValue: { loadTeams: () => of([team]) } },
+                { provide: TeamApi, useValue: { load$: () => of([team]) } },
                 {
                     provide: AdminApi,
                     useValue: { listTeamMembers$, addTeamMember$ }

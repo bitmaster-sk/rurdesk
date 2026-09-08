@@ -15,7 +15,7 @@ import { AroUser, AroTeam, ProjectMembersRes } from '../../model/project-members
 import { ProjectMemberApi } from '../../api/project-member.api.service';
 import { AclStore } from '../../store/acl.store';
 import { Role } from '../../../shared/constants/role.enum';
-import { TeamService } from '../../../team/team.service';
+import { TeamApi } from '../../../team/api/team.api.service';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
 import { UserApi } from '../../../user/api/user.api.service';
@@ -31,7 +31,7 @@ export class ProjectMembersComponent implements OnInit {
     public readonly project = input.required<Project>();
 
     private readonly memberApi = inject(ProjectMemberApi);
-    private readonly teamService = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     protected readonly aclStore = inject(AclStore);
 
@@ -84,12 +84,10 @@ export class ProjectMembersComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        combineLatest([this.userApi.load$(), this.teamService.loadTeams()]).subscribe(
-            ([users, teams]) => {
-                this.allUsers.set(users);
-                this.allTeams.set(teams);
-            }
-        );
+        combineLatest([this.userApi.load$(), this.teamApi.load$()]).subscribe(([users, teams]) => {
+            this.allUsers.set(users);
+            this.allTeams.set(teams);
+        });
         this.loadMembers();
     }
 

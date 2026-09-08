@@ -14,7 +14,7 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
 import { MessageService } from '../../message.service';
 import { ProjectService } from 'src/app/project/project.service';
-import { TeamService } from 'src/app/team/team.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -125,8 +125,8 @@ describe('MessagePage mentionCandidates', () => {
                     useValue: { loadProjects: () => of(projects), loadMembers: () => of([]) }
                 },
                 {
-                    provide: TeamService,
-                    useValue: { loadMyTeams: () => of([]) }
+                    provide: TeamApi,
+                    useValue: { loadMy$: () => of([]) }
                 },
                 {
                     provide: UserApi,

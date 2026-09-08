@@ -11,7 +11,7 @@ import { AdminApi } from '../../api/admin.api.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
-import { TeamService } from '../../../team/team.service';
+import { TeamApi } from '../../../team/api/team.api.service';
 
 /**
  * AdminTeamsComponent manages teams and their members (admin screen, bottom panel).
@@ -32,7 +32,7 @@ export class AdminTeamsComponent implements OnInit {
     public readonly draggedUser = input<AdminUser | null>(null);
 
     private readonly adminApi = inject(AdminApi);
-    private readonly teamService = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
 
     protected readonly teams = signal<Team[]>([]);
     protected readonly selectedTeam = signal<Team | null>(null);
@@ -52,7 +52,7 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     private loadTeams(): void {
-        this.teamService.loadTeams().subscribe(teams => this.teams.set(teams));
+        this.teamApi.load$().subscribe(teams => this.teams.set(teams));
     }
 
     protected onSelectTeam(team: Team): void {

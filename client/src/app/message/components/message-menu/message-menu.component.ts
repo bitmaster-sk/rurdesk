@@ -24,7 +24,7 @@ import { Project } from 'src/app/project/model/project.model';
 import { ProjectService } from 'src/app/project/project.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
-import { TeamService } from 'src/app/team/team.service';
+import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
@@ -38,7 +38,7 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
 export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly sMessage = inject(MessageService);
     private readonly authStore = inject(AuthStore);
-    private readonly sTeam = inject(TeamService);
+    private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     private readonly sProject = inject(ProjectService);
     private readonly sNotice = inject(NoticeService);
@@ -82,7 +82,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
             this._projects.set(projects);
         });
 
-        this.sTeam.loadMyTeams().subscribe(teams => {
+        this.teamApi.loadMy$().subscribe(teams => {
             this._teams.set(teams);
         });
 
