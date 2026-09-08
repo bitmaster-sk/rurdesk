@@ -12,7 +12,8 @@ import { MessagePage } from './message.page';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
-import { MessageService } from '../../message.service';
+import { MessageApi } from '../../api/message.api.service';
+import { MessageUnreadStore } from '../../store/message-unread.store';
 import { ProjectService } from 'src/app/project/project.service';
 import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
@@ -112,13 +113,15 @@ describe('MessagePage mentionCandidates', () => {
                     useValue: { paramMap: paramMapSubject.asObservable() }
                 },
                 {
-                    provide: MessageService,
+                    provide: MessageApi,
                     useValue: {
-                        loadMessages: () => of([]),
-                        Unread: unreadSubject,
-                        insertReadMessage: () => of(null),
-                        unreadRemove: () => {}
+                        load$: () => of([]),
+                        markRead$: () => of(null)
                     }
+                },
+                {
+                    provide: MessageUnreadStore,
+                    useValue: { unread$: unreadSubject, remove: () => {} }
                 },
                 {
                     provide: ProjectService,

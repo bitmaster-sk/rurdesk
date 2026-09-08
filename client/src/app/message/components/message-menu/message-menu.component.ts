@@ -17,7 +17,7 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { Message } from 'src/app/message/model/message.model';
-import { MessageService } from 'src/app/message/message.service';
+import { MessageUnreadStore } from 'src/app/message/store/message-unread.store';
 import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
 import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { Project } from 'src/app/project/model/project.model';
@@ -36,7 +36,7 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MessageMenuComponent implements OnInit, OnDestroy {
-    private readonly sMessage = inject(MessageService);
+    private readonly unreadStore = inject(MessageUnreadStore);
     private readonly authStore = inject(AuthStore);
     private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
@@ -49,7 +49,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly _teams = signal<Team[]>([]);
     private readonly _teammates = signal<User[]>([]);
 
-    private readonly unread = toSignal(this.sMessage.Unread, {
+    private readonly unread = toSignal(this.unreadStore.unread$, {
         initialValue: new Map<string, Message[]>()
     });
 
@@ -76,7 +76,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly subscriptions = new Subscription();
 
     public ngOnInit(): void {
-        this.sMessage.loadUnreadMessages().subscribe();
+        this.unreadStore.load();
 
         this.sProject.loadProjects().subscribe(projects => {
             this._projects.set(projects);
@@ -97,7 +97,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
                         notice.payload.idMessageRecipientType !== MessageRecipientType.issue &&
                         notice.action !== NoticeAction.Update
                 )
-            ).subscribe(notice => this.sMessage.unreadPush([notice.payload]))
+            ).subscribe(notice => this.unreadStore.push([notice.payload]))
         );
     }
 

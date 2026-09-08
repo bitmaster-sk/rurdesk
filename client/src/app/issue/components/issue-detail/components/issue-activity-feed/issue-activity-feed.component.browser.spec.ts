@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
 import { IssueActivityFeedComponent } from './issue-activity-feed.component';
 import { User } from 'src/app/auth/model/user.model';
-import { MessageService } from 'src/app/message/message.service';
+import { MessageApi } from 'src/app/message/api/message.api.service';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
@@ -64,7 +64,7 @@ function makeUser(id: number, name: string): User {
 
 describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     const stubMessage = {
-        loadMessages: () => NEVER
+        load$: () => NEVER
     };
 
     const stubTracker = {
@@ -99,7 +99,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
-                { provide: MessageService, useValue: stubMessage },
+                { provide: MessageApi, useValue: stubMessage },
                 { provide: TrackerService, useValue: stubTracker },
                 { provide: NoticeService, useValue: stubNotice },
                 { provide: ProjectMemberStore, useValue: stubProjectMemberStore },
