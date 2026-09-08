@@ -86,7 +86,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
             this._teams.set(teams);
         });
 
-        this.userApi.loadUsers$().subscribe(users => {
+        this.userApi.load$().subscribe(users => {
             this._teammates.set(users.filter(u => !u.isAgent));
         });
 

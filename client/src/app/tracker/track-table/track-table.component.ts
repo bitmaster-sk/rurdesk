@@ -50,7 +50,7 @@ export class TrackTableComponent implements OnInit {
 
     public ngOnInit(): void {
         this.userApi
-            .loadUsers$()
+            .load$()
             .pipe(
                 map(users => {
                     const result = new Map<number, User>();

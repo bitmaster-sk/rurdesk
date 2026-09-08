@@ -84,7 +84,7 @@ export class ProjectMembersComponent implements OnInit {
     }
 
     public ngOnInit(): void {
-        combineLatest([this.userApi.loadUsers$(), this.teamService.loadTeams()]).subscribe(
+        combineLatest([this.userApi.load$(), this.teamService.loadTeams()]).subscribe(
             ([users, teams]) => {
                 this.allUsers.set(users);
                 this.allTeams.set(teams);

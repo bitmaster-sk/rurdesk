@@ -148,7 +148,7 @@ export class MessagePage implements OnInit, OnDestroy {
             combineLatest([
                 this.sProject.loadProjects(),
                 this.sTeam.loadMyTeams(),
-                this.userApi.loadUsers$()
+                this.userApi.load$()
             ])
                 .pipe(
                     map(([projects, teams, users]) => ({

@@ -130,7 +130,7 @@ describe('MessagePage mentionCandidates', () => {
                 },
                 {
                     provide: UserApi,
-                    useValue: { loadUsers$: () => of([alice, bob, carol]) }
+                    useValue: { load$: () => of([alice, bob, carol]) }
                 },
                 {
                     provide: AuthStore,
@@ -189,7 +189,7 @@ describe('MessagePage mentionCandidates', () => {
         paramMapSubject.next(makeParamMap(2, MessageRecipientType.user));
 
         const page = createPage();
-        // allUsers is populated from userApi.loadUsers$() which returns [alice, bob, carol]
+        // allUsers is populated from userApi.load$() which returns [alice, bob, carol]
         expect(page.mentionCandidates()).toEqual([bob]);
     });
 

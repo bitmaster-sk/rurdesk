@@ -29,7 +29,7 @@ describe('TrackTableComponent (browser)', () => {
                         deleteTrack: () => of(undefined)
                     }
                 },
-                { provide: UserApi, useValue: { loadUsers$: () => of([ME]) } }
+                { provide: UserApi, useValue: { load$: () => of([ME]) } }
             ]
         })
             .overrideComponent(TrackTableComponent, { set: { template: '' } })
