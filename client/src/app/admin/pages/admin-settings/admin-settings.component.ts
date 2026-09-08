@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { filter } from 'rxjs/operators';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
-import { AdminApi } from '../../api/admin.api.service';
+import { SettingsApi } from 'src/app/core/settings/settings.api.service';
 import { VersionApi } from '../../api/version.api.service';
 import { BuildInfo } from '../../model/build-info.model';
 
@@ -14,7 +14,7 @@ import { BuildInfo } from '../../model/build-info.model';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminSettingsComponent {
-    private readonly adminApi = inject(AdminApi);
+    private readonly settingsApi = inject(SettingsApi);
     private readonly versionApi = inject(VersionApi);
     private readonly fb = inject(FormBuilder);
 
@@ -61,11 +61,11 @@ export class AdminSettingsComponent {
 
     public constructor() {
         this.versionApi
-            .getVersion$()
+            .load$()
             .pipe(takeUntilDestroyed())
             .subscribe(info => this.buildInfo.set(info));
 
-        this.adminApi.getSettings$().subscribe(settings => {
+        this.settingsApi.load$().subscribe(settings => {
             this.form.patchValue(settings, { emitEvent: false });
             this.lastSaved = JSON.stringify(this.form.getRawValue());
         });
@@ -87,7 +87,7 @@ export class AdminSettingsComponent {
             return;
         }
         this.saveStatus.set(UiSaveState.Saving);
-        this.adminApi.updateSettings$(this.form.getRawValue()).subscribe({
+        this.settingsApi.update$(this.form.getRawValue()).subscribe({
             next: settings => {
                 this.form.patchValue(settings, { emitEvent: false });
                 this.lastSaved = JSON.stringify(this.form.getRawValue());

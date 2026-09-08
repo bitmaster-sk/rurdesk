@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AdminUser, UserCreatedEvent } from '../../model/admin-user.model';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ApiError } from 'src/app/shared/model/api-error.model';
@@ -12,7 +12,7 @@ import { ApiError } from 'src/app/shared/model/api-error.model';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminUsersComponent implements OnInit {
-    private readonly adminApi = inject(AdminApi);
+    private readonly adminUserApi = inject(AdminUserApi);
     private readonly sToast = inject(ToastNotificationService);
 
     protected readonly users = signal<AdminUser[]>([]);
@@ -32,7 +32,7 @@ export class AdminUsersComponent implements OnInit {
     }
 
     private loadUsers(): void {
-        this.adminApi.listUsers$().subscribe(users => this.users.set(users));
+        this.adminUserApi.load$().subscribe(users => this.users.set(users));
     }
 
     protected onOpenCreate(): void {
@@ -61,7 +61,7 @@ export class AdminUsersComponent implements OnInit {
     }
 
     protected onToggleAdmin(user: AdminUser): void {
-        this.adminApi.setAdmin$(user.idUser, !user.isAdmin).subscribe({
+        this.adminUserApi.setAdmin$(user.idUser, !user.isAdmin).subscribe({
             next: () => this.loadUsers(),
             error: (err: unknown) =>
                 this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
@@ -69,7 +69,7 @@ export class AdminUsersComponent implements OnInit {
     }
 
     protected onConfirmDelete(user: AdminUser): void {
-        this.adminApi.deleteUser$(user.idUser).subscribe({
+        this.adminUserApi.delete$(user.idUser).subscribe({
             next: () => this.loadUsers(),
             error: (err: unknown) =>
                 this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')

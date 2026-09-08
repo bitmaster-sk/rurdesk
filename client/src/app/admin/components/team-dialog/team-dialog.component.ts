@@ -9,7 +9,7 @@ import {
     signal
 } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminTeamApi } from '../../api/admin-team.api.service';
 import { Team } from '../../../team/model/team.model';
 
 /**
@@ -24,7 +24,7 @@ import { Team } from '../../../team/model/team.model';
 })
 export class TeamDialogComponent {
     private readonly fb = inject(FormBuilder);
-    private readonly adminApi = inject(AdminApi);
+    private readonly adminTeamApi = inject(AdminTeamApi);
 
     public readonly visible = model<boolean>(false);
     public readonly team = input<Team | null>(null);
@@ -56,12 +56,12 @@ export class TeamDialogComponent {
         const value = this.form.getRawValue();
         const team = this.team();
         const save$ = team
-            ? this.adminApi.updateTeam$({
+            ? this.adminTeamApi.update$({
                   idTeam: team.idTeam,
                   name: value.name!,
                   color: value.color!
               })
-            : this.adminApi.createTeam$({ name: value.name!, color: value.color! });
+            : this.adminTeamApi.insert$({ name: value.name!, color: value.color! });
 
         this.isSaving.set(true);
         save$.subscribe({

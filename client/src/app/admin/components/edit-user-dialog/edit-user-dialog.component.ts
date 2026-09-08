@@ -13,7 +13,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { forkJoin, map } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
 import { AgentGateway } from '../../model/agent-gateway.model';
@@ -31,7 +31,7 @@ import { AgentGateway } from '../../model/agent-gateway.model';
 })
 export class EditUserDialogComponent {
     private readonly fb = inject(FormBuilder);
-    private readonly adminApi = inject(AdminApi);
+    private readonly adminUserApi = inject(AdminUserApi);
     private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
 
@@ -118,8 +118,8 @@ export class EditUserDialogComponent {
         // For an agent with an existing gateway, save a changed URL alongside the name.
         const gw = this.gateway();
         const newUrl = value.gatewayUrl!.trim();
-        const calls: ReturnType<AdminApi['updateUser$']>[] = [
-            this.adminApi.updateUser$(user.idUser, req)
+        const calls: ReturnType<AdminUserApi['update$']>[] = [
+            this.adminUserApi.update$(user.idUser, req)
         ];
         if (user.isAgent && gw && newUrl && newUrl !== gw.gatewayUrl) {
             calls.push(

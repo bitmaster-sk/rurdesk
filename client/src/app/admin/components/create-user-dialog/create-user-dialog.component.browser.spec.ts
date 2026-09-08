@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule, type FormGroup } from '@angular/forms';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminUserApi } from '../../api/admin-user.api.service';
 import { CreateUserDialogComponent } from './create-user-dialog.component';
 
 describe('CreateUserDialogComponent — isAgent validator wiring (browser)', () => {
@@ -10,7 +10,7 @@ describe('CreateUserDialogComponent — isAgent validator wiring (browser)', () 
             declarations: [CreateUserDialogComponent],
             imports: [ReactiveFormsModule],
             providers: [
-                { provide: AdminApi, useValue: {} },
+                { provide: AdminUserApi, useValue: {} },
                 { provide: ToastNotificationService, useValue: {} }
             ]
         })

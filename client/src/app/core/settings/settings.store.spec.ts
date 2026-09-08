@@ -1,15 +1,16 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
-import { SettingsApi, type AppSettings } from './settings.api.service';
+import { type AppSettings } from './model/app-settings.model';
+import { SettingsApi } from './settings.api.service';
 import { SettingsStore } from './settings.store';
 
 function build(getReturn?: AppSettings) {
-    const getSettings$ = vi.fn().mockReturnValue(of(getReturn));
+    const load$ = vi.fn().mockReturnValue(of(getReturn));
     const injector = Injector.create({
-        providers: [{ provide: SettingsApi, useValue: { getSettings$ } }]
+        providers: [{ provide: SettingsApi, useValue: { load$ } }]
     });
     const store = runInInjectionContext(injector, () => new SettingsStore());
-    return { store, getSettings$ };
+    return { store, load$ };
 }
 
 describe('SettingsStore', () => {
@@ -26,7 +27,10 @@ describe('SettingsStore', () => {
             tablePageSize: 75,
             kanbanPageSize: 30,
             ganttBacklogPageSize: 40,
-            userApiKeyLimit: 25
+            sprintVelocityLimit: 15,
+            userApiKeyLimit: 25,
+            isAgentThinkingPersisted: false,
+            agentThinkingMaxKb: 2048
         });
         store.load();
         expect(store.tablePageSize()).toBe(75);

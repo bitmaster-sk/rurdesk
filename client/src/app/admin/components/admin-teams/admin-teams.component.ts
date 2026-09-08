@@ -7,7 +7,7 @@ import {
     input,
     signal
 } from '@angular/core';
-import { AdminApi } from '../../api/admin.api.service';
+import { AdminTeamApi } from '../../api/admin-team.api.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
@@ -31,7 +31,7 @@ export class AdminTeamsComponent implements OnInit {
     /** user row currently dragged from the parent users table (null when none) */
     public readonly draggedUser = input<AdminUser | null>(null);
 
-    private readonly adminApi = inject(AdminApi);
+    private readonly adminTeamApi = inject(AdminTeamApi);
     private readonly teamApi = inject(TeamApi);
 
     protected readonly teams = signal<Team[]>([]);
@@ -61,7 +61,7 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     private loadMembers(idTeam: number): void {
-        this.adminApi.listTeamMembers$(idTeam).subscribe(members => this.members.set(members));
+        this.adminTeamApi.loadMembers$(idTeam).subscribe(members => this.members.set(members));
     }
 
     protected onNewTeam(): void {
@@ -80,7 +80,7 @@ export class AdminTeamsComponent implements OnInit {
     }
 
     protected onConfirmDeleteTeam(team: Team): void {
-        this.adminApi.deleteTeam$(team.idTeam).subscribe(() => {
+        this.adminTeamApi.delete$(team.idTeam).subscribe(() => {
             if (this.selectedTeam()?.idTeam === team.idTeam) {
                 this.selectedTeam.set(null);
                 this.members.set([]);
@@ -91,7 +91,7 @@ export class AdminTeamsComponent implements OnInit {
 
     protected onAddMember(user: User | AdminUser, team: Team | null = this.selectedTeam()): void {
         if (!team) return;
-        this.adminApi.addTeamMember$(team.idTeam, user.idUser).subscribe(() => {
+        this.adminTeamApi.insertMember$(team.idTeam, user.idUser).subscribe(() => {
             if (this.selectedTeam()?.idTeam === team.idTeam) {
                 this.loadMembers(team.idTeam);
             }
@@ -141,8 +141,8 @@ export class AdminTeamsComponent implements OnInit {
     protected onConfirmRemoveMember(user: User): void {
         const team = this.selectedTeam();
         if (!team) return;
-        this.adminApi
-            .removeTeamMember$(team.idTeam, user.idUser)
+        this.adminTeamApi
+            .deleteMember$(team.idTeam, user.idUser)
             .subscribe(() => this.loadMembers(team.idTeam));
     }
 }

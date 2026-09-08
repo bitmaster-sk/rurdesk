@@ -7,7 +7,7 @@ import { BuildInfo } from '../model/build-info.model';
 export class VersionApi {
     private readonly http = inject(HttpClient);
 
-    public getVersion$(): Observable<BuildInfo> {
+    public load$(): Observable<BuildInfo> {
         // admin-only
         return this.http.get<BuildInfo>('/api/private/admin/version');
     }
