@@ -8,12 +8,19 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
 
 const agentRunsDir = ".agent-runs"
+
+// Used only for an empty origin, which has no HEAD to detect.
+const fallbackBaseBranch = "main"
+
+// Concurrent git ref updates on one repo fail with "cannot lock ref".
+var worktreeMu sync.Mutex
 
 // hookSourcePath is the pre-push hook baked into the image and installed into
 // every cloned repo. A var, not const, so tests can point it at a fixture.
@@ -50,6 +57,18 @@ func CloneRepo(cfg *Config) error {
 			if err := runGit(repoPath, "remote", "set-url", "origin", authenticatedURL); err != nil {
 				return fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
 			}
+		}
+
+		if cfg.RepoBranchBase == "" {
+			resolved, err := detectDefaultBranch(repoPath)
+			if err != nil {
+				return fmt.Errorf("detecting default branch in %s: %w", repoPath, err)
+			}
+			if resolved == "" {
+				resolved = fallbackBaseBranch
+			}
+			log.Info().Str("branch", resolved).Msg("REPO_BRANCH_BASE unset — using the repo's default branch")
+			cfg.RepoBranchBase = resolved
 		}
 
 		// A brand-new (empty) repo has no branches: `fetch origin main` would
@@ -150,6 +169,25 @@ func seedEmptyRemote(repoPath, branch string) error {
 	return nil
 }
 
+// Returns "" when origin has no HEAD, i.e. an empty repo.
+func detectDefaultBranch(repoPath string) (string, error) {
+	out, err := runGitOutput(repoPath, "ls-remote", "--symref", "origin", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	for _, line := range strings.Split(out, "\n") {
+		rest, found := strings.CutPrefix(line, "ref: ")
+		if !found {
+			continue
+		}
+		ref, _, _ := strings.Cut(rest, "\t")
+		if branch, ok := strings.CutPrefix(strings.TrimSpace(ref), "refs/heads/"); ok {
+			return branch, nil
+		}
+	}
+	return "", nil
+}
+
 // remoteHasBranch reports whether origin has the given branch. `ls-remote
 // --heads` exits 0 either way; a match prints a line, a miss prints nothing,
 // so emptiness of stdout is the signal.
@@ -185,9 +223,17 @@ func InstallHooks(repoPath string) error {
 }
 
 // CreateWorktree creates a new git worktree for a run. Returns the worktree path.
-func CreateWorktree(repoPath, branch string, idRun int64) (string, error) {
+// The start point must stay an explicitly fetched origin/<baseBranch>: the base
+// checkout's HEAD is only as new as gateway startup.
+func CreateWorktree(repoPath, baseBranch, branch string, idRun int64) (string, error) {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
 	worktreePath := WorktreePath(repoPath, idRun)
-	if err := runGit(repoPath, "worktree", "add", worktreePath, "-b", branch); err != nil {
+	if err := runGit(repoPath, "fetch", "origin", baseBranch); err != nil {
+		return "", fmt.Errorf("fetching %s: %w", baseBranch, err)
+	}
+	if err := runGit(repoPath, "worktree", "add", worktreePath, "-b", branch, "origin/"+baseBranch); err != nil {
 		return "", fmt.Errorf("creating worktree: %w", err)
 	}
 	return worktreePath, nil

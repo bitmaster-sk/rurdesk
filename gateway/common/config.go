@@ -104,7 +104,7 @@ func LoadConfig(adapterType string) (*Config, error) {
 
 	listenPort := envInt("LISTEN_PORT", 9090)
 	maxConcurrent := envInt("MAX_CONCURRENT", 1)
-	repoBranchBase := envOrDefault("REPO_BRANCH_BASE", "main")
+	repoBranchBase := strings.TrimSpace(os.Getenv("REPO_BRANCH_BASE"))
 	logLevel := envOrDefault("LOG_LEVEL", "info")
 	workspaceBase := envOrDefault("WORKSPACE_BASE", "/worktrees")
 	cfg := &Config{
