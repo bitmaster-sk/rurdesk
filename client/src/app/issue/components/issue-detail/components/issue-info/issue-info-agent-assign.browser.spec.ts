@@ -61,7 +61,7 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
                     provide: MrDiffApi,
                     useValue: { getStatus$: () => NEVER, getDiff$: () => NEVER }
                 },
-                { provide: GitIntegrationApi, useValue: { get$: () => NEVER } },
+                { provide: GitIntegrationApi, useValue: { loadOne$: () => NEVER } },
                 { provide: Router, useValue: { navigate: vi.fn() } }
             ]
         })

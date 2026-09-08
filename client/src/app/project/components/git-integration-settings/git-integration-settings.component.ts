@@ -101,7 +101,7 @@ export class GitIntegrationSettingsComponent implements OnInit {
                 accessToken: value.accessToken
             };
             this.gitIntegrationApi
-                .create$(this.project().idProject, req)
+                .insert$(this.project().idProject, req)
                 .subscribe(result => this.saved.emit(result));
         }
     }

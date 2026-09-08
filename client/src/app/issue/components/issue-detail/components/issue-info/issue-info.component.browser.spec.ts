@@ -60,7 +60,7 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                     provide: MrDiffApi,
                     useValue: { getStatus$, getDiff$: () => NEVER }
                 },
-                { provide: GitIntegrationApi, useValue: { get$: getIntegration$ } },
+                { provide: GitIntegrationApi, useValue: { loadOne$: getIntegration$ } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
                 { provide: NoticeService, useValue: { mrStatus$: mrStatus$.asObservable() } }
             ]

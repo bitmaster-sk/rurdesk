@@ -74,7 +74,7 @@ export class GitIntegrationListComponent implements OnInit {
 
     private load(): void {
         this.gitIntegrationApi
-            .list$(this.project().idProject)
+            .load$(this.project().idProject)
             .subscribe(list => this.integrations.set(list));
     }
 }

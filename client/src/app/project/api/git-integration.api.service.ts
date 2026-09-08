@@ -11,19 +11,19 @@ import {
 export class GitIntegrationApi {
     private readonly http = inject(HttpClient);
 
-    public list$(idProject: number): Observable<GitIntegrationRes[]> {
+    public load$(idProject: number): Observable<GitIntegrationRes[]> {
         return this.http.get<GitIntegrationRes[]>(
             `/api/private/project/${idProject}/git-integration`
         );
     }
 
-    public get$(idProject: number, idGitIntegration: number): Observable<GitIntegrationRes> {
+    public loadOne$(idProject: number, idGitIntegration: number): Observable<GitIntegrationRes> {
         return this.http.get<GitIntegrationRes>(
             `/api/private/project/${idProject}/git-integration/${idGitIntegration}`
         );
     }
 
-    public create$(idProject: number, req: CreateGitIntegrationReq): Observable<GitIntegrationRes> {
+    public insert$(idProject: number, req: CreateGitIntegrationReq): Observable<GitIntegrationRes> {
         return this.http.post<GitIntegrationRes>(
             `/api/private/project/${idProject}/git-integration`,
             req

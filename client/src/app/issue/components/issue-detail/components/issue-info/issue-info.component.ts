@@ -288,7 +288,7 @@ export class IssueInfoComponent implements OnInit {
     }
 
     private loadGitIntegration(idProject: number, idGitIntegration: number): void {
-        this.gitIntegrationApi.get$(idProject, idGitIntegration).subscribe({
+        this.gitIntegrationApi.loadOne$(idProject, idGitIntegration).subscribe({
             next: integration => this.gitIntegration.set(integration),
             error: () => this.gitIntegration.set(null)
         });
