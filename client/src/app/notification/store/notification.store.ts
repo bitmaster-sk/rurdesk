@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { NotificationApi } from '../api/notification.api';
+import { NotificationApi } from '../api/notification.api.service';
 import { Notification, NotificationGroup } from '../model/notification.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { NotificationType } from '../model/notification-type.enum';
@@ -72,7 +72,7 @@ export class NotificationStore {
             return;
         }
         this.started = true;
-        this.notifApi.list({ limit: 50 }).subscribe(notifications => {
+        this.notifApi.load$({ limit: 50 }).subscribe(notifications => {
             this.load(notifications);
         });
         this.wsSubscription = this.sNotice.notification$.subscribe(notice => {

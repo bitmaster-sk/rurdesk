@@ -1,6 +1,6 @@
 import { Injector, runInInjectionContext } from '@angular/core';
 import { Subject, of } from 'rxjs';
-import { NotificationApi } from '../api/notification.api';
+import { NotificationApi } from '../api/notification.api.service';
 import { NotificationStore } from './notification.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
@@ -21,19 +21,19 @@ function notif(overrides: Partial<Notification>): Notification {
 
 function buildStore(listReturn = of<Notification[]>([])): {
     store: NotificationStore;
-    list$: ReturnType<typeof vi.fn>;
+    load$: ReturnType<typeof vi.fn>;
     notification$: Subject<Notice<Notification>>;
 } {
-    const list$ = vi.fn().mockReturnValue(listReturn);
+    const load$ = vi.fn().mockReturnValue(listReturn);
     const notification$ = new Subject<Notice<Notification>>();
     const injector = Injector.create({
         providers: [
-            { provide: NotificationApi, useValue: { list: list$ } },
+            { provide: NotificationApi, useValue: { load$ } },
             { provide: NoticeService, useValue: { notification$ } }
         ]
     });
     const store = runInInjectionContext(injector, () => new NotificationStore());
-    return { store, list$, notification$ };
+    return { store, load$, notification$ };
 }
 
 describe('NotificationStore', () => {
@@ -118,11 +118,11 @@ describe('NotificationStore', () => {
                 notif({ idNotification: 10, isRead: true }),
                 notif({ idNotification: 11, isRead: false })
             ];
-            const { store, list$ } = buildStore(of(fetched));
+            const { store, load$ } = buildStore(of(fetched));
 
             store.init();
 
-            expect(list$).toHaveBeenCalledWith({ limit: 50 });
+            expect(load$).toHaveBeenCalledWith({ limit: 50 });
             expect(store.all().map(n => n.idNotification)).toEqual([10, 11]);
         });
 
@@ -145,12 +145,12 @@ describe('NotificationStore', () => {
 
         it('is idempotent — second call does not re-fetch or double-subscribe', () => {
             const fetched = [notif({ idNotification: 1 })];
-            const { store, list$, notification$ } = buildStore(of(fetched));
+            const { store, load$, notification$ } = buildStore(of(fetched));
 
             store.init();
             store.init();
 
-            expect(list$).toHaveBeenCalledTimes(1);
+            expect(load$).toHaveBeenCalledTimes(1);
 
             // only one prepend happens (one subscription, not two)
             notification$.next({

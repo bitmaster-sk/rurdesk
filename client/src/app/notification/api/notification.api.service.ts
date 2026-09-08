@@ -14,7 +14,7 @@ export interface NotificationListParams {
 export class NotificationApi {
     private readonly http = inject(HttpClient);
 
-    public list(params: NotificationListParams = {}): Observable<Notification[]> {
+    public load$(params: NotificationListParams = {}): Observable<Notification[]> {
         const queryParams: Record<string, string> = {};
         if (params.idProject != null) {
             queryParams['idProject'] = String(params.idProject);
@@ -31,16 +31,16 @@ export class NotificationApi {
         return this.http.get<Notification[]>('/api/private/notification', { params: queryParams });
     }
 
-    public markRead(idNotification: number): Observable<void> {
+    public markReadOne$(idNotification: number): Observable<void> {
         return this.http.put<void>(`/api/private/notification/${idNotification}/read`, {});
     }
 
-    public markAllRead(idProject?: number): Observable<void> {
+    public markReadAll$(idProject?: number): Observable<void> {
         const body = idProject != null ? { idProject } : {};
         return this.http.post<void>('/api/private/notification/read', body);
     }
 
-    public delete(idNotification: number): Observable<void> {
+    public delete$(idNotification: number): Observable<void> {
         return this.http.delete<void>(`/api/private/notification/${idNotification}`);
     }
 }
