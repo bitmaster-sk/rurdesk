@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createUser } from './support/user';
 import { tokenOf } from './support/sprint';
-import { assignAgent, createStubGatewayBot } from './support/agent-bot';
+import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 
 const PROJECT_NAME = 'Thinking Project';
@@ -12,7 +12,7 @@ const ISSUE_TITLE = 'Watch the agent think';
 const RUN_TIMEOUT_MS = 60_000;
 
 test.describe('agent thinking', () => {
-    // The stub gateway holds one bot's credentials at a time, so two tests
+    // The stub gateway holds one agent's credentials at a time, so two tests
     // configuring it at once would authenticate each other's callbacks away.
     test.describe.configure({ mode: 'serial' });
     test.slow();
@@ -20,7 +20,7 @@ test.describe('agent thinking', () => {
     // Scenario:
     // - create a user and log in through the real login form
     // - create a blank project and an issue in it
-    // - create a bot pointed at the stub gateway and hand the stub its tokens
+    // - create an agent pointed at the stub gateway and hand the stub its tokens
     // - assign the agent while the issue detail is open, without reloading
     // - assert a thinking row appears with the working dot
     // - assert the streamed thought and the tool call arrive in the open page
@@ -41,7 +41,7 @@ test.describe('agent thinking', () => {
             email: 'e2e-admin@example.com',
             password: 'Passw0rd!23'
         });
-        const bot = await createStubGatewayBot(
+        const agent = await createStubGatewayAgent(
             request,
             baseURL!,
             adminToken,
@@ -50,7 +50,7 @@ test.describe('agent thinking', () => {
         );
 
         const userToken = await tokenOf(request, baseURL!, user);
-        await assignAgent(request, baseURL!, userToken, idProject, idIssuePublic, bot.idUser);
+        await assignAgent(request, baseURL!, userToken, idProject, idIssuePublic, agent.idUser);
 
         const row = page.getByTestId('agent-thinking-row').first();
         await expect(row).toBeVisible({ timeout: RUN_TIMEOUT_MS });
@@ -62,7 +62,7 @@ test.describe('agent thinking', () => {
     });
 
     // Scenario:
-    // - create a user, a project and an issue, and a bot on the stub gateway
+    // - create a user, a project and an issue, and an agent on the stub gateway
     // - assign the agent and wait until the design stage posts its comment
     // - reload, so nothing is left of the live stream in memory
     // - expand the design stage's thinking row
@@ -84,10 +84,16 @@ test.describe('agent thinking', () => {
             email: 'e2e-admin@example.com',
             password: 'Passw0rd!23'
         });
-        const bot = await createStubGatewayBot(request, baseURL!, adminToken, idProject, 'replay');
+        const agent = await createStubGatewayAgent(
+            request,
+            baseURL!,
+            adminToken,
+            idProject,
+            'replay'
+        );
 
         const userToken = await tokenOf(request, baseURL!, user);
-        await assignAgent(request, baseURL!, userToken, idProject, idIssuePublic, bot.idUser);
+        await assignAgent(request, baseURL!, userToken, idProject, idIssuePublic, agent.idUser);
 
         await expect(page.getByText('Stub design proposal.')).toBeVisible({
             timeout: RUN_TIMEOUT_MS

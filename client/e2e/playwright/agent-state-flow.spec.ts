@@ -1,7 +1,7 @@
 import { APIRequestContext, expect, Page, test } from '@playwright/test';
 import { createUser } from './support/user';
 import { tokenOf } from './support/sprint';
-import { assignAgent, createStubGatewayBot } from './support/agent-bot';
+import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 import { EventMapping, WorkflowEventMap } from './support/workflow-event-map';
 
@@ -86,14 +86,14 @@ class Flow {
             severity: 'Medium'
         });
 
-        const bot = await createStubGatewayBot(request, baseURL, adminToken, idProject, label);
+        const agent = await createStubGatewayAgent(request, baseURL, adminToken, idProject, label);
         const idRun = await assignAgent(
             request,
             baseURL,
             userToken,
             idProject,
             idIssuePublic,
-            bot.idUser
+            agent.idUser
         );
 
         return {

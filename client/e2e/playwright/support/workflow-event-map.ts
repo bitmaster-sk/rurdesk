@@ -1,5 +1,5 @@
 import { APIRequestContext, expect, request as playwrightRequest } from '@playwright/test';
-import { STUB_GATEWAY_URL_FOR_TEST, STUB_GATEWAY_URL_FOR_TRACKER } from './agent-bot';
+import { STUB_GATEWAY_URL_FOR_TEST, STUB_GATEWAY_URL_FOR_TRACKER } from './agent';
 
 export interface EventMapping {
     event: string;
