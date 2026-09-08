@@ -21,7 +21,7 @@ import { MessageUnreadStore } from 'src/app/message/store/message-unread.store';
 import { MessageKeyConverter } from 'src/app/message/converter/message-key.converter';
 import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { Team } from 'src/app/team/model/team.model';
 import { TeamApi } from 'src/app/team/api/team.api.service';
@@ -40,7 +40,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly authStore = inject(AuthStore);
     private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly sNotice = inject(NoticeService);
 
     private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
@@ -78,7 +78,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     public ngOnInit(): void {
         this.unreadStore.load();
 
-        this.sProject.loadProjects().subscribe(projects => {
+        this.projectApi.load$().subscribe(projects => {
             this._projects.set(projects);
         });
 

@@ -12,7 +12,7 @@ describe('ProjectOwnerGuard.canActivate', () => {
     function run(role$: Observable<{ role: Role }>): boolean | UrlTree {
         TestBed.configureTestingModule({
             providers: [
-                { provide: ProjectMemberApi, useValue: { getUserRole: () => role$ } },
+                { provide: ProjectMemberApi, useValue: { loadUserRole$: () => role$ } },
                 { provide: Router, useValue: { parseUrl: () => redirectTree } }
             ]
         });

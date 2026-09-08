@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanMatchFn } from '@angular/router';
 import { map } from 'rxjs/operators';
-import { ProjectService } from '../project/project.service';
+import { ProjectApi } from '../project/api/project.api.service';
 import { Project } from '../project/model/project.model';
 
 export abstract class FirstProjectGuard {
@@ -16,7 +16,7 @@ export abstract class FirstProjectGuard {
      * empty-path route (the normal "My page").
      */
     public static readonly canMatch: CanMatchFn = () => {
-        const projectService = inject(ProjectService);
-        return projectService.loadProjects().pipe(map(FirstProjectGuard.hasNoProjects));
+        const projectApi = inject(ProjectApi);
+        return projectApi.load$().pipe(map(FirstProjectGuard.hasNoProjects));
     };
 }

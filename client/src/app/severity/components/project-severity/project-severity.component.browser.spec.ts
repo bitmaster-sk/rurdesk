@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ProjectSeverityComponent } from './project-severity.component';
 import { SeverityApi } from '../../api/severity.api.service';
 import { SeverityStore } from '../../store/severity.store';
-import { ProjectService } from '../../../project/project.service';
+import { ProjectApi } from '../../../project/api/project.api.service';
 import { WindowService } from '../../../shared/window/window.service';
 
 /**
@@ -41,8 +41,8 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
                 { provide: SeverityApi, useValue: severityApi },
                 { provide: SeverityStore, useValue: severityStore },
                 {
-                    provide: ProjectService,
-                    useValue: { updateProject: vi.fn().mockReturnValue(of({})) }
+                    provide: ProjectApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
                 }
             ]
         });

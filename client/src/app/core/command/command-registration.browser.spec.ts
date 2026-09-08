@@ -12,7 +12,7 @@ import { IssueService } from '../../issue/issue.service';
 import { StateStore } from '../../state/store/state.store';
 import { SeverityStore } from '../../severity/store/severity.store';
 import { AclStore } from '../../project/store/acl.store';
-import { ProjectService } from '../../project/project.service';
+import { ProjectApi } from '../../project/api/project.api.service';
 import { ProjectMemberStore } from '../../project/project-member.store';
 import { SessionService } from '../../auth/service/session.service';
 import { AuthStore } from '../../auth/store/auth.store';
@@ -129,8 +129,10 @@ describe('NavigationCommandProvider', () => {
                 AclStore,
                 { provide: Router, useValue: router },
                 {
-                    provide: ProjectService,
-                    useValue: { loadProjects: vi.fn(() => of([{ idProject: 7, name: 'Website' }])) }
+                    provide: ProjectApi,
+                    useValue: {
+                        load$: vi.fn(() => of([{ idProject: 7, name: 'Website' }]))
+                    }
                 },
                 { provide: CommandPaletteService, useValue: { openHelp: vi.fn() } },
                 {

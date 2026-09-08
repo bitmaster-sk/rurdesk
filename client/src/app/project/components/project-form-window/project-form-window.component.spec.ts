@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
 import { ProjectFormWindowComponent } from './project-form-window.component';
-import { ProjectService } from '../../project.service';
+import { ProjectApi } from '../../api/project.api.service';
 import { Project, CreateProjectReq } from '../../model/project.model';
 
 describe('ProjectFormWindowComponent', () => {
@@ -30,7 +30,10 @@ describe('ProjectFormWindowComponent', () => {
             providers: [
                 { provide: WindowReference, useValue: { close } },
                 { provide: WindowConfig, useValue: {} },
-                { provide: ProjectService, useValue: { insertProject, updateProject } },
+                {
+                    provide: ProjectApi,
+                    useValue: { insert$: insertProject, update$: updateProject }
+                },
                 { provide: Router, useValue: { navigate } }
             ]
         });

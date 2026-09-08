@@ -14,7 +14,7 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
 import { MessageApi } from '../../api/message.api.service';
 import { MessageUnreadStore } from '../../store/message-unread.store';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
@@ -124,8 +124,8 @@ describe('MessagePage mentionCandidates', () => {
                     useValue: { unread$: unreadSubject, remove: () => {} }
                 },
                 {
-                    provide: ProjectService,
-                    useValue: { loadProjects: () => of(projects), loadMembers: () => of([]) }
+                    provide: ProjectApi,
+                    useValue: { load$: () => of(projects), loadMembers$: () => of([]) }
                 },
                 {
                     provide: TeamApi,

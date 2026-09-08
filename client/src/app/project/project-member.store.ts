@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { User } from '../auth/model/user.model';
-import { ProjectService } from './project.service';
+import { ProjectApi } from './api/project.api.service';
 
 @Injectable({
     providedIn: 'root'
@@ -14,10 +14,10 @@ export class ProjectMemberStore {
 
     public usersMap$ = this.users$.pipe(map(users => this.toMap(users)));
 
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
 
     public load(idProject: number): void {
-        this.sProject.loadMembers(idProject).subscribe(users => this.users.next(users));
+        this.projectApi.loadMembers$(idProject).subscribe(users => this.users.next(users));
     }
 
     private toMap(users: User[]): Map<number, User> {

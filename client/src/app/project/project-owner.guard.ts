@@ -21,7 +21,7 @@ export abstract class ProjectOwnerGuard {
         const idProject = Number(route.paramMap.get('idProject'));
         const redirect = router.parseUrl(`/project/${idProject}/view`);
 
-        return memberApi.getUserRole(idProject).pipe(
+        return memberApi.loadUserRole$(idProject).pipe(
             map(({ role }) => (role === Role.Owner ? true : redirect)),
             catchError(() => of(redirect))
         );

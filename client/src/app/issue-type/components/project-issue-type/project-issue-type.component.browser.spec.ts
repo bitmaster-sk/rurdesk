@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ProjectIssueTypeComponent } from './project-issue-type.component';
 import { IssueTypeApi } from '../../api/issue-type.api.service';
 import { IssueTypeStore } from '../../store/issue-type.store';
-import { ProjectService } from '../../../project/project.service';
+import { ProjectApi } from '../../../project/api/project.api.service';
 import { WindowService } from '../../../shared/window/window.service';
 
 describe('ProjectIssueTypeComponent (browser)', () => {
@@ -41,8 +41,8 @@ describe('ProjectIssueTypeComponent (browser)', () => {
                 { provide: IssueTypeApi, useValue: issueTypeApi },
                 { provide: IssueTypeStore, useValue: issueTypeStore },
                 {
-                    provide: ProjectService,
-                    useValue: { updateProject: vi.fn().mockReturnValue(of({})) }
+                    provide: ProjectApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
                 }
             ]
         });

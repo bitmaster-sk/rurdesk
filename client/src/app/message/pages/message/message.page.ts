@@ -19,7 +19,7 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
-import { ProjectService } from 'src/app/project/project.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -46,7 +46,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
     private readonly messageApi = inject(MessageApi);
     private readonly unreadStore = inject(MessageUnreadStore);
-    private readonly sProject = inject(ProjectService);
+    private readonly projectApi = inject(ProjectApi);
     private readonly teamApi = inject(TeamApi);
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
@@ -147,11 +147,7 @@ export class MessagePage implements OnInit, OnDestroy {
 
         // recipients
         this.subscriptions.add(
-            combineLatest([
-                this.sProject.loadProjects(),
-                this.teamApi.loadMy$(),
-                this.userApi.load$()
-            ])
+            combineLatest([this.projectApi.load$(), this.teamApi.loadMy$(), this.userApi.load$()])
                 .pipe(
                     map(([projects, teams, users]) => ({
                         conversationGroups: this.toConversationGroups(projects, teams, users),
