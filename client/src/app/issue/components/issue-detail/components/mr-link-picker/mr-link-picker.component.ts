@@ -57,22 +57,28 @@ export class MrLinkPickerComponent implements OnInit {
     protected form!: FormGroup<MrLinkPickerForm>;
 
     public ngOnInit(): void {
-        const initialId = this.idGitIntegration() ?? null;
+        const idGitIntegrationInitial = this.idGitIntegration() ?? null;
         this.form = this.fb.group<MrLinkPickerForm>({
-            idGitIntegration: this.fb.control<number | null>(initialId, Validators.required),
+            idGitIntegration: this.fb.control<number | null>(
+                idGitIntegrationInitial,
+                Validators.required
+            ),
             mrId: this.nfb.control(this.mrId() ?? '', [
                 Validators.required,
                 Validators.maxLength(50)
             ])
         });
-        this.selectedIntegrationId.set(initialId);
+        this.selectedIntegrationId.set(idGitIntegrationInitial);
         this.form.controls.idGitIntegration.valueChanges.subscribe(value =>
             this.selectedIntegrationId.set(typeof value === 'number' ? value : null)
         );
 
-        this.gitIntegrationApi
-            .load$(this.idProject())
-            .subscribe(list => this.integrations.set(list));
+        this.gitIntegrationApi.load$(this.idProject()).subscribe(list => {
+            this.integrations.set(list);
+            if (idGitIntegrationInitial == null && list.length === 1) {
+                this.form.controls.idGitIntegration.setValue(list[0].idGitIntegration);
+            }
+        });
     }
 
     protected get integrationOptions(): { label: string; value: number }[] {
