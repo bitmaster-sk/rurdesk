@@ -172,6 +172,35 @@
                         </div>
                     }
                 </div>
+                <div class="emoji-picker" (clickOutside)="showEmojiPicker.set(false)">
+                    <ui-button
+                        variant="text"
+                        severity="primary"
+                        size="small"
+                        [uiTooltip]="'MESSAGE_EDITOR.EMOJI' | translate"
+                        (click)="showEmojiPicker.set(!showEmojiPicker())"
+                    >
+                        <tabler-icon icon="mood-smile" [size]="14" />
+                    </ui-button>
+                    @if (showEmojiPicker()) {
+                        <div class="emoji-picker__grid">
+                            @for (group of EMOJI_GROUPS; track group.label) {
+                                <div class="emoji-picker__group-label">
+                                    {{ 'MESSAGE_EDITOR.EMOJI_GROUP.' + group.label | translate }}
+                                </div>
+                                @for (emoji of group.emojis; track $index) {
+                                    <button
+                                        type="button"
+                                        class="emoji-picker__emoji"
+                                        (mousedown)="onEmoji(emoji); $event.preventDefault()"
+                                    >
+                                        {{ emoji }}
+                                    </button>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         </div>
 

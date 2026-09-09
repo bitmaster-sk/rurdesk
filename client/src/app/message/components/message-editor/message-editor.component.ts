@@ -19,6 +19,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
 import { AsciiEmoji } from './ascii-emoji';
 import { CodeBlockLanguage } from './constant/code-block-language.enum';
+import { EMOJI_GROUPS, EmojiGroup } from './constant/emoji-picker.constant';
 import { EditorCharacters } from './constant/editor-characters.enum';
 import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
@@ -74,7 +75,11 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     protected readonly showCodeBlockSelector = signal(false);
 
+    protected readonly showEmojiPicker = signal(false);
+
     protected readonly CodeBlockLanguage: typeof CodeBlockLanguage = CodeBlockLanguage;
+
+    protected readonly EMOJI_GROUPS: EmojiGroup[] = EMOJI_GROUPS;
 
     // @mention autocomplete state
     protected readonly mentionQuery = signal<{ start: number; query: string } | null>(null);
@@ -318,6 +323,14 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             EditorCharacters.CODE_BLOCK;
         // execCommand insertText is undoable; Range.insertNode is not.
         el.ownerDocument.execCommand('insertText', false, block);
+        this.onInput();
+    }
+
+    protected onEmoji(char: string): void {
+        this.showEmojiPicker.set(false);
+        const el = this.editorRef().nativeElement;
+        el.focus();
+        el.ownerDocument.execCommand('insertText', false, char);
         this.onInput();
     }
 

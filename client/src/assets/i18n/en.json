@@ -1068,7 +1068,14 @@
         "STRIKETHROUGH": "Strikethrough",
         "BULLET_LIST": "Bullet list",
         "ORDERED_LIST": "Ordered list",
-        "CODE_BLOCK": "Code block"
+        "CODE_BLOCK": "Code block",
+        "EMOJI": "Emoji",
+        "EMOJI_GROUP": {
+            "REACTIONS": "Reactions",
+            "PEOPLE": "People",
+            "OBJECTS": "Objects",
+            "SYMBOLS": "Symbols"
+        }
     },
     "MOCKUP": {
         "LABEL": "UI Mockup",

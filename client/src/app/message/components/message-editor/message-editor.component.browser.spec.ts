@@ -489,4 +489,121 @@ describe('MessageEditorComponent (contenteditable)', () => {
 
         expect(host.emitted).toContain('ship it 😄 ');
     });
+
+    describe('emoji picker', () => {
+        function emojiGrid(fixture: ComponentFixture<HostComponent>): HTMLElement | null {
+            return fixture.nativeElement.querySelector('.emoji-picker__grid');
+        }
+
+        function emojiButton(fixture: ComponentFixture<HostComponent>): HTMLElement {
+            const picker = fixture.nativeElement.querySelector('.emoji-picker');
+            return picker.querySelector('button') as HTMLElement;
+        }
+
+        function clickOutside(): void {
+            document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        }
+
+        it('opens the grid on toolbar click and closes on click outside', async () => {
+            await initFixture();
+            expect(emojiGrid(fixture)).toBeNull();
+
+            emojiButton(fixture).click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+            expect(emojiGrid(fixture)).not.toBeNull();
+
+            clickOutside();
+            fixture.detectChanges();
+            await fixture.whenStable();
+            expect(emojiGrid(fixture)).toBeNull();
+        });
+
+        it('inserts the emoji at the caret position, not at the end', async () => {
+            await initFixture();
+            const el = editorEl(fixture);
+            el.textContent = 'hello world';
+            placeCaretAtLinear(el, 5);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            fixture.detectChanges();
+
+            emojiButton(fixture).click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            const firstEmoji = fixture.nativeElement.querySelector(
+                '.emoji-picker__emoji'
+            ) as HTMLElement;
+            firstEmoji.dispatchEvent(
+                new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+            );
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            expect(EditorText.serialize(el)).toBe('hello👍 world');
+
+            el.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+            );
+            fixture.detectChanges();
+            await fixture.whenStable();
+            expect(host.emitted).toContain('hello👍 world');
+        });
+
+        it('replaces the current selection with the emoji', async () => {
+            await initFixture();
+            const el = editorEl(fixture);
+            el.textContent = 'hello world';
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            fixture.detectChanges();
+
+            EditorSelection.setLinearSelection(el, 0, 5);
+            el.focus();
+
+            emojiButton(fixture).click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            const firstEmoji = fixture.nativeElement.querySelector(
+                '.emoji-picker__emoji'
+            ) as HTMLElement;
+            firstEmoji.dispatchEvent(
+                new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+            );
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            expect(EditorText.serialize(el)).toBe('👍 world');
+        });
+
+        it('undo removes the inserted emoji and restores original text', async () => {
+            await initFixture();
+            const el = editorEl(fixture);
+            el.textContent = 'hello world';
+            placeCaretAtLinear(el, 5);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            fixture.detectChanges();
+
+            emojiButton(fixture).click();
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            const firstEmoji = fixture.nativeElement.querySelector(
+                '.emoji-picker__emoji'
+            ) as HTMLElement;
+            firstEmoji.dispatchEvent(
+                new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+            );
+            fixture.detectChanges();
+            await fixture.whenStable();
+            expect(EditorText.serialize(el)).toBe('hello👍 world');
+
+            document.execCommand('undo');
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            fixture.detectChanges();
+            await fixture.whenStable();
+
+            expect(EditorText.serialize(el)).toBe('hello world');
+        });
+    });
 });

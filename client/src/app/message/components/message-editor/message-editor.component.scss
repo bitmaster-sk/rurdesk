@@ -123,3 +123,49 @@
         }
     }
 }
+
+.emoji-picker {
+    position: relative;
+    display: inline-block;
+
+    &__grid {
+        position: absolute;
+        bottom: calc(100% + var(--ui-space));
+        left: 0;
+        background-color: var(--ui-color-surface);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+        min-width: 12rem;
+        max-height: 18rem;
+        overflow-y: auto;
+        padding: var(--ui-space-s);
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        gap: 0.125rem;
+    }
+
+    &__group-label {
+        grid-column: 1 / -1;
+        font-size: var(--font-size-xs);
+        color: var(--ui-color-text-muted);
+        padding: 0.25rem 0 0.125rem;
+    }
+
+    &__emoji {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        padding: 0.125rem;
+        border: none;
+        background: transparent;
+        border-radius: var(--ui-radius-sm);
+        cursor: pointer;
+
+        &:hover {
+            background: var(--ui-color-surface-hover);
+        }
+    }
+}
