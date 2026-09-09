@@ -108,6 +108,20 @@
                         </div>
                     }
 
+                    <!-- Time -->
+                    @if (showTime()) {
+                        <div class="qap--section">
+                            <div class="qap--section-label">
+                                {{ 'ISSUE.QUICK_ACTIONS.TIME' | translate }}
+                            </div>
+                            <app-tracker-start-button
+                                [idProject]="issue()!.idProject"
+                                [idIssuePublic]="issue()!.idIssuePublic"
+                                [issueTitle]="issue()!.title"
+                            ></app-tracker-start-button>
+                        </div>
+                    }
+
                     <!-- AI -->
                     <div class="qap--section">
                         <div class="qap--section-label">

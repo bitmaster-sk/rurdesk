@@ -3,12 +3,30 @@ package model
 import "time"
 
 type Tracker struct {
-	IdTracker     int64     `json:"idTracker" db:"id_tracker"`
-	IdUser        int64     `json:"idUser" db:"id_user"`
-	IdIssue       int64     `json:"idIssue" db:"id_issue"`
-	StartAt       time.Time `json:"startAt" db:"start_at"`
-	IdProject     int64     `json:"idProject" db:"id_project"`
-	IdIssuePublic int64     `json:"idIssuePublic" db:"id_issue_public"`
+	IdTracker     int64      `json:"idTracker" db:"id_tracker"`
+	IdUser        int64      `json:"idUser" db:"id_user"`
+	IdIssue       int64      `json:"idIssue" db:"id_issue"`
+	StartAt       time.Time  `json:"startAt" db:"start_at"`
+	PausedAt      *time.Time `json:"pausedAt" db:"paused_at"`
+	PausedSeconds int64      `json:"pausedSeconds" db:"paused_seconds"`
+	IdProject     int64      `json:"idProject" db:"id_project"`
+	IdIssuePublic int64      `json:"idIssuePublic" db:"id_issue_public"`
+	IssueTitle    string     `json:"issueTitle" db:"issue_title"`
+	ProjectName   string     `json:"projectName" db:"project_name"`
+}
+
+// ElapsedSeconds is the tracked time with paused stretches removed. It never goes
+// negative even if the clock is skewed or the row is edited by hand.
+func (t *Tracker) ElapsedSeconds(now time.Time) int64 {
+	until := now
+	if t.PausedAt != nil {
+		until = *t.PausedAt
+	}
+	elapsed := int64(until.Sub(t.StartAt).Seconds()) - t.PausedSeconds
+	if elapsed < 0 {
+		return 0
+	}
+	return elapsed
 }
 
 type Track struct {
@@ -21,6 +39,7 @@ type Track struct {
 	Tracked       *int64     `json:"tracked" db:"tracked"`
 	StartAt       *time.Time `json:"startAt" db:"start_at"`
 	EndAt         *time.Time `json:"endAt" db:"end_at"`
+	Note          *string    `json:"note" db:"note"`
 }
 
 func (t *Tracker) ToTrack() *Track {
@@ -36,11 +55,16 @@ type CreateTrackerReq struct {
 	IdProject     int64 `json:"idProject" binding:"required"`
 }
 
+type SubmitTrackerReq struct {
+	Note *string `json:"note" binding:"omitempty,max=2000"`
+}
+
 type CreateTrackReq struct {
 	IdIssue int64      `json:"idIssue"  binding:"required"`
 	Tracked *int64     `json:"tracked"  binding:"omitempty"`
 	StartAt *time.Time `json:"startAt"`
 	EndAt   *time.Time `json:"endAt"`
+	Note    *string    `json:"note" binding:"omitempty,max=2000"`
 }
 
 type EditTrackReq struct {
@@ -48,6 +72,7 @@ type EditTrackReq struct {
 	Tracked *int64     `json:"tracked"  binding:"omitempty"`
 	StartAt *time.Time `json:"startAt"`
 	EndAt   *time.Time `json:"endAt"`
+	Note    *string    `json:"note" binding:"omitempty,max=2000"`
 }
 
 type TracksFilter struct {

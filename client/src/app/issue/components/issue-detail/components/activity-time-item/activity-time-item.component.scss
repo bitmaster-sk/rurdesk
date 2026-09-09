@@ -68,6 +68,17 @@
             color: var(--ui-color-text);
         }
 
+        .range {
+            margin-left: auto;
+            font-family: var(--ui-font-mono);
+            font-size: 0.75rem;
+            color: var(--ui-color-text-muted);
+        }
+
+        .range + .duration-badge {
+            margin-left: 0;
+        }
+
         .duration-badge {
             margin-left: auto;
             background: var(--ui-blue-100);
@@ -78,4 +89,93 @@
             font-weight: 700;
         }
     }
+}
+
+.time-card .time-header .timestamp {
+    margin-left: auto;
+}
+
+.time-card .time-header .tools {
+    display: flex;
+    gap: 2px;
+    max-width: 0;
+    margin-left: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        max-width 0.18s ease,
+        margin-left 0.18s ease,
+        opacity 0.18s ease;
+}
+
+.activity-item:hover .time-card .time-header .tools,
+.activity-item .time-card:focus-within .time-header .tools {
+    max-width: 3.5rem;
+    margin-left: var(--ui-space-s);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
+}
+
+.tool-btn:hover {
+    background: var(--ui-blue-50);
+    color: var(--ui-blue-600);
+}
+
+.tool-btn--danger:hover {
+    background: var(--ui-red-50);
+    color: var(--ui-red-600);
+}
+
+.time-edit {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space-s);
+}
+
+.time-edit input[uiInput]:first-of-type {
+    width: 6rem;
+}
+
+.note {
+    margin: 6px 0 0;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+    white-space: pre-wrap;
+}
+
+.note-prompt {
+    margin-top: 6px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    font: inherit;
+    font-size: var(--font-size-s);
+    font-style: italic;
+    cursor: pointer;
+}
+
+.note-prompt:hover {
+    color: var(--ui-color-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
 }

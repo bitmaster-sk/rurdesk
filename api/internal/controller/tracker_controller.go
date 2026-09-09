@@ -137,7 +137,14 @@ func (tc *TrackerController) CreateTracker(c *gin.Context) {
 		IdProject:     issue.IdProject,
 	}
 
-	tracker, err = tc.trackerRepo.InsertTracker(ctx, tracker)
+	if _, err = tc.trackerRepo.InsertTracker(ctx, tracker); err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Reload so the response carries the joined issue title and project name.
+	tracker, err = tc.trackerRepo.LoadTracker(ctx, user.IdUser)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -177,12 +184,73 @@ func (tc *TrackerController) DeleteTracker(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func (tc *TrackerController) PauseTracker(c *gin.Context) {
+	tc.switchPause(c, true)
+}
+
+func (tc *TrackerController) ResumeTracker(c *gin.Context) {
+	tc.switchPause(c, false)
+}
+
+func (tc *TrackerController) switchPause(c *gin.Context, pause bool) {
+	idTracker, err := strconv.ParseInt(c.Param("idTracker"), 10, 64)
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+
+	var tracker *model.Tracker
+	err = extctx.RunInTx(ctx, tc.pool, func(ctx context.Context) error {
+		tracker, err = tc.trackerRepo.LoadTracker(ctx, user.IdUser)
+		if err != nil {
+			return err
+		}
+		if tracker.IdTracker != idTracker {
+			return errs.ErrNotFound
+		}
+		now := time.Now().UTC()
+		if pause {
+			if err := tc.trackerRepo.PauseTracker(ctx, idTracker, now); err != nil {
+				return err
+			}
+		} else if err := tc.trackerRepo.ResumeTracker(ctx, idTracker, now); err != nil {
+			return err
+		}
+		tracker, err = tc.trackerRepo.LoadTracker(ctx, user.IdUser)
+		return err
+	})
+	if errors.Is(err, errs.ErrNotFound) {
+		_ = c.Error(errs.ErrNotFound)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, tracker)
+}
+
 func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 	idTracker, err := strconv.ParseInt(c.Param("idTracker"), 10, 64)
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
+	}
+
+	var dto model.SubmitTrackerReq
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&dto); err != nil {
+			_ = c.Error(err)
+			c.Status(http.StatusBadRequest)
+			return
+		}
 	}
 
 	ctx := c.Request.Context()
@@ -199,9 +267,17 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 		}
 
 		track = tracker.ToTrack()
-		endAt := time.Now().UTC()
+		now := time.Now().UTC()
+		track.Note = dto.Note
+
+		// A forgotten timer must not write an unbounded value into issue.tracked, so the
+		// entry is clamped to the same ceiling the manual endpoints enforce.
+		tracked := tracker.ElapsedSeconds(now)
+		if tracked > maxTrackedSeconds {
+			tracked = maxTrackedSeconds
+		}
+		endAt := track.StartAt.Add(time.Duration(tracked) * time.Second)
 		track.EndAt = &endAt
-		tracked := int64(track.EndAt.Sub(*track.StartAt).Seconds())
 		track.Tracked = &tracked
 
 		track, err = tc.trackerRepo.InsertTrack(ctx, track)
@@ -320,6 +396,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 			Tracked: dto.Tracked,
 			StartAt: dto.StartAt,
 			EndAt:   dto.EndAt,
+			Note:    dto.Note,
 		}
 
 		if t.Tracked != nil {
@@ -404,6 +481,7 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 		t.Tracked = dto.Tracked
 		t.StartAt = dto.StartAt
 		t.EndAt = dto.EndAt
+		t.Note = dto.Note
 
 		if t.Tracked != nil {
 			endAt := time.Now().UTC()

@@ -1,4 +1,12 @@
-import { Component, input, output, computed, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    computed,
+    inject,
+    input,
+    output,
+    signal
+} from '@angular/core';
 import { combineLatest, timer } from 'rxjs';
 import { distinctUntilChanged, filter, map, switchMap } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,7 +25,8 @@ import { Track } from './model/track.model';
     selector: 'app-tracker',
     templateUrl: './tracker.component.html',
     styleUrls: ['./tracker.component.scss'],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TrackerComponent {
     private readonly trackerService = inject(TrackerService);
@@ -75,6 +84,16 @@ export class TrackerComponent {
         { initialValue: null }
     );
 
+    public isTrackingOther = computed(() => {
+        const tracker = this.tracker();
+        const issue = this.issue();
+        return !!tracker?.idTracker && !!issue && tracker.idIssue !== issue.idIssue;
+    });
+
+    public runningTracker = computed(() => (this.isTrackingOther() ? this.tracker() : null));
+
+    public isSwitchOpen = signal(false);
+
     public trackedControl = new FormControl(null, [
         Validators.required,
         DurationValidator.duration
@@ -96,6 +115,14 @@ export class TrackerComponent {
             });
     }
 
+    public onStartRequest(): void {
+        if (this.isTrackingOther()) {
+            this.isSwitchOpen.set(true);
+            return;
+        }
+        this.onStartTracker();
+    }
+
     public onStartTracker(): void {
         const issue = this.issue();
         const project = this.project();
@@ -103,6 +130,18 @@ export class TrackerComponent {
             return;
         }
         this.trackerService.insertTracker$(project.idProject, issue.idIssuePublic).subscribe();
+    }
+
+    public onSwitchTracker(): void {
+        const issue = this.issue();
+        const project = this.project();
+        const tracker = this.tracker();
+        if (!issue || !project || !tracker) {
+            return;
+        }
+        this.trackerService
+            .switchTracker$(project.idProject, issue.idIssuePublic, tracker.idTracker)
+            .subscribe();
     }
 
     public onSubmitTracker(tracker: Tracker): void {

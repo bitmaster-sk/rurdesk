@@ -17,6 +17,8 @@ import { Issue } from '../../../../model/issue.model';
 import { IssueInfoComponent } from './issue-info.component';
 import { CiStatus, MrState, MrStatus } from 'src/app/project/model/git-integration.model';
 import { MrStatusNotice } from 'src/app/shared/notice/model/mr-status-notice.model';
+import { TrackerService } from 'src/app/shared/tracker/tracker.service';
+import { Track } from 'src/app/shared/tracker/model/track.model';
 
 const ISSUE: Issue = {
     idIssue: 10,
@@ -32,11 +34,15 @@ const ISSUE: Issue = {
 
 describe('IssueInfoComponent — live MR status notice (browser)', () => {
     let mrStatus$: Subject<unknown>;
+    let tracksChanged$: Subject<boolean>;
+    let tracksForIssue: Track[];
     let loadStatus$: ReturnType<typeof vi.fn>;
     let getIntegration$: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
         mrStatus$ = new Subject<unknown>();
+        tracksChanged$ = new Subject<boolean>();
+        tracksForIssue = [];
         loadStatus$ = vi.fn(() => NEVER);
         getIntegration$ = vi.fn(() => NEVER);
         await TestBed.configureTestingModule({
@@ -62,7 +68,14 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 },
                 { provide: GitIntegrationApi, useValue: { loadOne$: getIntegration$ } },
                 { provide: Router, useValue: { navigate: vi.fn() } },
-                { provide: NoticeService, useValue: { mrStatus$: mrStatus$.asObservable() } }
+                { provide: NoticeService, useValue: { mrStatus$: mrStatus$.asObservable() } },
+                {
+                    provide: TrackerService,
+                    useValue: {
+                        tracksChanged$: tracksChanged$.asObservable(),
+                        loadTracks$: () => of(tracksForIssue)
+                    }
+                }
             ]
         })
             .overrideComponent(IssueInfoComponent, { set: { template: '' } })
@@ -197,5 +210,17 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
         expect(component.mrStatus()).toBeNull();
         expect(loadStatus$).toHaveBeenCalledTimes(2);
         expect(getIntegration$).toHaveBeenCalledTimes(1);
+    });
+    it('re-sums the tracked total when a timer is submitted elsewhere', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const half: Partial<Track> = { tracked: 1800 };
+        const hour: Partial<Track> = { tracked: 3600 };
+        tracksForIssue = [half, hour] as Track[];
+        tracksChanged$.next(true);
+
+        expect(fixture.componentInstance.currentIssue()?.tracked).toBe(5400);
     });
 });

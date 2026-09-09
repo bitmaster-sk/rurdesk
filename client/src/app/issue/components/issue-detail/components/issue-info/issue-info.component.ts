@@ -30,11 +30,12 @@ interface IssueInfoForm {
     scheduledAt: FormControl<Date | null>;
 }
 
-import { filter, switchMap, takeUntil } from 'rxjs/operators';
+import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ElementRef, OnInit } from '@angular/core';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Project } from 'src/app/project/model/project.model';
+import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { IssueApi } from '../../../../api/issue.api.service';
 import { Issue } from '../../../../model/issue.model';
@@ -100,6 +101,7 @@ export class IssueInfoComponent implements OnInit {
     private readonly gitIntegrationApi = inject(GitIntegrationApi);
     private readonly destroyRef = inject(DestroyRef);
     private readonly notice = inject(NoticeService);
+    private readonly trackerService = inject(TrackerService);
 
     public readonly currentIssue = signal<Issue | null>(null);
     public readonly isNewIssue = computed(() => !this.currentIssue()?.idIssue);
@@ -229,6 +231,21 @@ export class IssueInfoComponent implements OnInit {
 
     public ngOnInit(): void {
         this.listenMrStatusChange();
+        this.listenTrackChange();
+    }
+
+    private listenTrackChange(): void {
+        this.trackerService.tracksChanged$
+            .pipe(
+                map(() => this.currentIssue()?.idIssue),
+                filter((idIssue): idIssue is number => !!idIssue),
+                switchMap(idIssue => this.trackerService.loadTracks$({ idIssue })),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe(tracks => {
+                const tracked = tracks.reduce((sum, track) => sum + (track.tracked ?? 0), 0);
+                this.currentIssue.update(issue => (issue ? { ...issue, tracked } : issue));
+            });
     }
 
     // Resets and reloads the PR panel, but only when the issue points at a

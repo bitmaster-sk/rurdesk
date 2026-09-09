@@ -125,20 +125,48 @@
             }
 
             .comment-actions {
+                display: flex;
+                max-width: 0;
+                margin-left: 0;
+                overflow: hidden;
                 opacity: 0;
-                transition: opacity 0.1s;
-
-                .edit-btn {
-                    padding: var(--ui-space-xs);
-                    height: 1.5rem;
-                    width: 1.5rem;
-                }
+                pointer-events: none;
+                transition:
+                    max-width 0.18s ease,
+                    margin-left 0.18s ease,
+                    opacity 0.18s ease;
             }
         }
     }
 
-    &:hover .comment-actions {
+    &:hover .comment-header .comment-header-right .comment-actions,
+    &:focus-within .comment-header .comment-header-right .comment-actions {
+        max-width: 1.75rem;
+        margin-left: var(--ui-space-s);
         opacity: 1;
+        pointer-events: auto;
+    }
+
+    .tool-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 0;
+        border-radius: var(--ui-radius-md);
+        background: transparent;
+        color: var(--ui-color-text-muted);
+        cursor: pointer;
+        transition:
+            background 0.14s ease,
+            color 0.14s ease;
+
+        &:hover {
+            background: var(--ui-blue-50);
+            color: var(--ui-blue-600);
+        }
     }
 
     .line-mode {

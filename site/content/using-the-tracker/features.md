@@ -270,6 +270,34 @@ the feed to the **🕐 Time** chip to see just the tracked time, per contributor
 
 ![Tracked time in the task activity feed, filtered to the Time chip](../../site/assets/img/tracker.png)
 
+### The running timer
+
+Start a timer from a task's detail, from the **Time** section of the quick
+actions popup, or from the command palette. Only one timer runs at a time — if
+one is already running on another task, you are asked whether to submit it and
+switch.
+
+While a timer runs it appears in the page header as a small control:
+
+- the **stopwatch and clock** open a panel with today's total, a chart of when
+  the work happened, and the confirm, pause and discard actions;
+- the **task number** is a link straight to the task being worked on;
+- the last segment **pauses and resumes** the timer.
+
+There is nothing in the header when no timer runs. A running timer keeps
+counting on its own: reload the page, close the tab, or sign in on another
+device and it is still running, with the time it should have. Have the app open
+in several tabs and they all show the same timer — start, pause or stop it in
+one and the others follow immediately.
+
+When you confirm a timer you can attach a **note** describing what you did.
+Entries in the activity feed can be edited or deleted afterwards by whoever
+logged them (project owners can correct anyone's), including the note.
+
+A single entry is capped at **24 hours**, so a timer left running overnight
+cannot distort a task's totals. The control turns amber and warns you once a
+timer has been running for more than eight hours.
+
 ## AI features
 
 > These run **inside the API** using the provider configured in

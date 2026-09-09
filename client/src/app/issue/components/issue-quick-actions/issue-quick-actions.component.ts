@@ -65,6 +65,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     public readonly showIssueType = input(true);
     public readonly showAssignee = input(true);
     public readonly showReschedule = input(true);
+    public readonly showTime = input(true);
 
     public readonly splitRequested = output<Issue>();
 

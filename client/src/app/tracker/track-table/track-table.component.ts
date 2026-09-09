@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { combineLatest, merge, Subject } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -11,14 +11,15 @@ import { UserApi } from 'src/app/user/api/user.api.service';
 @Component({
     selector: 'app-track-table',
     templateUrl: './track-table.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TrackTableComponent implements OnInit {
     private readonly trackerService = inject(TrackerService);
     private readonly userApi = inject(UserApi);
     private readonly authStore = inject(AuthStore);
 
-    public users = new Map<number, User>();
+    public users = signal<Map<number, User>>(new Map());
 
     public tracks$ = this.trackerService.tracks$;
 
@@ -41,7 +42,8 @@ export class TrackTableComponent implements OnInit {
                     idIssue: filter.idIssue,
                     idUser: user.idUser,
                     tracked: null,
-                    endAt: null
+                    endAt: null,
+                    note: null
                 };
                 return seed;
             })
@@ -58,7 +60,7 @@ export class TrackTableComponent implements OnInit {
                     return result;
                 })
             )
-            .subscribe(users => (this.users = users));
+            .subscribe(users => this.users.set(users));
     }
 
     public onEditTrack(track: Track): void {
@@ -67,7 +69,8 @@ export class TrackTableComponent implements OnInit {
             idUser: track.idUser,
             idIssue: track.idIssue,
             tracked: track.tracked,
-            endAt: track.endAt
+            endAt: track.endAt,
+            note: track.note
         });
     }
 

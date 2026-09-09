@@ -38,6 +38,17 @@ describe('UiCommandPaletteComponent', () => {
     it('renders every item', () =>
         expect(mount().nativeElement.querySelectorAll('[data-item]').length).toBe(2));
 
+    it('draws the icon of every command the tracker contributes', () => {
+        const icons = ['player-play', 'player-pause', 'check', 'trash'];
+        const f = mount([
+            {
+                heading: 'G',
+                items: icons.map(icon => ({ ...item(icon, icon), icon }))
+            }
+        ]);
+        expect(f.nativeElement.querySelectorAll('.palette__ico svg').length).toBe(icons.length);
+    });
+
     it('selects first by default and moves with ArrowDown', () => {
         const f = mount();
         press(f, 'ArrowDown');

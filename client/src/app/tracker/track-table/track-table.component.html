@@ -13,7 +13,7 @@
         @for (track of (tracks$ | async) ?? []; track track.idTrack) {
             <tr>
                 <td>
-                    @if (users.get(track.idUser!); as user) {
+                    @if (users().get(track.idUser!); as user) {
                         <span class="flex items-center">
                             <app-avatar
                                 [height]="1"

@@ -54,6 +54,7 @@ export class CommandPaletteService {
             scrollStrategy: this.overlay.scrollStrategies.block()
         });
         this.ref = this.overlayRef.attach(new ComponentPortal(UiCommandPaletteComponent));
+        this.overlayRef.updatePosition();
         this.open$.set(true);
 
         const inst = this.ref.instance;
@@ -95,6 +96,7 @@ export class CommandPaletteService {
                 .centerVertically()
         });
         const help = this.helpRef.attach(new ComponentPortal(UiCommandHelpComponent));
+        this.helpRef.updatePosition();
         this.helpOpen$.set(true);
         const closeHelp = (): void => {
             this.helpRef?.dispose();

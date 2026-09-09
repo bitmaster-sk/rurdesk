@@ -7,6 +7,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SeverityDropdownComponent } from './severity-dropdown/severity-dropdown.component';
 import { StateDropdownComponent } from './state-dropdown/state-dropdown.component';
 import { TrackerComponent } from './tracker/tracker.component';
+import { TrackerControlComponent } from './tracker/tracker-control/tracker-control.component';
+import { TrackerStartButtonComponent } from './tracker/tracker-start-button/tracker-start-button.component';
+import { TrackerSwitchDialogComponent } from './tracker/tracker-switch-dialog/tracker-switch-dialog.component';
 import { DurationPipe } from './duration/duration.pipe';
 import { RouterModule } from '@angular/router';
 import { SecDurationPipe } from './duration/sec-duration.pipe';
@@ -37,7 +40,14 @@ import {
     IconDeviceImac,
     IconRobot,
     IconAdjustmentsHorizontal,
-    IconInfoCircle
+    IconInfoCircle,
+    IconPlayerPlay,
+    IconPlayerPause,
+    IconArrowUpRight,
+    IconAlertTriangle,
+    IconTrash,
+    IconChevronDown,
+    IconArrowDown
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -54,6 +64,9 @@ import {
         SeverityDropdownComponent,
         StateDropdownComponent,
         TrackerComponent,
+        TrackerControlComponent,
+        TrackerStartButtonComponent,
+        TrackerSwitchDialogComponent,
         DurationPipe,
         SecDurationPipe,
         TeammateSelectorComponent,
@@ -83,7 +96,14 @@ import {
             IconDeviceImac,
             IconRobot,
             IconAdjustmentsHorizontal,
-            IconInfoCircle
+            IconInfoCircle,
+            IconPlayerPlay,
+            IconPlayerPause,
+            IconArrowUpRight,
+            IconAlertTriangle,
+            IconTrash,
+            IconChevronDown,
+            IconArrowDown
         })
     ],
     exports: [
@@ -101,6 +121,9 @@ import {
         SeverityDropdownComponent,
         StateDropdownComponent,
         TrackerComponent,
+        TrackerControlComponent,
+        TrackerStartButtonComponent,
+        TrackerSwitchDialogComponent,
         DurationPipe,
         SecDurationPipe,
         TeammateSelectorComponent,

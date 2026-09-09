@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -28,18 +29,48 @@ func (r *TrackerRepository) LoadTracker(ctx context.Context, idUser int64) (*mod
 			tra.id_user,
 			tra.id_issue,
 			tra.start_at,
+			tra.paused_at,
+			tra.paused_seconds,
 			iss.id_project,
-			iss.id_issue_public
+			iss.id_issue_public,
+			iss.title,
+			pro.name
 		FROM
 			issues.tracker tra
 			INNER JOIN issues.issue iss ON tra.id_issue = iss.id_issue
+			INNER JOIN projects.project pro ON pro.id_project = iss.id_project
 		WHERE
 			tra.id_user = $1
-	`, idUser).Scan(&tra.IdTracker, &tra.IdUser, &tra.IdIssue, &tra.StartAt, &tra.IdProject, &tra.IdIssuePublic)
+	`, idUser).Scan(&tra.IdTracker, &tra.IdUser, &tra.IdIssue, &tra.StartAt, &tra.PausedAt, &tra.PausedSeconds, &tra.IdProject, &tra.IdIssuePublic, &tra.IssueTitle, &tra.ProjectName)
 	if err != nil {
 		return nil, fmt.Errorf("querying tracker: %w", err)
 	}
 	return tra, nil
+}
+
+func (r *TrackerRepository) PauseTracker(ctx context.Context, idTracker int64, pausedAt time.Time) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE issues.tracker SET paused_at = $2 WHERE id_tracker = $1 AND paused_at IS NULL
+	`, idTracker, pausedAt)
+	if err != nil {
+		return fmt.Errorf("pausing tracker: %w", err)
+	}
+	return nil
+}
+
+func (r *TrackerRepository) ResumeTracker(ctx context.Context, idTracker int64, resumedAt time.Time) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE issues.tracker
+		SET paused_seconds = paused_seconds + GREATEST(0, EXTRACT(EPOCH FROM ($2 - paused_at))::bigint),
+		    paused_at = NULL
+		WHERE id_tracker = $1 AND paused_at IS NOT NULL
+	`, idTracker, resumedAt)
+	if err != nil {
+		return fmt.Errorf("resuming tracker: %w", err)
+	}
+	return nil
 }
 
 func (r *TrackerRepository) InsertTracker(ctx context.Context, tracker *model.Tracker) (*model.Tracker, error) {
@@ -74,7 +105,7 @@ func (r *TrackerRepository) LoadTracks(ctx context.Context, filter model.TracksF
 
 	sb.WriteString(`
 		SELECT t.id_track, t.id_user, t.id_issue, iss.id_issue_public, iss.id_project,
-		       iss.title AS issue_title, t.tracked, t.start_at, t.end_at
+		       iss.title AS issue_title, t.tracked, t.start_at, t.end_at, t.note
 		FROM issues.track t
 		INNER JOIN issues.issue iss ON iss.id_issue = t.id_issue
 		WHERE 1=1
@@ -122,7 +153,7 @@ func (r *TrackerRepository) LoadTrack(ctx context.Context, idTrack int64) (*mode
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT t.id_track, t.id_user, t.id_issue, iss.id_issue_public, iss.id_project,
-		       iss.title AS issue_title, t.tracked, t.start_at, t.end_at
+		       iss.title AS issue_title, t.tracked, t.start_at, t.end_at, t.note
 		FROM issues.track t
 		INNER JOIN issues.issue iss ON iss.id_issue = t.id_issue
 		WHERE t.id_track = $1
@@ -140,9 +171,9 @@ func (r *TrackerRepository) LoadTrack(ctx context.Context, idTrack int64) (*mode
 func (r *TrackerRepository) InsertTrack(ctx context.Context, track *model.Track) (*model.Track, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
-		INSERT INTO issues.track(id_user, id_issue, tracked, start_at, end_at)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id_track
-	`, track.IdUser, track.IdIssue, track.Tracked, track.StartAt, track.EndAt).Scan(&track.IdTrack)
+		INSERT INTO issues.track(id_user, id_issue, tracked, start_at, end_at, note)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id_track
+	`, track.IdUser, track.IdIssue, track.Tracked, track.StartAt, track.EndAt, track.Note).Scan(&track.IdTrack)
 	if err != nil {
 		return nil, fmt.Errorf("inserting track: %w", err)
 	}
@@ -152,8 +183,8 @@ func (r *TrackerRepository) InsertTrack(ctx context.Context, track *model.Track)
 func (r *TrackerRepository) UpdateTrack(ctx context.Context, track *model.Track) (*model.Track, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
-		UPDATE issues.track SET id_user=$1, id_issue=$2, tracked=$3, start_at=$4, end_at=$5 WHERE id_track=$6
-	`, track.IdUser, track.IdIssue, track.Tracked, track.StartAt, track.EndAt, track.IdTrack)
+		UPDATE issues.track SET id_user=$1, id_issue=$2, tracked=$3, start_at=$4, end_at=$5, note=$6 WHERE id_track=$7
+	`, track.IdUser, track.IdIssue, track.Tracked, track.StartAt, track.EndAt, track.Note, track.IdTrack)
 	if err != nil {
 		return nil, fmt.Errorf("updating track: %w", err)
 	}
