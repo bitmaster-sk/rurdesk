@@ -4,6 +4,7 @@ import { CoreModule } from '../core/core.module';
 import { CommandRegistryService } from '../core/command/command-registry.service';
 import { IssueActionCommandProvider } from './command/issue-action.command-provider';
 import { IssueSearchCommandProvider } from './command/issue-search.command-provider';
+import { TrackerCommandProvider } from './command/tracker.command-provider';
 import { IssueRoutingModule } from './issue-routing.module';
 import { IssueDetailPage } from './components/issue-detail/issue-detail.page';
 import { IssueInfoComponent } from './components/issue-detail/components/issue-info/issue-info.component';
@@ -242,9 +243,11 @@ export class IssueModule {
     public constructor(
         registry: CommandRegistryService,
         actions: IssueActionCommandProvider,
-        search: IssueSearchCommandProvider
+        search: IssueSearchCommandProvider,
+        tracker: TrackerCommandProvider
     ) {
         registry.register(actions);
         registry.register(search);
+        registry.register(tracker);
     }
 }

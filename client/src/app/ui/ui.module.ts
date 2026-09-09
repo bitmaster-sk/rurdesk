@@ -11,6 +11,7 @@ import {
     IconCalendar,
     IconChartBar,
     IconChartColumn,
+    IconCheck,
     IconChevronDown,
     IconChevronLeft,
     IconChevronRight,
@@ -27,11 +28,14 @@ import {
     IconList,
     IconLoader2,
     IconLogout,
+    IconPlayerPause,
+    IconPlayerPlay,
     IconPlus,
     IconSearch,
     IconSeparatorVertical,
     IconSettings,
     IconTable,
+    IconTrash,
     IconUser,
     IconX,
     TablerIconComponent,
@@ -187,7 +191,11 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
             IconChartColumn,
             IconLogout,
             IconHome,
-            IconKeyboard
+            IconKeyboard,
+            IconCheck,
+            IconTrash,
+            IconPlayerPlay,
+            IconPlayerPause
         })
     ]
 })
