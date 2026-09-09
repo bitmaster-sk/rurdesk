@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
-import { filter, first } from 'rxjs/operators';
+import { filter, first, switchMap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { MessageApi } from 'src/app/message/api/message.api.service';
@@ -221,6 +221,20 @@ export class IssueActivityFeedComponent implements AfterViewInit {
                 this.allItems.set(this.mergeItems(messages, tracks));
             });
 
+        this.listenTrackChange();
+        this.listenTaskChanges();
+    }
+
+    private listenTrackChange(): void {
+        this.trackerService.tracksChanged$
+            .pipe(
+                switchMap(() => this.trackerService.loadTracks$({ idIssue: this.idIssue() })),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe(tracks => this.replaceTimeItems(tracks));
+    }
+
+    private listenTaskChanges(): void {
         this.sNotice.Message.pipe(
             filter(
                 notice =>
@@ -365,14 +379,27 @@ export class IssueActivityFeedComponent implements AfterViewInit {
             data: msg
         }));
 
-        const timeItems: TimelineItem[] = tracks
+        return [...commentItems, ...this.toTimeItems(tracks)].sort(
+            (a, b) => a.date.getTime() - b.date.getTime()
+        );
+    }
+
+    private replaceTimeItems(tracks: Track[]): void {
+        this.liveItems.update(items => items.filter(item => item.type !== 'time'));
+        this.allItems.update(items =>
+            [...items.filter(item => item.type !== 'time'), ...this.toTimeItems(tracks)].sort(
+                (a, b) => a.date.getTime() - b.date.getTime()
+            )
+        );
+    }
+
+    private toTimeItems(tracks: Track[]): TimelineItem[] {
+        return tracks
             .filter((t): t is Track & { endAt: Date } => (t.tracked ?? 0) > 0 && !!t.endAt)
             .map(t => ({
                 type: 'time' as const,
                 date: new Date(t.endAt),
                 data: t
             }));
-
-        return [...commentItems, ...timeItems].sort((a, b) => a.date.getTime() - b.date.getTime());
     }
 }

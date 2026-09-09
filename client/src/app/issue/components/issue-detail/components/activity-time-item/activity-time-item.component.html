@@ -7,21 +7,96 @@
         <div class="time-header">
             <span class="label">Time logged</span>
             <span class="timestamp">{{ track().endAt | date: 'medium' }}</span>
+            <span class="tools">
+                @if (canEdit() && !isEditing()) {
+                    <button
+                        type="button"
+                        class="tool-btn"
+                        data-testid="track-edit"
+                        [attr.aria-label]="'TRACK.EDIT' | translate"
+                        (click)="onStartEdit()"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                    </button>
+                    <button
+                        type="button"
+                        class="tool-btn tool-btn--danger"
+                        data-testid="track-delete"
+                        uiConfirm
+                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                        [attr.aria-label]="'TRACK.DELETE' | translate"
+                        (confirmed)="onDelete()"
+                    >
+                        <tabler-icon icon="trash" [size]="14" />
+                    </button>
+                }
+            </span>
         </div>
-        <div class="time-body">
-            @if (user(); as u) {
-                <app-avatar
-                    [name]="u.name"
-                    [bgColor]="u.colorAvatarBg"
-                    [height]="1.25"
-                    [width]="1.25"
-                    [radius]="0.625"
-                ></app-avatar>
-                <span class="username">{{ u.name }}</span>
-            } @else {
-                <span class="username">Unknown</span>
+
+        @if (isEditing()) {
+            <form class="time-edit" [formGroup]="form" (ngSubmit)="onSaveEdit()">
+                <input
+                    type="text"
+                    uiInput
+                    formControlName="tracked"
+                    data-testid="track-edit-duration"
+                    [attr.aria-label]="'TRACK.TIME' | translate"
+                />
+                <input
+                    type="text"
+                    uiInput
+                    class="w-full"
+                    formControlName="note"
+                    data-testid="track-edit-note"
+                    [attr.placeholder]="'TRACK.NOTE_PLACEHOLDER' | translate"
+                />
+                <ui-button
+                    type="submit"
+                    size="small"
+                    data-testid="track-edit-save"
+                    [disabled]="form.invalid"
+                >
+                    {{ 'SAVE' | translate }}
+                </ui-button>
+                <ui-button
+                    type="button"
+                    size="small"
+                    severity="secondary"
+                    variant="text"
+                    (click)="onCancelEdit()"
+                >
+                    {{ 'CANCEL' | translate }}
+                </ui-button>
+            </form>
+        } @else {
+            <div class="time-body">
+                @if (user(); as u) {
+                    <app-avatar
+                        [name]="u.name"
+                        [bgColor]="u.colorAvatarBg"
+                        [height]="1.25"
+                        [width]="1.25"
+                        [radius]="0.625"
+                    ></app-avatar>
+                    <span class="username">{{ u.name }}</span>
+                } @else {
+                    <span class="username">Unknown</span>
+                }
+                @if (track().startAt && track().endAt) {
+                    <span class="range">
+                        {{ track().startAt | date: 'shortTime' }} →
+                        {{ track().endAt | date: 'shortTime' }}
+                    </span>
+                }
+                <span class="duration-badge">{{ formatDuration(track().tracked ?? 0) }}</span>
+            </div>
+            @if (track().note) {
+                <p class="note">{{ track().note }}</p>
+            } @else if (canEdit()) {
+                <button type="button" class="note-prompt" (click)="onStartEdit()">
+                    {{ 'TRACK.NO_NOTE' | translate }}
+                </button>
             }
-            <span class="duration-badge">{{ formatDuration(track().tracked ?? 0) }}</span>
-        </div>
+        }
     </div>
 </div>

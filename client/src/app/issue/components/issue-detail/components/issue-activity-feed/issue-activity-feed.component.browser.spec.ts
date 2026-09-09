@@ -8,9 +8,10 @@ import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { AuthStore } from 'src/app/auth/store/auth.store';
-import { NEVER } from 'rxjs';
+import { NEVER, Subject, of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import { AgentThinkingApi } from 'src/app/agent/api/agent-thinking.api.service';
+import { Track } from 'src/app/shared/tracker/model/track.model';
 
 @Pipe({ name: 'translate', standalone: false })
 class StubTranslatePipe implements PipeTransform {
@@ -68,7 +69,8 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     };
 
     const stubTracker = {
-        loadTracks$: () => NEVER
+        loadTracks$: () => NEVER,
+        tracksChanged$: NEVER
     };
 
     const stubNotice = {
@@ -276,5 +278,81 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         const candidates = comp.mentionCandidates();
 
         expect(candidates).toHaveLength(0);
+    });
+});
+
+describe('IssueActivityFeedComponent track refresh (browser)', () => {
+    const makeTrack = (note: string | null): Track => ({
+        idTrack: 7,
+        idUser: 1,
+        idIssue: 1,
+        idIssuePublic: 31,
+        idProject: 10,
+        issueTitle: 'Task',
+        tracked: 600,
+        startAt: new Date('2026-09-08T10:00:00Z'),
+        endAt: new Date('2026-09-08T10:10:00Z'),
+        note
+    });
+
+    it('shows an edited track note without a reload', async () => {
+        const tracksChange$ = new Subject<boolean>();
+        const tracks = [makeTrack(null)];
+
+        await TestBed.configureTestingModule({
+            declarations: [IssueActivityFeedComponent, StubTranslatePipe, StubDatePipe],
+            imports: [
+                TranslateModule.forRoot(),
+                MessageEditorStub,
+                TablerIconStub,
+                ActivityCommentItemStub,
+                ActivityTimeItemStub,
+                AgentThinkingRowStub
+            ],
+            providers: [
+                { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                { provide: MessageApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: TrackerService,
+                    useValue: {
+                        loadTracks$: () => of(tracks),
+                        tracksChanged$: tracksChange$.asObservable()
+                    }
+                },
+                { provide: NoticeService, useValue: { Message: NEVER, agentThinking$: NEVER } },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { load: () => {}, usersMap$: of(new Map<number, User>()) }
+                },
+                {
+                    provide: AuthStore,
+                    useValue: {
+                        user: signal(makeUser(1, 'Me')),
+                        getUser: () => makeUser(1, 'Me')
+                    }
+                }
+            ]
+        }).compileComponents();
+
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+
+        const timeItem = () =>
+            fixture.componentInstance
+                .displayItems()
+                .filter(item => item.type === 'time')
+                .map(item => item.data);
+
+        expect(timeItem()).toHaveLength(1);
+        expect(timeItem()[0].note).toBeNull();
+
+        tracks[0] = makeTrack('reviewed the migration');
+        tracksChange$.next(true);
+        fixture.detectChanges();
+
+        expect(timeItem()).toHaveLength(1);
+        expect(timeItem()[0].note).toBe('reviewed the migration');
     });
 });
