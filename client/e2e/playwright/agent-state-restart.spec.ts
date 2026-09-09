@@ -4,6 +4,7 @@ import { tokenOf } from './support/sprint';
 import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 import { WorkflowEventMap } from './support/workflow-event-map';
+import { Attempt } from './support/attempt';
 
 const RUN_TIMEOUT_MS = 90_000;
 
@@ -24,7 +25,8 @@ test.describe('workflow event state on restart', () => {
         request,
         baseURL
     }) => {
-        const user = await createUser(request, baseURL!, 'restart');
+        const label = Attempt.label('restart');
+        const user = await createUser(request, baseURL!, label);
         await Interaction.login(page, user);
         const idProject = await Interaction.createBlankProject(page, 'Restart Flow');
 
@@ -77,13 +79,7 @@ test.describe('workflow event state on restart', () => {
             severity: 'Medium'
         });
 
-        const agent = await createStubGatewayAgent(
-            request,
-            baseURL!,
-            adminToken,
-            idProject,
-            'restart'
-        );
+        const agent = await createStubGatewayAgent(request, baseURL!, adminToken, idProject, label);
         const idRun = await assignAgent(
             request,
             baseURL!,

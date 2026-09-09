@@ -5,6 +5,7 @@ import { assignAgent, createStubGatewayAgent, GatewayScript } from './support/ag
 import { Interaction } from './support/interaction';
 import { WorkflowEventMap } from './support/workflow-event-map';
 import { IssueNoticeLog } from './support/issue-notices';
+import { Attempt } from './support/attempt';
 
 // The stub gateway streams three thinking batches per stage ~700ms apart.
 const RUN_TIMEOUT_MS = 90_000;
@@ -24,7 +25,7 @@ async function setUpTransition(
     page: Page,
     request: APIRequestContext,
     baseURL: string,
-    label: string,
+    rawLabel: string,
     event: string,
     script?: GatewayScript,
     withGitIntegration = false
@@ -32,6 +33,7 @@ async function setUpTransition(
     // Attach before the first navigation, so no notice is missed.
     const notices = IssueNoticeLog.attach(page);
 
+    const label = Attempt.label(rawLabel);
     const user = await createUser(request, baseURL, label);
     await Interaction.login(page, user);
 

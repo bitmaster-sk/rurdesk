@@ -1,5 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { BOOTSTRAP_USER } from './bootstrap-user';
+import { Attempt } from './attempt';
 
 export interface TestUser {
     name: string;
@@ -17,9 +18,10 @@ export async function createUser(
     });
     const { token } = (await login.json()) as { token: string };
 
+    const attemptLabel = Attempt.label(label);
     const user: TestUser = {
-        name: `E2E ${label}`,
-        email: `e2e-${label}@example.com`,
+        name: `E2E ${attemptLabel}`,
+        email: `e2e-${attemptLabel}@example.com`,
         password: 'Passw0rd!23'
     };
 

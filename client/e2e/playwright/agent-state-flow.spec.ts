@@ -4,6 +4,7 @@ import { tokenOf } from './support/sprint';
 import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 import { EventMapping, WorkflowEventMap } from './support/workflow-event-map';
+import { Attempt } from './support/attempt';
 
 const RUN_TIMEOUT_MS = 90_000;
 
@@ -44,9 +45,10 @@ class Flow {
         page: Page,
         request: APIRequestContext,
         baseURL: string,
-        label: string,
+        rawLabel: string,
         buildMappings: (stateOf: (event: string) => Promise<number>) => Promise<EventMapping[]>
     ): Promise<{ flow: Flow; states: Map<string, number> }> {
+        const label = Attempt.label(rawLabel);
         const user = await createUser(request, baseURL, label);
         await Interaction.login(page, user);
         const idProject = await Interaction.createBlankProject(page, `Flow ${label}`);
