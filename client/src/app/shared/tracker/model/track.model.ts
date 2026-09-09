@@ -8,6 +8,7 @@ export interface Track {
     tracked: number | null;
     startAt: Date | null;
     endAt: Date | null;
+    note: string | null;
 }
 
 export interface CreateTrackReq {
@@ -15,6 +16,7 @@ export interface CreateTrackReq {
     tracked?: number | null;
     startAt?: Date | null;
     endAt?: Date | null;
+    note?: string | null;
 }
 
 export interface TrackUpdate extends CreateTrackReq {
@@ -27,4 +29,5 @@ export interface TrackForm {
     idIssue: number;
     tracked: number | null;
     endAt: Date | null;
+    note: string | null;
 }

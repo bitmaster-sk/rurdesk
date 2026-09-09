@@ -12,10 +12,12 @@ import { Tracker } from '../model/tracker.model';
 export class TrackerApi {
     private readonly http = inject(HttpClient);
 
-    public load$(): Observable<Tracker> {
+    public load$(): Observable<Tracker | null> {
         return this.http
             .get<Tracker>('/api/private/tracker')
-            .pipe(map(tracker => TrackerConverter.toTracker(tracker)));
+            .pipe(
+                map(tracker => (tracker?.idTracker ? TrackerConverter.toTracker(tracker) : null))
+            );
     }
 
     public insert$(idProject: number, idIssuePublic: number): Observable<Tracker> {
@@ -24,10 +26,22 @@ export class TrackerApi {
             .pipe(map(tracker => TrackerConverter.toTracker(tracker)));
     }
 
-    public submit$(idTracker: number): Observable<Track> {
+    public submit$(idTracker: number, note?: string | null): Observable<Track> {
         return this.http
-            .patch<Track>(`/api/private/tracker/${idTracker}/submit`, {})
+            .patch<Track>(`/api/private/tracker/${idTracker}/submit`, { note: note ?? null })
             .pipe(map(savedTrack => TrackerConverter.toTrack(savedTrack)));
+    }
+
+    public pause$(idTracker: number): Observable<Tracker> {
+        return this.http
+            .patch<Tracker>(`/api/private/tracker/${idTracker}/pause`, {})
+            .pipe(map(tracker => TrackerConverter.toTracker(tracker)));
+    }
+
+    public resume$(idTracker: number): Observable<Tracker> {
+        return this.http
+            .patch<Tracker>(`/api/private/tracker/${idTracker}/resume`, {})
+            .pipe(map(tracker => TrackerConverter.toTracker(tracker)));
     }
 
     public delete$(idTracker: number): Observable<void> {
