@@ -29,6 +29,12 @@ func GetDb(ctx context.Context, pool *pgxpool.Pool) PersistentStorage {
 	return pool
 }
 
+// HasTx reports whether ctx already carries a transaction.
+func HasTx(ctx context.Context) bool {
+	_, ok := ctx.Value(txKey{}).(pgx.Tx)
+	return ok
+}
+
 type afterCommitKey struct{}
 
 type afterCommitHooks struct {

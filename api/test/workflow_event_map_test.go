@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
@@ -500,6 +501,65 @@ func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnReconcileToPh
 	idState := s.loadIssueState(iss.IdIssue)
 	s.Require().NotNil(idState, "reconciling a crash-orphaned run must apply the mapping too")
 	s.Equal(reconciledStateID, *idState)
+}
+
+func (s *WorkflowEventMapSuite) loadRunPhase(idRun int64) string {
+	var phase string
+	err := s.App.Pool.QueryRow(context.Background(),
+		`SELECT phase FROM agent.run WHERE id_run = $1`, idRun).Scan(&phase)
+	s.Require().NoError(err)
+	return phase
+}
+
+func (s *WorkflowEventMapSuite) waitForIssueLockWaiter() {
+	s.Require().Eventually(func() bool {
+		var waiting int
+		err := s.App.Pool.QueryRow(context.Background(), `
+			SELECT count(*) FROM pg_stat_activity
+			WHERE wait_event_type = 'Lock' AND query LIKE 'UPDATE issues.issue%'
+		`).Scan(&waiting)
+		return err == nil && waiting > 0
+	}, 10*time.Second, 50*time.Millisecond, "the state write never reached the locked issue row")
+}
+
+func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_PhaseIsNotVisibleBeforeTheState() {
+	s.mapEventTo("done", s.IdStateDone)
+	defer s.clearEventMap()
+
+	iss := s.createIssue("atomic phase and state issue")
+
+	ctx := context.Background()
+	var idRun int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'pr_open', '{"stages":[]}')
+		RETURNING id_run
+	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
+	s.Require().NoError(err)
+	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	blocker, err := s.App.Pool.Begin(ctx)
+	s.Require().NoError(err)
+	_, err = blocker.Exec(ctx, `SELECT id_issue FROM issues.issue WHERE id_issue = $1 FOR UPDATE`, iss.IdIssue)
+	s.Require().NoError(err)
+
+	transitioned := make(chan error, 1)
+	go func() {
+		_, txErr := injector.GetAgentRunRepository().
+			TransitionPhase(ctx, idRun, "pr_open", "done", "system", nil, "PR merged")
+		transitioned <- txErr
+	}()
+
+	s.waitForIssueLockWaiter()
+	s.Equal("pr_open", s.loadRunPhase(idRun), "the phase must stay hidden while the mapped state is still unwritten")
+
+	s.Require().NoError(blocker.Rollback(ctx))
+	s.Require().NoError(<-transitioned)
+
+	s.Equal("done", s.loadRunPhase(idRun))
+	idState := s.loadIssueState(iss.IdIssue)
+	s.Require().NotNil(idState)
+	s.Equal(s.IdStateDone, *idState)
 }
 
 func TestWorkflowEventMapSuite(t *testing.T) {

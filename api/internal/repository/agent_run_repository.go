@@ -49,6 +49,36 @@ func (r *AgentRunRepository) transitionState(ctx context.Context, run *model.Age
 	r.phaseTransitioner.Transition(ctx, run.IdProject, run.IdIssue, event)
 }
 
+// phaseWrite keeps a phase write and the issue state it maps to in one transaction, so a
+// concurrent reader can never see the new phase while the issue still holds the old state.
+// An ambient transaction is joined rather than nested, and ErrPhaseMismatch commits the
+// no-op instead of rolling back a transaction that wrote nothing.
+func (r *AgentRunRepository) phaseWrite(
+	ctx context.Context,
+	write func(context.Context) (*model.AgentRun, error),
+) (*model.AgentRun, error) {
+	if extctx.HasTx(ctx) {
+		return write(ctx)
+	}
+
+	var run *model.AgentRun
+	var writeErr error
+	txErr := extctx.RunInTx(ctx, r.pool, func(txCtx context.Context) error {
+		run, writeErr = write(txCtx)
+		if writeErr != nil && !errors.Is(writeErr, ErrPhaseMismatch) {
+			return writeErr
+		}
+		return nil
+	})
+	if writeErr != nil {
+		return nil, writeErr
+	}
+	if txErr != nil {
+		return nil, txErr
+	}
+	return run, nil
+}
+
 const agentRunColumns = `
 	id_run, id_issue, id_user_agent, id_project, id_git_integration,
 	phase, stage_plan, queue_position,
@@ -72,6 +102,12 @@ func scanAgentRun(row pgx.Row) (*model.AgentRun, error) {
 }
 
 func (r *AgentRunRepository) Insert(ctx context.Context, idIssue, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+	return r.phaseWrite(ctx, func(ctx context.Context) (*model.AgentRun, error) {
+		return r.insert(ctx, idIssue, idUserAgent, idProject, stagePlan)
+	})
+}
+
+func (r *AgentRunRepository) insert(ctx context.Context, idIssue, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
 	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
 		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, $4, $5)
@@ -343,6 +379,18 @@ func (r *AgentRunRepository) TransitionPhase(
 	idUser *int64,
 	reason string,
 ) (*model.AgentRun, error) {
+	return r.phaseWrite(ctx, func(ctx context.Context) (*model.AgentRun, error) {
+		return r.transitionPhase(ctx, idRun, fromPhase, toPhase, actorType, idUser, reason)
+	})
+}
+
+func (r *AgentRunRepository) transitionPhase(
+	ctx context.Context,
+	idRun int64,
+	fromPhase, toPhase, actorType string,
+	idUser *int64,
+	reason string,
+) (*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 
 	var finishedAt *time.Time
@@ -418,6 +466,12 @@ func (r *AgentRunRepository) SetPrInfo(ctx context.Context, idRun int64, dto mod
 // ErrPhaseMismatch if the run is no longer at fromPhase (e.g. a concurrent Restart),
 // which the caller treats as a no-op.
 func (r *AgentRunRepository) SetPrInfoFrom(ctx context.Context, idRun int64, dto model.SetRunPrReq, fromPhase string) (*model.AgentRun, error) {
+	return r.phaseWrite(ctx, func(ctx context.Context) (*model.AgentRun, error) {
+		return r.setPrInfoFrom(ctx, idRun, dto, fromPhase)
+	})
+}
+
+func (r *AgentRunRepository) setPrInfoFrom(ctx context.Context, idRun int64, dto model.SetRunPrReq, fromPhase string) (*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, fmt.Sprintf(`
 		UPDATE agent.run
@@ -461,6 +515,12 @@ func (r *AgentRunRepository) SetPrInfoFrom(ctx context.Context, idRun int64, dto
 // ErrPhaseMismatch on a concurrent move (e.g. Restart) — a no-op for the caller. toPhase
 // must be non-terminal (caller guarantees this via decideNextRunPhase).
 func (r *AgentRunRepository) ReconcileToPhase(ctx context.Context, idRun int64, fromPhase, toPhase, actorType, reason string) (*model.AgentRun, error) {
+	return r.phaseWrite(ctx, func(ctx context.Context) (*model.AgentRun, error) {
+		return r.reconcileToPhase(ctx, idRun, fromPhase, toPhase, actorType, reason)
+	})
+}
+
+func (r *AgentRunRepository) reconcileToPhase(ctx context.Context, idRun int64, fromPhase, toPhase, actorType, reason string) (*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, fmt.Sprintf(`
 		UPDATE agent.run
