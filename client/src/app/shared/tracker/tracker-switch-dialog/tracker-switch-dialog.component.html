@@ -1,0 +1,57 @@
+<ui-dialog
+    [(visible)]="visible"
+    [header]="'TRACK.SWITCH_TITLE' | translate"
+    panelClass="tracker-switch"
+    width="26rem"
+>
+    <div class="tsd" data-testid="tracker-switch-dialog">
+        <div class="tsd-card tsd-card--running">
+            <div class="tsd-role">
+                <span class="tsd-dot"></span>
+                {{ 'TRACK.SWITCH_RUNNING' | translate }}
+            </div>
+            <div class="tsd-meta">
+                <span class="tsd-ref">#{{ tracker().idIssuePublic }}</span>
+                <span class="tsd-sep">·</span>
+                <span class="tsd-project">{{ tracker().projectName }}</span>
+            </div>
+            <div class="tsd-title">{{ tracker().issueTitle }}</div>
+            <div class="tsd-elapsed" data-testid="tracker-switch-elapsed">{{ elapsedLabel() }}</div>
+        </div>
+
+        <div class="tsd-arrow"><tabler-icon icon="arrow-down" [size]="16" /></div>
+
+        <div class="tsd-card">
+            <div class="tsd-role">{{ 'TRACK.SWITCH_NEXT' | translate }}</div>
+            <div class="tsd-meta">
+                <span class="tsd-ref">#{{ idIssuePublic() }}</span>
+                @if (projectName()) {
+                    <span class="tsd-sep">·</span>
+                    <span class="tsd-project">{{ projectName() }}</span>
+                }
+            </div>
+            @if (issueTitle()) {
+                <div class="tsd-title">{{ issueTitle() }}</div>
+            }
+        </div>
+
+        <p class="tsd-explain">
+            {{ 'TRACK.SWITCH_EXPLAIN' | translate: { issue: tracker().idIssuePublic } }}
+        </p>
+    </div>
+
+    <ng-template #footer>
+        <ui-button
+            severity="secondary"
+            variant="text"
+            [label]="'CANCEL' | translate"
+            data-testid="tracker-switch-cancel"
+            (click)="onCancel()"
+        ></ui-button>
+        <ui-button
+            [label]="'TRACK.SWITCH_CONFIRM' | translate"
+            data-testid="tracker-switch-confirm"
+            (click)="onConfirm()"
+        ></ui-button>
+    </ng-template>
+</ui-dialog>

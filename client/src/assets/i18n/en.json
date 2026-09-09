@@ -570,7 +570,8 @@
             "OPEN_IN_NEW_TAB": "Open in new tab",
             "COPY_ID": "Copy ID",
             "DELETE": "Delete",
-            "AI": "AI"
+            "AI": "AI",
+            "TIME": "Time"
         },
         "ADD": "Add task",
         "MOVE_FAILED": "Failed to move the card. The board has been refreshed.",
@@ -744,13 +745,33 @@
         "RECORDS": "Track records",
         "CONFIRM.DELETE": "Do you really want to delete this track record?",
         "TIME": "Tracked time",
-        "RANGE_LABEL": "{{ from }} \u2013 {{ to }}",
+        "RANGE_LABEL": "{{ from }} – {{ to }}",
         "SUBMIT": "Submit tracked time",
         "STOP": "Stop tracking",
         "START": "Start tracking",
         "SAVE": "Save tracked time",
         "EDIT": "Edit track record",
-        "DELETE": "Delete track record"
+        "DELETE": "Delete track record",
+        "PAUSE": "Pause",
+        "RESUME": "Resume",
+        "PAUSED": "Paused",
+        "RUNNING": "Running",
+        "DETAILS": "Show timer details",
+        "DISCARD": "Discard",
+        "NOTE": "Note",
+        "NOTE_PLACEHOLDER": "What did you work on?",
+        "NO_NOTE": "Add a note",
+        "TODAY_TOTAL": "Today",
+        "RUNAWAY_WARNING": "This timer has been running for a long time. Entries are capped at 24 hours.",
+        "SWITCH_TITLE": "Another timer is running",
+        "SWITCH_MESSAGE": "Submit the time on {{ issue }} and start tracking this issue?",
+        "SWITCH_RUNNING": "Running now",
+        "SWITCH_NEXT": "Start next",
+        "SWITCH_EXPLAIN": "The time tracked so far is submitted to #{{ issue }}, then the new timer starts.",
+        "SWITCH_CONFIRM": "Submit and switch",
+        "START_HERE": "Start tracking this issue",
+        "TODAY_ISSUES": "{{ count }} tasks",
+        "SUBMIT_SHORT": "Submit"
     },
     "TIME": {
         "START": "Start time",
@@ -981,7 +1002,8 @@
             "COMMENT_ON_LINES": "Comment on this line",
             "REPLYING_TO": "Replying to lines {{start}}–{{end}} of {{author}}'s message"
         },
-        "EDITED": "edited {{time}}"
+        "EDITED": "edited {{time}}",
+        "EDIT": "Edit comment"
     },
     "COMMAND": {
         "PALETTE_LABEL": "Command palette",

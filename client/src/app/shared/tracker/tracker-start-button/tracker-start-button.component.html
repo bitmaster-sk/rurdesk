@@ -1,0 +1,62 @@
+@if (isTrackingThis()) {
+    <div class="tsb-group">
+        <button
+            type="button"
+            class="tsb-btn"
+            data-testid="tracker-start-button-toggle"
+            [attr.aria-label]="(isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate"
+            (click)="onTogglePause()"
+        >
+            <tabler-icon [icon]="isPaused() ? 'player-play' : 'player-pause'" [size]="14" />
+            @if (!isIconOnly()) {
+                <span>{{ (isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate }}</span>
+            }
+        </button>
+        <button
+            type="button"
+            class="tsb-btn"
+            data-testid="tracker-start-button-submit"
+            [attr.aria-label]="'TRACK.SUBMIT' | translate"
+            (click)="onSubmit()"
+        >
+            <tabler-icon icon="check" [size]="14" />
+            @if (!isIconOnly()) {
+                <span>{{ 'TRACK.SUBMIT' | translate }}</span>
+            }
+        </button>
+    </div>
+} @else if (runningTracker(); as running) {
+    <button
+        type="button"
+        class="tsb-btn"
+        data-testid="tracker-start-button-switch"
+        [attr.aria-label]="'TRACK.START_HERE' | translate"
+        (click)="isSwitchOpen.set(true)"
+    >
+        <tabler-icon icon="player-play" [size]="14" />
+        @if (!isIconOnly()) {
+            <span>{{ 'TRACK.START_HERE' | translate }}</span>
+        }
+    </button>
+    <app-tracker-switch-dialog
+        [(visible)]="isSwitchOpen"
+        [tracker]="running"
+        [idIssuePublic]="idIssuePublic()"
+        [issueTitle]="issueTitle()"
+        [projectName]="projectName()"
+        (confirmed)="onSwitch()"
+    ></app-tracker-switch-dialog>
+} @else {
+    <button
+        type="button"
+        class="tsb-btn"
+        data-testid="tracker-start-button-start"
+        [attr.aria-label]="'TRACK.START_HERE' | translate"
+        (click)="onStart()"
+    >
+        <tabler-icon icon="player-play" [size]="14" />
+        @if (!isIconOnly()) {
+            <span>{{ 'TRACK.START_HERE' | translate }}</span>
+        }
+    </button>
+}

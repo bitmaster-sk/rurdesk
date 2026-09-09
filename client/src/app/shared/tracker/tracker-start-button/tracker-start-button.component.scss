@@ -1,0 +1,32 @@
+:host {
+    display: block;
+}
+
+.tsb-group {
+    display: flex;
+    gap: var(--ui-space-s);
+}
+
+.tsb-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-surface);
+    color: var(--ui-color-text);
+    font: inherit;
+    font-size: var(--font-size-s);
+    cursor: pointer;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease,
+        color 0.14s ease;
+}
+
+.tsb-btn:hover {
+    border-color: var(--ui-color-primary);
+    background: var(--ui-color-primary-weak);
+    color: var(--ui-color-primary);
+}

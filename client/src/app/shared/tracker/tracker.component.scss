@@ -9,3 +9,11 @@
     text-align: left;
     font-weight: bold;
 }
+
+.tracker-display {
+    flex: 1 1 auto;
+    min-width: 7rem;
+    font-family: var(--ui-font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+}

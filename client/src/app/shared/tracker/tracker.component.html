@@ -56,17 +56,29 @@
         </div>
         <div class="ui-input-group-addon">
             <ui-button
-                [disabled]="!!isTracking()"
                 type="button"
                 size="small"
                 severity="secondary"
                 variant="text"
                 [isIconOnly]="true"
-                [ariaLabel]="'TRACK.START' | translate"
-                (click)="onStartTracker()"
+                [uiTooltip]="'TRACK.START_HERE' | translate"
+                uiTooltipPosition="top"
+                [ariaLabel]="'TRACK.START_HERE' | translate"
+                (click)="onStartRequest()"
             >
                 <tabler-icon icon="clock" [size]="14" />
             </ui-button>
         </div>
     </div>
+
+    @if (runningTracker(); as running) {
+        <app-tracker-switch-dialog
+            [(visible)]="isSwitchOpen"
+            [tracker]="running"
+            [idIssuePublic]="issue()!.idIssuePublic"
+            [issueTitle]="issue()!.title"
+            [projectName]="project()?.name"
+            (confirmed)="onSwitchTracker()"
+        ></app-tracker-switch-dialog>
+    }
 }

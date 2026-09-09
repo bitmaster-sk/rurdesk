@@ -1,0 +1,127 @@
+@if (tracker(); as tracker) {
+    <div
+        #anchor
+        class="tracker-ctl"
+        [class.is-paused]="isPaused()"
+        [class.is-stale]="isRunaway()"
+        data-testid="tracker-control"
+    >
+        <button
+            type="button"
+            class="ctl-clock"
+            data-testid="tracker-control-clock"
+            [attr.aria-label]="'TRACK.DETAILS' | translate"
+            (click)="popover.toggle($event); onPopoverOpened()"
+        >
+            <span class="tt-dot"></span>
+            <span class="ctl-digits">{{ elapsedLabel() }}</span>
+        </button>
+        <a
+            class="ctl-ref"
+            data-testid="tracker-control-issue-link"
+            [routerLink]="issueLink(tracker)"
+            [uiTooltip]="tracker.issueTitle"
+            uiTooltipPosition="bottom"
+        >
+            #{{ tracker.idIssuePublic }}
+            <tabler-icon class="ctl-arrow" icon="arrow-up-right" [size]="12" />
+        </a>
+        <button
+            type="button"
+            class="ctl-quick"
+            data-testid="tracker-control-pause"
+            [attr.aria-label]="(isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate"
+            (click)="onTogglePause()"
+        >
+            <tabler-icon [icon]="isPaused() ? 'player-play' : 'player-pause'" [size]="14" />
+        </button>
+    </div>
+
+    <ui-popover #popover panelClass="tracker-popover">
+        <div class="tracker-panel">
+            <div class="tp-head">
+                <div class="tp-meta">
+                    <span class="tp-ref">#{{ tracker.idIssuePublic }}</span>
+                    <span class="tp-sep">·</span>
+                    <span class="tp-project">{{ tracker.projectName }}</span>
+                </div>
+                <a class="tp-title" [routerLink]="issueLink(tracker)" (click)="popover.hide()">
+                    {{ tracker.issueTitle }}
+                </a>
+            </div>
+
+            <div class="tp-body">
+                <div class="tp-clock">
+                    <span class="tp-elapsed" [class.is-paused]="isPaused()">
+                        {{ elapsedLabel() }}
+                    </span>
+                    <span class="tp-summary">
+                        {{ 'TRACK.TODAY_TOTAL' | translate }}
+                        <span class="tp-sep">·</span>
+                        {{ 'TRACK.TODAY_ISSUES' | translate: { count: todayIssueCount() } }}
+                    </span>
+                </div>
+                <div class="tp-day">
+                    <div class="tp-spark">
+                        @for (bar of sparkBars(); track $index) {
+                            <span class="tp-slot">
+                                <span
+                                    class="tp-bar"
+                                    [class.is-now]="bar.isNow"
+                                    [style.height.%]="bar.height"
+                                ></span>
+                            </span>
+                        }
+                    </div>
+                    <span class="tp-today-value">{{ todayTotalLabel() }}</span>
+                </div>
+            </div>
+
+            <div class="tp-note">
+                <input
+                    type="text"
+                    uiInput
+                    class="w-full"
+                    data-testid="tracker-note-input"
+                    [formControl]="noteControl"
+                    [attr.placeholder]="'TRACK.NOTE' | translate"
+                />
+            </div>
+
+            <div class="tp-actions">
+                <button
+                    type="button"
+                    class="tp-action"
+                    data-testid="tracker-toggle-pause"
+                    (click)="onTogglePause()"
+                >
+                    <tabler-icon [icon]="isPaused() ? 'player-play' : 'player-pause'" [size]="16" />
+                    <span>{{ (isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="tp-action tp-action--danger"
+                    data-testid="tracker-discard"
+                    (click)="onDiscard(); popover.hide()"
+                >
+                    <tabler-icon icon="x" [size]="16" />
+                    <span>{{ 'TRACK.DISCARD' | translate }}</span>
+                </button>
+                <button
+                    type="button"
+                    class="tp-submit"
+                    data-testid="tracker-confirm"
+                    (click)="onConfirm(); popover.hide()"
+                >
+                    {{ 'TRACK.SUBMIT_SHORT' | translate }}
+                </button>
+            </div>
+            @if (isRunaway()) {
+                <div class="tp-warning" data-testid="tracker-runaway-warning">
+                    <tabler-icon icon="alert-triangle" [size]="14" />
+                    <span>{{ 'TRACK.RUNAWAY_WARNING' | translate }}</span>
+                </div>
+            }
+        </div>
+    </ui-popover>
+}
