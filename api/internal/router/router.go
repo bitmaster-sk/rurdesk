@@ -228,6 +228,8 @@ func New(
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)
 	pri.PATCH("/tracker/:idTracker/submit", trackerCtrl.SubmitTracker)
+	pri.PATCH("/tracker/:idTracker/pause", trackerCtrl.PauseTracker)
+	pri.PATCH("/tracker/:idTracker/resume", trackerCtrl.ResumeTracker)
 	pri.DELETE("/tracker/:idTracker", trackerCtrl.DeleteTracker)
 
 	pri.GET("/track", trackerCtrl.GetTracks)
