@@ -17,7 +17,8 @@ import {
     changeDetection: ChangeDetectionStrategy.OnPush,
     encapsulation: ViewEncapsulation.None,
     host: {
-        '[class.ui-button--fluid]': 'fluid()'
+        '[class.ui-button--fluid]': 'fluid()',
+        '[class.ui-button--host-disabled]': 'disabled() || loading()'
     }
 })
 export class UiButtonComponent {

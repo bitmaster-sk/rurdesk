@@ -67,7 +67,11 @@ ui-button.ui-button--fluid > .ui-button {
     cursor: not-allowed;
 }
 
-.ui-button:disabled {
+// The host has to opt out of pointer events too: with only the inner button
+// muted, a click lands on ui-button itself and still reaches the consumer's
+// (click), which runs the action the disabled state forbids.
+.ui-button:disabled,
+ui-button.ui-button--host-disabled {
     pointer-events: none;
 }
 
