@@ -90,9 +90,9 @@ The composer turns common ASCII smileys into emoji as you type: write `:)`, `:D`
 `;)`, `:(`, `:P`, `:O`, `>:)` or `<3`, then press space, and the shortcut becomes
 the emoji character. Undo (`Ctrl+Z` / `Cmd+Z`) brings the shortcut back.
 
-For anything beyond these shortcuts, use your operating system's emoji picker
-(`Ctrl+Cmd+Space` on macOS, `Win+.` on Windows) — the composer accepts any emoji
-character you type.
+For anything beyond these shortcuts, open the emoji picker in the composer
+toolbar, or use your operating system's picker (`Ctrl+Cmd+Space` on macOS,
+`Win+.` on Windows) — the composer accepts any emoji character you type.
 
 ### Views
 
