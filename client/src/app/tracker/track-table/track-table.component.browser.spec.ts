@@ -53,7 +53,8 @@ describe('TrackTableComponent (browser)', () => {
             idIssue: 42,
             idUser: ME.idUser,
             tracked: null,
-            endAt: null
+            endAt: null,
+            note: null
         });
     });
 
