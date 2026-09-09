@@ -1,30 +1,13 @@
-import {
-    Duration,
-    differenceInSeconds,
-    differenceInHours,
-    differenceInMinutes,
-    sub
-} from 'date-fns';
+import { Duration } from 'date-fns';
+import { TrackerConverter } from '../tracker/converter/tracker.converter';
 import { Tracker } from '../tracker/model/tracker.model';
 
 export class DurationConverter {
     public static trackerToDuration(tracker: Tracker): Duration {
-        const duration: Duration = {};
-
         if (!tracker?.startAt) {
             return {};
         }
-
-        const now = new Date();
-        duration.hours = Math.abs(differenceInHours(tracker.startAt, now));
-
-        const remainingMinutes = sub(tracker.startAt, { hours: -duration.hours });
-        duration.minutes = Math.abs(differenceInMinutes(remainingMinutes, now));
-
-        const remainingSeconds = sub(remainingMinutes, { minutes: -duration.minutes });
-        duration.seconds = Math.abs(differenceInSeconds(remainingSeconds, now));
-
-        return duration;
+        return DurationConverter.secondsToDuration(TrackerConverter.toElapsedSeconds(tracker));
     }
 
     public static secondsToDuration(seconds: number): Duration {
