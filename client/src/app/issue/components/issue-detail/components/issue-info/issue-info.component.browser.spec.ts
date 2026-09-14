@@ -1,10 +1,12 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { NEVER, Subject, of } from 'rxjs';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
+import { AclStore } from 'src/app/project/store/acl.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
@@ -62,6 +64,10 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 { provide: ProjectStore, useValue: { project$: of({ idProject: 7, name: 'p' }) } },
                 { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
                 { provide: PinApi, useValue: { insert$: () => NEVER } },
+                {
+                    provide: AclStore,
+                    useValue: { canCreateIssue: () => true }
+                },
                 {
                     provide: MrDiffApi,
                     useValue: { loadStatus$, load$: () => NEVER }
@@ -222,5 +228,73 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
         tracksChanged$.next(true);
 
         expect(fixture.componentInstance.currentIssue()?.tracked).toBe(5400);
+    });
+});
+
+describe('IssueInfoComponent — "New task" menu action', () => {
+    let navigate: ReturnType<typeof vi.fn>;
+    let canCreateIssue: ReturnType<typeof signal<boolean>>;
+
+    beforeEach(async () => {
+        navigate = vi.fn();
+        canCreateIssue = signal(true);
+        await TestBed.configureTestingModule({
+            declarations: [IssueInfoComponent],
+            providers: [
+                {
+                    provide: IssueApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of(ISSUE)) }
+                },
+                { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
+                { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { users$: of([]), usersMap$: of(new Map()) }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 7 }) } },
+                { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
+                { provide: PinApi, useValue: { insert$: () => NEVER } },
+                {
+                    provide: AclStore,
+                    useValue: { canCreateIssue }
+                },
+                {
+                    provide: MrDiffApi,
+                    useValue: { loadStatus$: vi.fn(() => NEVER), load$: () => NEVER }
+                },
+                { provide: GitIntegrationApi, useValue: { loadOne$: vi.fn(() => NEVER) } },
+                { provide: Router, useValue: { navigate } },
+                { provide: NoticeService, useValue: { mrStatus$: NEVER } },
+                {
+                    provide: TrackerService,
+                    useValue: { tracksChanged$: NEVER, loadTracks$: () => of([]) }
+                }
+            ]
+        })
+            .overrideComponent(IssueInfoComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    it('includes a "New task" item that navigates to /project/{id}/issue/0', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        const newTask = actions.find(a => a.labelKey === 'COMMAND.ACTION.CREATE_ISSUE');
+        expect(newTask).toBeDefined();
+        newTask!.command!();
+        expect(navigate).toHaveBeenCalledWith(['/project', 7, 'issue', 0]);
+    });
+
+    it('omits the "New task" item when canCreateIssue() is false', () => {
+        canCreateIssue.set(false);
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        expect(actions.find(a => a.labelKey === 'COMMAND.ACTION.CREATE_ISSUE')).toBeUndefined();
     });
 });
