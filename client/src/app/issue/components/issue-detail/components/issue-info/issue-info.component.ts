@@ -115,6 +115,9 @@ export class IssueInfoComponent implements OnInit {
     public readonly showInputTitle = signal(false);
     public readonly showInputDescription = signal(false);
 
+    private readonly descriptionMousedownCoords = signal<{ x: number; y: number } | null>(null);
+    private readonly descriptionPreviewMoveThreshold = 5;
+
     protected readonly isMrLinkPickerOpen = signal(false);
     // PR panel starts closed; the diff is fetched on the first expand.
     protected readonly isPrPanelCollapsed = signal(true);
@@ -353,7 +356,33 @@ export class IssueInfoComponent implements OnInit {
         this.showInputTitle.set(false);
     }
 
-    public onToggleInputDescription(): void {
+    public onDescriptionPreviewMousedown(event: MouseEvent): void {
+        this.descriptionMousedownCoords.set({ x: event.clientX, y: event.clientY });
+    }
+
+    public onToggleInputDescription(event?: MouseEvent): void {
+        if (event) {
+            const start = this.descriptionMousedownCoords();
+            const end = { x: event.clientX, y: event.clientY };
+            if (start) {
+                const dx = Math.abs(end.x - start.x);
+                const dy = Math.abs(end.y - start.y);
+                if (
+                    dx > this.descriptionPreviewMoveThreshold ||
+                    dy > this.descriptionPreviewMoveThreshold
+                ) {
+                    // Dragging to select text — stay in preview mode.
+                    return;
+                }
+            }
+
+            const selection = window.getSelection()?.toString().trim();
+            if (selection && selection.length > 0) {
+                // Double-click word selection or existing selection — stay in preview mode.
+                return;
+            }
+        }
+
         this.showInputDescription.update(v => !v);
         if (this.showInputDescription()) {
             setTimeout(() => this.inputDescription()?.focus(), 0);

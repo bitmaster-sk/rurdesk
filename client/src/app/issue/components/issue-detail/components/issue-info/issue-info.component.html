@@ -141,7 +141,8 @@
                         uiActivatable
                         class="description-preview col-span-12 p-0"
                         [attr.aria-label]="'DESCRIPTION_EDIT' | translate"
-                        (click)="onToggleInputDescription()"
+                        (mousedown)="onDescriptionPreviewMousedown($event)"
+                        (click)="onToggleInputDescription($event)"
                     >
                         <div
                             markdown
