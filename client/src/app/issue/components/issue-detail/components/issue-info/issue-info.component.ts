@@ -55,6 +55,7 @@ import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
+import { AclStore } from 'src/app/project/store/acl.store';
 import {
     GitIntegrationRes,
     MrDiff,
@@ -90,6 +91,7 @@ export class IssueInfoComponent implements OnInit {
     private readonly router = inject(Router);
     private readonly fb = inject(FormBuilder);
     private readonly issueApi = inject(IssueApi);
+    private readonly aclStore = inject(AclStore);
     private readonly pinApi = inject(PinApi);
     private readonly authStore = inject(AuthStore);
     private readonly stateStore = inject(StateStore);
@@ -175,35 +177,54 @@ export class IssueInfoComponent implements OnInit {
         initialValue: new Map()
     });
 
-    public readonly actions: UiMenuItem[] = [
-        {
-            labelKey: 'AI.SINGULAR',
-            items: [
+    public readonly actions = computed<UiMenuItem[]>(() => {
+        const items: UiMenuItem[] = [];
+        if (this.aclStore.canCreateIssue()) {
+            items.push(
                 {
-                    labelKey: 'SPLIT.SINGULAR',
+                    labelKey: 'COMMAND.ACTION.CREATE_ISSUE',
+                    icon: 'plus',
                     command: () => {
-                        const issue = this.currentIssue();
-                        if (issue) {
-                            this.splitRequested.emit(issue);
+                        const idProject = this.currentIssue()?.idProject;
+                        if (idProject != null) {
+                            void this.router.navigate(['/project', idProject, 'issue', 0]);
                         }
                     }
-                }
-            ]
-        },
-        {
-            labelKey: 'ISSUE.PIN.SINGULAR',
-            items: [
-                {
-                    labelKey: 'ISSUE.PIN.TO.PROJECT.PAGE',
-                    command: () => this.onPin(PinDestinationType.PROJECT)
                 },
-                {
-                    labelKey: 'ISSUE.PIN.TO.MY.PAGE',
-                    command: () => this.onPin(PinDestinationType.USER)
-                }
-            ]
+                { separator: true }
+            );
         }
-    ];
+        items.push(
+            {
+                labelKey: 'AI.SINGULAR',
+                items: [
+                    {
+                        labelKey: 'SPLIT.SINGULAR',
+                        command: () => {
+                            const issue = this.currentIssue();
+                            if (issue) {
+                                this.splitRequested.emit(issue);
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                labelKey: 'ISSUE.PIN.SINGULAR',
+                items: [
+                    {
+                        labelKey: 'ISSUE.PIN.TO.PROJECT.PAGE',
+                        command: () => this.onPin(PinDestinationType.PROJECT)
+                    },
+                    {
+                        labelKey: 'ISSUE.PIN.TO.MY.PAGE',
+                        command: () => this.onPin(PinDestinationType.USER)
+                    }
+                ]
+            }
+        );
+        return items;
+    });
 
     public form: FormGroup<IssueInfoForm> = this.issueToForm();
 
