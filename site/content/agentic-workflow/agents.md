@@ -14,13 +14,13 @@ approving stages.
 
 ## Concepts
 
-| Term                        | Meaning                                                                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                              |
-| **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                              |
+| Term                        | Meaning                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                                |
+| **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                                |
 | **Agent gateway**           | The agent's single gateway record (the Goose gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with. |
-| **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                              |
-| **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                  |
+| **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                                |
+| **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                    |
 
 ## 1. Create an agent user
 
@@ -30,7 +30,7 @@ name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
 
-![Creating an agent](../../site/assets/img/bot-create.png)
+![Creating an agent](../../site/assets/img/agent-create.png)
 
 ## 2. Copy the agent's credentials
 
@@ -52,7 +52,7 @@ expose only over HTTPS (or `localhost`); on a plain-HTTP deployment it falls bac
 to a legacy copy path, and if the browser blocks that too the dialog says so —
 select the token in the row and copy it manually.
 
-![Agent credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/bot-keys.png)
+![Agent credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/agent-keys.png)
 
 > The tracker signs each `stage_execute` webhook with the Tracker → Gateway
 > token; the gateway verifies the `X-Tracker-Signature` and rejects mismatches
