@@ -15,9 +15,13 @@ if [ -n "$COMMIT" ]; then
     LDFLAGS="$LDFLAGS -X $BUILDINFO_PKG.commit=$COMMIT"
 fi
 
+# Which main package becomes the `api` binary. The commercial image overrides it
+# with ./commercial/cmd/api; the free default never imports commercial/.
+API_PACKAGE="${API_PACKAGE:-./cmd/api}"
+
 # Build the Go application
-echo "🛠️ Start: Application build"
-go build -ldflags "$LDFLAGS" -o api ./cmd/api
+echo "🛠️ Start: Application build ($API_PACKAGE)"
+go build -ldflags "$LDFLAGS" -o api "$API_PACKAGE"
 echo "✅ Success: Application build"
 
 # Build the admin maintenance CLI (shipped in the production image)

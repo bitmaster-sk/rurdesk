@@ -69,6 +69,15 @@ jobs:
                       type=semver,pattern={{version}}
                       type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
+            - name: Meta (rurdesk-commercial)
+              id: meta-commercial
+              uses: docker/metadata-action@v5
+              with:
+                  images: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE_PREFIX }}/rurdesk-commercial
+                  tags: |
+                      type=semver,pattern={{version}}
+                      type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
             - name: Meta (gateway-claude)
               id: meta-gateway-claude
               uses: docker/metadata-action@v5
@@ -102,6 +111,21 @@ jobs:
                       REQUIRE_NOTICES=1
                   tags: ${{ steps.meta-tracker.outputs.tags }}
                   labels: ${{ steps.meta-tracker.outputs.labels }}
+
+            - name: Build & push rurdesk-commercial
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: ./docker/tracker/Dockerfile.prod
+                  platforms: linux/amd64,linux/arm64
+                  push: true
+                  build-args: |
+                      VERSION=${{ steps.meta-commercial.outputs.version }}
+                      COMMIT=${{ github.sha }}
+                      REQUIRE_NOTICES=1
+                      API_PACKAGE=./commercial/cmd/api
+                  tags: ${{ steps.meta-commercial.outputs.tags }}
+                  labels: ${{ steps.meta-commercial.outputs.labels }}
 
             - name: Build & push gateway-claude
               uses: docker/build-push-action@v5
