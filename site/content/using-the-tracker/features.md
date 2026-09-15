@@ -116,8 +116,9 @@ the task:
 - **State**, **severity**, **type**, and **assignee** — inline selectors
 - **Reschedule** — previous/next day, today, remove the date, or pick one from a
   calendar
-- **Split** the task with AI (see [Task Split](#task-split))
-- **Open** the task, **copy its ID**, or **delete** it
+- An action row along the bottom: start **tracking** time on the task, **split**
+  it with AI (see [Task Split](#task-split)), **open** it, **copy its ID**, or
+  **delete** it
 
 On the Kanban board the reschedule section is hidden — drag the card instead.
 

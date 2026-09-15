@@ -1,8 +1,9 @@
 @if (isTrackingThis()) {
-    <div class="tsb-group">
+    <div class="tsb-group" [class.tsb-group--compact]="isCompact()">
         <button
             type="button"
             class="tsb-btn"
+            [class.tsb-btn--compact]="isCompact()"
             data-testid="tracker-start-button-toggle"
             [attr.aria-label]="(isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate"
             (click)="onTogglePause()"
@@ -15,13 +16,14 @@
         <button
             type="button"
             class="tsb-btn"
+            [class.tsb-btn--compact]="isCompact()"
             data-testid="tracker-start-button-submit"
             [attr.aria-label]="'TRACK.SUBMIT' | translate"
             (click)="onSubmit()"
         >
             <tabler-icon icon="check" [size]="14" />
             @if (!isIconOnly()) {
-                <span>{{ 'TRACK.SUBMIT' | translate }}</span>
+                <span>{{ submitLabelKey() | translate }}</span>
             }
         </button>
     </div>
@@ -29,13 +31,14 @@
     <button
         type="button"
         class="tsb-btn"
+        [class.tsb-btn--compact]="isCompact()"
         data-testid="tracker-start-button-switch"
         [attr.aria-label]="'TRACK.START_HERE' | translate"
         (click)="isSwitchOpen.set(true)"
     >
-        <tabler-icon icon="player-play" [size]="14" />
+        <tabler-icon icon="clock" [size]="14" />
         @if (!isIconOnly()) {
-            <span>{{ 'TRACK.START_HERE' | translate }}</span>
+            <span>{{ startLabelKey() | translate }}</span>
         }
     </button>
     <app-tracker-switch-dialog
@@ -50,13 +53,14 @@
     <button
         type="button"
         class="tsb-btn"
+        [class.tsb-btn--compact]="isCompact()"
         data-testid="tracker-start-button-start"
         [attr.aria-label]="'TRACK.START_HERE' | translate"
         (click)="onStart()"
     >
-        <tabler-icon icon="player-play" [size]="14" />
+        <tabler-icon icon="clock" [size]="14" />
         @if (!isIconOnly()) {
-            <span>{{ 'TRACK.START_HERE' | translate }}</span>
+            <span>{{ startLabelKey() | translate }}</span>
         }
     </button>
 }

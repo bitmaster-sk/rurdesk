@@ -109,6 +109,14 @@ class UserDropdownStub {
     public readonly ngModelChange = output<any>();
 }
 
+@Component({ selector: 'app-tracker-start-button', template: '', standalone: true })
+class TrackerStartButtonStub {
+    public readonly isCompact = input(false);
+    public readonly idProject = input<number>(0);
+    public readonly idIssuePublic = input<number>(0);
+    public readonly issueTitle = input<string>();
+}
+
 async function createFixture(
     overrides: {
         states?: IssueState[];
@@ -148,6 +156,7 @@ async function createFixture(
             SeverityBadgeSelectorStub,
             IssueTypeBadgeSelectorStub,
             UserDropdownStub,
+            TrackerStartButtonStub,
             TablerIconStub
         ],
         declarations: [IssueQuickActionsComponent],

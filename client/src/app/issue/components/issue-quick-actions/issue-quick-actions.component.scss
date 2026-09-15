@@ -44,6 +44,12 @@
         padding: var(--ui-space-s);
         background: var(--ui-surface-50);
         border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md);
+
+        // The tracker button brings its own host element; take it out of the
+        // layout so its tile(s) become flex children of the footer row.
+        app-tracker-start-button {
+            display: contents;
+        }
     }
 }
 

@@ -108,35 +108,24 @@
                         </div>
                     }
 
-                    <!-- Time -->
-                    @if (showTime()) {
-                        <div class="qap--section">
-                            <div class="qap--section-label">
-                                {{ 'ISSUE.QUICK_ACTIONS.TIME' | translate }}
-                            </div>
+                    <!-- Actions footer -->
+                    <div class="qap--actions">
+                        @if (showTime()) {
                             <app-tracker-start-button
+                                [isCompact]="true"
                                 [idProject]="issue()!.idProject"
                                 [idIssuePublic]="issue()!.idIssuePublic"
                                 [issueTitle]="issue()!.title"
                             ></app-tracker-start-button>
-                        </div>
-                    }
-
-                    <!-- AI -->
-                    <div class="qap--section">
-                        <div class="qap--section-label">
-                            {{ 'ISSUE.QUICK_ACTIONS.AI' | translate }}
-                        </div>
-                        <div class="qap--ai-actions">
-                            <button class="reschedule-btn reschedule-btn--full" (click)="onSplit()">
-                                <tabler-icon icon="git-branch" [size]="14" />
-                                {{ 'SPLIT.SINGULAR' | translate }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Actions footer -->
-                    <div class="qap--actions">
+                        }
+                        <button
+                            class="qap--action"
+                            (click)="onSplit()"
+                            [title]="'SPLIT.SPLIT_BUTTON' | translate"
+                        >
+                            <tabler-icon icon="git-branch" [size]="14" />
+                            <span>{{ 'SPLIT.SINGULAR' | translate }}</span>
+                        </button>
                         <button
                             class="qap--action"
                             (click)="onOpen()"
