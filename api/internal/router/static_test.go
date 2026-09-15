@@ -80,3 +80,49 @@ func TestStaticRejectsPathTraversal(t *testing.T) {
 
 	assert.NotContains(t, w.Body.String(), "top-secret")
 }
+
+func TestStaticReturns404ForMissingJsChunk(t *testing.T) {
+	engine, _ := newStaticEngine(t)
+
+	w := doGet(engine, "/chunk-HBPWM3DS.js")
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NotContains(t, w.Body.String(), "spa-shell")
+}
+
+func TestStaticReturns404ForMissingCssChunk(t *testing.T) {
+	engine, _ := newStaticEngine(t)
+
+	w := doGet(engine, "/styles-ABC123.css")
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.NotContains(t, w.Body.String(), "spa-shell")
+}
+
+func TestStaticSetsNoCacheForIndexHtml(t *testing.T) {
+	engine, _ := newStaticEngine(t)
+
+	w := doGet(engine, "/projects/42/board")
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "no-cache", w.Result().Header.Get("Cache-Control"))
+}
+
+func TestStaticSetsImmutableCacheForExistingAsset(t *testing.T) {
+	engine, _ := newStaticEngine(t)
+
+	w := doGet(engine, "/assets/app.js")
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "public, max-age=31536000, immutable", w.Result().Header.Get("Cache-Control"))
+}
+
+func TestStaticSets404NoCacheControlForMissingStatic(t *testing.T) {
+	engine, _ := newStaticEngine(t)
+
+	w := doGet(engine, "/chunk-XYZ.js")
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	// 404 for missing static files should not set Cache-Control headers.
+	assert.Empty(t, w.Result().Header.Get("Cache-Control"))
+}
