@@ -1,0 +1,60 @@
+@if (isVisible()) {
+    @let license = this.license();
+
+    <div
+        class="license-banner flex items-center gap-2 px-3 py-2"
+        [class]="license.severity"
+        data-testid="license-banner"
+        role="status"
+    >
+        @switch (license.severity) {
+            @case (severities.Info) {
+                <tabler-icon icon="info-circle" [size]="16" />
+            }
+            @case (severities.Expired) {
+                <tabler-icon icon="ban" [size]="16" />
+            }
+            @default {
+                <tabler-icon icon="alert-triangle" [size]="16" />
+            }
+        }
+
+        <span class="grow">
+            @if (license.severity === severities.Expired) {
+                {{ 'LICENSE.EXPIRED' | translate: { date: expiresAtLabel() } }}
+                {{ 'LICENSE.PAID_FEATURES_OFF' | translate }}
+            } @else {
+                @if (license.daysRemaining === 0) {
+                    {{ 'LICENSE.EXPIRES_TODAY' | translate: { date: expiresAtLabel() } }}
+                } @else {
+                    {{
+                        'LICENSE.EXPIRES_IN'
+                            | translate: { days: license.daysRemaining, date: expiresAtLabel() }
+                    }}
+                }
+                @if (license.severity !== severities.Info) {
+                    {{ 'LICENSE.PAID_FEATURES_STOP' | translate }}
+                }
+                @if (license.severity === severities.Error) {
+                    {{ 'LICENSE.KEEP_LOCAL_ADMIN' | translate }}
+                }
+            }
+        </span>
+
+        <a class="license-banner-action" [href]="renewUrl" target="_blank" rel="noopener">
+            {{ 'LICENSE.RENEW' | translate }}
+        </a>
+
+        @if (license.isDismissible) {
+            <button
+                type="button"
+                class="license-banner-dismiss"
+                data-testid="license-banner-dismiss"
+                [attr.aria-label]="'LICENSE.DISMISS' | translate"
+                (click)="onDismiss()"
+            >
+                <tabler-icon icon="x" [size]="16" />
+            </button>
+        }
+    </div>
+}
