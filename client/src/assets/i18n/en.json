@@ -642,6 +642,9 @@
             "WEEK": "Week",
             "MONTH": "Month"
         },
+        "MENU": {
+            "CLONE": "Clone task"
+        },
         "COPY_SUFFIX": "{{title}} (copy)"
     },
     "CONFIRM": "Confirm",

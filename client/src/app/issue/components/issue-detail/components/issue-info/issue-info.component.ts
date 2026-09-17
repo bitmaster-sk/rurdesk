@@ -191,6 +191,11 @@ export class IssueInfoComponent implements OnInit {
                         }
                     }
                 },
+                {
+                    labelKey: 'ISSUE.MENU.CLONE',
+                    icon: 'copy',
+                    command: () => this.cloneIssue()
+                },
                 { separator: true }
             );
         }
@@ -200,6 +205,7 @@ export class IssueInfoComponent implements OnInit {
                 items: [
                     {
                         labelKey: 'SPLIT.SINGULAR',
+                        icon: 'scissors',
                         command: () => {
                             const issue = this.currentIssue();
                             if (issue) {
@@ -214,10 +220,12 @@ export class IssueInfoComponent implements OnInit {
                 items: [
                     {
                         labelKey: 'ISSUE.PIN.TO.PROJECT.PAGE',
+                        icon: 'pin',
                         command: () => this.onPin(PinDestinationType.PROJECT)
                     },
                     {
                         labelKey: 'ISSUE.PIN.TO.MY.PAGE',
+                        icon: 'pin',
                         command: () => this.onPin(PinDestinationType.USER)
                     }
                 ]
@@ -408,6 +416,14 @@ export class IssueInfoComponent implements OnInit {
                 idIssue: issue.idIssue
             })
             .subscribe();
+    }
+
+    private cloneIssue(): void {
+        const issue = this.currentIssue();
+        if (!issue?.idProject) return;
+        void this.router.navigate(['/project', issue.idProject, 'issue', 0], {
+            state: { cloneSource: issue }
+        });
     }
 
     protected onOpenMrLinkPicker(): void {
