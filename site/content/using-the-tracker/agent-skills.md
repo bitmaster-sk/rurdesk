@@ -33,6 +33,8 @@ the builtins you have left untouched. **A builtin you edited is never
 overwritten** — it stays exactly as you wrote it and keeps its *edited* mark
 until you restore the original, which also opts it back into future updates.
 
+![The agent skills catalog with a builtin skill open for editing](../../site/assets/img/admin-skills.png)
+
 ### What ships out of the box
 
 | Skill | Enabled by default | What it does |
@@ -58,6 +60,8 @@ because the assignee dock (below) shows it.
 
 New runs pick up the matrix at the moment the run is created.
 
+![The per-project skill matrix: skills down the side, the four run stages across the top](../../site/assets/img/project-agent-skills.png)
+
 ## Per-run overrides
 
 The project matrix is the default, not a straitjacket.
@@ -67,6 +71,8 @@ assignee dropdown (the sliders icon). It shows the per-stage chips pre-filled
 from the project matrix; adjust them and press **Assign**. The run is created
 with exactly those skills. Clicking the agent's name instead assigns it straight
 away with the project defaults — one click, no detour.
+
+![The skills dock open next to an agent's row in the assignee dropdown, its per-stage chips prefilled from the project](../../site/assets/img/assignee-skills-dock.png)
 
 **While a run is going**, the **Skills** chip on the run card opens the same
 per-stage list. Stages that have already started are locked — their prompt was

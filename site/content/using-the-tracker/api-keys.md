@@ -31,6 +31,8 @@ new one.
 Create one key per client rather than sharing a single key everywhere. That way, losing
 a laptop costs you one key instead of every integration you have.
 
+![The API keys panel in user settings, listing each key with its creation and last-used date](../../site/assets/img/api-keys.png)
+
 ## Connecting an MCP client
 
 Point the client at the tracker's MCP endpoint and pass the key as a bearer token:

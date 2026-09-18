@@ -127,9 +127,15 @@ While a stage runs, its row is open and scrolls itself: thinking and tool calls
 are appended live — no refresh — next to the stage name, a working dot and the
 elapsed time. Thinking reads as prose; each tool call sits in its own small card
 with the argument that identifies it and a coloured icon for what the call did —
-run a command, write, or read. Once the stage finishes, the row collapses under the comment that
+run a command, write, or read.
+
+![An open Thinking row, the agent's reasoning for the brainstorming stage read as prose](../../site/assets/img/thinking-expanded.png)
+
+Once the stage finishes, the row collapses under the comment that
 stage produced; click the header to read it again. Collapsed it is a single line,
 so it stays out of the way without needing a filter of its own.
+
+![The same Thinking row collapsed to a single line under the stage name](../../site/assets/img/thinking-collapsed.png)
 
 A stage that produces no comment — one that **failed**, or a brainstorm with
 nothing to ask — still gets its own row at the end of the feed. That is usually
@@ -170,6 +176,8 @@ stage; it accepts 64 KB to 10240 KB. A stage that hits the limit keeps what it
 had and the row says the rest was dropped.
 
 Both settings apply to the next batch of thinking; no restart is needed.
+
+![Admin application settings, with the thinking retention toggle and the per-stage KB limit](../../site/assets/img/admin-settings.png)
 
 > Thinking text can quote source code and tool output, exactly like a design or
 > plan comment. It is visible to every member of the project, so treat it with

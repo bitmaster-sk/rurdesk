@@ -84,6 +84,8 @@ runs, so it needs **write** access:
   PR is linked. See [Automatic state changes](./features.md#automatic-state-changes)
   for what happens to the task's state when a manually linked PR is merged.
 
+![The link-pull-request dialog: pick the git integration, then give the request's number](../../site/assets/img/pr-link-picker.png)
+
 ![MR diff inline](../../site/assets/img/mr-diff.png)
 
 ### CI status

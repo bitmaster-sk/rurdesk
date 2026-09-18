@@ -28,7 +28,8 @@ export const SIDEBAR = [
         pages: [
             { src: 'getting-started/index.md', out: 'index.html', nav: 'Overview' },
             { src: 'getting-started/installation.md', out: 'installation.html', nav: 'Installation & first run' },
-            { src: 'getting-started/configuration.md', out: 'configuration.html', nav: 'Configuration' }
+            { src: 'getting-started/configuration.md', out: 'configuration.html', nav: 'Configuration' },
+            { src: 'getting-started/licensing.md', out: 'licensing.html', nav: 'Licensing' }
         ]
     },
     {

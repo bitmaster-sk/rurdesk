@@ -10,34 +10,45 @@ are **owned by the project** and live right on the **Board** — there is no
 separate screen to learn. Each task can belong to at most one sprint of its
 project, and carries **story points** that drive the sprint's totals.
 
-## The sprint scope chip
+![The board with the sprint strip above it: a tab per cycle, the health strip, and the cycle's tasks below](../../site/assets/img/sprint-board.png)
 
-The Board toolbar has a **sprint scope chip** next to the layout switch. Use it
-to focus the board on one cycle:
+## The sprint strip
 
-- Pick a sprint → the board shows only that cycle's tasks.
-- Pick **All cycles** → the scope is cleared.
-- **＋ New sprint** → creates a cycle for the current project. The name
-  (`Sprint 1`, `Sprint 2`, …) and a two-week date window are filled in for you,
-  so a new cycle is **one click**. You can rename or re-date it later.
+The cycle is the board's top-level scope, so it gets its own row of tabs above
+the board. Clicking a tab scopes everything below it — the health strip, the
+charts and the cards — to that one cycle.
+
+- **Backlog** is pinned on the left: the work that belongs to no cycle.
+- Then one tab per open cycle, oldest start date first. The **current** one
+  carries a dot.
+- Closed cycles follow, muted, once you switch them on (see
+  [Viewing closed sprints](#viewing-closed-sprints)).
+- **＋ Sprint** is pinned on the right. It creates a cycle for the current
+  project with the name (`Sprint 1`, `Sprint 2`, …) and a two-week window
+  already filled in, so a new cycle is **one click**. You can rename or re-date
+  it later from the **✎** on its tab, which is also where you delete it.
+
+![The New sprint dialog: an auto-naming name field and a two-week window filled in](../../site/assets/img/sprint-create.png)
 
 There is no manual "activate" step — the **current** cycle is derived from the
 dates (the cycle whose window contains today, otherwise the next planned one).
 
-## The Sprints board layout
+Tabs are drop targets. Drag a card onto a tab to move that task into the cycle,
+or onto **Backlog** to take it out of every cycle. Closed tabs refuse drops.
+When there are more cycles than fit, **‹ ›** arrows scroll the strip; Backlog
+and **＋ Sprint** stay put.
 
-The layout switch offers **Columns · Swimlane · Sprints**. Switching to
-**Sprints** stacks your cycles as rows and your project's states as columns:
+## Board layouts
 
-- The **current** cycle is the top lane, then upcoming planned cycles, then a
-  **Backlog** lane for work not yet assigned to any cycle.
-- Drag a card **up or down** to move it between cycles (or into the Backlog).
-- Drag a card **left or right** to change its state, exactly like the normal
-  board.
+The layout switch offers **Columns · Swimlane**. It decides how the selected
+cycle's tasks are arranged, not which tasks you see — that is the strip's job:
 
-In Sprints mode the scope chip shows **All cycles** and is disabled — the lanes
-already show every cycle, so the chip's filter would only get in the way. Your
-previous scope selection comes back when you switch to Columns or Swimlane.
+- **Columns** — one column per project state.
+- **Swimlane** — the same state columns, split into a row per assignee, with an
+  **Unassigned** row.
+
+Dragging a card **left or right** changes its state in both layouts. Changing
+its cycle is the strip's drag, above.
 
 ## Points
 
@@ -48,15 +59,21 @@ feed the sprint's capacity and velocity. Agents can set points too, via the
 
 ## Closing a sprint & rollover
 
-When a cycle ends, **close** it. Closing:
+When a cycle ends, **close** it with **Roll over** in the Board toolbar. The
+button acts on the cycle selected in the strip, and is unavailable on the
+Backlog tab and on a cycle that is already closed. Closing:
 
 - moves every **unfinished** task (any state that isn't a *final* state) into
   the **next planned** cycle, or clears it to the **Backlog** if there is none;
 - leaves **finished** tasks in the closed cycle, so its velocity stays honest;
-- is final — a closed cycle can't be closed again.
+- is final — a closed cycle can't be closed again;
+- drops the board back to no cycle selected, since the one you were on has just
+  left the open tabs.
 
 Velocity for a cycle is the sum of points of its tasks that reached a final
 state.
+
+![The next cycle after a rollover, each carried-over task marked with a carryover count](../../site/assets/img/sprint-rollover.png)
 
 ## Viewing closed sprints
 
@@ -88,6 +105,8 @@ For a cycle it shows the name and window, a segmented bar (done / in progress /
 not started), the done-out-of-total figure, where you are in the window, the
 pace so far against the pace needed, and a verdict chip. A **Points / Tasks**
 toggle on the right switches every number between story points and task counts.
+
+![The sprint health strip: name, window, segmented bar, done-out-of-total, days left, pace and the verdict chip](../../site/assets/img/sprint-health-strip.png)
 
 The chips mean:
 
