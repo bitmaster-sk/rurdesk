@@ -1,0 +1,14 @@
+rurdesk Commercial License (placeholder)
+
+Everything in this directory and its subdirectories is NOT covered by the
+AGPL-3.0 license in the repository root. It is source-available commercial
+software.
+
+Use of this code in a running instance requires a valid paid rurdesk
+subscription. Reading, auditing, modifying and contributing to it is allowed
+without a subscription; using it to enable paid features is not.
+
+NOTE: this text is a placeholder, not reviewed legal wording. rurdesk issue
+#126 tracks two open items that must be closed before the first licence is
+sold: legal review of the AGPL boundary between this directory and the core,
+and the final wording of this file.

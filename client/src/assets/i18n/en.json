@@ -944,6 +944,16 @@
         "CONFIRM_DELETE_TEAM": "Delete this team? Members lose access granted through it.",
         "CONFIRM_REMOVE_MEMBER": "Remove this member from the team?"
     },
+    "LICENSE": {
+        "EXPIRES_IN": "Your rurdesk license expires in {{days}} days ({{date}}).",
+        "EXPIRES_TODAY": "Your rurdesk license expires today ({{date}}).",
+        "EXPIRED": "Your rurdesk license expired on {{date}}.",
+        "PAID_FEATURES_STOP": "Paid features stop working after that — your data and local sign-in are not affected.",
+        "PAID_FEATURES_OFF": "Paid features are off. Your data and local sign-in still work.",
+        "KEEP_LOCAL_ADMIN": "Make sure at least one admin can sign in with a local password.",
+        "RENEW": "Renew license",
+        "DISMISS": "Hide until tomorrow"
+    },
     "GIT_INTEGRATION": {
         "SINGULAR": "Git Integration",
         "PLURAL": "Git Integrations",

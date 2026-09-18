@@ -78,6 +78,19 @@ jobs:
               working-directory: api
               run: golangci-lint run ./...
 
+            - name: Commercial code stays out of the free build
+              working-directory: api
+              run: |
+                  if go list -deps ./internal/... ./cmd/api | grep 'rurdesk/api/commercial'; then
+                    echo "the free entrypoint depends on commercial/ (see the imports above)"
+                    exit 1
+                  fi
+                  # In a throwaway copy: the later test steps still need commercial/.
+                  standalone=$(mktemp -d)
+                  cp -r . "$standalone/api"
+                  rm -rf "$standalone/api/commercial"
+                  (cd "$standalone/api" && go build ./...)
+
             # -race requires cgo; the ubuntu runner ships gcc. TEST_DATABASE_* are
             # mandatory — the suite's TestMain refuses to run without them (and the
             # name must contain "test"), so it can never touch a real database.

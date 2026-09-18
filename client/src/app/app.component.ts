@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { AuthTokenStore } from './auth/store/auth-token.store';
 import { SettingsStore } from './core/settings/settings.store';
+import { LicenseStore } from './core/license/license.store';
 import { HotkeyService } from './core/command/hotkey.service';
 import { NotificationStore } from './notification/store/notification.store';
 
@@ -11,6 +12,7 @@ import { NotificationStore } from './notification/store/notification.store';
 })
 export class AppComponent {
     private readonly settingsStore = inject(SettingsStore);
+    private readonly licenseStore = inject(LicenseStore);
     private readonly tokenStore = inject(AuthTokenStore);
     private readonly hotkeys = inject(HotkeyService);
     private readonly notificationStore = inject(NotificationStore);
@@ -23,6 +25,7 @@ export class AppComponent {
         // After a successful login/registration the auth components load them.
         if (this.tokenStore.hasToken()) {
             this.settingsStore.load();
+            this.licenseStore.load();
             this.notificationStore.init();
         }
         // Global keyboard entry point for the command palette (⌘K / bare `/` / `?`).

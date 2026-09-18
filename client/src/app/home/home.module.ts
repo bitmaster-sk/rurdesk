@@ -8,6 +8,7 @@ import { ProjectModule } from '../project/project.module';
 import { FormsModule } from '@angular/forms';
 import { NotificationModule } from '../notification/notification.module';
 import { TopMenuComponent } from './components/top-menu/top-menu.component';
+import { LicenseBannerComponent } from './components/license-banner/license-banner.component';
 import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
 import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
 import {
@@ -23,11 +24,20 @@ import {
     IconCalendar,
     IconChartColumn,
     IconDeviceDesktop,
-    IconSparkles
+    IconSparkles,
+    IconInfoCircle,
+    IconAlertTriangle,
+    IconBan,
+    IconX
 } from '@tabler/icons-angular';
 
 @NgModule({
-    declarations: [TopMenuComponent, AppLayoutComponent, ProjectLayoutComponent],
+    declarations: [
+        TopMenuComponent,
+        LicenseBannerComponent,
+        AppLayoutComponent,
+        ProjectLayoutComponent
+    ],
     imports: [
         CoreModule,
         SharedModule,
@@ -51,7 +61,11 @@ import {
             IconLayoutColumns,
             IconCalendar,
             IconChartColumn,
-            IconSparkles
+            IconSparkles,
+            IconInfoCircle,
+            IconAlertTriangle,
+            IconBan,
+            IconX
         })
     ]
 })

@@ -52,6 +52,7 @@ func New(
 	projectSkillCtrl *controller.ProjectSkillController,
 	agentOverviewCtrl *controller.AgentOverviewController,
 	appSettingsCtrl *controller.AppSettingsController,
+	licenseCtrl *controller.LicenseController,
 	apiKeyCtrl *controller.ApiKeyController,
 	healthCtrl *controller.HealthController,
 	versionCtrl *controller.VersionController,
@@ -93,6 +94,8 @@ func New(
 
 	// App settings — readable by any authenticated user (clients need page sizes)
 	pri.GET("/settings", appSettingsCtrl.Get)
+
+	pri.GET("/license", licenseCtrl.Get)
 
 	pri.GET("/skills", skillCtrl.List)
 
