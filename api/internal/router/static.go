@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ var staticExts = map[string]struct{}{
 	".js": {}, ".mjs": {}, ".css": {}, ".woff": {}, ".woff2": {},
 	".ttf": {}, ".eot": {}, ".svg": {}, ".png": {}, ".jpg": {},
 	".jpeg": {}, ".gif": {}, ".webp": {}, ".ico": {}, ".map": {},
+	".json": {},
 }
 
 // registerStaticServing serves the Angular production build as an SPA
@@ -66,14 +68,20 @@ func registerStaticServing(engine *gin.Engine, staticDir string) {
 	})
 }
 
-// setCacheHeaders tells the browser to always revalidate index.html (so it
-// picks up new chunk hashes after a deploy) and to cache other static assets
-// for a year — safe because outputHashing: "all" changes the filename when
-// content changes.
+// hashedAssetPattern matches the content-hash filenames the Angular build
+// emits under outputHashing: "all" (main-7LTDLGCT.js, styles-QK3RZ2XA.css).
+// Only those may be cached forever: everything copied verbatim from
+// src/assets (translations, images, favicons) keeps its name across deploys,
+// so caching it immutably would pin a stale copy in the browser for a year.
+var hashedAssetPattern = regexp.MustCompile(`-[A-Z0-9]{8,}\.[a-zA-Z0-9]+$`)
+
+// setCacheHeaders caches content-hashed assets for a year and makes the
+// browser revalidate everything else — index.html above all, so it picks up
+// new chunk hashes after a deploy.
 func setCacheHeaders(c *gin.Context, path string) {
-	if path == "/index.html" || filepath.Base(path) == "index.html" {
-		c.Header("Cache-Control", "no-cache")
+	if hashedAssetPattern.MatchString(filepath.Base(path)) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
 		return
 	}
-	c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	c.Header("Cache-Control", "no-cache")
 }
