@@ -5,6 +5,8 @@ import { AppComponent } from './app.component';
 import './app.chart';
 import { AuthInterceptor } from './auth/auth.interceptor';
 import { ErrorInterceptor } from './core/error.interceptor';
+import { DynamicImportErrorHandler } from './core/dynamic-import-error-handler';
+import { ErrorHandler } from '@angular/core';
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { AuthModule } from './auth/auth.module';
 import { CoreModule } from './core/core.module';
@@ -27,6 +29,7 @@ import { UiToastModule } from './ui/ui-toast.module';
         UiToastModule
     ],
     providers: [
+        { provide: ErrorHandler, useClass: DynamicImportErrorHandler },
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
         { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } },
