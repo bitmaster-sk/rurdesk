@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { UiModule } from '../../ui.module';
+import { UiPopoverComponent } from './popover.component';
 
 @Component({
     standalone: false,
@@ -142,5 +143,65 @@ describe('UiPopoverComponent (browser)', () => {
         fixture.detectChanges();
         expect(panel()).not.toBeNull();
         expect(fixture.componentInstance.hideCount).toBe(0);
+    });
+});
+
+describe('UiPopoverComponent suppressUntilNextPointerDown (browser)', () => {
+    @Component({
+        standalone: false,
+        template: `
+            <div #anchor class="anchor">anchor</div>
+            <ui-popover #pop (closed)="hideCount = hideCount + 1">
+                <div class="pop-content">Hello</div>
+            </ui-popover>
+        `
+    })
+    class SuppressHostComponent {
+        public hideCount = 0;
+        private readonly pop = viewChild.required<UiPopoverComponent>('pop');
+        private readonly anchor = viewChild.required<ElementRef<HTMLElement>>('anchor');
+        public open(): void {
+            this.pop().show(this.anchor().nativeElement, this.anchor().nativeElement, true);
+        }
+    }
+
+    function panel(): HTMLElement | null {
+        return document.querySelector('.ui-popover');
+    }
+
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            declarations: [SuppressHostComponent],
+            imports: [UiModule],
+            providers: [provideNoopAnimations()]
+        }).compileComponents();
+    });
+
+    it('stays open through an auxclick on an ancestor of the exclude element', () => {
+        const fixture = TestBed.createComponent(SuppressHostComponent);
+        fixture.detectChanges();
+        fixture.componentInstance.open();
+        fixture.detectChanges();
+        expect(panel()).not.toBeNull();
+
+        // The trailing auxclick of the opening right-click — target is an
+        // ancestor (document.body), which dismissExcludeEl.contains() returns
+        // false for. Without suppression this would close the popover.
+        document.body.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, button: 2 }));
+        fixture.detectChanges();
+        expect(panel()).not.toBeNull();
+    });
+
+    it('closes on a genuine outside click after pointerdown re-arms', () => {
+        const fixture = TestBed.createComponent(SuppressHostComponent);
+        fixture.detectChanges();
+        fixture.componentInstance.open();
+        fixture.detectChanges();
+
+        // A genuine outside click: pointerdown (clears suppression) → click.
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
     });
 });

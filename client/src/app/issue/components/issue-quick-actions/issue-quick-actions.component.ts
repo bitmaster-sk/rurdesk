@@ -132,7 +132,12 @@ export class IssueQuickActionsComponent implements OnDestroy {
         // (not `currentTarget`, which is already null here when the event arrived
         // via an @Output / FullCalendar, e.g. kanban & gantt).
         const originEl = event.target as HTMLElement | null;
-        setTimeout(() => this.popoverRef().show(anchor, originEl));
+        // Open synchronously — the signals are set above and the overlay attaches
+        // in the same change-detection cycle, so the deferral bought nothing and
+        // widened the window for the trailing `auxclick` to land on a live overlay.
+        // `suppressUntilNextPointerDown` ignores that `auxclick` (which targets an
+        // ancestor of `originEl` on a firm/slow press); the next `pointerdown` re-arms.
+        this.popoverRef().show(anchor, originEl, true);
     }
 
     public hide(): void {
