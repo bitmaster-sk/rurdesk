@@ -30,3 +30,29 @@
     background: var(--ui-color-primary-weak);
     color: var(--ui-color-primary);
 }
+
+// Compact variant: an icon-over-label tile that sits in a row of other action
+// tiles (issue quick actions footer). The host must be `display: contents` in
+// that row for the flex sizing below to reach the footer.
+.tsb-group--compact {
+    display: contents;
+}
+
+.tsb-btn--compact {
+    flex: 1;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px var(--ui-space-s);
+    border-color: transparent;
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.tsb-btn--compact:hover {
+    border-color: transparent;
+    background: var(--ui-surface-200);
+    color: var(--ui-color-text);
+}

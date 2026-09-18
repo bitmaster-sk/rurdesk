@@ -18,6 +18,8 @@ export class TrackerStartButtonComponent {
 
     public readonly isIconOnly = input(false);
 
+    public readonly isCompact = input(false);
+
     public readonly issueTitle = input<string>();
 
     public readonly projectName = input<string>();
@@ -38,6 +40,14 @@ export class TrackerStartButtonComponent {
     );
 
     protected readonly isPaused = computed(() => !!this.tracker()?.pausedAt);
+
+    protected readonly startLabelKey = computed(() =>
+        this.isCompact() ? 'TRACK.START_SHORT' : 'TRACK.START_HERE'
+    );
+
+    protected readonly submitLabelKey = computed(() =>
+        this.isCompact() ? 'TRACK.SUBMIT_SHORT' : 'TRACK.SUBMIT'
+    );
 
     protected readonly isSwitchOpen = signal(false);
 

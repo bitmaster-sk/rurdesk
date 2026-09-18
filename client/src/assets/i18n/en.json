@@ -569,9 +569,7 @@
             "OPEN": "Open",
             "OPEN_IN_NEW_TAB": "Open in new tab",
             "COPY_ID": "Copy ID",
-            "DELETE": "Delete",
-            "AI": "AI",
-            "TIME": "Time"
+            "DELETE": "Delete"
         },
         "ADD": "Add task",
         "MOVE_FAILED": "Failed to move the card. The board has been refreshed.",
@@ -771,7 +769,8 @@
         "SWITCH_CONFIRM": "Submit and switch",
         "START_HERE": "Start tracking this issue",
         "TODAY_ISSUES": "{{ count }} tasks",
-        "SUBMIT_SHORT": "Submit"
+        "SUBMIT_SHORT": "Submit",
+        "START_SHORT": "Track"
     },
     "TIME": {
         "START": "Start time",
