@@ -39,7 +39,7 @@ describe('IssueDetailPage title', () => {
                 { provide: NoticeService, useValue: { issue$ } },
                 {
                     provide: I18nService,
-                    useValue: { instant: (k: string, p?: Record<string, unknown>) => k }
+                    useValue: { instant: (k: string, _p?: Record<string, unknown>) => k }
                 },
                 { provide: CommandPaletteService, useValue: { setContext } }
             ]
