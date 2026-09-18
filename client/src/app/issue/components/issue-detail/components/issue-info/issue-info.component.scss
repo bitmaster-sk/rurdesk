@@ -125,6 +125,17 @@
             line-height: 1.2;
         }
 
+        &__body {
+            padding: var(--ui-space-m);
+
+            // The panel body itself provides the bottom spacing, so the
+            // library's bottom margin on the final wrapper would create a
+            // double gap. Keep it for all earlier wrappers.
+            .d2h-file-wrapper:last-child {
+                margin-bottom: 0;
+            }
+        }
+
         // Body content when no PR/MR is linked. Mirrors `.quality-panel__empty`
         // so the unlinked-state hint reads as a sibling-empty-state rather than
         // a different panel.
