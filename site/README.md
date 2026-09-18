@@ -28,7 +28,8 @@ site/
   assets/css/site.css   all styling (palette mirrors client/src/app/theme/app-preset.ts)
   assets/img/           screenshots, .webm clips, architecture.svg, favicon
   tools/build.mjs       md → HTML generator (page list + sidebar defined here)
-  tools/capture.mjs     automated Playwright screenshots
+  tools/scenario.mjs    interactive Playwright capture runner (screenshots + clips)
+  tools/capture-lib.mjs shared capture helpers (login, shooting, output dir)
   test/                 build behavior tests
   dist/                 output — never edit, always regenerate
 ```

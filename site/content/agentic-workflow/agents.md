@@ -14,13 +14,13 @@ approving stages.
 
 ## Concepts
 
-| Term                        | Meaning                                                                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                              |
-| **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                              |
+| Term                        | Meaning                                                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                                |
+| **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                                |
 | **Agent gateway**           | The agent's single gateway record (the Goose gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with. |
-| **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                              |
-| **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                  |
+| **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                                |
+| **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                    |
 
 ## 1. Create an agent user
 
@@ -30,7 +30,7 @@ name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
 
-![Creating an agent](../../site/assets/img/bot-create.png)
+![Creating an agent](../../site/assets/img/agent-create.png)
 
 ## 2. Copy the agent's credentials
 
@@ -52,7 +52,7 @@ expose only over HTTPS (or `localhost`); on a plain-HTTP deployment it falls bac
 to a legacy copy path, and if the browser blocks that too the dialog says so —
 select the token in the row and copy it manually.
 
-![Agent credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/bot-keys.png)
+![Agent credentials dialog — the one-time Gateway → Tracker and Tracker → Gateway tokens](../../site/assets/img/agent-keys.png)
 
 > The tracker signs each `stage_execute` webhook with the Tracker → Gateway
 > token; the gateway verifies the `X-Tracker-Signature` and rejects mismatches
@@ -127,9 +127,15 @@ While a stage runs, its row is open and scrolls itself: thinking and tool calls
 are appended live — no refresh — next to the stage name, a working dot and the
 elapsed time. Thinking reads as prose; each tool call sits in its own small card
 with the argument that identifies it and a coloured icon for what the call did —
-run a command, write, or read. Once the stage finishes, the row collapses under the comment that
+run a command, write, or read.
+
+![An open Thinking row, the agent's reasoning for the brainstorming stage read as prose](../../site/assets/img/thinking-expanded.png)
+
+Once the stage finishes, the row collapses under the comment that
 stage produced; click the header to read it again. Collapsed it is a single line,
 so it stays out of the way without needing a filter of its own.
+
+![The same Thinking row collapsed to a single line under the stage name](../../site/assets/img/thinking-collapsed.png)
 
 A stage that produces no comment — one that **failed**, or a brainstorm with
 nothing to ask — still gets its own row at the end of the feed. That is usually
@@ -170,6 +176,8 @@ stage; it accepts 64 KB to 10240 KB. A stage that hits the limit keeps what it
 had and the row says the rest was dropped.
 
 Both settings apply to the next batch of thinking; no restart is needed.
+
+![Admin application settings, with the thinking retention toggle and the per-stage KB limit](../../site/assets/img/admin-settings.png)
 
 > Thinking text can quote source code and tool output, exactly like a design or
 > plan comment. It is visible to every member of the project, so treat it with

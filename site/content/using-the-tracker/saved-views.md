@@ -13,11 +13,15 @@ list in one click.
 Saved views belong to the **project** and are reachable from the **Views** button in
 the task page toolbar, on every view.
 
+![The Views menu open over the task list, with shared and private views and their view-type badges](../../site/assets/img/saved-views-menu.png)
+
 ## Saving a view
 
 1. Filter and sort the list the way you want it.
 2. Open **Views** → **Save current view…**
 3. Give it a name and choose whether it is private or shared.
+
+![The save-view dialog asking for a name and whether the view is shared](../../site/assets/img/saved-views-dialog.png)
 
 The view records the state of the toolbar at that moment. Later changes to your filters
 do **not** update it — use **Update "&lt;name&gt;"** in the same menu when you want to

@@ -7,10 +7,10 @@ description: Accounts, the global admin role, agents, agent credentials, teams, 
 
 Two permission layers exist side by side:
 
-| Layer | Scope | Values |
-| --- | --- | --- |
-| **Global admin** | Whole instance | `admin` flag on a user |
-| **Project role** | One project | `viewer` · `member` · `owner` |
+| Layer            | Scope          | Values                        |
+| ---------------- | -------------- | ----------------------------- |
+| **Global admin** | Whole instance | `admin` flag on a user        |
+| **Project role** | One project    | `viewer` · `member` · `owner` |
 
 ## Accounts & first run
 
@@ -94,7 +94,7 @@ Rotation:
   the gateway's `TRACKER_TO_GATEWAY_TOKEN` and restart it right after —
   webhook calls fail signature verification in between.
 
-![Agent credentials dialog](../../site/assets/img/bot-keys.png)
+![Agent credentials dialog](../../site/assets/img/agent-keys.png)
 
 ## Teams
 
@@ -121,14 +121,14 @@ role is the **highest** of their direct assignment and any team they belong to.
 Owners manage a project's membership — they do **not** create or edit the teams
 themselves; that stays in the [admin Teams panel](#teams).
 
-| Capability | viewer | member | owner |
-| --- | :-: | :-: | :-: |
-| See the project, tasks, views | ✔ | ✔ | ✔ |
-| Create / edit tasks, log time, relations | | ✔ | ✔ |
-| Read git integrations, MR diffs | | ✔ | ✔ |
-| Manage project members & team access | | | ✔ |
-| Manage git integrations | | | ✔ |
-| Manage agent gateways & agent settings | | | ✔ |
+| Capability                               | viewer | member | owner |
+| ---------------------------------------- | :----: | :----: | :---: |
+| See the project, tasks, views            |   ✔    |   ✔    |   ✔   |
+| Create / edit tasks, log time, relations |        |   ✔    |   ✔   |
+| Read git integrations, MR diffs          |        |   ✔    |   ✔   |
+| Manage project members & team access     |        |        |   ✔   |
+| Manage git integrations                  |        |        |   ✔   |
+| Manage agent gateways & agent settings   |        |        |   ✔   |
 
 > **Time entries.** A time entry can be edited or removed only by its author, or
 > by a project **owner** (who may correct or clean up any member's entries). A

@@ -45,6 +45,8 @@ the opposite arrow brings it back. The button between them resets to the even
 way back, whatever you dragged or collapsed. Hovering any of the three explains
 what it does, including why it is currently inactive.
 
+![The task info pane collapsed, activity filling the width, with the three separator controls showing at the edge](../../site/assets/img/split-collapsed.png)
+
 Double-clicking the separator resets it too. With the separator focused, the
 arrow keys move it (hold Shift for a finer step), Home/End collapse a side, and
 Enter resets.
@@ -94,9 +96,11 @@ For anything beyond these shortcuts, open the emoji picker in the composer
 toolbar, or use your operating system's picker (`Ctrl+Cmd+Space` on macOS,
 `Win+.` on Windows) — the composer accepts any emoji character you type.
 
+![The emoji picker open from the composer toolbar, grouped into reactions, people, objects and symbols](../../site/assets/img/emoji-picker.png)
+
 ### Views
 
-The same tasks can be viewed five ways — switch views from the project toolbar:
+The same tasks can be viewed four ways — switch views from the project toolbar:
 
 #### Filters
 
@@ -192,6 +196,8 @@ Support, whatever fits). The type is **optional**: a new project has no default
 type, so tasks stay untyped until you pick one. Set a default in project
 settings if you'd rather every new task start with one.
 
+![Task types in project settings: the three starter types, drag handles to reorder them, and the default-type picker](../../site/assets/img/project-task-types.png)
+
 Types are deliberately monochrome. Colour on a task already means two things —
 the state badge and the severity dot — so a third colour would make all three
 harder to read at a glance. The type renders as a plain outlined label instead.
@@ -211,6 +217,8 @@ toggle — and save that filter into a view like any other.
 **workflow events** to task states: when an event fires, the task's state
 updates to whatever you mapped it to; leave an event unmapped to skip it. The
 events are grouped by what can trigger them:
+
+![The Automatic state changes panel, with each workflow event on the left and the task state it maps to on the right](../../site/assets/img/workflow-state-map.png)
 
 - **Any linked pull request** — **Done** and **Failed**, because they fire for
   **both** an agent-opened PR and a **manually linked** one. A background check
@@ -277,12 +285,16 @@ actions popup, or from the command palette. Only one timer runs at a time — if
 one is already running on another task, you are asked whether to submit it and
 switch.
 
+![The switch dialog: the timer running now above, the task about to start below, and the Submit and switch action](../../site/assets/img/timer-switch.png)
+
 While a timer runs it appears in the page header as a small control:
 
 - the **stopwatch and clock** open a panel with today's total, a chart of when
   the work happened, and the confirm, pause and discard actions;
 - the **task number** is a link straight to the task being worked on;
 - the last segment **pauses and resumes** the timer.
+
+![The header timer with its panel open: elapsed time, today's total, the day chart, a note field and the confirm, pause and discard actions](../../site/assets/img/running-timer.png)
 
 There is nothing in the header when no timer runs. A running timer keeps
 counting on its own: reload the page, close the tab, or sign in on another

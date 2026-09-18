@@ -7,7 +7,7 @@
     "scripts": {
         "build": "node tools/build.mjs",
         "test": "node --test test/*.test.mjs",
-        "capture": "node tools/capture.mjs"
+        "capture": "node tools/scenario.mjs"
     },
     "dependencies": {
         "marked": "^16.0.0"

@@ -15,7 +15,8 @@ export const VW = 1600, VH = 1000;
 export const SETTLE_MS = 1800;
 
 export const BASE = (process.env.CAPTURE_BASE || 'http://localhost').replace(/\/+$/, '');
-export const IMG = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', 'img');
+export const IMG = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..', 'assets', 'tmp');
+fs.mkdirSync(IMG, { recursive: true });
 
 // ───────────────────────────── browser lifecycle ─────────────────────────────
 
@@ -330,7 +331,12 @@ export async function centerOf(locator) {
 
 // ───────────────────────────────── ffmpeg ─────────────────────────────────
 
+// A system ffmpeg is tried first on purpose: Playwright's bundled build is
+// compiled VP8-only, so putting it first would silently cost us the VP9 path.
 export function findFfmpeg() {
+  for (const p of ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg']) {
+    if (fs.existsSync(p)) return p;
+  }
   const base = path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright');
   try {
     for (const d of fs.readdirSync(base)) {
@@ -340,6 +346,12 @@ export function findFfmpeg() {
     }
   } catch { /* none */ }
   return null;
+}
+
+function hasVp9(ff) {
+  try {
+    return execFileSync(ff, ['-hide_banner', '-encoders'], { encoding: 'utf8' }).includes('libvpx-vp9');
+  } catch { return false; }
 }
 
 // rename the newest .webm in IMG to `file`, then re-encode: trim `offsetSec` off the
@@ -357,7 +369,13 @@ export function finalizeWebm(file, offsetSec = 0) {
   const tmp = dst.replace(/\.webm$/, '.enc.webm');
   const args = ['-y'];
   if (offsetSec > 0.05) args.push('-ss', offsetSec.toFixed(2)); // fast front trim
-  args.push('-i', dst, '-c:v', 'libvpx', '-b:v', '5000k', '-quality', 'good', '-cpu-used', '1', '-an', tmp);
+  args.push('-i', dst);
+  if (hasVp9(ff)) {
+    args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0', '-row-mt', '1', '-deadline', 'good', '-cpu-used', '2');
+  } else {
+    args.push('-c:v', 'libvpx', '-b:v', '5000k', '-quality', 'good', '-cpu-used', '1');
+  }
+  args.push('-an', tmp);
   execFileSync(ff, args, { stdio: 'ignore' });
   fs.renameSync(tmp, dst);
   return true;
