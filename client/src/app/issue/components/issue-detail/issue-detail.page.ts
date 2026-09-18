@@ -14,6 +14,7 @@ import { ProjectStore } from 'src/app/project/project.store';
 import { BrowserTitleService } from 'src/app/core/browser-title.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { IssueApi } from '../../api/issue.api.service';
 import { IssueConverter } from '../../converter/issue.converter';
@@ -35,6 +36,7 @@ export class IssueDetailPage implements OnDestroy {
     private readonly projectStore = inject(ProjectStore);
     private readonly notice = inject(NoticeService);
     private readonly browserTitle = inject(BrowserTitleService);
+    private readonly i18n = inject(I18nService);
     private readonly commandPalette = inject(CommandPaletteService);
     private lastIdProject: number | null = null;
 
@@ -145,16 +147,31 @@ export class IssueDetailPage implements OnDestroy {
         if (params.idIssuePublic !== null) {
             return this.issueApi.loadOne$(params.idProject, params.idIssuePublic);
         }
+        const cloneSource = (history.state as { cloneSource?: Issue } | null)?.cloneSource;
         // idIssue/idIssuePublic stay absent on purpose — the form reads their absence as "new issue".
-        const draft: CreateIssueReq = {
-            idProject: params.idProject,
-            idState: null,
-            idSeverity: null,
-            idIssueType: null,
-            title: '',
-            description: '',
-            tracked: 0
-        };
+        const draft: CreateIssueReq = cloneSource
+            ? {
+                  idProject: params.idProject,
+                  idState: cloneSource.idState,
+                  idSeverity: cloneSource.idSeverity,
+                  idIssueType: cloneSource.idIssueType,
+                  title: this.i18n.instant('ISSUE.COPY_SUFFIX', { title: cloneSource.title }),
+                  description: cloneSource.description,
+                  assignedTo: cloneSource.assignedTo,
+                  estimated: cloneSource.estimated,
+                  points: cloneSource.points,
+                  scheduledAt: cloneSource.scheduledAt,
+                  tracked: 0
+              }
+            : {
+                  idProject: params.idProject,
+                  idState: null,
+                  idSeverity: null,
+                  idIssueType: null,
+                  title: '',
+                  description: '',
+                  tracked: 0
+              };
         return of(draft as Issue);
     }
 

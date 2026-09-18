@@ -288,6 +288,55 @@ describe('IssueInfoComponent — "New task" menu action', () => {
         expect(navigate).toHaveBeenCalledWith(['/project', 7, 'issue', 0]);
     });
 
+    it('includes a "Clone task" item that navigates to /project/{id}/issue/0 with cloneSource state', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        const clone = actions.find(a => a.labelKey === 'ISSUE.MENU.CLONE');
+        expect(clone).toBeDefined();
+        expect(clone!.icon).toBe('copy');
+        clone!.command!();
+        expect(navigate).toHaveBeenCalledWith(['/project', 7, 'issue', 0], {
+            state: { cloneSource: ISSUE }
+        });
+    });
+
+    it('omits the "Clone task" item when canCreateIssue() is false', () => {
+        canCreateIssue.set(false);
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        expect(actions.find(a => a.labelKey === 'ISSUE.MENU.CLONE')).toBeUndefined();
+    });
+
+    it('adds scissors icon to Split sub-item', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        const aiGroup = actions.find(a => a.labelKey === 'AI.SINGULAR');
+        const split = aiGroup!.items!.find(i => i.labelKey === 'SPLIT.SINGULAR');
+        expect(split!.icon).toBe('scissors');
+    });
+
+    it('adds pin icon to both Pin sub-items', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const actions = fixture.componentInstance.actions();
+        const pinGroup = actions.find(a => a.labelKey === 'ISSUE.PIN.SINGULAR');
+        const toProject = pinGroup!.items!.find(i => i.labelKey === 'ISSUE.PIN.TO.PROJECT.PAGE');
+        const toMyPage = pinGroup!.items!.find(i => i.labelKey === 'ISSUE.PIN.TO.MY.PAGE');
+        expect(toProject!.icon).toBe('pin');
+        expect(toMyPage!.icon).toBe('pin');
+    });
+
     it('omits the "New task" item when canCreateIssue() is false', () => {
         canCreateIssue.set(false);
         const fixture = TestBed.createComponent(IssueInfoComponent);

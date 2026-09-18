@@ -99,7 +99,9 @@ import {
     IconSearch,
     IconBell,
     IconBellOff,
-    IconRepeat
+    IconRepeat,
+    IconPin,
+    IconScissors
 } from '@tabler/icons-angular';
 import { GanttTimelineHeaderComponent } from './components/issue-gantt/components/gantt-timeline-header/gantt-timeline-header';
 import { GanttTaskBarComponent } from './components/issue-gantt/components/gantt-task-bar/gantt-task-bar';
@@ -234,7 +236,9 @@ import { AgentModule } from '../agent/agent.module';
             IconLock,
             IconSearch,
             IconBell,
-            IconBellOff
+            IconBellOff,
+            IconPin,
+            IconScissors
         })
     ]
 })
