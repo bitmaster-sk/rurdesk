@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, forwardRef } from '@angular/core';
 import { provideLocationMocks } from '@angular/common/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { provideRouter, Router } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
@@ -80,33 +80,89 @@ function makeIssue(over: Partial<Issue> = {}): Issue {
     };
 }
 
-@Component({ selector: 'app-state-badge-selector', template: '', standalone: true })
-class StateBadgeSelectorStub {
+@Component({
+    selector: 'app-state-badge-selector',
+    template: '',
+    standalone: true,
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => StateBadgeSelectorStub),
+            multi: true
+        }
+    ]
+})
+class StateBadgeSelectorStub implements ControlValueAccessor {
     public readonly states = input<any[]>([]);
     public readonly ngModel = input<any>(null);
     public readonly ngModelChange = output<any>();
+    public writeValue() {}
+    public registerOnChange() {}
+    public registerOnTouched() {}
+    public setDisabledState() {}
 }
 
-@Component({ selector: 'app-severity-badge-selector', template: '', standalone: true })
-class SeverityBadgeSelectorStub {
+@Component({
+    selector: 'app-severity-badge-selector',
+    template: '',
+    standalone: true,
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => SeverityBadgeSelectorStub),
+            multi: true
+        }
+    ]
+})
+class SeverityBadgeSelectorStub implements ControlValueAccessor {
     public readonly severities = input<any[]>([]);
     public readonly ngModel = input<any>(null);
     public readonly ngModelChange = output<any>();
+    public writeValue() {}
+    public registerOnChange() {}
+    public registerOnTouched() {}
+    public setDisabledState() {}
 }
 
-@Component({ selector: 'app-issue-type-badge-selector', template: '', standalone: true })
-class IssueTypeBadgeSelectorStub {
+@Component({
+    selector: 'app-issue-type-badge-selector',
+    template: '',
+    standalone: true,
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => IssueTypeBadgeSelectorStub),
+            multi: true
+        }
+    ]
+})
+class IssueTypeBadgeSelectorStub implements ControlValueAccessor {
     public readonly issueTypes = input<any[]>([]);
     public readonly ngModel = input<any>(null);
     public readonly ngModelChange = output<any>();
+    public writeValue() {}
+    public registerOnChange() {}
+    public registerOnTouched() {}
+    public setDisabledState() {}
 }
 
-@Component({ selector: 'app-user-dropdown', template: '', standalone: true })
-class UserDropdownStub {
+@Component({
+    selector: 'app-user-dropdown',
+    template: '',
+    standalone: true,
+    providers: [
+        { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UserDropdownStub), multi: true }
+    ]
+})
+class UserDropdownStub implements ControlValueAccessor {
     public readonly users = input<any[]>([]);
     public readonly filter = input<boolean>(false);
     public readonly ngModel = input<any>(null);
     public readonly ngModelChange = output<any>();
+    public writeValue() {}
+    public registerOnChange() {}
+    public registerOnTouched() {}
+    public setDisabledState() {}
 }
 
 @Component({ selector: 'app-tracker-start-button', template: '', standalone: true })
@@ -572,5 +628,98 @@ describe('IssueQuickActionsComponent (TestBed)', () => {
         comp.view.set('date');
         comp.onPopoverHide();
         expect(comp.view()).toBe('actions');
+    });
+});
+
+describe('IssueQuickActionsComponent — context-menu open/close (browser)', () => {
+    function panel(): HTMLElement | null {
+        return document.querySelector('.ui-popover');
+    }
+
+    function dispatchAuxclick(target: HTMLElement): void {
+        const event = new MouseEvent('auxclick', {
+            bubbles: true,
+            cancelable: true,
+            button: 2
+        });
+        target.dispatchEvent(event);
+    }
+
+    async function setupWithRow(): Promise<{
+        fixture: any;
+        comp: any;
+        row: HTMLElement;
+        leaf: HTMLElement;
+        td: HTMLElement;
+    }> {
+        // Create a row structure: <tr><td><span class="leaf">text</span></td></tr>
+        // so auxclick can target the <td> (ancestor) as it does on cursor drift.
+        const row = document.createElement('tr');
+        const td = document.createElement('td');
+        const leaf = document.createElement('span');
+        leaf.className = 'leaf';
+        leaf.textContent = 'task';
+        td.appendChild(leaf);
+        row.appendChild(td);
+        document.body.appendChild(row);
+
+        const result = await createFixture();
+        return { fixture: result.fixture, comp: result.comp, row, leaf, td };
+    }
+
+    afterEach(() => {
+        document.querySelectorAll('tr').forEach(el => el.remove());
+    });
+
+    it('stays open on trailing auxclick after contextmenu (same target)', async () => {
+        const { fixture, comp, leaf } = await setupWithRow();
+        comp.show(
+            { clientY: 100, clientX: 200, target: leaf, preventDefault: () => {} } as any,
+            makeIssue()
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(panel()).not.toBeNull();
+
+        // Trailing auxclick on the same leaf — would close without the fix
+        // if dismissExcludeEl.contains() returned false.
+        dispatchAuxclick(leaf);
+        fixture.detectChanges();
+        expect(panel()).not.toBeNull();
+    });
+
+    it('stays open when auxclick target is an ancestor of the right-clicked element', async () => {
+        const { fixture, comp, leaf, td } = await setupWithRow();
+
+        // contextmenu targets the leaf <span>; auxclick targets the <td> (ancestor)
+        // — the actual failing scenario on a firm/slow trackpad press.
+        comp.show(
+            { clientY: 100, clientX: 200, target: leaf, preventDefault: () => {} } as any,
+            makeIssue()
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(panel()).not.toBeNull();
+
+        dispatchAuxclick(td);
+        fixture.detectChanges();
+        expect(panel()).not.toBeNull();
+    });
+
+    it('genuine outside click still dismisses after suppression re-arms', async () => {
+        const { fixture, comp, leaf } = await setupWithRow();
+        comp.show(
+            { clientY: 100, clientX: 200, target: leaf, preventDefault: () => {} } as any,
+            makeIssue()
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(panel()).not.toBeNull();
+
+        // Genuine outside click: pointerdown clears suppression, then click dismisses.
+        document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        fixture.detectChanges();
+        expect(panel()).toBeNull();
     });
 });

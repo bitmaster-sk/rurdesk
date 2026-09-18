@@ -67,6 +67,17 @@ export class UiPopoverComponent implements OnDestroy {
      *  which would otherwise read as an outside click and close it on release. */
     private dismissExcludeEl: HTMLElement | null = null;
 
+    /** While set, the `outsidePointerEvents()` handler skips the dismiss check
+     *  entirely. Used by context-menu openers to ignore the trailing `auxclick`
+     *  of the opening right-click — which targets an ancestor of `dismissExcludeEl`
+     *  when the cursor drifts on a firm/slow press. Re-armed by the next
+     *  `pointerdown` (a genuine outside click always starts with one). */
+    private suppressOutsideDismiss = false;
+
+    /** One-shot `pointerdown` capture listener that clears `suppressOutsideDismiss`.
+     *  Stored so `disposeOverlay()` can remove it on close (no listener leak). */
+    private clearSuppressListener: (() => void) | null = null;
+
     public ngOnDestroy(): void {
         this.disposeOverlay();
     }
@@ -83,7 +94,11 @@ export class UiPopoverComponent implements OnDestroy {
     /** Open anchored to an element (or the `currentTarget` of an event).
      *  `excludeEl` is an additional element to exclude from outside-dismiss
      *  (e.g. the row a context menu was opened from). */
-    public show(target: HTMLElement | Event, excludeEl?: HTMLElement | null): void {
+    public show(
+        target: HTMLElement | Event,
+        excludeEl?: HTMLElement | null,
+        suppressUntilNextPointerDown = false
+    ): void {
         if (this.isOpen()) {
             return;
         }
@@ -94,6 +109,17 @@ export class UiPopoverComponent implements OnDestroy {
         }
         this.originEl = origin;
         this.dismissExcludeEl = excludeEl ?? null;
+
+        if (suppressUntilNextPointerDown) {
+            this.suppressOutsideDismiss = true;
+            const clear = (): void => {
+                this.suppressOutsideDismiss = false;
+                document.removeEventListener('pointerdown', clear, true);
+                this.clearSuppressListener = null;
+            };
+            this.clearSuppressListener = clear;
+            document.addEventListener('pointerdown', clear, true);
+        }
 
         const positionStrategy = this.overlay
             .position()
@@ -130,6 +156,7 @@ export class UiPopoverComponent implements OnDestroy {
         });
         this.overlayRef.attach(new TemplatePortal(this.tpl(), this.vcr));
         this.overlayRef.outsidePointerEvents().subscribe(event => {
+            if (this.suppressOutsideDismiss) return;
             const target = event.target as Node | null;
             const onOrigin =
                 !!target &&
@@ -164,6 +191,11 @@ export class UiPopoverComponent implements OnDestroy {
     }
 
     private disposeOverlay(): void {
+        if (this.clearSuppressListener) {
+            document.removeEventListener('pointerdown', this.clearSuppressListener, true);
+            this.clearSuppressListener = null;
+        }
+        this.suppressOutsideDismiss = false;
         this.overlayRef?.dispose();
         this.overlayRef = null;
         this.originEl = null;
