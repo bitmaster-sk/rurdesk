@@ -338,14 +338,14 @@ func (r *MessageRepository) UpdateMessage(ctx context.Context, idMessage int64, 
 			UPDATE messages.message
 			SET message = $3, updated_at = now() at time zone 'utc', version = version + 1
 			WHERE id_message = $1 AND id_user_from = $2
-			RETURNING id_message, message, created_at, updated_at, id_user_from, version
+			RETURNING id_message, message, created_at, updated_at, id_user_from, version, message_kind
 		)
-		SELECT u.id_message, u.message, u.created_at, u.updated_at, u.version,
+		SELECT u.id_message, u.message, u.created_at, u.updated_at, u.version, u.message_kind,
 		       usr.id_user, usr.name, usr.color_avatar_bg
 		FROM updated u
 		INNER JOIN users.user usr ON usr.id_user = u.id_user_from
 	`, idMessage, idUserFrom, newMessage).Scan(
-		&msg.IdMessage, &msg.Message, &msg.CreatedAt, &msg.UpdatedAt, &msg.Version,
+		&msg.IdMessage, &msg.Message, &msg.CreatedAt, &msg.UpdatedAt, &msg.Version, &msg.MessageKind,
 		&creator.IdUser, &creator.Name, &creator.ColorAvatarBg,
 	)
 	if err != nil {

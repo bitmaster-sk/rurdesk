@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -161,6 +162,7 @@ func (s *MessageAnchorSuite) Test_05_EditingParentMarksAnchorOutdated() {
 	var updatedParent model.Message
 	json.NewDecoder(editRes.Body).Decode(&updatedParent)
 	s.Equal(2, updatedParent.Version)
+	s.Equal(constants.MessageKindComment, updatedParent.MessageKind)
 
 	// List messages and check child anchor is outdated
 	msgs := s.listMessages()
