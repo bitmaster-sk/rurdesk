@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { IssueDetailPage } from './issue-detail.page';
 import { IssueApi } from '../../api/issue.api.service';
 import { ProjectStore } from 'src/app/project/project.store';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
+import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
@@ -12,6 +15,8 @@ import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
 import { Fixtures } from 'src/testing/fixtures';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
 const issue: Issue = Fixtures.issue({ idIssue: 10, idIssuePublic: 5, title: 'X', idState: 1 });
 
@@ -169,5 +174,112 @@ describe('IssueDetailPage clone pre-fill', () => {
         expect(issue?.title).toBe('');
         expect(issue?.description).toBe('');
         expect(issue?.idState).toBeNull();
+    });
+});
+
+describe('IssueDetailPage delete and redirect', () => {
+    const savedIssue: Issue = Fixtures.issue({
+        idIssue: 10,
+        idIssuePublic: 5,
+        idProject: 1,
+        title: 'X'
+    });
+    let navigate: ReturnType<typeof vi.fn>;
+    let delete$: ReturnType<typeof vi.fn>;
+    let showSuccess: ReturnType<typeof vi.fn>;
+    let showError: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+        localStorage.clear();
+        navigate = vi.fn();
+        delete$ = vi.fn().mockReturnValue(of(undefined));
+        showSuccess = vi.fn();
+        showError = vi.fn();
+
+        TestBed.configureTestingModule({
+            declarations: [IssueDetailPage],
+            providers: [
+                {
+                    provide: ActivatedRoute,
+                    useValue: {
+                        paramMap: of(convertToParamMap({ idProject: '1', idIssuePublic: '5' }))
+                    }
+                },
+                {
+                    provide: IssueApi,
+                    useValue: { loadOne$: () => of(savedIssue), delete$ }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 1 }) } },
+                { provide: NoticeService, useValue: { issue$: new Subject() } },
+                {
+                    provide: I18nService,
+                    useValue: { instant: (k: string, _p?: Record<string, unknown>) => k }
+                },
+                { provide: CommandPaletteService, useValue: { setContext: vi.fn() } },
+                { provide: Router, useValue: { navigate } },
+                {
+                    provide: ToastNotificationService,
+                    useValue: { showSuccess, showError }
+                },
+                { provide: SavedViewApi, useValue: { loadByProject$: () => of([]) } },
+                SavedViewStore
+            ]
+        }).overrideComponent(IssueDetailPage, {
+            set: {
+                template: '',
+                providers: [{ provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } }]
+            }
+        });
+    });
+
+    afterEach(() => localStorage.clear());
+
+    it('navigates to the last visited view after a successful delete', () => {
+        IssueLastViewStorage.save(1, IssueViewMode.KANBAN);
+        const f = TestBed.createComponent(IssueDetailPage);
+        f.detectChanges();
+        f.componentInstance.pendingDeleteIssue.set(savedIssue);
+        f.componentInstance.onDeleteConfirmed();
+        expect(delete$).toHaveBeenCalledWith(1, 5);
+        expect(showSuccess).toHaveBeenCalledWith('ISSUE.DELETE.SUCCESS');
+        expect(navigate).toHaveBeenCalledWith(
+            ['/project', 1, 'issue', 'view', IssueViewMode.KANBAN],
+            { queryParams: undefined }
+        );
+    });
+
+    it('falls back to table when no last view is stored', () => {
+        const f = TestBed.createComponent(IssueDetailPage);
+        f.detectChanges();
+        f.componentInstance.pendingDeleteIssue.set(savedIssue);
+        f.componentInstance.onDeleteConfirmed();
+        expect(navigate).toHaveBeenCalledWith(
+            ['/project', 1, 'issue', 'view', IssueViewMode.TABLE],
+            { queryParams: undefined }
+        );
+    });
+
+    it('appends the applied saved view id as a query param', () => {
+        IssueLastViewStorage.save(1, IssueViewMode.GANTT);
+        const store = TestBed.inject(SavedViewStore);
+        store.setApplied(42);
+        const f = TestBed.createComponent(IssueDetailPage);
+        f.detectChanges();
+        f.componentInstance.pendingDeleteIssue.set(savedIssue);
+        f.componentInstance.onDeleteConfirmed();
+        expect(navigate).toHaveBeenCalledWith(
+            ['/project', 1, 'issue', 'view', IssueViewMode.GANTT],
+            { queryParams: { view: 42 } }
+        );
+    });
+
+    it('shows an error toast and does not navigate when delete fails', () => {
+        delete$.mockReturnValue(throwError(() => new Error('403')));
+        const f = TestBed.createComponent(IssueDetailPage);
+        f.detectChanges();
+        f.componentInstance.pendingDeleteIssue.set(savedIssue);
+        f.componentInstance.onDeleteConfirmed();
+        expect(showError).toHaveBeenCalledWith('ISSUE.DELETE.FAILED');
+        expect(navigate).not.toHaveBeenCalled();
     });
 });

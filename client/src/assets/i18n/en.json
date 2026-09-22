@@ -641,7 +641,13 @@
             "MONTH": "Month"
         },
         "MENU": {
-            "CLONE": "Clone task"
+            "CLONE": "Clone task",
+            "DELETE": "Delete task",
+            "DELETE_CONFIRM": "Delete this task? This cannot be undone."
+        },
+        "DELETE": {
+            "SUCCESS": "Task deleted",
+            "FAILED": "Could not delete the task. Please try again."
         },
         "COPY_SUFFIX": "{{title}} (copy)"
     },

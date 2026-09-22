@@ -49,6 +49,8 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { FULLCALENDAR_LOCALES, FullCalendarLocales } from './fullcalendar-locales';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
 @Component({
     selector: 'app-issue-calendar',
@@ -456,6 +458,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
+            IssueLastViewStorage.save(project.idProject, IssueViewMode.CALENDAR);
             const now = new Date();
             // Never persisted in a view, so both branches need it computed here.
             const scheduledAtFrom = startOfMonth(now);

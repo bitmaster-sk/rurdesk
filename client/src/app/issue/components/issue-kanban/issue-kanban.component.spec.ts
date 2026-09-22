@@ -30,6 +30,7 @@ import { NoticeSubject } from 'src/app/shared/notice/constant/notice-subject.enu
 import { Issue } from '../../model/issue.model';
 import { LangChangeEvent } from '@ngx-translate/core';
 import { Fixtures } from 'src/testing/fixtures';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 
 const storage = new Map<string, string>();
 vi.stubGlobal('localStorage', {
@@ -852,5 +853,14 @@ describe('IssueKanbanComponent — sprint analytics', () => {
                 .velocities()
                 .map(v => v.donePoints)
         ).toEqual([100, 2, 4, 6, 8, 10]);
+    });
+});
+
+describe('IssueKanbanComponent — last viewed view persistence', () => {
+    beforeEach(() => storage.clear());
+
+    it('persists the kanban view as the last visited issue list view', () => {
+        setup();
+        expect(storage.get('rurdesk.issue.lastView.1')).toBe(IssueViewMode.KANBAN);
     });
 });

@@ -37,6 +37,8 @@ import { RelationDropEvent } from './components/issue-table-drop-zone/issue-tabl
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
 @Component({
     selector: 'app-issue-table',
@@ -177,6 +179,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
             });
         this.projectStore.project$.pipe(first()).subscribe(p => {
             this.idProject = p.idProject;
+            IssueLastViewStorage.save(p.idProject, IssueViewMode.TABLE);
         });
         // Wire list-mode j/k/↑↓ (gated + dispatched by HotkeyService) to row highlight.
         this.hotkeys.registerListHandler(delta => this.moveHighlight(delta));

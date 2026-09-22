@@ -60,6 +60,8 @@ import {
 import { ZOOM_LEVELS, ZOOM_OPTIONS } from './constants/gantt-zoom-options';
 import { STORAGE_KEY_CARD_MODE, STORAGE_KEY_MINIMAP } from './constants/gantt-storage-keys';
 import { UiMotion } from 'src/app/ui/util/ui-motion';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
 const ROW_HEIGHT_COMFORTABLE = 72;
 const ROW_HEIGHT_COMPACT = 38;
@@ -397,6 +399,9 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public ngAfterViewInit(): void {
         this.issueToolbarService.register(this.toolbarRef());
         this.setInitialFilter();
+        this.projectStore.project$
+            .pipe(first())
+            .subscribe(p => IssueLastViewStorage.save(p.idProject, IssueViewMode.GANTT));
         this.onSavedViewResetSignal();
         this.updateRowHeight();
         this._wsSub.add(
