@@ -99,11 +99,11 @@ describe('MessageEditorComponent (contenteditable)', () => {
         // Typing alone must NOT emit in onaction mode (would post per keystroke).
         expect(host.emitted).toEqual([]);
 
-        // Shift+Enter = send.
+        // Ctrl+Enter = send.
         el.dispatchEvent(
             new KeyboardEvent('keydown', {
                 key: 'Enter',
-                shiftKey: true,
+                ctrlKey: true,
                 bubbles: true
             })
         );
@@ -145,9 +145,9 @@ describe('MessageEditorComponent (contenteditable)', () => {
         // comment editor would post to the server on every keystroke/toolbar click).
         expect(host.emitted).toEqual([]);
 
-        // Shift+Enter (send) is the single commit that emits + updates the model.
+        // Ctrl+Enter (send) is the single commit that emits + updates the model.
         el.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+            new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })
         );
         fixture.detectChanges();
         await fixture.whenStable();
@@ -251,6 +251,9 @@ describe('MessageEditorComponent (contenteditable)', () => {
         // NOT propagate to message()/messageChange — the token lives in the editor's
         // serialized DOM until the user actually sends.
         expect(EditorText.serialize(el)).toBe('@[Jan](user:1) ');
+
+        // A mention pick is an edit, not a send — nothing was emitted.
+        expect(host.emitted).toEqual([]);
     });
 
     it('Enter is NOT swallowed when @query has zero matching candidates (picker hidden)', async () => {
@@ -272,13 +275,13 @@ describe('MessageEditorComponent (contenteditable)', () => {
         const items = fixture.nativeElement.querySelectorAll('.mention-picker__item');
         expect(items.length).toBe(0);
 
-        // Shift+Enter must reach onSend (not be swallowed by picker logic).
+        // Ctrl+Enter must reach onSend (not be swallowed by picker logic).
         // Observable proof: _onChange is called (it triggers the registered CVA change
-        // callback). We verify by checking that the dispatched event was NOT preventDefault'd,
-        // because onShiftEnter calls evt.preventDefault() — so if it fired, it was prevented.
+        // callback). We verify by checking that the dispatched event WAS preventDefault'd,
+        // because onSendShortcut calls evt.preventDefault() — so if it fired, it was prevented.
         const enterEvt = new KeyboardEvent('keydown', {
             key: 'Enter',
-            shiftKey: true,
+            ctrlKey: true,
             bubbles: true,
             cancelable: true
         });
@@ -286,7 +289,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         await fixture.whenStable();
 
-        // onShiftEnter calls evt.preventDefault(); if it was NOT swallowed by the picker
+        // onSendShortcut calls evt.preventDefault(); if it was NOT swallowed by the picker
         // guard, the event reached that path and was prevented.
         expect(enterEvt.defaultPrevented).toBe(true);
     });
@@ -376,7 +379,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         expect(items.length).toBe(0);
     });
 
-    it('plain Enter inserts a newline (does not send); Shift+Enter sends', async () => {
+    it('plain Enter inserts a newline (does not send); Ctrl+Enter sends', async () => {
         await initFixture();
         const el = editorEl(fixture);
         el.textContent = 'line1';
@@ -397,17 +400,62 @@ describe('MessageEditorComponent (contenteditable)', () => {
         fixture.detectChanges();
         expect(EditorText.serialize(el)).toBe('line1\nline2');
 
-        // Shift+Enter sends the multi-line value.
+        // Ctrl+Enter sends the multi-line value.
         el.dispatchEvent(
             new KeyboardEvent('keydown', {
                 key: 'Enter',
-                shiftKey: true,
+                ctrlKey: true,
                 bubbles: true
             })
         );
         fixture.detectChanges();
         await fixture.whenStable();
         expect(host.emitted).toContain('line1\nline2');
+    });
+
+    it('Cmd+Enter (metaKey) also sends', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        el.textContent = 'hello mac';
+        placeCaretAtEnd(el);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+
+        el.dispatchEvent(
+            new KeyboardEvent('keydown', {
+                key: 'Enter',
+                metaKey: true,
+                bubbles: true
+            })
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(host.emitted).toContain('hello mac');
+    });
+
+    it('Shift+Enter inserts a newline and does NOT send', async () => {
+        await initFixture();
+        const el = editorEl(fixture);
+        el.textContent = 'before';
+        placeCaretAtEnd(el);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+
+        const before = host.emitted.length;
+        el.dispatchEvent(
+            new KeyboardEvent('keydown', {
+                key: 'Enter',
+                shiftKey: true,
+                bubbles: true,
+                cancelable: true
+            })
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        // No send occurred.
+        expect(host.emitted.length).toBe(before);
+        // Shift+Enter is NOT prevented — it falls through to the browser default.
+        // (We can't assert the newline in jsdom, but we can assert no send + no preventDefault.)
     });
 
     function typeAt(el: HTMLDivElement, text: string, caret: number): void {
@@ -482,7 +530,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
         await fixture.whenStable();
 
         el.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+            new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })
         );
         fixture.detectChanges();
         await fixture.whenStable();
@@ -543,7 +591,7 @@ describe('MessageEditorComponent (contenteditable)', () => {
             expect(EditorText.serialize(el)).toBe('hello👍 world');
 
             el.dispatchEvent(
-                new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+                new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true })
             );
             fixture.detectChanges();
             await fixture.whenStable();
