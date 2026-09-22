@@ -25,8 +25,12 @@ FROM golang:1.25-alpine AS api-build
 # plain `docker build`, which leaves the buildinfo dev defaults in place.
 ARG VERSION
 ARG COMMIT
+# Selects the entrypoint package. It changes what the `api` binary contains; the
+# runtime stage is identical either way.
+ARG API_PACKAGE
 ENV VERSION=${VERSION} \
-    COMMIT=${COMMIT}
+    COMMIT=${COMMIT} \
+    API_PACKAGE=${API_PACKAGE}
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 
@@ -36,7 +40,15 @@ COPY api/go.mod api/go.sum ./
 RUN go mod download
 
 COPY api ./
-RUN ./script/build.sh
+# A free image must not ship the commercial licence text, so the file is written
+# here and the runtime stage copies it unconditionally.
+RUN ./script/build.sh \
+ && if [ "$API_PACKAGE" = "./commercial/cmd/api" ]; then \
+        cp commercial/LICENSE /app/LICENSE.commercial; \
+    else \
+        echo "This build contains no commercial code; the root LICENSE (AGPL-3.0) covers all of it." \
+            > /app/LICENSE.commercial; \
+    fi
 
 ################################################################
 # Stage 3 — minimal runtime, non-root
@@ -72,6 +84,7 @@ RUN if [ -f /tmp/notices/THIRD_PARTY_NOTICES.txt ]; then \
     fi \
  && rm -rf /tmp/notices
 COPY LICENSE /app/
+COPY --from=api-build /app/LICENSE.commercial /app/
 
 # Production serves the SPA from the Go binary on the single application port.
 ENV SERVE_STATIC=true \

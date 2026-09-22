@@ -1,0 +1,49 @@
+.license-banner {
+    font-size: var(--font-size-s);
+    border-bottom: 1px solid transparent;
+
+    &.info {
+        background: var(--ui-sky-50);
+        border-bottom-color: var(--ui-sky-200);
+        color: var(--ui-sky-800);
+    }
+
+    &.warning {
+        background: var(--ui-orange-50);
+        border-bottom-color: var(--ui-orange-200);
+        color: var(--ui-orange-800);
+    }
+
+    &.error {
+        background: var(--ui-red-50);
+        border-bottom-color: var(--ui-red-200);
+        color: var(--ui-red-700);
+    }
+
+    &.expired {
+        background: var(--ui-red-600);
+        border-bottom-color: var(--ui-red-800);
+        color: #ffffff;
+    }
+}
+
+.license-banner-action {
+    font-weight: 700;
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+}
+
+.license-banner-dismiss {
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    opacity: 0.6;
+
+    &:hover {
+        opacity: 1;
+    }
+}

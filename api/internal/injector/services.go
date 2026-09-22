@@ -10,6 +10,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/ai"
 	"github.com/bitmaster-sk/rurdesk/api/internal/controller"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
+	"github.com/bitmaster-sk/rurdesk/api/internal/license"
 	"github.com/bitmaster-sk/rurdesk/api/internal/mcp"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -1153,6 +1154,7 @@ func GetRouter() (*router.Router, error) {
 			GetProjectSkillController(),
 			GetAgentOverviewController(),
 			appSettingsController,
+			GetLicenseController(),
 			apiKeyController,
 			GetHealthController(),
 			GetVersionController(),
@@ -1171,6 +1173,28 @@ func GetAppSettingsRepository() *repository.AppSettingsRepository {
 		return repository.NewAppSettingsRepository(pool), nil
 	})
 	return instance.(*repository.AppSettingsRepository)
+}
+
+// GetLicenseProvider returns the entitlement source. The free build keeps the
+// Free default, which entitles nothing and never calls out.
+func GetLicenseProvider() license.Provider {
+	instance, _ := di.GetWithNew("license-provider", func() (any, error) {
+		return license.Free{}, nil
+	})
+	return instance.(license.Provider)
+}
+
+// SetLicenseProvider installs a paid entitlement source. It must run before
+// anything resolves the provider.
+func SetLicenseProvider(provider license.Provider) {
+	di.Set("license-provider", provider)
+}
+
+func GetLicenseController() *controller.LicenseController {
+	instance, _ := di.GetWithNew("license-controller", func() (any, error) {
+		return controller.NewLicenseController(GetLicenseProvider()), nil
+	})
+	return instance.(*controller.LicenseController)
 }
 
 func GetAppSettingsService() (*service.AppSettingsService, error) {

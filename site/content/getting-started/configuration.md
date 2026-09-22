@@ -47,6 +47,8 @@ These must match the credentials your Postgres service is configured with.
 | `GIT_INTEGRATION_ENCRYPTION_KEY` | `<32-byte-key>` | Encrypts stored git integration tokens at rest |
 | `MERGE_POLL_INTERVAL` | `60s` | How often linked pull requests are checked for a merge. Lower it for snappier `done` state changes at the cost of more git-host API calls |
 | `AGENT_EMAIL_DOMAIN` | `agents.local` | Domain for the synthesized e-mail of an agent account (`agent-<name>@<domain>`). Renamed from `BOT_EMAIL_DOMAIN`; existing accounts keep the address they were created with |
+| `LICENSE_KEY` | _(empty)_ | **Commercial image only.** Signed license key enabling paid features. Ignored by the free image; unset means paid features stay off. See [Licensing](./licensing.md) |
+| `LICENSE_PUBLIC_KEY` | _(empty)_ | **Commercial image only.** Base64 Ed25519 public key the license key is verified against, offline and at startup. See [Licensing](./licensing.md) |
 
 > **WebSocket origin & your reverse proxy.** Real-time updates use a WebSocket
 > that is accepted only when the request's `Origin` matches its `Host` (a

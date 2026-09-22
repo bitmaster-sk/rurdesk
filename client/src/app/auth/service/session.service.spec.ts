@@ -2,6 +2,7 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { SettingsStore } from '../../core/settings/settings.store';
+import { LicenseStore } from '../../core/license/license.store';
 import { NotificationStore } from '../../notification/store/notification.store';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
@@ -10,6 +11,7 @@ import { SessionService } from './session.service';
 function build(logout$ = () => of(undefined)) {
     const navigate = vi.fn();
     const load = vi.fn();
+    const loadLicense = vi.fn();
     const saveToken = vi.fn();
     const clearToken = vi.fn();
     const init = vi.fn();
@@ -19,21 +21,23 @@ function build(logout$ = () => of(undefined)) {
             { provide: AuthApi, useValue: { logout$ } },
             { provide: AuthTokenStore, useValue: { saveToken, clearToken } },
             { provide: SettingsStore, useValue: { load } },
+            { provide: LicenseStore, useValue: { load: loadLicense } },
             { provide: NotificationStore, useValue: { init } }
         ]
     });
     const session = runInInjectionContext(injector, () => new SessionService());
-    return { session, navigate, load, saveToken, clearToken, init };
+    return { session, navigate, load, loadLicense, saveToken, clearToken, init };
 }
 
 describe('SessionService.start', () => {
-    it('stores the token, loads the auth-gated settings and lands on the home page', () => {
-        const { session, navigate, load, saveToken, init } = build();
+    it('stores the token, loads the auth-gated state and lands on the home page', () => {
+        const { session, navigate, load, loadLicense, saveToken, init } = build();
 
         session.start('jwt-123');
 
         expect(saveToken).toHaveBeenCalledWith('jwt-123');
         expect(load).toHaveBeenCalled();
+        expect(loadLicense).toHaveBeenCalled();
         expect(init).toHaveBeenCalled();
         expect(navigate).toHaveBeenCalledWith(['/']);
     });

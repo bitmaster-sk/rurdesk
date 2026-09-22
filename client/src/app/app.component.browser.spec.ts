@@ -3,6 +3,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { UiToastStub } from 'src/testing/stubs';
 import { AppComponent } from './app.component';
 import { SettingsStore } from './core/settings/settings.store';
+import { LicenseStore } from './core/license/license.store';
 import { AuthTokenStore } from './auth/store/auth-token.store';
 import { HotkeyService } from './core/command/hotkey.service';
 
@@ -16,6 +17,7 @@ describe('AppComponent', () => {
             declarations: [AppComponent],
             providers: [
                 { provide: SettingsStore, useValue: { load: () => {} } },
+                { provide: LicenseStore, useValue: { load: () => {} } },
                 { provide: AuthTokenStore, useValue: { hasToken: () => false } },
                 { provide: HotkeyService, useValue: { start: () => {} } }
             ]
