@@ -93,6 +93,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             .slice(0, 8);
     });
 
+    // Platform-aware shortcut hint for the send button tooltip.
+    protected readonly isMac = computed(() =>
+        /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent)
+    );
+    protected readonly sendShortcutHint = computed(() => (this.isMac() ? '⌘↵' : 'Ctrl+↵'));
+
     private _onChange: (value: string) => void = () => {};
     private _onTouch: (value: string) => void = () => {};
 
@@ -130,7 +136,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
     }
 
-    public onShiftEnter(evt: Event): void {
+    public onSendShortcut(evt: Event): void {
         evt.preventDefault();
         this.onSend();
     }
@@ -140,7 +146,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const candidates = this.filteredCandidates();
         // Picker is only "active" when there is a query AND at least one candidate
         // visible. When zero candidates match, the picker is hidden and keys must
-        // behave normally (Enter = newline, Shift+Enter = send).
+        // behave normally (Enter = newline, Ctrl/Cmd+Enter = send).
         if (q && candidates.length > 0) {
             // Autocomplete is open — handle navigation keys.
             if (evt.key === 'ArrowDown') {
@@ -166,10 +172,11 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             }
         }
 
-        // Shift+Enter sends; plain Enter falls through so the browser inserts a
-        // newline/<div>, which EditorText.serialize() normalizes.
-        if (evt.key === 'Enter' && evt.shiftKey) {
-            this.onShiftEnter(evt);
+        // Ctrl+Enter (Windows/Linux) or Cmd+Enter (macOS) sends; plain Enter and
+        // Shift+Enter fall through so the browser inserts a newline/<div>, which
+        // EditorText.serialize() normalizes.
+        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
+            this.onSendShortcut(evt);
         }
     }
 

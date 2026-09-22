@@ -206,7 +206,13 @@
 
         <div class="text-right">
             @if (!disableSendButton()) {
-                <ui-button variant="text" severity="primary" size="small" (click)="onSend()">
+                <ui-button
+                    variant="text"
+                    severity="primary"
+                    size="small"
+                    (click)="onSend()"
+                    [uiTooltip]="sendShortcutHint()"
+                >
                     <tabler-icon [icon]="sendIcon()" [size]="14" />
                     @if (sendLabel()) {
                         <span class="ml-1">{{ sendLabel() }}</span>

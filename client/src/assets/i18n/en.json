@@ -1109,7 +1109,9 @@
             "PEOPLE": "People",
             "OBJECTS": "Objects",
             "SYMBOLS": "Symbols"
-        }
+        },
+        "SEND_SHORTCUT_HINT_MAC": "⌘↵",
+        "SEND_SHORTCUT_HINT_OTHER": "Ctrl+↵"
     },
     "MOCKUP": {
         "LABEL": "UI Mockup",
