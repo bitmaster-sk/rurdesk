@@ -1,24 +1,30 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    ElementRef,
     OnDestroy,
     effect,
     inject,
-    signal
+    signal,
+    viewChild
 } from '@angular/core';
 import { Track } from 'src/app/shared/tracker/model/track.model';
-import { ActivatedRoute, ParamMap } from '@angular/router';
+import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { Observable, concat, of } from 'rxjs';
 import { filter, map, shareReplay, switchMap } from 'rxjs/operators';
 import { ProjectStore } from 'src/app/project/project.store';
 import { BrowserTitleService } from 'src/app/core/browser-title.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { IssueApi } from '../../api/issue.api.service';
 import { IssueConverter } from '../../converter/issue.converter';
 import { Issue, CreateIssueReq } from '../../model/issue.model';
+import { SavedViewStore } from 'src/app/project/store/saved-view.store';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 
@@ -32,12 +38,16 @@ import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 })
 export class IssueDetailPage implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
+    private readonly router = inject(Router);
     private readonly issueApi = inject(IssueApi);
     private readonly projectStore = inject(ProjectStore);
     private readonly notice = inject(NoticeService);
+    private readonly savedViewStore = inject(SavedViewStore);
+    private readonly toast = inject(ToastNotificationService);
     private readonly browserTitle = inject(BrowserTitleService);
     private readonly i18n = inject(I18nService);
     private readonly commandPalette = inject(CommandPaletteService);
+    private readonly deleteConfirmEl = viewChild<ElementRef<HTMLElement>>('deleteConfirm');
     private lastIdProject: number | null = null;
 
     public readonly agentRunStore = inject(AgentRunStore);
@@ -45,6 +55,7 @@ export class IssueDetailPage implements OnDestroy {
 
     public readonly splitPaneStorageKey = 'rurdesk.issueDetail.split';
 
+    public readonly pendingDeleteIssue = signal<Issue | null>(null);
     public readonly isSplitDialogOpen = signal(false);
     public readonly splitIssue = signal<Issue | null>(null);
     public readonly pendingTrack = signal<Track | null>(null);
@@ -141,6 +152,37 @@ export class IssueDetailPage implements OnDestroy {
 
     public onSplitCancelled(): void {
         this.isSplitDialogOpen.set(false);
+    }
+
+    public onDeleteRequested(issue: Issue): void {
+        this.pendingDeleteIssue.set(issue);
+        // The uiConfirm directive opens on click; render the host synchronously and click it.
+        queueMicrotask(() => this.deleteConfirmEl()?.nativeElement.click());
+    }
+
+    public onDeleteConfirmed(): void {
+        const issue = this.pendingDeleteIssue();
+        this.pendingDeleteIssue.set(null);
+        if (!issue) {
+            return;
+        }
+        this.issueApi.delete$(issue.idProject, issue.idIssuePublic).subscribe({
+            next: () => {
+                this.toast.showSuccess('ISSUE.DELETE.SUCCESS');
+                const lastView = IssueLastViewStorage.load(issue.idProject) ?? IssueViewMode.TABLE;
+                const idSavedView = this.savedViewStore.idAppliedView();
+                const queryParams = idSavedView !== null ? { view: idSavedView } : undefined;
+                void this.router.navigate(
+                    ['/project', issue.idProject, 'issue', 'view', lastView],
+                    {
+                        queryParams
+                    }
+                );
+            },
+            error: () => {
+                this.toast.showError('ISSUE.DELETE.FAILED');
+            }
+        });
     }
 
     private loadIssue(params: IssueDetailPageParams): Observable<Issue> {

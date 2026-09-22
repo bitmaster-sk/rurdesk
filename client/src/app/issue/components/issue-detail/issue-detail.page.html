@@ -20,6 +20,7 @@
             [agentRun]="agentRunStore.run()"
             (splitRequested)="onSplitRequested($event)"
             (trackAdded)="onTrackAdded($event)"
+            (deleteRequested)="onDeleteRequested($event)"
             (cancelAgentRun)="agentRunStore.cancel()"
             (continueAgentRun)="agentRunStore.continue()"
             (restartAgentRun)="agentRunStore.restart()"
@@ -50,4 +51,12 @@
     (accepted)="onSplitAccepted($event)"
     (cancelled)="onSplitCancelled()"
 ></app-split-dialog>
-} } }
+} } } @if (pendingDeleteIssue()) {
+<span
+    #deleteConfirm
+    uiConfirm
+    [confirmText]="'ISSUE.MENU.DELETE_CONFIRM' | translate"
+    (confirmed)="onDeleteConfirmed()"
+    (closed)="pendingDeleteIssue.set(null)"
+></span>
+}
