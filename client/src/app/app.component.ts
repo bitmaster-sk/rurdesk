@@ -17,8 +17,6 @@ export class AppComponent {
     private readonly hotkeys = inject(HotkeyService);
     private readonly notificationStore = inject(NotificationStore);
 
-    public title = 'issue-client';
-
     public constructor() {
         // Settings are auth-gated on the server; an anonymous visitor (login/register)
         // runs on the store's fallback defaults and must not trigger a guaranteed 401.
