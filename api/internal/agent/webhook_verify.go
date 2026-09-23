@@ -19,7 +19,6 @@ var (
 	ErrSignatureInvalid  = errors.New("signature verification failed")
 	ErrSignatureReplayed = errors.New("request timestamp outside allowed window")
 	ErrEventIdInvalid    = errors.New("invalid X-Tracker-Event-Id header")
-	ErrSequenceInvalid   = errors.New("invalid X-Tracker-Sequence header")
 )
 
 // VerifySignature checks the X-Tracker-Signature header against the body.
@@ -89,16 +88,4 @@ func ExtractEventId(header string) (uuid.UUID, error) {
 		return uuid.Nil, ErrEventIdInvalid
 	}
 	return id, nil
-}
-
-// ExtractSequence parses the X-Tracker-Sequence header.
-func ExtractSequence(header string) (int64, error) {
-	if header == "" {
-		return 0, ErrSequenceInvalid
-	}
-	seq, err := strconv.ParseInt(header, 10, 64)
-	if err != nil {
-		return 0, ErrSequenceInvalid
-	}
-	return seq, nil
 }

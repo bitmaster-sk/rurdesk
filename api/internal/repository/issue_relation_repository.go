@@ -63,14 +63,12 @@ func (r *IssueRelationRepository) LoadRelations(ctx context.Context, f *model.Lo
 	db := extctx.GetDb(ctx, r.pool)
 
 	args := []any{f.IdsProject}
-	idx := 2
 
 	var outboundIssueFilter, inboundIssueFilter string
 	if len(f.IdsIssue) > 0 {
-		outboundIssueFilter = fmt.Sprintf("AND r.id_issue_from = ANY($%d)", idx)
-		inboundIssueFilter = fmt.Sprintf("AND r.id_issue_to = ANY($%d)", idx)
+		outboundIssueFilter = fmt.Sprintf("AND r.id_issue_from = ANY($%d)", len(args)+1)
+		inboundIssueFilter = fmt.Sprintf("AND r.id_issue_to = ANY($%d)", len(args)+1)
 		args = append(args, f.IdsIssue)
-		idx++
 	}
 	// UNION ALL is intentional: each half targets a different indexed column
 	// (idx_relation_project_from / _to) for an index scan. An OR on
@@ -145,8 +143,6 @@ func (r *IssueRelationRepository) LoadRelations(ctx context.Context, f *model.Lo
 			r.id_project = ANY($1) %s
 	`, model.RelationDirectionOutbound, outboundIssueFilter,
 		model.RelationDirectionInbound, inboundIssueFilter)
-
-	_ = idx // used above when IdsIssue is non-empty
 
 	rows, err := db.Query(ctx, q, args...)
 	if err != nil {

@@ -2,11 +2,11 @@
 .DS_Store
 Thumbs.db
 desktop.ini
-ROADMAP.md
 
 # Internal working notes — public docs live in site/
 docs/development/
 PROMOTE.md
+ROADMAP.md
 
 # Environment / secrets — never commit
 .env

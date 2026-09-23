@@ -60,7 +60,8 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
         this.size() === 'small' ? 14 : this.size() === 'large' ? 18 : 16
     );
     public readonly emptyMessage = input<string>();
-    public readonly emptyFilterMessage = input<string>();
+    /** Component-level disabled, combined with the forms setDisabledState into isDisabled. */
+    public readonly disabled = input(false);
     public readonly inputId = input<string>();
     public readonly showToggleAll = input(true);
 
@@ -77,7 +78,8 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
 
     /** CVA model value = array of resolved option values. */
     private readonly value = signal<unknown[]>([]);
-    protected readonly isDisabled = signal(false);
+    private readonly disabledFromForm = signal(false);
+    protected readonly isDisabled = computed(() => this.disabled() || this.disabledFromForm());
     protected readonly isOpen = signal(false);
 
     protected readonly baseId = `ui-multiselect-${nextId()}`;
@@ -142,7 +144,7 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
         this.onTouched = fn;
     }
     public setDisabledState(isDisabled: boolean): void {
-        this.isDisabled.set(isDisabled);
+        this.disabledFromForm.set(isDisabled);
         if (isDisabled) {
             this.close();
         }

@@ -53,6 +53,26 @@ export class QualityPanelComponent implements OnInit {
         return '';
     });
 
+    public readonly dimensions = computed(() => {
+        const r = this.report();
+        if (!r) return [];
+        return [
+            { key: 'clarity', label: 'QUALITY.DIMENSION.CLARITY', value: r.dimensions.clarity },
+            {
+                key: 'completeness',
+                label: 'QUALITY.DIMENSION.COMPLETENESS',
+                value: r.dimensions.completeness
+            },
+            {
+                key: 'actionability',
+                label: 'QUALITY.DIMENSION.ACTIONABILITY',
+                value: r.dimensions.actionability
+            },
+            { key: 'scope', label: 'QUALITY.DIMENSION.SCOPE', value: r.dimensions.scope },
+            { key: 'metadata', label: 'QUALITY.DIMENSION.METADATA', value: r.dimensions.metadata }
+        ];
+    });
+
     private qualityApi = inject(QualityApi);
 
     public ngOnInit(): void {
