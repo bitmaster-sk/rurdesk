@@ -42,6 +42,7 @@ type IssueController struct {
 	acl                 *service.AclService
 	stagePlan           *service.StagePlanService
 	notifSvc            *service.NotificationService
+	customFieldValueSvc *service.CustomFieldValueService
 	pool                *pgxpool.Pool
 }
 
@@ -55,19 +56,21 @@ func NewIssueController(
 	participantRepo *repository.IssueParticipantRepository,
 	acl *service.AclService,
 	notifSvc *service.NotificationService,
+	customFieldValueSvc *service.CustomFieldValueService,
 	pool *pgxpool.Pool,
 ) *IssueController {
 	return &IssueController{
-		issueRepo:       ir,
-		projectRepo:     pr,
-		userRepo:        ur,
-		stateRepo:       stateRepo,
-		severityRepo:    severityRepo,
-		issueTypeRepo:   issueTypeRepo,
-		participantRepo: participantRepo,
-		acl:             acl,
-		notifSvc:        notifSvc,
-		pool:            pool,
+		issueRepo:           ir,
+		projectRepo:         pr,
+		userRepo:            ur,
+		stateRepo:           stateRepo,
+		severityRepo:        severityRepo,
+		issueTypeRepo:       issueTypeRepo,
+		participantRepo:     participantRepo,
+		acl:                 acl,
+		notifSvc:            notifSvc,
+		customFieldValueSvc: customFieldValueSvc,
+		pool:                pool,
 	}
 }
 
@@ -298,7 +301,7 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 				return fmt.Errorf("adding assignee participant: %w", err)
 			}
 		}
-		return nil
+		return ic.customFieldValueSvc.Apply(ctx, dto.IdProject, result.IdIssue, dto.CustomFields, true)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -308,6 +311,12 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
+		return
+	}
+	var appErr *errs.Error
+	if err != nil && errs.As(err, &appErr) {
+		_ = c.Error(appErr)
+		c.Status(appErr.HttpStatus())
 		return
 	}
 	if err != nil {
@@ -442,7 +451,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return fmt.Errorf("auto-adding assignee as participant (edit): %w", addErr)
 			}
 		}
-		return nil
+		return ic.customFieldValueSvc.Apply(ctx, dto.IdProject, issue.IdIssue, dto.CustomFields, false)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -467,6 +476,12 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	if err == errs.ErrAgentNoGateway {
 		_ = c.Error(errs.ErrAgentNoGateway)
 		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
+	var editAppErr *errs.Error
+	if err != nil && errs.As(err, &editAppErr) {
+		_ = c.Error(editAppErr)
+		c.Status(editAppErr.HttpStatus())
 		return
 	}
 	if err != nil {
@@ -919,6 +934,7 @@ func buildIssueFilter(c *gin.Context, idProject int64) (*model.LoadIssuesFilter,
 		}
 	}
 	f.SprintUnset = c.Query("sprintUnset") == "true"
+	f.IncludeCustomFields = c.Query("includeCustomFields") == "true"
 	orderCol := c.Query("orderColumn")
 	orderDir := c.Query("orderDirection")
 	if orderCol != "" {

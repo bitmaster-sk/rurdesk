@@ -14,7 +14,7 @@ import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IssueApi } from '../../../../api/issue.api.service';
-import { Issue } from '../../../../model/issue.model';
+import { Issue, UpdateIssueReq } from '../../../../model/issue.model';
 import { IssueInfoComponent } from './issue-info.component';
 
 const ISSUE = {
@@ -95,7 +95,7 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
         component.form.patchValue({ title: 'renamed' });
         fixture.detectChanges();
 
-        const saved = issueApi.update$.mock.calls.at(-1)?.[0] as Issue | undefined;
-        expect(saved?.assignedTo).toBe(8);
+        const changes = issueApi.update$.mock.calls.at(-1)?.[2] as UpdateIssueReq | undefined;
+        expect(changes?.assignedTo).toBe(8);
     });
 });

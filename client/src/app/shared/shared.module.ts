@@ -4,6 +4,7 @@ import { AvatarComponent } from './avatar/avatar.component';
 import { UserDropdownComponent } from './user-dropdown/user-dropdown.component';
 import { CoreModule } from '../core/core.module';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { IssueCustomFieldsComponent } from './issue-custom-fields/issue-custom-fields.component';
 import { SeverityDropdownComponent } from './severity-dropdown/severity-dropdown.component';
 import { StateDropdownComponent } from './state-dropdown/state-dropdown.component';
 import { TrackerComponent } from './tracker/tracker.component';
@@ -76,7 +77,8 @@ import {
         MessageBodyComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
-        AgentDockComponent
+        AgentDockComponent,
+        IssueCustomFieldsComponent
     ],
     imports: [
         CoreModule,
@@ -133,7 +135,8 @@ import {
         MessageBodyComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
-        AgentDockComponent
+        AgentDockComponent,
+        IssueCustomFieldsComponent
     ]
 })
 export class SharedModule {}

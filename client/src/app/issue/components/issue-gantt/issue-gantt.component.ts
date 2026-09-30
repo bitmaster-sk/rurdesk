@@ -679,21 +679,21 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 return;
             }
 
-            const updated = {
-                ...task,
-                scheduledAt: result.scheduledAt,
-                estimated: result.estimated
-            };
-            this.issueApi.update$(updated).subscribe({
-                next: () => {
-                    this.issueFilterStore.refresh();
-                    this.dragService.reset();
-                },
-                error: () => {
-                    this.issueFilterStore.refresh();
-                    this.dragService.reset();
-                }
-            });
+            this.issueApi
+                .update$(task.idProject, task.idIssuePublic, {
+                    scheduledAt: result.scheduledAt,
+                    estimated: result.estimated
+                })
+                .subscribe({
+                    next: () => {
+                        this.issueFilterStore.refresh();
+                        this.dragService.reset();
+                    },
+                    error: () => {
+                        this.issueFilterStore.refresh();
+                        this.dragService.reset();
+                    }
+                });
             return;
         }
 

@@ -15,6 +15,19 @@ import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms'
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
 
+type IssueFormValues = Pick<
+    Issue,
+    | 'idState'
+    | 'idSeverity'
+    | 'idIssueType'
+    | 'title'
+    | 'description'
+    | 'assignedTo'
+    | 'estimated'
+    | 'points'
+    | 'scheduledAt'
+>;
+
 interface IssueInfoForm {
     idIssue: FormControl<number | null>;
     idIssuePublic: FormControl<number | null>;
@@ -119,6 +132,13 @@ export class IssueInfoComponent implements OnInit {
 
     private readonly descriptionMousedownCoords = signal<{ x: number; y: number } | null>(null);
     private readonly descriptionPreviewMoveThreshold = 5;
+
+    // Must stay outside `form`: an invalid required field would make form.valid false,
+    // and listenFormChange() would silently stop autosaving every other field.
+    private readonly customFieldValues = signal<Record<string, string | number | boolean | null>>(
+        {}
+    );
+    protected readonly isMissingRequiredCustomField = signal(false);
 
     protected readonly isMrLinkPickerOpen = signal(false);
     // PR panel starts closed; the diff is fetched on the first expand.
@@ -350,7 +370,9 @@ export class IssueInfoComponent implements OnInit {
         if (isUpdate) {
             this.saveStatus.set(UiSaveState.Saving);
         }
-        const saver = isUpdate ? this.issueApi.update$(issue) : this.issueApi.insert$(issue);
+        const saver = isUpdate
+            ? this.issueApi.update$(issue.idProject, issue.idIssuePublic, this.formToChanges())
+            : this.issueApi.insert$(issue);
         saver.subscribe({
             next: savedIssue => {
                 if (isUpdate) {
@@ -422,6 +444,16 @@ export class IssueInfoComponent implements OnInit {
         this.showInputDescription.set(false);
     }
 
+    protected onCustomFieldValuesChange(
+        values: Record<string, string | number | boolean | null>
+    ): void {
+        this.customFieldValues.set(values);
+    }
+
+    protected onCustomFieldsMissingRequired(isMissing: boolean): void {
+        this.isMissingRequiredCustomField.set(isMissing);
+    }
+
     public onTrackAdded(track: Track): void {
         this.currentIssue.update(issue =>
             issue ? { ...issue, tracked: (issue.tracked ?? 0) + (track.tracked ?? 0) } : issue
@@ -463,15 +495,15 @@ export class IssueInfoComponent implements OnInit {
         this.isMrLinkPickerOpen.set(false);
         const issue = this.currentIssue();
         if (!issue) return;
-        const updated: Issue = {
-            ...issue,
-            idGitIntegration: result?.idGitIntegration ?? null,
-            mrId: result?.mrId ?? null
-        };
-        this.issueApi.update$(updated).subscribe(saved => {
-            this.currentIssue.set(saved);
-            this.syncMrPanel(saved);
-        });
+        this.issueApi
+            .update$(issue.idProject, issue.idIssuePublic, {
+                idGitIntegration: result?.idGitIntegration ?? null,
+                mrId: result?.mrId ?? null
+            })
+            .subscribe(saved => {
+                this.currentIssue.set(saved);
+                this.syncMrPanel(saved);
+            });
     }
 
     // Syncs the assignee the dock already saved. Must not emit: the form
@@ -595,9 +627,18 @@ export class IssueInfoComponent implements OnInit {
         const v = this.form.getRawValue();
         const current = this.currentIssue();
         return {
+            ...this.formToChanges(),
             idIssue: v.idIssue ?? 0,
             idIssuePublic: v.idIssuePublic ?? 0,
             idProject: v.idProject ?? 0,
+            tracked: current?.tracked ?? 0,
+            customFields: this.isNewIssue() ? this.customFieldValues() : undefined
+        };
+    }
+
+    private formToChanges(): IssueFormValues {
+        const v = this.form.getRawValue();
+        return {
             idState: v.idState,
             idSeverity: v.idSeverity,
             idIssueType: v.idIssueType,
@@ -608,8 +649,7 @@ export class IssueInfoComponent implements OnInit {
                 DurationParser.stringToDuration(v.estimated ?? '')
             ),
             points: v.points ?? null,
-            scheduledAt: v.scheduledAt,
-            tracked: current?.tracked ?? 0
+            scheduledAt: v.scheduledAt
         };
     }
 }

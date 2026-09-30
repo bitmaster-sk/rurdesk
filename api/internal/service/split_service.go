@@ -16,11 +16,12 @@ import (
 
 // SplitService handles AI-driven issue splitting.
 type SplitService struct {
-	pool      *pgxpool.Pool
-	aiClient  ai.Provider
-	issueRepo *repository.IssueRepository
-	relRepo   *repository.IssueRelationRepository
-	stateRepo *repository.StateRepository
+	pool                 *pgxpool.Pool
+	aiClient             ai.Provider
+	issueRepo            *repository.IssueRepository
+	relRepo              *repository.IssueRelationRepository
+	stateRepo            *repository.StateRepository
+	customFieldValueRepo *repository.CustomFieldValueRepository
 }
 
 func NewSplitService(
@@ -29,13 +30,15 @@ func NewSplitService(
 	issueRepo *repository.IssueRepository,
 	relRepo *repository.IssueRelationRepository,
 	stateRepo *repository.StateRepository,
+	valueRepo *repository.CustomFieldValueRepository,
 ) *SplitService {
 	return &SplitService{
-		pool:      pool,
-		aiClient:  aiClient,
-		issueRepo: issueRepo,
-		relRepo:   relRepo,
-		stateRepo: stateRepo,
+		pool:                 pool,
+		aiClient:             aiClient,
+		issueRepo:            issueRepo,
+		relRepo:              relRepo,
+		stateRepo:            stateRepo,
+		customFieldValueRepo: valueRepo,
 	}
 }
 
@@ -123,6 +126,10 @@ func (s *SplitService) Accept(ctx context.Context, idProject, idIssue int64, chi
 
 			inserted, err := s.issueRepo.InsertIssue(ctx, newIssue)
 			if err != nil {
+				return err
+			}
+
+			if err := s.customFieldValueRepo.CopyRequiredValues(ctx, parent.IdIssue, inserted.IdIssue); err != nil {
 				return err
 			}
 

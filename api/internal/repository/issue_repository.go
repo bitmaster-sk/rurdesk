@@ -124,6 +124,11 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 	if err != nil {
 		return nil, fmt.Errorf("collecting issues: %w", err)
 	}
+	if f.IncludeCustomFields {
+		if err := r.attachCustomFields(ctx, issues); err != nil {
+			return nil, err
+		}
+	}
 	return issues, nil
 }
 
@@ -375,6 +380,11 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 		iss := row.Issue
 		items[i] = &iss
 	}
+	if f.IncludeCustomFields {
+		if err := r.attachCustomFields(ctx, items); err != nil {
+			return nil, nil, err
+		}
+	}
 	return items, next, nil
 }
 
@@ -518,6 +528,15 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 	for _, ks := range order {
 		out = append(out, byKey[ks])
 	}
+	if f.IncludeCustomFields {
+		flat := []*model.Issue{}
+		for _, group := range out {
+			flat = append(flat, group.Items...)
+		}
+		if err := r.attachCustomFields(ctx, flat); err != nil {
+			return nil, err
+		}
+	}
 	return out, nil
 }
 
@@ -558,7 +577,56 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 	if err != nil {
 		return nil, fmt.Errorf("collecting issue: %w", err)
 	}
+	// Never gate this on IncludeCustomFields: the websocket broadcast goes through
+	// here, and without the values an open detail renders the task without them.
+	if err := r.attachCustomFields(ctx, []*model.Issue{issue}); err != nil {
+		return nil, err
+	}
 	return issue, nil
+}
+
+func (r *IssueRepository) attachCustomFields(ctx context.Context, issues []*model.Issue) error {
+	if len(issues) == 0 {
+		return nil
+	}
+	idsIssue := make([]int64, len(issues))
+	byId := make(map[int64]*model.Issue, len(issues))
+	for i, issue := range issues {
+		idsIssue[i] = issue.IdIssue
+		byId[issue.IdIssue] = issue
+	}
+
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT v.id_issue, f.key, v.field_type,
+		       v.value_text, v.value_number, v.value_date, v.value_bool, v.id_option
+		FROM issues.issue_custom_value v
+		INNER JOIN issues.custom_field f ON f.id_custom_field = v.id_custom_field
+		WHERE v.id_issue = ANY($1)
+	`, idsIssue)
+	if err != nil {
+		return fmt.Errorf("querying issue custom fields: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var idIssue int64
+		var key string
+		value := model.IssueCustomValue{}
+		if err := rows.Scan(&idIssue, &key, &value.FieldType,
+			&value.ValueText, &value.ValueNumber, &value.ValueDate, &value.ValueBool, &value.IdOption); err != nil {
+			return fmt.Errorf("scanning issue custom field: %w", err)
+		}
+		issue, ok := byId[idIssue]
+		if !ok {
+			continue
+		}
+		if issue.CustomFields == nil {
+			issue.CustomFields = map[string]any{}
+		}
+		issue.CustomFields[key] = value.AsJson()
+	}
+	return rows.Err()
 }
 
 func (r *IssueRepository) InsertIssue(ctx context.Context, issue *model.Issue) (*model.Issue, error) {
@@ -807,6 +875,11 @@ func (r *IssueRepository) LoadIssuesByIds(ctx context.Context, f *model.LoadIssu
 	issues, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[model.Issue])
 	if err != nil {
 		return nil, fmt.Errorf("collecting issues by ids: %w", err)
+	}
+	if f.IncludeCustomFields {
+		if err := r.attachCustomFields(ctx, issues); err != nil {
+			return nil, err
+		}
 	}
 	return issues, nil
 }

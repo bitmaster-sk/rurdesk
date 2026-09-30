@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
+import { switchMap } from 'rxjs/operators';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import {
     Command,
@@ -16,7 +17,7 @@ import { ProjectMemberStore } from '../../project/project-member.store';
 import { AclStore } from '../../project/store/acl.store';
 import { AuthStore } from '../../auth/store/auth.store';
 import { NoticeService } from '../../shared/notice/notice.service';
-import { Issue } from '../model/issue.model';
+import { UpdateIssueReq } from '../model/issue.model';
 
 @Injectable({ providedIn: 'root' })
 export class IssueActionCommandProvider implements CommandProvider {
@@ -43,7 +44,7 @@ export class IssueActionCommandProvider implements CommandProvider {
                         users: this.users() ?? [],
                         currentUserId: this.authStore.user()?.idUser ?? null
                     },
-                    (over: Partial<Issue>) => this.patch(ctx, over),
+                    (over: UpdateIssueReq) => this.patch(ctx, over),
                     this.t
                 )
             );
@@ -58,31 +59,40 @@ export class IssueActionCommandProvider implements CommandProvider {
         return commands;
     }
 
-    private patch(ctx: CommandContext, over: Partial<Issue>): void {
+    private patch(ctx: CommandContext, over: UpdateIssueReq): void {
         if (!ctx.issue) return;
         // Emit the saved issue locally so an open task detail refreshes at once (the server does
         // not echo the acting client's own change back over the socket).
         this.issueApi
-            .update$({ ...ctx.issue, ...over })
+            .update$(ctx.issue.idProject, ctx.issue.idIssuePublic, over)
             .subscribe(saved => this.notice.emitIssue(saved));
     }
 
     private clone(ctx: CommandContext): void {
-        const src = ctx.issue;
-        if (!src || ctx.idProject == null) return;
+        const source = ctx.issue;
+        if (!source || ctx.idProject == null) return;
+        const idProject = ctx.idProject;
+        // Reload the source: the context issue can come from a list that left the custom
+        // values out, and a clone missing a required one is refused.
         this.issueApi
-            .insert$({
-                idProject: ctx.idProject,
-                title: this.t('ISSUE.COPY_SUFFIX', { title: src.title }),
-                description: src.description,
-                idState: src.idState,
-                idSeverity: src.idSeverity,
-                idIssueType: src.idIssueType,
-                assignedTo: src.assignedTo,
-                tracked: 0,
-                estimated: src.estimated,
-                scheduledAt: src.scheduledAt
-            })
+            .loadOne$(idProject, source.idIssuePublic)
+            .pipe(
+                switchMap(src =>
+                    this.issueApi.insert$({
+                        idProject,
+                        title: this.t('ISSUE.COPY_SUFFIX', { title: src.title }),
+                        description: src.description,
+                        idState: src.idState,
+                        idSeverity: src.idSeverity,
+                        idIssueType: src.idIssueType,
+                        assignedTo: src.assignedTo,
+                        tracked: 0,
+                        estimated: src.estimated,
+                        scheduledAt: src.scheduledAt,
+                        customFields: src.customFields
+                    })
+                )
+            )
             .subscribe(created => {
                 void this.router.navigate([
                     '/project',

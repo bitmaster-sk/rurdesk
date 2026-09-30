@@ -1,0 +1,46 @@
+@switch (fieldType()) {
+    @case (fieldTypes.Select) {
+        <ui-select
+            [inputId]="inputId()"
+            [options]="options()"
+            optionLabel="label"
+            optionValue="idOption"
+            [showClear]="true"
+            [ngModel]="value()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onChange($event)"
+        ></ui-select>
+    }
+    @case (fieldTypes.Boolean) {
+        <input
+            [id]="inputId()"
+            uiCheckbox
+            type="checkbox"
+            [ngModel]="value() === true"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onChange($event)"
+        />
+    }
+    @case (fieldTypes.Date) {
+        <input
+            uiDatepicker
+            mode="date"
+            [id]="inputId()"
+            class="w-full"
+            [ngModel]="dateValue()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onChange($event)"
+        />
+    }
+    @default {
+        <input
+            [id]="inputId()"
+            uiInput
+            [type]="isNumber() ? 'number' : 'text'"
+            class="w-full"
+            [ngModel]="value()"
+            [ngModelOptions]="{ standalone: true }"
+            (ngModelChange)="onChange($event)"
+        />
+    }
+}

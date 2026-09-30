@@ -10,6 +10,7 @@ import { ProjectSettingsPage } from './pages/project-settings/project-settings.p
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueTypeModule } from '../issue-type/issue-type.module';
+import { CustomFieldModule } from '../custom-field/custom-field.module';
 import { BaseChartDirective } from 'ng2-charts';
 import { PinModule } from '../pin/pin.module';
 import { RouterModule } from '@angular/router';
@@ -54,7 +55,8 @@ import {
     IconCircleCheck,
     IconHistory,
     IconInfoCircle,
-    IconCategory
+    IconCategory,
+    IconListDetails
 } from '@tabler/icons-angular';
 import { WorkflowEventStateMapComponent } from './components/workflow-event-state-map/workflow-event-state-map.component';
 import { AgentSkillMatrixComponent } from './components/agent-skill-matrix/agent-skill-matrix.component';
@@ -96,6 +98,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
         StateModule,
         SeverityModule,
         IssueTypeModule,
+        CustomFieldModule,
         BaseChartDirective,
         PinModule,
         UiModule,
@@ -128,7 +131,8 @@ import { PeopleCommandProvider } from './command/people.command-provider';
             IconCircleCheck,
             IconHistory,
             IconInfoCircle,
-            IconCategory
+            IconCategory,
+            IconListDetails
         })
     ]
 })

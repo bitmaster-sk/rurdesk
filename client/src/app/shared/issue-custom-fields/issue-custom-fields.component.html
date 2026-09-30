@@ -1,0 +1,76 @@
+@if (fields().length > 0) {
+    <div class="custom-fields-separator">
+        <span>{{ 'CUSTOM_FIELD.PLURAL' | translate }}</span>
+    </div>
+    @for (field of fields(); track field.idCustomField) {
+        <div class="ui-field flex flex-col" data-testid="issue-custom-field">
+            <label [for]="'cf-' + field.key" [class.required]="isRequired(field)">
+                {{ field.name }}
+            </label>
+            @switch (field.fieldType) {
+                @case (fieldTypes.Select) {
+                    <ui-select
+                        [inputId]="'cf-' + field.key"
+                        [options]="field.options"
+                        optionLabel="label"
+                        optionValue="idOption"
+                        [showClear]="!isRequired(field)"
+                        [disabled]="isReadOnly(field)"
+                        [ngModel]="valueOf(field)"
+                        (ngModelChange)="onValueChange(field, $event)"
+                    ></ui-select>
+                }
+                @case (fieldTypes.Boolean) {
+                    <div class="custom-field-checkbox">
+                        <input
+                            uiCheckbox
+                            type="checkbox"
+                            [id]="'cf-' + field.key"
+                            [disabled]="isReadOnly(field)"
+                            [ngModel]="valueOf(field) === true"
+                            (ngModelChange)="onValueChange(field, $event)"
+                        />
+                    </div>
+                }
+                @case (fieldTypes.Date) {
+                    <input
+                        uiDatepicker
+                        mode="date"
+                        [id]="'cf-' + field.key"
+                        class="w-full"
+                        [disabled]="isReadOnly(field)"
+                        [ngModel]="dateValueOf(field)"
+                        (ngModelChange)="onValueChange(field, $event)"
+                    />
+                }
+                @case (fieldTypes.Number) {
+                    <input
+                        uiInput
+                        type="number"
+                        [id]="'cf-' + field.key"
+                        [disabled]="isReadOnly(field)"
+                        [ngModel]="valueOf(field)"
+                        [ngModelOptions]="{ standalone: true }"
+                        (focusout)="onInputBlur(field, $event)"
+                    />
+                }
+                @default {
+                    <input
+                        uiInput
+                        type="text"
+                        [id]="'cf-' + field.key"
+                        [disabled]="isReadOnly(field)"
+                        [ngModel]="valueOf(field)"
+                        [ngModelOptions]="{ standalone: true }"
+                        (focusout)="onInputBlur(field, $event)"
+                    />
+                }
+            }
+            @if (isMissing(field) && predatesRequirement(field)) {
+                <small class="custom-field-missing" data-testid="issue-custom-field-missing">
+                    {{ 'CUSTOM_FIELD.MISSING_PREDATES' | translate }}
+                </small>
+            }
+        </div>
+    }
+}

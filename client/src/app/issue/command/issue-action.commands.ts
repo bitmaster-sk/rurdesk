@@ -1,5 +1,5 @@
 import { Command, CommandContext, Translator } from '../../core/command/command.model';
-import { Issue } from '../model/issue.model';
+import { UpdateIssueReq } from '../model/issue.model';
 import { IssueState } from '../../state/model/issue-state.model';
 import { IssueSeverity } from '../../severity/model/issue-severity.model';
 import { User } from '../../auth/model/user.model';
@@ -15,7 +15,7 @@ export abstract class IssueActionCommands {
     public static build(
         ctx: CommandContext,
         data: ActionData,
-        patch: (over: Partial<Issue>) => void,
+        patch: (over: UpdateIssueReq) => void,
         t: Translator
     ): Command[] {
         if (!ctx.issue || ctx.idProject == null) return [];

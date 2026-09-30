@@ -522,11 +522,13 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
             seconds: Math.trunc(evt.endDelta.milliseconds / 1000)
         });
         issue.estimated = (issue.estimated ?? 0) + deltaSeconds;
-        this.issueApi.update$(issue).subscribe({
-            error: () => {
-                evt.revert();
-            }
-        });
+        this.issueApi
+            .update$(issue.idProject, issue.idIssuePublic, { estimated: issue.estimated })
+            .subscribe({
+                error: () => {
+                    evt.revert();
+                }
+            });
     }
 
     private onCalendarEventDrop(evt: EventDropArg): void {
@@ -549,11 +551,16 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                 seconds: Math.trunc(evt.delta.milliseconds / 1000)
             });
         }
-        this.issueApi.update$(issue).subscribe({
-            error: () => {
-                evt.revert();
-            }
-        });
+        this.issueApi
+            .update$(issue.idProject, issue.idIssuePublic, {
+                scheduledAt: issue.scheduledAt,
+                estimated: issue.estimated
+            })
+            .subscribe({
+                error: () => {
+                    evt.revert();
+                }
+            });
         this.settleDroppedEvent(issue.idIssue);
         this.startDropPulse(issue.idIssue);
     }

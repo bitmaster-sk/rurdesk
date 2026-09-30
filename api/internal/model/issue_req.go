@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 	"unicode/utf8"
@@ -14,33 +15,35 @@ const (
 )
 
 type CreateIssueReq struct {
-	IdProject      int64      `json:"idProject"`
-	IdState        *int64     `json:"idState"      binding:"omitempty"`
-	IdSeverity     *int64     `json:"idSeverity"   binding:"omitempty"`
-	IdIssueType    *int64     `json:"idIssueType"  binding:"omitempty"`
-	Title          string     `json:"title"        binding:"required,max=100"`
-	Description    string     `json:"description"  binding:"required"`
-	AssignedTo     *int64     `json:"assignedTo"   binding:"omitempty"`
-	Estimated      int64      `json:"estimated"`
-	Points         *int       `json:"points"       binding:"omitempty,min=0"`
-	ScheduledAt    *time.Time `json:"scheduledAt"`
-	IdempotencyKey *string    `json:"-"` // populated from Idempotency-Key header only
+	IdProject      int64                      `json:"idProject"`
+	IdState        *int64                     `json:"idState"      binding:"omitempty"`
+	IdSeverity     *int64                     `json:"idSeverity"   binding:"omitempty"`
+	IdIssueType    *int64                     `json:"idIssueType"  binding:"omitempty"`
+	Title          string                     `json:"title"        binding:"required,max=100"`
+	Description    string                     `json:"description"  binding:"required"`
+	AssignedTo     *int64                     `json:"assignedTo"   binding:"omitempty"`
+	Estimated      int64                      `json:"estimated"`
+	Points         *int                       `json:"points"       binding:"omitempty,min=0"`
+	ScheduledAt    *time.Time                 `json:"scheduledAt"`
+	IdempotencyKey *string                    `json:"-"` // populated from Idempotency-Key header only
+	CustomFields   map[string]json.RawMessage `json:"customFields"`
 }
 
 type EditIssueReq struct {
-	IdProject        int64               `json:"idProject"`
-	IdIssuePublic    int64               `json:"idIssuePublic"`
-	IdState          Optional[int64]     `json:"idState,omitzero"`
-	IdSeverity       Optional[int64]     `json:"idSeverity,omitzero"`
-	IdIssueType      Optional[int64]     `json:"idIssueType,omitzero"`
-	Title            Optional[string]    `json:"title,omitzero"`
-	Description      Optional[string]    `json:"description,omitzero"`
-	AssignedTo       Optional[int64]     `json:"assignedTo,omitzero"`
-	Estimated        Optional[int64]     `json:"estimated,omitzero"`
-	Points           Optional[int]       `json:"points,omitzero"`
-	ScheduledAt      Optional[time.Time] `json:"scheduledAt,omitzero"`
-	IdGitIntegration Optional[int64]     `json:"idGitIntegration,omitzero"`
-	MrId             Optional[string]    `json:"mrId,omitzero"`
+	IdProject        int64                      `json:"idProject"`
+	IdIssuePublic    int64                      `json:"idIssuePublic"`
+	IdState          Optional[int64]            `json:"idState,omitzero"`
+	IdSeverity       Optional[int64]            `json:"idSeverity,omitzero"`
+	IdIssueType      Optional[int64]            `json:"idIssueType,omitzero"`
+	Title            Optional[string]           `json:"title,omitzero"`
+	Description      Optional[string]           `json:"description,omitzero"`
+	AssignedTo       Optional[int64]            `json:"assignedTo,omitzero"`
+	Estimated        Optional[int64]            `json:"estimated,omitzero"`
+	Points           Optional[int]              `json:"points,omitzero"`
+	ScheduledAt      Optional[time.Time]        `json:"scheduledAt,omitzero"`
+	IdGitIntegration Optional[int64]            `json:"idGitIntegration,omitzero"`
+	MrId             Optional[string]           `json:"mrId,omitzero"`
+	CustomFields     map[string]json.RawMessage `json:"customFields"`
 }
 
 func (r *EditIssueReq) Validate() error {
@@ -80,24 +83,25 @@ type BulkEditIssuesReq struct {
 }
 
 type LoadIssuesReq struct {
-	IdProject       int64     `json:"idProject"`
-	OrderColumn     string    `json:"orderColumn"`
-	OrderDirection  string    `json:"orderDirection"`
-	IdsSeverity     []int64   `json:"idsSeverity"`
-	SeverityUnset   bool      `json:"severityUnset"`
-	IdsIssueType    []int64   `json:"idsIssueType"`
-	IssueTypeUnset  bool      `json:"issueTypeUnset"`
-	IdsState        []int64   `json:"idsState"`
-	StateUnset      bool      `json:"stateUnset"`
-	IdsAssignedTo   []int64   `json:"idsAssignedTo"`
-	AssignedToUnset bool      `json:"assignedToUnset"`
-	Title           string    `json:"title"`
-	CreateAtFrom    time.Time `json:"createAtFrom"`
-	CreateAtTo      time.Time `json:"createAtTo"`
-	UpdateAtFrom    time.Time `json:"updateAtFrom"`
-	UpdateAtTo      time.Time `json:"updateAtTo"`
-	ScheduledAtFrom time.Time `json:"scheduledAtFrom"`
-	ScheduledAtTo   time.Time `json:"scheduledAtTo"`
+	IdProject           int64     `json:"idProject"`
+	OrderColumn         string    `json:"orderColumn"`
+	OrderDirection      string    `json:"orderDirection"`
+	IdsSeverity         []int64   `json:"idsSeverity"`
+	SeverityUnset       bool      `json:"severityUnset"`
+	IdsIssueType        []int64   `json:"idsIssueType"`
+	IssueTypeUnset      bool      `json:"issueTypeUnset"`
+	IdsState            []int64   `json:"idsState"`
+	StateUnset          bool      `json:"stateUnset"`
+	IdsAssignedTo       []int64   `json:"idsAssignedTo"`
+	AssignedToUnset     bool      `json:"assignedToUnset"`
+	Title               string    `json:"title"`
+	CreateAtFrom        time.Time `json:"createAtFrom"`
+	CreateAtTo          time.Time `json:"createAtTo"`
+	UpdateAtFrom        time.Time `json:"updateAtFrom"`
+	UpdateAtTo          time.Time `json:"updateAtTo"`
+	ScheduledAtFrom     time.Time `json:"scheduledAtFrom"`
+	ScheduledAtTo       time.Time `json:"scheduledAtTo"`
+	IncludeCustomFields bool      `json:"includeCustomFields"`
 }
 
 func (dto *LoadIssuesReq) GetOrder() *Order {
@@ -109,22 +113,23 @@ func (dto *LoadIssuesReq) GetOrder() *Order {
 
 func NewLoadIssuesFilter(dto *LoadIssuesReq) *LoadIssuesFilter {
 	return &LoadIssuesFilter{
-		IdProject:       dto.IdProject,
-		IdsSeverity:     dto.IdsSeverity,
-		SeverityUnset:   dto.SeverityUnset,
-		IdsIssueType:    dto.IdsIssueType,
-		IssueTypeUnset:  dto.IssueTypeUnset,
-		IdsState:        dto.IdsState,
-		StateUnset:      dto.StateUnset,
-		IdsAssignedTo:   dto.IdsAssignedTo,
-		AssignedToUnset: dto.AssignedToUnset,
-		Title:           dto.Title,
-		CreateAtFrom:    dto.CreateAtFrom,
-		CreateAtTo:      dto.CreateAtTo,
-		UpdateAtFrom:    dto.UpdateAtFrom,
-		UpdateAtTo:      dto.UpdateAtTo,
-		ScheduledAtFrom: dto.ScheduledAtFrom,
-		ScheduledAtTo:   dto.ScheduledAtTo,
-		Order:           dto.GetOrder(),
+		IdProject:           dto.IdProject,
+		IdsSeverity:         dto.IdsSeverity,
+		SeverityUnset:       dto.SeverityUnset,
+		IdsIssueType:        dto.IdsIssueType,
+		IssueTypeUnset:      dto.IssueTypeUnset,
+		IdsState:            dto.IdsState,
+		StateUnset:          dto.StateUnset,
+		IdsAssignedTo:       dto.IdsAssignedTo,
+		AssignedToUnset:     dto.AssignedToUnset,
+		Title:               dto.Title,
+		CreateAtFrom:        dto.CreateAtFrom,
+		CreateAtTo:          dto.CreateAtTo,
+		UpdateAtFrom:        dto.UpdateAtFrom,
+		UpdateAtTo:          dto.UpdateAtTo,
+		ScheduledAtFrom:     dto.ScheduledAtFrom,
+		ScheduledAtTo:       dto.ScheduledAtTo,
+		Order:               dto.GetOrder(),
+		IncludeCustomFields: dto.IncludeCustomFields,
 	}
 }

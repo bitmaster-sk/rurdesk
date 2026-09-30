@@ -9,6 +9,7 @@ import { AuthTokenStore } from 'src/app/auth/store/auth-token.store';
 import { IssueParticipantModel } from 'src/app/issue/model/issue-participant.model';
 import { NoticeSubject } from './constant/notice-subject.enum';
 import { NoticeAction } from './constant/notice-action.enum';
+import { CustomField } from 'src/app/custom-field/model/custom-field.model';
 import { MrStatusNotice } from './model/mr-status-notice.model';
 import { Notice } from './model/notice.model';
 
@@ -57,6 +58,9 @@ export class NoticeService {
 
     private mrStatusSubject = new Subject<Notice<MrStatusNotice>>();
     public mrStatus$: Observable<Notice<MrStatusNotice>> = this.mrStatusSubject.asObservable();
+
+    private customFieldSubject = new Subject<Notice<CustomField>>();
+    public customField$: Observable<Notice<CustomField>> = this.customFieldSubject.asObservable();
 
     private socket: WebSocket | null = null;
 
@@ -173,6 +177,9 @@ export class NoticeService {
                 break;
             case NoticeSubject.MrStatus:
                 this.mrStatusSubject.next(notice as Notice<MrStatusNotice>);
+                break;
+            case NoticeSubject.CustomField:
+                this.customFieldSubject.next(notice as Notice<CustomField>);
                 break;
             default:
                 console.warn('unsupported notice');

@@ -111,6 +111,14 @@
                     ></app-tracker>
                 </div>
             }
+
+            <app-issue-custom-fields
+                [issue]="currentIssue()"
+                [project]="project()"
+                [isNewIssue]="isNewIssue()"
+                (valuesChange)="onCustomFieldValuesChange($event)"
+                (missingRequiredChange)="onCustomFieldsMissingRequired($event)"
+            ></app-issue-custom-fields>
         </div>
 
         <div class="issue-description col-span-12">
@@ -287,7 +295,7 @@
         @if (isNewIssue()) {
             <div class="col-span-12 mt-2 flex justify-end">
                 <ui-button
-                    [disabled]="!form.valid"
+                    [disabled]="!form.valid || isMissingRequiredCustomField()"
                     severity="primary"
                     [label]="'SAVE' | translate"
                     (click)="onSave()"
