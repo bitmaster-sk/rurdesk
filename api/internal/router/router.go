@@ -255,8 +255,9 @@ func New(
 	pri.PUT("/project/:idProject/git-integration/:idGitIntegration", gitIntCtrl.Update)
 	pri.DELETE("/project/:idProject/git-integration/:idGitIntegration", gitIntCtrl.Delete)
 
-	// MR diff & status (read-only, cached)
+	// MR diff, file content & status (read-only, cached)
 	pri.GET("/project/:idProject/git-integration/:idGitIntegration/mr/:mrId/diff", gitIntCtrl.GetDiff)
+	pri.GET("/project/:idProject/git-integration/:idGitIntegration/mr/:mrId/file-content", gitIntCtrl.GetFileContent)
 	pri.GET("/project/:idProject/git-integration/:idGitIntegration/mr/:mrId/status", gitIntCtrl.GetStatus)
 
 	// WebSocket

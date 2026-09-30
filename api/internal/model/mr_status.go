@@ -12,4 +12,5 @@ type MrStatusNotice struct {
 	CiStatus         string `json:"ciStatus"`
 	WebUrl           string `json:"webUrl"`
 	HeadSHA          string `json:"headSha"`
+	BaseSHA          string `json:"baseSha"`
 }

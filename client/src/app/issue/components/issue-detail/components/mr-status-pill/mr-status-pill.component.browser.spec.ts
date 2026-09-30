@@ -40,7 +40,8 @@ describe('MrStatusPillComponent', () => {
             approved: false,
             ciStatus,
             webUrl: '',
-            headSha: ''
+            headSha: '',
+            baseSha: ''
         };
         fixture.componentRef.setInput('status', status);
         fixture.detectChanges();

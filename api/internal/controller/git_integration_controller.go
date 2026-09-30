@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -306,6 +307,82 @@ func (gc *GitIntegrationController) GetStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
+func (gc *GitIntegrationController) GetFileContent(c *gin.Context) {
+	idProject, idGitIntegration, ok := gc.parseProjectAndIntegration(c)
+	if !ok {
+		return
+	}
+	mrId := c.Param("mrId")
+	path := c.Query("path")
+	ref := c.Query("ref")
+	if path == "" || ref == "" {
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+
+	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	host, err := gc.loadHostForIntegration(ctx, idGitIntegration, idProject)
+	if errors.Is(err, errs.ErrGitIntegrationNotFound) {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	diff, err := gc.fetchDiff(ctx, host, idGitIntegration, mrId)
+	if err != nil {
+		_ = c.Error(errs.ErrGitHostUnavailable)
+		c.Status(http.StatusBadGateway)
+		return
+	}
+
+	allowed := false
+	for _, f := range diff.Files {
+		if f.NewPath == path || f.OldPath == path {
+			if ref == diff.HeadSHA || ref == diff.BaseSHA {
+				allowed = true
+				break
+			}
+		}
+	}
+	if !allowed {
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	content, err := gc.fetchFileContent(ctx, host, idGitIntegration, ref, path)
+	if err != nil {
+		if errors.Is(err, githost.ErrFileTooLarge) || errors.Is(err, githost.ErrBinaryFile) {
+			_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+			c.Status(http.StatusBadRequest)
+			return
+		}
+		_ = c.Error(errs.ErrGitHostUnavailable)
+		c.Status(http.StatusBadGateway)
+		return
+	}
+
+	lines := strings.Split(string(content), "\n")
+	if len(lines) > 0 && lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	c.JSON(http.StatusOK, map[string]any{"lines": lines, "lineCount": len(lines)})
+}
+
 func (gc *GitIntegrationController) loadHostForIntegration(ctx context.Context, idGitIntegration, idProject int64) (githost.GitHost, error) {
 	integration, err := gc.gitIntRepo.LoadByID(ctx, idGitIntegration, idProject)
 	if err != nil {
@@ -351,6 +428,18 @@ func (gc *GitIntegrationController) fetchDiff(ctx context.Context, host githost.
 	}
 	gc.diffCache.SetDiff(idGitIntegration, mrId, diff.HeadSHA, diff)
 	return diff, nil
+}
+
+func (gc *GitIntegrationController) fetchFileContent(ctx context.Context, host githost.GitHost, idGitIntegration int64, ref, path string) ([]byte, error) {
+	if cached, ok := gc.diffCache.GetFileContent(idGitIntegration, ref, path); ok {
+		return cached, nil
+	}
+	content, err := host.GetFileContent(ctx, path, ref)
+	if err != nil {
+		return nil, err
+	}
+	gc.diffCache.SetFileContent(idGitIntegration, ref, path, content)
+	return content, nil
 }
 
 func (gc *GitIntegrationController) parseProjectAndIntegration(c *gin.Context) (idProject, idGitIntegration int64, ok bool) {

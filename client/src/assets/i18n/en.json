@@ -1120,7 +1120,10 @@
     "DIFF": {
         "LOADING": "Loading diff…",
         "OPEN_ON_HOST": "Open on host",
-        "TOGGLE_FILE": "Show or hide this file's changes"
+        "TOGGLE_FILE": "Show or hide this file's changes",
+        "EXPAND_N": "Load {{count}} more lines",
+        "EXPAND_ALL": "Expand {{count}} hidden lines",
+        "EXPAND_FAILED": "Could not load more diff context"
     },
     "ISSUE_TYPE": {
         "SINGULAR": "Type",

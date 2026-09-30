@@ -15,6 +15,7 @@ type countingGitHost struct {
 	diffSHA      string // HeadSHA carried by the returned diff
 	changesCalls int
 	statusCalls  int
+	contentCalls int
 }
 
 func (h *countingGitHost) GetMergeRequestChanges(context.Context, string) (*githost.Diff, error) {
@@ -38,9 +39,13 @@ func (h *countingGitHost) FindOpenPullRequest(context.Context, string) (string, 
 func (h *countingGitHost) CreatePullRequest(context.Context, string, string, string, string) (string, string, error) {
 	return "", "", nil
 }
+func (h *countingGitHost) GetFileContent(context.Context, string, string) ([]byte, error) {
+	h.contentCalls++
+	return []byte("file content"), nil
+}
 
 func newDiffController() *GitIntegrationController {
-	return &GitIntegrationController{diffCache: githost.NewDiffCache(16, 16)}
+	return &GitIntegrationController{diffCache: githost.NewDiffCache(16, 16, 16)}
 }
 
 // Second fetch for the same head SHA must be served from the cache — the changes

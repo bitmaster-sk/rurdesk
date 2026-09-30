@@ -9,8 +9,8 @@ import (
 )
 
 func TestDiffCache_Hit(t *testing.T) {
-	cache := NewDiffCache(100, 50)
-	diff := &Diff{HeadSHA: "abc", Files: []DiffFile{{OldPath: "a.go", NewPath: "a.go"}}}
+	cache := NewDiffCache(100, 50, 50)
+	diff := &Diff{HeadSHA: "abc", BaseSHA: "def", Files: []DiffFile{{OldPath: "a.go", NewPath: "a.go"}}}
 	cache.SetDiff(1, "42", "abc123", diff)
 
 	got, ok := cache.GetDiff(1, "42", "abc123")
@@ -19,7 +19,7 @@ func TestDiffCache_Hit(t *testing.T) {
 }
 
 func TestDiffCache_Miss_DifferentSha(t *testing.T) {
-	cache := NewDiffCache(100, 50)
+	cache := NewDiffCache(100, 50, 50)
 	diff := &Diff{HeadSHA: "sha1"}
 	cache.SetDiff(1, "42", "sha1", diff)
 
@@ -28,7 +28,7 @@ func TestDiffCache_Miss_DifferentSha(t *testing.T) {
 }
 
 func TestDiffCache_StatusHit(t *testing.T) {
-	cache := NewDiffCache(100, 50)
+	cache := NewDiffCache(100, 50, 50)
 	status := &Status{State: "open", Approved: false, CiStatus: "success"}
 	cache.SetStatus(1, "42", status)
 
@@ -40,10 +40,12 @@ func TestDiffCache_StatusHit(t *testing.T) {
 func TestDiffCache_StatusExpiry(t *testing.T) {
 	// Built directly (not via NewDiffCache) for a short status TTL.
 	shortCache := &DiffCache{
-		diffs:       lru.NewLRU[string, *Diff](100, nil, 24*time.Hour),
-		statuses:    lru.NewLRU[string, *Status](50, nil, 10*time.Millisecond),
-		diffIndex:   make(map[int64]map[string]struct{}),
-		statusIndex: make(map[int64]map[string]struct{}),
+		diffs:        lru.NewLRU[string, *Diff](100, nil, 24*time.Hour),
+		statuses:     lru.NewLRU[string, *Status](50, nil, 10*time.Millisecond),
+		contents:     lru.NewLRU[string, []byte](50, nil, 24*time.Hour),
+		diffIndex:    make(map[int64]map[string]struct{}),
+		statusIndex:  make(map[int64]map[string]struct{}),
+		contentIndex: make(map[int64]map[string]struct{}),
 	}
 	shortCache.SetStatus(1, "42", &Status{State: "open"})
 
@@ -57,11 +59,13 @@ func TestDiffCache_StatusExpiry(t *testing.T) {
 }
 
 func TestDiffCache_PurgeIntegration(t *testing.T) {
-	cache := NewDiffCache(100, 50)
+	cache := NewDiffCache(100, 50, 50)
 	cache.SetDiff(7, "1", "sha1", &Diff{HeadSHA: "sha1"})
 	cache.SetDiff(7, "2", "sha2", &Diff{HeadSHA: "sha2"})
 	cache.SetStatus(7, "1", &Status{State: "open"})
 	cache.SetDiff(8, "1", "sha1", &Diff{HeadSHA: "other"})
+	cache.SetFileContent(7, "sha1", "a.go", []byte("x"))
+	cache.SetFileContent(8, "sha1", "a.go", []byte("y"))
 
 	cache.PurgeIntegration(7)
 
@@ -69,9 +73,22 @@ func TestDiffCache_PurgeIntegration(t *testing.T) {
 	_, ok2 := cache.GetDiff(7, "2", "sha2")
 	_, ok3 := cache.GetStatus(7, "1")
 	_, ok4 := cache.GetDiff(8, "1", "sha1")
+	_, ok5 := cache.GetFileContent(7, "sha1", "a.go")
+	_, ok6 := cache.GetFileContent(8, "sha1", "a.go")
 
 	assert.False(t, ok1)
 	assert.False(t, ok2)
 	assert.False(t, ok3)
 	assert.True(t, ok4, "other integration must be unaffected")
+	assert.False(t, ok5)
+	assert.True(t, ok6, "other integration content must be unaffected")
+}
+
+func TestDiffCache_FileContentHit(t *testing.T) {
+	cache := NewDiffCache(100, 50, 50)
+	cache.SetFileContent(1, "sha1", "a.go", []byte("line1\nline2"))
+
+	got, ok := cache.GetFileContent(1, "sha1", "a.go")
+	assert.True(t, ok)
+	assert.Equal(t, []byte("line1\nline2"), got)
 }

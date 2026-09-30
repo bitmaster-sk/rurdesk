@@ -1,6 +1,7 @@
 package githost
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -29,7 +30,7 @@ func TestGiteaHost_GetMergeRequestChanges(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	diff, err := host.GetMergeRequestChanges(t.Context(), "1")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, "cafebabe", diff.HeadSHA)
 	assert.Len(t, diff.Files, 1)
@@ -58,7 +59,7 @@ func TestGiteaHost_GetMergeRequestStatus_Open(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
@@ -88,7 +89,7 @@ func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
@@ -114,7 +115,7 @@ func TestGiteaHost_GetMergeRequestStatus_NoCi(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.CiStatusUnknown, status.CiStatus)
 }
@@ -132,7 +133,7 @@ func TestGiteaHost_DefaultBranch(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	branch, err := host.DefaultBranch(t.Context())
+	branch, err := host.DefaultBranch(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "trunk", branch)
 }
@@ -148,7 +149,7 @@ func TestGiteaHost_FindOpenPullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	id, prURL, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	id, prURL, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "5", id)
@@ -164,7 +165,7 @@ func TestGiteaHost_FindOpenPullRequest_NotFound(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	_, _, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	_, _, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.False(t, found)
 }
@@ -199,7 +200,7 @@ func TestGiteaHost_FindOpenPullRequest_WalksPages(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	id, prURL, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	id, prURL, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.True(t, found, "a PR beyond the first page must still be found")
 	assert.Equal(t, "99", id)
@@ -219,7 +220,7 @@ func TestGiteaHost_FindOpenPullRequest_StopsOnShortPage(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	_, _, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	_, _, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.False(t, found)
 	assert.Equal(t, 1, requests)
@@ -239,8 +240,45 @@ func TestGiteaHost_CreatePullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGiteaHost(srv.URL, "owner/repo", "token")
-	id, prURL, err := host.CreatePullRequest(t.Context(), "feature", "main", "title", "body")
+	id, prURL, err := host.CreatePullRequest(context.Background(), "feature", "main", "title", "body")
 	require.NoError(t, err)
 	assert.Equal(t, "8", id)
 	assert.Equal(t, "https://gitea/owner/repo/pulls/8", prURL)
+}
+
+func TestGiteaHost_GetMergeRequestChanges_DeletedFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/repos/owner/repo/pulls/1" {
+			json.NewEncoder(w).Encode(map[string]any{
+				"head": map[string]any{"sha": "head-sha"},
+				"base": map[string]any{"sha": "base-sha"},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode([]map[string]any{
+			{"filename": "gone.go", "status": "removed", "patch": "@@ -1,1 +0,0 @@\n-line\n"},
+		})
+	}))
+	defer srv.Close()
+
+	host := NewGiteaHost(srv.URL, "owner/repo", "token")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
+	require.NoError(t, err)
+	require.Len(t, diff.Files, 1)
+	assert.True(t, diff.Files[0].IsDeleted)
+	assert.Equal(t, "base-sha", diff.BaseSHA)
+}
+
+func TestGiteaHost_GetFileContent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v1/repos/owner/repo/raw/src/main.go", r.URL.Path)
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGiteaHost(srv.URL, "owner/repo", "token")
+	content, err := host.GetFileContent(context.Background(), "src/main.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
 }

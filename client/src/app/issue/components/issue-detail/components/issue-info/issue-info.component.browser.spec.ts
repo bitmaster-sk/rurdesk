@@ -101,7 +101,8 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
             approved: true,
             ciStatus: 'success',
             webUrl: 'https://host/mr/123',
-            headSha: 'def456'
+            headSha: 'def456',
+            baseSha: 'abc123'
         };
         mrStatus$.next({
             subject: 'mr_status',
@@ -115,7 +116,8 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
             approved: true,
             ciStatus: CiStatus.Success,
             webUrl: 'https://host/mr/123',
-            headSha: 'def456'
+            headSha: 'def456',
+            baseSha: 'abc123'
         };
         expect(
             (fixture.componentInstance as unknown as { mrStatus: () => MrStatus | null }).mrStatus()
@@ -138,7 +140,8 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 approved: true,
                 ciStatus: 'success',
                 webUrl: 'https://host/mr/123',
-                headSha: 'def456'
+                headSha: 'def456',
+                baseSha: 'abc123'
             } satisfies MrStatusNotice
         });
         fixture.detectChanges();
@@ -165,7 +168,8 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 approved: true,
                 ciStatus: 'success',
                 webUrl: 'https://host/mr/123',
-                headSha: 'def456'
+                headSha: 'def456',
+                baseSha: 'abc123'
             } satisfies MrStatusNotice
         });
         fixture.detectChanges();
@@ -202,7 +206,8 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 approved: false,
                 ciStatus: 'pending',
                 webUrl: 'https://host/mr/123',
-                headSha: 'def456'
+                headSha: 'def456',
+                baseSha: 'abc123'
             } satisfies MrStatusNotice
         });
         fixture.detectChanges();

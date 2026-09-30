@@ -50,10 +50,12 @@ export interface MrDiffFile {
     oldPath: string;
     newPath: string;
     patch: string;
+    isDeleted: boolean;
 }
 
 export interface MrDiff {
     headSha: string;
+    baseSha: string;
     files: MrDiffFile[];
 }
 
@@ -63,4 +65,27 @@ export interface MrStatus {
     ciStatus: CiStatus;
     webUrl: string;
     headSha: string;
+    baseSha: string;
 }
+
+export enum DiffExpandDirection {
+    Up = 'up',
+    Down = 'down'
+}
+
+export interface FileContentRequest {
+    file: MrDiffFile;
+    ref: string;
+    direction: DiffExpandDirection;
+    line: number;
+    count: number;
+}
+
+export interface FileContentResponse {
+    lines: string[];
+    lineCount: number;
+}
+
+export type FileContentLoader = (
+    req: FileContentRequest
+) => import('rxjs').Observable<FileContentResponse>;

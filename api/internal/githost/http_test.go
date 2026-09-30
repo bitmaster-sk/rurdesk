@@ -1,6 +1,7 @@
 package githost
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -24,7 +25,7 @@ func TestPostJSON(t *testing.T) {
 	defer srv.Close()
 
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := postJSON(t.Context(), client, srv.URL, map[string]string{"k": "v"}, func(req *http.Request) {
+	resp, err := postJSON(context.Background(), client, srv.URL, map[string]string{"k": "v"}, func(req *http.Request) {
 		req.Header.Set("X-Auth", "secret")
 	})
 	require.NoError(t, err)

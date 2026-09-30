@@ -7,6 +7,8 @@ type GitHost interface {
 	GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error)
 	GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error)
 	GetMergeRequestUrl(idMr string) string
+	// GetFileContent returns the raw UTF-8 content of path at the given ref.
+	GetFileContent(ctx context.Context, path, ref string) ([]byte, error)
 
 	// DefaultBranch returns the repository's default branch (PR base).
 	DefaultBranch(ctx context.Context) (string, error)
@@ -20,13 +22,15 @@ type GitHost interface {
 
 type Diff struct {
 	HeadSHA string     `json:"headSha"`
+	BaseSHA string     `json:"baseSha"`
 	Files   []DiffFile `json:"files"`
 }
 
 type DiffFile struct {
-	OldPath string `json:"oldPath"`
-	NewPath string `json:"newPath"`
-	Patch   string `json:"patch"`
+	OldPath   string `json:"oldPath"`
+	NewPath   string `json:"newPath"`
+	Patch     string `json:"patch"`
+	IsDeleted bool   `json:"isDeleted"`
 }
 
 type Status struct {
@@ -38,4 +42,6 @@ type Status struct {
 	// (keyed by head SHA) be read without an extra host call, and it always
 	// matches the SHA GetMergeRequestChanges keys its diff under.
 	HeadSHA string `json:"headSha"`
+	// BaseSHA is the target commit; used to expand context in deleted files.
+	BaseSHA string `json:"baseSha"`
 }

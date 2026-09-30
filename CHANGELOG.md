@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Incremental code expansion in the MR/PR diff panel: click arrow rows between hunks (or
+  above the first / below the last changed lines) to load up to 20 additional context lines
+  from the git host. The file is fetched once per commit and sliced locally, so later clicks
+  are instant.
+- New backend endpoint `GET /api/private/project/:idProject/git-integration/:idGitIntegration/mr/:mrId/file-content`
+  that proxies file contents from GitHub, GitLab and Gitea, validates the requested path
+  belongs to the MR diff, and rejects oversized or binary files.
+- `Diff` and `Status` responses now include `baseSha`; `DiffFile` includes `isDeleted` so
+  deleted files can be expanded from the base commit.
+
 ## [1.3.0] - 2026-09-09
 
 Watch an agent think while it works, answer its review comments without sending it back

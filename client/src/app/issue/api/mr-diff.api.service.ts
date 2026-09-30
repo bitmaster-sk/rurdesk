@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable } from 'rxjs';
-import { MrDiff, MrStatus } from '../../project/model/git-integration.model';
+import { Observable, map } from 'rxjs';
+import { FileContentResponse, MrDiff, MrStatus } from '../../project/model/git-integration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MrDiffApi {
@@ -21,5 +21,21 @@ export class MrDiffApi {
         return this.http.get<MrStatus>(
             `/api/private/project/${idProject}/git-integration/${idGitIntegration}/mr/${mrId}/status`
         );
+    }
+
+    public loadFileContent$(
+        idProject: number,
+        idGitIntegration: number,
+        mrId: string,
+        path: string,
+        ref: string
+    ): Observable<FileContentResponse> {
+        const params = { path, ref };
+        return this.http
+            .get<{ lines: string[]; lineCount: number }>(
+                `/api/private/project/${idProject}/git-integration/${idGitIntegration}/mr/${mrId}/file-content`,
+                { params }
+            )
+            .pipe(map(res => ({ lines: res.lines, lineCount: res.lineCount })));
     }
 }

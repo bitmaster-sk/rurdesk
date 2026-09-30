@@ -1,1 +1,142 @@
-<div #diffContainer class="diff-viewer"></div>
+<div #structuredContainer class="diff-viewer diff-viewer--structured">
+    @if (loading()) {
+        <div class="diff-viewer__loading">
+            <span class="diff-viewer__spinner" [innerHTML]="iconLoader"></span>
+            <span>{{ 'DIFF.LOADING' | translate }}</span>
+        </div>
+    } @else if (diff()) {
+        @for (
+            file of parsedFiles();
+            track file.newPath + ':' + file.oldPath;
+            let fileIdx = $index
+        ) {
+            <div class="diff-viewer__file">
+                <div
+                    class="diff-viewer__file-header"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-expanded]="!collapsedFiles().has(fileIdx)"
+                    (click)="toggleFile(fileIdx)"
+                    (keydown.enter)="toggleFile(fileIdx)"
+                    (keydown.space)="toggleFile(fileIdx)"
+                >
+                    <span class="diff-viewer__file-name">
+                        <span class="diff-viewer__chevron" [innerHTML]="iconChevron"></span>
+                        {{ fileName(file) }}
+                    </span>
+                    <span class="diff-viewer__file-extras">
+                        <span class="diff-viewer__stats">{{ statsFor(file) }}</span>
+                        @if (fileLinkFor(file); as link) {
+                            <a
+                                class="diff-viewer__file-link"
+                                [href]="link"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                [title]="'DIFF.OPEN_ON_HOST' | translate"
+                            >
+                                <span [innerHTML]="iconExternalLink"></span>
+                            </a>
+                        }
+                    </span>
+                </div>
+                <div
+                    class="diff-viewer__file-body"
+                    [class.diff-viewer__file-body--collapsed]="collapsedFiles().has(fileIdx)"
+                >
+                    <table class="diff-viewer__table">
+                        <tbody>
+                            @for (
+                                target of expandersFor(file, fileIdx);
+                                track target.hunkIndex + ':' + target.direction;
+                                let hunkIdx = $index
+                            ) {
+                                @if (target.direction === DiffExpandDirection.Up) {
+                                    <tr class="diff-viewer__expander">
+                                        <td class="diff-viewer__expander-cell" colspan="3">
+                                            <button
+                                                type="button"
+                                                (click)="onExpand(file, fileIdx, target)"
+                                            >
+                                                <tabler-icon
+                                                    [icon]="expanderIcon(target)"
+                                                    [size]="14"
+                                                />
+                                                <span>{{ expanderLabel(target) }}</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                                @if (hunkIdx < file.hunks.length) {
+                                    <tr class="diff-viewer__hunk-header">
+                                        <td class="diff-viewer__line-number"></td>
+                                        <td class="diff-viewer__line-number"></td>
+                                        <td class="diff-viewer__code">
+                                            @@ -{{ file.hunks[hunkIdx].oldStart }},{{
+                                                file.hunks[hunkIdx].oldLines
+                                            }}
+                                            +{{ file.hunks[hunkIdx].newStart }},{{
+                                                file.hunks[hunkIdx].newLines
+                                            }}
+                                            @@
+                                        </td>
+                                    </tr>
+                                    @for (line of file.hunks[hunkIdx].lines; track $index) {
+                                        <tr
+                                            [class.diff-viewer__context]="
+                                                line.kind === DiffLineKind.Context
+                                            "
+                                            [class.diff-viewer__add]="
+                                                line.kind === DiffLineKind.Add
+                                            "
+                                            [class.diff-viewer__remove]="
+                                                line.kind === DiffLineKind.Remove
+                                            "
+                                        >
+                                            <td
+                                                class="diff-viewer__line-number diff-viewer__line-number--old"
+                                            >
+                                                >{{ line.oldLine ?? '' }}
+                                            </td>
+                                            <td
+                                                class="diff-viewer__line-number diff-viewer__line-number--new"
+                                            >
+                                                >{{ line.newLine ?? '' }}
+                                            </td>
+                                            <td class="diff-viewer__code">
+                                                >
+                                                <span class="diff-viewer__prefix">
+                                                    {{ prefixFor(line.kind) }}
+                                                </span>
+                                                {{ line.text }}
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                @if (
+                                    target.direction === DiffExpandDirection.Down &&
+                                    hunkIdx < file.hunks.length
+                                ) {
+                                    <tr class="diff-viewer__expander">
+                                        <td class="diff-viewer__expander-cell" colspan="3">
+                                            <button
+                                                type="button"
+                                                (click)="onExpand(file, fileIdx, target)"
+                                            >
+                                                <tabler-icon
+                                                    [icon]="expanderIcon(target)"
+                                                    [size]="14"
+                                                />
+                                                <span>{{ expanderLabel(target) }}</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+</div>
+<div #rawContainer class="diff-viewer diff-viewer--raw"></div>

@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"unicode/utf8"
 )
+
+const maxFileContentBytes = 1 << 20 // 1 MiB
 
 // postJSON issues a single POST with a JSON body. The caller's setAuth applies
 // host-specific auth headers (and any Accept header).
@@ -57,4 +61,20 @@ func readBody(resp *http.Response) string {
 	}
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 	return string(b)
+}
+
+var (
+	ErrFileTooLarge = errors.New("file exceeds maximum allowed size")
+	ErrBinaryFile   = errors.New("file appears to be binary")
+)
+
+// guardFileContent rejects content that is too large or not valid UTF-8.
+func guardFileContent(name string, data []byte) ([]byte, error) {
+	if len(data) > maxFileContentBytes {
+		return nil, fmt.Errorf("%s: %w", name, ErrFileTooLarge)
+	}
+	if !utf8.Valid(data) {
+		return nil, fmt.Errorf("%s: %w", name, ErrBinaryFile)
+	}
+	return data, nil
 }

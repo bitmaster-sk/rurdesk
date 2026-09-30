@@ -1,9 +1,11 @@
 package githost
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -29,7 +31,7 @@ func TestGitHubHost_GetMergeRequestChanges(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "test-token")
-	diff, err := host.GetMergeRequestChanges(t.Context(), "1")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
 	require.NoError(t, err)
 	require.NotNil(t, diff)
 	assert.Equal(t, "abc123", diff.HeadSHA)
@@ -70,10 +72,100 @@ func TestGitHubHost_GetMergeRequestChanges_Pagination(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	diff, err := host.GetMergeRequestChanges(t.Context(), "1")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Len(t, diff.Files, 101)
 	assert.Equal(t, 2, callCount)
+}
+
+func TestGitHubHost_GetMergeRequestChanges_DeletedFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/pulls/1") && !strings.Contains(r.URL.Path, "/files") {
+			json.NewEncoder(w).Encode(map[string]any{
+				"head": map[string]any{"sha": "head-sha"},
+				"base": map[string]any{"sha": "base-sha"},
+			})
+			return
+		}
+		json.NewEncoder(w).Encode([]map[string]any{
+			{"filename": "gone.go", "status": "removed", "patch": "@@ -1,2 +0,0 @@\n-line1\n-line2\n"},
+		})
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
+	require.NoError(t, err)
+	require.Len(t, diff.Files, 1)
+	assert.True(t, diff.Files[0].IsDeleted)
+	assert.Equal(t, "base-sha", diff.BaseSHA)
+}
+
+func TestGitHubHost_GetFileContent_Raw(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v3/repos/owner/repo/contents/src/main.go", r.URL.Path)
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		w.Header().Set("Content-Type", "application/vnd.github.raw+json")
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	content, err := host.GetFileContent(context.Background(), "src/main.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
+}
+
+func TestGitHubHost_GetFileContent_Base64Json(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{"content": "cGFja2FnZSBtYWluCg=="})
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	content, err := host.GetFileContent(context.Background(), "src/main.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
+}
+
+func TestGitHubHost_GetFileContent_RespectsSizeLimit(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/vnd.github.raw+json")
+		_, _ = w.Write(make([]byte, maxFileContentBytes+1))
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	_, err := host.GetFileContent(context.Background(), "big.go", "ref")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrFileTooLarge)
+}
+
+func TestGitHubHost_GetFileContent_RejectsBinary(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/vnd.github.raw+json")
+		_, _ = w.Write([]byte{0x00, 0x01, 0xff})
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	_, err := host.GetFileContent(context.Background(), "bin.bin", "ref")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrBinaryFile)
+}
+
+func TestGitHubHost_GetFileContent_UnknownStatus(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("not found"))
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	_, err := host.GetFileContent(context.Background(), "missing.go", "ref")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "404")
 }
 
 func githubCheckRunsPayload(runs ...map[string]any) map[string]any {
@@ -100,7 +192,7 @@ func TestGitHubHost_GetMergeRequestStatus_Open(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
@@ -127,7 +219,7 @@ func TestGitHubHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
@@ -166,7 +258,7 @@ func TestGitHubHost_CiStatus_FailureOnSecondCheckRunsPage(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.CiStatusFailed, status.CiStatus)
 	assert.Equal(t, []string{"1", "2"}, pagesServed)
@@ -198,7 +290,7 @@ func TestGitHubHost_CiStatus_FallsBackToCommitStatuses(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.True(t, statusesCalled)
 	assert.Equal(t, constants.CiStatusFailed, status.CiStatus)
@@ -227,7 +319,7 @@ func TestGitHubHost_CiStatus_NoCiAtAll(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.CiStatusUnknown, status.CiStatus)
 }
@@ -269,7 +361,7 @@ func TestGitHubHost_CiStatus_CheckRunConclusions(t *testing.T) {
 			defer srv.Close()
 
 			host := NewGitHubHost(srv.URL, "owner/repo", "token")
-			status, err := host.GetMergeRequestStatus(t.Context(), "1")
+			status, err := host.GetMergeRequestStatus(context.Background(), "1")
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, status.CiStatus)
 		})
@@ -297,7 +389,7 @@ func TestGitHubHost_CiStatus_CanceledAmongGreen(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.CiStatusCanceled, status.CiStatus)
 }
@@ -334,7 +426,7 @@ func TestGitHubHost_DefaultBranch(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	branch, err := host.DefaultBranch(t.Context())
+	branch, err := host.DefaultBranch(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "main", branch)
 }
@@ -351,7 +443,7 @@ func TestGitHubHost_FindOpenPullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	id, prURL, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	id, prURL, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "42", id)
@@ -365,7 +457,7 @@ func TestGitHubHost_FindOpenPullRequest_NotFound(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	_, _, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	_, _, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.False(t, found)
 }
@@ -386,7 +478,7 @@ func TestGitHubHost_CreatePullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	id, prURL, err := host.CreatePullRequest(t.Context(), "feature", "main", "My PR", "body")
+	id, prURL, err := host.CreatePullRequest(context.Background(), "feature", "main", "My PR", "body")
 	require.NoError(t, err)
 	assert.Equal(t, "7", id)
 	assert.Equal(t, "https://github.com/owner/repo/pull/7", prURL)
@@ -400,7 +492,7 @@ func TestGitHubHost_CreatePullRequest_Error(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	_, _, err := host.CreatePullRequest(t.Context(), "feature", "main", "t", "b")
+	_, _, err := host.CreatePullRequest(context.Background(), "feature", "main", "t", "b")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "422")
 	assert.Contains(t, err.Error(), "No commits")
@@ -436,7 +528,7 @@ func TestGitHubHost_RetryAfter429(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitHubHost(srv.URL, "owner/repo", "token")
-	_, err := host.GetMergeRequestStatus(t.Context(), "1")
+	_, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, attempts, 2)
 }

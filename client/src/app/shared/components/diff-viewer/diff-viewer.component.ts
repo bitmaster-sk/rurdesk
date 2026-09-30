@@ -1,17 +1,28 @@
 import {
     AfterViewInit,
     ChangeDetectionStrategy,
+    ChangeDetectorRef,
     Component,
     ElementRef,
     OnChanges,
     ViewEncapsulation,
     inject,
     input,
+    signal,
     viewChild
 } from '@angular/core';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { html } from 'diff2html';
-import { MrDiff, MrDiffFile } from 'src/app/project/model/git-integration.model';
+import {
+    DiffExpandDirection,
+    FileContentLoader,
+    MrDiff,
+    MrDiffFile
+} from 'src/app/project/model/git-integration.model';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { take } from 'rxjs/operators';
+import { DiffExpander, ExpanderTarget } from './diff-expander';
+import { DiffLineKind, DiffParser, ParsedDiffFile } from './diff-parser';
 
 // Tabler icons inlined as SVG so they render inside diff2html's
 // innerHTML-rendered DOM (where the `<tabler-icon>` Angular component can't
@@ -37,23 +48,11 @@ const ICON_CHEVRON =
 export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
 
 /**
- * Renders any unified-diff patch using diff2html. Two input modes:
- *  - `diff`: a structured MrDiff (used by the issue MR/PR panel that fetches
- *    the patch from the git host API as a typed object).
- *  - `rawPatch`: a plain string already in unified-diff format (used by the
- *    plan-message renderer for ```diff fenced blocks the agent emits).
- *
- * Exactly one of the inputs should be set per use site. If both are set
- * `rawPatch` wins — it's the simpler shape and avoids the
- * re-header-rewriting logic the structured path needs.
- *
- * The component disables diff2html's built-in file-list header (it links to
- * an in-page anchor we don't expose) and instead enriches each per-file
- * header with an +added/-removed line summary and an optional external link
- * to the file on the source host. When the caller has a `MrDiff` it can pass
- * `fileLinkBuilder` to control where that icon points (e.g. github blob
- * URL). For raw-patch callers the host context is unknown so no link is
- * shown — only stats parsed out of the patch itself.
+ * Renders unified diffs. Two input modes:
+ *  - `diff`: structured MrDiff rendered with a custom Angular hunk renderer
+ *    that supports incremental context expansion.
+ *  - `rawPatch`: plain unified-diff string rendered with diff2html.
+ * If both are set, `rawPatch` wins.
  */
 @Component({
     selector: 'app-diff-viewer',
@@ -61,27 +60,34 @@ export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
     styleUrls: ['./diff-viewer.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    // diff2html injects the rendered diff via innerHTML, so its CSS classes
-    // (`.d2h-*`) are not visible to Angular's view-encapsulation attribute
-    // selectors. Turning encapsulation off lets the imported diff2html
-    // stylesheet match the dynamic markup. The class names are well-namespaced
-    // (`.d2h-*`, `.diff-viewer`) so the global leak is negligible.
+    // diff2html injects rendered HTML for rawPatch mode, so its CSS classes
+    // are not visible to Angular's view-encapsulation attribute selectors.
+    // Disable encapsulation; the structured renderer uses the same global
+    // class namespace.
     encapsulation: ViewEncapsulation.None
 })
 export class DiffViewerComponent implements AfterViewInit, OnChanges {
-    private readonly i18n = inject(I18nService);
+    protected readonly i18n = inject(I18nService);
+    protected readonly toast = inject(ToastNotificationService);
+    private readonly cdr = inject(ChangeDetectorRef);
+
+    protected readonly iconLoader = ICON_LOADER;
+    protected readonly iconChevron = ICON_CHEVRON;
+    protected readonly iconExternalLink = ICON_EXTERNAL_LINK;
 
     public readonly diff = input<MrDiff | null>(null);
     public readonly rawPatch = input<string | null>(null);
     public readonly fileLinkBuilder = input<DiffFileLinkBuilder | null>(null);
-    // `loading` is for callers that fetch the diff asynchronously (e.g. the
-    // issue MR/PR panel that hits the git host API on toggle). Toggled while
-    // the request is in flight so the viewer renders a spinner instead of an
-    // empty box. Plan-stage callers using `rawPatch` pass the data
-    // synchronously and can leave this at the default false.
     public readonly loading = input(false);
+    public readonly fileContentLoader = input<FileContentLoader | null>(null);
 
-    private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('diffContainer');
+    private readonly rawContainerRef = viewChild<ElementRef<HTMLDivElement>>('rawContainer');
+    private readonly structuredContainerRef =
+        viewChild<ElementRef<HTMLDivElement>>('structuredContainer');
+    protected readonly parsedFiles = signal<ParsedDiffFile[]>([]);
+    protected readonly collapsedFiles = signal<Set<number>>(new Set());
+    private readonly fileContents = new Map<string, string[]>();
+    private readonly fileLineCounts = new Map<string, number>();
 
     public ngAfterViewInit(): void {
         this.render();
@@ -92,62 +98,204 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
     }
 
     private render(): void {
-        const container = this.containerRef()?.nativeElement;
-        if (!container) return;
+        const rawContainer = this.rawContainerRef()?.nativeElement;
+        const structuredContainer = this.structuredContainerRef()?.nativeElement;
+        if (!rawContainer || !structuredContainer) return;
 
         if (this.loading()) {
-            container.innerHTML = `<div class="diff-viewer__loading"><span class="diff-viewer__spinner">${ICON_LOADER}</span>${this.i18n.instant('DIFF.LOADING')}</div>`;
+            this.parsedFiles.set([]);
+            rawContainer.innerHTML = '';
+            this.cdr.markForCheck();
             return;
         }
 
-        const patch = this.resolvePatch();
-        if (!patch) {
-            container.innerHTML = '';
-            return;
-        }
-
-        container.innerHTML = html(patch, {
-            drawFileList: false,
-            matching: 'lines',
-            outputFormat: 'line-by-line'
-        });
-
-        this.enrichFileHeaders(container);
-    }
-
-    private resolvePatch(): string | null {
         const raw = this.rawPatch();
-        if (raw) return raw;
+        if (raw) {
+            structuredContainer.innerHTML = '';
+            this.parsedFiles.set([]);
+            rawContainer.innerHTML = html(raw, {
+                drawFileList: false,
+                matching: 'lines',
+                outputFormat: 'line-by-line'
+            });
+            this.enrichFileHeaders(rawContainer);
+            this.cdr.markForCheck();
+            return;
+        }
 
         const diff = this.diff();
-        if (!diff) return null;
+        if (!diff) {
+            rawContainer.innerHTML = '';
+            this.parsedFiles.set([]);
+            return;
+        }
 
-        return diff.files.map(f => `--- a/${f.oldPath}\n+++ b/${f.newPath}\n${f.patch}`).join('\n');
+        rawContainer.innerHTML = '';
+        this.parsedFiles.set(
+            diff.files.map(f => DiffParser.parseFile(f.oldPath, f.newPath, f.patch, f.isDeleted))
+        );
+        this.collapsedFiles.set(new Set());
+        this.cdr.markForCheck();
     }
 
-    /**
-     * Appends a `+X / -Y` stat badge and (when a host link is available) an
-     * external-link icon to each file header rendered by diff2html, and
-     * wires the header itself as a click-to-collapse toggle for the file's
-     * diff body. Relies on diff2html emitting `.d2h-file-wrapper` blocks in
-     * the same order as `MrDiff.files`, so we can pair them positionally
-     * without re-parsing file names back out of the DOM.
-     *
-     * The stats/link extras are injected inside `.d2h-file-name-wrapper`
-     * (the existing flex row that holds the file name + tag) rather than
-     * directly under `.d2h-file-header`. The name-wrapper already takes
-     * width:100% and is a flex container with align-items:center —
-     * appending here means the extras flow naturally on the right of the
-     * name without forcing a wrap that would break diff2html's fixed-height
-     * header and push the diff table down.
-     *
-     * Collapse uses diff2html's own `.d2h-d-none` class on `.d2h-file-diff`,
-     * matching how diff2html itself toggles file visibility from the file
-     * list — no extra display rules needed.
-     */
+    protected refFor(isDeleted: boolean): string {
+        const diff = this.diff();
+        if (!diff) return '';
+        return isDeleted ? diff.baseSha : diff.headSha;
+    }
+
+    protected pathFor(file: ParsedDiffFile): string {
+        return file.newPath === '/dev/null' ? file.oldPath : file.newPath;
+    }
+
+    protected expandersFor(file: ParsedDiffFile, fileIdx: number): ExpanderTarget[] {
+        return DiffExpander.list(file.hunks, this.fileLineCount(file, fileIdx), file.isDeleted);
+    }
+
+    private fileLineCount(file: ParsedDiffFile, fileIdx: number): number {
+        const diff = this.diff();
+        if (!diff) return 0;
+        const key = this.contentCacheKey(file, this.refFor(diff.files[fileIdx].isDeleted));
+        return this.fileLineCounts.get(key) ?? 0;
+    }
+
+    private contentCacheKey(file: ParsedDiffFile, ref: string): string {
+        return `${this.pathFor(file)}:${ref}`;
+    }
+
+    protected onExpand(file: ParsedDiffFile, fileIdx: number, target: ExpanderTarget): void {
+        const loader = this.fileContentLoader();
+        if (!loader) return;
+        const diff = this.diff();
+        if (!diff) return;
+        const isDeleted = diff.files[fileIdx].isDeleted;
+        const ref = this.refFor(isDeleted);
+        if (!ref) return;
+
+        const hunk = file.hunks[target.hunkIndex];
+        const count = DiffExpander.chunkSize(target.gap);
+        const startLine = DiffExpander.startLine(hunk, target.direction, count, isDeleted);
+        const key = this.contentCacheKey(file, ref);
+        const cached = this.fileContents.get(key);
+        if (cached) {
+            this.applyExpansion(file, fileIdx, target, cached, startLine, count);
+            return;
+        }
+
+        const req = {
+            file: diff.files[fileIdx],
+            ref,
+            direction: target.direction,
+            line: startLine,
+            count
+        };
+        loader(req)
+            .pipe(take(1))
+            .subscribe({
+                next: res => {
+                    this.fileContents.set(key, res.lines);
+                    this.fileLineCounts.set(key, res.lineCount);
+                    this.applyExpansion(file, fileIdx, target, res.lines, startLine, count);
+                },
+                error: () => this.toast.showError('DIFF.EXPAND_FAILED')
+            });
+    }
+
+    private applyExpansion(
+        file: ParsedDiffFile,
+        fileIdx: number,
+        target: ExpanderTarget,
+        allLines: string[],
+        startLine: number,
+        count: number
+    ): void {
+        const slice = allLines.slice(startLine, startLine + count);
+        if (slice.length === 0) return;
+
+        DiffParser.expandContext(file, target.hunkIndex, target.direction, slice);
+
+        if (target.direction === DiffExpandDirection.Up && target.hunkIndex > 0) {
+            DiffParser.mergeHunksIfAdjacent(file, target.hunkIndex - 1, target.hunkIndex);
+        } else if (
+            target.direction === DiffExpandDirection.Down &&
+            target.hunkIndex < file.hunks.length - 1
+        ) {
+            DiffParser.mergeHunksIfAdjacent(file, target.hunkIndex, target.hunkIndex + 1);
+        }
+
+        this.parsedFiles.update(files => {
+            const next = [...files];
+            next[fileIdx] = { ...file, hunks: [...file.hunks] };
+            return next;
+        });
+        this.cdr.markForCheck();
+    }
+
+    protected expanderIcon(target: ExpanderTarget): string {
+        if (target.singleButton) return 'arrows-up-down';
+        return target.direction === DiffExpandDirection.Up ? 'arrow-up' : 'arrow-down';
+    }
+
+    protected expanderLabel(target: ExpanderTarget): string {
+        if (target.singleButton) {
+            return this.i18n.instant('DIFF.EXPAND_ALL', { count: target.gap });
+        }
+        return this.i18n.instant('DIFF.EXPAND_N', { count: DiffExpander.chunkSize(target.gap) });
+    }
+
+    protected toggleFile(fileIdx: number): void {
+        this.collapsedFiles.update(set => {
+            const next = new Set(set);
+            if (next.has(fileIdx)) next.delete(fileIdx);
+            else next.add(fileIdx);
+            return next;
+        });
+    }
+
+    protected fileName(file: ParsedDiffFile): string {
+        return file.newPath === '/dev/null' ? file.oldPath : file.newPath;
+    }
+
+    protected fileLinkFor(file: ParsedDiffFile): string | null {
+        const diff = this.diff();
+        const builder = this.fileLinkBuilder();
+        if (!diff || !builder) return null;
+        const idx = diff.files.findIndex(
+            f => f.oldPath === file.oldPath && f.newPath === file.newPath
+        );
+        const mrFile = diff.files[idx];
+        return mrFile ? builder(mrFile) : null;
+    }
+
+    protected statsFor(file: ParsedDiffFile): string {
+        let added = 0;
+        let removed = 0;
+        for (const h of file.hunks) {
+            for (const ln of h.lines) {
+                if (ln.kind === DiffLineKind.Add) added++;
+                else if (ln.kind === DiffLineKind.Remove) removed++;
+            }
+        }
+        return `+${added} -${removed}`;
+    }
+
+    protected prefixFor(kind: DiffLineKind): string {
+        switch (kind) {
+            case DiffLineKind.Add:
+                return '+';
+            case DiffLineKind.Remove:
+                return '-';
+            default:
+                return ' ';
+        }
+    }
+
+    protected readonly DiffLineKind = DiffLineKind;
+    protected readonly DiffExpandDirection = DiffExpandDirection;
+
     private enrichFileHeaders(container: HTMLElement): void {
         const wrappers = container.querySelectorAll<HTMLElement>('.d2h-file-wrapper');
-        const files = this.resolveFiles();
+        const files = this.diff()?.files ?? [];
         const builder = this.fileLinkBuilder();
 
         wrappers.forEach((wrapper, idx) => {
@@ -188,8 +336,6 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         };
 
         header.addEventListener('click', event => {
-            // Let the host-link icon (and any future header buttons) keep
-            // their own click semantics instead of also toggling collapse.
             const target = event.target as HTMLElement | null;
             if (target?.closest('.diff-viewer__file-link')) return;
             toggle();
@@ -201,12 +347,6 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
             event.preventDefault();
             toggle();
         });
-    }
-
-    private resolveFiles(): MrDiffFile[] {
-        const diff = this.diff();
-        if (diff) return diff.files;
-        return [];
     }
 
     private buildExtras(added: number, removed: number, url: string | null): HTMLElement {
@@ -234,11 +374,6 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         return extras;
     }
 
-    /**
-     * Fallback used when the viewer was given a `rawPatch` instead of a
-     * structured `MrDiff` — we don't have per-file patch strings to count
-     * against, so we read +/- lines out of what diff2html already rendered.
-     */
     private extractPatchFromHeader(wrapper: HTMLElement): string {
         const lines: string[] = [];
         wrapper.querySelectorAll<HTMLElement>('.d2h-ins, .d2h-del').forEach(line => {

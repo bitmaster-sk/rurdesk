@@ -2,8 +2,10 @@ package githost
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -59,6 +61,9 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 		Head struct {
 			SHA string `json:"sha"`
 		} `json:"head"`
+		Base struct {
+			SHA string `json:"sha"`
+		} `json:"base"`
 	}
 	if err := json.NewDecoder(prResp.Body).Decode(&prData); err != nil {
 		return nil, fmt.Errorf("decoding PR metadata: %w", err)
@@ -85,6 +90,7 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 			Filename         string `json:"filename"`
 			PreviousFilename string `json:"previous_filename"`
 			Patch            string `json:"patch"`
+			Status           string `json:"status"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&pageFiles); err != nil {
 			return nil, fmt.Errorf("decoding PR files page %d: %w", page, err)
@@ -95,9 +101,10 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 				oldPath = f.Filename
 			}
 			files = append(files, DiffFile{
-				OldPath: oldPath,
-				NewPath: f.Filename,
-				Patch:   f.Patch,
+				OldPath:   oldPath,
+				NewPath:   f.Filename,
+				Patch:     f.Patch,
+				IsDeleted: f.Status == "removed",
 			})
 		}
 		if len(pageFiles) < 100 || resp.Header.Get("Link") == "" || !strings.Contains(resp.Header.Get("Link"), `rel="next"`) {
@@ -106,7 +113,7 @@ func (h *GitHubHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 		page++
 	}
 
-	return &Diff{HeadSHA: prData.Head.SHA, Files: files}, nil
+	return &Diff{HeadSHA: prData.Head.SHA, BaseSHA: prData.Base.SHA, Files: files}, nil
 }
 
 func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
@@ -130,6 +137,9 @@ func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 		Head   struct {
 			SHA string `json:"sha"`
 		} `json:"head"`
+		Base struct {
+			SHA string `json:"sha"`
+		} `json:"base"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&prData); err != nil {
 		return nil, fmt.Errorf("decoding PR status: %w", err)
@@ -149,7 +159,45 @@ func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA, BaseSHA: prData.Base.SHA}, nil
+}
+
+func (h *GitHubHost) GetFileContent(ctx context.Context, path, ref string) ([]byte, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", h.apiBase, h.repoPath, path, url.QueryEscape(ref))
+	req, err := h.newRequest(ctx, apiURL)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.raw+json")
+	resp, err := doWithRetry(ctx, h.client, req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching file content %s@%s: %w", path, ref, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("file content %s@%s: unexpected status %d: %s", path, ref, resp.StatusCode, readBody(resp))
+	}
+
+	ct := resp.Header.Get("Content-Type")
+	if ct == "application/vnd.github.raw+json" || !strings.Contains(ct, "application/json") {
+		data, err := io.ReadAll(io.LimitReader(resp.Body, maxFileContentBytes+1))
+		if err != nil {
+			return nil, fmt.Errorf("reading file content %s@%s: %w", path, ref, err)
+		}
+		return guardFileContent(path, data)
+	}
+
+	var payload struct {
+		Content string `json:"content"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, fmt.Errorf("decoding file content %s@%s: %w", path, ref, err)
+	}
+	data, err := base64.StdEncoding.DecodeString(payload.Content)
+	if err != nil {
+		return nil, fmt.Errorf("decoding base64 %s@%s: %w", path, ref, err)
+	}
+	return guardFileContent(path, data)
 }
 
 func (h *GitHubHost) GetMergeRequestUrl(idMr string) string {

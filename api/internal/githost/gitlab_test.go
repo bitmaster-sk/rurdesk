@@ -1,6 +1,7 @@
 package githost
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -27,7 +28,7 @@ func TestGitLabHost_GetMergeRequestChanges(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	diff, err := host.GetMergeRequestChanges(t.Context(), "1")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, "deadbeef", diff.HeadSHA)
 	assert.Len(t, diff.Files, 1)
@@ -57,7 +58,7 @@ func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateOpen, status.State)
 	assert.Equal(t, constants.CiStatusSuccess, status.CiStatus)
@@ -86,7 +87,7 @@ func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	status, err := host.GetMergeRequestStatus(context.Background(), "1")
 	require.NoError(t, err)
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
@@ -119,7 +120,7 @@ func TestGitLabHost_GetMergeRequestStatus_PipelineStates(t *testing.T) {
 			defer srv.Close()
 
 			host := NewGitLabHost(srv.URL, "group/project", "token")
-			status, err := host.GetMergeRequestStatus(t.Context(), "1")
+			status, err := host.GetMergeRequestStatus(context.Background(), "1")
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, status.CiStatus)
 		})
@@ -145,7 +146,7 @@ func TestGitLabHost_DefaultBranch(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	branch, err := host.DefaultBranch(t.Context())
+	branch, err := host.DefaultBranch(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, "develop", branch)
 }
@@ -162,7 +163,7 @@ func TestGitLabHost_FindOpenPullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	id, mrURL, found, err := host.FindOpenPullRequest(t.Context(), "feature")
+	id, mrURL, found, err := host.FindOpenPullRequest(context.Background(), "feature")
 	require.NoError(t, err)
 	assert.True(t, found)
 	assert.Equal(t, "9", id)
@@ -183,8 +184,46 @@ func TestGitLabHost_CreatePullRequest(t *testing.T) {
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
-	id, mrURL, err := host.CreatePullRequest(t.Context(), "feature", "main", "title", "desc")
+	id, mrURL, err := host.CreatePullRequest(context.Background(), "feature", "main", "title", "desc")
 	require.NoError(t, err)
 	assert.Equal(t, "3", id)
 	assert.Equal(t, "https://gitlab.com/group/project/-/merge_requests/3", mrURL)
+}
+
+func TestGitLabHost_GetMergeRequestChanges_DeletedFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v4/projects/group%2Fproject/merge_requests/1/changes", r.URL.EscapedPath())
+		json.NewEncoder(w).Encode(map[string]any{
+			"diff_refs": map[string]any{
+				"head_sha": "head-sha",
+				"base_sha": "base-sha",
+			},
+			"changes": []map[string]any{
+				{"old_path": "gone.go", "new_path": "gone.go", "deleted_file": true, "diff": "@@ -1,1 +0,0 @@\n-line\n"},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	host := NewGitLabHost(srv.URL, "group/project", "token")
+	diff, err := host.GetMergeRequestChanges(context.Background(), "1")
+	require.NoError(t, err)
+	require.Len(t, diff.Files, 1)
+	assert.True(t, diff.Files[0].IsDeleted)
+	assert.Equal(t, "base-sha", diff.BaseSHA)
+}
+
+func TestGitLabHost_GetFileContent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		expectedSuffix := "/api/v4/projects/group%2Fproject/repository/files/src%2Fmain.go/raw"
+		assert.True(t, strings.HasSuffix(r.URL.EscapedPath(), expectedSuffix), "got %s", r.URL.Path)
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGitLabHost(srv.URL, "group/project", "token")
+	content, err := host.GetFileContent(context.Background(), "src/main.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
 }
