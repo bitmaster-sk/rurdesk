@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { of, Subject, throwError } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
+import { TranslateModule } from '@ngx-translate/core';
 import { ActivatedRoute, convertToParamMap, Router } from '@angular/router';
 import { IssueDetailPage } from './issue-detail.page';
 import { IssueApi } from '../../api/issue.api.service';
@@ -15,6 +16,7 @@ import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
 import { Issue } from '../../model/issue.model';
 import { Fixtures } from 'src/testing/fixtures';
+import { UiModule } from 'src/app/ui/ui.module';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
@@ -281,5 +283,77 @@ describe('IssueDetailPage delete and redirect', () => {
         f.componentInstance.onDeleteConfirmed();
         expect(showError).toHaveBeenCalledWith('ISSUE.DELETE.FAILED');
         expect(navigate).not.toHaveBeenCalled();
+    });
+
+    describe('confirmation modal', () => {
+        const DIALOG_TEMPLATE = `
+            <ui-dialog
+                [visible]="!!pendingDeleteIssue()"
+                header="Delete task"
+                (hide)="pendingDeleteIssue.set(null)"
+            >
+                <span>confirm</span>
+                <ng-template #footer>
+                    <ui-button data-testid="cancel" label="Cancel" (click)="pendingDeleteIssue.set(null)" />
+                    <ui-button data-testid="issue-delete-confirm" label="Delete" (click)="onDeleteConfirmed()" />
+                </ng-template>
+            </ui-dialog>
+        `;
+
+        function panel(): HTMLElement | null {
+            return document.querySelector('.ui-dialog');
+        }
+
+        function click(testId: string): void {
+            document
+                .querySelector<HTMLElement>(
+                    `[data-testid="${testId}"] button, [data-testid="${testId}"]`
+                )!
+                .click();
+        }
+
+        beforeEach(() => {
+            TestBed.configureTestingModule({
+                imports: [UiModule, TranslateModule.forRoot()]
+            }).overrideComponent(IssueDetailPage, {
+                set: {
+                    template: DIALOG_TEMPLATE,
+                    providers: [{ provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } }]
+                }
+            });
+        });
+
+        it('opens a centered modal when delete is requested', () => {
+            const f = TestBed.createComponent(IssueDetailPage);
+            f.detectChanges();
+            expect(panel()).toBeNull();
+            f.componentInstance.onDeleteRequested(savedIssue);
+            f.detectChanges();
+            expect(panel()).not.toBeNull();
+            expect(document.querySelector('.ui-dialog__backdrop')).not.toBeNull();
+        });
+
+        it('deletes the task and closes the modal on confirm', () => {
+            const f = TestBed.createComponent(IssueDetailPage);
+            f.detectChanges();
+            f.componentInstance.onDeleteRequested(savedIssue);
+            f.detectChanges();
+            click('issue-delete-confirm');
+            f.detectChanges();
+            expect(delete$).toHaveBeenCalledWith(1, 5);
+            expect(panel()).toBeNull();
+        });
+
+        it('closes the modal without deleting on cancel', () => {
+            const f = TestBed.createComponent(IssueDetailPage);
+            f.detectChanges();
+            f.componentInstance.onDeleteRequested(savedIssue);
+            f.detectChanges();
+            click('cancel');
+            f.detectChanges();
+            expect(delete$).not.toHaveBeenCalled();
+            expect(panel()).toBeNull();
+            expect(f.componentInstance.pendingDeleteIssue()).toBeNull();
+        });
     });
 });

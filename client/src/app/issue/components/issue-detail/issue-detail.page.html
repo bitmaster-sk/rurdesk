@@ -51,12 +51,27 @@
     (accepted)="onSplitAccepted($event)"
     (cancelled)="onSplitCancelled()"
 ></app-split-dialog>
-} } } @if (pendingDeleteIssue()) {
-<span
-    #deleteConfirm
-    uiConfirm
-    [confirmText]="'ISSUE.MENU.DELETE_CONFIRM' | translate"
-    (confirmed)="onDeleteConfirmed()"
-    (closed)="pendingDeleteIssue.set(null)"
-></span>
-}
+} } }
+
+<ui-dialog
+    [visible]="!!pendingDeleteIssue()"
+    [header]="'ISSUE.MENU.DELETE' | translate"
+    width="28rem"
+    (hide)="pendingDeleteIssue.set(null)"
+>
+    <span>{{ 'ISSUE.MENU.DELETE_CONFIRM' | translate }}</span>
+    <ng-template #footer>
+        <ui-button
+            [label]="'CANCEL' | translate"
+            severity="secondary"
+            variant="text"
+            (click)="pendingDeleteIssue.set(null)"
+        />
+        <ui-button
+            data-testid="issue-delete-confirm"
+            [label]="'ISSUE.DELETE.CONFIRM' | translate"
+            severity="danger"
+            (click)="onDeleteConfirmed()"
+        />
+    </ng-template>
+</ui-dialog>

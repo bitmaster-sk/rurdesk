@@ -1,12 +1,10 @@
 import {
     ChangeDetectionStrategy,
     Component,
-    ElementRef,
     OnDestroy,
     effect,
     inject,
-    signal,
-    viewChild
+    signal
 } from '@angular/core';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
@@ -47,7 +45,6 @@ export class IssueDetailPage implements OnDestroy {
     private readonly browserTitle = inject(BrowserTitleService);
     private readonly i18n = inject(I18nService);
     private readonly commandPalette = inject(CommandPaletteService);
-    private readonly deleteConfirmEl = viewChild<ElementRef<HTMLElement>>('deleteConfirm');
     private lastIdProject: number | null = null;
 
     public readonly agentRunStore = inject(AgentRunStore);
@@ -156,8 +153,6 @@ export class IssueDetailPage implements OnDestroy {
 
     public onDeleteRequested(issue: Issue): void {
         this.pendingDeleteIssue.set(issue);
-        // The uiConfirm directive opens on click; render the host synchronously and click it.
-        queueMicrotask(() => this.deleteConfirmEl()?.nativeElement.click());
     }
 
     public onDeleteConfirmed(): void {

@@ -647,7 +647,8 @@
         },
         "DELETE": {
             "SUCCESS": "Task deleted",
-            "FAILED": "Could not delete the task. Please try again."
+            "FAILED": "Could not delete the task. Please try again.",
+            "CONFIRM": "Delete"
         },
         "COPY_SUFFIX": "{{title}} (copy)"
     },
