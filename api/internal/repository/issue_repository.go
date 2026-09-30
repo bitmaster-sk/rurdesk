@@ -111,10 +111,7 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 	if f.Offset != nil && *f.Offset > 0 {
 		fmt.Fprintf(&sb, "OFFSET $%d ", idx)
 		args = append(args, *f.Offset)
-		idx++
 	}
-
-	_ = idx
 
 	rows, err := db.Query(ctx, sb.String(), args...)
 	if err != nil {

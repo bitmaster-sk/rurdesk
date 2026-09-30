@@ -155,4 +155,14 @@ describe('UiMultiSelectComponent (browser)', () => {
         fixture.detectChanges();
         expect(header()!.classList).toContain('ui-select-panel__checkbox--indeterminate');
     });
+
+    it('does not open when disabled via input', () => {
+        const fixture = setup();
+        fixture.componentInstance.ctrl.disable();
+        fixture.detectChanges();
+        trigger(fixture.nativeElement).click();
+        fixture.detectChanges();
+        expect(options().length).toBe(0);
+        expect(trigger(fixture.nativeElement).classList).toContain('ui-select-trigger--disabled');
+    });
 });

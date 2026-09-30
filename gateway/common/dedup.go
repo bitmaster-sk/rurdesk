@@ -14,15 +14,26 @@ type DedupCache struct {
 	mu      sync.Mutex
 	entries map[string]dedupEntry
 	ttl     time.Duration
+	stopCh  chan struct{}
 }
 
 func NewDedupCache(ttl time.Duration) *DedupCache {
 	dc := &DedupCache{
 		entries: make(map[string]dedupEntry),
 		ttl:     ttl,
+		stopCh:  make(chan struct{}),
 	}
 	go dc.evictLoop()
 	return dc
+}
+
+// Close stops the eviction goroutine. Safe to call multiple times.
+func (dc *DedupCache) Close() {
+	select {
+	case <-dc.stopCh:
+	default:
+		close(dc.stopCh)
+	}
 }
 
 func (dc *DedupCache) IsProcessed(eventID string) bool {
@@ -48,8 +59,13 @@ func (dc *DedupCache) MarkProcessed(eventID string) {
 func (dc *DedupCache) evictLoop() {
 	ticker := time.NewTicker(dc.ttl / 2)
 	defer ticker.Stop()
-	for range ticker.C {
-		dc.evict()
+	for {
+		select {
+		case <-dc.stopCh:
+			return
+		case <-ticker.C:
+			dc.evict()
+		}
 	}
 }
 

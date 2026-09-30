@@ -34,6 +34,7 @@ func main() {
 	trackerClient := common.NewTrackerClient(cfg)
 	agentAdapter := selectAdapter(cfg, trackerClient)
 	dedup := common.NewDedupCache(24 * time.Hour)
+	defer dedup.Close()
 	state := common.NewState()
 	orchestrator := common.NewOrchestrator(cfg, agentAdapter, trackerClient, state)
 
