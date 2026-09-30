@@ -3,6 +3,12 @@
     background: color-mix(in srgb, var(--ui-color-primary) 4%, var(--ui-color-canvas));
 }
 
+// Not Tailwind's hover:underline: it compiles to a nested rule the production CSS
+// optimizer drops, so the hover state silently disappears from the built bundle.
+.notif-card-link:hover {
+    text-decoration: underline;
+}
+
 .notif-card-badge {
     gap: var(--ui-space-s);
     font-size: var(--font-size-s);
