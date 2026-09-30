@@ -39,3 +39,74 @@ export class IssueNoticeLog {
             .toBe(true);
     }
 }
+
+interface CustomFieldNotice {
+    subject: string;
+    action: string;
+    payload: {
+        key?: string;
+        customFields?: Record<string, string | number | boolean | null>;
+    };
+}
+
+/** Collects the `custom_field` and `issue` websocket notices the page receives. */
+export class CustomFieldNoticeLog {
+    private readonly notices: CustomFieldNotice[] = [];
+
+    private readonly subject: string;
+
+    private constructor(subject: string) {
+        this.subject = subject;
+    }
+
+    public static attach(page: Page): CustomFieldNoticeLog {
+        return CustomFieldNoticeLog.collect(page, 'custom_field');
+    }
+
+    public static attachIssueNotices(page: Page): CustomFieldNoticeLog {
+        return CustomFieldNoticeLog.collect(page, 'issue');
+    }
+
+    private static collect(page: Page, subject: string): CustomFieldNoticeLog {
+        const log = new CustomFieldNoticeLog(subject);
+        page.on('websocket', socket => {
+            socket.on('framereceived', frame => {
+                let parsed: CustomFieldNotice;
+                try {
+                    parsed = JSON.parse(frame.payload as string) as CustomFieldNotice;
+                } catch {
+                    return;
+                }
+                if (parsed?.subject === subject) {
+                    log.notices.push(parsed);
+                }
+            });
+        });
+        return log;
+    }
+
+    public async waitForAction(action: string, timeoutMs: number): Promise<void> {
+        await expect
+            .poll(() => this.notices.some(notice => notice.action === action), {
+                timeout: timeoutMs,
+                message: `no ${this.subject} notice with action ${action}`
+            })
+            .toBe(true);
+    }
+
+    public async waitForCustomFieldValue(
+        key: string,
+        value: string,
+        timeoutMs: number
+    ): Promise<void> {
+        await expect
+            .poll(
+                () => this.notices.some(notice => notice.payload?.customFields?.[key] === value),
+                {
+                    timeout: timeoutMs,
+                    message: `no ${this.subject} notice carried ${key}=${value}`
+                }
+            )
+            .toBe(true);
+    }
+}

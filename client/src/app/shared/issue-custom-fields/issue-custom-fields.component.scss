@@ -1,0 +1,34 @@
+:host {
+    display: contents;
+}
+
+.custom-field-missing {
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-xs);
+}
+
+.custom-field-checkbox {
+    display: flex;
+    align-items: center;
+    min-height: var(--ui-input-min-height);
+}
+
+// Not Tailwind's col-span-12: that would force the auto-fit grid to make 12 columns
+// and squeeze every field into one row.
+.custom-fields-separator {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.25rem 0;
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    &::after {
+        content: '';
+        flex: 1;
+        border-top: 1px solid var(--ui-color-border);
+    }
+}

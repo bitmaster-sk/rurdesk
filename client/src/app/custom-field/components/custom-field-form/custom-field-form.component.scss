@@ -1,0 +1,42 @@
+.custom-field-key {
+    font-family: var(--ui-font-mono);
+}
+
+.custom-field-hint {
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-xs);
+}
+
+.custom-field-error {
+    color: var(--ui-color-danger);
+    font-size: var(--font-size-xs);
+}
+
+.custom-field-key-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.custom-field-key-row .ui-button {
+    flex: 0 0 auto;
+}
+
+.custom-field-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.custom-field-backfill {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius);
+    background-color: var(--ui-surface-50);
+}
+
+.custom-field-backfill__count {
+    font-size: var(--font-size-xs);
+    color: var(--ui-color-text-muted);
+}

@@ -1,5 +1,26 @@
 export type CreateIssueReq = Omit<Issue, 'idIssue' | 'idIssuePublic'>;
 
+// A key left out keeps its stored value and an explicit null clears it, so a field
+// must never be sent as undefined to mean "empty".
+export type UpdateIssueReq = Partial<
+    Omit<
+        Issue,
+        | 'idIssue'
+        | 'idIssuePublic'
+        | 'idProject'
+        | 'createAt'
+        | 'updateAt'
+        | 'createBy'
+        | 'updateBy'
+        | 'tracked'
+        | 'qualityScore'
+        | 'relationCount'
+        | 'ganttRank'
+        | 'idSprint'
+        | 'carryoverCount'
+    >
+>;
+
 export interface Issue {
     idIssue: number;
     idIssuePublic: number;
@@ -25,4 +46,5 @@ export interface Issue {
     idSprint?: number | null;
     points?: number | null;
     carryoverCount?: number;
+    customFields?: Record<string, string | number | boolean | null>;
 }

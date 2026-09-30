@@ -1,4 +1,4 @@
-import { expect, Locator, Page } from '@playwright/test';
+import { APIRequestContext, expect, Locator, Page } from '@playwright/test';
 import { TestUser } from './user';
 
 export interface IssueDraft {
@@ -49,6 +49,89 @@ export abstract class Interaction {
         await page.getByRole('button', { name: 'Save', exact: true }).click();
         await page.waitForURL(/\/issue\/[1-9]\d*$/);
         return Number(page.url().match(/\/issue\/(\d+)$/)![1]);
+    }
+
+    public static async createCustomField(
+        page: Page,
+        idProject: number,
+        field: {
+            name: string;
+            /** Left out, the form derives it from the name. */
+            key?: string;
+            type?: string;
+            isRequired?: boolean;
+            defaultValue?: string;
+            options?: string[];
+        }
+    ): Promise<void> {
+        await page.goto(`/project/${idProject}/settings`);
+        await page.getByRole('button', { name: /new field/i }).click();
+        await page.locator('#custom-field-name').fill(field.name);
+        if (field.key !== undefined) {
+            await page.getByTestId('custom-field-key-edit').click();
+            await page.locator('#custom-field-key').fill(field.key);
+        }
+        if (field.type) {
+            await Interaction.pickOption(page, '#custom-field-type', field.type);
+        }
+        if (field.isRequired) {
+            await page.locator('#custom-field-required').check();
+        }
+        if (field.defaultValue !== undefined) {
+            await page.locator('#custom-field-default').fill(field.defaultValue);
+        }
+        for (const [index, label] of (field.options ?? []).entries()) {
+            await page.getByRole('button', { name: /add option/i }).click();
+            await page.getByTestId('custom-field-option').nth(index).fill(label);
+        }
+
+        await page.getByRole('button', { name: 'Save', exact: true }).click();
+        // Wait on the field's own row: a count taken while the list loads can be zero.
+        await expect(
+            page.getByTestId('custom-field-row').filter({ hasText: field.key ?? field.name })
+        ).toHaveCount(1);
+    }
+
+    // A detail autosaves on change, so a reload right after typing can cancel the
+    // request that is still in flight.
+    public static waitForIssueSaved(
+        page: Page,
+        idProject: number,
+        idIssue: number
+    ): Promise<unknown> {
+        return page.waitForResponse(
+            response =>
+                response.request().method() === 'PATCH' &&
+                response.url().endsWith(`/api/private/project/${idProject}/issue/${idIssue}`) &&
+                response.ok()
+        );
+    }
+
+    public static async apiToken(
+        request: APIRequestContext,
+        baseURL: string,
+        user: TestUser
+    ): Promise<string> {
+        const login = await request.post(`${baseURL}/api/public/login`, {
+            data: { email: user.email, password: user.password }
+        });
+        const { token } = (await login.json()) as { token: string };
+        return token;
+    }
+
+    public static async setCustomFieldValues(
+        request: APIRequestContext,
+        baseURL: string,
+        token: string,
+        idProject: number,
+        idIssue: number,
+        customFields: Record<string, string | number | boolean | null>
+    ): Promise<void> {
+        const res = await request.patch(
+            `${baseURL}/api/private/project/${idProject}/issue/${idIssue}`,
+            { headers: { Authorization: token }, data: { customFields } }
+        );
+        expect(res.status(), await res.text()).toBe(200);
     }
 
     public static async pickOption(

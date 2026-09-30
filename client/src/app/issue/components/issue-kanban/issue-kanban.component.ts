@@ -518,11 +518,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.container.data.tiles.unshift(issue);
         this.shiftTotals(evt);
         this.refreshBurndown();
-        this.issueApi.update$(issue).subscribe({
-            error: () => {
-                this.issueFilterStore.refresh();
-            }
-        });
+        this.issueApi
+            .update$(issue.idProject, issue.idIssuePublic, { idState: issue.idState })
+            .subscribe({
+                error: () => {
+                    this.issueFilterStore.refresh();
+                }
+            });
     }
 
     protected onSwimlaneCardDrop(evt: CdkDragDrop<SwimlaneCell>): void {
@@ -546,11 +548,16 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         evt.container.data.tiles.unshift(updated);
         this.shiftTotals(evt);
         this.refreshBurndown();
-        this.issueApi.update$(updated).subscribe({
-            error: () => {
-                this.issueFilterStore.refresh();
-            }
-        });
+        this.issueApi
+            .update$(updated.idProject, updated.idIssuePublic, {
+                idState: updated.idState,
+                assignedTo: updated.assignedTo ?? null
+            })
+            .subscribe({
+                error: () => {
+                    this.issueFilterStore.refresh();
+                }
+            });
     }
 
     private refreshBurndown(): void {

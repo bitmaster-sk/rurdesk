@@ -39,7 +39,7 @@ export class PeopleCommandProvider implements CommandProvider {
         if (ctx.issue && this.acl.canUpdateIssue()) {
             // Emit the saved task so an open detail's assignee select refreshes immediately.
             this.issueApi
-                .update$({ ...ctx.issue, assignedTo: idUser })
+                .update$(ctx.issue.idProject, ctx.issue.idIssuePublic, { assignedTo: idUser })
                 .subscribe(saved => this.notice.emitIssue(saved));
             return;
         }

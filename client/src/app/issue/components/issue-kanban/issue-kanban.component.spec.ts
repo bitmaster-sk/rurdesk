@@ -465,7 +465,7 @@ describe('IssueKanbanComponent — closed sprints display setting', () => {
 });
 
 describe('IssueKanbanComponent — onStateChange (columns)', () => {
-    it('calls updateIssue with the new idState and state', () => {
+    it('sends only the new idState', () => {
         const h = setup();
         const tile = makeTile({ idState: 1, state: stateA });
 
@@ -474,9 +474,9 @@ describe('IssueKanbanComponent — onStateChange (columns)', () => {
         );
 
         expect(h.update$).toHaveBeenCalledTimes(1);
-        expect(h.update$).toHaveBeenCalledWith(
-            expect.objectContaining({ idState: stateB.idState, state: stateB })
-        );
+        expect(h.update$).toHaveBeenCalledWith(tile.idProject, tile.idIssuePublic, {
+            idState: stateB.idState
+        });
     });
 
     it('on success: does not refresh the board nor show a toast', () => {
@@ -505,7 +505,7 @@ describe('IssueKanbanComponent — onStateChange (columns)', () => {
 });
 
 describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
-    it('state change: calls updateIssue with the new idState and state', () => {
+    it('state change: sends the new idState and the unchanged assignee', () => {
         const h = setup();
         const tile = makeTile({ idState: 1, state: stateA });
         const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
@@ -513,12 +513,13 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
         expect(h.update$).toHaveBeenCalledTimes(1);
-        expect(h.update$).toHaveBeenCalledWith(
-            expect.objectContaining({ idState: stateB.idState, state: stateB })
-        );
+        expect(h.update$).toHaveBeenCalledWith(tile.idProject, tile.idIssuePublic, {
+            idState: stateB.idState,
+            assignedTo: alice.idUser
+        });
     });
 
-    it('user change: calls updateIssue with the new assignedTo and assignedToUser', () => {
+    it('user change: sends the new assignedTo', () => {
         const h = setup();
         const tile = makeTile({ assignedTo: alice.idUser, assignedToUser: alice });
         const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateA, user: bob });
@@ -526,9 +527,10 @@ describe('IssueKanbanComponent — onSwimlaneCardDrop (swimlane)', () => {
         handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
 
         expect(h.update$).toHaveBeenCalledTimes(1);
-        expect(h.update$).toHaveBeenCalledWith(
-            expect.objectContaining({ assignedTo: bob.idUser, assignedToUser: bob })
-        );
+        expect(h.update$).toHaveBeenCalledWith(tile.idProject, tile.idIssuePublic, {
+            idState: stateA.idState,
+            assignedTo: bob.idUser
+        });
     });
 
     it('no-op drop (same state and user): does not call updateIssue', () => {

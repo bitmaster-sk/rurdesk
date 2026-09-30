@@ -29,6 +29,7 @@ func New(
 	issueCtrl *controller.IssueController,
 	sevCtrl *controller.SeverityController,
 	itCtrl *controller.IssueTypeController,
+	cfCtrl *controller.CustomFieldController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
 	savedViewCtrl *controller.SavedViewController,
@@ -224,6 +225,12 @@ func New(
 	pri.PATCH("/issue-type/:idIssueType", itCtrl.EditIssueType)
 	pri.DELETE("/issue-type/:idIssueType/project/:idProject", itCtrl.DeleteIssueType)
 	pri.GET("/issue-type/:idIssueType/project/:idProject/usage", itCtrl.GetIssueTypeUsage)
+
+	pri.GET("/custom-field", cfCtrl.GetCustomFields)
+	pri.POST("/custom-field", cfCtrl.CreateCustomField)
+	pri.PATCH("/custom-field/:idCustomField", cfCtrl.EditCustomField)
+	pri.DELETE("/custom-field/:idCustomField/project/:idProject", cfCtrl.DeleteCustomField)
+	pri.GET("/custom-field/:idCustomField/project/:idProject/usage", cfCtrl.GetCustomFieldUsage)
 
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)

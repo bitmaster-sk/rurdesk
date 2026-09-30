@@ -1,0 +1,7 @@
+<app-custom-field-form
+    [customField]="customField"
+    [issuesMissing]="issuesMissing()"
+    [projectFields]="projectFields()"
+    (save)="onSave($event)"
+    (cancelled)="onCancel()"
+></app-custom-field-form>

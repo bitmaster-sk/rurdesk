@@ -26,7 +26,7 @@ import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
-import { Issue } from '../../model/issue.model';
+import { Issue, UpdateIssueReq } from '../../model/issue.model';
 import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ClipboardService } from 'src/app/core/clipboard.service';
@@ -232,11 +232,11 @@ export class IssueQuickActionsComponent implements OnDestroy {
     // One optimistic write for every quick action. Without the rollback the
     // popover shows the new value while the board behind it keeps the old one,
     // and nothing tells the user the save failed.
-    private patch(over: Partial<Issue>): void {
+    private patch(over: UpdateIssueReq): void {
         const previous = this.issue();
         if (!previous) return;
         this.issue.set({ ...previous, ...over });
-        this.issueApi.update$({ ...previous, ...over }).subscribe({
+        this.issueApi.update$(previous.idProject, previous.idIssuePublic, over).subscribe({
             next: () => this.issueFilterStore.refresh(),
             error: () => {
                 this.issue.set(previous);

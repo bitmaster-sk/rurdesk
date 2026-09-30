@@ -68,6 +68,12 @@ PR:
 
 ![The agent workflow end to end](../../site/assets/img/agent-workflow.webm)
 
+### Custom fields in a run
+
+If the project defines [custom fields](../using-the-tracker/custom-fields.html),
+the agent sees their values on every task it reads, so whatever context a field
+carries reaches the run.
+
 ## 4. The run lifecycle
 
 A run advances through **phases**:

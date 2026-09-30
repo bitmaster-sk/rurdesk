@@ -72,8 +72,8 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.scheduledAt).toEqual(
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.scheduledAt).toEqual(
             add(new Date('2025-01-15T09:00:00Z'), { days: 1, months: 0, years: 0, seconds: 0 })
         );
     });
@@ -93,10 +93,8 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.scheduledAt).toEqual(
-            add(new Date('2025-01-15T09:00:00Z'), { seconds: 1800 })
-        );
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.scheduledAt).toEqual(add(new Date('2025-01-15T09:00:00Z'), { seconds: 1800 }));
     });
 
     it('allDay → timed: sets scheduledAt to event.start, estimated to 1h', () => {
@@ -114,9 +112,9 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.scheduledAt).toEqual(new Date('2025-01-16T10:00:00Z'));
-        expect(passedIssue.estimated).toBe(3600);
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.scheduledAt).toEqual(new Date('2025-01-16T10:00:00Z'));
+        expect(patch.estimated).toBe(3600);
     });
 
     it('timed → allDay: sets estimated to null', () => {
@@ -130,8 +128,8 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.estimated).toBeNull();
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.estimated).toBeNull();
     });
 
     it('on API error: calls revert', () => {
@@ -166,7 +164,7 @@ describe('IssueCalendarComponent onCalendarEventDrop (TestBed)', () => {
         );
 
         expect(issue.scheduledAt).toEqual(originalScheduledAt);
-        expect(mocks.issueApiMock.update$.mock.calls[0][0]).not.toBe(issue);
+        expect(mocks.issueApiMock.update$.mock.calls[0][2]).not.toBe(issue);
     });
 
     it('without scheduledAt: reverts without updating', () => {
@@ -213,8 +211,8 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         const expectedDelta = DurationConverter.durationToSeconds({ days: 1, seconds: 0 });
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.estimated).toBe(3600 + expectedDelta);
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.estimated).toBe(3600 + expectedDelta);
         expect(issue.estimated).toBe(3600);
     });
 
@@ -229,8 +227,8 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
             })
         );
 
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.estimated).toBe(3600 + 5400);
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.estimated).toBe(3600 + 5400);
     });
 
     it('with non-zero startDelta: reverts without updating', () => {
@@ -278,8 +276,8 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         const expectedDelta = DurationConverter.durationToSeconds({ days: -1, seconds: 0 });
-        const passedIssue = mocks.issueApiMock.update$.mock.calls[0][0];
-        expect(passedIssue.estimated).toBe(7200 + expectedDelta);
+        const patch = mocks.issueApiMock.update$.mock.calls[0][2];
+        expect(patch.estimated).toBe(7200 + expectedDelta);
     });
 
     it('on API error: calls revert', () => {
@@ -314,6 +312,6 @@ describe('IssueCalendarComponent onCalendarEventResize (TestBed)', () => {
         );
 
         expect(issue.estimated).toBe(originalEstimated);
-        expect(mocks.issueApiMock.update$.mock.calls[0][0]).not.toBe(issue);
+        expect(mocks.issueApiMock.update$.mock.calls[0][2]).not.toBe(issue);
     });
 });

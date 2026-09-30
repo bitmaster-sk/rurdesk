@@ -177,7 +177,9 @@ describe('IssueActionCommandProvider', () => {
     function setup(states: any[] = []) {
         const router = { navigate: vi.fn() };
         const insertIssue = vi.fn(() => of({ idIssuePublic: 99, idProject: 1 }));
-        const updateIssue = vi.fn((i: Issue) => of(i));
+        const updateIssue = vi.fn(() => of(Fixtures.issue()));
+        // The clone reloads the source so it carries custom values a list view omits.
+        const loadOneIssue = vi.fn(() => of({ ...issue, customFields: { impact: 4 } }));
         const emitIssue = vi.fn();
         TestBed.configureTestingModule({
             providers: [
@@ -186,7 +188,11 @@ describe('IssueActionCommandProvider', () => {
                 { provide: Router, useValue: router },
                 {
                     provide: IssueApi,
-                    useValue: { insert$: insertIssue, update$: updateIssue }
+                    useValue: {
+                        insert$: insertIssue,
+                        update$: updateIssue,
+                        loadOne$: loadOneIssue
+                    }
                 },
                 { provide: StateStore, useValue: { states$: of(states) } },
                 { provide: SeverityStore, useValue: { severities$: of([]) } },
@@ -202,6 +208,7 @@ describe('IssueActionCommandProvider', () => {
             router,
             insertIssue,
             updateIssue,
+            loadOneIssue,
             emitIssue
         };
     }
@@ -219,7 +226,8 @@ describe('IssueActionCommandProvider', () => {
                 description: 'd',
                 idState: 3,
                 idSeverity: 2,
-                assignedTo: 7
+                assignedTo: 7,
+                customFields: { impact: 4 }
             })
         );
         expect(router.navigate).toHaveBeenCalledWith(['/project', 1, 'issue', 99]);
@@ -240,7 +248,9 @@ describe('IssueActionCommandProvider', () => {
             .getCommands({ idProject: 1, issue })
             .find(c => c.id === 'issue.state.11')!
             .run();
-        expect(updateIssue).toHaveBeenCalledWith(expect.objectContaining({ idState: 11 }));
+        expect(updateIssue).toHaveBeenCalledWith(issue.idProject, issue.idIssuePublic, {
+            idState: 11
+        });
         expect(emitIssue).toHaveBeenCalled();
     });
 });
@@ -249,7 +259,7 @@ describe('PeopleCommandProvider', () => {
     const member = { idUser: 9, name: 'Petra', email: 'p@x' };
     function setup() {
         const router = { navigate: vi.fn() };
-        const updateIssue = vi.fn((i: Issue) => of(i));
+        const updateIssue = vi.fn(() => of(Fixtures.issue()));
         const emitIssue = vi.fn();
         TestBed.configureTestingModule({
             providers: [
@@ -270,7 +280,9 @@ describe('PeopleCommandProvider', () => {
         const issue: Issue = Fixtures.issue({ idIssue: 15, idIssuePublic: 5, title: 'X' });
         const { provider, router, updateIssue, emitIssue } = setup();
         provider.getCommands({ idProject: 1, issue })[0].run();
-        expect(updateIssue).toHaveBeenCalledWith(expect.objectContaining({ assignedTo: 9 }));
+        expect(updateIssue).toHaveBeenCalledWith(issue.idProject, issue.idIssuePublic, {
+            assignedTo: 9
+        });
         expect(emitIssue).toHaveBeenCalled(); // open detail refreshes at once
         expect(router.navigate).not.toHaveBeenCalled();
     });

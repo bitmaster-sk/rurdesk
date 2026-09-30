@@ -93,6 +93,30 @@
                     ></app-project-issue-type>
                 </div>
             </section>
+            } @if (aclStore.canManageCustomField()) {
+            <section class="panel">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="list-details" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'CUSTOM_FIELD.PLURAL' | translate }}</div>
+                    </div>
+                    <div class="panel-head-r">
+                        <ui-button
+                            size="small"
+                            [label]="'CUSTOM_FIELD.NEW' | translate"
+                            (click)="projectCustomField.onNewCustomField()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                        </ui-button>
+                    </div>
+                </header>
+                <div class="panel-body panel-body--flush">
+                    <app-project-custom-field
+                        #projectCustomField
+                        [project]="project"
+                    ></app-project-custom-field>
+                </div>
+            </section>
             } @if (aclStore.canReadMembers()) {
             <section class="panel">
                 <header class="panel-head">

@@ -71,17 +71,19 @@
                     </ui-select>
                 }
             }
-            <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                    type="radio"
-                    name="delete-mode"
-                    data-testid="delete-migration-mode-unassign"
-                    value="unassign"
-                    [checked]="mode() === 'unassign'"
-                    (change)="mode.set('unassign')"
-                />
-                <span>{{ 'SHARED.DELETE_MIGRATION.UNASSIGN' | translate }}</span>
-            </label>
+            @if (hasTargets()) {
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input
+                        type="radio"
+                        name="delete-mode"
+                        data-testid="delete-migration-mode-unassign"
+                        value="unassign"
+                        [checked]="mode() === 'unassign'"
+                        (change)="mode.set('unassign')"
+                    />
+                    <span>{{ 'SHARED.DELETE_MIGRATION.UNASSIGN' | translate }}</span>
+                </label>
+            }
         }
     </div>
 

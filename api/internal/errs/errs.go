@@ -64,6 +64,18 @@ var (
 	ErrInvalidSeverityMigrationTarget  = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different severity of the same project", "error.invalid_severity_migration_target", http.StatusUnprocessableEntity)
 	ErrInvalidIssueTypeMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different issue type of the same project", "error.invalid_issue_type_migration_target", http.StatusUnprocessableEntity)
 
+	// ── Custom fields ───────────────────────────────────────────────────────
+
+	ErrCustomFieldInUse                        = newErr("CUSTOM_FIELD_IN_USE", "custom field still has values; pass deleteValues=true to remove them", "error.custom_field_in_use", http.StatusConflict)
+	ErrCustomFieldOptionInUse                  = newErr("CUSTOM_FIELD_OPTION_IN_USE", "option still has values; pass migrateOptionTo=<id> or deleteOptionValues=true", "error.custom_field_option_in_use", http.StatusConflict)
+	ErrCustomFieldArchived                     = newErr("CUSTOM_FIELD_ARCHIVED", "cannot write to an archived custom field", "error.custom_field_archived", http.StatusBadRequest)
+	ErrCustomFieldUnknownKey                   = newErr("CUSTOM_FIELD_UNKNOWN_KEY", "unknown custom field key for this project", "error.custom_field_unknown_key", http.StatusBadRequest)
+	ErrCustomFieldValueType                    = newErr("CUSTOM_FIELD_VALUE_TYPE", "value does not match the field type", "error.custom_field_value_type", http.StatusBadRequest)
+	ErrCustomFieldRequired                     = newErr("CUSTOM_FIELD_REQUIRED", "required custom field cannot be cleared", "error.custom_field_required", http.StatusBadRequest)
+	ErrCustomFieldImmutable                    = newErr("CUSTOM_FIELD_IMMUTABLE", "custom field key and type cannot be changed; create a new field instead", "error.custom_field_immutable", http.StatusBadRequest)
+	ErrCustomFieldKeyExists                    = newErr("CUSTOM_FIELD_KEY_EXISTS", "a custom field with this key already exists in the project", "error.custom_field_key_exists", http.StatusConflict)
+	ErrInvalidCustomFieldOptionMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different option of the same field", "error.invalid_custom_field_option_migration_target", http.StatusUnprocessableEntity)
+
 	// ── Issue relations ────────────────────────────────────────────────────
 
 	ErrCycle         = newErr("CYCLE", "relation would create a cycle", "error.relation_cycle", http.StatusUnprocessableEntity)

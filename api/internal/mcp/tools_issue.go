@@ -83,6 +83,15 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithNumber("estimated", mcpgo.Description("Estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("Story points")),
 			mcpgo.WithString("scheduled_at", mcpgo.Description("Scheduled datetime (RFC3339)")),
+			mcpgo.WithObject("custom_fields", mcpgo.Description(
+				"Custom field values as a key→value object, e.g. {\"impact\": 7, \"reviewed\": true}. "+
+					"Keys are the field keys from list_custom_fields; call it first, an unknown key is rejected. "+
+					"Each value must match the field's fieldType: text=string, number=number, "+
+					"boolean=true or false, date=RFC3339 string, select=the numeric idOption of one of "+
+					"that field's options, never its label. A key set to null clears the value; an omitted "+
+					"key falls back to the field's defaultValue, or stays empty when it has none. "+
+					"A field with isRequired must be present here unless it has a defaultValue, "+
+					"or creation fails and the error names the missing keys.")),
 			mcpgo.WithString("idempotency_key", mcpgo.Description("Unique key to prevent duplicate creation on retry")),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
@@ -103,6 +112,14 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithNumber("estimated", mcpgo.Description("New estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("New story points")),
 			mcpgo.WithString("scheduled_at", mcpgo.Description("New scheduled datetime (RFC3339)")),
+			mcpgo.WithObject("custom_fields", mcpgo.Description(
+				"Custom field values as a key→value object, e.g. {\"impact\": 7, \"reviewed\": true}. "+
+					"Keys are the field keys from list_custom_fields; call it first, an unknown key is rejected. "+
+					"Each value must match the field's fieldType: text=string, number=number, "+
+					"boolean=true or false, date=RFC3339 string, select=the numeric idOption of one of "+
+					"that field's options, never its label. Send only the keys you are changing: an omitted "+
+					"key keeps its stored value, a key set to null clears it, and a required field "+
+					"cannot be set to null.")),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 			return handleUpdateIssue(ctx, req, dispatcher)
@@ -167,6 +184,7 @@ func handleListIssues(ctx context.Context, req mcpgo.CallToolRequest, dispatcher
 	if offset := req.GetInt("offset", -1); offset >= 0 {
 		query.Set("offset", strconv.Itoa(offset))
 	}
+	query.Set("includeCustomFields", "true")
 
 	path := fmt.Sprintf("/api/private/project/%d/issue?%s", projectID, query.Encode())
 	resp, err := dispatcher.Request(ctx, RequestOpts{
@@ -318,6 +336,9 @@ func handleCreateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 	if scheduledAt := req.GetString("scheduled_at", ""); scheduledAt != "" {
 		body["scheduledAt"] = scheduledAt
 	}
+	if customFields, ok := req.GetArguments()["custom_fields"]; ok {
+		body["customFields"] = customFields
+	}
 
 	idempotencyKey := req.GetString("idempotency_key", "")
 
@@ -377,6 +398,9 @@ func handleUpdateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 		if val, ok := args[argKey]; ok {
 			body[bodyKey] = val
 		}
+	}
+	if customFields, ok := args["custom_fields"]; ok {
+		body["customFields"] = customFields
 	}
 
 	path := fmt.Sprintf("/api/private/project/%d/issue/%d", projectID, issueID)

@@ -1,0 +1,183 @@
+<div class="form w-full" [formGroup]="form">
+    <div class="form-body">
+        <div class="ui-field">
+            <label class="required" for="custom-field-name">{{ 'NAME' | translate }}:</label>
+            <input
+                id="custom-field-name"
+                uiInput
+                formControlName="name"
+                type="text"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field">
+            <label class="required" for="custom-field-key">
+                {{ 'CUSTOM_FIELD.KEY' | translate }}:
+            </label>
+            <div class="custom-field-key-row">
+                <input
+                    id="custom-field-key"
+                    uiInput
+                    formControlName="key"
+                    type="text"
+                    class="w-full custom-field-key"
+                    (input)="onKeyInput()"
+                />
+                @if (isKeyLocked()) {
+                    <ui-button
+                        variant="text"
+                        size="small"
+                        [label]="'CUSTOM_FIELD.KEY_EDIT' | translate"
+                        data-testid="custom-field-key-edit"
+                        (click)="onRevealKey()"
+                    >
+                        <tabler-icon icon="pencil" [size]="16" />
+                    </ui-button>
+                }
+            </div>
+            @if (conflictingField(); as conflict) {
+                <small class="custom-field-error" data-testid="custom-field-key-taken">
+                    {{
+                        'CUSTOM_FIELD.KEY_TAKEN'
+                            | translate: { key: keyValue(), name: conflict.name }
+                    }}
+                </small>
+            } @else if (isKeyUngenerated()) {
+                <small class="custom-field-error" data-testid="custom-field-key-ungenerated">
+                    {{ 'CUSTOM_FIELD.KEY_UNGENERATED' | translate }}
+                </small>
+            }
+            @if (isNew()) {
+                <small class="custom-field-hint">
+                    {{ 'CUSTOM_FIELD.IMMUTABLE_HINT' | translate }}
+                </small>
+            }
+        </div>
+
+        <div class="ui-field">
+            <label for="custom-field-type">{{ 'CUSTOM_FIELD.TYPE' | translate }}:</label>
+            <ui-select
+                inputId="custom-field-type"
+                [options]="fieldTypes"
+                formControlName="fieldType"
+                (valueChanged)="onTypeChange($event.value)"
+            >
+                <ng-template #item let-type>
+                    {{ 'CUSTOM_FIELD.FIELD_TYPE.' + type.toUpperCase() | translate }}
+                </ng-template>
+                <ng-template #selectedItem let-type>
+                    {{ 'CUSTOM_FIELD.FIELD_TYPE.' + type.toUpperCase() | translate }}
+                </ng-template>
+            </ui-select>
+            @if (isNew()) {
+                <small class="custom-field-hint">
+                    {{ 'CUSTOM_FIELD.IMMUTABLE_HINT' | translate }}
+                </small>
+            }
+        </div>
+
+        @if (isSelectType()) {
+            <div class="ui-field">
+                <label>{{ 'CUSTOM_FIELD.OPTIONS' | translate }}:</label>
+                @for (option of options(); track $index) {
+                    <div class="custom-field-option">
+                        <input
+                            uiInput
+                            type="text"
+                            class="w-full"
+                            data-testid="custom-field-option"
+                            [value]="option.label"
+                            (input)="onOptionLabelInput($index, $event)"
+                        />
+                        <ui-button
+                            variant="text"
+                            severity="danger"
+                            size="small"
+                            data-testid="custom-field-option-remove"
+                            (click)="onRemoveOption($index)"
+                        >
+                            <tabler-icon icon="trash" [size]="16" />
+                        </ui-button>
+                    </div>
+                }
+                <ui-button
+                    variant="text"
+                    size="small"
+                    [label]="'CUSTOM_FIELD.ADD_OPTION' | translate"
+                    (click)="onAddOption()"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </ui-button>
+            </div>
+        }
+
+        <div class="ui-field" data-testid="custom-field-default">
+            <label for="custom-field-default">
+                {{ 'CUSTOM_FIELD.DEFAULT_LABEL' | translate }}
+            </label>
+            @if (isDefaultOffered()) {
+                <app-custom-field-value-input
+                    inputId="custom-field-default"
+                    [fieldType]="selectedType()"
+                    [options]="savedOptions()"
+                    [value]="defaultValue()"
+                    (valueChange)="onDefaultChange($event)"
+                ></app-custom-field-value-input>
+                <small class="custom-field-hint">
+                    {{ 'CUSTOM_FIELD.DEFAULT_HINT' | translate }}
+                </small>
+            } @else {
+                <small class="custom-field-hint">
+                    {{ 'CUSTOM_FIELD.DEFAULT_LATER' | translate }}
+                </small>
+            }
+        </div>
+
+        <div class="ui-field-checkbox mb-4">
+            <input
+                id="custom-field-required"
+                uiCheckbox
+                type="checkbox"
+                formControlName="isRequired"
+            />
+            <label for="custom-field-required">{{ 'CUSTOM_FIELD.REQUIRED' | translate }}</label>
+        </div>
+
+        @if (isBackfillOffered()) {
+            <div class="ui-field custom-field-backfill" data-testid="custom-field-backfill">
+                @if (issuesMissing() !== null) {
+                    <span class="custom-field-backfill__count">
+                        {{ 'CUSTOM_FIELD.BACKFILL_COUNT' | translate: { count: issuesMissing() } }}
+                    </span>
+                }
+                <label for="custom-field-backfill">
+                    {{ 'CUSTOM_FIELD.BACKFILL_LABEL' | translate }}
+                </label>
+                <app-custom-field-value-input
+                    inputId="custom-field-backfill"
+                    [fieldType]="selectedType()"
+                    [options]="savedOptions()"
+                    [value]="backfill()"
+                    (valueChange)="onBackfillChange($event)"
+                ></app-custom-field-value-input>
+                <small class="custom-field-hint">
+                    {{ 'CUSTOM_FIELD.BACKFILL_HINT' | translate }}
+                </small>
+            </div>
+        }
+    </div>
+    <div class="form-footer">
+        <ui-button
+            [disabled]="isSaveDisabled"
+            severity="primary"
+            [label]="'SAVE' | translate"
+            (click)="onSave()"
+        >
+            <tabler-icon icon="device-floppy" [size]="16" />
+        </ui-button>
+        <ui-button severity="secondary" [label]="'CANCEL' | translate" (click)="onCancel()">
+            <tabler-icon icon="cancel" [size]="16" />
+        </ui-button>
+    </div>
+</div>

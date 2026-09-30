@@ -39,7 +39,7 @@ func TestPreview_NoModelConfigured_ReturnsErrAiNotConfigured(t *testing.T) {
 
 	// nil repos are safe: the guard returns before the issue is loaded.
 	mock := &mockAIProvider{response: validSplitResponse()}
-	svc := service.NewSplitService(nil, mock, nil, nil, nil)
+	svc := service.NewSplitService(nil, mock, nil, nil, nil, nil)
 
 	_, err := svc.Preview(context.Background(), 1, "")
 	require.Error(t, err)
@@ -49,7 +49,7 @@ func TestPreview_NoModelConfigured_ReturnsErrAiNotConfigured(t *testing.T) {
 // The empty-children guard must reject before touching the database.
 func TestAccept_EmptyChildren_ReturnsBadRequest(t *testing.T) {
 	mock := &mockAIProvider{response: validSplitResponse()}
-	svc := service.NewSplitService(nil, mock, nil, nil, nil)
+	svc := service.NewSplitService(nil, mock, nil, nil, nil, nil)
 
 	_, err := svc.Accept(context.Background(), 1, 1, nil, 1)
 	require.Error(t, err)

@@ -192,6 +192,38 @@ func GetIssueTypeRepository() *repository.IssueTypeRepository {
 	return instance.(*repository.IssueTypeRepository)
 }
 
+func GetCustomFieldRepository() *repository.CustomFieldRepository {
+	instance, _ := di.GetWithNew("custom-field-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewCustomFieldRepository(pool), nil
+	})
+	return instance.(*repository.CustomFieldRepository)
+}
+
+func GetCustomFieldService() *service.CustomFieldService {
+	instance, _ := di.GetWithNew("custom-field-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewCustomFieldService(pool, GetCustomFieldRepository(), GetCustomFieldValueRepository()), nil
+	})
+	return instance.(*service.CustomFieldService)
+}
+
+func GetCustomFieldValueRepository() *repository.CustomFieldValueRepository {
+	instance, _ := di.GetWithNew("custom-field-value-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewCustomFieldValueRepository(pool), nil
+	})
+	return instance.(*repository.CustomFieldValueRepository)
+}
+
+func GetCustomFieldValueService() *service.CustomFieldValueService {
+	instance, _ := di.GetWithNew("custom-field-value-service", func() (any, error) {
+		return service.NewCustomFieldValueService(
+			GetCustomFieldRepository(), GetCustomFieldValueRepository()), nil
+	})
+	return instance.(*service.CustomFieldValueService)
+}
+
 func GetStateRepository() *repository.StateRepository {
 	instance, _ := di.GetWithNew("state-repository", func() (any, error) {
 		pool := mustDb()
@@ -667,6 +699,7 @@ func GetIssueController() *controller.IssueController {
 			GetIssueParticipantRepository(),
 			GetAclService(),
 			GetNotificationService(),
+			GetCustomFieldValueService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).
 			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
@@ -689,6 +722,15 @@ func GetIssueTypeController() *controller.IssueTypeController {
 		return controller.NewIssueTypeController(GetIssueTypeRepository(), GetIssueTypeService(), GetAclService(), pool), nil
 	})
 	return instance.(*controller.IssueTypeController)
+}
+
+func GetCustomFieldController() *controller.CustomFieldController {
+	instance, _ := di.GetWithNew("custom-field-controller", func() (any, error) {
+		return controller.NewCustomFieldController(
+			GetCustomFieldRepository(), GetCustomFieldService(), GetAclService(),
+			GetNotifier(), GetProjectRepository()), nil
+	})
+	return instance.(*controller.CustomFieldController)
 }
 
 func GetStateController() *controller.StateController {
@@ -814,7 +856,7 @@ func GetIssueRelationController() *controller.IssueRelationController {
 func GetSplitService() *service.SplitService {
 	instance, _ := di.GetWithNew("split-service", func() (any, error) {
 		pool := mustDb()
-		return service.NewSplitService(pool, GetAIProvider(), GetIssueRepository(), GetIssueRelationRepository(), GetStateRepository()), nil
+		return service.NewSplitService(pool, GetAIProvider(), GetIssueRepository(), GetIssueRelationRepository(), GetStateRepository(), GetCustomFieldValueRepository()), nil
 	})
 	return instance.(*service.SplitService)
 }
@@ -1130,6 +1172,7 @@ func GetRouter() (*router.Router, error) {
 			GetIssueController(),
 			GetSeverityController(),
 			GetIssueTypeController(),
+			GetCustomFieldController(),
 			GetStateController(),
 			sprintController,
 			GetSavedViewController(),

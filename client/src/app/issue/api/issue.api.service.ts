@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { IssuesFilter } from '../components/filter/issue-filter.entity';
 import { IssueConverter } from '../converter/issue.converter';
-import { Issue, CreateIssueReq } from '../model/issue.model';
+import { Issue, CreateIssueReq, UpdateIssueReq } from '../model/issue.model';
 import { IssuesPage, IssueGroup } from '../model/issues-page.model';
 
 @Injectable({
@@ -73,12 +73,13 @@ export class IssueApi {
             .pipe(map(iss => IssueConverter.toIssue(iss)));
     }
 
-    public update$(issue: Issue): Observable<Issue> {
+    public update$(
+        idProject: number,
+        idIssuePublic: number,
+        changes: UpdateIssueReq
+    ): Observable<Issue> {
         return this.http
-            .patch<Issue>(
-                `/api/private/project/${issue.idProject}/issue/${issue.idIssuePublic}`,
-                issue
-            )
+            .patch<Issue>(`/api/private/project/${idProject}/issue/${idIssuePublic}`, changes)
             .pipe(map(iss => IssueConverter.toIssue(iss)));
     }
 

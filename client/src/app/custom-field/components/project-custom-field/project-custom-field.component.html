@@ -1,0 +1,133 @@
+<div class="flex flex-col">
+    <div class="col-span-12 p-0">
+        <table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+            <thead>
+                <tr>
+                    <th scope="col" style="width: 2rem"></th>
+                    <th scope="col">{{ 'NAME' | translate }}</th>
+                    <th scope="col">{{ 'CUSTOM_FIELD.KEY' | translate }}</th>
+                    <th scope="col">{{ 'CUSTOM_FIELD.TYPE' | translate }}</th>
+                    <th scope="col" class="action-column"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (customField of customFields(); track customField.idCustomField) {
+                    <tr
+                        data-testid="custom-field-row"
+                        cdkDrag
+                        [class.custom-field-row--archived]="!!customField.archivedAt"
+                        (pointerdown)="onRowPointerDown($event)"
+                        (pointerup)="onRowPointerUp($event)"
+                        (cdkDragEnded)="onDragEnded($event)"
+                    >
+                        <td>
+                            <tabler-icon
+                                icon="grip-vertical"
+                                [size]="16"
+                                cdkDragHandle
+                                class="drag-handle"
+                            />
+                        </td>
+                        <td>
+                            <div class="flex items-center gap-2">
+                                <span>{{ customField.name }}</span>
+                                @if (customField.isRequired) {
+                                    <ui-tag
+                                        severity="info"
+                                        [value]="'CUSTOM_FIELD.REQUIRED' | translate"
+                                    />
+                                }
+                                @if (customField.archivedAt) {
+                                    <ui-tag [value]="'CUSTOM_FIELD.ARCHIVED' | translate" />
+                                }
+                            </div>
+                        </td>
+                        <td>
+                            <code class="custom-field-key">{{ customField.key }}</code>
+                        </td>
+                        <td>
+                            {{
+                                'CUSTOM_FIELD.FIELD_TYPE.' + customField.fieldType.toUpperCase()
+                                    | translate
+                            }}
+                        </td>
+                        <td class="action-column">
+                            <div class="flex items-center justify-end gap-1">
+                                @if (!customField.archivedAt) {
+                                    <ui-button
+                                        variant="text"
+                                        severity="info"
+                                        size="small"
+                                        data-testid="custom-field-edit"
+                                        (click)="onEditCustomField(customField)"
+                                    >
+                                        <tabler-icon icon="pencil" [size]="16" />
+                                    </ui-button>
+                                }
+                                <ui-button
+                                    variant="text"
+                                    severity="danger"
+                                    size="small"
+                                    data-testid="custom-field-delete"
+                                    (click)="onDeleteCustomField(customField)"
+                                >
+                                    <tabler-icon icon="trash" [size]="16" />
+                                </ui-button>
+                                @if (!customField.archivedAt) {
+                                    <ui-button
+                                        variant="text"
+                                        size="small"
+                                        data-testid="custom-field-archive"
+                                        [label]="'CUSTOM_FIELD.ARCHIVE' | translate"
+                                        (click)="onArchive(customField, true)"
+                                    >
+                                        <tabler-icon icon="archive" [size]="16" />
+                                    </ui-button>
+                                } @else {
+                                    <ui-button
+                                        variant="text"
+                                        size="small"
+                                        data-testid="custom-field-restore"
+                                        [label]="'CUSTOM_FIELD.RESTORE' | translate"
+                                        (click)="onArchive(customField, false)"
+                                    >
+                                        <tabler-icon icon="archive-off" [size]="16" />
+                                    </ui-button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                } @empty {
+                    <tr>
+                        <td
+                            colspan="5"
+                            class="text-center ui-color-text-muted"
+                            data-testid="custom-field-empty"
+                        >
+                            {{ 'CUSTOM_FIELD.EMPTY' | translate }}
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<app-delete-migration-dialog
+    [(visible)]="isDeleteDialogVisible"
+    [entityLabel]="'CUSTOM_FIELD.SINGULAR' | translate"
+    [usageItems]="deleteUsageItems()"
+    [hasUsage]="hasDeleteUsage()"
+    [isLoading]="isDeleting()"
+    (confirmed)="onConfirmDelete()"
+/>
+
+<app-delete-migration-dialog
+    [(visible)]="isOptionDialogVisible"
+    [entityLabel]="'CUSTOM_FIELD.OPTION' | translate"
+    [usageItems]="optionUsageItems()"
+    [options]="optionTargets()"
+    [hasUsage]="true"
+    [isLoading]="isResolvingOption()"
+    (confirmed)="onConfirmOptionIntent($event)"
+/>

@@ -1,6 +1,9 @@
 import { describe, beforeEach, expect, it } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { TablerIconStub } from 'src/testing/stubs';
+import { UiModule } from 'src/app/ui/ui.module';
 import { DeleteMigrationOption, DeleteMigrationUsageItem } from './delete-migration-option.model';
 import { DeleteMigrationDialogComponent } from './delete-migration-dialog.component';
 
@@ -93,5 +96,43 @@ describe('DeleteMigrationDialogComponent', () => {
         fixture.componentInstance.selectedId.set(2);
         fixture.componentInstance.onConfirm();
         expect(fixture.componentInstance.visible()).toBe(true);
+    });
+});
+
+describe('DeleteMigrationDialogComponent — rendered choices', () => {
+    beforeEach(() => {
+        TestBed.configureTestingModule({
+            declarations: [DeleteMigrationDialogComponent],
+            imports: [FormsModule, UiModule, TranslateModule.forRoot(), TablerIconStub]
+        });
+    });
+
+    function render(options: DeleteMigrationOption[]) {
+        const fixture = TestBed.createComponent(DeleteMigrationDialogComponent);
+        fixture.componentRef.setInput('entityLabel', 'Custom field');
+        fixture.componentRef.setInput('usageItems', usageItems);
+        fixture.componentRef.setInput('options', options);
+        fixture.componentRef.setInput('hasUsage', true);
+        fixture.componentRef.setInput('visible', true);
+        fixture.detectChanges();
+        return fixture;
+    }
+
+    it('offers both choices when the values can be moved somewhere', () => {
+        render([targetOption]);
+
+        expect(
+            document.querySelector('[data-testid="delete-migration-mode-migrate"]')
+        ).not.toBeNull();
+        expect(
+            document.querySelector('[data-testid="delete-migration-mode-unassign"]')
+        ).not.toBeNull();
+    });
+
+    it('offers no choice at all when there is nowhere to move the values', () => {
+        render([]);
+
+        expect(document.querySelector('[data-testid="delete-migration-mode-migrate"]')).toBeNull();
+        expect(document.querySelector('[data-testid="delete-migration-mode-unassign"]')).toBeNull();
     });
 });
