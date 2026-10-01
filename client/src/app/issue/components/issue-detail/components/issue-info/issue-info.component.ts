@@ -97,6 +97,7 @@ export class IssueInfoComponent implements OnInit {
     public readonly agentRun = input<AgentRun | null>(null);
     public readonly splitRequested = output<Issue>();
     public readonly trackAdded = output<Track>();
+    public readonly deleteRequested = output<Issue>();
     public readonly cancelAgentRun = output<void>();
     public readonly continueAgentRun = output<void>();
     public readonly restartAgentRun = output<void>();
@@ -222,7 +223,7 @@ export class IssueInfoComponent implements OnInit {
                 { separator: true }
             );
         }
-        items.push(
+        const actionGroups: UiMenuItem[] = [
             {
                 labelKey: 'AI.SINGULAR',
                 items: [
@@ -253,7 +254,21 @@ export class IssueInfoComponent implements OnInit {
                     }
                 ]
             }
-        );
+        ];
+        if (this.aclStore.canDeleteIssue()) {
+            actionGroups.push({ separator: true });
+            actionGroups.push({
+                labelKey: 'ISSUE.MENU.DELETE',
+                icon: 'trash',
+                command: () => {
+                    const issue = this.currentIssue();
+                    if (issue) {
+                        this.deleteRequested.emit(issue);
+                    }
+                }
+            });
+        }
+        items.push(...actionGroups);
         return items;
     });
 

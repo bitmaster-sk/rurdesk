@@ -41,6 +41,8 @@ import { SprintApi } from '../../api/sprint.api.service';
 import { SprintTab } from '../sprint-tab-strip/sprint-tab-strip.component';
 import { SprintDialogSave } from '../sprint-dialog/sprint-dialog.component';
 import { Sprint } from '../../model/sprint.model';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
+import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 import { SprintUnit } from '../../constants/sprint-unit.enum';
 import { SprintState } from '../../constants/sprint-state.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
@@ -229,6 +231,9 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     public ngOnInit(): void {
         this.savedViewStore.setLiveKanbanLayout(this.viewMode());
         this.setInitialFilter();
+        this.projectStore.project$
+            .pipe(first())
+            .subscribe(p => IssueLastViewStorage.save(p.idProject, IssueViewMode.KANBAN));
         this.onSavedViewResetSignal();
         this.applyViewLayoutOnChange();
 
