@@ -890,7 +890,7 @@ func GetGitIntegrationRepository() *repository.GitIntegrationRepository {
 
 func GetDiffCache() *githost.DiffCache {
 	instance, _ := di.GetWithNew("diff-cache", func() (any, error) {
-		return githost.NewDiffCache(500, 200, 1000), nil
+		return githost.NewDiffCache(500, 200, 200), nil
 	})
 	return instance.(*githost.DiffCache)
 }

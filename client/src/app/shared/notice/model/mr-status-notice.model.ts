@@ -9,5 +9,4 @@ export interface MrStatusNotice {
     ciStatus: string;
     webUrl: string;
     headSha: string;
-    baseSha: string;
 }

@@ -9,7 +9,6 @@ import (
 )
 
 // DiffCache holds two in-memory LRU caches: one for diffs (24h TTL) and one for statuses (30s TTL).
-// It also caches immutable file contents (24h TTL) keyed by integration, SHA and path.
 // Keys include id_git_integration so different integrations with overlapping MR IDs never collide.
 type DiffCache struct {
 	diffs    *lru.LRU[string, *Diff]

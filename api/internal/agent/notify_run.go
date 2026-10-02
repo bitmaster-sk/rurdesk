@@ -185,7 +185,6 @@ func BroadcastMrStatusUpdate(
 			CiStatus:         status.CiStatus,
 			WebUrl:           status.WebUrl,
 			HeadSHA:          status.HeadSHA,
-			BaseSHA:          status.BaseSHA,
 		},
 	}
 }

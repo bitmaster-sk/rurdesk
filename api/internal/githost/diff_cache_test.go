@@ -10,7 +10,7 @@ import (
 
 func TestDiffCache_Hit(t *testing.T) {
 	cache := NewDiffCache(100, 50, 50)
-	diff := &Diff{HeadSHA: "abc", BaseSHA: "def", Files: []DiffFile{{OldPath: "a.go", NewPath: "a.go"}}}
+	diff := &Diff{HeadSHA: "abc", Files: []DiffFile{{OldPath: "a.go", NewPath: "a.go"}}}
 	cache.SetDiff(1, "42", "abc123", diff)
 
 	got, ok := cache.GetDiff(1, "42", "abc123")

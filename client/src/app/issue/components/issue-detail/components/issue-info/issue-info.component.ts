@@ -156,21 +156,10 @@ export class IssueInfoComponent implements OnInit {
 
     protected readonly fileContentLoader = computed<FileContentLoader | null>(() => {
         const issue = this.currentIssue();
-        const integration = this.gitIntegration();
-        if (!issue?.idGitIntegration || !issue.mrId || !integration) return null;
-        const idProject = issue.idProject;
-        const idGitIntegration = issue.idGitIntegration;
-        const mrId = issue.mrId;
-        return req => {
-            const path = req.file.newPath === '/dev/null' ? req.file.oldPath : req.file.newPath;
-            return this.mrDiffApi.loadFileContent$(
-                idProject,
-                idGitIntegration,
-                mrId,
-                path,
-                req.ref
-            );
-        };
+        if (!issue?.idGitIntegration || !issue.mrId || !this.gitIntegration()) return null;
+        const { idProject, idGitIntegration, mrId } = issue;
+        return (path, ref) =>
+            this.mrDiffApi.loadFileContent$(idProject, idGitIntegration, mrId, path, ref);
     });
 
     public readonly states = toSignal(
@@ -350,8 +339,7 @@ export class IssueInfoComponent implements OnInit {
                     approved: n.payload.approved,
                     ciStatus: n.payload.ciStatus as MrStatus['ciStatus'],
                     webUrl: n.payload.webUrl,
-                    headSha: n.payload.headSha,
-                    baseSha: n.payload.baseSha
+                    headSha: n.payload.headSha
                 };
                 this.mrStatus.set(status);
             });

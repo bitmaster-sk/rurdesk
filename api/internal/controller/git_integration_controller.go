@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -342,45 +343,23 @@ func (gc *GitIntegrationController) GetFileContent(c *gin.Context) {
 		return
 	}
 
-	diff, err := gc.fetchDiff(ctx, host, idGitIntegration, mrId)
-	if err != nil {
-		_ = c.Error(errs.ErrGitHostUnavailable)
-		c.Status(http.StatusBadGateway)
-		return
-	}
-
-	allowed := false
-	for _, f := range diff.Files {
-		if f.NewPath == path || f.OldPath == path {
-			if ref == diff.HeadSHA || ref == diff.BaseSHA {
-				allowed = true
-				break
-			}
-		}
-	}
-	if !allowed {
+	lines, err := gc.fetchMrFileLines(ctx, host, idGitIntegration, mrId, path, ref)
+	switch {
+	case errors.Is(err, errs.ErrForbidden):
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
-		return
-	}
-
-	content, err := gc.fetchFileContent(ctx, host, idGitIntegration, ref, path)
-	if err != nil {
-		if errors.Is(err, githost.ErrFileTooLarge) || errors.Is(err, githost.ErrBinaryFile) {
-			_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
-			c.Status(http.StatusBadRequest)
-			return
-		}
+	case errors.Is(err, errs.ErrConflict):
+		_ = c.Error(errs.ErrConflict)
+		c.Status(http.StatusConflict)
+	case errors.Is(err, githost.ErrFileTooLarge), errors.Is(err, githost.ErrBinaryFile):
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
+	case err != nil:
 		_ = c.Error(errs.ErrGitHostUnavailable)
 		c.Status(http.StatusBadGateway)
-		return
+	default:
+		c.JSON(http.StatusOK, gin.H{"lines": lines})
 	}
-
-	lines := strings.Split(string(content), "\n")
-	if len(lines) > 0 && lines[len(lines)-1] == "" {
-		lines = lines[:len(lines)-1]
-	}
-	c.JSON(http.StatusOK, map[string]any{"lines": lines, "lineCount": len(lines)})
 }
 
 func (gc *GitIntegrationController) loadHostForIntegration(ctx context.Context, idGitIntegration, idProject int64) (githost.GitHost, error) {
@@ -430,16 +409,43 @@ func (gc *GitIntegrationController) fetchDiff(ctx context.Context, host githost.
 	return diff, nil
 }
 
-func (gc *GitIntegrationController) fetchFileContent(ctx context.Context, host githost.GitHost, idGitIntegration int64, ref, path string) ([]byte, error) {
-	if cached, ok := gc.diffCache.GetFileContent(idGitIntegration, ref, path); ok {
+func (gc *GitIntegrationController) diffForRef(ctx context.Context, host githost.GitHost, idGitIntegration int64, mrId, ref string) (*githost.Diff, error) {
+	if cached, isCached := gc.diffCache.GetDiff(idGitIntegration, mrId, ref); isCached {
 		return cached, nil
 	}
-	content, err := host.GetFileContent(ctx, path, ref)
+	diff, err := gc.fetchDiff(ctx, host, idGitIntegration, mrId)
 	if err != nil {
 		return nil, err
 	}
-	gc.diffCache.SetFileContent(idGitIntegration, ref, path, content)
-	return content, nil
+	if ref != diff.HeadSHA {
+		return nil, errs.ErrConflict
+	}
+	return diff, nil
+}
+
+func (gc *GitIntegrationController) fetchMrFileLines(ctx context.Context, host githost.GitHost, idGitIntegration int64, mrId, path, ref string) ([]string, error) {
+	diff, err := gc.diffForRef(ctx, host, idGitIntegration, mrId, ref)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.ContainsFunc(diff.Files, func(file githost.DiffFile) bool { return file.NewPath == path }) {
+		return nil, errs.ErrForbidden
+	}
+
+	content, isCached := gc.diffCache.GetFileContent(idGitIntegration, ref, path)
+	if !isCached {
+		content, err = host.GetFileContent(ctx, path, ref)
+		if err != nil {
+			return nil, err
+		}
+		gc.diffCache.SetFileContent(idGitIntegration, ref, path, content)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines, nil
 }
 
 func (gc *GitIntegrationController) parseProjectAndIntegration(c *gin.Context) (idProject, idGitIntegration int64, ok bool) {

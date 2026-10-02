@@ -1,7 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { FileContentResponse, MrDiff, MrStatus } from '../../project/model/git-integration.model';
+import { RequestContext } from '../../core/request-context';
+import { MrDiff, MrStatus } from '../../project/model/git-integration.model';
 
 @Injectable({ providedIn: 'root' })
 export class MrDiffApi {
@@ -29,13 +30,12 @@ export class MrDiffApi {
         mrId: string,
         path: string,
         ref: string
-    ): Observable<FileContentResponse> {
-        const params = { path, ref };
+    ): Observable<string[]> {
         return this.http
-            .get<{ lines: string[]; lineCount: number }>(
+            .get<{ lines: string[] }>(
                 `/api/private/project/${idProject}/git-integration/${idGitIntegration}/mr/${mrId}/file-content`,
-                { params }
+                { params: { path, ref }, context: RequestContext.disableErrorToast() }
             )
-            .pipe(map(res => ({ lines: res.lines, lineCount: res.lineCount })));
+            .pipe(map(res => res.lines));
     }
 }

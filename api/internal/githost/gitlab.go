@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -52,13 +51,11 @@ func (h *GitLabHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 	var data struct {
 		DiffRefs struct {
 			HeadSHA string `json:"head_sha"`
-			BaseSHA string `json:"base_sha"`
 		} `json:"diff_refs"`
 		Changes []struct {
-			OldPath     string `json:"old_path"`
-			NewPath     string `json:"new_path"`
-			Diff        string `json:"diff"`
-			DeletedFile bool   `json:"deleted_file"`
+			OldPath string `json:"old_path"`
+			NewPath string `json:"new_path"`
+			Diff    string `json:"diff"`
 		} `json:"changes"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
@@ -68,13 +65,12 @@ func (h *GitLabHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*
 	files := make([]DiffFile, 0, len(data.Changes))
 	for _, c := range data.Changes {
 		files = append(files, DiffFile{
-			OldPath:   c.OldPath,
-			NewPath:   c.NewPath,
-			Patch:     c.Diff,
-			IsDeleted: c.DeletedFile,
+			OldPath: c.OldPath,
+			NewPath: c.NewPath,
+			Patch:   c.Diff,
 		})
 	}
-	return &Diff{HeadSHA: data.DiffRefs.HeadSHA, BaseSHA: data.DiffRefs.BaseSHA, Files: files}, nil
+	return &Diff{HeadSHA: data.DiffRefs.HeadSHA, Files: files}, nil
 }
 
 func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
@@ -96,7 +92,6 @@ func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 		State    string `json:"state"`
 		DiffRefs struct {
 			HeadSHA string `json:"head_sha"`
-			BaseSHA string `json:"base_sha"`
 		} `json:"diff_refs"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&mrData); err != nil {
@@ -114,7 +109,7 @@ func (h *GitLabHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 	ciStatus := h.getCiStatus(ctx, idMr, mrData.DiffRefs.HeadSHA)
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: mrData.DiffRefs.HeadSHA, BaseSHA: mrData.DiffRefs.BaseSHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: mrData.DiffRefs.HeadSHA}, nil
 }
 
 func (h *GitLabHost) GetMergeRequestUrl(idMr string) string {
@@ -141,19 +136,7 @@ func (h *GitLabHost) GetFileContent(ctx context.Context, path, ref string) ([]by
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doWithRetry(ctx, h.client, req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching file content %s@%s: %w", path, ref, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("file content %s@%s: unexpected status %d: %s", path, ref, resp.StatusCode, readBody(resp))
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxFileContentBytes+1))
-	if err != nil {
-		return nil, fmt.Errorf("reading file content %s@%s: %w", path, ref, err)
-	}
-	return guardFileContent(path, data)
+	return fetchFileContent(ctx, h.client, req, path, ref)
 }
 
 func (h *GitLabHost) DefaultBranch(ctx context.Context) (string, error) {

@@ -8,19 +8,6 @@
     overflow-x: auto;
 }
 
-.diff-viewer--structured {
-    display: block;
-}
-
-.diff-viewer--raw:empty {
-    display: none;
-}
-
-.diff-viewer__loading .diff-viewer__spinner svg {
-    display: block;
-    animation: diff-viewer-spin 1s linear infinite;
-}
-
 // diff2html positions `.d2h-code-linenumber` (the line-number TD) with
 // `position: absolute` but never establishes a positioning context on the
 // row, so the line numbers anchor to whatever ancestor in the host page
@@ -114,6 +101,61 @@
     }
 }
 
+.diff-viewer .d2h-code-linenumber {
+    width: 6em;
+    border-left: 0;
+}
+
+.diff-viewer .line-num1,
+.diff-viewer .line-num2 {
+    width: 3em;
+    padding: 0 0.25em;
+}
+
+.diff-viewer .d2h-code-line {
+    padding-left: 6.5em;
+    width: calc(100% - 14.5em);
+}
+
+.diff-viewer__expanders {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0.125rem;
+}
+
+.diff-viewer__expand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.5rem;
+    border: 0;
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        background 0.15s;
+
+    &:hover:enabled {
+        color: var(--ui-color-primary);
+        background: var(--ui-color-surface-hover);
+    }
+
+    &:disabled {
+        cursor: progress;
+    }
+
+    svg {
+        display: block;
+    }
+}
+
+.diff-viewer__expand--loading svg {
+    color: var(--ui-color-primary);
+    animation: diff-viewer-spin 1s linear infinite;
+}
+
 .diff-viewer__loading {
     display: flex;
     align-items: center;
@@ -136,123 +178,6 @@
     to {
         transform: rotate(360deg);
     }
-}
-
-.diff-viewer__file {
-    border: 1px solid var(--ui-color-border);
-    border-radius: var(--ui-radius-md);
-    margin-bottom: var(--ui-space-m);
-    overflow: hidden;
-    background: var(--ui-color-surface);
-}
-
-.diff-viewer__file-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--ui-surface-100);
-    border-bottom: 1px solid var(--ui-color-border);
-    cursor: pointer;
-    user-select: none;
-}
-
-.diff-viewer__file-name {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-    flex-shrink: 1;
-    font-weight: 600;
-}
-
-.diff-viewer__table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--ui-font-mono);
-}
-
-.diff-viewer__table td {
-    padding: 0;
-    vertical-align: top;
-}
-
-.diff-viewer__line-number {
-    width: 3rem;
-    min-width: 3rem;
-    text-align: right;
-    padding: 0.125rem 0.5rem;
-    color: var(--ui-color-text-muted);
-    background: var(--ui-color-surface);
-    border-right: 1px solid var(--ui-color-border);
-    font-size: 0.75rem;
-    user-select: none;
-}
-
-.diff-viewer__code {
-    padding: 0.125rem 0.5rem;
-    white-space: pre;
-    font-size: 0.75rem;
-}
-
-.diff-viewer__hunk-header {
-    background: var(--ui-surface-100);
-    color: var(--ui-color-text-muted);
-}
-
-.diff-viewer__context {
-    background: var(--ui-color-surface);
-}
-
-.diff-viewer__add {
-    background: var(--ui-green-50);
-}
-
-.diff-viewer__remove {
-    background: var(--ui-red-50);
-}
-
-.diff-viewer__prefix {
-    display: inline-block;
-    width: 0.75rem;
-}
-
-.diff-viewer__expander {
-    background: var(--ui-surface-100);
-}
-
-.diff-viewer__expander-cell {
-    text-align: center;
-}
-
-.diff-viewer__expander-cell button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    width: 100%;
-    padding: 0.25rem;
-    border: 0;
-    background: transparent;
-    color: var(--ui-color-text-muted);
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition:
-        color 0.15s,
-        background 0.15s;
-
-    &:hover {
-        color: var(--ui-color-primary);
-        background: var(--ui-color-surface-hover);
-    }
-
-    tabler-icon {
-        display: block;
-        flex-shrink: 0;
-    }
-}
-
-.diff-viewer__file-body--collapsed {
-    display: none;
 }
 
 // Per-message-kind diff2html theming. The kind class lives on the parent

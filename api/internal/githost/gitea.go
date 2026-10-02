@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -49,9 +48,6 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*D
 		Head struct {
 			SHA string `json:"sha"`
 		} `json:"head"`
-		Base struct {
-			SHA string `json:"sha"`
-		} `json:"base"`
 	}
 	if err := json.NewDecoder(prResp.Body).Decode(&prData); err != nil {
 		return nil, fmt.Errorf("decoding PR metadata: %w", err)
@@ -78,7 +74,6 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*D
 			Filename         string `json:"filename"`
 			PreviousFilename string `json:"previous_filename"`
 			Patch            string `json:"patch"`
-			Status           string `json:"status"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&pageFiles); err != nil {
 			return nil, fmt.Errorf("decoding PR files page %d: %w", page, err)
@@ -89,10 +84,9 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*D
 				oldPath = f.Filename
 			}
 			files = append(files, DiffFile{
-				OldPath:   oldPath,
-				NewPath:   f.Filename,
-				Patch:     f.Patch,
-				IsDeleted: f.Status == "removed",
+				OldPath: oldPath,
+				NewPath: f.Filename,
+				Patch:   f.Patch,
 			})
 		}
 		if len(pageFiles) < 50 {
@@ -101,7 +95,7 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*D
 		page++
 	}
 
-	return &Diff{HeadSHA: prData.Head.SHA, BaseSHA: prData.Base.SHA, Files: files}, nil
+	return &Diff{HeadSHA: prData.Head.SHA, Files: files}, nil
 }
 
 func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
@@ -125,9 +119,6 @@ func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*St
 		Head   struct {
 			SHA string `json:"sha"`
 		} `json:"head"`
-		Base struct {
-			SHA string `json:"sha"`
-		} `json:"base"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&prData); err != nil {
 		return nil, fmt.Errorf("decoding PR status: %w", err)
@@ -147,28 +138,16 @@ func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*St
 
 	approved := h.hasApproval(ctx, idMr)
 
-	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA, BaseSHA: prData.Base.SHA}, nil
+	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
 }
 
 func (h *GiteaHost) GetFileContent(ctx context.Context, path, ref string) ([]byte, error) {
-	rawURL := fmt.Sprintf("%s/api/v1/repos/%s/raw/%s?ref=%s", h.baseUrl, h.repoPath, path, url.QueryEscape(ref))
+	rawURL := fmt.Sprintf("%s/api/v1/repos/%s/raw/%s?ref=%s", h.baseUrl, h.repoPath, escapePathSegments(path), url.QueryEscape(ref))
 	req, err := h.newRequest(ctx, rawURL)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := doWithRetry(ctx, h.client, req)
-	if err != nil {
-		return nil, fmt.Errorf("fetching file content %s@%s: %w", path, ref, err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("file content %s@%s: unexpected status %d: %s", path, ref, resp.StatusCode, readBody(resp))
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxFileContentBytes+1))
-	if err != nil {
-		return nil, fmt.Errorf("reading file content %s@%s: %w", path, ref, err)
-	}
-	return guardFileContent(path, data)
+	return fetchFileContent(ctx, h.client, req, path, ref)
 }
 
 func (h *GiteaHost) GetMergeRequestUrl(idMr string) string {
