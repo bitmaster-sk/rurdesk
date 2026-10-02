@@ -97,11 +97,8 @@ func (r *TrackerRepository) DeleteTracker(ctx context.Context, idTracker int64) 
 func (r *TrackerRepository) LoadTracks(ctx context.Context, filter model.TracksFilter) ([]*model.Track, error) {
 	db := extctx.GetDb(ctx, r.pool)
 
-	var (
-		sb   strings.Builder
-		args []any
-		idx  = 1
-	)
+	var sb strings.Builder
+	args := []any{}
 
 	sb.WriteString(`
 		SELECT t.id_track, t.id_user, t.id_issue, iss.id_issue_public, iss.id_project,
@@ -112,31 +109,25 @@ func (r *TrackerRepository) LoadTracks(ctx context.Context, filter model.TracksF
 	`)
 
 	if filter.IdIssue != nil {
-		fmt.Fprintf(&sb, " AND iss.id_issue = $%d", idx)
+		fmt.Fprintf(&sb, " AND iss.id_issue = $%d", len(args)+1)
 		args = append(args, *filter.IdIssue)
-		idx++
 	}
 	if len(filter.IdsProject) > 0 {
-		fmt.Fprintf(&sb, " AND iss.id_project = ANY($%d)", idx)
+		fmt.Fprintf(&sb, " AND iss.id_project = ANY($%d)", len(args)+1)
 		args = append(args, filter.IdsProject)
-		idx++
 	}
 	if filter.IdUser != nil {
-		fmt.Fprintf(&sb, " AND t.id_user = $%d", idx)
+		fmt.Fprintf(&sb, " AND t.id_user = $%d", len(args)+1)
 		args = append(args, *filter.IdUser)
-		idx++
 	}
 	if filter.StartFrom != nil {
-		fmt.Fprintf(&sb, " AND t.start_at >= $%d", idx)
+		fmt.Fprintf(&sb, " AND t.start_at >= $%d", len(args)+1)
 		args = append(args, *filter.StartFrom)
-		idx++
 	}
 	if filter.StartTo != nil {
-		fmt.Fprintf(&sb, " AND t.start_at <= $%d", idx)
+		fmt.Fprintf(&sb, " AND t.start_at <= $%d", len(args)+1)
 		args = append(args, *filter.StartTo)
-		idx++
 	}
-	_ = idx
 
 	rows, err := db.Query(ctx, sb.String(), args...)
 	if err != nil {

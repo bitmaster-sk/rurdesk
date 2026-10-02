@@ -51,36 +51,7 @@
             <div class="quality-panel__body">
                 <!-- Dimensions -->
                 <div class="quality-panel__dimensions">
-                    @for (
-                        dim of [
-                            {
-                                key: 'clarity',
-                                label: 'QUALITY.DIMENSION.CLARITY',
-                                value: report()!.dimensions.clarity
-                            },
-                            {
-                                key: 'completeness',
-                                label: 'QUALITY.DIMENSION.COMPLETENESS',
-                                value: report()!.dimensions.completeness
-                            },
-                            {
-                                key: 'actionability',
-                                label: 'QUALITY.DIMENSION.ACTIONABILITY',
-                                value: report()!.dimensions.actionability
-                            },
-                            {
-                                key: 'scope',
-                                label: 'QUALITY.DIMENSION.SCOPE',
-                                value: report()!.dimensions.scope
-                            },
-                            {
-                                key: 'metadata',
-                                label: 'QUALITY.DIMENSION.METADATA',
-                                value: report()!.dimensions.metadata
-                            }
-                        ];
-                        track dim.key
-                    ) {
+                    @for (dim of dimensions(); track dim.key) {
                         <div class="quality-panel__dim">
                             <span class="quality-panel__dim-label">
                                 {{ dim.label | translate }}
