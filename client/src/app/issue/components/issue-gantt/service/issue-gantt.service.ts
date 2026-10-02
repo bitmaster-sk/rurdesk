@@ -44,6 +44,7 @@ export class IssueGanttService {
     private backlogCursor: string | null = null;
     public readonly backlogHasMore = signal(false);
     public readonly backlogLoading = signal(false);
+    private pendingBacklogLimit: number | null = null;
 
     public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
@@ -94,15 +95,18 @@ export class IssueGanttService {
         });
     }
 
+    public restoreBacklogCount(loadedCount: number): void {
+        this.pendingBacklogLimit = Math.max(loadedCount, this.settings.ganttBacklogPageSize());
+    }
+
     private fetchBacklogPage(reset: boolean): void {
         if (!this.backlogFilter) return;
+        const limit =
+            (reset ? this.pendingBacklogLimit : null) ?? this.settings.ganttBacklogPageSize();
+        if (reset) this.pendingBacklogLimit = null;
         this.backlogLoading.set(true);
         this.issueApi
-            .loadPage$(
-                this.backlogFilter,
-                this.settings.ganttBacklogPageSize(),
-                reset ? null : this.backlogCursor
-            )
+            .loadPage$(this.backlogFilter, limit, reset ? null : this.backlogCursor)
             .subscribe({
                 next: page => {
                     this.backlogIssues$.next(
