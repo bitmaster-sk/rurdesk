@@ -217,4 +217,39 @@ describe('IssueTableService — refresh keeps loaded pages', () => {
         expect(svc.rows()).toHaveLength(99); // preserved extent, NOT 50
         expect(calls).toContainEqual({ limit: 100, cursor: null });
     });
+    it('loads the restored row count in one request, then pages normally again', () => {
+        const store = new IssueFilterStore();
+        const calls: { limit: number; cursor: string | null }[] = [];
+        const responder = (limit: number) => ({
+            items: issues(limit),
+            nextCursor: 'next',
+            total: 500
+        });
+        const svc = buildWithStore(store, responder, calls);
+
+        svc.restoreLoadedCount(120);
+        store.setInitialFilter(initialFilter());
+        expect(svc.rows()).toHaveLength(120);
+
+        store.setFilter({ title: 'login' });
+        expect(calls).toEqual([
+            { limit: 120, cursor: null },
+            { limit: 50, cursor: null }
+        ]);
+    });
+
+    it('never restores less than one page', () => {
+        const store = new IssueFilterStore();
+        const calls: { limit: number; cursor: string | null }[] = [];
+        const svc = buildWithStore(
+            store,
+            limit => ({ items: issues(limit), nextCursor: null, total: limit }),
+            calls
+        );
+
+        svc.restoreLoadedCount(3);
+        store.setInitialFilter(initialFilter());
+
+        expect(calls).toEqual([{ limit: 50, cursor: null }]);
+    });
 });

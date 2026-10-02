@@ -53,6 +53,8 @@ export class IssueTableService {
 
     private currentFilter: IssuesFilter | null = null;
 
+    private pendingLimit: number | null = null;
+
     // Store snapshots captured per reset (project-scoped maps).
     private readonly severities = signal<Map<number, IssueSeverity>>(new Map());
     private readonly issueTypes = signal<Map<number, IssueType>>(new Map());
@@ -124,9 +126,14 @@ export class IssueTableService {
                 if (preserve) {
                     this.pager.refetchExtent();
                 } else {
-                    this.pager.reset();
+                    this.pager.reset(this.pendingLimit ?? undefined);
+                    this.pendingLimit = null;
                 }
             });
+    }
+
+    public restoreLoadedCount(loadedCount: number): void {
+        this.pendingLimit = Math.max(loadedCount, this.settings.tablePageSize());
     }
 
     public canLoadMore(): boolean {

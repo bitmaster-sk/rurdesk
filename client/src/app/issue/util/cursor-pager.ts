@@ -28,9 +28,9 @@ export class CursorPager {
     // change) — `fetchPage(true)` replaces them wholesale on arrival. Clearing
     // to [] here made the table flash empty and its auto-layout columns collapse
     // then jump back. `isLoading` is available for a non-destructive indicator.
-    public reset(): void {
+    public reset(limit?: number): void {
         this.cursor.set(null);
-        this.fetchPage(true);
+        this.fetchPage(true, limit);
     }
 
     // Re-fetch the pages already loaded as a single request so a data refresh keeps the
@@ -70,10 +70,10 @@ export class CursorPager {
         return this.cursor() !== null;
     }
 
-    private fetchPage(isFirst: boolean): void {
+    private fetchPage(isFirst: boolean, limit?: number): void {
         const generation = ++this.generation;
         this.isLoading.set(true);
-        this.fetch(isFirst ? null : this.cursor()).subscribe({
+        this.fetch(isFirst ? null : this.cursor(), limit).subscribe({
             next: page => {
                 if (generation !== this.generation) {
                     return;
