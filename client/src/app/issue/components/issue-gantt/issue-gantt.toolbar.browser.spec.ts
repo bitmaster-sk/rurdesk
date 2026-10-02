@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { STORAGE_KEY_CARD_MODE, STORAGE_KEY_MINIMAP } from './constants/gantt-storage-keys';
 import { createGanttFixture } from './gantt-testbed.helper';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 
 describe('IssueGanttComponent toolbar handlers (TestBed)', () => {
     let comp: any;
@@ -12,6 +13,10 @@ describe('IssueGanttComponent toolbar handlers (TestBed)', () => {
         const result = await createGanttFixture();
         comp = result.comp;
         mocks = result.mocks;
+    });
+
+    it('persists the gantt view as the last visited issue list view', () => {
+        expect(localStorage.getItem('rurdesk.issue.lastView.10')).toBe(IssueViewMode.GANTT);
     });
 
     // =========================================================================

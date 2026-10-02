@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createCalendarFixture } from './calendar-testbed.helper';
+import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 
 describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
     let comp: any;
@@ -10,6 +11,10 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
         const result = await createCalendarFixture();
         comp = result.comp;
         mocks = result.mocks;
+    });
+
+    it('persists the calendar view as the last visited issue list view', () => {
+        expect(localStorage.getItem('rurdesk.issue.lastView.10')).toBe(IssueViewMode.CALENDAR);
     });
 
     function getApi() {

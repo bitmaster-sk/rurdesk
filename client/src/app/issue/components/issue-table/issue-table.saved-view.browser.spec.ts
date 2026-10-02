@@ -100,4 +100,9 @@ describe('IssueTableComponent saved view handoff (TestBed)', () => {
 
         expect(appliedFilter()['stateUnset']).toBe(true);
     });
+
+    it('persists the table view as the last visited issue list view', async () => {
+        await mount();
+        expect(localStorage.getItem('rurdesk.issue.lastView.10')).toBe(IssueViewMode.TABLE);
+    });
 });

@@ -234,10 +234,12 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
 describe('IssueInfoComponent — "New task" menu action', () => {
     let navigate: ReturnType<typeof vi.fn>;
     let canCreateIssue: ReturnType<typeof signal<boolean>>;
+    let canDeleteIssue: ReturnType<typeof signal<boolean>>;
 
     beforeEach(async () => {
         navigate = vi.fn();
         canCreateIssue = signal(true);
+        canDeleteIssue = signal(true);
         await TestBed.configureTestingModule({
             declarations: [IssueInfoComponent],
             providers: [
@@ -257,7 +259,7 @@ describe('IssueInfoComponent — "New task" menu action', () => {
                 { provide: PinApi, useValue: { insert$: () => NEVER } },
                 {
                     provide: AclStore,
-                    useValue: { canCreateIssue }
+                    useValue: { canCreateIssue, canDeleteIssue }
                 },
                 {
                     provide: MrDiffApi,
@@ -345,5 +347,76 @@ describe('IssueInfoComponent — "New task" menu action', () => {
 
         const actions = fixture.componentInstance.actions();
         expect(actions.find(a => a.labelKey === 'COMMAND.ACTION.CREATE_ISSUE')).toBeUndefined();
+    });
+});
+
+describe('IssueInfoComponent — "Delete task" menu action', () => {
+    let canDeleteIssue: ReturnType<typeof signal<boolean>>;
+    let navigate: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        navigate = vi.fn();
+        canDeleteIssue = signal(true);
+        await TestBed.configureTestingModule({
+            declarations: [IssueInfoComponent],
+            providers: [
+                {
+                    provide: IssueApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of(ISSUE)) }
+                },
+                { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
+                { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { users$: of([]), usersMap$: of(new Map()) }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 7 }) } },
+                { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
+                { provide: PinApi, useValue: { insert$: () => NEVER } },
+                {
+                    provide: AclStore,
+                    useValue: { canCreateIssue: () => true, canDeleteIssue }
+                },
+                {
+                    provide: MrDiffApi,
+                    useValue: { loadStatus$: vi.fn(() => NEVER), load$: () => NEVER }
+                },
+                { provide: GitIntegrationApi, useValue: { loadOne$: vi.fn(() => NEVER) } },
+                { provide: Router, useValue: { navigate } },
+                { provide: NoticeService, useValue: { mrStatus$: NEVER } },
+                {
+                    provide: TrackerService,
+                    useValue: { tracksChanged$: NEVER, loadTracks$: () => of([]) }
+                }
+            ]
+        })
+            .overrideComponent(IssueInfoComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    it('emits deleteRequested when the delete action is invoked', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        const emitted: Issue[] = [];
+        fixture.componentInstance.deleteRequested.subscribe(i => emitted.push(i));
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+
+        const deleteAction = fixture.componentInstance
+            .actions()
+            .find(a => a.labelKey === 'ISSUE.MENU.DELETE');
+        expect(deleteAction).toBeDefined();
+        deleteAction!.command!();
+        expect(emitted).toEqual([ISSUE]);
+    });
+
+    it('omits the delete action when canDeleteIssue() is false', () => {
+        canDeleteIssue.set(false);
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', ISSUE);
+        fixture.detectChanges();
+        expect(
+            fixture.componentInstance.actions().find(a => a.labelKey === 'ISSUE.MENU.DELETE')
+        ).toBeUndefined();
     });
 });
