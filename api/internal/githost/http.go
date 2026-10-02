@@ -4,10 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
+	"unicode/utf8"
 )
+
+const maxFileContentBytes = 1 << 20
 
 // postJSON issues a single POST with a JSON body. The caller's setAuth applies
 // host-specific auth headers (and any Accept header).
@@ -57,4 +63,39 @@ func readBody(resp *http.Response) string {
 	}
 	b, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 	return string(b)
+}
+
+var (
+	ErrFileTooLarge = errors.New("file exceeds maximum allowed size")
+	ErrBinaryFile   = errors.New("file appears to be binary")
+)
+
+func fetchFileContent(ctx context.Context, client *http.Client, req *http.Request, path, ref string) ([]byte, error) {
+	resp, err := doWithRetry(ctx, client, req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching file content %s@%s: %w", path, ref, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("file content %s@%s: unexpected status %d: %s", path, ref, resp.StatusCode, readBody(resp))
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxFileContentBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading file content %s@%s: %w", path, ref, err)
+	}
+	if len(data) > maxFileContentBytes {
+		return nil, fmt.Errorf("%s: %w", path, ErrFileTooLarge)
+	}
+	if !utf8.Valid(data) {
+		return nil, fmt.Errorf("%s: %w", path, ErrBinaryFile)
+	}
+	return data, nil
+}
+
+func escapePathSegments(path string) string {
+	segments := strings.Split(path, "/")
+	for idx, segment := range segments {
+		segments[idx] = url.PathEscape(segment)
+	}
+	return strings.Join(segments, "/")
 }

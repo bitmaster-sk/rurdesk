@@ -440,3 +440,18 @@ func TestGitHubHost_RetryAfter429(t *testing.T) {
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, attempts, 2)
 }
+
+func TestGitHubHost_GetFileContent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v3/repos/owner/repo/contents/src/my%20file%23v2.go", r.URL.EscapedPath())
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		assert.Equal(t, "application/vnd.github.raw+json", r.Header.Get("Accept"))
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGitHubHost(srv.URL, "owner/repo", "token")
+	content, err := host.GetFileContent(t.Context(), "src/my file#v2.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
+}

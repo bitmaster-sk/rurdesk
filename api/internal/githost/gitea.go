@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -138,6 +139,15 @@ func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*St
 	approved := h.hasApproval(ctx, idMr)
 
 	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
+}
+
+func (h *GiteaHost) GetFileContent(ctx context.Context, path, ref string) ([]byte, error) {
+	rawURL := fmt.Sprintf("%s/api/v1/repos/%s/raw/%s?ref=%s", h.baseUrl, h.repoPath, escapePathSegments(path), url.QueryEscape(ref))
+	req, err := h.newRequest(ctx, rawURL)
+	if err != nil {
+		return nil, err
+	}
+	return fetchFileContent(ctx, h.client, req, path, ref)
 }
 
 func (h *GiteaHost) GetMergeRequestUrl(idMr string) string {

@@ -2,16 +2,21 @@ import {
     AfterViewInit,
     ChangeDetectionStrategy,
     Component,
+    DestroyRef,
     ElementRef,
     OnChanges,
+    SimpleChanges,
     ViewEncapsulation,
     inject,
     input,
     viewChild
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
-import { html } from 'diff2html';
-import { MrDiff, MrDiffFile } from 'src/app/project/model/git-integration.model';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { Diff2HtmlConfig, html } from 'diff2html';
+import { FileContentLoader, MrDiff, MrDiffFile } from 'src/app/project/model/git-integration.model';
+import { DiffParser, EXPAND_STEP, ExpandAction, ExpandDirection, ExpandSlot } from './diff-parser';
 
 // Tabler icons inlined as SVG so they render inside diff2html's
 // innerHTML-rendered DOM (where the `<tabler-icon>` Angular component can't
@@ -33,6 +38,31 @@ const ICON_CHEVRON =
     'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M6 9l6 6l6 -6"/>' +
     '</svg>';
+const ICON_FOLD_UP =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 13v-8l-3 3m6 0l-3 -3"/>' +
+    '<path d="M4 17h16"/>' +
+    '</svg>';
+const ICON_FOLD_DOWN =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 11v8l3 -3m-6 0l3 3"/>' +
+    '<path d="M4 7h16"/>' +
+    '</svg>';
+const ICON_FOLD =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 15v6l3 -3m-6 0l3 3"/>' +
+    '<path d="M12 9v-6l3 3m-6 0l3 -3"/>' +
+    '<path d="M4 12h16"/>' +
+    '</svg>';
+
+const DIFF2HTML_CONFIG: Diff2HtmlConfig = {
+    drawFileList: false,
+    matching: 'lines',
+    outputFormat: 'line-by-line'
+};
 
 export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
 
@@ -70,6 +100,8 @@ export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
 })
 export class DiffViewerComponent implements AfterViewInit, OnChanges {
     private readonly i18n = inject(I18nService);
+    private readonly toast = inject(ToastNotificationService);
+    private readonly destroyRef = inject(DestroyRef);
 
     public readonly diff = input<MrDiff | null>(null);
     public readonly rawPatch = input<string | null>(null);
@@ -80,14 +112,24 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
     // empty box. Plan-stage callers using `rawPatch` pass the data
     // synchronously and can leave this at the default false.
     public readonly loading = input(false);
+    public readonly fileContentLoader = input<FileContentLoader | null>(null);
 
     private readonly containerRef = viewChild<ElementRef<HTMLDivElement>>('diffContainer');
+
+    private patches: string[] | null = null;
+    private readonly fileLines = new Map<number, string[]>();
+    private readonly pendingFiles = new Set<number>();
 
     public ngAfterViewInit(): void {
         this.render();
     }
 
-    public ngOnChanges(): void {
+    public ngOnChanges(changes: SimpleChanges): void {
+        if (changes['diff']) {
+            this.patches = this.diff()?.files.map(file => file.patch) ?? null;
+            this.fileLines.clear();
+            this.pendingFiles.clear();
+        }
         this.render();
     }
 
@@ -100,38 +142,64 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
             return;
         }
 
-        const patch = this.resolvePatch();
-        if (!patch) {
+        const raw = this.rawPatch();
+        if (raw) {
+            container.innerHTML = html(raw, DIFF2HTML_CONFIG);
+            this.enrichFileHeaders(container);
+            return;
+        }
+
+        const diff = this.diff();
+        if (!diff) {
             container.innerHTML = '';
             return;
         }
 
-        container.innerHTML = html(patch, {
-            drawFileList: false,
-            matching: 'lines',
-            outputFormat: 'line-by-line'
-        });
-
-        this.enrichFileHeaders(container);
+        container.replaceChildren(
+            ...diff.files.flatMap((_, idx) => this.renderFile(idx)?.parentElement ?? [])
+        );
+        container
+            .querySelectorAll<HTMLElement>('.d2h-file-wrapper[data-idx]')
+            .forEach(wrapper => this.enrichWrapper(wrapper, Number(wrapper.dataset['idx'])));
     }
 
-    private resolvePatch(): string | null {
-        const raw = this.rawPatch();
-        if (raw) return raw;
+    private renderFile(idx: number): HTMLElement | null {
+        const scratch = document.createElement('div');
+        scratch.innerHTML = html(this.filePatch(idx), DIFF2HTML_CONFIG);
+        const wrapper = scratch.querySelector<HTMLElement>('.d2h-file-wrapper');
+        wrapper?.setAttribute('data-idx', String(idx));
+        return wrapper;
+    }
 
-        const diff = this.diff();
-        if (!diff) return null;
+    private findFileWrapper(idx: number): HTMLElement | null {
+        return (
+            this.containerRef()?.nativeElement.querySelector<HTMLElement>(
+                `.d2h-file-wrapper[data-idx="${idx}"]`
+            ) ?? null
+        );
+    }
 
-        return diff.files.map(f => `--- a/${f.oldPath}\n+++ b/${f.newPath}\n${f.patch}`).join('\n');
+    private filePatch(idx: number): string {
+        const file = this.diff()?.files[idx];
+        if (!file) return '';
+        const patch = this.patches?.[idx] ?? file.patch;
+        return `--- a/${file.oldPath}\n+++ b/${file.newPath}\n${this.fileModeLine(patch)}${patch}`;
+    }
+
+    private fileModeLine(patch: string): string {
+        const [first] = DiffParser.parse(patch);
+        if (first?.oldStart === 0 && first.oldLines === 0) return 'new file mode 100644\n';
+        if (first?.newStart === 0 && first.newLines === 0) return 'deleted file mode 100644\n';
+        return '';
     }
 
     /**
      * Appends a `+X / -Y` stat badge and (when a host link is available) an
      * external-link icon to each file header rendered by diff2html, and
      * wires the header itself as a click-to-collapse toggle for the file's
-     * diff body. Relies on diff2html emitting `.d2h-file-wrapper` blocks in
-     * the same order as `MrDiff.files`, so we can pair them positionally
-     * without re-parsing file names back out of the DOM.
+     * diff body. A `MrDiff` file is rendered on its own and its wrapper carries
+     * `data-idx`, because diff2html drops files without hunks; a raw patch
+     * has no file list, so its wrappers pair positionally.
      *
      * The stats/link extras are injected inside `.d2h-file-name-wrapper`
      * (the existing flex row that holds the file name + tag) rather than
@@ -147,24 +215,145 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
      */
     private enrichFileHeaders(container: HTMLElement): void {
         const wrappers = container.querySelectorAll<HTMLElement>('.d2h-file-wrapper');
-        const files = this.resolveFiles();
+        wrappers.forEach((wrapper, idx) => this.enrichWrapper(wrapper, idx));
+    }
+
+    private enrichWrapper(wrapper: HTMLElement, idx: number): void {
+        const header = wrapper.querySelector<HTMLElement>('.d2h-file-header');
+        const nameWrapper = wrapper.querySelector<HTMLElement>('.d2h-file-name-wrapper');
+        const body = wrapper.querySelector<HTMLElement>('.d2h-file-diff');
+        if (!header || !nameWrapper || !body) return;
+
+        const file = this.resolveFiles()[idx];
         const builder = this.fileLinkBuilder();
+        const patch = file?.patch ?? this.extractPatchFromHeader(wrapper);
+        const { added, removed } = this.countChanges(patch);
+        const url = file && builder ? builder(file) : null;
 
-        wrappers.forEach((wrapper, idx) => {
-            const header = wrapper.querySelector<HTMLElement>('.d2h-file-header');
-            const nameWrapper = wrapper.querySelector<HTMLElement>('.d2h-file-name-wrapper');
-            const body = wrapper.querySelector<HTMLElement>('.d2h-file-diff');
-            if (!header || !nameWrapper || !body) return;
+        this.prependChevron(nameWrapper);
+        nameWrapper.appendChild(this.buildExtras(added, removed, url));
+        this.wireCollapse(header, body);
+        this.addExpanders(wrapper, idx);
+    }
 
-            const file = files[idx];
-            const patch = file?.patch ?? this.extractPatchFromHeader(wrapper);
-            const { added, removed } = this.countChanges(patch);
-            const url = file && builder ? builder(file) : null;
+    private canExpand(): boolean {
+        return !this.rawPatch() && !!this.fileContentLoader() && !!this.diff()?.headSha;
+    }
 
-            this.prependChevron(nameWrapper);
-            nameWrapper.appendChild(this.buildExtras(added, removed, url));
-            this.wireCollapse(header, body);
+    private addExpanders(wrapper: HTMLElement, idx: number): void {
+        const patch = this.patches?.[idx];
+        const tbody = wrapper.querySelector<HTMLElement>('.d2h-diff-tbody');
+        if (!this.canExpand() || patch === undefined || !tbody) return;
+
+        const hunks = DiffParser.parse(patch);
+        const hunkHeaderCells = Array.from(
+            tbody.querySelectorAll<HTMLElement>('td.d2h-code-linenumber.d2h-info')
+        );
+        if (hunkHeaderCells.length !== hunks.length) return;
+
+        const slots = DiffParser.slots(hunks, this.fileLines.get(idx)?.length ?? null);
+        for (const slot of slots) {
+            const cell = hunkHeaderCells[slot.beforeHunk] ?? this.appendTrailingRow(tbody);
+            cell.classList.add('diff-viewer__expanders');
+            const isBetweenHunks = slot.beforeHunk > 0 && slot.beforeHunk < hunks.length;
+            for (const action of slot.actions) {
+                cell.appendChild(this.buildExpandButton(idx, slot, action, isBetweenHunks));
+            }
+        }
+    }
+
+    private appendTrailingRow(tbody: HTMLElement): HTMLElement {
+        const row = document.createElement('tr');
+        const numberCell = document.createElement('td');
+        numberCell.className = 'd2h-code-linenumber d2h-info';
+        const codeCell = document.createElement('td');
+        codeCell.className = 'd2h-info';
+        codeCell.innerHTML = '<div class="d2h-code-line"></div>';
+        row.append(numberCell, codeCell);
+        tbody.appendChild(row);
+        return numberCell;
+    }
+
+    private buildExpandButton(
+        idx: number,
+        slot: ExpandSlot,
+        action: ExpandAction,
+        isBetweenHunks: boolean
+    ): HTMLElement {
+        const isAll = isBetweenHunks && slot.gap !== null && slot.gap <= EXPAND_STEP;
+        const isUp = action.direction === ExpandDirection.Up;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'diff-viewer__expand';
+        button.innerHTML = isAll ? ICON_FOLD : isUp ? ICON_FOLD_UP : ICON_FOLD_DOWN;
+        const label = this.i18n.instant(
+            isAll ? 'DIFF.EXPAND_ALL' : isUp ? 'DIFF.EXPAND_UP' : 'DIFF.EXPAND_DOWN'
+        );
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.addEventListener('click', () => this.onExpand(idx, action, button));
+        return button;
+    }
+
+    private onExpand(idx: number, action: ExpandAction, button: HTMLButtonElement): void {
+        if (this.pendingFiles.has(idx)) return;
+        const cached = this.fileLines.get(idx);
+        if (cached) {
+            this.applyExpand(idx, cached, action);
+            return;
+        }
+
+        const diff = this.diff();
+        const loader = this.fileContentLoader();
+        if (!diff || !loader) return;
+
+        this.pendingFiles.add(idx);
+        this.showLoading(idx, button);
+        loader(diff.files[idx].newPath, diff.headSha)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: lines => {
+                    if (this.diff() !== diff) return;
+                    this.pendingFiles.delete(idx);
+                    const normalized = lines.map(line => line.replace(/\r$/, ''));
+                    this.fileLines.set(idx, normalized);
+                    this.applyExpand(idx, normalized, action);
+                },
+                error: (error: { status?: number }) => {
+                    if (this.diff() !== diff) return;
+                    this.pendingFiles.delete(idx);
+                    this.rerenderFile(idx);
+                    this.toast.showError(
+                        error.status === 409 ? 'DIFF.EXPAND_STALE' : 'DIFF.EXPAND_FAILED'
+                    );
+                }
+            });
+    }
+
+    private showLoading(idx: number, button: HTMLButtonElement): void {
+        const wrapper = this.findFileWrapper(idx);
+        wrapper?.querySelectorAll<HTMLButtonElement>('.diff-viewer__expand').forEach(other => {
+            other.disabled = true;
         });
+        button.classList.add('diff-viewer__expand--loading');
+        button.setAttribute('aria-busy', 'true');
+        button.innerHTML = ICON_LOADER;
+    }
+
+    private applyExpand(idx: number, lines: string[], action: ExpandAction): void {
+        if (!this.patches) return;
+        const hunks = DiffParser.expand(DiffParser.parse(this.patches[idx]), lines, action);
+        this.patches[idx] = DiffParser.serialize(hunks);
+        this.rerenderFile(idx);
+    }
+
+    private rerenderFile(idx: number): void {
+        const current = this.findFileWrapper(idx);
+        const fresh = this.renderFile(idx);
+        if (!current || !fresh) return;
+
+        current.replaceWith(fresh);
+        this.enrichWrapper(fresh, idx);
     }
 
     private prependChevron(nameWrapper: HTMLElement): void {

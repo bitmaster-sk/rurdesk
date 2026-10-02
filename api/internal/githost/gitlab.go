@@ -129,6 +129,16 @@ func (h *GitLabHost) setAuth(req *http.Request) {
 	req.Header.Set("PRIVATE-TOKEN", h.token)
 }
 
+func (h *GitLabHost) GetFileContent(ctx context.Context, path, ref string) ([]byte, error) {
+	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/repository/files/%s/raw?ref=%s",
+		h.baseUrl, h.encodedPath, url.PathEscape(path), url.QueryEscape(ref))
+	req, err := h.newRequest(ctx, apiURL)
+	if err != nil {
+		return nil, err
+	}
+	return fetchFileContent(ctx, h.client, req, path, ref)
+}
+
 func (h *GitLabHost) DefaultBranch(ctx context.Context) (string, error) {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s", h.baseUrl, h.encodedPath)
 	req, err := h.newRequest(ctx, apiURL)

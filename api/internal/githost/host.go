@@ -7,6 +7,7 @@ type GitHost interface {
 	GetMergeRequestChanges(ctx context.Context, idMr string) (*Diff, error)
 	GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error)
 	GetMergeRequestUrl(idMr string) string
+	GetFileContent(ctx context.Context, path, ref string) ([]byte, error)
 
 	// DefaultBranch returns the repository's default branch (PR base).
 	DefaultBranch(ctx context.Context) (string, error)

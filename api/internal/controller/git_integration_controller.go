@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -306,6 +308,60 @@ func (gc *GitIntegrationController) GetStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
+func (gc *GitIntegrationController) GetFileContent(c *gin.Context) {
+	idProject, idGitIntegration, ok := gc.parseProjectAndIntegration(c)
+	if !ok {
+		return
+	}
+	mrId := c.Param("mrId")
+	path := c.Query("path")
+	ref := c.Query("ref")
+	if path == "" || ref == "" {
+		_ = c.Error(errs.ErrBadRequest)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+
+	if !gc.acl.CanReadGitIntegration(ctx, user.IdUser, idProject) {
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
+		return
+	}
+
+	host, err := gc.loadHostForIntegration(ctx, idGitIntegration, idProject)
+	if errors.Is(err, errs.ErrGitIntegrationNotFound) {
+		_ = c.Error(errs.ErrGitIntegrationNotFound)
+		c.Status(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+
+	lines, err := gc.fetchMrFileLines(ctx, host, idGitIntegration, mrId, path, ref)
+	switch {
+	case errors.Is(err, errs.ErrForbidden):
+		_ = c.Error(errs.ErrForbidden)
+		c.Status(http.StatusForbidden)
+	case errors.Is(err, errs.ErrConflict):
+		_ = c.Error(errs.ErrConflict)
+		c.Status(http.StatusConflict)
+	case errors.Is(err, githost.ErrFileTooLarge), errors.Is(err, githost.ErrBinaryFile):
+		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
+		c.Status(http.StatusBadRequest)
+	case err != nil:
+		_ = c.Error(errs.ErrGitHostUnavailable)
+		c.Status(http.StatusBadGateway)
+	default:
+		c.JSON(http.StatusOK, gin.H{"lines": lines})
+	}
+}
+
 func (gc *GitIntegrationController) loadHostForIntegration(ctx context.Context, idGitIntegration, idProject int64) (githost.GitHost, error) {
 	integration, err := gc.gitIntRepo.LoadByID(ctx, idGitIntegration, idProject)
 	if err != nil {
@@ -351,6 +407,45 @@ func (gc *GitIntegrationController) fetchDiff(ctx context.Context, host githost.
 	}
 	gc.diffCache.SetDiff(idGitIntegration, mrId, diff.HeadSHA, diff)
 	return diff, nil
+}
+
+func (gc *GitIntegrationController) diffForRef(ctx context.Context, host githost.GitHost, idGitIntegration int64, mrId, ref string) (*githost.Diff, error) {
+	if cached, isCached := gc.diffCache.GetDiff(idGitIntegration, mrId, ref); isCached {
+		return cached, nil
+	}
+	diff, err := gc.fetchDiff(ctx, host, idGitIntegration, mrId)
+	if err != nil {
+		return nil, err
+	}
+	if ref != diff.HeadSHA {
+		return nil, errs.ErrConflict
+	}
+	return diff, nil
+}
+
+func (gc *GitIntegrationController) fetchMrFileLines(ctx context.Context, host githost.GitHost, idGitIntegration int64, mrId, path, ref string) ([]string, error) {
+	diff, err := gc.diffForRef(ctx, host, idGitIntegration, mrId, ref)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.ContainsFunc(diff.Files, func(file githost.DiffFile) bool { return file.NewPath == path }) {
+		return nil, errs.ErrForbidden
+	}
+
+	content, isCached := gc.diffCache.GetFileContent(idGitIntegration, ref, path)
+	if !isCached {
+		content, err = host.GetFileContent(ctx, path, ref)
+		if err != nil {
+			return nil, err
+		}
+		gc.diffCache.SetFileContent(idGitIntegration, ref, path, content)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
+	return lines, nil
 }
 
 func (gc *GitIntegrationController) parseProjectAndIntegration(c *gin.Context) (idProject, idGitIntegration int64, ok bool) {

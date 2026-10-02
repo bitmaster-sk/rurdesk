@@ -70,6 +70,7 @@ import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { AclStore } from 'src/app/project/store/acl.store';
 import {
+    FileContentLoader,
     GitIntegrationRes,
     MrDiff,
     MrDiffFile,
@@ -172,6 +173,14 @@ export class IssueInfoComponent implements OnInit {
             mrId
         );
         return (_file: MrDiffFile) => url;
+    });
+
+    protected readonly fileContentLoader = computed<FileContentLoader | null>(() => {
+        const issue = this.currentIssue();
+        if (!issue?.idGitIntegration || !issue.mrId || !this.gitIntegration()) return null;
+        const { idProject, idGitIntegration, mrId } = issue;
+        return (path, ref) =>
+            this.mrDiffApi.loadFileContent$(idProject, idGitIntegration, mrId, path, ref);
     });
 
     public readonly states = toSignal(

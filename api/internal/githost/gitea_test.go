@@ -244,3 +244,17 @@ func TestGiteaHost_CreatePullRequest(t *testing.T) {
 	assert.Equal(t, "8", id)
 	assert.Equal(t, "https://gitea/owner/repo/pulls/8", prURL)
 }
+
+func TestGiteaHost_GetFileContent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v1/repos/owner/repo/raw/src/my%20file%23v2.go", r.URL.EscapedPath())
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGiteaHost(srv.URL, "owner/repo", "token")
+	content, err := host.GetFileContent(t.Context(), "src/my file#v2.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
+}

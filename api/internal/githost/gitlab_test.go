@@ -188,3 +188,17 @@ func TestGitLabHost_CreatePullRequest(t *testing.T) {
 	assert.Equal(t, "3", id)
 	assert.Equal(t, "https://gitlab.com/group/project/-/merge_requests/3", mrURL)
 }
+
+func TestGitLabHost_GetFileContent(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/api/v4/projects/group%2Fproject/repository/files/src%2Fmain.go/raw", r.URL.EscapedPath())
+		assert.Equal(t, "abc123", r.URL.Query().Get("ref"))
+		_, _ = w.Write([]byte("package main\n"))
+	}))
+	defer srv.Close()
+
+	host := NewGitLabHost(srv.URL, "group/project", "token")
+	content, err := host.GetFileContent(t.Context(), "src/main.go", "abc123")
+	require.NoError(t, err)
+	assert.Equal(t, "package main\n", string(content))
+}

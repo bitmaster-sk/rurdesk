@@ -152,6 +152,16 @@ func (h *GitHubHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*S
 	return &Status{State: state, Approved: approved, CiStatus: ciStatus, WebUrl: h.GetMergeRequestUrl(idMr), HeadSHA: prData.Head.SHA}, nil
 }
 
+func (h *GitHubHost) GetFileContent(ctx context.Context, path, ref string) ([]byte, error) {
+	apiURL := fmt.Sprintf("%s/repos/%s/contents/%s?ref=%s", h.apiBase, h.repoPath, escapePathSegments(path), url.QueryEscape(ref))
+	req, err := h.newRequest(ctx, apiURL)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/vnd.github.raw+json")
+	return fetchFileContent(ctx, h.client, req, path, ref)
+}
+
 func (h *GitHubHost) GetMergeRequestUrl(idMr string) string {
 	return fmt.Sprintf("%s/%s/pull/%s", h.webBase, h.repoPath, idMr)
 }

@@ -33,6 +33,9 @@ func (f *fakeGitHost) GetMergeRequestStatus(context.Context, string) (*githost.S
 	return nil, nil
 }
 func (f *fakeGitHost) GetMergeRequestUrl(string) string { return "" }
+func (f *fakeGitHost) GetFileContent(context.Context, string, string) ([]byte, error) {
+	return nil, nil
+}
 func (f *fakeGitHost) DefaultBranch(context.Context) (string, error) {
 	return f.defaultBranch, f.defaultBranchErr
 }

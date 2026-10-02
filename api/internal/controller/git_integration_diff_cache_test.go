@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/stretchr/testify/require"
 )
@@ -15,6 +16,8 @@ type countingGitHost struct {
 	diffSHA      string // HeadSHA carried by the returned diff
 	changesCalls int
 	statusCalls  int
+	contentCalls int
+	content      string
 }
 
 func (h *countingGitHost) GetMergeRequestChanges(context.Context, string) (*githost.Diff, error) {
@@ -38,9 +41,13 @@ func (h *countingGitHost) FindOpenPullRequest(context.Context, string) (string, 
 func (h *countingGitHost) CreatePullRequest(context.Context, string, string, string, string) (string, string, error) {
 	return "", "", nil
 }
+func (h *countingGitHost) GetFileContent(context.Context, string, string) ([]byte, error) {
+	h.contentCalls++
+	return []byte(h.content), nil
+}
 
 func newDiffController() *GitIntegrationController {
-	return &GitIntegrationController{diffCache: githost.NewDiffCache(16, 16)}
+	return &GitIntegrationController{diffCache: githost.NewDiffCache(16, 16, 16)}
 }
 
 // Second fetch for the same head SHA must be served from the cache — the changes
@@ -88,4 +95,57 @@ func Test_fetchDiff_EmptyHead_AlwaysFetches(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, 2, host.changesCalls, "empty head SHA is uncacheable; every view hits the host")
+}
+
+func Test_fetchMrFileLines(t *testing.T) {
+	t.Run("returns the file split into lines without the trailing newline", func(t *testing.T) {
+		gc := newDiffController()
+		host := &countingGitHost{statusSHA: "sha1", diffSHA: "sha1", content: "one\ntwo\n"}
+
+		lines, err := gc.fetchMrFileLines(t.Context(), host, 7, "1", "a", "sha1")
+		require.NoError(t, err)
+		require.Equal(t, []string{"one", "two"}, lines)
+	})
+
+	t.Run("serves repeated reads of the same file and commit from the cache", func(t *testing.T) {
+		gc := newDiffController()
+		host := &countingGitHost{statusSHA: "sha1", diffSHA: "sha1", content: "one"}
+
+		_, err := gc.fetchMrFileLines(t.Context(), host, 7, "1", "a", "sha1")
+		require.NoError(t, err)
+		_, err = gc.fetchMrFileLines(t.Context(), host, 7, "1", "a", "sha1")
+		require.NoError(t, err)
+
+		require.Equal(t, 1, host.contentCalls)
+	})
+
+	t.Run("validates against the diff already served for that commit without asking the host for the MR status", func(t *testing.T) {
+		gc := newDiffController()
+		gc.diffCache.SetDiff(7, "1", "sha1", &githost.Diff{HeadSHA: "sha1", Files: []githost.DiffFile{{NewPath: "a"}}})
+		host := &countingGitHost{statusSHA: "sha2", diffSHA: "sha2", content: "one"}
+
+		lines, err := gc.fetchMrFileLines(t.Context(), host, 7, "1", "a", "sha1")
+		require.NoError(t, err)
+		require.Equal(t, []string{"one"}, lines)
+		require.Equal(t, 0, host.statusCalls)
+		require.Equal(t, 0, host.changesCalls)
+	})
+
+	t.Run("refuses a path that is not part of the MR diff", func(t *testing.T) {
+		gc := newDiffController()
+		host := &countingGitHost{statusSHA: "sha1", diffSHA: "sha1"}
+
+		_, err := gc.fetchMrFileLines(t.Context(), host, 7, "1", ".env", "sha1")
+		require.ErrorIs(t, err, errs.ErrForbidden)
+		require.Equal(t, 0, host.contentCalls)
+	})
+
+	t.Run("reports a conflict when the ref is no longer the MR head", func(t *testing.T) {
+		gc := newDiffController()
+		host := &countingGitHost{statusSHA: "sha2", diffSHA: "sha2"}
+
+		_, err := gc.fetchMrFileLines(t.Context(), host, 7, "1", "a", "sha1")
+		require.ErrorIs(t, err, errs.ErrConflict)
+		require.Equal(t, 0, host.contentCalls)
+	})
 }

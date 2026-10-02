@@ -48,8 +48,8 @@ they're listed on the project's Git integrations settings page:
 
 ### Token scopes
 
-The token both **reads** PR/MR diffs & status **and opens** the PR/MR for agent
-runs, so it needs **write** access:
+The token **reads** PR/MR diffs & status, **reads file contents** for diff expansion,
+and **opens** the PR/MR for agent runs, so it needs **write** access:
 
 | Host   | Token                         | Scope                                                         |
 | ------ | ----------------------------- | ------------------------------------------------------------- |
@@ -70,8 +70,12 @@ runs, so it needs **write** access:
 
 ## What you get
 
-- **MR/PR diff view** — the full diff rendered in the app (cached server-side,
+- **MR/PR diff view** — the diff rendered in the app (cached server-side,
   so repeated views don't re-hit the host API).
+- **Expand hidden lines** — the arrow buttons on a hunk header (and below the last
+  hunk) show the unchanged lines around a change: 20 at a time, or the whole gap
+  when it is short. The file is read from the host once per commit, so further
+  clicks are instant. Added and deleted files are already shown in full.
 - **MR/PR status** — open / merged / closed state next to the link. It updates
   on the open task by itself — CI result, approval and the final merge — so you
   don't have to reload the page.

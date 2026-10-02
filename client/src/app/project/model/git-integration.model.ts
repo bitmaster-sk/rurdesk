@@ -1,3 +1,5 @@
+import { Observable } from 'rxjs';
+
 export enum HostType {
     GitHub = 'github',
     GitLab = 'gitlab',
@@ -64,3 +66,5 @@ export interface MrStatus {
     webUrl: string;
     headSha: string;
 }
+
+export type FileContentLoader = (path: string, ref: string) => Observable<string[]>;
