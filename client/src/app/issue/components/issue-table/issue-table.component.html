@@ -364,7 +364,9 @@
                     <tabler-icon icon="plus" [size]="14" />
                 </ui-button>
             }
-            <span class="text-sm ui-color-text-muted">{{ rows().length }} / {{ total() }}</span>
+            <span class="text-sm ui-color-text-muted" data-testid="issue-table-count">
+                {{ rows().length }} / {{ total() }}
+            </span>
         </div>
     </div>
 
