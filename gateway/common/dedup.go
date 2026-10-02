@@ -11,10 +11,11 @@ type dedupEntry struct {
 
 // DedupCache is a thread-safe event-id deduplication cache with TTL eviction.
 type DedupCache struct {
-	mu      sync.Mutex
-	entries map[string]dedupEntry
-	ttl     time.Duration
-	stopCh  chan struct{}
+	mu        sync.Mutex
+	entries   map[string]dedupEntry
+	ttl       time.Duration
+	stopCh    chan struct{}
+	closeOnce sync.Once
 }
 
 func NewDedupCache(ttl time.Duration) *DedupCache {
@@ -27,13 +28,8 @@ func NewDedupCache(ttl time.Duration) *DedupCache {
 	return dc
 }
 
-// Close stops the eviction goroutine. Safe to call multiple times.
 func (dc *DedupCache) Close() {
-	select {
-	case <-dc.stopCh:
-	default:
-		close(dc.stopCh)
-	}
+	dc.closeOnce.Do(func() { close(dc.stopCh) })
 }
 
 func (dc *DedupCache) IsProcessed(eventID string) bool {
