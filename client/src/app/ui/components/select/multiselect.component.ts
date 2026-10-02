@@ -60,7 +60,6 @@ export class UiMultiSelectComponent<T> implements ControlValueAccessor, OnDestro
         this.size() === 'small' ? 14 : this.size() === 'large' ? 18 : 16
     );
     public readonly emptyMessage = input<string>();
-    /** Component-level disabled, combined with the forms setDisabledState into isDisabled. */
     public readonly disabled = input(false);
     public readonly inputId = input<string>();
     public readonly showToggleAll = input(true);

@@ -33,6 +33,21 @@ class HostComponent {
     public onChangeCount = 0;
 }
 
+@Component({
+    standalone: false,
+    template: `
+        <ui-multiselect
+            [options]="options"
+            optionLabel="label"
+            optionValue="value"
+            [disabled]="true"
+        />
+    `
+})
+class DisabledInputHostComponent {
+    public readonly options: Opt[] = [{ label: 'Alpha', value: 'a' }];
+}
+
 describe('UiMultiSelectComponent (browser)', () => {
     function trigger(el: HTMLElement): HTMLElement {
         return el.querySelector('.ui-select-trigger') as HTMLElement;
@@ -46,7 +61,7 @@ describe('UiMultiSelectComponent (browser)', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [HostComponent],
+            declarations: [HostComponent, DisabledInputHostComponent],
             imports: [UiModule, ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations()]
         }).compileComponents();
@@ -156,9 +171,18 @@ describe('UiMultiSelectComponent (browser)', () => {
         expect(header()!.classList).toContain('ui-select-panel__checkbox--indeterminate');
     });
 
-    it('does not open when disabled via input', () => {
+    it('does not open when the form control is disabled', () => {
         const fixture = setup();
         fixture.componentInstance.ctrl.disable();
+        fixture.detectChanges();
+        trigger(fixture.nativeElement).click();
+        fixture.detectChanges();
+        expect(options().length).toBe(0);
+        expect(trigger(fixture.nativeElement).classList).toContain('ui-select-trigger--disabled');
+    });
+
+    it('does not open when disabled via input', () => {
+        const fixture = TestBed.createComponent(DisabledInputHostComponent);
         fixture.detectChanges();
         trigger(fixture.nativeElement).click();
         fixture.detectChanges();
