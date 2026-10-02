@@ -19,6 +19,7 @@ import { KanbanColumn } from '../entity/kanban-column.entity';
 import { KanbanTile } from '../entity/kanban-tile.entity';
 import { SwimlaneCell } from '../entity/swimlane-cell.entity';
 import { SwimlaneRow } from '../entity/swimlane-row.entity';
+import { SavedViewKanbanLayout } from 'src/app/project/model/saved-view.model';
 
 interface StoreMaps {
     severities: Map<number, IssueSeverity>;
@@ -44,6 +45,8 @@ export class IssueKanbanService {
     // (mutating tiles in place would not trigger change detection).
     private readonly columnsSubject = new BehaviorSubject<KanbanColumn[]>([]);
     private readonly swimlaneSubject = new BehaviorSubject<SwimlaneRow[]>([]);
+
+    private pendingLimit: number | null = null;
 
     public constructor() {
         // Drop any leftover filter from a previously-mounted view so we don't fire a
@@ -75,7 +78,7 @@ export class IssueKanbanService {
                 this.issueApi.loadGrouped$(
                     filter,
                     'state',
-                    refresh ? this.columnExtent() : this.settings.kanbanPageSize()
+                    refresh ? this.columnExtent() : this.firstPageLimit()
                 ),
                 this.maps$(filter)
             ]).pipe(
@@ -96,7 +99,7 @@ export class IssueKanbanService {
                 this.issueApi.loadGrouped$(
                     filter,
                     'state,assignedTo',
-                    refresh ? this.swimlaneExtent() : this.settings.kanbanPageSize()
+                    refresh ? this.swimlaneExtent() : this.firstPageLimit()
                 ),
                 this.maps$(filter)
             ]).pipe(
@@ -110,21 +113,35 @@ export class IssueKanbanService {
         shareReplay({ bufferSize: 1, refCount: true })
     );
 
+    public restoreLoadedCount(loadedCount: number): void {
+        this.pendingLimit = Math.max(loadedCount, this.settings.kanbanPageSize());
+    }
+
+    private firstPageLimit(): number {
+        const limit = this.pendingLimit ?? this.settings.kanbanPageSize();
+        this.pendingLimit = null;
+        return limit;
+    }
+
+    public loadedCount(layout: SavedViewKanbanLayout): number {
+        const tiles =
+            layout === 'columns'
+                ? this.columnsSubject.getValue().map(c => c.tiles.length)
+                : this.swimlaneSubject
+                      .getValue()
+                      .flatMap(row => row.cells.map(c => c.tiles.length));
+        return tiles.length ? Math.max(...tiles) : 0;
+    }
+
     // On a data refresh, re-request enough per group to cover the most-loaded column so
     // "Load more" progress survives. The grouped endpoint takes a single per-group limit,
     // so we size it to the widest column (others simply keep all they have).
     private columnExtent(): number {
-        const tiles = this.columnsSubject.getValue().map(c => c.tiles.length);
-        const loaded = tiles.length ? Math.max(...tiles) : 0;
-        return Math.max(loaded, this.settings.kanbanPageSize());
+        return Math.max(this.loadedCount('columns'), this.settings.kanbanPageSize());
     }
 
     private swimlaneExtent(): number {
-        const tiles = this.swimlaneSubject
-            .getValue()
-            .flatMap(row => row.cells.map(c => c.tiles.length));
-        const loaded = tiles.length ? Math.max(...tiles) : 0;
-        return Math.max(loaded, this.settings.kanbanPageSize());
+        return Math.max(this.loadedCount('swimlane'), this.settings.kanbanPageSize());
     }
 
     public readonly states$ = this.issueFilterStore.actualFilter$.pipe(

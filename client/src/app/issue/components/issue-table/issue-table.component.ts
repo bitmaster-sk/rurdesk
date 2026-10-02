@@ -4,9 +4,11 @@ import {
     Component,
     DestroyRef,
     ElementRef,
+    Injector,
     OnDestroy,
     OnInit,
     TemplateRef,
+    afterNextRender,
     computed,
     effect,
     inject,
@@ -37,6 +39,8 @@ import { RelationDropEvent } from './components/issue-table-drop-zone/issue-tabl
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 
@@ -66,6 +70,21 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly commandPalette = inject(CommandPaletteService);
     private readonly noticeService = inject(NoticeService);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly listState = inject(IssueListStateStore);
+    private readonly injector = inject(Injector);
+
+    private readonly tableScrollRef = viewChild<ElementRef<HTMLElement>>('tableScroll');
+
+    private pendingScroll: { top: number; left: number } | null = null;
+
+    private readonly readPosition = (): IssueListPosition => {
+        const scrollEl = this.tableScrollRef()?.nativeElement;
+        return {
+            loadedCount: this.rows().length,
+            scrollTop: scrollEl?.scrollTop ?? 0,
+            scrollLeft: scrollEl?.scrollLeft ?? 0
+        };
+    };
 
     /**
      * Keyboard row highlight (list `j`/`k`/↑↓ via HotkeyService), tracked by the
@@ -168,7 +187,25 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.issueToolbarService.register(this.toolbarRef());
     }
 
+    private readonly restoreScrollOnLoad = effect(() => {
+        if (!this.hasLoaded() || this.isLoading()) return;
+        const scroll = this.pendingScroll;
+        this.pendingScroll = null;
+        if (!scroll || this.rows().length === 0) return;
+        afterNextRender(
+            () => {
+                const scrollEl = this.tableScrollRef()?.nativeElement;
+                if (!scrollEl) return;
+                scrollEl.scrollTop = scroll.top;
+                scrollEl.scrollLeft = scroll.left;
+            },
+            { injector: this.injector }
+        );
+    });
+
     public ngOnInit(): void {
+        this.restorePosition();
+        this.listState.registerPosition(this.readPosition);
         this.setInitialFilter();
         this.onSavedViewResetSignal();
         this.issueFilterStore.actualFilter$
@@ -237,6 +274,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
+        this.listState.unregisterPosition(this.readPosition);
         this.pulseTimers.forEach(timer => clearTimeout(timer));
         this.pulseTimers.clear();
         this.issueToolbarService.clear();
@@ -438,7 +476,17 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private onSavedViewResetSignal(): void {
         this.savedViewStore.filterResetSignal$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.setInitialFilter());
+            .subscribe(() => {
+                this.listState.forgetFilter();
+                this.setInitialFilter();
+            });
+    }
+
+    private restorePosition(): void {
+        const position = this.listState.restorePosition();
+        if (!position) return;
+        this.issueTableService.restoreLoadedCount(position.loadedCount);
+        this.pendingScroll = { top: position.scrollTop, left: position.scrollLeft };
     }
 
     private setInitialFilter(): void {
@@ -460,6 +508,11 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
                         ...SavedViewConfigConverter.toFilter(pending.config),
                         idProject: project.idProject
                     });
+                    return;
+                }
+                const restored = this.listState.restoreFilter();
+                if (restored) {
+                    this.issueFilterStore.setInitialFilter(restored);
                     return;
                 }
                 this.issueFilterStore.setInitialFilter({

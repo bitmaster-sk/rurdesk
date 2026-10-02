@@ -22,6 +22,7 @@ import { UiModule } from 'src/app/ui/ui.module';
 import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 
 import { signal } from '@angular/core';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
 
 export function makeIssue(over: Partial<Issue> = {}): Issue {
     return Fixtures.issue({ idProject: 5, title: 'T', ...over });
@@ -98,6 +99,7 @@ export interface TableMocks {
     stateStoreMock: any;
     commandPaletteMock: any;
     hotkeysMock: any;
+    listStateMock: any;
 }
 
 export function configureTableTestBed(): TableMocks {
@@ -108,7 +110,8 @@ export function configureTableTestBed(): TableMocks {
         hasLoaded: signal(false),
         canLoadMore: vi.fn(() => false),
         insertRelation$: vi.fn(() => ({ pipe: vi.fn(() => ({ subscribe: vi.fn() })) })),
-        loadRelationsFor: vi.fn()
+        loadRelationsFor: vi.fn(),
+        restoreLoadedCount: vi.fn()
     };
 
     const issueFilterStoreMock = {
@@ -124,6 +127,14 @@ export function configureTableTestBed(): TableMocks {
 
     const projectStoreMock = {
         project$: of({ idProject: 10 })
+    };
+
+    const listStateMock = {
+        restoreFilter: vi.fn(() => null),
+        restorePosition: vi.fn(() => null),
+        registerPosition: vi.fn(),
+        unregisterPosition: vi.fn(),
+        forgetFilter: vi.fn()
     };
 
     const stateStoreMock = {
@@ -158,6 +169,7 @@ export function configureTableTestBed(): TableMocks {
         providers: [
             { provide: IssueTableService, useValue: issueTableServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
+            { provide: IssueListStateStore, useValue: listStateMock },
             { provide: ProjectStore, useValue: projectStoreMock },
             { provide: StateStore, useValue: stateStoreMock },
             { provide: IssueToolbarService, useValue: { register: vi.fn(), clear: vi.fn() } },
@@ -187,7 +199,8 @@ export function configureTableTestBed(): TableMocks {
         projectStoreMock,
         stateStoreMock,
         commandPaletteMock,
-        hotkeysMock
+        hotkeysMock,
+        listStateMock
     };
 }
 

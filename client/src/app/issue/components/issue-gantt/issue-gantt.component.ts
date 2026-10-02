@@ -3,7 +3,9 @@ import {
     ChangeDetectionStrategy,
     Component,
     HostListener,
+    Injector,
     OnDestroy,
+    afterNextRender,
     TemplateRef,
     effect,
     inject,
@@ -21,6 +23,8 @@ import { ProjectStore } from 'src/app/project/project.store';
 import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { IssueGanttService } from './service/issue-gantt.service';
 import { GanttTimelineService } from './service/gantt-timeline.service';
 import { GanttDragService, DragMode } from './service/gantt-drag.service';
@@ -104,6 +108,19 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     private readonly ganttOrderApi = inject(GanttOrderApi);
     private readonly toast = inject(ToastNotificationService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly listState = inject(IssueListStateStore);
+    private readonly injector = inject(Injector);
+
+    private pendingScroll: { top: number; left: number } | null = null;
+
+    private readonly readPosition = (): IssueListPosition => {
+        const container = this.timelineBodyRef()?.getScrollContainer();
+        return {
+            loadedCount: this.backlogTasks().length,
+            scrollTop: container?.scrollTop ?? 0,
+            scrollLeft: container?.scrollLeft ?? 0
+        };
+    };
 
     // Optimistic manual-order overlay: set on drop, applied over the shared
     // scheduled list until the refreshed server data matches (then auto-cleared).
@@ -396,8 +413,28 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         });
     }
 
+    private readonly restoreScrollOnData = effect(() => {
+        if (this.ganttData() === undefined) return;
+        const scroll = this.pendingScroll;
+        this.pendingScroll = null;
+        if (!scroll || this.scheduledTasks().length === 0) return;
+        afterNextRender(
+            () => {
+                const container = this.timelineBodyRef()?.getScrollContainer();
+                if (!container) return;
+                container.scrollLeft = scroll.left;
+                container.scrollTop = scroll.top;
+                this.wbsPanelRef()?.syncScrollFrom(scroll.top);
+                this.viewportScrollLeft.set(scroll.left);
+            },
+            { injector: this.injector }
+        );
+    });
+
     public ngAfterViewInit(): void {
         this.issueToolbarService.register(this.toolbarRef());
+        this.restorePosition();
+        this.listState.registerPosition(this.readPosition);
         this.setInitialFilter();
         this.projectStore.project$
             .pipe(first())
@@ -448,6 +485,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     });
 
     public ngOnDestroy(): void {
+        this.listState.unregisterPosition(this.readPosition);
         this._wsSub.unsubscribe();
         this.issueToolbarService.clear();
         this.commandPalette.setContext({ idProject: null, issue: null });
@@ -871,7 +909,17 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     private onSavedViewResetSignal(): void {
         this.savedViewStore.filterResetSignal$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.setInitialFilter());
+            .subscribe(() => {
+                this.listState.forgetFilter();
+                this.setInitialFilter();
+            });
+    }
+
+    private restorePosition(): void {
+        const position = this.listState.restorePosition();
+        if (!position) return;
+        this.ganttService.restoreBacklogCount(position.loadedCount);
+        this.pendingScroll = { top: position.scrollTop, left: position.scrollLeft };
     }
 
     private setInitialFilter(): void {
@@ -887,6 +935,15 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                     scheduledAtFrom,
                     scheduledAtTo,
                     idProject: project.idProject
+                });
+                return;
+            }
+            const restored = this.listState.restoreFilter();
+            if (restored) {
+                this.issueFilterStore.setInitialFilter({
+                    ...restored,
+                    scheduledAtFrom,
+                    scheduledAtTo
                 });
                 return;
             }

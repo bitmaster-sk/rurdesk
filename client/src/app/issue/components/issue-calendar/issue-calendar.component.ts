@@ -26,7 +26,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import { FullCalendarComponent } from '@fullcalendar/angular';
 import { CalendarOptions } from '@fullcalendar/core';
 import { IssueApi } from '../../api/issue.api.service';
-import { startOfMonth, endOfMonth, add } from 'date-fns';
+import { add } from 'date-fns';
 import { ProjectStore } from 'src/app/project/project.store';
 import { first } from 'rxjs/operators';
 import cloneDeep from 'lodash-es/cloneDeep';
@@ -36,6 +36,8 @@ import { DurationConverter } from 'src/app/shared/duration/duration.converter';
 import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { IssueCalendarService } from './service/issue-calendar.service';
 import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-actions.component';
@@ -78,6 +80,17 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private readonly destroyRef = inject(DestroyRef);
     private readonly commandPalette = inject(CommandPaletteService);
     private readonly noticeService = inject(NoticeService);
+    private readonly listState = inject(IssueListStateStore);
+
+    private readonly restoredPosition = this.listState.restorePosition();
+
+    private readonly readPosition = (): IssueListPosition => ({
+        loadedCount: 0,
+        scrollTop: 0,
+        scrollLeft: 0,
+        date: this.calendarRef().getApi().getDate(),
+        calendarView: this.currentView
+    });
 
     // Keeps Calendar import alive to prevent tree-shaking of the plugin
     private readonly _calendar = Calendar;
@@ -99,7 +112,8 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
         },
         height: '100%',
         expandRows: true,
-        initialView: 'dayGridMonth',
+        initialView: this.restoredPosition?.calendarView ?? 'dayGridMonth',
+        initialDate: this.restoredPosition?.date,
         events: [],
         editable: true,
         // Render every event as a block bar (never FC's "dot" layout for timed
@@ -186,7 +200,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     public readonly cardModeOptions = CALENDAR_CARD_MODE_OPTIONS;
 
-    public currentView = 'dayGridMonth';
+    public currentView = this.restoredPosition?.calendarView ?? 'dayGridMonth';
 
     public readonly viewOptions = [
         { labelKey: 'ISSUE.CALENDAR.DAY', value: 'timeGridDay' },
@@ -196,6 +210,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     public ngAfterViewInit(): void {
         this.issueToolbarService.register(this.toolbarRef());
+        this.listState.registerPosition(this.readPosition);
 
         this.issueCalendarService.events$
             .pipe(takeUntilDestroyed(this.destroyRef))
@@ -265,6 +280,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
+        this.listState.unregisterPosition(this.readPosition);
         this.issueToolbarService.clear();
     }
 
@@ -453,16 +469,18 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     private onSavedViewResetSignal(): void {
         this.savedViewStore.filterResetSignal$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.setInitialFilter());
+            .subscribe(() => {
+                this.listState.forgetFilter();
+                this.setInitialFilter();
+            });
     }
 
     private setInitialFilter(): void {
         this.projectStore.project$.pipe(first()).subscribe(project => {
             IssueLastViewStorage.save(project.idProject, IssueViewMode.CALENDAR);
-            const now = new Date();
-            // Never persisted in a view, so both branches need it computed here.
-            const scheduledAtFrom = startOfMonth(now);
-            const scheduledAtTo = endOfMonth(now);
+            // Never persisted in a view, so every branch needs it computed here.
+            const { activeStart: scheduledAtFrom, activeEnd: scheduledAtTo } =
+                this.calendarRef().getApi().view;
             const pending = this.savedViewStore.consumePending(project.idProject);
             if (pending) {
                 this.issueFilterStore.setInitialFilter({
@@ -470,6 +488,15 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                     scheduledAtFrom,
                     scheduledAtTo,
                     idProject: project.idProject
+                });
+                return;
+            }
+            const restored = this.listState.restoreFilter();
+            if (restored) {
+                this.issueFilterStore.setInitialFilter({
+                    ...restored,
+                    scheduledAtFrom,
+                    scheduledAtTo
                 });
                 return;
             }

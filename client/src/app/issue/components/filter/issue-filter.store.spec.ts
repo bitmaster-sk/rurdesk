@@ -77,4 +77,24 @@ describe('IssueFilterStore', () => {
         expect(emission?.refresh).toBe(true);
         expect(emission?.filter).toMatchObject({ idProject: 1 });
     });
+
+    it('changedFilter$ emits user edits but not initial filters or data refreshes', () => {
+        const emitted: IssuesFilter[] = [];
+        store.changedFilter$.subscribe(f => emitted.push(f));
+
+        store.setInitialFilter(baseFilter());
+        store.refresh();
+        expect(emitted).toEqual([]);
+
+        store.setFilter({ title: 'login' });
+        store.setOrder({ orderColumn: 'title', orderDirection: 'asc' });
+        store.setSprint(4);
+        store.refresh();
+
+        expect(emitted.map(f => [f.title, f.orderColumn, f.idSprint])).toEqual([
+            ['login', 'idIssuePublic', undefined],
+            ['login', 'title', undefined],
+            ['login', 'title', 4]
+        ]);
+    });
 });

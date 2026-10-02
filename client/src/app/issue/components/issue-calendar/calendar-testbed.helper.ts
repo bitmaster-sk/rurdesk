@@ -18,6 +18,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
 
 export function mockSub<T = unknown>() {
     const handlers: { next?: (v: T) => void; error?: (e: unknown) => void } = {};
@@ -42,6 +43,8 @@ function makeCalendarApi() {
         addEventSource: vi.fn(),
         setOption: vi.fn(),
         on: vi.fn(),
+        getDate: vi.fn(() => new Date(2026, 8, 15)),
+        view: { activeStart: new Date(2026, 8, 1), activeEnd: new Date(2026, 9, 1) },
         el
     };
     return api;
@@ -69,6 +72,7 @@ export interface CalendarMocks {
     commandPaletteMock: any;
     noticeServiceMock: any;
     i18nMock: any;
+    listStateMock: any;
 }
 
 export function configureCalendarTestBed(
@@ -119,12 +123,21 @@ export function configureCalendarTestBed(
         issue$: EMPTY
     };
 
+    const listStateMock = {
+        restoreFilter: vi.fn((): unknown => null),
+        restorePosition: vi.fn((): unknown => null),
+        registerPosition: vi.fn(),
+        unregisterPosition: vi.fn(),
+        forgetFilter: vi.fn()
+    };
+
     TestBed.configureTestingModule({
         imports: [TranslateModule.forRoot(), FullCalendarStub, QuickActionsStub, FilterStub],
         declarations: [IssueCalendarComponent],
         providers: [
             { provide: IssueCalendarService, useValue: issueCalendarServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
+            { provide: IssueListStateStore, useValue: listStateMock },
             { provide: ProjectStore, useValue: projectStoreMock },
             { provide: IssueApi, useValue: issueApiMock },
             { provide: IssueToolbarService, useValue: { register: vi.fn(), clear: vi.fn() } },
@@ -156,7 +169,8 @@ export function configureCalendarTestBed(
         issueApiMock,
         commandPaletteMock,
         noticeServiceMock,
-        i18nMock
+        i18nMock,
+        listStateMock
     };
 }
 

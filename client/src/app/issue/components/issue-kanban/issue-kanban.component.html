@@ -125,7 +125,7 @@
             [(unit)]="unit"
         ></app-sprint-health-strip>
 
-        <div class="grow overflow-auto">
+        <div class="grow overflow-auto" #boardScroll>
             @if (viewMode() === 'columns') {
                 @if (columns$ | async; as columns) {
                     <app-issue-kanban-columns

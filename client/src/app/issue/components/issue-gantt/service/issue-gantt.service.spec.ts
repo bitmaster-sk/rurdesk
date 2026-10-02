@@ -305,4 +305,24 @@ describe('IssueGanttService — backlog refresh keeps loaded pages', () => {
         expect(calls).toEqual([{ limit: 30, cursor: null }]);
         expect(backlogLength(svc)).toBe(30);
     });
+    it('loads the restored backlog count on the first load, then pages normally again', () => {
+        const store = new IssueFilterStore();
+        const calls: { limit: number; cursor: string | null }[] = [];
+        const svc = buildWithStore(
+            store,
+            limit => ({ items: backlogItems(limit), nextCursor: 'more', total: 200 }),
+            calls
+        );
+
+        svc.restoreBacklogCount(90);
+        store.setInitialFilter(initialFilter());
+        expect(backlogLength(svc)).toBe(90);
+
+        store.setFilter({ title: 'abc' });
+
+        expect(calls).toEqual([
+            { limit: 90, cursor: null },
+            { limit: 30, cursor: null }
+        ]);
+    });
 });

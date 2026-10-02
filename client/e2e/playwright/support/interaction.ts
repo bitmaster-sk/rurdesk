@@ -119,6 +119,23 @@ export abstract class Interaction {
         return token;
     }
 
+    public static async createIssuesViaApi(
+        request: APIRequestContext,
+        baseURL: string,
+        token: string,
+        idProject: number,
+        idState: number,
+        titles: string[]
+    ): Promise<void> {
+        for (const title of titles) {
+            const res = await request.post(`${baseURL}/api/private/project/${idProject}/issue`, {
+                headers: { Authorization: token },
+                data: { title, idState, description: 'Created by an e2e test.' }
+            });
+            expect(res.status(), await res.text()).toBe(200);
+        }
+    }
+
     public static async setCustomFieldValues(
         request: APIRequestContext,
         baseURL: string,

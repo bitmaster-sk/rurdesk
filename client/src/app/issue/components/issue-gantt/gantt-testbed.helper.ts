@@ -28,6 +28,7 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ExtendedIssue } from '../../model/extended-issue.model';
 import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../model/issue-relation.model';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
 
 export function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
     return Fixtures.extendedIssue({
@@ -141,6 +142,7 @@ export interface GanttMocks {
     ganttOrderApiMock: any;
     toastMock: any;
     noticeServiceMock: any;
+    listStateMock: any;
 }
 
 export function configureGanttTestBed(
@@ -162,7 +164,8 @@ export function configureGanttTestBed(
         backlogLoading: vi.fn(() => false),
         loadMoreBacklog: vi.fn(),
         addRelations: vi.fn(),
-        removeRelation: vi.fn()
+        removeRelation: vi.fn(),
+        restoreBacklogCount: vi.fn()
     };
 
     const rowHeightSignal = Object.assign(() => 72, { set: vi.fn() });
@@ -238,6 +241,14 @@ export function configureGanttTestBed(
     const toastMock = { showError: vi.fn() };
     const noticeServiceMock = { show: vi.fn(), relation$: EMPTY, issue$: EMPTY };
 
+    const listStateMock = {
+        restoreFilter: vi.fn((): unknown => null),
+        restorePosition: vi.fn((): unknown => null),
+        registerPosition: vi.fn(),
+        unregisterPosition: vi.fn(),
+        forgetFilter: vi.fn()
+    };
+
     TestBed.configureTestingModule({
         imports: [
             TranslateModule.forRoot(),
@@ -255,6 +266,7 @@ export function configureGanttTestBed(
             { provide: GanttCascadeService, useValue: cascadeServiceMock },
             { provide: GanttCriticalPathService, useValue: criticalPathServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
+            { provide: IssueListStateStore, useValue: listStateMock },
             { provide: ProjectStore, useValue: projectStoreMock },
             { provide: IssueBulkApi, useValue: bulkApiMock },
             { provide: IssueApi, useValue: issueApiMock },
@@ -300,7 +312,8 @@ export function configureGanttTestBed(
         relationApiMock,
         ganttOrderApiMock,
         toastMock,
-        noticeServiceMock
+        noticeServiceMock,
+        listStateMock
     };
 }
 
