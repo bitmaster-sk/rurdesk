@@ -36,6 +36,12 @@ export class IssueFilterStore {
         filter((f): f is IssuesFilter => !!f)
     );
 
+    public readonly changedFilter$ = this.filter.asObservable().pipe(
+        filter(f => !f.initial && !f.refresh),
+        map(f => f.filter),
+        filter((f): f is IssuesFilter => !!f)
+    );
+
     public showFilter$ = this.showFilter.asObservable();
 
     /** Should emit only when the filter is modified (not initial or refresh) */

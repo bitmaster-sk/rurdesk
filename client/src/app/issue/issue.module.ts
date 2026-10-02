@@ -19,6 +19,7 @@ import { DragDropModule } from '@angular/cdk/drag-drop';
 import { FilterComponent } from './components/filter/filter.component';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueFilterStore } from './components/filter/issue-filter.store';
+import { IssueListStateStore } from './store/issue-list-state.store';
 import { SavedViewApplyService } from './service/saved-view-apply.service';
 import { SavedViewMenuComponent } from './components/saved-view-menu/saved-view-menu.component';
 import { SavedViewDialogComponent } from './components/saved-view-dialog/saved-view-dialog.component';
@@ -183,6 +184,7 @@ import { AgentModule } from '../agent/agent.module';
     ],
     providers: [
         IssueFilterStore,
+        IssueListStateStore,
         IssueToolbarService,
         SavedViewApplyService,
         provideTablerIcons({
