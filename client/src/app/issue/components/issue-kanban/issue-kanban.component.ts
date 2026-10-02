@@ -1,10 +1,13 @@
 import {
     AfterViewInit,
+    afterNextRender,
     ChangeDetectionStrategy,
     Component,
     computed,
     DestroyRef,
+    ElementRef,
     inject,
+    Injector,
     OnDestroy,
     OnInit,
     signal,
@@ -21,13 +24,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
-import { first, map } from 'rxjs/operators';
+import { first, map, tap } from 'rxjs/operators';
 import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueKanbanService } from './service/issue-kanban.service';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { KanbanColumn } from './entity/kanban-column.entity';
 import { KanbanTile } from './entity/kanban-tile.entity';
 import { SwimlaneCell } from './entity/swimlane-cell.entity';
@@ -80,12 +85,35 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private readonly destroyRef = inject(DestroyRef);
 
+    private readonly listState = inject(IssueListStateStore);
+
+    private readonly injector = inject(Injector);
+
+    private readonly boardScrollRef = viewChild<ElementRef<HTMLElement>>('boardScroll');
+
+    private pendingScroll: { top: number; left: number } | null = null;
+
+    private rememberedIdSprint: number | null | undefined = undefined;
+
+    private readonly readPosition = (): IssueListPosition => {
+        const scrollEl = this.boardScrollRef()?.nativeElement;
+        return {
+            loadedCount: this.issueKanbanService.loadedCount(this.viewMode()),
+            scrollTop: scrollEl?.scrollTop ?? 0,
+            scrollLeft: scrollEl?.scrollLeft ?? 0,
+            kanbanLayout: this.viewMode(),
+            idSprint: this.selectedIdSprint()
+        };
+    };
+
     private readonly toolbarRef = viewChild.required<TemplateRef<unknown>>('toolbar');
 
     private readonly quickActionsRef =
         viewChild.required<IssueQuickActionsComponent>('quickActions');
 
-    protected readonly columns$ = this.issueKanbanService.columns$;
+    protected readonly columns$ = this.issueKanbanService.columns$.pipe(
+        tap(() => this.restoreScrollAfterRender())
+    );
 
     protected readonly showFilter$ = this.issueFilterStore.showFilter$;
 
@@ -99,7 +127,10 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected readonly swimlaneData$ = combineLatest([
         this.issueKanbanService.swimlaneRows$,
         this.issueKanbanService.states$
-    ]).pipe(map(([rows, states]) => ({ rows, states })));
+    ]).pipe(
+        map(([rows, states]) => ({ rows, states })),
+        tap(() => this.restoreScrollAfterRender())
+    );
 
     protected readonly sprints = toSignal(this.sprintStore.sprints$, { initialValue: [] });
 
@@ -228,9 +259,19 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public ngOnInit(): void {
         this.savedViewStore.setLiveKanbanLayout(this.viewMode());
+        const position = this.listState.restorePosition();
+        if (position) {
+            this.issueKanbanService.restoreLoadedCount(position.loadedCount);
+            this.pendingScroll = { top: position.scrollTop, left: position.scrollLeft };
+            this.rememberedIdSprint = position.idSprint;
+        }
+        this.listState.registerPosition(this.readPosition);
         this.setInitialFilter();
         this.onSavedViewResetSignal();
         this.applyViewLayoutOnChange();
+        if (position?.kanbanLayout) {
+            this.onViewModeChange(position.kanbanLayout);
+        }
 
         // Live updates: apply teammate changes to the loaded board. A move
         // between columns FLIP-flies the card; own drags land as in-place
@@ -337,6 +378,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
+        this.listState.unregisterPosition(this.readPosition);
         this.issueToolbarService.clear();
         // left behind, it would land in a view saved from the table or the calendar
         this.savedViewStore.setLiveKanbanLayout(null);
@@ -386,8 +428,12 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     protected onSprintChange(idSprint: number | null): void {
-        this.selectedIdSprint.set(idSprint);
         this.issueFilterStore.setSprint(idSprint);
+        this.scopeToSprint(idSprint);
+    }
+
+    private scopeToSprint(idSprint: number | null): void {
+        this.selectedIdSprint.set(idSprint);
         this.analytics.scopeAndReload(this.idProject(), idSprint);
         if (this.showCharts()) {
             this.analytics.reloadBurndown();
@@ -574,7 +620,25 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private onSavedViewResetSignal(): void {
         this.savedViewStore.filterResetSignal$
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe(() => this.setDefaultFilter(this.idProject(), this.selectedIdSprint()));
+            .subscribe(() => {
+                this.listState.forgetFilter();
+                this.setDefaultFilter(this.idProject(), this.selectedIdSprint());
+            });
+    }
+
+    private restoreScrollAfterRender(): void {
+        const scroll = this.pendingScroll;
+        if (!scroll) return;
+        this.pendingScroll = null;
+        afterNextRender(
+            () => {
+                const scrollEl = this.boardScrollRef()?.nativeElement;
+                if (!scrollEl) return;
+                scrollEl.scrollTop = scroll.top;
+                scrollEl.scrollLeft = scroll.left;
+            },
+            { injector: this.injector }
+        );
     }
 
     /** Both apply paths end in setInitialFilter, so this covers a remount and a same-mode push. */
@@ -593,24 +657,47 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.projectStore.project$.pipe(first()).subscribe(project => {
             this.idProject.set(project.idProject);
             this.projectName.set(project.name);
+            const remembered = this.rememberedIdSprint;
             this.sprintStore.currentSprintOnLoad$
                 .pipe(first(), takeUntilDestroyed(this.destroyRef))
-                .subscribe(current => this.onSprintChange(current?.idSprint ?? null));
+                .subscribe(current => {
+                    if (remembered !== undefined && this.isSprintSelectable(remembered)) {
+                        this.scopeToSprint(remembered);
+                    } else {
+                        this.onSprintChange(current?.idSprint ?? null);
+                    }
+                });
             this.sprintStore.load(project.idProject);
             this.analytics.setScope(project.idProject, this.selectedIdSprint());
             this.analytics.reloadVelocity();
 
             const pending = this.savedViewStore.consumePending(project.idProject);
+            const restored = pending ? null : this.listState.restoreFilter();
             if (pending) {
                 // A staged view REPLACES the defaults: a field it omits is unfiltered.
                 this.issueFilterStore.setInitialFilter({
                     ...SavedViewConfigConverter.toFilter(pending.config),
                     idProject: project.idProject
                 });
+            } else if (restored) {
+                this.sortColumn.set(restored.orderColumn);
+                this.sortDirection.set(restored.orderDirection);
+                this.issueFilterStore.setInitialFilter({
+                    ...restored,
+                    ...(remembered === undefined
+                        ? {}
+                        : { idSprint: remembered, sprintUnset: remembered === null })
+                });
             } else {
-                this.setDefaultFilter(project.idProject);
+                this.setDefaultFilter(project.idProject, remembered);
             }
         });
+    }
+
+    private isSprintSelectable(idSprint: number | null): boolean {
+        if (idSprint === null) return true;
+        const sprint = this.sprints().find(s => s.idSprint === idSprint);
+        return !!sprint && (sprint.state !== SprintState.Closed || this.showClosedSprints());
     }
 
     private setDefaultFilter(idProject: number, idSprint?: number | null): void {

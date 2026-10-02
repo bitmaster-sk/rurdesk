@@ -30,6 +30,9 @@ import { NoticeSubject } from 'src/app/shared/notice/constant/notice-subject.enu
 import { Issue } from '../../model/issue.model';
 import { LangChangeEvent } from '@ngx-translate/core';
 import { Fixtures } from 'src/testing/fixtures';
+import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssuesFilter } from '../filter/issue-filter.entity';
+import { IssueListPosition } from '../../entity/issue-list-position.entity';
 
 const storage = new Map<string, string>();
 vi.stubGlobal('localStorage', {
@@ -175,7 +178,9 @@ function makeStats(overrides: Partial<SprintStats> = {}): SprintStats {
 function setup(
     sprints: Sprint[] = [],
     project: { idProject: number } | null = { idProject: 1 },
-    issueNotices: Observable<Notice<Issue>> = EMPTY
+    issueNotices: Observable<Notice<Issue>> = EMPTY,
+    restoredFilter: IssuesFilter | null = null,
+    restoredPosition: IssueListPosition | null = null
 ): Harness {
     const update$ = vi.fn().mockReturnValue(of(undefined as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
@@ -195,7 +200,12 @@ function setup(
             { provide: IssueApi, useValue: { update$ } },
             {
                 provide: IssueKanbanService,
-                useValue: { columns$: of([]), swimlaneRows$: of([]), states$: of([]) }
+                useValue: {
+                    columns$: of([]),
+                    swimlaneRows$: of([]),
+                    states$: of([]),
+                    restoreLoadedCount: () => undefined
+                }
             },
             SprintStore,
             SprintAnalyticsStore,
@@ -241,7 +251,17 @@ function setup(
                 useValue: { project$: project === null ? NEVER : of(project) }
             },
             { provide: SavedViewApi, useValue: { loadByProject$: () => of([]) } },
-            SavedViewStore
+            SavedViewStore,
+            {
+                provide: IssueListStateStore,
+                useValue: {
+                    restoreFilter: () => restoredFilter,
+                    restorePosition: () => restoredPosition,
+                    registerPosition: () => undefined,
+                    unregisterPosition: () => undefined,
+                    forgetFilter: () => undefined
+                }
+            }
         ]
     });
 
@@ -667,6 +687,88 @@ describe('IssueKanbanComponent — saved view reset', () => {
         expect(h.setInitialFilter).toHaveBeenCalledWith(
             expect.objectContaining({ idSprint: null, sprintUnset: true })
         );
+    });
+});
+
+describe('IssueKanbanComponent — remembered filter', () => {
+    beforeEach(() => storage.clear());
+
+    const remembered: IssuesFilter = {
+        idProject: 1,
+        title: 'login',
+        orderColumn: 'updateAt',
+        orderDirection: 'desc'
+    };
+
+    function backTo(idSprint: number | null): IssueListPosition {
+        return { loadedCount: 20, scrollTop: 0, scrollLeft: 0, idSprint };
+    }
+
+    function lastFilter(h: Harness): IssuesFilter {
+        const calls = h.setInitialFilter.mock.calls;
+        return calls[calls.length - 1][0];
+    }
+
+    it('shows the remembered filter instead of the defaults', () => {
+        const h = setup([openSprint, secondSprint], { idProject: 1 }, EMPTY, remembered);
+
+        expect(h.setInitialFilter).toHaveBeenCalledTimes(1);
+        expect(h.setInitialFilter).toHaveBeenCalledWith(remembered);
+    });
+
+    it('shows the remembered sort in the sort button', () => {
+        const h = setup([openSprint], { idProject: 1 }, EMPTY, remembered);
+
+        expect(handlers(h.component).currentSortLabel()).toBe('UPDATED.AT');
+    });
+
+    it('opens on the current sprint when the board is not reached through Back', () => {
+        const h = setup([openSprint, secondSprint], { idProject: 1 }, EMPTY, remembered);
+
+        expect(handlers(h.component).selectedIdSprint()).toBe(openSprint.idSprint);
+    });
+
+    it('goes back to the sprint tab that was open before leaving', () => {
+        const h = setup(
+            [openSprint, secondSprint],
+            { idProject: 1 },
+            EMPTY,
+            remembered,
+            backTo(secondSprint.idSprint)
+        );
+
+        expect(handlers(h.component).selectedIdSprint()).toBe(secondSprint.idSprint);
+        expect(lastFilter(h)).toMatchObject({
+            title: 'login',
+            idSprint: secondSprint.idSprint,
+            sprintUnset: false
+        });
+    });
+
+    it('goes back to the backlog tab when it was open before leaving', () => {
+        const h = setup([openSprint], { idProject: 1 }, EMPTY, null, backTo(null));
+
+        expect(handlers(h.component).selectedIdSprint()).toBeNull();
+        expect(lastFilter(h)).toMatchObject({ idSprint: null, sprintUnset: true });
+    });
+
+    it('falls back to the current sprint when the remembered one was deleted', () => {
+        const h = setup([openSprint], { idProject: 1 }, EMPTY, remembered, backTo(99));
+
+        expect(handlers(h.component).selectedIdSprint()).toBe(openSprint.idSprint);
+        expect(h.setSprint).toHaveBeenCalledWith(openSprint.idSprint);
+    });
+
+    it('falls back to the current sprint when the remembered one closed and is hidden', () => {
+        const h = setup(
+            [openSprint, closedOld],
+            { idProject: 1 },
+            EMPTY,
+            remembered,
+            backTo(closedOld.idSprint)
+        );
+
+        expect(handlers(h.component).selectedIdSprint()).toBe(openSprint.idSprint);
     });
 });
 

@@ -391,4 +391,31 @@ describe('IssueKanbanService — columns keep loaded pages on refresh', () => {
         expect(groupedCalls[groupedCalls.length - 1]).toBe(40);
         expect(columns.find(c => c.state.idState === 1)!.tiles.length).toBe(40);
     });
+    it('loads the restored card count on the first load, then pages normally again', () => {
+        const store = new IssueFilterStore();
+        const groupedCalls: number[] = [];
+        const svc = buildRefreshService(store, groupedCalls);
+        let columns: KanbanColumn[] = [];
+        svc.columns$.subscribe(c => (columns = c));
+
+        svc.restoreLoadedCount(40);
+        store.setInitialFilter(initialFilter());
+        expect(columns.find(c => c.state.idState === 1)!.tiles.length).toBe(40);
+
+        store.setFilter({ title: 'abc' });
+
+        expect(groupedCalls).toEqual([40, 20]);
+    });
+
+    it('reports the most-loaded column as the loaded count', () => {
+        const store = new IssueFilterStore();
+        const svc = buildRefreshService(store, []);
+        let columns: KanbanColumn[] = [];
+        svc.columns$.subscribe(c => (columns = c));
+        store.setInitialFilter(initialFilter());
+
+        svc.loadMoreColumn(columns.find(c => c.state.idState === 1)!);
+
+        expect(svc.loadedCount('columns')).toBe(40);
+    });
 });
