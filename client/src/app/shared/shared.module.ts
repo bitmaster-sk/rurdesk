@@ -24,7 +24,7 @@ import { IssueTypeDropdownComponent } from './issue-type-dropdown/issue-type-dro
 import { TeammateSelectorComponent } from './teammate-selector/teammate-selector.component';
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
-import { MentionChipComponent } from './mention/mention-chip/mention-chip.component';
+
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
 import { DeleteMigrationDialogComponent } from './components/delete-migration-dialog/delete-migration-dialog.component';
@@ -73,7 +73,6 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
-        MentionChipComponent,
         MessageBodyComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
@@ -131,7 +130,6 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
-        MentionChipComponent,
         MessageBodyComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
