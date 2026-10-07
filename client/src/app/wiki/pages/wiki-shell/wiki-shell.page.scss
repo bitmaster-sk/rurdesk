@@ -1,0 +1,190 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.wiki-shell {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+}
+
+.wiki-nav {
+    flex: 0 0 15.5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--ui-color-canvas);
+    border-right: 1px solid var(--ui-color-border);
+
+    &__head {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-l) var(--ui-space-m) var(--ui-space);
+    }
+
+    &__title {
+        flex: 1;
+        margin: 0;
+        font-size: var(--font-size-l);
+    }
+
+    &__search {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        margin: 0 var(--ui-space-m) var(--ui-space);
+        padding: var(--ui-space-s) var(--ui-space);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-surface);
+
+        &:focus-within {
+            border-color: var(--ui-color-primary);
+        }
+    }
+
+    &__search-input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--ui-color-text);
+        font: inherit;
+        font-size: var(--font-size);
+    }
+
+    &__search-clear {
+        display: inline-flex;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ui-color-text-muted);
+        cursor: pointer;
+    }
+
+    &__scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: var(--ui-space-l);
+        font-size: var(--font-size);
+    }
+
+    &__group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--ui-space) var(--ui-space-m) var(--ui-space-s);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    &__group-add {
+        display: inline-flex;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ui-color-text-muted);
+        cursor: pointer;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+    }
+
+    &__list {
+        display: block;
+        padding: 0 var(--ui-space);
+    }
+
+    &__flat {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-s);
+        border-radius: var(--ui-radius-sm);
+        color: var(--ui-color-text-muted);
+        text-decoration: none;
+
+        &:hover {
+            background: var(--ui-color-content-hover);
+            color: var(--ui-color-primary);
+        }
+
+        &--active {
+            background: var(--ui-color-primary-weak-border);
+            color: var(--ui-color-primary);
+            font-weight: bold;
+        }
+    }
+
+    &__count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        min-width: 14px;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-muted-fg);
+    }
+
+    &__robot {
+        color: var(--ui-green-700);
+    }
+
+    &__empty {
+        padding: var(--ui-space-s) var(--ui-space-l);
+        color: var(--ui-color-muted-fg);
+        font-style: italic;
+    }
+
+    &__hit {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-xs);
+        margin: 0 var(--ui-space);
+        padding: var(--ui-space);
+        border-radius: var(--ui-radius-sm);
+        text-decoration: none;
+        color: var(--ui-color-text);
+
+        &:hover {
+            background: var(--ui-color-content-hover);
+        }
+
+        mark {
+            background: var(--ui-color-highlight);
+            color: inherit;
+            border-radius: 2px;
+        }
+    }
+
+    &__hit-title {
+        font-weight: bold;
+    }
+
+    &__hit-snippet {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        line-height: 1.5;
+    }
+
+    &__footer {
+        padding: var(--ui-space);
+        border-top: 1px solid var(--ui-color-border);
+        font-size: var(--font-size);
+    }
+}
+
+.wiki-main {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+}

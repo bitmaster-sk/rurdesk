@@ -1,0 +1,84 @@
+@if (view(); as view) {
+<div class="wiki-history" data-testid="wiki-history">
+    <header class="wiki-history__head">
+        <div>
+            <div class="wiki-history__crumb">
+                <app-wiki-tree-show />
+                {{ view.page.title }}
+            </div>
+            <h1>{{ 'WIKI.HISTORY.TITLE' | translate }}</h1>
+        </div>
+        <ui-button
+            variant="text"
+            severity="secondary"
+            [routerLink]="['/project', idProject, 'wiki', view.spaceKind, view.page.slug]"
+        >
+            <tabler-icon icon="arrow-left" [size]="16" />
+            {{ 'WIKI.HISTORY.BACK' | translate }}
+        </ui-button>
+    </header>
+    <div class="wiki-history__body">
+        <div class="wiki-history__versions">
+            @for (version of versions(); track version.versionNo) {
+            <button
+                type="button"
+                class="wiki-history__version"
+                data-testid="wiki-version"
+                [class.wiki-history__version--selected]="version.versionNo === selected()"
+                (click)="onSelect(version.versionNo)"
+            >
+                <span class="wiki-history__version-top">
+                    <b>v{{ version.versionNo }}</b>
+                    <span>{{ version.createAt | date: 'short' }}</span>
+                </span>
+                <span>{{ authorName(version.createBy) }}</span>
+                @if (version.note) {
+                <span class="wiki-history__note">{{ version.note }}</span>
+                } @if (version.mergedFrom) {
+                <span class="wiki-history__note">
+                    {{ 'WIKI.HISTORY.MERGED_FROM' | translate: { version: version.mergedFrom } }}
+                </span>
+                }
+            </button>
+            }
+        </div>
+        <div class="wiki-history__diff">
+            @if (selected(); as selectedNo) {
+            <div class="wiki-history__diff-head">
+                <b>
+                    {{ selectedNo === 1 ? ('WIKI.HISTORY.CREATED' | translate) : 'v' + (selectedNo -
+                    1) + ' → v' + selectedNo }}
+                </b>
+                @if (view.canEdit && selectedNo !== latest()) {
+                <ui-button
+                    size="small"
+                    variant="outlined"
+                    data-testid="wiki-revert"
+                    uiConfirm
+                    [confirmText]="'WIKI.HISTORY.RESTORE_CONFIRM' | translate: { version: selectedNo }"
+                    (confirmed)="onRevert(selectedNo)"
+                >
+                    <tabler-icon icon="restore" [size]="14" />
+                    {{ 'WIKI.HISTORY.RESTORE' | translate: { version: selectedNo } }}
+                </ui-button>
+                }
+            </div>
+            @if (firstVersion(); as first) {
+            <pre class="wiki-history__first">{{ first.body }}</pre>
+            } @else if (diff(); as diff) {
+            <app-diff-viewer [rawPatch]="diff" />
+            } @else if (diff() === '') {
+            <div class="wiki-history__same">{{ 'WIKI.HISTORY.NO_TEXT_CHANGE' | translate }}</div>
+            } @else {
+            <div class="flex h-full min-h-40 w-full items-center justify-center">
+                <ui-loader [size]="32" />
+            </div>
+            } }
+        </div>
+    </div>
+</div>
+} @else {
+<div class="flex h-full min-h-40 w-full items-center justify-center">
+    <ui-loader [size]="32" />
+</div>
+}

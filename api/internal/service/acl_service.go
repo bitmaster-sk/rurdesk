@@ -316,6 +316,43 @@ func (acl *AclService) CanReadTeam(ctx context.Context, idUser, idTeam int64) bo
 	return isMember
 }
 
+// --- Wiki ---
+
+func (acl *AclService) CanReadWiki(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleViewer)
+}
+
+func (acl *AclService) CanEditWiki(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleMember)
+}
+
+func (acl *AclService) CanManageWiki(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
+}
+
+func (acl *AclService) CanEditSharedWiki(ctx context.Context, idUser int64) bool {
+	idsProject, err := acl.LoadVisibleProjectIds(ctx, idUser)
+	if err != nil {
+		extctx.GetLogger(ctx).Error().Err(err).Msg("CanEditSharedWiki")
+		return false
+	}
+	for _, idProject := range idsProject {
+		if acl.atLeast(ctx, idUser, idProject, model.RoleMember) {
+			return true
+		}
+	}
+	return false
+}
+
+func (acl *AclService) CanManageSharedWiki(ctx context.Context, idUser int64) bool {
+	isAdmin, err := acl.userRepo.IsAdminUser(ctx, idUser)
+	if err != nil {
+		extctx.GetLogger(ctx).Error().Err(err).Msg("CanManageSharedWiki")
+		return false
+	}
+	return isAdmin
+}
+
 func isInUserArray(users []*model.User, idUser int64) bool {
 	for _, u := range users {
 		if u.IdUser == idUser {

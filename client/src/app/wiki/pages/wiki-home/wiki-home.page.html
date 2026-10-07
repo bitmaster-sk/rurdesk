@@ -1,0 +1,21 @@
+@if (isIntroShown()) {
+<div class="wiki-home" data-testid="wiki-home">
+    <div class="wiki-home__bar"><app-wiki-tree-show /></div>
+    <div class="wiki-home__intro">
+        <tabler-icon icon="book-2" [size]="40" class="ui-color-primary" />
+        <h1>{{ 'WIKI.HOME.TITLE' | translate }}</h1>
+        <p>{{ 'WIKI.HOME.TEXT' | translate }}</p>
+        <p class="wiki-home__muted">{{ 'WIKI.HOME.COUNT' | translate: { count: pageCount() } }}</p>
+        @if (canCreate()) {
+        <ui-button data-testid="wiki-home-create" (click)="onCreate()">
+            <tabler-icon icon="plus" [size]="16" />
+            {{ 'WIKI.PAGE.NEW' | translate }}
+        </ui-button>
+        }
+    </div>
+</div>
+} @else {
+<div class="flex h-full min-h-40 w-full items-center justify-center">
+    <ui-loader [size]="32" />
+</div>
+}

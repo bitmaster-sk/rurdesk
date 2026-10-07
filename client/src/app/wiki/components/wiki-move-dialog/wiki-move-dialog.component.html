@@ -1,0 +1,29 @@
+<ui-dialog [(visible)]="visible" [header]="'WIKI.MOVE.TITLE' | translate" width="28rem">
+    <div class="flex flex-col gap-2">
+        <label class="ui-color-text-muted" for="wiki-move-parent">
+            {{ 'WIKI.FIELD.PARENT' | translate }}
+        </label>
+        <ui-select
+            inputId="wiki-move-parent"
+            data-testid="wiki-move-parent"
+            [options]="options()"
+            optionLabel="label"
+            optionValue="value"
+            [filter]="true"
+            [ngModel]="selected()"
+            (ngModelChange)="selected.set($event)"
+        >
+            <ng-template #item let-option>
+                <span [style.padding-left.rem]="option.depth">{{ option.label }}</span>
+            </ng-template>
+        </ui-select>
+        <div class="flex justify-end gap-2 mt-3">
+            <ui-button variant="text" severity="secondary" (click)="visible.set(false)">
+                {{ 'CANCEL' | translate }}
+            </ui-button>
+            <ui-button data-testid="wiki-move-confirm" (click)="onConfirm()">
+                {{ 'WIKI.MOVE.CONFIRM' | translate }}
+            </ui-button>
+        </div>
+    </div>
+</ui-dialog>

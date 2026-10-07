@@ -1,0 +1,104 @@
+<div class="wiki-conflict" data-testid="wiki-conflict">
+    <div class="wiki-conflict__summary">
+        <ui-tag
+            severity="warn"
+            [value]="'WIKI.CONFLICT.COUNT' | translate: { count: conflictCount() }"
+        />
+        <span class="ui-color-text-muted">{{ 'WIKI.CONFLICT.HINT' | translate }}</span>
+        <span class="grow"></span>
+        <ui-button variant="text" severity="secondary" (click)="cancelled.emit()">
+            {{ 'WIKI.CONFLICT.BACK' | translate }}
+        </ui-button>
+        <ui-button
+            data-testid="wiki-conflict-save"
+            [disabled]="remaining() > 0"
+            [loading]="isSaving()"
+            (click)="onResolve()"
+        >
+            <tabler-icon icon="check" [size]="16" />
+            {{
+                remaining() > 0
+                    ? ('WIKI.CONFLICT.REMAINING' | translate: { count: remaining() })
+                    : ('WIKI.CONFLICT.SAVE' | translate)
+            }}
+        </ui-button>
+    </div>
+
+    @for (chunk of chunks(); track $index) {
+        @if (chunk.kind === ChunkKind.Stable) {
+            <pre class="wiki-conflict__stable">{{ joined(chunk.lines) }}</pre>
+        } @else {
+            <div class="wiki-conflict__chunk" data-testid="wiki-conflict-chunk">
+                <div class="wiki-conflict__chunk-head">
+                    <tabler-icon icon="alert-triangle" [size]="16" class="ui-color-orange" />
+                    <span class="grow">{{ 'WIKI.CONFLICT.CHUNK' | translate }}</span>
+                    <ui-button
+                        size="small"
+                        [variant]="choice($index)?.pick === Pick.Mine ? 'filled' : 'outlined'"
+                        data-testid="wiki-conflict-mine"
+                        (click)="onPick($index, Pick.Mine)"
+                    >
+                        {{ 'WIKI.CONFLICT.USE_MINE' | translate }}
+                    </ui-button>
+                    <ui-button
+                        size="small"
+                        [variant]="choice($index)?.pick === Pick.Theirs ? 'filled' : 'outlined'"
+                        data-testid="wiki-conflict-theirs"
+                        (click)="onPick($index, Pick.Theirs)"
+                    >
+                        {{ 'WIKI.CONFLICT.USE_THEIRS' | translate }}
+                    </ui-button>
+                    <ui-button
+                        size="small"
+                        [variant]="choice($index)?.pick === Pick.Both ? 'filled' : 'outlined'"
+                        (click)="onPick($index, Pick.Both)"
+                    >
+                        {{ 'WIKI.CONFLICT.USE_BOTH' | translate }}
+                    </ui-button>
+                    <ui-button
+                        size="small"
+                        [variant]="choice($index)?.pick === Pick.Custom ? 'filled' : 'text'"
+                        (click)="onPick($index, Pick.Custom)"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                        {{ 'WIKI.CONFLICT.EDIT' | translate }}
+                    </ui-button>
+                </div>
+                @if (choice($index)?.pick === Pick.Custom) {
+                    <textarea
+                        uiTextarea
+                        class="wiki-conflict__custom"
+                        rows="6"
+                        [value]="choice($index)?.custom ?? ''"
+                        (input)="onCustomInput($index, $event)"
+                    ></textarea>
+                } @else {
+                    <div class="wiki-conflict__sides">
+                        <div
+                            class="wiki-conflict__side wiki-conflict__side--mine"
+                            [class.wiki-conflict__side--chosen]="
+                                choice($index)?.pick === Pick.Mine ||
+                                choice($index)?.pick === Pick.Both
+                            "
+                        >
+                            <div class="wiki-conflict__label">
+                                {{ 'WIKI.CONFLICT.MINE' | translate }}
+                            </div>
+                            <pre>{{ joined(chunk.mine) }}</pre>
+                        </div>
+                        <div
+                            class="wiki-conflict__side wiki-conflict__side--theirs"
+                            [class.wiki-conflict__side--chosen]="
+                                choice($index)?.pick === Pick.Theirs ||
+                                choice($index)?.pick === Pick.Both
+                            "
+                        >
+                            <div class="wiki-conflict__label">{{ theirsLabel() }}</div>
+                            <pre>{{ joined(chunk.theirs) }}</pre>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>

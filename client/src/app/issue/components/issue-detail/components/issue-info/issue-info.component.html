@@ -152,11 +152,7 @@
                         (mousedown)="onDescriptionPreviewMousedown($event)"
                         (click)="onToggleInputDescription($event)"
                     >
-                        <div
-                            markdown
-                            [data]="form.get('description')?.value"
-                            ngPreserveWhitespaces
-                        ></div>
+                        <app-message-body [body]="form.get('description')?.value ?? ''" />
                     </div>
                 }
             }
@@ -200,6 +196,16 @@
                     [currentUserId]="currentUserId()"
                     [members]="users()"
                 ></app-issue-participants>
+            </div>
+        }
+
+        @if (!isNewIssue()) {
+            <div class="col-span-12 mt-2">
+                <app-issue-wiki-panel
+                    [idProject]="project()?.idProject ?? 0"
+                    [idIssue]="currentIssue()?.idIssue ?? null"
+                    [canEdit]="canEditWiki()"
+                ></app-issue-wiki-panel>
             </div>
         }
 

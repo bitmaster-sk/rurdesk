@@ -7,6 +7,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../shared/shared.module';
 import { ProjectFormWindowComponent } from './components/project-form-window/project-form-window.component';
 import { ProjectSettingsPage } from './pages/project-settings/project-settings.page';
+import { ProjectWikiSettingsComponent } from './components/project-wiki-settings/project-wiki-settings.component';
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueTypeModule } from '../issue-type/issue-type.module';
@@ -65,6 +66,7 @@ import { CommandRegistryService } from '../core/command/command-registry.service
 import { NavigationCommandProvider } from './command/navigation.command-provider';
 import { SavedViewCommandProvider } from './command/saved-view.command-provider';
 import { PeopleCommandProvider } from './command/people.command-provider';
+import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
 
 @NgModule({
     declarations: [
@@ -72,6 +74,7 @@ import { PeopleCommandProvider } from './command/people.command-provider';
         ProjectFormComponent,
         ProjectFormWindowComponent,
         ProjectSettingsPage,
+        ProjectWikiSettingsComponent,
         ProjectBuilderComponent,
         ProjectBuilderStepInputComponent,
         ProjectBuilderStepStagingComponent,
@@ -142,10 +145,12 @@ export class ProjectModule {
         registry: CommandRegistryService,
         nav: NavigationCommandProvider,
         people: PeopleCommandProvider,
-        savedViews: SavedViewCommandProvider
+        savedViews: SavedViewCommandProvider,
+        wiki: WikiCommandProvider
     ) {
         registry.register(nav);
         registry.register(people);
         registry.register(savedViews);
+        registry.register(wiki);
     }
 }

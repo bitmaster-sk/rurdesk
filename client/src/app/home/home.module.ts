@@ -24,6 +24,7 @@ import {
     IconCalendar,
     IconChartColumn,
     IconDeviceDesktop,
+    IconBook2,
     IconSparkles,
     IconInfoCircle,
     IconAlertTriangle,
@@ -53,6 +54,7 @@ import {
         provideTablerIcons({
             IconPlus,
             IconUser,
+            IconBook2,
             IconUsers,
             IconSettings,
             IconLogout,

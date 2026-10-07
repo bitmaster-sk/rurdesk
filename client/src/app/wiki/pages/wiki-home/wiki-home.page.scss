@@ -1,0 +1,34 @@
+.wiki-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ui-space-xl);
+    padding: var(--ui-space-xl);
+
+    &__bar {
+        align-self: stretch;
+    }
+
+    &__intro {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--ui-space);
+        max-width: 32rem;
+        margin-top: var(--ui-space-xl);
+        text-align: center;
+
+        h1 {
+            margin: 0;
+        }
+
+        p {
+            margin: 0;
+            color: var(--ui-color-text-muted);
+        }
+    }
+
+    &__muted {
+        font-size: var(--font-size-s);
+    }
+}

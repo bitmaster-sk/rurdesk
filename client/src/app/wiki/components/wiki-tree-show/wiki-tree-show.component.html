@@ -1,0 +1,14 @@
+@if (layout.isTreeHidden()) {
+    <span class="wiki-tree-show">
+        <ui-button
+            variant="text"
+            severity="secondary"
+            data-testid="wiki-tree-show"
+            [ariaLabel]="'WIKI.TREE.SHOW' | translate"
+            [uiTooltip]="'WIKI.TREE.SHOW' | translate"
+            (click)="layout.toggleTree()"
+        >
+            <tabler-icon icon="layout-sidebar-left-expand" [size]="16" />
+        </ui-button>
+    </span>
+}

@@ -182,6 +182,17 @@
                     <app-workflow-event-state-map [project]="project" />
                 </div>
             </section>
+            <section class="panel" data-testid="project-wiki-settings">
+                <header class="panel-head">
+                    <div class="panel-head-l">
+                        <tabler-icon icon="book-2" [size]="16" class="panel-icon" />
+                        <div class="panel-title">{{ 'WIKI.SETTINGS.TITLE' | translate }}</div>
+                    </div>
+                </header>
+                <div class="panel-body">
+                    <app-project-wiki-settings [project]="project" />
+                </div>
+            </section>
             <section class="panel">
                 <header class="panel-head">
                     <div class="panel-head-l">

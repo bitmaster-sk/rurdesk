@@ -1,0 +1,75 @@
+<ng-template #level let-entries let-idParent="idParent">
+    <div
+        class="wiki-tree__level"
+        cdkDropList
+        [cdkDropListData]="entries"
+        [cdkDropListDisabled]="!canEdit()"
+        (cdkDropListDropped)="onDrop($event, idParent)"
+    >
+        @for (entry of entries; track entry.node.idPage) {
+            <div class="wiki-tree__item" cdkDrag [cdkDragData]="entry">
+                <a
+                    class="wiki-tree__node"
+                    data-testid="wiki-tree-node"
+                    [class.wiki-tree__node--active]="entry.node.idPage === activeIdPage()"
+                    [routerLink]="link(entry)"
+                    [title]="entry.node.title"
+                >
+                    @if (entry.children.length > 0) {
+                        <button
+                            type="button"
+                            class="wiki-tree__chevron"
+                            [attr.aria-expanded]="isOpen(entry)"
+                            [attr.aria-label]="'WIKI.TREE.TOGGLE' | translate"
+                            (click)="onToggle($event, entry)"
+                        >
+                            <tabler-icon
+                                [icon]="isOpen(entry) ? 'chevron-down' : 'chevron-right'"
+                                [size]="14"
+                            />
+                        </button>
+                        <tabler-icon
+                            [icon]="isOpen(entry) ? 'folder-open' : 'folder'"
+                            [size]="14"
+                            class="wiki-tree__icon"
+                        />
+                    } @else {
+                        <span class="wiki-tree__chevron-space"></span>
+                        <tabler-icon
+                            [icon]="entry.node.idPage === idHomePage() ? 'home' : 'file-text'"
+                            [size]="14"
+                            class="wiki-tree__icon"
+                        />
+                    }
+                    <span class="wiki-tree__title">{{ entry.node.title }}</span>
+                    @if (entry.node.agentAccess === AgentAccess.Always) {
+                        <tabler-icon
+                            icon="robot"
+                            [size]="13"
+                            class="wiki-tree__agent"
+                            [uiTooltip]="'WIKI.ACCESS.ALWAYS' | translate"
+                        />
+                    } @else if (entry.children.length > 0) {
+                        <span class="wiki-tree__count">{{ entry.descendants }}</span>
+                    }
+                </a>
+                @if (entry.children.length > 0 && isOpen(entry)) {
+                    <div class="wiki-tree__children">
+                        <ng-container
+                            [ngTemplateOutlet]="level"
+                            [ngTemplateOutletContext]="{
+                                $implicit: entry.children,
+                                idParent: entry.node.idPage
+                            }"
+                        />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</ng-template>
+
+<ng-container
+    [ngTemplateOutlet]="level"
+    [ngTemplateOutletContext]="{ $implicit: entries(), idParent: null }"
+/>

@@ -65,6 +65,7 @@ export class UiButtonStub {
     public readonly loading = input<boolean>(false);
     public readonly disabled = input<boolean>(false);
     public readonly ariaLabel = input<string>('');
+    public readonly isIconOnly = input<boolean>(false);
 }
 
 @Component({ selector: 'ui-badge', template: '', standalone: true })
@@ -78,7 +79,9 @@ export class UiOdometerStub {
 }
 
 @Component({ selector: 'ui-loader', template: '', standalone: true })
-export class UiLoaderStub {}
+export class UiLoaderStub {
+    public readonly size = input<number>(16);
+}
 
 @Component({ selector: 'ui-dialog', template: '<ng-content></ng-content>', standalone: true })
 export class UiDialogStub {

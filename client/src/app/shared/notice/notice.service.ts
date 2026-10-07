@@ -12,6 +12,7 @@ import { NoticeAction } from './constant/notice-action.enum';
 import { CustomField } from 'src/app/custom-field/model/custom-field.model';
 import { MrStatusNotice } from './model/mr-status-notice.model';
 import { Notice } from './model/notice.model';
+import { WikiSavedNotice } from 'src/app/wiki/model/wiki-page.model';
 
 @Injectable({
     providedIn: 'root'
@@ -61,6 +62,9 @@ export class NoticeService {
 
     private customFieldSubject = new Subject<Notice<CustomField>>();
     public customField$: Observable<Notice<CustomField>> = this.customFieldSubject.asObservable();
+
+    private wikiPageSubject = new Subject<Notice<WikiSavedNotice>>();
+    public wikiPage$: Observable<Notice<WikiSavedNotice>> = this.wikiPageSubject.asObservable();
 
     private socket: WebSocket | null = null;
 
@@ -160,6 +164,9 @@ export class NoticeService {
                 break;
             case NoticeSubject.Issue:
                 this.issueSubject.next(notice as Notice<Issue>);
+                break;
+            case NoticeSubject.WikiPage:
+                this.wikiPageSubject.next(notice as Notice<WikiSavedNotice>);
                 break;
             case NoticeSubject.AgentRun:
                 this.agentRunSubject.next(notice);

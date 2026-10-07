@@ -404,7 +404,195 @@
         "TABLE": "Table",
         "BOARD": "Board",
         "CALENDAR": "Calendar",
-        "GANTT": "Gantt"
+        "GANTT": "Gantt",
+        "WIKI": "Wiki"
+    },
+    "WIKI": {
+        "TITLE": "Wiki",
+        "SPACE": {
+            "INSTANCE": "Shared",
+            "PROJECT": "This project"
+        },
+        "HOME": {
+            "TITLE": "Project wiki",
+            "TEXT": "Conventions, architecture and decisions in one place, for people and for agents. Pick a page in the tree or create a new one.",
+            "COUNT": "{{count}} pages in shared and project space",
+            "SET": "Set as home",
+            "UNSET": "Unset as home"
+        },
+        "TREE": {
+            "ALWAYS": "Agent always reads",
+            "EMPTY": "No pages yet",
+            "TOGGLE": "Expand or collapse",
+            "HIDE": "Hide page tree",
+            "SHOW": "Show page tree"
+        },
+        "SEARCH": {
+            "PLACEHOLDER": "Search the wiki",
+            "EMPTY": "Nothing found"
+        },
+        "PAGE": {
+            "NEW": "Page",
+            "NEW_SHARED": "New shared page",
+            "EDIT": "Edit",
+            "COPY_LINK": "Copy link",
+            "FULL_WIDTH": "Use full width",
+            "NARROW": "Use narrow width",
+            "LINK_COPIED": "Link copied",
+            "HEADING_LINK": "Copy a link to this heading",
+            "VERSION_BY": "version {{version}} · {{name}}",
+            "LINKED_TASKS": "Linked tasks",
+            "NO_TASKS": "No linked tasks",
+            "BACKLINKS": "Linked from",
+            "NO_BACKLINKS": "No page links here",
+            "NOT_FOUND": "This page does not exist or was moved to the trash."
+        },
+        "FIELD": {
+            "TITLE": "Page title",
+            "BODY_PLACEHOLDER": "Write Markdown. [[ links a page, # links a task.",
+            "PREVIEW": "Preview",
+            "SPACE": "Space",
+            "PARENT": "Parent page",
+            "AGENT_ACCESS": "Agent access",
+            "SUMMARY": "Summary for the agent",
+            "SUMMARY_HINT": "One or two sentences. Agents see it in the wiki index.",
+            "NOTE": "Change note",
+            "NOTE_PLACEHOLDER": "What changed and why"
+        },
+        "FORMAT": {
+            "LABEL": "Formatting",
+            "HEADING1": "Heading 1",
+            "HEADING2": "Heading 2",
+            "HEADING3": "Heading 3",
+            "BOLD": "Bold (Ctrl/⌘+B)",
+            "ITALIC": "Italic (Ctrl/⌘+I)",
+            "STRIKETHROUGH": "Strikethrough",
+            "CODE": "Inline code",
+            "LINK": "Link (Ctrl/⌘+K)",
+            "WIKI_LINK": "Link to a wiki page",
+            "BULLET_LIST": "Bullet list",
+            "ORDERED_LIST": "Numbered list",
+            "TASK_LIST": "Checklist",
+            "QUOTE": "Quote",
+            "CODE_BLOCK": "Code block",
+            "TABLE": "Table",
+            "TABLE_SIZE": "Table size {{size}}",
+            "CALLOUT": "Info, warning or error block"
+        },
+        "CALLOUT": {
+            "NOTE": "Info",
+            "TIP": "Tip",
+            "IMPORTANT": "Important",
+            "WARNING": "Warning",
+            "CAUTION": "Error"
+        },
+        "ACCESS": {
+            "ALWAYS": "Always reads",
+            "ALWAYS_HINT": "The whole page goes into the prompt of every agent run.",
+            "ON_DEMAND": "On demand",
+            "ON_DEMAND_HINT": "The agent sees the title and summary and reads the page when it needs it.",
+            "HIDDEN": "Hidden",
+            "HIDDEN_HINT": "Meant for people only; agents do not get it.",
+            "MANAGE_ONLY": "Only a project owner can change “Always reads”.",
+            "BUDGET": "Always-read pages: {{used}} / {{limit}} tokens"
+        },
+        "SAVE": {
+            "ACTION": "Save version",
+            "CREATE": "Create page",
+            "DONE": "Page saved",
+            "MERGED": "Saved and merged with changes saved meanwhile",
+            "CREATED": "Page created"
+        },
+        "LEAVE": {
+            "TITLE": "Discard this new page?",
+            "TEXT": "The page has not been created yet. If you leave now, what you wrote is lost.",
+            "DISCARD": "Discard and leave",
+            "STAY": "Keep writing"
+        },
+        "DRAFT": {
+            "TITLE": "You have an unsaved draft",
+            "FOUND": "A draft from {{date}} (based on v{{version}}) was kept on the server. Newer versions are merged when you continue.",
+            "PENDING": "You have an unsaved draft from {{date}}.",
+            "CONTINUE": "Continue the draft",
+            "DISCARD": "Discard draft",
+            "SAVING": "Saving draft…",
+            "SAVED": "Draft saved · base v{{version}}"
+        },
+        "LIVE": {
+            "EDITING": "{{names}} is editing this page right now. You can keep writing; changes in different parts merge automatically.",
+            "SAVED": "{{name}} saved v{{version}} while you were editing.",
+            "APPLY": "Merge now",
+            "APPLIED": "Their changes are merged into your text"
+        },
+        "CONFLICT": {
+            "COUNT": "Conflicts: {{count}}",
+            "HINT": "Everything else merged automatically. Choose what stays where you both edited the same lines.",
+            "CHUNK": "You both changed this part",
+            "MINE": "Your version",
+            "THEIRS": "{{name}} · v{{version}}",
+            "USE_MINE": "Use mine",
+            "USE_THEIRS": "Use theirs",
+            "USE_BOTH": "Both",
+            "EDIT": "Edit",
+            "BACK": "Back to editor",
+            "SAVE": "Save merged version",
+            "REMAINING": "{{count}} left to resolve"
+        },
+        "MOVE": {
+            "ACTION": "Move",
+            "TITLE": "Move page",
+            "ROOT": "No parent (top level)",
+            "CONFIRM": "Move"
+        },
+        "HISTORY": {
+            "TITLE": "History",
+            "BACK": "Back to page",
+            "CREATED": "Created",
+            "MERGED_FROM": "merged with v{{version}}",
+            "RESTORE": "Restore v{{version}}",
+            "RESTORE_CONFIRM": "Restore v{{version}} as a new version?",
+            "RESTORED": "Version restored",
+            "NO_TEXT_CHANGE": "Only the title, summary or agent access changed."
+        },
+        "TRASH": {
+            "TITLE": "Trash",
+            "HINT": "Deleted pages stay here for 30 days. Deleting a page also moves its subpages here.",
+            "EMPTY": "The trash is empty",
+            "PAGE": "Page",
+            "SPACE": "Space",
+            "DELETED_BY": "Deleted",
+            "EXPIRES": "Deleted for good",
+            "SUBPAGES": "+ {{count}} subpages",
+            "PARENT_GONE": "parent gone",
+            "DAYS_LEFT": "in {{count}} days",
+            "RESTORE": "Restore",
+            "RESTORE_ROOT": "Restore to top level",
+            "PURGE": "Delete for good",
+            "PURGE_CONFIRM": "Delete this page and its subpages for good?",
+            "CONFIRM": "Move this page and its subpages to the trash?",
+            "MOVED": "Moved to the trash",
+            "RESTORED": "Page restored",
+            "PURGED": "Deleted for good"
+        },
+        "SETTINGS": {
+            "TITLE": "Wiki",
+            "TOKEN_LIMIT": "Token limit for always-read pages",
+            "TOKEN_LIMIT_HINT": "Shared and project pages marked “Always reads” together must fit this limit."
+        },
+        "ISSUE": {
+            "TITLE": "Wiki",
+            "ADD": "Link a wiki page",
+            "SEARCH": "Search pages",
+            "FROM_DESCRIPTION": "from description",
+            "MANUAL": "added",
+            "EMPTY": "No linked pages",
+            "REMOVE": "Remove link"
+        },
+        "COMMAND": {
+            "GROUP": "Wiki",
+            "OPEN": "Open wiki",
+            "NEW": "New wiki page"
+        }
     },
     "ISSUE": {
         "POINTS": "Points",
@@ -849,7 +1037,11 @@
         "task_not_found": "Task not found.",
         "issue_has_active_run": "This issue already has an active run. Change the assignee to hand it over.",
         "agent_post_while_run_paused": "The agent cannot post while the run is paused.",
-        "invalid_project_builder_refs": "Some cross-references in the project plan are invalid."
+        "invalid_project_builder_refs": "Some cross-references in the project plan are invalid.",
+        "wiki_slug_taken": "A page with this title already exists here.",
+        "wiki_token_limit": "Always-read pages would exceed the project token limit.",
+        "wiki_invalid_parent": "This page cannot be placed there.",
+        "wiki_invalid_title": "The title must contain at least one letter or digit."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",

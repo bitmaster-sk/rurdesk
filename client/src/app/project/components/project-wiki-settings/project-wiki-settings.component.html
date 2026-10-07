@@ -1,0 +1,27 @@
+@if (isLoaded()) {
+    <div class="flex flex-col gap-1" style="max-width: 24rem" [uiSaveStatus]="saveStatus()">
+        <label for="wiki-token-limit">{{ 'WIKI.SETTINGS.TOKEN_LIMIT' | translate }}</label>
+        <input
+            uiInput
+            id="wiki-token-limit"
+            type="number"
+            min="0"
+            max="200000"
+            step="1000"
+            data-testid="wiki-token-limit"
+            [formControl]="tokenLimit"
+        />
+        <small class="ui-color-text-muted" data-testid="wiki-token-usage">
+            {{
+                'WIKI.ACCESS.BUDGET' | translate: { used: alwaysTokens(), limit: tokenLimit.value }
+            }}
+        </small>
+        <small class="ui-color-text-muted">
+            {{ 'WIKI.SETTINGS.TOKEN_LIMIT_HINT' | translate }}
+        </small>
+    </div>
+} @else {
+    <div class="flex items-center justify-center p-4">
+        <ui-loader [size]="24" />
+    </div>
+}

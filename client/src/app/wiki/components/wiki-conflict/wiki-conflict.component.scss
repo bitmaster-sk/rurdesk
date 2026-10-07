@@ -1,0 +1,91 @@
+.wiki-conflict {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space);
+    padding: var(--ui-space-l) var(--ui-space-xl);
+    overflow-y: auto;
+    height: 100%;
+
+    &__summary {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        margin-bottom: var(--ui-space);
+        font-size: var(--font-size-s);
+    }
+
+    &__stable {
+        margin: 0;
+        padding: var(--ui-space-s) var(--ui-space-m);
+        font-family: var(--ui-font-mono);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+        white-space: pre-wrap;
+        max-height: 8rem;
+        overflow: hidden;
+    }
+
+    &__chunk {
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        overflow: hidden;
+        background: var(--ui-color-surface);
+    }
+
+    &__chunk-head {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: var(--ui-space) var(--ui-space-m);
+        background: var(--ui-color-canvas);
+        border-bottom: 1px solid var(--ui-color-border);
+        font-size: var(--font-size-s);
+    }
+
+    &__sides {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    &__side {
+        padding: var(--ui-space) var(--ui-space-m);
+
+        pre {
+            margin: 0;
+            font-family: var(--ui-font-mono);
+            font-size: var(--font-size-s);
+            white-space: pre-wrap;
+        }
+
+        & + & {
+            border-left: 1px solid var(--ui-color-border);
+        }
+
+        &--mine {
+            background: var(--ui-color-primary-weak);
+        }
+
+        &--theirs {
+            background: var(--ui-sky-50);
+        }
+
+        &--chosen {
+            box-shadow: inset 0 0 0 2px var(--ui-color-primary);
+        }
+    }
+
+    &__label {
+        font-size: var(--font-size-s);
+        font-weight: bold;
+        text-transform: uppercase;
+        color: var(--ui-color-text-muted);
+        margin-bottom: var(--ui-space-s);
+    }
+
+    &__custom {
+        width: 100%;
+        border: 0;
+        border-radius: 0;
+        font-family: var(--ui-font-mono);
+    }
+}

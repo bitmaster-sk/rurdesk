@@ -455,6 +455,414 @@ async function openIssueList(page) {
     return P;
 }
 
+// ─────────────────────────────────── wiki ───────────────────────────────────
+
+// Demo wiki for the DevToolbox project. Parents come before their children;
+// `tasks` are public task numbers linked to the page by hand.
+
+const WIKI_HOME_SLUG = "devtoolbox";
+
+const WIKI_SHARED_PAGES = [
+    {
+        slug: "commit-messages",
+        title: "Commit messages",
+        agentAccess: "always",
+        summary: "Conventional Commits: type, scope, short imperative subject.",
+        body: `Every commit follows **Conventional Commits**.
+
+\`\`\`text
+feat(jwt-decoder): show the expiry as a relative time
+\`\`\`
+
+| Type | Use it for |
+| --- | --- |
+| \`feat\` | a change users notice |
+| \`fix\` | a bug fix |
+| \`test\` | tests only |
+| \`chore\` | build, CI, tooling |
+
+- Subject in the imperative, no full stop, at most 72 characters.
+- Reference the task in the body: \`Refs #12\`.
+
+> [!TIP]
+> Agents read this page on every run, so their commits follow it too.
+`,
+    },
+    {
+        slug: "code-review-checklist",
+        title: "Code review checklist",
+        agentAccess: "on_demand",
+        summary: "What a reviewer checks before approving a pull request.",
+        body: `Before you approve a pull request:
+
+- [x] The task is linked and its acceptance criteria are met
+- [x] New logic has unit tests
+- [ ] No secrets, tokens or personal data in the diff
+- [ ] Commit messages follow [[shared:Commit messages]]
+
+> [!IMPORTANT]
+> Ask for changes when tests are missing, even for small fixes.
+`,
+    },
+    {
+        slug: "security-basics",
+        title: "Security basics",
+        agentAccess: "on_demand",
+        summary: "Everything runs in the browser; nothing leaves the page.",
+        body: `DevToolbox tools never send user input anywhere.
+
+- All processing happens in the browser.
+- No analytics on tool inputs, ever.
+- Tokens pasted into the JWT Decoder stay in memory only.
+
+> [!CAUTION]
+> Never log the contents of a text field, not even in development builds.
+`,
+    },
+];
+
+const WIKI_PROJECT_PAGES = [
+    {
+        slug: "devtoolbox",
+        title: "DevToolbox",
+        agentAccess: "always",
+        summary: "What DevToolbox is, how it is built and where to start.",
+        body: `**DevToolbox** is a small single-page app with everyday developer utilities.
+Each tool is a self-contained folder plugged into a shared shell.
+
+## Stack
+
+| Part | Choice |
+| --- | --- |
+| Build | Vite + TypeScript |
+| Tests | Vitest |
+| Hosting | static files behind a CDN |
+
+## Where to start
+
+1. Read [[Architecture]] to see how tools are registered.
+2. Pick a tool under [[Tools]].
+3. Follow [[shared:Commit messages]] and the [[shared:Code review checklist]].
+
+> [!NOTE]
+> This page is the wiki home page, so **Wiki** in the project menu opens it.
+`,
+    },
+    {
+        slug: "architecture",
+        parent: "devtoolbox",
+        title: "Architecture",
+        agentAccess: "on_demand",
+        summary: "App shell, tool registry and the tool manifest contract.",
+        tasks: [2, 3],
+        body: `The app shell (#2) renders a sidebar and one route per tool.
+Tools register themselves in the **tool registry** (#3).
+
+## Tool manifest
+
+\`\`\`ts
+const manifest: ToolManifest = {
+    id: 'base64',
+    title: 'Base64',
+    load: () => import('./ui'),
+};
+\`\`\`
+
+Every tool keeps its pure functions in \`logic.ts\` and its view in \`ui.ts\`,
+so the logic can be tested without a browser.
+`,
+    },
+    {
+        slug: "tools",
+        parent: "devtoolbox",
+        title: "Tools",
+        agentAccess: "on_demand",
+        summary: "Index of all tools in the toolbox.",
+        body: `| Tool | What it does |
+| --- | --- |
+| [[JSON Formatter]] | validate, pretty-print and minify JSON |
+| [[Base64]] | encode and decode text, Unicode-safe |
+| [[JWT Decoder]] | read a token's header, payload and expiry |
+| [[Hash Generator]] | MD5 and SHA-256 of text or files |
+| [[Color Converter]] | HEX, RGB and HSL with contrast ratio |
+| [[UUID Generator]] | random v4 UUIDs |
+| [[Numeric ID Generator]] | random numeric IDs of a chosen length |
+`,
+    },
+    {
+        slug: "json-formatter",
+        parent: "tools",
+        title: "JSON Formatter",
+        agentAccess: "on_demand",
+        summary: "Validate, pretty-print and minify JSON.",
+        tasks: [5, 6, 7],
+        body: `Two panes: raw JSON on the left, the formatted result on the right.
+
+## Behaviour
+
+- Invalid JSON shows the **line and column** of the first error.
+- Indent is 2 spaces by default; 4 and tab are options.
+- **Minify** removes all whitespace outside strings.
+
+## Code
+
+| File | Contents |
+| --- | --- |
+| \`tools/json-formatter/logic.ts\` | \`validateJson\`, \`formatJson\`, \`minifyJson\` |
+| \`tools/json-formatter/ui.ts\` | the two-pane view |
+
+> [!WARNING]
+> Inputs over 5 MB are formatted in a worker so the page stays responsive.
+
+See also [[Base64]] for encoding the result.
+`,
+    },
+    {
+        slug: "base64",
+        parent: "tools",
+        title: "Base64",
+        agentAccess: "on_demand",
+        summary: "Encode and decode text, Unicode-safe.",
+        tasks: [8, 9, 10],
+        body: `Encodes text to Base64 and back with one toggle.
+
+- Text is encoded as **UTF-8** first, so emoji and CJK round-trip.
+- Decoding invalid input shows an error instead of garbage.
+- A URL-safe variant swaps \`+/\` for \`-_\`.
+
+\`\`\`ts
+encode('héllo') // 'aMOpbGxv'
+\`\`\`
+`,
+    },
+    {
+        slug: "jwt-decoder",
+        parent: "tools",
+        title: "JWT Decoder",
+        agentAccess: "on_demand",
+        summary: "Read a token's header, payload and expiry.",
+        tasks: [11, 12, 13],
+        body: `Paste a JWT to see its **header**, **payload** and **signature** side by side.
+
+- \`exp\` and \`iat\` are shown as dates and as "expires in 2 h".
+- Expired tokens get a red badge.
+- The signature is **not** verified; there is no key in the browser.
+
+> [!CAUTION]
+> Tokens stay in memory only. See [[shared:Security basics]].
+`,
+    },
+    {
+        slug: "hash-generator",
+        parent: "tools",
+        title: "Hash Generator",
+        agentAccess: "on_demand",
+        summary: "MD5 and SHA-256 of text or files.",
+        tasks: [14, 15, 16],
+        body: `Hashes text or a dropped file.
+
+| Algorithm | Source |
+| --- | --- |
+| SHA-256 | Web Crypto (\`crypto.subtle\`) |
+| MD5 | small bundled implementation |
+
+Known value for tests: MD5 of an empty string is
+\`d41d8cd98f00b204e9800998ecf8427e\`.
+`,
+    },
+    {
+        slug: "color-converter",
+        parent: "tools",
+        title: "Color Converter",
+        agentAccess: "on_demand",
+        summary: "HEX, RGB and HSL with a contrast ratio check.",
+        tasks: [17, 18, 19],
+        body: `Edit any of HEX, RGB or HSL and the other two follow, with a live preview.
+
+## Contrast
+
+The WCAG contrast ratio against white and black is shown next to the preview.
+
+| Ratio | Meaning |
+| --- | --- |
+| 4.5 : 1 | AA for normal text |
+| 7 : 1 | AAA for normal text |
+
+- [x] HEX ↔ RGB
+- [x] RGB ↔ HSL
+- [ ] Alpha channel
+`,
+    },
+    {
+        slug: "uuid-generator",
+        parent: "tools",
+        title: "UUID Generator",
+        agentAccess: "on_demand",
+        summary: "Random version 4 UUIDs.",
+        tasks: [27, 28],
+        body: `Generates random **v4** UUIDs with \`crypto.randomUUID()\`.
+
+- One click copies the value.
+- Optional: upper case, no dashes.
+`,
+    },
+    {
+        slug: "numeric-id-generator",
+        parent: "tools",
+        title: "Numeric ID Generator",
+        agentAccess: "on_demand",
+        summary: "Random numeric IDs of a chosen length or range.",
+        tasks: [29, 30, 31],
+        body: `Generates random numbers either **by length** (e.g. 6 digits) or **by range**
+(min and max sliders).
+
+> [!NOTE]
+> A 6-digit ID never starts with 0, so it really has 6 digits.
+`,
+    },
+    {
+        slug: "release-and-ci",
+        title: "Release and CI",
+        agentAccess: "on_demand",
+        summary: "Pipeline stages and how to ship a release.",
+        tasks: [21, 22],
+        body: `Every push runs **lint → test → build** (#21).
+
+## Shipping a release
+
+1. Merge to \`main\` with a green pipeline.
+2. Tag the commit: \`git tag v1.4.0\`.
+3. The deploy job (#22) uploads \`dist/\` and purges the CDN.
+
+> [!WARNING]
+> Do not deploy on Friday afternoon.
+`,
+    },
+];
+
+// Second version of one page, so History has something to show.
+const WIKI_REVISION = {
+    slug: "json-formatter",
+    note: "Document the worker limit and the indent options",
+    replace: [
+        [
+            "Indent is 2 spaces by default; 4 and tab are options.",
+            "Indent is 2 spaces by default; 4 spaces and tab are options.",
+        ],
+        ["Inputs over 5 MB", "Inputs over 2 MB"],
+    ],
+};
+
+async function wikiTree(page, P) {
+    const r = await L.api(page, "GET", `/api/private/project/${P}/wiki/tree`);
+    if (!r.ok) throw new Error(`loading the wiki tree failed: ${r.status}`);
+    return r.data;
+}
+
+// creates the pages whose slug is not in the space yet; returns slug → idPage
+async function ensureWikiPages(page, P, space, pages, log) {
+    const tree = await wikiTree(page, P);
+    const idSpace = tree.spaces.find((s) => s.kind === space).idSpace;
+    const bySlug = new Map(
+        tree.nodes
+            .filter((n) => n.idSpace === idSpace)
+            .map((n) => [n.slug, n.idPage]),
+    );
+    for (const p of pages) {
+        if (bySlug.has(p.slug)) continue;
+        const r = await L.api(
+            page,
+            "POST",
+            `/api/private/project/${P}/wiki/page`,
+            {
+                space,
+                title: p.title,
+                summary: p.summary,
+                body: p.body,
+                agentAccess: p.agentAccess,
+                idParent: p.parent ? (bySlug.get(p.parent) ?? null) : null,
+            },
+        );
+        if (!r.ok)
+            throw new Error(
+                `creating wiki page ${p.title} failed: ${r.status} ${JSON.stringify(r.data)}`,
+            );
+        bySlug.set(p.slug, r.data.idPage);
+        log(`+ ${space}/${p.slug}`);
+    }
+    return bySlug;
+}
+
+async function ensureWikiRevision(page, P, log) {
+    const r = await L.api(
+        page,
+        "GET",
+        `/api/private/project/${P}/wiki/page/project/${WIKI_REVISION.slug}`,
+    );
+    if (!r.ok)
+        throw new Error(`loading ${WIKI_REVISION.slug} failed: ${r.status}`);
+    const current = r.data.page;
+    if (current.versionNo > 1) return;
+    let body = current.body;
+    for (const [from, to] of WIKI_REVISION.replace)
+        body = body.replace(from, to);
+    const saved = await L.api(
+        page,
+        "PUT",
+        `/api/private/wiki/page/${current.idPage}`,
+        {
+            baseVersion: current.versionNo,
+            title: current.title,
+            summary: current.summary,
+            body,
+            agentAccess: current.agentAccess,
+            note: WIKI_REVISION.note,
+        },
+    );
+    if (!saved.ok)
+        throw new Error(`saving ${WIKI_REVISION.slug} failed: ${saved.status}`);
+    log(`~ ${WIKI_REVISION.slug} v2`);
+}
+
+async function ensureWikiTaskLinks(page, P, bySlug, log) {
+    const r = await L.api(page, "GET", `/api/private/project/${P}/issue`);
+    const list = Array.isArray(r.data)
+        ? r.data
+        : (r.data?.items ?? r.data?.data ?? []);
+    const idIssueOf = new Map(list.map((i) => [i.idIssuePublic, i.idIssue]));
+    for (const p of WIKI_PROJECT_PAGES) {
+        for (const publicId of p.tasks ?? []) {
+            const idIssue = idIssueOf.get(publicId);
+            const idPage = bySlug.get(p.slug);
+            if (!idIssue || !idPage) continue;
+            const links = await L.api(
+                page,
+                "GET",
+                `/api/private/issue/${idIssue}/wiki`,
+            );
+            if ((links.data ?? []).some((link) => link.idPage === idPage))
+                continue;
+            await L.api(page, "POST", `/api/private/issue/${idIssue}/wiki`, {
+                idPage,
+            });
+            log(`# ${publicId} ↔ ${p.slug}`);
+        }
+    }
+}
+
+// opens a wiki path in the default layout: tree shown, reading width
+async function openWikiPage(page, P, path) {
+    await L.gotoApp(page, `${L.BASE}/project/${P}/wiki`);
+    await page.evaluate(() => {
+        localStorage.removeItem("wiki.treeHidden");
+        localStorage.removeItem("wiki.fullWidth");
+    });
+    await L.gotoApp(page, `${L.BASE}/project/${P}/wiki/${path}`);
+    await L.settle(page);
+}
+
+const WIKI_TASK = 5;
+
 // ─────────────────────────────────── steps ───────────────────────────────────
 // Each: { id, type, title, file, run(ctx) }. ctx = { page, cursor, mark, log }.
 
@@ -2345,7 +2753,9 @@ const STEPS = [
             // The row actions are display:none until the option is hovered.
             const agentRow = page
                 .locator(".ui-select-panel__option")
-                .filter({ has: page.locator('[data-testid="agent-skills-action"]') })
+                .filter({
+                    has: page.locator('[data-testid="agent-skills-action"]'),
+                })
                 .first();
             await agentRow.hover({ timeout: 10000 });
             await page.waitForTimeout(300);
@@ -2696,7 +3106,18 @@ const STEPS = [
             const out = path.join(L.IMG, "agent-workflow.webm");
             execFileSync(
                 ff,
-                ["-y", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", out],
+                [
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    list,
+                    "-c",
+                    "copy",
+                    out,
+                ],
                 { stdio: "ignore" },
             );
             fs.unlinkSync(list);
@@ -2728,6 +3149,144 @@ const STEPS = [
                 .first()
                 .click({ timeout: 8000 })
                 .catch(() => {});
+        },
+    },
+    // ── J · Wiki ──
+    {
+        id: "wiki-pages",
+        type: "generate",
+        title: "Wiki: shared + project pages, home page, a 2nd version, task links",
+        run: async ({ page, log }) => {
+            const P = await getProject(page);
+            await ensureWikiPages(page, P, "instance", WIKI_SHARED_PAGES, log);
+            const bySlug = await ensureWikiPages(
+                page,
+                P,
+                "project",
+                WIKI_PROJECT_PAGES,
+                log,
+            );
+            const home = await L.api(
+                page,
+                "PUT",
+                `/api/private/project/${P}/wiki/home`,
+                {
+                    idPage: bySlug.get(WIKI_HOME_SLUG),
+                },
+            );
+            if (!home.ok)
+                throw new Error(
+                    `setting the wiki home page failed: ${home.status}`,
+                );
+            await ensureWikiRevision(page, P, log);
+            await ensureWikiTaskLinks(page, P, bySlug, log);
+        },
+    },
+    {
+        id: "wiki-page",
+        type: "screenshot",
+        file: "wiki-page.png",
+        title: "Wiki page with the tree, linked tasks and backlinks",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await openWikiPage(page, P, "project/json-formatter");
+            await page
+                .getByTestId("wiki-page-title")
+                .waitFor({ state: "visible", timeout: 10000 });
+            await L.shootPage(page, "wiki-page.png");
+        },
+    },
+    {
+        id: "wiki-editor",
+        type: "screenshot",
+        file: "wiki-editor.png",
+        title: "Wiki editor: toolbar, Markdown and live preview",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await openWikiPage(page, P, "project/color-converter/edit");
+            await page
+                .locator(".cm-editor")
+                .first()
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(600);
+            await L.shootPage(page, "wiki-editor.png");
+        },
+    },
+    {
+        id: "wiki-history",
+        type: "screenshot",
+        file: "wiki-history.png",
+        title: "Wiki page history with the change between versions",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await openWikiPage(page, P, "project/json-formatter/history");
+            await page
+                .getByTestId("wiki-version")
+                .first()
+                .waitFor({ state: "visible", timeout: 10000 });
+            await L.shootPage(page, "wiki-history.png");
+        },
+    },
+    {
+        id: "wiki-task-panel",
+        type: "screenshot",
+        file: "wiki-task-panel.png",
+        title: "Wiki panel on a task, opened",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/${WIKI_TASK}`);
+            await L.settle(page);
+            const panel = page.getByTestId("issue-wiki-panel");
+            await panel.scrollIntoViewIfNeeded();
+            const panelClass = (await panel.getAttribute("class")) ?? "";
+            if (panelClass.includes("wiki-panel--collapsed")) {
+                await panel.locator(".wiki-panel__header").click();
+            }
+            await page
+                .getByTestId("issue-wiki-link")
+                .first()
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(400);
+            await panel.screenshot({ path: `${L.IMG}/wiki-task-panel.png` });
+        },
+    },
+    {
+        id: "wiki-comment-link",
+        type: "screenshot",
+        file: "wiki-comment-link.png",
+        title: "Typing [[ in a comment suggests wiki pages",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/${WIKI_TASK}`);
+            await L.settle(page);
+            const composer = page.locator(".feed-editor").first();
+            const editor = composer.locator(".editor-input").first();
+            await composer.scrollIntoViewIfNeeded();
+            await editor.click();
+            await editor.pressSequentially("Details are in [[gen", {
+                delay: 15,
+            });
+            const picker = page.getByTestId("wiki-link-picker");
+            await page
+                .getByTestId("wiki-link-option")
+                .first()
+                .waitFor({ state: "visible", timeout: 8000 });
+            await page.waitForTimeout(400);
+            const pb = await picker.boundingBox(),
+                cb = await composer.boundingBox();
+            const x = Math.min(pb.x, cb.x) - 8,
+                y = Math.min(pb.y, cb.y) - 8;
+            await page.screenshot({
+                path: `${L.IMG}/wiki-comment-link.png`,
+                clip: {
+                    x,
+                    y,
+                    width: Math.max(pb.x + pb.width, cb.x + cb.width) + 8 - x,
+                    height:
+                        Math.max(pb.y + pb.height, cb.y + cb.height) + 8 - y,
+                },
+            });
+            await editor.press("Escape");
         },
     },
 ];

@@ -1,8 +1,20 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    computed,
+    effect,
+    inject,
+    input,
+    output
+} from '@angular/core';
+import { Router } from '@angular/router';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 import { Mention } from 'src/app/shared/mention/mention';
+import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
+import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 
 export type RenderSegment =
     | { type: 'diff'; content: string }
@@ -41,7 +53,49 @@ export class MessageBodyComponent {
     /** Emits the ref of the mockup the user chose to approve. */
     public readonly useMockup = output<string>();
 
+    private readonly router = inject(Router);
+    private readonly wikiScope = inject(WikiLinkScope, { optional: true });
+    private readonly wikiStore = inject(WikiLinkStore);
+
+    private readonly wikiContext = computed(() => {
+        const idProject = this.wikiScope?.idProject() ?? null;
+        const tree = idProject === null ? null : this.wikiStore.tree(idProject);
+        return idProject !== null && tree ? WikiLinkConverter.toContext(idProject, tree) : null;
+    });
+
     public readonly segments = computed<RenderSegment[]>(() => {
+        const context = this.wikiContext();
+        return this.baseSegments().map(segment =>
+            context && segment.type === 'text' && segment.content.includes('[[')
+                ? {
+                      type: 'text',
+                      content: WikiLinkConverter.toPageLinksMarkdown(segment.content, context)
+                  }
+                : segment
+        );
+    });
+
+    public constructor() {
+        effect(() => {
+            const idProject = this.wikiScope?.idProject() ?? null;
+            if (idProject !== null && this.body().includes('[[')) {
+                this.wikiStore.ensure(idProject);
+            }
+        });
+    }
+
+    protected onTextClick(event: MouseEvent): void {
+        const anchor = (event.target as HTMLElement | null)?.closest('a');
+        const href = anchor?.getAttribute('href');
+        if (!href?.startsWith('/') || event.metaKey || event.ctrlKey || event.shiftKey) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        void this.router.navigateByUrl(href);
+    }
+
+    private readonly baseSegments = computed<RenderSegment[]>(() => {
         const kind = this.messageKind();
         const isAgentKind = kind !== undefined && AGENT_KINDS.has(kind);
 

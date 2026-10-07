@@ -1,0 +1,148 @@
+@use '../../wiki-article';
+
+:host {
+    display: block;
+}
+
+:host ::ng-deep .wiki-article {
+    @include wiki-article.article;
+
+    &.wiki-article--full {
+        max-width: none;
+    }
+}
+
+.wiki-page {
+    &__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--ui-space-l);
+        padding: var(--ui-space-l) var(--ui-space-xl) var(--ui-space);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    &__heading {
+        min-width: 0;
+    }
+
+    &__crumbs {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--ui-space-s);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+
+        a {
+            color: inherit;
+            text-decoration: none;
+
+            &:hover {
+                color: var(--ui-color-primary);
+            }
+        }
+    }
+
+    &__title {
+        margin: var(--ui-space-s) 0 0;
+        font-size: 1.75rem;
+        overflow-wrap: anywhere;
+    }
+
+    &__meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--ui-space-m);
+        margin-top: var(--ui-space-s);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__actions {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        flex-shrink: 0;
+    }
+
+    &__draft {
+        display: block;
+        margin: var(--ui-space) var(--ui-space-xl) 0;
+    }
+
+    &__layout {
+        display: flex;
+        min-height: 0;
+
+        .wiki-article {
+            margin-right: auto;
+        }
+    }
+
+    &__aside {
+        flex: 0 0 16rem;
+        padding: var(--ui-space-l);
+        border-left: 1px solid var(--ui-color-border);
+        background: var(--ui-color-canvas);
+        font-size: var(--font-size-s);
+        min-height: calc(100vh - 12rem);
+
+        section {
+            margin-bottom: var(--ui-space-xl);
+        }
+
+        h4 {
+            margin: 0 0 var(--ui-space);
+            font-size: var(--font-size-s);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--ui-color-text-muted);
+        }
+    }
+
+    &__aside-row {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-xs) 0;
+        color: var(--ui-color-text);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+    }
+
+    &__aside-icon {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        height: 1lh;
+    }
+
+    &__aside-text {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    &__aside-empty {
+        color: var(--ui-color-muted-fg);
+        font-style: italic;
+    }
+
+    &__issue-ref {
+        font-weight: bold;
+        color: var(--ui-sky-700);
+    }
+
+    &__missing {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: var(--ui-space-xl);
+        color: var(--ui-color-text-muted);
+    }
+}

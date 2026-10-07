@@ -175,6 +175,27 @@ export abstract class Interaction {
         return (await revealed.locator('code').innerText()).trim();
     }
 
+    public static async fillWikiEditor(page: Page, text: string): Promise<void> {
+        const content = page.getByTestId('wiki-editor').locator('.cm-content');
+        await content.click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.press('Delete');
+        await page.keyboard.insertText(text);
+    }
+
+    public static async createWikiPage(
+        page: Page,
+        idProject: number,
+        title: string,
+        body: string
+    ): Promise<void> {
+        await page.goto(`/project/${idProject}/wiki/new?space=project`);
+        await page.getByTestId('wiki-edit-title').fill(title);
+        await Interaction.fillWikiEditor(page, body);
+        await page.getByTestId('wiki-save').click();
+        await expect(page.getByTestId('wiki-page-title')).toHaveText(title);
+    }
+
     public static async acceptConfirm(page: Page): Promise<void> {
         await page.locator('.ui-confirm-panel').getByRole('button', { name: 'Yes' }).click();
     }

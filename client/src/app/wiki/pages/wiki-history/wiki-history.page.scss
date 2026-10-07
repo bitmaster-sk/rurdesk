@@ -1,0 +1,114 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.wiki-history {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    &__head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: var(--ui-space-l) var(--ui-space-xl) var(--ui-space);
+        border-bottom: 1px solid var(--ui-color-border);
+
+        h1 {
+            margin: var(--ui-space-s) 0 0;
+            font-size: 1.75rem;
+        }
+    }
+
+    &__crumb {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__body {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+    }
+
+    &__versions {
+        flex: 0 0 18rem;
+        overflow-y: auto;
+        border-right: 1px solid var(--ui-color-border);
+    }
+
+    &__version {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-xs);
+        width: 100%;
+        padding: var(--ui-space) var(--ui-space-m);
+        border: 0;
+        border-bottom: 1px solid var(--ui-color-border);
+        border-left: 3px solid transparent;
+        background: transparent;
+        color: var(--ui-color-text);
+        font: inherit;
+        font-size: var(--font-size-s);
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background: var(--ui-color-content-hover);
+        }
+
+        &--selected {
+            border-left-color: var(--ui-color-primary);
+            background: var(--ui-color-primary-weak);
+        }
+    }
+
+    &__version-top {
+        display: flex;
+        justify-content: space-between;
+        color: var(--ui-color-text-muted);
+
+        b {
+            color: var(--ui-color-text);
+        }
+    }
+
+    &__note {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+
+    &__diff {
+        flex: 1;
+        min-width: 0;
+        overflow-y: auto;
+        padding: var(--ui-space-m);
+    }
+
+    &__diff-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--ui-space);
+    }
+
+    &__first {
+        margin: 0;
+        padding: var(--ui-space-m);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-canvas);
+        font-family: var(--ui-font-mono);
+        font-size: var(--font-size-s);
+        white-space: pre-wrap;
+    }
+
+    &__same {
+        color: var(--ui-color-text-muted);
+        font-style: italic;
+    }
+}

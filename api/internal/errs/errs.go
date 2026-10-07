@@ -74,6 +74,10 @@ var (
 	ErrCustomFieldRequired                     = newErr("CUSTOM_FIELD_REQUIRED", "required custom field cannot be cleared", "error.custom_field_required", http.StatusBadRequest)
 	ErrCustomFieldImmutable                    = newErr("CUSTOM_FIELD_IMMUTABLE", "custom field key and type cannot be changed; create a new field instead", "error.custom_field_immutable", http.StatusBadRequest)
 	ErrCustomFieldKeyExists                    = newErr("CUSTOM_FIELD_KEY_EXISTS", "a custom field with this key already exists in the project", "error.custom_field_key_exists", http.StatusConflict)
+	ErrWikiSlugTaken                           = newErr("WIKI_SLUG_TAKEN", "a wiki page with this slug already exists in the space", "error.wiki_slug_taken", http.StatusConflict)
+	ErrWikiTokenLimit                          = newErr("WIKI_TOKEN_LIMIT", "always-read wiki pages would exceed the project token limit", "error.wiki_token_limit", http.StatusUnprocessableEntity)
+	ErrWikiInvalidParent                       = newErr("WIKI_INVALID_PARENT", "the parent page must be a live page of the same space and not the page itself or its descendant", "error.wiki_invalid_parent", http.StatusUnprocessableEntity)
+	ErrWikiInvalidTitle                        = newErr("WIKI_INVALID_TITLE", "the page title must contain at least one letter or digit", "error.wiki_invalid_title", http.StatusBadRequest)
 	ErrInvalidCustomFieldOptionMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different option of the same field", "error.invalid_custom_field_option_migration_target", http.StatusUnprocessableEntity)
 
 	// ── Issue relations ────────────────────────────────────────────────────
