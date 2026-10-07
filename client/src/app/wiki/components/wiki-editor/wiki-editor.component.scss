@@ -1,0 +1,66 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.wiki-editor-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--ui-space-xs);
+    overflow-x: auto;
+    scrollbar-width: none;
+    --ui-button-sm-height: 1.75rem;
+    --ui-button-sm-padding-x: 0.3125rem;
+
+    .ui-button-group + .ui-button-group {
+        padding-left: var(--ui-space-xs);
+        border-left: 1px solid var(--ui-color-border);
+    }
+    min-height: 2.25rem;
+    padding: 0 var(--ui-space-s);
+    border-bottom: 1px solid var(--ui-color-border);
+    background: var(--ui-color-canvas);
+}
+
+.wiki-editor {
+    flex: 1;
+    min-height: 0;
+
+    ::ng-deep .cm-editor {
+        height: 100%;
+        background: var(--ui-color-canvas);
+        color: var(--ui-color-text);
+        font-size: var(--font-size-s);
+    }
+
+    ::ng-deep .cm-editor.cm-focused {
+        outline: none;
+    }
+
+    ::ng-deep .cm-scroller {
+        font-family: var(--ui-font-mono);
+        line-height: 1.6;
+        padding: var(--ui-space-m) var(--ui-space);
+    }
+
+    ::ng-deep .cm-cursor {
+        border-left-color: var(--ui-color-text);
+    }
+
+    ::ng-deep .cm-tooltip-autocomplete {
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-surface);
+        font-family: var(--font-family);
+    }
+
+    ::ng-deep .cm-tooltip-autocomplete > ul > li[aria-selected] {
+        background: var(--ui-color-primary-weak-border);
+        color: var(--ui-color-primary);
+    }
+}

@@ -1,0 +1,26 @@
+.wiki-table-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    border-radius: var(--ui-radius-sm);
+
+    &:focus-visible {
+        outline: var(--ui-focus-ring-width, 2px) solid var(--ui-color-primary);
+        outline-offset: 2px;
+    }
+
+    &__cell {
+        width: 1.1rem;
+        height: 1.1rem;
+        padding: 0;
+        border: 1px solid var(--ui-color-border);
+        border-radius: 2px;
+        background: var(--ui-color-canvas);
+        cursor: pointer;
+
+        &--active {
+            border-color: var(--ui-color-primary);
+            background: var(--ui-color-primary-weak-border);
+        }
+    }
+}

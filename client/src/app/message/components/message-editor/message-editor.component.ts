@@ -25,8 +25,20 @@ import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
 import { Mention } from 'src/app/shared/mention/mention';
+import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
+import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
+import { WikiTreeConverter } from 'src/app/wiki/converter/wiki-tree.converter';
+import { WikiLinkCandidate } from 'src/app/wiki/entity/wiki-link-candidate.entity';
+import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 
 type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
+
+interface PickerPosition {
+    left: string;
+    top: string;
+    bottom: string;
+}
 
 @Component({
     selector: 'app-message-editor',
@@ -81,6 +93,14 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     protected readonly EMOJI_GROUPS: EmojiGroup[] = EMOJI_GROUPS;
 
+    private static readonly pickerWidth = 224;
+    private static readonly pickerHeight = 260;
+    protected readonly pickerPosition = signal<PickerPosition>({
+        left: '0px',
+        top: 'auto',
+        bottom: 'calc(100% + 4px)'
+    });
+
     // @mention autocomplete state
     protected readonly mentionQuery = signal<{ start: number; query: string } | null>(null);
     protected readonly activeIndex = signal(0);
@@ -91,6 +111,24 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         return this.mentionCandidates()
             .filter(u => u.name.toLowerCase().includes(needle))
             .slice(0, 8);
+    });
+
+    private readonly wikiScope = inject(WikiLinkScope, { optional: true });
+    private readonly wikiStore = inject(WikiLinkStore);
+    protected readonly WikiSpaceKind = WikiSpaceKind;
+    protected readonly wikiQuery = signal<{ start: number; query: string } | null>(null);
+    protected readonly isWikiLoading = computed(() => {
+        const idProject = this.wikiScope?.idProject() ?? null;
+        return idProject !== null && this.wikiStore.tree(idProject) === null;
+    });
+    protected readonly wikiCandidates = computed<WikiLinkCandidate[]>(() => {
+        const query = this.wikiQuery();
+        const idProject = this.wikiScope?.idProject() ?? null;
+        const tree = idProject === null ? null : this.wikiStore.tree(idProject);
+        if (!query || !tree) {
+            return [];
+        }
+        return WikiTreeConverter.toLinkCandidates(tree, query.query, 8);
     });
 
     // Platform-aware shortcut hint for the send button tooltip.
@@ -172,6 +210,30 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             }
         }
 
+        const wikiCandidates = this.wikiCandidates();
+        if (this.wikiQuery() && wikiCandidates.length > 0) {
+            if (evt.key === 'ArrowDown') {
+                evt.preventDefault();
+                this.activeIndex.update(i => Math.min(i + 1, wikiCandidates.length - 1));
+                return;
+            }
+            if (evt.key === 'ArrowUp') {
+                evt.preventDefault();
+                this.activeIndex.update(i => Math.max(i - 1, 0));
+                return;
+            }
+            if (evt.key === 'Enter' || evt.key === 'Tab') {
+                evt.preventDefault();
+                this.selectWikiPage(wikiCandidates[this.activeIndex()]);
+                return;
+            }
+        }
+        if (this.wikiQuery() && evt.key === 'Escape') {
+            evt.preventDefault();
+            this.wikiQuery.set(null);
+            return;
+        }
+
         // Ctrl+Enter (Windows/Linux) or Cmd+Enter (macOS) sends; plain Enter and
         // Shift+Enter fall through so the browser inserts a newline/<div>, which
         // EditorText.serialize() normalizes.
@@ -194,6 +256,64 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             this.propagateChange(body);
         }
         this.detectMentionQuery(body);
+        this.detectWikiQuery(body);
+    }
+
+    protected selectWikiPage(candidate: WikiLinkCandidate): void {
+        const query = this.wikiQuery();
+        if (!query) {
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        EditorSelection.setLinearSelection(root, query.start, caret);
+        root.ownerDocument.execCommand(
+            'insertText',
+            false,
+            WikiLinkConverter.toLinkText(candidate)
+        );
+        this.wikiQuery.set(null);
+        this.onInput();
+    }
+
+    private detectWikiQuery(body: string): void {
+        const idProject = this.wikiScope?.idProject() ?? null;
+        if (idProject === null) {
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        const match = /\[\[([^[\]\n]*)$/.exec(body.slice(0, caret));
+        if (!match) {
+            this.wikiQuery.set(null);
+            return;
+        }
+        if (!this.wikiQuery()) {
+            this.wikiStore.reload(idProject);
+            this.activeIndex.set(0);
+        }
+        this.wikiQuery.set({ start: caret - match[0].length, query: match[1] });
+        this.placePicker(caret - match[0].length);
+    }
+
+    private placePicker(offset: number): void {
+        const root = this.editorRef().nativeElement;
+        const container = root.parentElement;
+        if (!container) {
+            return;
+        }
+        const caret = EditorSelection.rectAt(root, offset);
+        const box = container.getBoundingClientRect();
+        const maxLeft = Math.max(0, box.width - MessageEditorComponent.pickerWidth);
+        const left = `${Math.min(Math.max(0, caret.left - box.left), maxLeft)}px`;
+        const view = root.ownerDocument.defaultView;
+        const hasRoomBelow =
+            !view || caret.bottom + MessageEditorComponent.pickerHeight < view.innerHeight;
+        this.pickerPosition.set(
+            hasRoomBelow
+                ? { left, top: `${caret.bottom - box.top + 4}px`, bottom: 'auto' }
+                : { left, top: 'auto', bottom: `${box.bottom - caret.top + 4}px` }
+        );
     }
 
     private replaceAsciiEmoji(el: HTMLDivElement): boolean {
@@ -241,6 +361,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         if (boundary) {
             this.mentionQuery.set({ start: atIdx, query: m[1] });
             this.activeIndex.set(0);
+            this.placePicker(atIdx);
         } else {
             this.mentionQuery.set(null);
         }

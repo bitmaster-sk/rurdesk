@@ -30,6 +30,7 @@ func New(
 	sevCtrl *controller.SeverityController,
 	itCtrl *controller.IssueTypeController,
 	cfCtrl *controller.CustomFieldController,
+	wikiCtrl *controller.WikiController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
 	savedViewCtrl *controller.SavedViewController,
@@ -234,6 +235,32 @@ func New(
 	pri.PATCH("/custom-field/:idCustomField", cfCtrl.EditCustomField)
 	pri.DELETE("/custom-field/:idCustomField/project/:idProject", cfCtrl.DeleteCustomField)
 	pri.GET("/custom-field/:idCustomField/project/:idProject/usage", cfCtrl.GetCustomFieldUsage)
+
+	pri.GET("/project/:idProject/wiki/tree", wikiCtrl.GetTree)
+	pri.GET("/project/:idProject/wiki/page/:space/:slug", wikiCtrl.GetPage)
+	pri.POST("/project/:idProject/wiki/page", wikiCtrl.CreatePage)
+	pri.GET("/project/:idProject/wiki/trash", wikiCtrl.GetTrash)
+	pri.GET("/project/:idProject/wiki/search", wikiCtrl.Search)
+	pri.PUT("/project/:idProject/wiki/settings", wikiCtrl.UpdateSettings)
+	pri.PUT("/project/:idProject/wiki/home", wikiCtrl.UpdateHome)
+	pri.PUT("/wiki/page/:idPage", wikiCtrl.SavePage)
+	pri.POST("/wiki/page/:idPage/merge-preview", wikiCtrl.MergePreview)
+	pri.PUT("/wiki/page/:idPage/position", wikiCtrl.MovePage)
+	pri.DELETE("/wiki/page/:idPage", wikiCtrl.TrashPage)
+	pri.POST("/wiki/page/:idPage/restore", wikiCtrl.RestorePage)
+	pri.DELETE("/wiki/page/:idPage/purge", wikiCtrl.PurgePage)
+	pri.GET("/wiki/page/:idPage/version", wikiCtrl.GetVersions)
+	pri.GET("/wiki/page/:idPage/version/:versionNo", wikiCtrl.GetVersion)
+	pri.POST("/wiki/page/:idPage/revert/:versionNo", wikiCtrl.RevertPage)
+	pri.GET("/wiki/page/:idPage/diff", wikiCtrl.GetDiff)
+	pri.GET("/wiki/page/:idPage/draft", wikiCtrl.GetDraft)
+	pri.PUT("/wiki/page/:idPage/draft", wikiCtrl.SaveDraft)
+	pri.DELETE("/wiki/page/:idPage/draft", wikiCtrl.DeleteDraft)
+	pri.PUT("/wiki/page/:idPage/editing", wikiCtrl.Heartbeat)
+	pri.DELETE("/wiki/page/:idPage/editing", wikiCtrl.Heartbeat)
+	pri.GET("/issue/:idIssue/wiki", wikiCtrl.GetIssueLinks)
+	pri.POST("/issue/:idIssue/wiki", wikiCtrl.AddIssueLink)
+	pri.DELETE("/issue/:idIssue/wiki/:idPage", wikiCtrl.RemoveIssueLink)
 
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)

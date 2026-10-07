@@ -9,5 +9,6 @@ export enum NoticeSubject {
     AgentThinking = 'agent_thinking',
     Participant = 'issue_participant',
     MrStatus = 'mr_status',
-    CustomField = 'custom_field'
+    CustomField = 'custom_field',
+    WikiPage = 'wiki_page'
 }

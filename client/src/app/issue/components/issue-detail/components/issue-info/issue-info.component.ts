@@ -126,6 +126,8 @@ export class IssueInfoComponent implements OnInit {
     // Auto-save status of the whole issue form, shown in the header.
     public readonly saveStatus = signal<UiSaveState>(UiSaveState.Idle);
 
+    protected readonly canEditWiki = computed(() => this.aclStore.canUpdateIssue());
+
     public currentUserId(): number {
         return this.authStore.getUser().idUser;
     }

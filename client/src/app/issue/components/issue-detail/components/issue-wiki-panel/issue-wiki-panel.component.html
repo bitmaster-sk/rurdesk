@@ -1,0 +1,124 @@
+<div
+    class="wiki-panel"
+    data-testid="issue-wiki-panel"
+    [class.wiki-panel--collapsed]="isCollapsed()"
+>
+    <div
+        uiActivatable
+        class="wiki-panel__header"
+        [attr.aria-expanded]="!isCollapsed()"
+        [attr.aria-label]="'WIKI.ISSUE.TITLE' | translate"
+        (click)="onToggle()"
+    >
+        <span class="wiki-panel__chevron" [class.wiki-panel__chevron--collapsed]="isCollapsed()">
+            <tabler-icon icon="chevron-down" [size]="14" />
+        </span>
+        <span class="wiki-panel__icon">
+            <tabler-icon icon="book-2" [size]="14" />
+        </span>
+        <span class="wiki-panel__title">{{ 'WIKI.ISSUE.TITLE' | translate }}</span>
+        @if (links().length > 0) {
+            <span class="wiki-panel__count">{{ links().length }}</span>
+        }
+        @if (canEdit()) {
+            <span class="wiki-panel__actions" (click)="$event.stopPropagation()">
+                <ui-button
+                    variant="text"
+                    severity="secondary"
+                    size="small"
+                    data-testid="issue-wiki-add"
+                    [title]="'WIKI.ISSUE.ADD' | translate"
+                    (click)="onPickerToggle(); addPopover.toggle($event)"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </ui-button>
+            </span>
+        }
+    </div>
+
+    <ui-popover #addPopover (closed)="onPickerClosed()">
+        <div class="wiki-panel__popover" data-testid="issue-wiki-picker">
+            <input
+                uiInput
+                class="w-full"
+                data-testid="issue-wiki-search"
+                [placeholder]="'WIKI.ISSUE.SEARCH' | translate"
+                [value]="query()"
+                (input)="onFilter($event)"
+            />
+            @if (tree()) {
+                <div class="wiki-panel__picks">
+                    @for (group of pickGroups(); track group.kind) {
+                        <div class="wiki-panel__group">
+                            {{
+                                (group.kind === SpaceKind.Instance
+                                    ? 'WIKI.SPACE.INSTANCE'
+                                    : 'WIKI.SPACE.PROJECT'
+                                ) | translate
+                            }}
+                        </div>
+                        @for (page of group.pages; track page.idPage) {
+                            <button
+                                type="button"
+                                class="wiki-panel__hit"
+                                data-testid="issue-wiki-pick"
+                                [style.padding-left.rem]="0.5 + page.depth * 0.75"
+                                [disabled]="page.isLinked"
+                                (click)="onAdd(page); addPopover.hide()"
+                            >
+                                <tabler-icon
+                                    [icon]="page.isLinked ? 'check' : 'file-text'"
+                                    [size]="14"
+                                />
+                                <span>{{ page.title }}</span>
+                            </button>
+                        }
+                    } @empty {
+                        <div class="wiki-panel__empty">{{ 'WIKI.SEARCH.EMPTY' | translate }}</div>
+                    }
+                </div>
+            } @else {
+                <div class="flex justify-center p-3" data-testid="issue-wiki-picker-loading">
+                    <ui-loader [size]="20" />
+                </div>
+            }
+        </div>
+    </ui-popover>
+
+    @if (!isCollapsed()) {
+        <div class="wiki-panel__body">
+            @for (page of links(); track page.idPage) {
+                <div class="wiki-panel__row" data-testid="issue-wiki-link">
+                    <span class="wiki-panel__page-icon">
+                        <tabler-icon icon="file-text" [size]="18" />
+                    </span>
+                    <a class="wiki-panel__link" [routerLink]="link(page)">{{ page.title }}</a>
+                    <span
+                        class="wiki-panel__source"
+                        [class.wiki-panel__source--description]="page.source === Source.Description"
+                    >
+                        {{
+                            (page.source === Source.Description
+                                ? 'WIKI.ISSUE.FROM_DESCRIPTION'
+                                : 'WIKI.ISSUE.MANUAL'
+                            ) | translate
+                        }}
+                    </span>
+                    @if (canEdit() && page.source === Source.Manual) {
+                        <ui-button
+                            variant="text"
+                            severity="secondary"
+                            size="small"
+                            [ariaLabel]="'WIKI.ISSUE.REMOVE' | translate"
+                            (click)="onRemove(page)"
+                        >
+                            <tabler-icon icon="x" [size]="14" />
+                        </ui-button>
+                    }
+                </div>
+            } @empty {
+                <div class="wiki-panel__empty">{{ 'WIKI.ISSUE.EMPTY' | translate }}</div>
+            }
+        </div>
+    }
+</div>

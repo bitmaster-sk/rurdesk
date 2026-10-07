@@ -43,6 +43,7 @@ type IssueController struct {
 	stagePlan           *service.StagePlanService
 	notifSvc            *service.NotificationService
 	customFieldValueSvc *service.CustomFieldValueService
+	wikiSvc             *service.WikiService
 	pool                *pgxpool.Pool
 }
 
@@ -72,6 +73,11 @@ func NewIssueController(
 		customFieldValueSvc: customFieldValueSvc,
 		pool:                pool,
 	}
+}
+
+func (ic *IssueController) WithWiki(wikiSvc *service.WikiService) *IssueController {
+	ic.wikiSvc = wikiSvc
+	return ic
 }
 
 func (ic *IssueController) WithGitIntRepo(repo *repository.GitIntegrationRepository) *IssueController {
@@ -301,7 +307,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 				return fmt.Errorf("adding assignee participant: %w", err)
 			}
 		}
-		return ic.customFieldValueSvc.Apply(ctx, dto.IdProject, result.IdIssue, dto.CustomFields, true)
+		if err := ic.customFieldValueSvc.Apply(ctx, dto.IdProject, result.IdIssue, dto.CustomFields, true); err != nil {
+			return err
+		}
+		return ic.syncWikiLinks(ctx, result)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -451,7 +460,10 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return fmt.Errorf("auto-adding assignee as participant (edit): %w", addErr)
 			}
 		}
-		return ic.customFieldValueSvc.Apply(ctx, dto.IdProject, issue.IdIssue, dto.CustomFields, false)
+		if err := ic.customFieldValueSvc.Apply(ctx, dto.IdProject, issue.IdIssue, dto.CustomFields, false); err != nil {
+			return err
+		}
+		return ic.syncWikiLinks(ctx, issue)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -1121,4 +1133,11 @@ func uniqueRecipients(creatorId int64, assignedTo *int64, excludeId int64) []int
 		result = append(result, *assignedTo)
 	}
 	return result
+}
+
+func (ic *IssueController) syncWikiLinks(ctx context.Context, issue *model.Issue) error {
+	if ic.wikiSvc == nil {
+		return nil
+	}
+	return ic.wikiSvc.SyncIssueDescription(ctx, issue.IdIssue, issue.IdProject, issue.Description)
 }

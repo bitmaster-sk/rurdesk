@@ -1,0 +1,270 @@
+@if (isReady()) {
+<div class="wiki-edit" data-testid="wiki-edit">
+    <div class="wiki-edit__bar">
+        <app-wiki-tree-show />
+        <input
+            uiInput
+            class="wiki-edit__title"
+            data-testid="wiki-edit-title"
+            [placeholder]="'WIKI.FIELD.TITLE' | translate"
+            [value]="title()"
+            (input)="onTextInput($event, title)"
+        />
+        <div class="wiki-edit__bar-end">
+            @for (editor of editors(); track editor.idUser) {
+            <span class="wiki-edit__presence" [uiTooltip]="editor.name">
+                <app-avatar [name]="editor.name" [height]="1.4" [width]="1.4" [radius]="0.7" />
+            </span>
+            } @switch (draftState()) { @case (DraftState.Saving) {
+            <span class="wiki-edit__draft-state">{{ 'WIKI.DRAFT.SAVING' | translate }}</span>
+            } @case (DraftState.Saved) {
+            <span class="wiki-edit__draft-state">
+                <tabler-icon icon="cloud-check" [size]="14" />
+                {{ 'WIKI.DRAFT.SAVED' | translate: { version: baseVersion() } }}
+            </span>
+            } }
+            <ui-button variant="text" severity="secondary" (click)="onCancel()">
+                {{ 'CANCEL' | translate }}
+            </ui-button>
+            <ui-button
+                data-testid="wiki-save"
+                [loading]="isSaving()"
+                [disabled]="!title().trim() || isOverBudget()"
+                (click)="onSave()"
+            >
+                <tabler-icon icon="check" [size]="16" />
+                {{ (isCreate ? 'WIKI.SAVE.CREATE' : 'WIKI.SAVE.ACTION') | translate }}
+            </ui-button>
+        </div>
+    </div>
+
+    @if (editors().length > 0) {
+    <div class="wiki-edit__banner wiki-edit__banner--info" data-testid="wiki-presence">
+        <tabler-icon icon="users" [size]="16" />
+        {{ 'WIKI.LIVE.EDITING' | translate: { names: editorNames() } }}
+    </div>
+    } @if (incoming(); as incoming) {
+    <div class="wiki-edit__banner wiki-edit__banner--warn" data-testid="wiki-incoming">
+        <tabler-icon icon="refresh-alert" [size]="16" />
+        <span class="grow">
+            {{ 'WIKI.LIVE.SAVED' | translate: { name: incoming.userName, version: incoming.versionNo
+            } }}
+        </span>
+        <ui-button
+            size="small"
+            variant="outlined"
+            data-testid="wiki-apply-incoming"
+            (click)="onApplyIncoming()"
+        >
+            <tabler-icon icon="git-merge" [size]="14" />
+            {{ 'WIKI.LIVE.APPLY' | translate }}
+        </ui-button>
+    </div>
+    } @if (conflict(); as conflict) {
+    <app-wiki-conflict
+        class="wiki-edit__conflict"
+        [chunks]="conflict.chunks"
+        [theirsLabel]="'WIKI.CONFLICT.THEIRS' | translate: { name: conflict.theirsName, version: conflict.currentVersion }"
+        [isSaving]="isSaving()"
+        (resolved)="onResolved($event)"
+        (cancelled)="onConflictCancelled()"
+    />
+    } @else {
+    <div class="wiki-edit__main">
+        <div class="wiki-edit__split">
+            <div class="wiki-edit__pane wiki-edit__pane--source">
+                <app-wiki-editor
+                    #editor
+                    [initialValue]="body()"
+                    [placeholderText]="'WIKI.FIELD.BODY_PLACEHOLDER' | translate"
+                    [pages]="pageOptions()"
+                    [issues]="issueOptions()"
+                    (valueChange)="onBodyChange($event)"
+                    (issuesRequested)="onIssuesRequested()"
+                />
+            </div>
+            <div class="wiki-edit__pane">
+                <div class="wiki-edit__pane-label">{{ 'WIKI.FIELD.PREVIEW' | translate }}</div>
+                <article
+                    class="wiki-article"
+                    markdown
+                    ngPreserveWhitespaces
+                    [data]="preview()"
+                ></article>
+            </div>
+        </div>
+
+        <aside class="wiki-edit__settings">
+            @if (isCreate && canChooseShared()) {
+            <div class="wiki-edit__field">
+                <label for="wiki-space">{{ 'WIKI.FIELD.SPACE' | translate }}</label>
+                <ui-select
+                    inputId="wiki-space"
+                    data-testid="wiki-edit-space"
+                    [options]="spaceOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="space()"
+                    (ngModelChange)="onSpaceChange($event)"
+                />
+            </div>
+            } @if (isCreate) {
+            <div class="wiki-edit__field">
+                <label for="wiki-parent">{{ 'WIKI.FIELD.PARENT' | translate }}</label>
+                <ui-select
+                    inputId="wiki-parent"
+                    [options]="parentOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [filter]="true"
+                    [ngModel]="idParent()"
+                    (ngModelChange)="idParent.set($event)"
+                >
+                    <ng-template #item let-option>
+                        <span [style.padding-left.rem]="option.depth">{{ option.label }}</span>
+                    </ng-template>
+                </ui-select>
+            </div>
+            }
+
+            <div class="wiki-edit__field">
+                <span class="wiki-edit__label">{{ 'WIKI.FIELD.AGENT_ACCESS' | translate }}</span>
+                <button
+                    type="button"
+                    class="wiki-edit__radio"
+                    data-testid="wiki-access-always"
+                    [class.wiki-edit__radio--on]="agentAccess() === AgentAccess.Always"
+                    [disabled]="!canManage() && agentAccess() !== AgentAccess.Always"
+                    (click)="agentAccess.set(AgentAccess.Always)"
+                >
+                    <span class="wiki-edit__dot"></span>
+                    <span>
+                        <b>{{ 'WIKI.ACCESS.ALWAYS' | translate }}</b>
+                        <small>{{ 'WIKI.ACCESS.ALWAYS_HINT' | translate }}</small>
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="wiki-edit__radio"
+                    [class.wiki-edit__radio--on]="agentAccess() === AgentAccess.OnDemand"
+                    [disabled]="!canManage() && agentAccess() === AgentAccess.Always"
+                    (click)="agentAccess.set(AgentAccess.OnDemand)"
+                >
+                    <span class="wiki-edit__dot"></span>
+                    <span>
+                        <b>{{ 'WIKI.ACCESS.ON_DEMAND' | translate }}</b>
+                        <small>{{ 'WIKI.ACCESS.ON_DEMAND_HINT' | translate }}</small>
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    class="wiki-edit__radio"
+                    [class.wiki-edit__radio--on]="agentAccess() === AgentAccess.Hidden"
+                    [disabled]="!canManage() && agentAccess() === AgentAccess.Always"
+                    (click)="agentAccess.set(AgentAccess.Hidden)"
+                >
+                    <span class="wiki-edit__dot"></span>
+                    <span>
+                        <b>{{ 'WIKI.ACCESS.HIDDEN' | translate }}</b>
+                        <small>{{ 'WIKI.ACCESS.HIDDEN_HINT' | translate }}</small>
+                    </span>
+                </button>
+                @if (!canManage()) {
+                <small class="wiki-edit__hint">{{ 'WIKI.ACCESS.MANAGE_ONLY' | translate }}</small>
+                }
+                <small class="wiki-edit__hint" [class.wiki-edit__hint--error]="isOverBudget()">
+                    {{ 'WIKI.ACCESS.BUDGET' | translate: { used: budgetTokens(), limit:
+                    store.tree()?.tokenLimit ?? 0 } }}
+                </small>
+                <div class="wiki-edit__budget">
+                    <div
+                        class="wiki-edit__budget-fill"
+                        [class.wiki-edit__budget-fill--over]="isOverBudget()"
+                        [style.width.%]="budgetPercent()"
+                    ></div>
+                </div>
+            </div>
+
+            <div class="wiki-edit__field">
+                <label for="wiki-summary">{{ 'WIKI.FIELD.SUMMARY' | translate }}</label>
+                <textarea
+                    uiTextarea
+                    id="wiki-summary"
+                    rows="3"
+                    maxlength="500"
+                    [value]="summary()"
+                    (input)="onTextInput($event, summary)"
+                ></textarea>
+                <small class="wiki-edit__hint">{{ 'WIKI.FIELD.SUMMARY_HINT' | translate }}</small>
+            </div>
+
+            <div class="wiki-edit__field">
+                <label for="wiki-note">{{ 'WIKI.FIELD.NOTE' | translate }}</label>
+                <textarea
+                    uiTextarea
+                    id="wiki-note"
+                    rows="2"
+                    maxlength="500"
+                    [placeholder]="'WIKI.FIELD.NOTE_PLACEHOLDER' | translate"
+                    [value]="note()"
+                    (input)="onTextInput($event, note)"
+                ></textarea>
+            </div>
+        </aside>
+    </div>
+    }
+</div>
+
+<ui-dialog
+    [visible]="isLeaveOpen()"
+    [header]="'WIKI.LEAVE.TITLE' | translate"
+    [closable]="false"
+    width="28rem"
+>
+    <p>{{ 'WIKI.LEAVE.TEXT' | translate }}</p>
+    <div class="flex justify-end gap-2 mt-3">
+        <ui-button
+            variant="text"
+            severity="danger"
+            data-testid="wiki-leave-discard"
+            (click)="onLeaveDecided(true)"
+        >
+            {{ 'WIKI.LEAVE.DISCARD' | translate }}
+        </ui-button>
+        <ui-button data-testid="wiki-leave-stay" (click)="onLeaveDecided(false)">
+            {{ 'WIKI.LEAVE.STAY' | translate }}
+        </ui-button>
+    </div>
+</ui-dialog>
+
+<ui-dialog
+    [visible]="!!pendingDraft()"
+    [header]="'WIKI.DRAFT.TITLE' | translate"
+    [closable]="false"
+    width="30rem"
+>
+    @if (pendingDraft(); as draft) {
+    <p>
+        {{ 'WIKI.DRAFT.FOUND' | translate: { date: (draft.updateAt | date: 'short'), version:
+        draft.baseVersion } }}
+    </p>
+    <div class="flex justify-end gap-2 mt-3">
+        <ui-button
+            variant="text"
+            severity="secondary"
+            data-testid="wiki-draft-discard"
+            (click)="onDiscardDraft()"
+        >
+            {{ 'WIKI.DRAFT.DISCARD' | translate }}
+        </ui-button>
+        <ui-button data-testid="wiki-draft-continue" (click)="onContinueDraft()">
+            {{ 'WIKI.DRAFT.CONTINUE' | translate }}
+        </ui-button>
+    </div>
+    }
+</ui-dialog>
+} @else {
+<div class="flex h-full min-h-40 w-full items-center justify-center">
+    <ui-loader [size]="32" />
+</div>
+}

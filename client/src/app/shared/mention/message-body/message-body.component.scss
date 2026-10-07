@@ -15,4 +15,8 @@
         display: inline;
         margin: 0;
     }
+
+    ::ng-deep a[title='missing'] {
+        color: var(--ui-red-600);
+    }
 }

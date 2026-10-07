@@ -1,0 +1,170 @@
+@mixin article {
+    flex: 1;
+    min-width: 0;
+    max-width: 56rem;
+    padding: var(--ui-space-xl);
+    line-height: 1.6;
+    color: var(--ui-color-text);
+    overflow-wrap: anywhere;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        scroll-margin-top: var(--ui-space-l);
+
+        &:hover .wiki-heading-anchor,
+        .wiki-heading-anchor:focus-visible {
+            opacity: 1;
+        }
+    }
+
+    .wiki-heading-anchor {
+        margin-left: var(--ui-space-s);
+        border-bottom: none;
+        color: var(--ui-color-text-muted);
+        font-weight: 400;
+        opacity: 0;
+        transition: opacity 120ms ease-out;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+    }
+
+    h1,
+    h2 {
+        padding-bottom: var(--ui-space-s);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    h2 {
+        margin: 1.5em 0 0.5em;
+        font-size: var(--font-size-l);
+    }
+
+    h3 {
+        margin: 1.2em 0 0.4em;
+        font-size: var(--font-size-m);
+    }
+
+    a {
+        color: var(--ui-color-primary);
+        text-decoration: none;
+        border-bottom: 1px dashed var(--ui-color-primary-accent);
+    }
+
+    a[title='missing'] {
+        color: var(--ui-red-600);
+        border-bottom-color: var(--ui-red-300);
+    }
+
+    code {
+        font-family: var(--ui-font-mono);
+        font-size: 0.9em;
+        padding: 1px var(--ui-space-s);
+        border-radius: var(--ui-radius-sm);
+        background: var(--ui-color-primary-weak);
+        color: var(--ui-color-primary-strong);
+    }
+
+    pre {
+        padding: var(--ui-space-m);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-surface-900);
+        color: var(--ui-surface-100);
+        overflow-x: auto;
+
+        code {
+            padding: 0;
+            background: none;
+            color: inherit;
+        }
+    }
+
+    blockquote {
+        margin: 0;
+        padding-left: var(--ui-space-m);
+        border-left: 3px solid var(--ui-color-border);
+        color: var(--ui-color-text-muted);
+    }
+
+    li:has(> .wiki-task),
+    li:has(> p > .wiki-task) {
+        list-style: none;
+    }
+
+    .wiki-task {
+        position: relative;
+        display: inline-block;
+        width: 0.95em;
+        height: 0.95em;
+        margin: 0 0.35em 0 -1.3em;
+        vertical-align: -0.12em;
+        border: 1.5px solid var(--ui-color-text-muted);
+        border-radius: var(--ui-radius-sm);
+    }
+
+    .wiki-task--done {
+        border-color: var(--ui-color-primary);
+        background: var(--ui-color-primary);
+
+        &::after {
+            content: '';
+            position: absolute;
+            left: 0.26em;
+            top: 0.06em;
+            width: 0.25em;
+            height: 0.5em;
+            border: solid var(--ui-color-primary-contrast);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+    }
+
+    .wiki-callout {
+        --wiki-callout-accent: var(--ui-blue-600);
+        --wiki-callout-bg: var(--ui-blue-50);
+
+        margin: 1em 0;
+        padding: var(--ui-space) var(--ui-space-l);
+        border-left: 4px solid var(--wiki-callout-accent);
+        border-radius: var(--ui-radius-md);
+        background: var(--wiki-callout-bg);
+
+        > :last-child {
+            margin-bottom: 0;
+        }
+
+        p {
+            margin: var(--ui-space-s) 0;
+        }
+    }
+
+    .wiki-callout__title {
+        font-weight: 700;
+        color: var(--wiki-callout-accent);
+    }
+
+    .wiki-callout--tip {
+        --wiki-callout-accent: var(--ui-green-600);
+        --wiki-callout-bg: var(--ui-green-50);
+    }
+
+    .wiki-callout--important {
+        --wiki-callout-accent: var(--ui-purple-600);
+        --wiki-callout-bg: var(--ui-purple-50);
+    }
+
+    .wiki-callout--warning {
+        --wiki-callout-accent: var(--ui-orange-600);
+        --wiki-callout-bg: var(--ui-orange-50);
+    }
+
+    .wiki-callout--caution {
+        --wiki-callout-accent: var(--ui-red-600);
+        --wiki-callout-bg: var(--ui-red-50);
+    }
+}

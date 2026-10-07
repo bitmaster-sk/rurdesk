@@ -1,0 +1,169 @@
+<div class="wiki-shell">
+    @if (!layout.isTreeHidden()) {
+    <aside class="wiki-nav" data-testid="wiki-nav">
+        <div class="wiki-nav__head">
+            <h2 class="wiki-nav__title">{{ 'WIKI.TITLE' | translate }}</h2>
+            @if (store.projectSpace()?.canEdit) {
+            <ui-button
+                size="small"
+                variant="outlined"
+                severity="secondary"
+                data-testid="wiki-create"
+                (click)="onCreate(SpaceKind.Project)"
+            >
+                <tabler-icon icon="plus" [size]="14" />
+                {{ 'WIKI.PAGE.NEW' | translate }}
+            </ui-button>
+            }
+            <ui-button
+                variant="text"
+                severity="secondary"
+                size="small"
+                [ariaLabel]="'WIKI.TREE.HIDE' | translate"
+                [uiTooltip]="'WIKI.TREE.HIDE' | translate"
+                data-testid="wiki-tree-hide"
+                (click)="layout.toggleTree()"
+            >
+                <tabler-icon icon="layout-sidebar-left-collapse" [size]="16" />
+            </ui-button>
+        </div>
+
+        <div class="wiki-nav__search">
+            <tabler-icon icon="search" [size]="14" class="ui-color-text-muted" />
+            <input
+                class="wiki-nav__search-input"
+                data-testid="wiki-search"
+                [placeholder]="'WIKI.SEARCH.PLACEHOLDER' | translate"
+                [value]="query()"
+                (input)="onSearchInput($event)"
+                (keydown.escape)="onClearSearch()"
+            />
+            @if (query()) {
+            <button type="button" class="wiki-nav__search-clear" (click)="onClearSearch()">
+                <tabler-icon icon="x" [size]="14" />
+            </button>
+            }
+        </div>
+
+        <div class="wiki-nav__scroll">
+            @if (query().trim()) { @if (isSearching()) {
+            <div class="wiki-nav__searching" data-testid="wiki-search-loading">
+                <ui-loader [size]="20" />
+            </div>
+            } @for (hit of hits(); track hit.idPage) {
+            <a class="wiki-nav__hit" data-testid="wiki-search-hit" [routerLink]="hitLink(hit)">
+                <span class="wiki-nav__hit-title">{{ hit.title }}</span>
+                <span class="wiki-nav__hit-snippet">
+                    @for (part of snippetParts(hit); track $index) { @if (part.isMatch) {
+                    <mark>{{ part.text }}</mark>
+                    } @else { {{ part.text }} } }
+                </span>
+            </a>
+            } @empty { @if (!isSearching()) {
+            <div class="wiki-nav__empty" data-testid="wiki-search-empty">
+                {{ 'WIKI.SEARCH.EMPTY' | translate }}
+            </div>
+            } } } @else if (store.groups(); as groups) { @if (groups.always.length > 0) {
+            <div class="wiki-nav__group">{{ 'WIKI.TREE.ALWAYS' | translate }}</div>
+            <div class="wiki-nav__list">
+                @for (node of groups.always; track node.idPage) {
+                <a
+                    class="wiki-nav__flat"
+                    [class.wiki-nav__flat--active]="node.idPage === activeIdPage()"
+                    [routerLink]="alwaysLink(node)"
+                >
+                    <tabler-icon icon="file-text" [size]="14" />
+                    <span class="grow">{{ node.title }}</span>
+                    <tabler-icon icon="robot" [size]="13" class="wiki-nav__robot" />
+                </a>
+                }
+            </div>
+            }
+
+            <div class="wiki-nav__group">
+                <span>{{ 'WIKI.SPACE.INSTANCE' | translate }}</span>
+                @if (store.sharedSpace()?.canEdit) {
+                <button
+                    type="button"
+                    class="wiki-nav__group-add"
+                    data-testid="wiki-create-shared"
+                    [attr.aria-label]="'WIKI.PAGE.NEW_SHARED' | translate"
+                    [uiTooltip]="'WIKI.PAGE.NEW_SHARED' | translate"
+                    (click)="onCreate(SpaceKind.Instance)"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </button>
+                }
+            </div>
+            <app-wiki-tree
+                class="wiki-nav__list"
+                [entries]="groups.shared"
+                [idProject]="idProject()"
+                [spaceKind]="SpaceKind.Instance"
+                [activeIdPage]="activeIdPage()"
+                [expanded]="store.expanded()"
+                [canEdit]="!!store.sharedSpace()?.canEdit"
+                (toggled)="store.toggle($event)"
+                (moved)="onMoved($event)"
+            />
+            @if (groups.shared.length === 0) {
+            <div class="wiki-nav__empty">{{ 'WIKI.TREE.EMPTY' | translate }}</div>
+            }
+
+            <div class="wiki-nav__group">
+                <span>{{ 'WIKI.SPACE.PROJECT' | translate }}</span>
+                @if (store.projectSpace()?.canEdit) {
+                <button
+                    type="button"
+                    class="wiki-nav__group-add"
+                    [attr.aria-label]="'WIKI.PAGE.NEW' | translate"
+                    [uiTooltip]="'WIKI.PAGE.NEW' | translate"
+                    (click)="onCreate(SpaceKind.Project)"
+                >
+                    <tabler-icon icon="plus" [size]="14" />
+                </button>
+                }
+            </div>
+            <app-wiki-tree
+                class="wiki-nav__list"
+                data-testid="wiki-tree-project"
+                [entries]="groups.project"
+                [idProject]="idProject()"
+                [spaceKind]="SpaceKind.Project"
+                [idHomePage]="store.projectSpace()?.idHomePage ?? null"
+                [activeIdPage]="activeIdPage()"
+                [expanded]="store.expanded()"
+                [canEdit]="!!store.projectSpace()?.canEdit"
+                (toggled)="store.toggle($event)"
+                (moved)="onMoved($event)"
+            />
+            @if (groups.project.length === 0) {
+            <div class="wiki-nav__empty">{{ 'WIKI.TREE.EMPTY' | translate }}</div>
+            } } @else {
+            <div class="flex h-full min-h-40 w-full items-center justify-center">
+                <ui-loader [size]="32" />
+            </div>
+            }
+        </div>
+
+        <div class="wiki-nav__footer">
+            <a
+                class="wiki-nav__flat"
+                data-testid="wiki-trash-link"
+                routerLinkActive="wiki-nav__flat--active"
+                [routerLink]="['/project', idProject(), 'wiki', 'trash']"
+            >
+                <tabler-icon icon="trash" [size]="14" />
+                <span class="grow">{{ 'WIKI.TRASH.TITLE' | translate }}</span>
+                @if (store.tree()?.trashCount; as trashCount) {
+                <span class="wiki-nav__count" data-testid="wiki-trash-count">{{ trashCount }}</span>
+                }
+            </a>
+        </div>
+    </aside>
+    }
+
+    <main class="wiki-main">
+        <router-outlet />
+    </main>
+</div>

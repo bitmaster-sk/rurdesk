@@ -1,0 +1,94 @@
+<div class="wiki-trash" data-testid="wiki-trash">
+    <section class="panel">
+        <header class="panel-head">
+            <div class="panel-head-l">
+                <app-wiki-tree-show />
+                <tabler-icon icon="trash" [size]="16" class="panel-icon" />
+                <div>
+                    <div class="panel-title">{{ 'WIKI.TRASH.TITLE' | translate }}</div>
+                    <div class="panel-sub">{{ 'WIKI.TRASH.HINT' | translate }}</div>
+                </div>
+            </div>
+        </header>
+        <div class="panel-body panel-body--flush">
+            @if (items(); as items) { @if (items.length === 0) {
+            <div class="p-4 text-center ui-color-text-muted">
+                {{ 'WIKI.TRASH.EMPTY' | translate }}
+            </div>
+            } @else {
+            <table class="ui-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'WIKI.TRASH.PAGE' | translate }}</th>
+                        <th scope="col">{{ 'WIKI.TRASH.SPACE' | translate }}</th>
+                        <th scope="col">{{ 'WIKI.TRASH.DELETED_BY' | translate }}</th>
+                        <th scope="col">{{ 'WIKI.TRASH.EXPIRES' | translate }}</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (item of items; track item.idPage) {
+                    <tr data-testid="wiki-trash-row">
+                        <td>
+                            <b>{{ item.title }}</b>
+                            @if (item.descendants > 0) {
+                            <span class="wiki-trash__muted">
+                                {{ 'WIKI.TRASH.SUBPAGES' | translate: { count: item.descendants } }}
+                            </span>
+                            }
+                        </td>
+                        <td class="wiki-trash__muted">
+                            {{ (isShared(item) ? 'WIKI.SPACE.INSTANCE' : 'WIKI.SPACE.PROJECT') |
+                            translate }} @if (!item.parentAlive) {
+                            <ui-tag
+                                severity="secondary"
+                                [value]="'WIKI.TRASH.PARENT_GONE' | translate"
+                            />
+                            }
+                        </td>
+                        <td>
+                            {{ authorName(item.deletedBy) }} · {{ item.deletedAt | date: 'short' }}
+                        </td>
+                        <td class="wiki-trash__muted">
+                            {{ 'WIKI.TRASH.DAYS_LEFT' | translate: { count: daysLeft(item) } }}
+                        </td>
+                        <td>
+                            <div class="flex items-center justify-end gap-2">
+                                <ui-button
+                                    variant="text"
+                                    severity="secondary"
+                                    size="small"
+                                    data-testid="wiki-trash-restore"
+                                    (click)="onRestore(item)"
+                                >
+                                    <tabler-icon icon="restore" [size]="14" />
+                                    {{ (item.parentAlive ? 'WIKI.TRASH.RESTORE' :
+                                    'WIKI.TRASH.RESTORE_ROOT') | translate }}
+                                </ui-button>
+                                @if (canPurge(item)) {
+                                <ui-button
+                                    variant="text"
+                                    severity="danger"
+                                    size="small"
+                                    uiConfirm
+                                    [confirmText]="'WIKI.TRASH.PURGE_CONFIRM' | translate"
+                                    [ariaLabel]="'WIKI.TRASH.PURGE' | translate"
+                                    (confirmed)="onPurge(item)"
+                                >
+                                    <tabler-icon icon="trash" [size]="14" />
+                                </ui-button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+            } } @else {
+            <div class="flex h-full min-h-40 w-full items-center justify-center">
+                <ui-loader [size]="32" />
+            </div>
+            }
+        </div>
+    </section>
+</div>

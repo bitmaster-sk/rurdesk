@@ -201,6 +201,54 @@ func GetCustomFieldRepository() *repository.CustomFieldRepository {
 	return instance.(*repository.CustomFieldRepository)
 }
 
+func GetWikiSpaceRepository() *repository.WikiSpaceRepository {
+	instance, _ := di.GetWithNew("wiki-space-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiSpaceRepository(pool), nil
+	})
+	return instance.(*repository.WikiSpaceRepository)
+}
+
+func GetWikiPageRepository() *repository.WikiPageRepository {
+	instance, _ := di.GetWithNew("wiki-page-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiPageRepository(pool), nil
+	})
+	return instance.(*repository.WikiPageRepository)
+}
+
+func GetWikiPageVersionRepository() *repository.WikiPageVersionRepository {
+	instance, _ := di.GetWithNew("wiki-page-version-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiPageVersionRepository(pool), nil
+	})
+	return instance.(*repository.WikiPageVersionRepository)
+}
+
+func GetWikiPageDraftRepository() *repository.WikiPageDraftRepository {
+	instance, _ := di.GetWithNew("wiki-page-draft-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiPageDraftRepository(pool), nil
+	})
+	return instance.(*repository.WikiPageDraftRepository)
+}
+
+func GetWikiPageLinkRepository() *repository.WikiPageLinkRepository {
+	instance, _ := di.GetWithNew("wiki-page-link-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiPageLinkRepository(pool), nil
+	})
+	return instance.(*repository.WikiPageLinkRepository)
+}
+
+func GetWikiIssuePageRepository() *repository.WikiIssuePageRepository {
+	instance, _ := di.GetWithNew("wiki-issue-page-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiIssuePageRepository(pool), nil
+	})
+	return instance.(*repository.WikiIssuePageRepository)
+}
+
 func GetCustomFieldService() *service.CustomFieldService {
 	instance, _ := di.GetWithNew("custom-field-service", func() (any, error) {
 		pool := mustDb()
@@ -604,6 +652,15 @@ func GetJobScheduler() *scheduler.Scheduler {
 				},
 			},
 			scheduler.Task{
+				Name:       "wiki-trash-purge",
+				Interval:   24 * time.Hour,
+				RunOnStart: true,
+				Run: func(ctx context.Context) error {
+					_, err := GetWikiService().PurgeExpiredTrash(ctx, time.Now().UTC())
+					return err
+				},
+			},
+			scheduler.Task{
 				Name:     "agent-thinking-tail-sweep",
 				Interval: time.Hour,
 				Run: func(_ context.Context) error {
@@ -702,7 +759,7 @@ func GetIssueController() *controller.IssueController {
 			GetNotificationService(),
 			GetCustomFieldValueService(),
 			pool,
-		).WithGitIntRepo(GetGitIntegrationRepository()).
+		).WithGitIntRepo(GetGitIntegrationRepository()).WithWiki(GetWikiService()).
 			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
 				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
 	})
@@ -1174,6 +1231,7 @@ func GetRouter() (*router.Router, error) {
 			GetSeverityController(),
 			GetIssueTypeController(),
 			GetCustomFieldController(),
+			GetWikiController(),
 			GetStateController(),
 			sprintController,
 			GetSavedViewController(),
@@ -1266,4 +1324,25 @@ func GetAppSettingsController() (*controller.AppSettingsController, error) {
 		return nil, err
 	}
 	return instance.(*controller.AppSettingsController), nil
+}
+
+func GetWikiService() *service.WikiService {
+	instance, _ := di.GetWithNew("wiki-service", func() (any, error) {
+		pool := mustDb()
+		cache, err := GetCache()
+		if err != nil {
+			return nil, err
+		}
+		return service.NewWikiService(pool, GetWikiSpaceRepository(), GetWikiPageRepository(),
+			GetWikiPageVersionRepository(), GetWikiPageDraftRepository(), GetWikiPageLinkRepository(), GetWikiIssuePageRepository(),
+			GetProjectRepository(), GetAclService(), GetNotifier(), cache), nil
+	})
+	return instance.(*service.WikiService)
+}
+
+func GetWikiController() *controller.WikiController {
+	instance, _ := di.GetWithNew("wiki-controller", func() (any, error) {
+		return controller.NewWikiController(GetWikiService()), nil
+	})
+	return instance.(*controller.WikiController)
 }

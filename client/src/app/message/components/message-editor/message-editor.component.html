@@ -10,7 +10,13 @@
             (keydown)="onKeydown($event)"
         ></div>
         @if (mentionQuery() && filteredCandidates().length) {
-            <div class="mention-picker" role="listbox">
+            <div
+                class="mention-picker"
+                role="listbox"
+                [style.left]="pickerPosition().left"
+                [style.top]="pickerPosition().top"
+                [style.bottom]="pickerPosition().bottom"
+            >
                 @for (u of filteredCandidates(); track u.idUser; let i = $index) {
                     <div
                         class="mention-picker__item"
@@ -27,6 +33,40 @@
                             [radius]="1"
                         ></app-avatar>
                         <span class="mention-picker__name">{{ u.name }}</span>
+                    </div>
+                }
+            </div>
+        }
+        @if (wikiQuery() && (isWikiLoading() || wikiCandidates().length)) {
+            <div
+                class="mention-picker"
+                role="listbox"
+                data-testid="wiki-link-picker"
+                [style.left]="pickerPosition().left"
+                [style.top]="pickerPosition().top"
+                [style.bottom]="pickerPosition().bottom"
+            >
+                @if (isWikiLoading()) {
+                    <div class="mention-picker__item">
+                        <ui-loader [size]="16" />
+                    </div>
+                }
+                @for (page of wikiCandidates(); track page.idPage; let i = $index) {
+                    <div
+                        class="mention-picker__item"
+                        data-testid="wiki-link-option"
+                        [class.mention-picker__item--active]="i === activeIndex()"
+                        role="option"
+                        [attr.aria-selected]="i === activeIndex()"
+                        (mousedown)="selectWikiPage(page); $event.preventDefault()"
+                    >
+                        <tabler-icon icon="file-text" [size]="14" />
+                        <span class="mention-picker__name">{{ page.title }}</span>
+                        @if (page.kind === WikiSpaceKind.Instance) {
+                            <span class="mention-picker__hint">
+                                {{ 'WIKI.SPACE.INSTANCE' | translate }}
+                            </span>
+                        }
                     </div>
                 }
             </div>

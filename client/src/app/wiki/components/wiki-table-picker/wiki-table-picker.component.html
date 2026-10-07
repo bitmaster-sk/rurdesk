@@ -1,0 +1,29 @@
+<div class="flex flex-col gap-2">
+    <div
+        class="wiki-table-picker"
+        role="grid"
+        tabindex="0"
+        data-testid="wiki-table-picker"
+        [attr.aria-label]="'WIKI.FORMAT.TABLE_SIZE' | translate: { size: label() }"
+        (keydown)="onKeydown($event)"
+    >
+        @for (row of rows; track row) {
+            <div class="flex gap-0.5" role="row">
+                @for (column of columns; track column) {
+                    <button
+                        type="button"
+                        tabindex="-1"
+                        role="gridcell"
+                        class="wiki-table-picker__cell"
+                        [class.wiki-table-picker__cell--active]="isActive(row, column)"
+                        [attr.data-testid]="'wiki-table-cell-' + row + '-' + column"
+                        [attr.aria-label]="row + ' × ' + column"
+                        (mouseenter)="onHover(row, column)"
+                        (click)="onPick(row, column)"
+                    ></button>
+                }
+            </div>
+        }
+    </div>
+    <div class="text-center text-sm ui-color-text-muted" aria-live="polite">{{ label() }}</div>
+</div>

@@ -1,0 +1,202 @@
+@use '../../wiki-article';
+
+:host {
+    display: block;
+    height: 100%;
+}
+
+:host ::ng-deep .wiki-article {
+    @include wiki-article.article;
+
+    padding: var(--ui-space-m) var(--ui-space-l);
+    font-size: var(--font-size-s);
+}
+
+.wiki-edit {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    &__bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ui-space-m);
+        padding: var(--ui-space) var(--ui-space-xl);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    &__title {
+        flex: 1;
+        max-width: 32rem;
+        font-size: var(--font-size-l);
+        font-weight: bold;
+    }
+
+    &__bar-end {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+    }
+
+    &__presence {
+        display: inline-flex;
+        border-radius: 999px;
+        box-shadow: 0 0 0 2px var(--ui-sky-600);
+    }
+
+    &__draft-state {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--ui-space-xs);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__banner {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: var(--ui-space) var(--ui-space-xl);
+        border-bottom: 1px solid var(--ui-color-border);
+        font-size: var(--font-size-s);
+
+        &--info {
+            background: var(--ui-sky-50);
+            color: var(--ui-sky-700);
+        }
+
+        &--warn {
+            background: var(--ui-amber-50);
+            color: var(--ui-amber-800);
+        }
+    }
+
+    &__conflict {
+        flex: 1;
+        min-height: 0;
+    }
+
+    &__main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+    }
+
+    &__split {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-width: 0;
+        min-height: 0;
+    }
+
+    &__pane {
+        min-height: 0;
+        overflow-y: auto;
+
+        &--source {
+            border-right: 1px solid var(--ui-color-border);
+        }
+    }
+
+    &__pane-label {
+        display: flex;
+        align-items: center;
+        min-height: 2.25rem;
+        padding: 0 var(--ui-space-l);
+        border-bottom: 1px solid var(--ui-color-border);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__settings {
+        flex: 0 0 18rem;
+        padding: var(--ui-space-l);
+        border-left: 1px solid var(--ui-color-border);
+        overflow-y: auto;
+        font-size: var(--font-size-s);
+    }
+
+    &__field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-s);
+        margin-bottom: var(--ui-space-l);
+
+        label,
+        .wiki-edit__label {
+            color: var(--ui-color-text-muted);
+        }
+    }
+
+    &__radio {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ui-space);
+        width: 100%;
+        padding: var(--ui-space) var(--ui-space-m);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-surface);
+        color: var(--ui-color-text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        small {
+            display: block;
+            color: var(--ui-color-text-muted);
+            font-size: var(--font-size-s);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        &--on {
+            border-color: var(--ui-color-primary);
+            background: var(--ui-color-primary-weak);
+
+            .wiki-edit__dot {
+                border: 4px solid var(--ui-color-primary);
+            }
+        }
+    }
+
+    &__dot {
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
+        border: 2px solid var(--ui-color-muted-fg);
+        border-radius: 50%;
+    }
+
+    &__hint {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+
+        &--error {
+            color: var(--ui-red-600);
+        }
+    }
+
+    &__budget {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--ui-surface-200);
+        overflow: hidden;
+    }
+
+    &__budget-fill {
+        height: 100%;
+        background: var(--ui-color-primary);
+
+        &--over {
+            background: var(--ui-red-600);
+        }
+    }
+}

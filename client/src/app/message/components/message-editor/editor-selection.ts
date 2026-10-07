@@ -28,6 +28,16 @@ export abstract class EditorSelection {
         sel.addRange(r);
     }
 
+    // Viewport rect of the caret at a linear offset; the root's rect when the spot has no box.
+    public static rectAt(root: HTMLElement, offset: number): DOMRect {
+        const position = EditorSelection.locate(root, offset);
+        const range = root.ownerDocument.createRange();
+        range.setStart(position.node, position.offset);
+        range.collapse(true);
+        const rect = range.getClientRects()[0] ?? range.getBoundingClientRect();
+        return rect.height > 0 ? rect : root.getBoundingClientRect();
+    }
+
     private static atomsWithin(atoms: Atom[], node: Node): Atom[] {
         return atoms.filter(a => a.node === node || node.contains(a.node));
     }

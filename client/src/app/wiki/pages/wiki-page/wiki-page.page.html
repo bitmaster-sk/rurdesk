@@ -1,0 +1,170 @@
+@if (view(); as view) {
+<div class="wiki-page" data-testid="wiki-page">
+    <header class="wiki-page__head">
+        <div class="wiki-page__heading">
+            <nav class="wiki-page__crumbs">
+                <app-wiki-tree-show />
+                <span>
+                    {{ (view.spaceKind === 'instance' ? 'WIKI.SPACE.INSTANCE' :
+                    'WIKI.SPACE.PROJECT') | translate }}
+                </span>
+                @for (crumb of breadcrumbs(); track crumb.idPage) {
+                <tabler-icon icon="chevron-right" [size]="12" />
+                <a [routerLink]="pageLink(crumb)">{{ crumb.title }}</a>
+                }
+            </nav>
+            <h1 class="wiki-page__title" data-testid="wiki-page-title">{{ view.page.title }}</h1>
+            <div class="wiki-page__meta">
+                @switch (view.page.agentAccess) { @case (AgentAccess.Always) {
+                <ui-tag severity="success" [value]="'WIKI.ACCESS.ALWAYS' | translate" />
+                } @case (AgentAccess.Hidden) {
+                <ui-tag severity="secondary" [value]="'WIKI.ACCESS.HIDDEN' | translate" />
+                } @default {
+                <ui-tag severity="info" [value]="'WIKI.ACCESS.ON_DEMAND' | translate" />
+                } }
+                <span>
+                    <tabler-icon icon="history" [size]="13" />
+                    {{ 'WIKI.PAGE.VERSION_BY' | translate: { version: view.page.versionNo, name:
+                    authorName() } }} · {{ view.page.updateAt | date: 'short' }}
+                </span>
+            </div>
+        </div>
+        <div class="wiki-page__actions">
+            <ui-button
+                variant="text"
+                severity="secondary"
+                data-testid="wiki-full-width"
+                [ariaLabel]="(layout.isFullWidth() ? 'WIKI.PAGE.NARROW' : 'WIKI.PAGE.FULL_WIDTH') | translate"
+                [uiTooltip]="(layout.isFullWidth() ? 'WIKI.PAGE.NARROW' : 'WIKI.PAGE.FULL_WIDTH') | translate"
+                [attr.aria-pressed]="layout.isFullWidth()"
+                (click)="layout.toggleFullWidth()"
+            >
+                <tabler-icon
+                    [icon]="layout.isFullWidth() ? 'arrows-minimize' : 'arrows-maximize'"
+                    [size]="16"
+                />
+            </ui-button>
+            <ui-button
+                variant="text"
+                severity="secondary"
+                data-testid="wiki-history-link"
+                [routerLink]="['history']"
+            >
+                <tabler-icon icon="history" [size]="16" />
+                {{ 'WIKI.HISTORY.TITLE' | translate }}
+            </ui-button>
+            @if (canSetHome()) {
+            <ui-button
+                variant="text"
+                severity="secondary"
+                data-testid="wiki-home-toggle"
+                [attr.aria-pressed]="isHome()"
+                (click)="onToggleHome()"
+            >
+                <tabler-icon [icon]="isHome() ? 'home-off' : 'home'" [size]="16" />
+                {{ (isHome() ? 'WIKI.HOME.UNSET' : 'WIKI.HOME.SET') | translate }}
+            </ui-button>
+            }
+            <ui-button variant="text" severity="secondary" (click)="onCopyLink()">
+                <tabler-icon icon="link" [size]="16" />
+                {{ 'WIKI.PAGE.COPY_LINK' | translate }}
+            </ui-button>
+            @if (view.canEdit) {
+            <ui-button
+                variant="text"
+                severity="secondary"
+                data-testid="wiki-move"
+                (click)="isMoveOpen.set(true)"
+            >
+                <tabler-icon icon="arrows-move" [size]="16" />
+                {{ 'WIKI.MOVE.ACTION' | translate }}
+            </ui-button>
+            <ui-button
+                variant="text"
+                severity="danger"
+                data-testid="wiki-delete"
+                uiConfirm
+                [confirmText]="'WIKI.TRASH.CONFIRM' | translate"
+                (confirmed)="onDelete()"
+            >
+                <tabler-icon icon="trash" [size]="16" />
+            </ui-button>
+            <ui-button data-testid="wiki-edit" [routerLink]="['edit']">
+                <tabler-icon icon="pencil" [size]="16" />
+                {{ 'WIKI.PAGE.EDIT' | translate }}
+            </ui-button>
+            }
+        </div>
+    </header>
+
+    @if (view.draft) {
+    <ui-message severity="warn" class="wiki-page__draft">
+        {{ 'WIKI.DRAFT.PENDING' | translate: { date: (view.draft.updateAt | date: 'short') } }}
+        <a [routerLink]="['edit']">{{ 'WIKI.DRAFT.CONTINUE' | translate }}</a>
+    </ui-message>
+    }
+
+    <div class="wiki-page__layout">
+        <article
+            class="wiki-article"
+            data-testid="wiki-page-body"
+            [class.wiki-article--full]="layout.isFullWidth()"
+            markdown
+            appWikiHeadingAnchors
+            ngPreserveWhitespaces
+            [data]="renderedBody()"
+            (click)="onBodyClick($event)"
+        ></article>
+
+        <aside class="wiki-page__aside">
+            <section>
+                <h4>{{ 'WIKI.PAGE.LINKED_TASKS' | translate }}</h4>
+                @for (issue of view.issues; track issue.idIssue) {
+                <a
+                    class="wiki-page__aside-row"
+                    [routerLink]="['/project', idProject(), 'issue', issue.idIssuePublic]"
+                >
+                    <span class="wiki-page__issue-ref">#{{ issue.idIssuePublic }}</span>
+                    <span class="wiki-page__aside-text">{{ issue.title }}</span>
+                </a>
+                } @empty {
+                <div class="wiki-page__aside-empty">{{ 'WIKI.PAGE.NO_TASKS' | translate }}</div>
+                }
+            </section>
+            <section>
+                <h4>{{ 'WIKI.PAGE.BACKLINKS' | translate }}</h4>
+                @for (ref of view.backlinks; track ref.idPage) {
+                <a class="wiki-page__aside-row" [routerLink]="pageLink(ref)">
+                    <span class="wiki-page__aside-icon">
+                        <tabler-icon icon="file-text" [size]="14" />
+                    </span>
+                    <span class="wiki-page__aside-text">{{ ref.title }}</span>
+                </a>
+                } @empty {
+                <div class="wiki-page__aside-empty">{{ 'WIKI.PAGE.NO_BACKLINKS' | translate }}</div>
+                }
+            </section>
+        </aside>
+    </div>
+</div>
+
+@if (view.canEdit) {
+<app-wiki-move-dialog
+    [(visible)]="isMoveOpen"
+    [nodes]="spaceNodes()"
+    [idSpace]="view.page.idSpace"
+    [idPage]="view.page.idPage"
+    [idParent]="view.page.idParent"
+    [rootLabel]="'WIKI.MOVE.ROOT' | translate"
+    (confirmed)="onMove($event)"
+/>
+} } @else if (isNotFound()) {
+<div class="wiki-page__missing">
+    <tabler-icon icon="file-off" [size]="32" />
+    <p>{{ 'WIKI.PAGE.NOT_FOUND' | translate }}</p>
+</div>
+} @else {
+<div class="flex h-full min-h-40 w-full items-center justify-center">
+    <ui-loader [size]="32" />
+</div>
+}

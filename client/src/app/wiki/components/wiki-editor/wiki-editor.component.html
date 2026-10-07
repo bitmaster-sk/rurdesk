@@ -1,0 +1,56 @@
+<div
+    class="wiki-editor-toolbar"
+    role="toolbar"
+    data-testid="wiki-editor-toolbar"
+    [attr.aria-label]="'WIKI.FORMAT.LABEL' | translate"
+>
+    @for (group of toolGroups; track $index) {
+        <div class="ui-button-group">
+            @for (tool of group; track tool.format) {
+                <ui-button
+                    variant="text"
+                    severity="secondary"
+                    size="small"
+                    [ariaLabel]="tool.label | translate"
+                    [uiTooltip]="tool.label | translate"
+                    [attr.data-testid]="'wiki-format-' + tool.format"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="onFormat(tool.format)"
+                >
+                    <tabler-icon [icon]="tool.icon" [size]="15" />
+                </ui-button>
+            }
+        </div>
+    }
+    <div class="ui-button-group">
+        <ui-button
+            variant="text"
+            severity="secondary"
+            size="small"
+            data-testid="wiki-format-table"
+            [ariaLabel]="'WIKI.FORMAT.TABLE' | translate"
+            [uiTooltip]="'WIKI.FORMAT.TABLE' | translate"
+            (mousedown)="$event.preventDefault()"
+            (click)="tablePopover.toggle($event)"
+        >
+            <tabler-icon icon="table" [size]="15" />
+        </ui-button>
+        <ui-button
+            variant="text"
+            severity="secondary"
+            size="small"
+            data-testid="wiki-format-callout"
+            [ariaLabel]="'WIKI.FORMAT.CALLOUT' | translate"
+            [uiTooltip]="'WIKI.FORMAT.CALLOUT' | translate"
+            (mousedown)="$event.preventDefault()"
+            (click)="calloutMenuRef.toggle($event)"
+        >
+            <tabler-icon icon="info-square-rounded" [size]="15" />
+        </ui-button>
+    </div>
+</div>
+<ui-popover #tablePopover>
+    <app-wiki-table-picker (picked)="tablePopover.hide(); onTablePicked($event)" />
+</ui-popover>
+<ui-menu #calloutMenuRef [model]="calloutMenu" />
+<div #host class="wiki-editor" data-testid="wiki-editor"></div>

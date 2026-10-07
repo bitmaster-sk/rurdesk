@@ -2,8 +2,15 @@
     <app-top-menu class="shrink-0"></app-top-menu>
     <div class="home-body flex flex-row w-full grow shrink min-h-0 overflow-hidden">
         <!-- LEFT MENU -->
-        <div class="home-left-menu grow-0 shrink-0 flex flex-col justify-between">
-            <div class="top">
+        <div
+            class="home-left-menu grow-0 shrink-0 flex flex-col justify-between"
+            data-testid="project-left-menu"
+            [class.home-left-menu--collapsed]="isCollapsed()"
+            [class.home-left-menu--resting]="isResting()"
+            (click)="onMenuClick()"
+            (mouseleave)="onMenuLeave()"
+        >
+            <div class="top menu-panel">
                 <ul class="navigation">
                     <li class="menu-section-title">
                         {{ 'PROJECT.SINGULAR' | translate }}
@@ -22,7 +29,7 @@
                         </a>
                     </li>
                     @if (aclStore.canUpdateProject()) {
-                        <li class="menu-item mb-0">
+                        <li class="menu-item">
                             <div class="menu-item-border"></div>
                             <a
                                 class="link"
@@ -34,6 +41,18 @@
                             </a>
                         </li>
                     }
+                    <li class="menu-item mb-0">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            data-testid="sidebar-link-wiki"
+                            [routerLink]="['/project', project()?.idProject, 'wiki']"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="book-2" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.WIKI' | translate }}</span>
+                        </a>
+                    </li>
                     <li class="menu-section-title">{{ 'HOME.TASKS' | translate }}</li>
                     <li class="menu-item">
                         <div class="menu-item-border"></div>
