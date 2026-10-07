@@ -45,7 +45,11 @@ class ActivityCommentItemStub {
     public readonly approveMockup = output<string>();
 }
 
-@Component({ selector: 'app-agent-thinking-row', template: '', standalone: true })
+@Component({
+    selector: 'app-agent-thinking-row',
+    template: '<div style="height: 400px"></div>',
+    standalone: true
+})
 class AgentThinkingRowStub {
     public readonly idRun = input<number>(0);
     public readonly stage = input<unknown>(undefined);
@@ -266,6 +270,82 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
 
         const rows = fixture.componentInstance.trailingThinkingRows();
         expect(rows.map(row => [row.stage.stage, row.isLive])).toEqual([['design', true]]);
+    });
+
+    it('scrolls the feed down when a live thinking row appears', async () => {
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+        const scroll: HTMLElement = fixture.nativeElement.querySelector('.feed-scroll');
+        scroll.style.height = '100px';
+        const host = fixture.nativeElement as HTMLElement;
+        host.style.display = 'block';
+        host.style.height = '200px';
+
+        fixture.componentRef.setInput('agentRun', { idRun: 5, phase: 'in_progress' });
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(scroll.scrollTop).toBeGreaterThan(0);
+        expect(scroll.scrollTop + scroll.clientHeight).toBeGreaterThanOrEqual(
+            scroll.scrollHeight - 1
+        );
+    });
+
+    it('scrolls again only when the next stage starts', async () => {
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+        const scroll: HTMLElement = fixture.nativeElement.querySelector('.feed-scroll');
+        scroll.style.height = '100px';
+        const host = fixture.nativeElement as HTMLElement;
+        host.style.display = 'block';
+        host.style.height = '200px';
+        const runAt = (stage: string) => ({
+            idRun: 5,
+            phase: 'in_progress',
+            stages: [{ stage, status: 'active' }]
+        });
+
+        fixture.componentRef.setInput('agentRun', runAt('design'));
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        scroll.scrollTop = 0;
+
+        fixture.componentRef.setInput('agentRun', runAt('design'));
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(scroll.scrollTop).toBe(0);
+
+        fixture.componentRef.setInput('agentRun', runAt('implementation'));
+        fixture.detectChanges();
+        await new Promise(resolve => setTimeout(resolve, 0));
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(scroll.scrollTop).toBeGreaterThan(0);
+    });
+
+    it('does not claim there is no activity while the agent is thinking', () => {
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.componentRef.setInput('agentRun', { idRun: 5, phase: 'in_progress' });
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.feed-empty')).toBeNull();
+    });
+
+    it('says there is no activity on an empty task', () => {
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('.feed-empty')).not.toBeNull();
     });
 
     it('mentionCandidates() returns an empty array when usersMap is empty', () => {

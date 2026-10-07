@@ -317,6 +317,24 @@ describe('AgentThinkingRowComponent (browser)', () => {
         expect(body(fixture)).toBeNull();
     });
 
+    it('keeps a running stage at its full height before anything streams in', () => {
+        const fixture = renderLive('400px');
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+        expect(parseFloat(getComputedStyle(body(fixture)).height)).toBe(12 * rem);
+    });
+
+    it('lets a short finished stage stay short', () => {
+        const fixture = render({ stage: 'design', status: 'done', hasThinking: true });
+        const host = fixture.nativeElement as HTMLElement;
+        host.style.display = 'block';
+        host.style.width = '400px';
+        toggle(fixture);
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+
+        expect(parseFloat(getComputedStyle(body(fixture)).height)).toBeLessThan(12 * rem);
+    });
+
     // A long shell command must never spill past the card: the whole right-hand
     // column starts scrolling sideways while the agent works.
     it('keeps a long tool argument inside the card', () => {
