@@ -88,17 +88,17 @@ describe('IssueFilterStore', () => {
     ] as const)('%s does not emit when no initial filter is set', (_, mutate) => {
         const actualFilterValues: IssuesFilter[] = [];
         const changedFilterValues: IssuesFilter[] = [];
-        const editedValues: void[] = [];
+        let editedCount = 0;
 
         store.actualFilter$.subscribe(f => actualFilterValues.push(f));
         store.changedFilter$.subscribe(f => changedFilterValues.push(f));
-        store.isFilterEdited$.subscribe(() => editedValues.push());
+        store.isFilterEdited$.subscribe(() => (editedCount += 1));
 
         mutate(store);
 
         expect(actualFilterValues).toEqual([]);
         expect(changedFilterValues).toEqual([]);
-        expect(editedValues).toEqual([]);
+        expect(editedCount).toBe(0);
         expect(store.getFilter()).toBeNull();
     });
 
@@ -110,18 +110,17 @@ describe('IssueFilterStore', () => {
     });
 
     it('isFilterEdited$ emits on setFilter and setOrder after setInitialFilter, but not on setSprint', () => {
-        const emitted = new Promise<number>(resolve => {
-            let count = 0;
-            store.isFilterEdited$.subscribe(() => {
-                count += 1;
-                resolve(count);
-            });
-        });
+        let editedCount = 0;
+        store.isFilterEdited$.subscribe(() => (editedCount += 1));
 
         store.setInitialFilter(baseFilter());
+        expect(editedCount).toBe(0);
         store.setSprint(9);
+        expect(editedCount).toBe(0);
         store.setOrder({ orderColumn: 'title', orderDirection: 'asc' });
-        return expect(emitted).resolves.toBe(1);
+        expect(editedCount).toBe(1);
+        store.setFilter({ title: 'login' });
+        expect(editedCount).toBe(2);
     });
 
     it('actualFilterChange$ marks refresh() as refresh:true (so paginated views keep their pages)', () => {
