@@ -40,8 +40,9 @@ func TestWiki_CreateAndReadPageWithResolvedLinksAndBacklinks(t *testing.T) {
 	require.Nil(t, view.Links[1].IdPage)
 
 	targetView := f.view(t, f.adminToken, "project", target.Slug)
-	require.Len(t, targetView.Backlinks, 1)
-	require.Equal(t, source.IdPage, targetView.Backlinks[0].IdPage)
+	require.Len(t, targetView.Backlinks.Items, 1)
+	require.Equal(t, 1, targetView.Backlinks.Total)
+	require.Equal(t, source.IdPage, targetView.Backlinks.Items[0].IdPage)
 
 	tree := f.tree(t, f.adminToken)
 	require.Len(t, tree.Spaces, 2)
@@ -322,8 +323,9 @@ func TestWiki_IssueDescriptionLinksAndManualLinks(t *testing.T) {
 	require.Equal(t, "manual", sources[manual.IdPage])
 
 	view := f.view(t, f.adminToken, "project", described.Slug)
-	require.Len(t, view.Issues, 1)
-	require.Equal(t, created.IdIssuePublic, view.Issues[0].IdIssuePublic)
+	require.Len(t, view.Issues.Items, 1)
+	require.Equal(t, 1, view.Issues.Total)
+	require.Equal(t, created.IdIssuePublic, view.Issues.Items[0].IdIssuePublic)
 }
 
 func TestWiki_HeartbeatListsOtherEditors(t *testing.T) {
@@ -436,8 +438,8 @@ func TestWiki_SharedPageBacklinksOnlyComeFromSpacesTheReaderSees(t *testing.T) {
 	shared := f.mustCreate(t, model.CreateWikiPageReq{Space: "instance", Title: uniqueWikiTitle("Git")})
 	f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: "Client X credentials", Body: "see [[" + shared.Title + "]]"})
 
-	require.Len(t, f.view(t, f.adminToken, "instance", shared.Slug).Backlinks, 1)
-	require.Empty(t, other.view(t, outsider, "instance", shared.Slug).Backlinks)
+	require.Len(t, f.view(t, f.adminToken, "instance", shared.Slug).Backlinks.Items, 1)
+	require.Empty(t, other.view(t, outsider, "instance", shared.Slug).Backlinks.Items)
 }
 
 func TestWiki_TokenLimitNeverBlocksShrinkingAndZeroOptsOutOfShared(t *testing.T) {
@@ -509,6 +511,83 @@ func TestWiki_TreeCountsTrashItemsTheReaderCanSee(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, Request(t, f.app, "POST", fmt.Sprintf("/api/private/wiki/page/%d/restore", ops.IdPage), "", f.adminToken).StatusCode)
 	require.Equal(t, before+1, f.tree(t, f.adminToken).TrashCount)
+}
+
+func TestWiki_LinkedTasksAndBacklinksComeInPagesWithTheOpenAndNewestFirst(t *testing.T) {
+	f := newWikiFixture(t, "wiki-paging")
+	target := f.mustCreate(t, model.CreateWikiPageReq{Space: "instance", Title: uniqueWikiTitle("Conventions")})
+	var issues []model.Issue
+	for i := 0; i < 25; i++ {
+		body, _ := json.Marshal(map[string]any{"idProject": f.idProject, "title": fmt.Sprintf("task %d", i), "description": "See [[shared:" + target.Slug + "]]."})
+		res := Request(t, f.app, "POST", fmt.Sprintf("/api/private/project/%d/issue", f.idProject), string(body), f.adminToken)
+		issueBody := readBody(t, res)
+		require.Equal(t, http.StatusOK, res.StatusCode, issueBody)
+		var created model.Issue
+		require.Nil(t, json.Unmarshal([]byte(issueBody), &created))
+		issues = append(issues, created)
+	}
+	closed := issues[len(issues)-1]
+	_, err := f.app.Pool.Exec(context.Background(), `
+		UPDATE issues.issue SET id_state = (
+			SELECT s.id_state FROM issues.state s
+			INNER JOIN projects.project_issue_state pis ON pis.id_state = s.id_state
+			WHERE pis.id_project = $1 AND s.final LIMIT 1)
+		WHERE id_issue = $2`, f.idProject, closed.IdIssue)
+	require.Nil(t, err)
+	for i := 0; i < 23; i++ {
+		f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle(fmt.Sprintf("Source %02d", i)), Body: "[[shared:" + target.Slug + "]]"})
+	}
+
+	other := f.otherProject(t, "wiki-paging-other")
+	body, _ := json.Marshal(map[string]any{"idProject": other.idProject, "title": "elsewhere", "description": "See [[shared:" + target.Slug + "]]."})
+	require.Equal(t, http.StatusOK, Request(t, f.app, "POST", fmt.Sprintf("/api/private/project/%d/issue", other.idProject), string(body), f.adminToken).StatusCode)
+
+	view := f.view(t, f.adminToken, "instance", target.Slug)
+	require.Len(t, view.Issues.Items, 20)
+	require.Equal(t, 26, view.Issues.Total)
+	require.Equal(t, other.idProject, view.Issues.Items[0].IdProject, "the newest task comes first and keeps its own project")
+	require.Equal(t, issues[len(issues)-2].IdIssue, view.Issues.Items[1].IdIssue)
+	for _, item := range view.Issues.Items {
+		require.False(t, item.IsClosed, "open tasks come before closed ones")
+	}
+	require.Len(t, view.Backlinks.Items, 20)
+	require.Equal(t, 23, view.Backlinks.Total)
+
+	rest := Request(t, f.app, "GET", fmt.Sprintf("/api/private/wiki/page/%d/issues?offset=20&limit=20", target.IdPage), "", f.adminToken)
+	restBody := readBody(t, rest)
+	require.Equal(t, http.StatusOK, rest.StatusCode, restBody)
+	var restIssues model.WikiPageIssueList
+	require.Nil(t, json.Unmarshal([]byte(restBody), &restIssues))
+	require.Len(t, restIssues.Items, 6)
+	require.Equal(t, 26, restIssues.Total)
+	require.Equal(t, closed.IdIssue, restIssues.Items[5].IdIssue)
+	require.True(t, restIssues.Items[5].IsClosed)
+	require.NotNil(t, restIssues.Items[5].StateName)
+
+	seen := map[int64]bool{}
+	for _, item := range append(view.Issues.Items, restIssues.Items...) {
+		require.False(t, seen[item.IdIssue], "pages never repeat a task")
+		seen[item.IdIssue] = true
+	}
+
+	moreLinks := Request(t, f.app, "GET", fmt.Sprintf("/api/private/project/%d/wiki/backlinks/%d?offset=20", f.idProject, target.IdPage), "", f.adminToken)
+	moreBody := readBody(t, moreLinks)
+	require.Equal(t, http.StatusOK, moreLinks.StatusCode, moreBody)
+	var backlinks model.WikiBacklinkList
+	require.Nil(t, json.Unmarshal([]byte(moreBody), &backlinks))
+	require.Len(t, backlinks.Items, 3)
+	require.Equal(t, 23, backlinks.Total)
+
+	viewer := f.userWithRole(t, "wiki-paging-viewer@test.sk", "viewer")
+	var limited model.WikiPageIssueList
+	limitedRes := Request(t, f.app, "GET", fmt.Sprintf("/api/private/wiki/page/%d/issues", target.IdPage), "", viewer)
+	require.Equal(t, http.StatusOK, limitedRes.StatusCode)
+	require.Nil(t, json.NewDecoder(limitedRes.Body).Decode(&limited))
+	require.Equal(t, 25, limited.Total, "tasks from projects the reader cannot see are not counted")
+
+	outsider := createUserAndLogin(t, f.app, f.adminToken, "wiki-paging-outsider@test.sk")
+	require.Equal(t, http.StatusForbidden, Request(t, f.app, "GET", fmt.Sprintf("/api/private/project/%d/wiki/backlinks/%d", f.idProject, target.IdPage), "", outsider).StatusCode)
+	require.Equal(t, http.StatusBadRequest, Request(t, f.app, "GET", fmt.Sprintf("/api/private/wiki/page/%d/issues?offset=-1", target.IdPage), "", f.adminToken).StatusCode)
 }
 
 func newWikiFixture(t *testing.T, name string) *wikiFixture {

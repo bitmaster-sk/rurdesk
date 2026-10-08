@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -66,7 +67,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	defer os.RemoveAll(mcpConfigDir)
 
 	mcpURL := common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage)
-	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, a.cfg.AgentApiKey)
+	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, a.cfg.AgentApiKey, task.IdRun)
 	if err != nil {
 		return stats, fmt.Errorf("writing claude MCP settings: %w", err)
 	}
@@ -481,7 +482,7 @@ func childEnv(oauthToken string) []string {
 // dir MUST be outside the worktree: the file holds the agent's bearer token in
 // cleartext and the agent commits from the worktree, so `git add -A` would push
 // it to the user's remote.
-func writeMCPSettings(dir, mcpURL, agentKey string) (string, error) {
+func writeMCPSettings(dir, mcpURL, agentKey string, idRun int64) (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("creating MCP config dir: %w", err)
 	}
@@ -491,7 +492,8 @@ func writeMCPSettings(dir, mcpURL, agentKey string) (string, error) {
 				"type": "sse",
 				"url":  mcpURL,
 				"headers": map[string]string{
-					"Authorization": "Bearer " + agentKey,
+					"Authorization":         "Bearer " + agentKey,
+					common.TrackerRunHeader: strconv.FormatInt(idRun, 10),
 				},
 			},
 		},

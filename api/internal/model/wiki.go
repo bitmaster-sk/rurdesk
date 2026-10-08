@@ -107,13 +107,14 @@ type WikiTrashItem struct {
 }
 
 type WikiSearchHit struct {
-	IdPage  int64   `json:"idPage"  db:"id_page"`
-	IdSpace int64   `json:"idSpace" db:"id_space"`
-	Slug    string  `json:"slug"    db:"slug"`
-	Title   string  `json:"title"   db:"title"`
-	Summary string  `json:"summary" db:"summary"`
-	Snippet string  `json:"snippet" db:"snippet"`
-	Score   float32 `json:"score"   db:"score"`
+	IdPage    int64   `json:"idPage"    db:"id_page"`
+	IdSpace   int64   `json:"idSpace"   db:"id_space"`
+	Slug      string  `json:"slug"      db:"slug"`
+	Title     string  `json:"title"     db:"title"`
+	Summary   string  `json:"summary"   db:"summary"`
+	VersionNo int     `json:"versionNo" db:"version_no"`
+	Snippet   string  `json:"snippet"   db:"snippet"`
+	Score     float32 `json:"score"     db:"score"`
 }
 
 type CreateWikiPageReq struct {
@@ -193,9 +194,22 @@ type WikiResolvedLink struct {
 }
 
 type WikiPageIssue struct {
-	IdIssue       int64  `json:"idIssue"`
-	IdIssuePublic int64  `json:"idIssuePublic"`
-	Title         string `json:"title"`
+	IdIssue       int64   `json:"idIssue"       db:"id_issue"`
+	IdIssuePublic int64   `json:"idIssuePublic" db:"id_issue_public"`
+	IdProject     int64   `json:"idProject"     db:"id_project"`
+	Title         string  `json:"title"         db:"title"`
+	StateName     *string `json:"stateName"     db:"state_name"`
+	IsClosed      bool    `json:"isClosed"      db:"is_closed"`
+}
+
+type WikiPageIssueList struct {
+	Items []WikiPageIssue `json:"items"`
+	Total int             `json:"total"`
+}
+
+type WikiBacklinkList struct {
+	Items []*WikiPageRef `json:"items"`
+	Total int            `json:"total"`
 }
 
 type WikiPageView struct {
@@ -203,8 +217,8 @@ type WikiPageView struct {
 	SpaceKind constants.WikiSpaceKind `json:"spaceKind"`
 	CanEdit   bool                    `json:"canEdit"`
 	CanManage bool                    `json:"canManage"`
-	Backlinks []*WikiPageRef          `json:"backlinks"`
-	Issues    []WikiPageIssue         `json:"issues"`
+	Backlinks WikiBacklinkList        `json:"backlinks"`
+	Issues    WikiPageIssueList       `json:"issues"`
 	Links     []WikiResolvedLink      `json:"links"`
 	Draft     *WikiPageDraft          `json:"draft"`
 }

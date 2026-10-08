@@ -31,6 +31,7 @@ func New(
 	itCtrl *controller.IssueTypeController,
 	cfCtrl *controller.CustomFieldController,
 	wikiCtrl *controller.WikiController,
+	wikiAgentCtrl *controller.WikiAgentController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
 	savedViewCtrl *controller.SavedViewController,
@@ -243,6 +244,10 @@ func New(
 	pri.GET("/project/:idProject/wiki/search", wikiCtrl.Search)
 	pri.PUT("/project/:idProject/wiki/settings", wikiCtrl.UpdateSettings)
 	pri.PUT("/project/:idProject/wiki/home", wikiCtrl.UpdateHome)
+	pri.GET("/project/:idProject/wiki/agent/search", wikiAgentCtrl.Search)
+	pri.GET("/project/:idProject/wiki/agent/page/:slug", wikiAgentCtrl.GetPage)
+	pri.GET("/project/:idProject/wiki/agent/pages", wikiAgentCtrl.GetPages)
+	pri.POST("/project/:idProject/wiki/agent/page", wikiAgentCtrl.UpsertPage)
 	pri.PUT("/wiki/page/:idPage", wikiCtrl.SavePage)
 	pri.POST("/wiki/page/:idPage/merge-preview", wikiCtrl.MergePreview)
 	pri.PUT("/wiki/page/:idPage/position", wikiCtrl.MovePage)
@@ -253,6 +258,8 @@ func New(
 	pri.GET("/wiki/page/:idPage/version/:versionNo", wikiCtrl.GetVersion)
 	pri.POST("/wiki/page/:idPage/revert/:versionNo", wikiCtrl.RevertPage)
 	pri.GET("/wiki/page/:idPage/diff", wikiCtrl.GetDiff)
+	pri.GET("/wiki/page/:idPage/issues", wikiCtrl.GetPageIssues)
+	pri.GET("/project/:idProject/wiki/backlinks/:idPage", wikiCtrl.GetPageBacklinks)
 	pri.GET("/wiki/page/:idPage/draft", wikiCtrl.GetDraft)
 	pri.PUT("/wiki/page/:idPage/draft", wikiCtrl.SaveDraft)
 	pri.DELETE("/wiki/page/:idPage/draft", wikiCtrl.DeleteDraft)
@@ -312,6 +319,7 @@ func New(
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
 	pri.GET("/agent/run/:idRun/thinking", agentThinkingCtrl.Get)
 	pri.GET("/agent/run/:idRun/skills", agentRunCtrl.GetSkills)
+	pri.GET("/agent/run/:idRun/wiki-read", wikiAgentCtrl.GetRunReads)
 	pri.PATCH("/agent/run/:idRun/skills", agentRunCtrl.PatchSkills)
 	pri.GET("/project/:idProject/agent/runs", agentRunCtrl.GetRunsByProject)
 	pri.GET("/project/:idProject/issue/:idIssuePublic/agent/run", agentRunCtrl.GetRunByIssue)

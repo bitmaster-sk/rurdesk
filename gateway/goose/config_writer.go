@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/bitmaster-sk/rurdesk/gateway/common"
 )
 
 // gooseConfigTemplate is config.yaml content for the tracker MCP server: a
 // streamable-HTTP extension (goose ≥ v1.30 dropped SSE remote extensions).
 // Goose does not reliably substitute ${ENV} in the extension `uri` (yields a
 // reqwest "builder error" on initialize), so writeGooseConfig writes the
-// stage-scoped URL and bearer token in literally, per run. %s order: uri,
-// bearer token.
+// stage-scoped URL and bearer token in literally, per run. Verb order: uri,
+// bearer token, run header name, run id.
 //
 // enabled: false is the only headless-safe tool gate — goose run has no
 // --allowed-tools flag, and GOOSE_MODE approve/smart_approve would hang
@@ -31,6 +33,7 @@ extensions:
     timeout: 300
     headers:
       Authorization: Bearer %s
+      %s: "%d"
   apps:
     type: builtin
     enabled: false
@@ -65,12 +68,12 @@ func gooseConfigDir() string {
 // HTTP MCP server pointed at mcpURL and carrying the literal agent bearer token.
 // Called once per run (the URL differs by stage), overwriting any previous
 // config. Mode 0o600 since the file holds the bearer token.
-func writeGooseConfig(configDir, mcpURL, agentKey string) (string, error) {
+func writeGooseConfig(configDir, mcpURL, agentKey string, idRun int64) (string, error) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", fmt.Errorf("creating goose config dir: %w", err)
 	}
 	path := filepath.Join(configDir, "config.yaml")
-	content := fmt.Sprintf(gooseConfigTemplate, mcpURL, agentKey)
+	content := fmt.Sprintf(gooseConfigTemplate, mcpURL, agentKey, common.TrackerRunHeader, idRun)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		return "", fmt.Errorf("writing goose config.yaml: %w", err)
 	}

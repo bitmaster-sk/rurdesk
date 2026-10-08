@@ -6,6 +6,7 @@ import { CreateAgentRunReq } from '../model/agent-run.model';
 import { AgentOverview } from '../model/agent-overview.model';
 import { AgentStage } from '../model/agent-stage.enum';
 import { AgentRun, RunStats } from '../model/agent-run.model';
+import { AgentRunWikiRead } from '../model/agent-run-wiki-read.model';
 
 @Injectable({ providedIn: 'root' })
 export class AgentRunApi {
@@ -46,6 +47,10 @@ export class AgentRunApi {
 
     public loadStats$(idRun: number): Observable<RunStats> {
         return this.http.get<RunStats>(`/api/private/agent/run/${idRun}/stats`);
+    }
+
+    public loadWikiReads$(idRun: number): Observable<AgentRunWikiRead[]> {
+        return this.http.get<AgentRunWikiRead[]>(`/api/private/agent/run/${idRun}/wiki-read`);
     }
 
     public loadSkills$(idRun: number): Observable<AgentRunStageSkills[]> {

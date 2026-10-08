@@ -43,7 +43,7 @@ func (r *WikiPageLinkRepository) Replace(ctx context.Context, idPage int64, link
 	return nil
 }
 
-func (r *WikiPageLinkRepository) LoadBacklinks(ctx context.Context, idSpace int64, slug string, idsSourceSpace []int64, hideHidden bool) ([]*model.WikiPageRef, error) {
+func (r *WikiPageLinkRepository) LoadBacklinks(ctx context.Context, idSpace int64, slug string, idsSourceSpace []int64, hideHidden bool, limit, offset int) ([]*model.WikiPageRef, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT p.id_page, p.id_space, p.slug, p.title
@@ -51,8 +51,9 @@ func (r *WikiPageLinkRepository) LoadBacklinks(ctx context.Context, idSpace int6
 		INNER JOIN wiki.page p ON p.id_page = l.id_page_from
 		WHERE l.id_space_to = $1 AND l.target_slug = $2 AND p.deleted_at IS NULL
 		  AND (NOT $3 OR p.agent_access <> 'hidden') AND p.id_space = ANY($4)
-		ORDER BY p.title
-	`, idSpace, slug, hideHidden, idsSourceSpace)
+		ORDER BY p.title, p.id_page
+		LIMIT $5 OFFSET $6
+	`, idSpace, slug, hideHidden, idsSourceSpace, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("querying wiki backlinks: %w", err)
 	}
@@ -61,4 +62,20 @@ func (r *WikiPageLinkRepository) LoadBacklinks(ctx context.Context, idSpace int6
 		return nil, fmt.Errorf("collecting wiki backlinks: %w", err)
 	}
 	return refs, nil
+}
+
+func (r *WikiPageLinkRepository) CountBacklinks(ctx context.Context, idSpace int64, slug string, idsSourceSpace []int64, hideHidden bool) (int, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var total int
+	err := db.QueryRow(ctx, `
+		SELECT count(*)
+		FROM wiki.page_link l
+		INNER JOIN wiki.page p ON p.id_page = l.id_page_from
+		WHERE l.id_space_to = $1 AND l.target_slug = $2 AND p.deleted_at IS NULL
+		  AND (NOT $3 OR p.agent_access <> 'hidden') AND p.id_space = ANY($4)
+	`, idSpace, slug, hideHidden, idsSourceSpace).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("counting wiki backlinks: %w", err)
+	}
+	return total, nil
 }

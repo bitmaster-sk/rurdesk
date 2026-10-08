@@ -109,3 +109,5 @@ var RecoverableFailReasons = map[string]bool{
 
 // RecoverableFailReasonList is RecoverableFailReasons as a slice, for SQL ANY($n).
 var RecoverableFailReasonList = []string{FailReasonCrashRecovery, FailReasonGatewayRestart}
+
+const AgentRunHeader = "X-Rurdesk-Run"

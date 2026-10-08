@@ -26,6 +26,7 @@ type Dispatcher struct {
 	userRepo     *repository.UserRepository
 	skillService *service.SkillService
 	stagePlan    *service.StagePlanService
+	wikiAgent    *service.WikiAgentService
 	gwClient     *GatewayClient
 	notifier     *notify.Notifier
 }
@@ -40,6 +41,7 @@ func NewDispatcher(
 	userRepo *repository.UserRepository,
 	skillService *service.SkillService,
 	stagePlan *service.StagePlanService,
+	wikiAgent *service.WikiAgentService,
 	gwClient *GatewayClient,
 	notifier *notify.Notifier,
 ) *Dispatcher {
@@ -53,6 +55,7 @@ func NewDispatcher(
 		userRepo:     userRepo,
 		skillService: skillService,
 		stagePlan:    stagePlan,
+		wikiAgent:    wikiAgent,
 		gwClient:     gwClient,
 		notifier:     notifier,
 	}
@@ -64,7 +67,7 @@ func NewDispatcher(
 func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun, task *model.AgentTask) {
 	go func() {
 		bgCtx := context.Background()
-		bundle, err := d.buildContextBundle(bgCtx, run, task)
+		bundle, wikiReads, err := d.buildContextBundle(bgCtx, run, task)
 		if err != nil {
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("building context bundle")
 			d.failTaskAndRun(bgCtx, run, task, fmt.Sprintf("context bundle build error: %v", err))
@@ -88,6 +91,10 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 		if err := d.DispatchEvent(bgCtx, run, event); err != nil {
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("dispatching stage_execute event")
 			d.failTaskAndRun(bgCtx, run, task, fmt.Sprintf("dispatch failed: %v", err))
+			return
+		}
+		if err := d.wikiAgent.RecordReads(bgCtx, wikiReads); err != nil {
+			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("recording wiki reads of the prompt")
 		}
 	}()
 }
@@ -122,18 +129,18 @@ func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, eve
 }
 
 // buildContextBundle assembles the per-stage context for a stage attempt.
-func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (map[string]any, error) {
+func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (map[string]any, []*model.AgentRunWikiRead, error) {
 	issue, err := d.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &run.IdIssue})
 	if err != nil {
-		return nil, fmt.Errorf("loading issue: %w", err)
+		return nil, nil, fmt.Errorf("loading issue: %w", err)
 	}
 	project, err := d.projectRepo.LoadProject(ctx, run.IdProject)
 	if err != nil {
-		return nil, fmt.Errorf("loading project: %w", err)
+		return nil, nil, fmt.Errorf("loading project: %w", err)
 	}
 	agent, err := d.userRepo.LoadUser(ctx, run.IdUserAgent)
 	if err != nil {
-		return nil, fmt.Errorf("loading agent user: %w", err)
+		return nil, nil, fmt.Errorf("loading agent user: %w", err)
 	}
 
 	messages, err := d.messageRepo.LoadIssueMessages(ctx, run.IdIssue, 0, nil)
@@ -144,7 +151,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	// tell the agent to implement an approved plan and attach nothing.
 	priorTasks, err := d.taskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
-		return nil, fmt.Errorf("loading prior tasks: %w", err)
+		return nil, nil, fmt.Errorf("loading prior tasks: %w", err)
 	}
 
 	// A skill deleted between planning and dispatch is simply absent: a missing
@@ -158,6 +165,13 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		stageSkills = loaded
 	}
 
+	// Like a missing skill, an unreadable wiki must never fail a run.
+	wiki, wikiReads, err := d.wikiAgent.BuildPromptContext(ctx, run, task)
+	if err != nil {
+		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("building wiki context — dispatching without it")
+		wiki, wikiReads = nil, nil
+	}
+
 	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle := map[string]any{
 		"issue":             issue,
@@ -169,6 +183,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"rejectedOutput":    artifacts.RejectedOutput,
 		"approvedMockupRef": derefStringOrNil(run.ApprovedMockupRef),
 		"skills":            stageSkills,
+		"wiki":              wiki,
 	}
 	if task.AttemptNo > 1 {
 		for _, t := range priorTasks {
@@ -177,7 +192,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 			}
 		}
 	}
-	return bundle, nil
+	return bundle, wikiReads, nil
 }
 
 // reviewThread returns the whole issue conversation oldest-first. Never trim it

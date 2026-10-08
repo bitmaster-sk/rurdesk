@@ -38,7 +38,20 @@ export interface WikiResolvedLink {
 export interface WikiPageIssue {
     idIssue: number;
     idIssuePublic: number;
+    idProject: number;
     title: string;
+    stateName: string | null;
+    isClosed: boolean;
+}
+
+export interface WikiPageIssueList {
+    items: WikiPageIssue[];
+    total: number;
+}
+
+export interface WikiBacklinkList {
+    items: WikiPageRef[];
+    total: number;
 }
 
 export interface WikiPageDraft {
@@ -56,8 +69,8 @@ export interface WikiPageView {
     spaceKind: WikiSpaceKind;
     canEdit: boolean;
     canManage: boolean;
-    backlinks: WikiPageRef[];
-    issues: WikiPageIssue[];
+    backlinks: WikiBacklinkList;
+    issues: WikiPageIssueList;
     links: WikiResolvedLink[];
     draft: WikiPageDraft | null;
 }

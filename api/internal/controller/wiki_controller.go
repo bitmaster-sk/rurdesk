@@ -395,6 +395,44 @@ func (wc *WikiController) RemoveIssueLink(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (wc *WikiController) GetPageIssues(c *gin.Context) {
+	idPage, ok := wc.idParam(c, "idPage")
+	if !ok {
+		return
+	}
+	limit, offset, ok := wc.paging(c)
+	if !ok {
+		return
+	}
+	issues, err := wc.wiki.LoadPageIssues(c.Request.Context(), wc.user(c), idPage, limit, offset)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, issues)
+}
+
+func (wc *WikiController) GetPageBacklinks(c *gin.Context) {
+	idProject, ok := wc.idParam(c, "idProject")
+	if !ok {
+		return
+	}
+	idPage, ok := wc.idParam(c, "idPage")
+	if !ok {
+		return
+	}
+	limit, offset, ok := wc.paging(c)
+	if !ok {
+		return
+	}
+	backlinks, err := wc.wiki.LoadPageBacklinks(c.Request.Context(), wc.user(c), idProject, idPage, limit, offset)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, backlinks)
+}
+
 func (wc *WikiController) idParam(c *gin.Context, name string) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param(name), 10, 64)
 	if err != nil {
@@ -411,6 +449,20 @@ func (wc *WikiController) intQuery(c *gin.Context, name string) (int, bool) {
 		return 0, false
 	}
 	return value, true
+}
+
+func (wc *WikiController) paging(c *gin.Context) (int, int, bool) {
+	limit, err := strconv.Atoi(c.DefaultQuery("limit", "0"))
+	if err != nil || limit < 0 {
+		ResponseErr(c, errs.ErrBadRequest.WithMessage("limit must be a non-negative number"))
+		return 0, 0, false
+	}
+	offset, err := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	if err != nil || offset < 0 {
+		ResponseErr(c, errs.ErrBadRequest.WithMessage("offset must be a non-negative number"))
+		return 0, 0, false
+	}
+	return limit, offset, true
 }
 
 func (wc *WikiController) user(c *gin.Context) model.User {

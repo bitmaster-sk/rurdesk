@@ -32,3 +32,15 @@ func IsValidWikiAgentAccess(access WikiAgentAccess) bool {
 		return false
 	}
 }
+
+type WikiReadSource string
+
+const (
+	WikiReadPromptAlways WikiReadSource = "prompt_always"
+	WikiReadPromptLinked WikiReadSource = "prompt_linked"
+	WikiReadPromptIndex  WikiReadSource = "prompt_index"
+	WikiReadMcpGet       WikiReadSource = "mcp_get"
+	WikiReadMcpSearch    WikiReadSource = "mcp_search"
+)
+
+const WikiSharedSlugPrefix = "shared:"
