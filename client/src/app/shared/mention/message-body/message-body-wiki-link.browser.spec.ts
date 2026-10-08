@@ -6,7 +6,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
-import { MentionChipComponent } from 'src/app/shared/mention/mention-chip/mention-chip.component';
+import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
 import { UiModule } from 'src/app/ui/ui.module';
 import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
@@ -74,13 +74,16 @@ async function render(
     const loadTree = vi.fn().mockReturnValue(of(tree));
     await TestBed.configureTestingModule({
         imports: [
-            MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
+            MarkdownModule.forRoot({
+                markedOptions: MARKDOWN_MARKED_OPTIONS,
+                markedExtensions: [MARKDOWN_MENTION_EXTENSION]
+            }),
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
             DiffViewerStub
         ],
-        declarations: [MessageBodyComponent, MockupCardComponent, MentionChipComponent],
+        declarations: [MessageBodyComponent, MockupCardComponent],
         providers: [
             provideRouter([]),
             { provide: WikiApi, useValue: { loadTree$: loadTree } },

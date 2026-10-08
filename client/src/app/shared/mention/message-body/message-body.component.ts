@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
-import { Mention } from 'src/app/shared/mention/mention';
+import { MENTION_TOKEN_RE } from 'src/app/shared/mention/mention';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
 import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
 import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
@@ -19,14 +19,7 @@ import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 export type RenderSegment =
     | { type: 'diff'; content: string }
     | { type: 'mockup'; content: string; title?: string; ref: string }
-    | { type: 'text'; content: string }
-    | { type: 'mention'; idUser: number; name: string };
-
-/** Span within a text block — either a code region or plain text. */
-interface TextSpan {
-    isCode: boolean;
-    text: string;
-}
+    | { type: 'text'; content: string };
 
 const AGENT_KINDS = new Set<MessageKind>([
     MessageKind.Design,
@@ -103,7 +96,7 @@ export class MessageBodyComponent {
         // For user messages: a single text segment (no diff/mockup splitting).
         const base = isAgentKind
             ? MessageSegmentParser.parse(this.body())
-            : [{ type: 'text' as const, content: this.body() }];
+            : [{ type: 'text' as const, content: this.resolveMentionNames(this.body()) }];
 
         const out: RenderSegment[] = [];
 
@@ -117,98 +110,30 @@ export class MessageBodyComponent {
                 });
                 continue;
             }
-            if (seg.type !== 'text') {
-                out.push(seg as RenderSegment);
+            if (seg.type === 'diff') {
+                out.push({ type: 'diff', content: seg.content });
                 continue;
             }
 
-            if (isAgentKind) {
-                // Agent text segments: parse mention tokens directly (no code-fence guard
-                // needed — agent messages aren't user-typed fenced code, and their
-                // diff/mockup blocks were already split off above).
-                for (const p of Mention.parse(seg.content)) {
-                    if (p.type === 'text') {
-                        if (p.text) out.push({ type: 'text', content: p.text });
-                    } else {
-                        out.push({ type: 'mention', idUser: p.idUser, name: p.name });
-                    }
-                }
-            } else {
-                // User-typed message: guard against mentions inside code fences / inline code.
-                const codeSpans = MessageBodyComponent.splitCodeSpans(seg.content);
-                for (const span of codeSpans) {
-                    if (span.isCode) {
-                        // Emit the raw code text as-is (literal, no chip).
-                        if (span.text) out.push({ type: 'text', content: span.text });
-                    } else {
-                        // Non-code span: parse mentions.
-                        for (const p of Mention.parse(span.text)) {
-                            if (p.type === 'text') {
-                                if (p.text) out.push({ type: 'text', content: p.text });
-                            } else {
-                                out.push({ type: 'mention', idUser: p.idUser, name: p.name });
-                            }
-                        }
-                    }
-                }
-            }
+            // Text segment: resolve live mention names, emit as single markdown document.
+            out.push({ type: 'text', content: this.resolveMentionNames(seg.content) });
         }
 
         return out;
     });
 
-    /**
-     * Split raw markdown text into alternating code / non-code spans so that
-     * mention tokens inside fenced blocks (``` … ```) or inline code (` … `) are
-     * never parsed as mentions — they must render literally.
-     *
-     * Handles:
-     *  - Fenced blocks opened with three (or more) backticks, closed by a matching
-     *    fence (same length). Multi-line.
-     *  - Inline code enclosed by one or more backticks (not newline-crossing by
-     *    the CommonMark spec, but we're lenient here).
-     */
-    private static splitCodeSpans(text: string): TextSpan[] {
-        const spans: TextSpan[] = [];
-        let i = 0;
-
-        while (i < text.length) {
-            if (text[i] !== '`') {
-                const next = text.indexOf('`', i);
-                if (next === -1) {
-                    spans.push({ isCode: false, text: text.slice(i) });
-                    break;
-                }
-                spans.push({ isCode: false, text: text.slice(i, next) });
-                i = next;
-                continue;
-            }
-
-            let fenceLen = 0;
-            while (i + fenceLen < text.length && text[i + fenceLen] === '`') {
-                fenceLen++;
-            }
-            const opener = text.slice(i, i + fenceLen);
-            const closerStart = text.indexOf(opener, i + fenceLen);
-            if (closerStart === -1) {
-                // No closer — treat the rest as plain text (no code).
-                spans.push({ isCode: false, text: text.slice(i) });
-                break;
-            }
-            // Ensure the closer is not immediately followed by another backtick
-            // (which would make it a longer fence, not a match).
-            const afterCloser = closerStart + fenceLen;
-            if (afterCloser < text.length && text[afterCloser] === '`') {
-                // Not a proper close — skip past opener and keep scanning.
-                spans.push({ isCode: false, text: opener });
-                i = i + fenceLen;
-                continue;
-            }
-            const codeContent = text.slice(i, afterCloser);
-            spans.push({ isCode: true, text: codeContent });
-            i = afterCloser;
-        }
-
-        return spans;
+    // Replace stored mention names with live candidate names so chips show the
+    // current user name. Same lookup logic as the old MentionChipComponent.displayName.
+    private resolveMentionNames(text: string): string {
+        const cands = this.candidates();
+        if (!cands) return text;
+        return text.replace(MENTION_TOKEN_RE, (_match, name: string, idStr: string) => {
+            const idUser = Number(idStr);
+            const found =
+                cands instanceof Map ? cands.get(idUser) : cands.find(u => u.idUser === idUser);
+            const liveName = found?.name;
+            if (!liveName || liveName.includes(']')) return _match;
+            return `@[${liveName}](user:${idUser})`;
+        });
     }
 }

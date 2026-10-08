@@ -2,12 +2,12 @@ import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
+import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
 import { TablerIconStub } from 'src/testing/stubs';
 import { MessageBodyComponent } from './message-body.component';
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
-import { MentionChipComponent } from 'src/app/shared/mention/mention-chip/mention-chip.component';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { User } from 'src/app/auth/model/user.model';
 
@@ -19,13 +19,16 @@ class DiffViewerStub {
 async function setup() {
     await TestBed.configureTestingModule({
         imports: [
-            MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
+            MarkdownModule.forRoot({
+                markedOptions: MARKDOWN_MARKED_OPTIONS,
+                markedExtensions: [MARKDOWN_MENTION_EXTENSION]
+            }),
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
             DiffViewerStub
         ],
-        declarations: [MessageBodyComponent, MockupCardComponent, MentionChipComponent]
+        declarations: [MessageBodyComponent, MockupCardComponent]
     }).compileComponents();
 }
 
@@ -49,7 +52,7 @@ describe('MessageBodyComponent (browser)', () => {
         expect(text).toContain('@Jan');
         expect(text).toContain('please');
 
-        const chips = fixture.nativeElement.querySelectorAll('app-mention-chip');
+        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(1);
     });
 
@@ -65,7 +68,7 @@ describe('MessageBodyComponent (browser)', () => {
         expect(diffViewers.length).toBe(1);
 
         // Diff content should not be mangled by mention parsing (no spurious chips).
-        const chips = fixture.nativeElement.querySelectorAll('app-mention-chip');
+        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(0);
     });
 
@@ -83,7 +86,7 @@ describe('MessageBodyComponent (browser)', () => {
         fixture.detectChanges();
 
         // The token is inside inline code — no chip must be rendered.
-        const chips = fixture.nativeElement.querySelectorAll('app-mention-chip');
+        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(0);
     });
 
@@ -100,7 +103,7 @@ describe('MessageBodyComponent (browser)', () => {
         fixture.detectChanges();
 
         // No chip should be rendered for the token inside the fence.
-        const chips = fixture.nativeElement.querySelectorAll('app-mention-chip');
+        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(0);
     });
 
@@ -121,26 +124,20 @@ describe('MessageBodyComponent (browser)', () => {
         const host: HTMLElement = fixture.nativeElement;
 
         // The mention chip element.
-        const chip = host.querySelector('app-mention-chip') as HTMLElement;
+        const chip = host.querySelector('.mention-chip') as HTMLElement;
         expect(chip).not.toBeNull();
 
-        // The text run element (.text-run) that follows the chip (" please").
+        // The text run element (.text-run) — now a single run containing the chip inline.
         const textRuns = host.querySelectorAll<HTMLElement>('.text-run');
-        // At minimum there must be two text runs ("cc " before, " please" after).
-        expect(textRuns.length).toBeGreaterThanOrEqual(2);
-        const trailingRun = textRuns[textRuns.length - 1];
+        // With the unified markdown renderer there is one text run.
+        expect(textRuns.length).toBeGreaterThanOrEqual(1);
+        const run = textRuns[0];
 
-        // Both must be rendered inline (not block) so they sit on the same line.
-        const chipRect = chip.getBoundingClientRect();
-        const textRect = trailingRun.getBoundingClientRect();
+        // The chip must be inside the text run (inline, not a separate block).
+        expect(run.contains(chip)).toBe(true);
 
-        // Their vertical centres must overlap (within 4 px of each other).
-        const chipMid = chipRect.top + chipRect.height / 2;
-        const textMid = textRect.top + textRect.height / 2;
-        expect(Math.abs(chipMid - textMid)).toBeLessThan(4);
-
-        // Also verify the text run's computed display is not 'block'.
-        const display = window.getComputedStyle(trailingRun).display;
+        // The text run must be rendered inline (not block) so the chip sits on the same line.
+        const display = window.getComputedStyle(run).display;
         expect(display).not.toBe('block');
     });
 
@@ -259,5 +256,112 @@ describe('MessageBodyComponent (browser)', () => {
         expect(text).not.toContain('😜');
         expect(text).not.toContain('😄');
         expect(text).not.toContain('😲');
+    });
+
+    it('renders a table with inline code in a cell as one <table> with <code>', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', '| a | `x` |\n| --- | --- |\n| 1 | 2 |');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelectorAll('table').length).toBe(1);
+        const code = host.querySelector('table code') as HTMLElement;
+        expect(code).not.toBeNull();
+        expect(code.textContent).toBe('x');
+    });
+
+    it('renders a list with inline code in two items as one <ul> with two <li>', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', '- item `a`\n- item `b`');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelectorAll('ul').length).toBe(1);
+        expect(host.querySelectorAll('ul li').length).toBe(2);
+    });
+
+    it('renders a mention in a table cell as a .mention-chip inside a <td>', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        const candidates = new Map<number, User>([
+            [1, { idUser: 1, name: 'Jan', email: '', colorAvatarBg: '' }]
+        ]);
+        fixture.componentRef.setInput('body', '| user |\n| --- |\n| @[Jan](user:1) |');
+        fixture.componentRef.setInput('candidates', candidates);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelectorAll('table').length).toBe(1);
+        const chip = host.querySelector('table td .mention-chip') as HTMLElement;
+        expect(chip).not.toBeNull();
+        expect(chip.textContent).toBe('@Jan');
+    });
+
+    it('renders a mention in a list item as a .mention-chip inside an <li>', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        const candidates = new Map<number, User>([
+            [1, { idUser: 1, name: 'Jan', email: '', colorAvatarBg: '' }]
+        ]);
+        fixture.componentRef.setInput('body', '- cc @[Jan](user:1)');
+        fixture.componentRef.setInput('candidates', candidates);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelectorAll('ul').length).toBe(1);
+        const chip = host.querySelector('ul li .mention-chip') as HTMLElement;
+        expect(chip).not.toBeNull();
+        expect(chip.textContent).toBe('@Jan');
+    });
+
+    it('resolves live name from candidates in a mention token', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        const candidates = new Map<number, User>([
+            [1, { idUser: 1, name: 'Nový', email: '', colorAvatarBg: '' }]
+        ]);
+        fixture.componentRef.setInput('body', 'cc @[Starý](user:1) please');
+        fixture.componentRef.setInput('candidates', candidates);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const chip = fixture.nativeElement.querySelector('.mention-chip') as HTMLElement;
+        expect(chip).not.toBeNull();
+        expect(chip.textContent).toBe('@Nový');
+    });
+
+    it('shows stored name when candidate is absent', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', 'cc @[Starý](user:1) please');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const chip = fixture.nativeElement.querySelector('.mention-chip') as HTMLElement;
+        expect(chip).not.toBeNull();
+        expect(chip.textContent).toBe('@Starý');
+    });
+
+    it('escapes HTML in mention names so <b> renders as text not an element', async () => {
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        const candidates = new Map<number, User>([
+            [1, { idUser: 1, name: '<b>x</b>', email: '', colorAvatarBg: '' }]
+        ]);
+        fixture.componentRef.setInput('body', 'cc @[x](user:1)');
+        fixture.componentRef.setInput('candidates', candidates);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const host: HTMLElement = fixture.nativeElement;
+        expect(host.querySelector('.mention-chip b')).toBeNull();
+        const chip = host.querySelector('.mention-chip') as HTMLElement;
+        expect(chip.textContent).toBe('@<b>x</b>');
     });
 });

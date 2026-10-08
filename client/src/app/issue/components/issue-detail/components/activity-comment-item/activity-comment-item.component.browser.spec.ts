@@ -2,13 +2,13 @@ import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { MarkdownModule } from 'ngx-markdown';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
+import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
 import { AvatarStub, MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
 import { ActivityCommentItemComponent } from './activity-comment-item.component';
 import { MessageBodyComponent } from 'src/app/shared/mention/message-body/message-body.component';
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
-import { MentionChipComponent } from 'src/app/shared/mention/mention-chip/mention-chip.component';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { Message } from 'src/app/message/model/message.model';
 import { User } from 'src/app/auth/model/user.model';
@@ -84,7 +84,10 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [
-                MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
+                MarkdownModule.forRoot({
+                    markedOptions: MARKDOWN_MARKED_OPTIONS,
+                    markedExtensions: [MARKDOWN_MENTION_EXTENSION]
+                }),
                 UiModule,
                 TranslateModule.forRoot(),
                 AvatarStub,
@@ -94,12 +97,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
                 AnchorReplyStub,
                 PlanActionsStub
             ],
-            declarations: [
-                ActivityCommentItemComponent,
-                MessageBodyComponent,
-                MockupCardComponent,
-                MentionChipComponent
-            ]
+            declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
         }).compileComponents();
     });
 
@@ -174,7 +172,10 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [
-                MarkdownModule.forRoot({ markedOptions: MARKDOWN_MARKED_OPTIONS }),
+                MarkdownModule.forRoot({
+                    markedOptions: MARKDOWN_MARKED_OPTIONS,
+                    markedExtensions: [MARKDOWN_MENTION_EXTENSION]
+                }),
                 UiModule,
                 TranslateModule.forRoot(),
                 AvatarStub,
@@ -184,12 +185,7 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
                 AnchorReplyStub,
                 PlanActionsStub
             ],
-            declarations: [
-                ActivityCommentItemComponent,
-                MessageBodyComponent,
-                MockupCardComponent,
-                MentionChipComponent
-            ]
+            declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
         }).compileComponents();
     });
 
@@ -212,7 +208,7 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
         expect(lineMode).not.toBeNull();
 
         // The mention chip must appear inside the line-mode lines.
-        const chips = fixture.nativeElement.querySelectorAll('app-mention-chip');
+        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBeGreaterThan(0);
     });
 });
