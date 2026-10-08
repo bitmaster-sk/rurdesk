@@ -738,11 +738,11 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	// `errored` outcome so the normal failure path records it.
 	pr := ctrl.resolvePrForCompletion(ctx, run, task, &body)
 
-	var idMessageOut *int64
-	var notifierMsg *model.Message
-	var targetStatus, nextPhase string
+	var res completeStageResult
 	txErr := extctx.RunInTx(ctx, ctrl.pool, func(ctx context.Context) error {
-		return ctrl.applyCompleteStage(ctx, run, task, &body, pr, reconcile, &agentUser, &idMessageOut, &notifierMsg, &targetStatus, &nextPhase)
+		var err error
+		res, err = ctrl.applyCompleteStage(ctx, run, task, &body, pr, reconcile, &agentUser)
+		return err
 	})
 	if txErr != nil {
 		if errors.Is(txErr, errReconcileSuperseded) {
@@ -767,12 +767,12 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		}
 	}
 
-	if notifierMsg != nil {
+	if res.notifierMsg != nil {
 		ctrl.notifier.Send <- &notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
-			Payload: notifierMsg,
+			Payload: res.notifierMsg,
 			Source:  "agent",
 		}
 	}
@@ -780,7 +780,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		IdsUser: idsUser,
 		Subject: notify.SubjectAgentTask,
 		Action:  notify.ActionUpdate,
-		Payload: map[string]any{"idTask": idTask, "idRun": run.IdRun, "status": targetStatus},
+		Payload: map[string]any{"idTask": idTask, "idRun": run.IdRun, "status": res.targetStatus},
 	}
 	// The local `run` is the pre-transition snapshot; reload so the broadcast
 	// carries the phase applyCompleteStage set.
@@ -793,8 +793,8 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 
 	c.JSON(http.StatusOK, model.CompleteStageRes{
 		IdTask:    idTask,
-		Status:    targetStatus,
-		NextPhase: nextPhase,
+		Status:    res.targetStatus,
+		NextPhase: res.nextPhase,
 	})
 }
 
@@ -806,21 +806,19 @@ func (ctrl *AgentRunController) applyCompleteStage(
 	pr *prComputed,
 	reconcile bool,
 	agentUser *model.User,
-	idMessageOut **int64,
-	notifierMsgOut **model.Message,
-	targetStatusOut *string,
-	nextPhaseOut *string,
-) error {
+) (completeStageResult, error) {
+	var res completeStageResult
+	var idMessage *int64
 	if body.Message != "" {
 		msg, err := ctrl.messageRepo.InsertIssueAgentMessage(
 			ctx, body.Message, agentUser, run.IdIssue, constants.MessageKind(body.MessageKind),
 		)
 		if err != nil {
-			return fmt.Errorf("writing message: %w", err)
+			return completeStageResult{}, fmt.Errorf("writing message: %w", err)
 		}
 		id := msg.IdMessage
-		*idMessageOut = &id
-		*notifierMsgOut = msg
+		idMessage = &id
+		res.notifierMsg = msg
 	}
 
 	prWritten := false
@@ -830,9 +828,9 @@ func (ctrl *AgentRunController) applyCompleteStage(
 			// Restart/Continue between the pre-tx guard and this CAS — treat that
 			// as a superseded no-op (roll back, respond 200), not a 500.
 			if reconcile && errors.Is(err, repository.ErrPhaseMismatch) {
-				return errReconcileSuperseded
+				return completeStageResult{}, errReconcileSuperseded
 			}
-			return fmt.Errorf("applying PR info: %w", err)
+			return completeStageResult{}, fmt.Errorf("applying PR info: %w", err)
 		}
 		prWritten = true
 	}
@@ -841,8 +839,8 @@ func (ctrl *AgentRunController) applyCompleteStage(
 	if body.Outcome == constants.StageOutcomeErrored {
 		targetStatus = constants.TaskStatusFailed
 	}
-	if err := ctrl.agentTaskRepo.SetResultAndStats(ctx, task.IdTask, *idMessageOut, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
-		return err
+	if err := ctrl.agentTaskRepo.SetResultAndStats(ctx, task.IdTask, idMessage, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
+		return completeStageResult{}, err
 	}
 	// CompleteReconcilable accepts the task from `active` (normal completion) or
 	// from `failed` with a recoverable error_reason (a late completion reconciled
@@ -855,9 +853,9 @@ func (ctrl *AgentRunController) applyCompleteStage(
 		// already completed or reconciled this task after our pre-tx gate. The
 		// winner is recording the work — no-op this call instead of 500.
 		if errors.Is(err, repository.ErrTaskStatusMismatch) {
-			return errReconcileSuperseded
+			return completeStageResult{}, errReconcileSuperseded
 		}
-		return fmt.Errorf("transitioning task status: %w", err)
+		return completeStageResult{}, fmt.Errorf("transitioning task status: %w", err)
 	}
 	// Record the error reason/detail AFTER the status CAS (errored outcome only).
 	if body.Outcome == constants.StageOutcomeErrored {
@@ -870,7 +868,7 @@ func (ctrl *AgentRunController) applyCompleteStage(
 			detail = *body.ErrorDetail
 		}
 		if err := ctrl.agentTaskRepo.SetError(ctx, task.IdTask, reason, detail); err != nil {
-			return err
+			return completeStageResult{}, err
 		}
 	}
 
@@ -885,18 +883,22 @@ func (ctrl *AgentRunController) applyCompleteStage(
 			// superseded no-op, not a partial commit.
 			if _, err := ctrl.agentRunRepo.ReconcileToPhase(ctx, run.IdRun, run.Phase, nextPhase, constants.ActorTypeAgent, "complete_stage:reconcile:"+body.Outcome); err != nil {
 				if errors.Is(err, repository.ErrPhaseMismatch) {
-					return errReconcileSuperseded
+					return completeStageResult{}, errReconcileSuperseded
 				}
-				return fmt.Errorf("reconcile phase transition: %w", err)
+				return completeStageResult{}, fmt.Errorf("reconcile phase transition: %w", err)
 			}
 		} else if _, err := ctrl.agentRunRepo.TransitionPhase(ctx, run.IdRun, run.Phase, nextPhase, constants.ActorTypeAgent, nil, "complete_stage:"+body.Outcome); err != nil {
 			log.Debug().Err(err).Int64("idRun", run.IdRun).Str("toPhase", nextPhase).Msg("phase transition tolerated")
 		}
 	}
 
-	*targetStatusOut = targetStatus
-	*nextPhaseOut = nextPhase
-	return nil
+	return completeStageResult{notifierMsg: res.notifierMsg, targetStatus: targetStatus, nextPhase: nextPhase}, nil
+}
+
+type completeStageResult struct {
+	notifierMsg  *model.Message
+	targetStatus string
+	nextPhase    string
 }
 
 // GatewayRecovered is called when a gateway (re)starts. Its in-flight
