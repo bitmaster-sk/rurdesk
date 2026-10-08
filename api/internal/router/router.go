@@ -253,6 +253,8 @@ func New(
 	pri.GET("/wiki/page/:idPage/version/:versionNo", wikiCtrl.GetVersion)
 	pri.POST("/wiki/page/:idPage/revert/:versionNo", wikiCtrl.RevertPage)
 	pri.GET("/wiki/page/:idPage/diff", wikiCtrl.GetDiff)
+	pri.GET("/wiki/page/:idPage/issues", wikiCtrl.GetPageIssues)
+	pri.GET("/project/:idProject/wiki/backlinks/:idPage", wikiCtrl.GetPageBacklinks)
 	pri.GET("/wiki/page/:idPage/draft", wikiCtrl.GetDraft)
 	pri.PUT("/wiki/page/:idPage/draft", wikiCtrl.SaveDraft)
 	pri.DELETE("/wiki/page/:idPage/draft", wikiCtrl.DeleteDraft)

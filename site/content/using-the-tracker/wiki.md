@@ -144,7 +144,10 @@ A task's detail has a **Wiki** panel with the pages linked to it:
 
 ![The Wiki panel on a task with a page added by hand](../../site/assets/img/wiki-task-panel.png)
 
-A page in turn lists its **linked tasks** in the panel next to its text.
+A page in turn lists its **linked tasks** in the panel next to its text: open
+tasks first, newest at the top, and closed ones greyed out with their state.
+The panel shows 20 at a time; **Load more** brings the next ones. The pages that
+link here, under **Linked from**, work the same way.
 
 The task description and comments understand the same `[[links]]` as the wiki.
 Type `[[` and the editor suggests pages as you type; press **Enter** to insert

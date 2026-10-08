@@ -65,6 +65,7 @@ import { WikiHomePage } from './pages/wiki-home/wiki-home.page';
 import { WikiPagePage } from './pages/wiki-page/wiki-page.page';
 import { WikiShellPage } from './pages/wiki-shell/wiki-shell.page';
 import { WikiTrashPage } from './pages/wiki-trash/wiki-trash.page';
+import { WikiPageAsideComponent } from './components/wiki-page-aside/wiki-page-aside.component';
 import { WikiTreeShowComponent } from './components/wiki-tree-show/wiki-tree-show.component';
 import { WikiTablePickerComponent } from './components/wiki-table-picker/wiki-table-picker.component';
 import { WikiHeadingAnchorsDirective } from './directives/wiki-heading-anchors.directive';
@@ -84,6 +85,7 @@ import { WikiRoutingModule } from './wiki-routing.module';
         WikiMoveDialogComponent,
         WikiTablePickerComponent,
         WikiTreeShowComponent,
+        WikiPageAsideComponent,
         WikiHeadingAnchorsDirective
     ],
     imports: [

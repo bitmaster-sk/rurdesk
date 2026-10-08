@@ -17,7 +17,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const wikiSearchLimit = 20
+const (
+	wikiSearchLimit     = 20
+	wikiListPageSize    = 20
+	wikiListMaxPageSize = 100
+)
 
 type WikiService struct {
 	pool          *pgxpool.Pool
@@ -125,21 +129,13 @@ func (s *WikiService) LoadPage(ctx context.Context, user model.User, idProject i
 		return nil, errs.ErrNotFound
 	}
 	access := s.spaceAccess(ctx, user, space)
-	backlinks, err := s.linkRepo.LoadBacklinks(ctx, space.IdSpace, page.Slug, []int64{instance.IdSpace, project.IdSpace}, user.IsAgent)
+	backlinks, err := s.loadBacklinks(ctx, user, page, []int64{instance.IdSpace, project.IdSpace}, wikiListPageSize, 0)
 	if err != nil {
 		return nil, err
 	}
-	visibleProjects, err := s.acl.LoadVisibleProjectIds(ctx, user.IdUser)
+	issues, err := s.loadPageIssues(ctx, user, page.IdPage, wikiListPageSize, 0)
 	if err != nil {
 		return nil, err
-	}
-	issueRefs, err := s.issuePageRepo.LoadByPage(ctx, page.IdPage, visibleProjects)
-	if err != nil {
-		return nil, err
-	}
-	issues := make([]model.WikiPageIssue, len(issueRefs))
-	for i, ref := range issueRefs {
-		issues[i] = model.WikiPageIssue{IdIssue: ref.IdIssue, IdIssuePublic: ref.IdIssuePublic, Title: ref.Title}
 	}
 	links, err := s.resolveLinks(ctx, instance, project, space, page.Body, user.IsAgent)
 	if err != nil {
@@ -154,8 +150,8 @@ func (s *WikiService) LoadPage(ctx context.Context, user model.User, idProject i
 		SpaceKind: space.Kind,
 		CanEdit:   access.canEdit,
 		CanManage: access.canManage,
-		Backlinks: backlinks,
-		Issues:    issues,
+		Backlinks: *backlinks,
+		Issues:    *issues,
 		Links:     links,
 		Draft:     draft,
 	}, nil
@@ -249,6 +245,28 @@ func (s *WikiService) Search(ctx context.Context, user model.User, idProject int
 		return []*model.WikiSearchHit{}, nil
 	}
 	return s.pageRepo.Search(ctx, []int64{instance.IdSpace, project.IdSpace}, prefixQuery, wikiSearchLimit, user.IsAgent)
+}
+
+func (s *WikiService) LoadPageIssues(ctx context.Context, user model.User, idPage int64, limit, offset int) (*model.WikiPageIssueList, error) {
+	if _, _, err := s.loadPageAccess(ctx, user, idPage, false); err != nil {
+		return nil, err
+	}
+	return s.loadPageIssues(ctx, user, idPage, clampListPageSize(limit), max(offset, 0))
+}
+
+func (s *WikiService) LoadPageBacklinks(ctx context.Context, user model.User, idProject, idPage int64, limit, offset int) (*model.WikiBacklinkList, error) {
+	instance, project, err := s.projectSpaces(ctx, user, idProject)
+	if err != nil {
+		return nil, err
+	}
+	page, _, err := s.loadPageAccess(ctx, user, idPage, false)
+	if err != nil {
+		return nil, err
+	}
+	if page.DeletedAt != nil || (page.IdSpace != instance.IdSpace && page.IdSpace != project.IdSpace) {
+		return nil, errs.ErrNotFound
+	}
+	return s.loadBacklinks(ctx, user, page, []int64{instance.IdSpace, project.IdSpace}, clampListPageSize(limit), max(offset, 0))
 }
 
 func (s *WikiService) UpdateSettings(ctx context.Context, user model.User, idProject int64, req model.WikiSettingsReq) error {
@@ -370,6 +388,34 @@ func (s *WikiService) SyncIssueDescription(ctx context.Context, idIssue, idProje
 		}
 	}
 	return s.issuePageRepo.ReplaceFromDescription(ctx, idIssue, idsPage)
+}
+
+func (s *WikiService) loadPageIssues(ctx context.Context, user model.User, idPage int64, limit, offset int) (*model.WikiPageIssueList, error) {
+	visibleProjects, err := s.acl.LoadVisibleProjectIds(ctx, user.IdUser)
+	if err != nil {
+		return nil, err
+	}
+	items, err := s.issuePageRepo.LoadByPage(ctx, idPage, visibleProjects, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.issuePageRepo.CountByPage(ctx, idPage, visibleProjects)
+	if err != nil {
+		return nil, err
+	}
+	return &model.WikiPageIssueList{Items: items, Total: total}, nil
+}
+
+func (s *WikiService) loadBacklinks(ctx context.Context, user model.User, page *model.WikiPage, idsSourceSpace []int64, limit, offset int) (*model.WikiBacklinkList, error) {
+	items, err := s.linkRepo.LoadBacklinks(ctx, page.IdSpace, page.Slug, idsSourceSpace, user.IsAgent, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	total, err := s.linkRepo.CountBacklinks(ctx, page.IdSpace, page.Slug, idsSourceSpace, user.IsAgent)
+	if err != nil {
+		return nil, err
+	}
+	return &model.WikiBacklinkList{Items: items, Total: total}, nil
 }
 
 func (s *WikiService) spaceAccess(ctx context.Context, user model.User, space *model.WikiSpace) wikiAccess {
@@ -588,6 +634,13 @@ func versionOf(page *model.WikiPage, note string, mergedFrom *int, idUser int64)
 		MergedFrom:  mergedFrom,
 		CreateBy:    &idUser,
 	}
+}
+
+func clampListPageSize(limit int) int {
+	if limit <= 0 {
+		return wikiListPageSize
+	}
+	return min(limit, wikiListMaxPageSize)
 }
 
 func tokensOfChars(chars int) int {

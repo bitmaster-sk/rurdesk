@@ -445,6 +445,7 @@
             "NO_TASKS": "No linked tasks",
             "BACKLINKS": "Linked from",
             "NO_BACKLINKS": "No page links here",
+            "LOAD_MORE_ERROR": "Could not load more",
             "NOT_FOUND": "This page does not exist or was moved to the trash."
         },
         "FIELD": {

@@ -8,7 +8,9 @@ import {
     WikiIssueLink,
     WikiPage,
     WikiPageDraft,
-    WikiPageView
+    WikiPageView,
+    WikiPageIssueList,
+    WikiBacklinkList
 } from '../model/wiki-page.model';
 import {
     WikiCreateRequest,
@@ -36,6 +38,23 @@ export class WikiApi {
     ): Observable<WikiPageView> {
         return this.http.get<WikiPageView>(
             `/api/private/project/${idProject}/wiki/page/${space}/${encodeURIComponent(slug)}`
+        );
+    }
+
+    public loadPageIssues$(idPage: number, offset: number): Observable<WikiPageIssueList> {
+        return this.http.get<WikiPageIssueList>(`/api/private/wiki/page/${idPage}/issues`, {
+            params: { offset }
+        });
+    }
+
+    public loadBacklinks$(
+        idProject: number,
+        idPage: number,
+        offset: number
+    ): Observable<WikiBacklinkList> {
+        return this.http.get<WikiBacklinkList>(
+            `/api/private/project/${idProject}/wiki/backlinks/${idPage}`,
+            { params: { offset } }
         );
     }
 

@@ -117,33 +117,12 @@
         ></article>
 
         <aside class="wiki-page__aside">
-            <section>
-                <h4>{{ 'WIKI.PAGE.LINKED_TASKS' | translate }}</h4>
-                @for (issue of view.issues; track issue.idIssue) {
-                <a
-                    class="wiki-page__aside-row"
-                    [routerLink]="['/project', idProject(), 'issue', issue.idIssuePublic]"
-                >
-                    <span class="wiki-page__issue-ref">#{{ issue.idIssuePublic }}</span>
-                    <span class="wiki-page__aside-text">{{ issue.title }}</span>
-                </a>
-                } @empty {
-                <div class="wiki-page__aside-empty">{{ 'WIKI.PAGE.NO_TASKS' | translate }}</div>
-                }
-            </section>
-            <section>
-                <h4>{{ 'WIKI.PAGE.BACKLINKS' | translate }}</h4>
-                @for (ref of view.backlinks; track ref.idPage) {
-                <a class="wiki-page__aside-row" [routerLink]="pageLink(ref)">
-                    <span class="wiki-page__aside-icon">
-                        <tabler-icon icon="file-text" [size]="14" />
-                    </span>
-                    <span class="wiki-page__aside-text">{{ ref.title }}</span>
-                </a>
-                } @empty {
-                <div class="wiki-page__aside-empty">{{ 'WIKI.PAGE.NO_BACKLINKS' | translate }}</div>
-                }
-            </section>
+            <app-wiki-page-aside
+                [idProject]="idProject()"
+                [idPage]="view.page.idPage"
+                [issues]="view.issues"
+                [backlinks]="view.backlinks"
+            />
         </aside>
     </div>
 </div>

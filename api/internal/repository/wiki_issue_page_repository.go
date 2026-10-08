@@ -20,12 +20,6 @@ type WikiIssuePageRef struct {
 	Source constants.WikiIssueLinkSource `json:"source" db:"source"`
 }
 
-type WikiPageIssueRef struct {
-	IdIssue       int64  `json:"idIssue"       db:"id_issue"`
-	IdIssuePublic int64  `json:"idIssuePublic" db:"id_issue_public"`
-	Title         string `json:"title"         db:"title"`
-}
-
 func NewWikiIssuePageRepository(pool *pgxpool.Pool) *WikiIssuePageRepository {
 	return &WikiIssuePageRepository{pool: pool}
 }
@@ -89,21 +83,39 @@ func (r *WikiIssuePageRepository) LoadByIssue(ctx context.Context, idIssue int64
 	return refs, nil
 }
 
-func (r *WikiIssuePageRepository) LoadByPage(ctx context.Context, idPage int64, idsProject []int64) ([]*WikiPageIssueRef, error) {
+func (r *WikiIssuePageRepository) LoadByPage(ctx context.Context, idPage int64, idsProject []int64, limit, offset int) ([]model.WikiPageIssue, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT i.id_issue, i.id_issue_public, i.title
+		SELECT i.id_issue, i.id_issue_public, i.id_project, i.title,
+		       s.name AS state_name, coalesce(s.final, false) AS is_closed
 		FROM wiki.issue_page ip
 		INNER JOIN issues.issue i ON i.id_issue = ip.id_issue
+		LEFT JOIN issues.state s ON s.id_state = i.id_state
 		WHERE ip.id_page = $1 AND i.id_project = ANY($2)
-		ORDER BY i.id_issue_public
-	`, idPage, idsProject)
+		ORDER BY is_closed, i.id_issue DESC
+		LIMIT $3 OFFSET $4
+	`, idPage, idsProject, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("querying wiki page issues: %w", err)
 	}
-	refs, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[WikiPageIssueRef])
+	issues, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.WikiPageIssue])
 	if err != nil {
 		return nil, fmt.Errorf("collecting wiki page issues: %w", err)
 	}
-	return refs, nil
+	return issues, nil
+}
+
+func (r *WikiIssuePageRepository) CountByPage(ctx context.Context, idPage int64, idsProject []int64) (int, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var total int
+	err := db.QueryRow(ctx, `
+		SELECT count(*)
+		FROM wiki.issue_page ip
+		INNER JOIN issues.issue i ON i.id_issue = ip.id_issue
+		WHERE ip.id_page = $1 AND i.id_project = ANY($2)
+	`, idPage, idsProject).Scan(&total)
+	if err != nil {
+		return 0, fmt.Errorf("counting wiki page issues: %w", err)
+	}
+	return total, nil
 }

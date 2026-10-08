@@ -193,9 +193,22 @@ type WikiResolvedLink struct {
 }
 
 type WikiPageIssue struct {
-	IdIssue       int64  `json:"idIssue"`
-	IdIssuePublic int64  `json:"idIssuePublic"`
-	Title         string `json:"title"`
+	IdIssue       int64   `json:"idIssue"       db:"id_issue"`
+	IdIssuePublic int64   `json:"idIssuePublic" db:"id_issue_public"`
+	IdProject     int64   `json:"idProject"     db:"id_project"`
+	Title         string  `json:"title"         db:"title"`
+	StateName     *string `json:"stateName"     db:"state_name"`
+	IsClosed      bool    `json:"isClosed"      db:"is_closed"`
+}
+
+type WikiPageIssueList struct {
+	Items []WikiPageIssue `json:"items"`
+	Total int             `json:"total"`
+}
+
+type WikiBacklinkList struct {
+	Items []*WikiPageRef `json:"items"`
+	Total int            `json:"total"`
 }
 
 type WikiPageView struct {
@@ -203,8 +216,8 @@ type WikiPageView struct {
 	SpaceKind constants.WikiSpaceKind `json:"spaceKind"`
 	CanEdit   bool                    `json:"canEdit"`
 	CanManage bool                    `json:"canManage"`
-	Backlinks []*WikiPageRef          `json:"backlinks"`
-	Issues    []WikiPageIssue         `json:"issues"`
+	Backlinks WikiBacklinkList        `json:"backlinks"`
+	Issues    WikiPageIssueList       `json:"issues"`
 	Links     []WikiResolvedLink      `json:"links"`
 	Draft     *WikiPageDraft          `json:"draft"`
 }

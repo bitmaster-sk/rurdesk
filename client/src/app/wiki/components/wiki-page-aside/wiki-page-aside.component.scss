@@ -1,0 +1,56 @@
+section {
+    margin-bottom: var(--ui-space-xl);
+}
+
+h4 {
+    margin: 0 0 var(--ui-space);
+    font-size: var(--font-size-s);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--ui-color-text-muted);
+}
+
+.wiki-aside {
+    &__row {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-xs) 0;
+        color: var(--ui-color-text);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+    }
+
+    &__row--closed {
+        color: var(--ui-color-text-muted);
+    }
+
+    &__icon {
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+        height: 1lh;
+    }
+
+    &__text {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    &__state {
+        color: var(--ui-color-text-muted);
+    }
+
+    &__empty {
+        color: var(--ui-color-muted-fg);
+        font-style: italic;
+    }
+
+    &__issue-ref {
+        font-weight: bold;
+        color: var(--ui-sky-700);
+    }
+}
