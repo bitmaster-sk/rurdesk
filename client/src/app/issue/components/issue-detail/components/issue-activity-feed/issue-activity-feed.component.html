@@ -127,7 +127,7 @@
                 [creator]="agentCreator()"
             ></app-agent-thinking-row>
         }
-        @if (displayGroups().length === 0) {
+        @if (isEmpty()) {
             <div class="feed-empty">No activity yet.</div>
         }
     </div>

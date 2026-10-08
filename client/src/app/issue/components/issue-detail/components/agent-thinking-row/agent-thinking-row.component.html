@@ -38,7 +38,12 @@
             }
         </button>
         @if (isOpen()) {
-            <div #body class="thinking-body" data-testid="agent-thinking-body">
+            <div
+                #body
+                class="thinking-body"
+                [class.is-live]="isLive()"
+                data-testid="agent-thinking-body"
+            >
                 @if (hasGap()) {
                     <div class="thinking-gap">
                         <tabler-icon icon="alert-triangle" [size]="14" />

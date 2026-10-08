@@ -118,6 +118,11 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         ThinkingRowConverter.toTrailingRows(this.agentRun(), this.currentAgentStage())
     );
 
+    private readonly liveThinkingKey = computed<string | null>(() => {
+        const live = this.trailingThinkingRows().find(row => row.isLive);
+        return live ? `${this.agentRun()?.idRun}:${live.stage.stage}` : null;
+    });
+
     public readonly anchorTarget = signal<{
         idParentMessage: number;
         lineStart: number;
@@ -183,7 +188,12 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         });
     });
 
+    public readonly isEmpty = computed(
+        () => this.displayGroups().length === 0 && this.trailingThinkingRows().length === 0
+    );
+
     private hasScrolled = false;
+    private lastLiveThinkingKey: string | null = null;
 
     public constructor() {
         effect(() => this.thinkingStore.bind(this.agentRun()?.idRun ?? null));
@@ -193,6 +203,14 @@ export class IssueActivityFeedComponent implements AfterViewInit {
                 this.hasScrolled = true;
                 this.scrollToBottom();
             }
+        });
+
+        effect(() => {
+            const key = this.liveThinkingKey();
+            if (key !== null && key !== this.lastLiveThinkingKey) {
+                this.scrollToBottom();
+            }
+            this.lastLiveThinkingKey = key;
         });
 
         effect(() => {

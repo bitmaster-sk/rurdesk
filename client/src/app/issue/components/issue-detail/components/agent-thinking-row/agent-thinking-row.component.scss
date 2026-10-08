@@ -113,6 +113,10 @@
     margin-top: var(--ui-space-s);
     padding: var(--ui-space) 0;
     color: var(--ui-color-text);
+
+    &.is-live {
+        height: 12rem;
+    }
 }
 
 .thinking-gap {
