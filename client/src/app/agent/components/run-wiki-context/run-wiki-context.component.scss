@@ -1,0 +1,51 @@
+.wiki-context {
+    margin-top: var(--ui-space-m);
+
+    &__title {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--ui-color-text-muted);
+        margin-bottom: 6px;
+    }
+
+    &__item {
+        font-size: var(--font-size-s);
+        line-height: 1.4;
+    }
+
+    &__icon {
+        display: inline-flex;
+        flex-shrink: 0;
+        color: var(--ui-color-text-muted);
+    }
+
+    &__toggle {
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    &__toggle:hover {
+        color: var(--ui-color-text);
+    }
+
+    &__index {
+        margin: 4px 0 0 22px;
+    }
+
+    &__page {
+        color: var(--ui-color-text);
+        font-weight: 500;
+    }
+
+    a.wiki-context__page:hover {
+        text-decoration: underline;
+    }
+
+    code {
+        font-family: var(--ui-font-mono);
+    }
+}

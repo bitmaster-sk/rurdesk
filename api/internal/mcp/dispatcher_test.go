@@ -232,3 +232,26 @@ func TestDispatcher_400_ThreeByteRuneNotSplit(t *testing.T) {
 	assert.True(t, utf8.ValidString(resp.ErrorMessage), "must not cut a rune in half")
 	assert.Equal(t, "invalid request: "+strings.Repeat("—", 100), resp.ErrorMessage)
 }
+
+func TestDispatcher_ForwardsExtraHeadersAndSkipsEmptyOnes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	received := http.Header{}
+	engine.GET("/test", func(c *gin.Context) {
+		received = c.Request.Header.Clone()
+		c.Status(http.StatusOK)
+	})
+	d := mcp.NewDispatcher(engine)
+
+	_, err := d.Request(context.Background(), mcp.RequestOpts{
+		Method:  "GET",
+		Path:    "/test",
+		Bearer:  "Bearer key",
+		Headers: map[string]string{"X-Rurdesk-Run": "42", "X-Empty": ""},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "42", received.Get("X-Rurdesk-Run"))
+	assert.Equal(t, "key", received.Get("Authorization"))
+	_, present := received["X-Empty"]
+	assert.False(t, present)
+}

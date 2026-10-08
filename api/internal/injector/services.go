@@ -591,6 +591,7 @@ func GetDispatcher() *agent.Dispatcher {
 			GetUserRepository(),
 			GetSkillService(),
 			GetStagePlanService(),
+			GetWikiAgentService(),
 			GetGatewayClient(),
 			GetNotifier(),
 		), nil
@@ -1232,6 +1233,7 @@ func GetRouter() (*router.Router, error) {
 			GetIssueTypeController(),
 			GetCustomFieldController(),
 			GetWikiController(),
+			GetWikiAgentController(),
 			GetStateController(),
 			sprintController,
 			GetSavedViewController(),
@@ -1338,6 +1340,29 @@ func GetWikiService() *service.WikiService {
 			GetProjectRepository(), GetAclService(), GetNotifier(), cache), nil
 	})
 	return instance.(*service.WikiService)
+}
+
+func GetAgentRunWikiReadRepository() *repository.AgentRunWikiReadRepository {
+	instance, _ := di.GetWithNew("agent-run-wiki-read-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewAgentRunWikiReadRepository(pool), nil
+	})
+	return instance.(*repository.AgentRunWikiReadRepository)
+}
+
+func GetWikiAgentService() *service.WikiAgentService {
+	instance, _ := di.GetWithNew("wiki-agent-service", func() (any, error) {
+		return service.NewWikiAgentService(GetWikiService(), GetAgentRunWikiReadRepository(),
+			GetAgentRunRepository(), GetAgentTaskRepository()), nil
+	})
+	return instance.(*service.WikiAgentService)
+}
+
+func GetWikiAgentController() *controller.WikiAgentController {
+	instance, _ := di.GetWithNew("wiki-agent-controller", func() (any, error) {
+		return controller.NewWikiAgentController(GetWikiAgentService()), nil
+	})
+	return instance.(*controller.WikiAgentController)
 }
 
 func GetWikiController() *controller.WikiController {

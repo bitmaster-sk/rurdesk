@@ -132,7 +132,7 @@ func TestWriteMCPSettings(t *testing.T) {
 	const mcpURL = "http://issue.proxy/mcp/plan/sse"
 	const agentKey = "deadbeef"
 
-	path, err := writeMCPSettings(configDir, mcpURL, agentKey)
+	path, err := writeMCPSettings(configDir, mcpURL, agentKey, 42)
 	if err != nil {
 		t.Fatalf("writeMCPSettings: %v", err)
 	}
@@ -172,6 +172,9 @@ func TestWriteMCPSettings(t *testing.T) {
 	}
 	if tracker.URL != mcpURL {
 		t.Errorf("url = %q, want %q", tracker.URL, mcpURL)
+	}
+	if got := tracker.Headers[common.TrackerRunHeader]; got != "42" {
+		t.Errorf("run header = %q, want 42", got)
 	}
 	if got := tracker.Headers["Authorization"]; got != "Bearer "+agentKey {
 		t.Errorf("Authorization = %q, want %q", got, "Bearer "+agentKey)

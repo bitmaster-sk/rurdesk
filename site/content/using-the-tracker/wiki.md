@@ -164,15 +164,54 @@ Each page has one of three access levels for AI agents:
 | Level | What an agent gets |
 | --- | --- |
 | **Always reads** | the whole page in the prompt of every agent run in the project |
-| **On demand** (default) | the title and summary in the wiki index; it reads the page when it needs it |
-| **Hidden** | nothing; the page is meant for people only |
+| **On demand** (default) | the title and summary in the wiki index of the prompt; the agent opens the page when it needs it |
+| **Hidden** | nothing: not in the prompt, not in the index, and not when the agent searches or opens pages |
 
 Pages marked **Always reads** share a token budget per project (12 000 by
 default). The editor shows how much of it is used and does not let you go over.
 A project owner changes the budget in **Project settings → Wiki**.
 
-> Agents start reading the wiki in an upcoming release. Until then, these
-> settings are saved and shown, but agent runs do not use the wiki yet.
+### What goes into an agent's prompt
+
+Every stage of an agent run starts with a wiki part built from both spaces, in
+this order:
+
+1. the pages linked to the task, whole, even when they are **On demand**;
+2. the **Always reads** pages, whole;
+3. an index of the other pages: slug, title and summary.
+
+**Hidden** pages are left out, even when they are linked to the task. A good
+summary is what makes an **On demand** page useful: it is all the agent sees of
+the page until it decides to open it.
+
+All of it together stays within the project's token budget, counted as about
+four characters per token. A page that does not fit is not sent; it goes to the
+top of the index marked as not loaded, so the agent can still open it. When the
+index does not fit either, the prompt says how many more pages there are. However
+large the budget, the wiki part of a prompt never goes over 60 000 tokens.
+
+The prompt asks the agent to follow the pages, to trust the code when a page
+says something else and point that out in its output, and never to edit the
+wiki.
+
+### Reading during a run
+
+While it works, the agent can search the wiki and open more pages, including an
+older version of a page. It gets the same pages a person sees except
+**Hidden** ones. Agents only read the wiki; changes stay with people.
+
+### What the agent read
+
+The **Agent run** card on the task shows a **Wiki context** for each stage:
+
+- the pages that went into the prompt, with their version and whether they were
+  sent because they are **always** read or **linked** to the task;
+- how many pages were in the index;
+- what the agent searched for and opened during the stage, with the version and
+  size of each page it read.
+
+Each page opens in the wiki. For a stage that ran more than once, the card shows
+the latest attempt.
 
 ## Permissions
 

@@ -61,7 +61,7 @@ func TestWriteGooseConfig(t *testing.T) {
 	const mcpURL = "http://issue.proxy/mcp/plan/http"
 	const agentKey = "deadbeef"
 
-	path, err := writeGooseConfig(dir, mcpURL, agentKey)
+	path, err := writeGooseConfig(dir, mcpURL, agentKey, 42)
 	if err != nil {
 		t.Fatalf("writeGooseConfig: %v", err)
 	}
@@ -86,6 +86,7 @@ func TestWriteGooseConfig(t *testing.T) {
 		"type: streamable_http",
 		"uri: " + mcpURL,
 		"Authorization: Bearer " + agentKey,
+		common.TrackerRunHeader + `: "42"`,
 		"enabled: true",
 		// Non-essential built-ins are disabled (headless tool gate); `apps`
 		// caused agents to build goose apps instead of repo files.

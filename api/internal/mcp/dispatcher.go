@@ -32,6 +32,7 @@ type RequestOpts struct {
 	Bearer         string            // "Bearer <token>" copied from MCP SSE connection
 	ToolName       string            // for X-MCP-Tool header
 	IdempotencyKey string            // optional
+	Headers        map[string]string // extra headers, e.g. the agent run a call belongs to
 }
 
 // Response is the result of a dispatcher call.
@@ -72,6 +73,12 @@ func (d *Dispatcher) Request(ctx context.Context, opts RequestOpts) (*Response, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-MCP-Tool", opts.ToolName)
 	req.Header.Set("X-MCP-Origin", "mcp")
+
+	for name, value := range opts.Headers {
+		if value != "" {
+			req.Header.Set(name, value)
+		}
+	}
 
 	if opts.IdempotencyKey != "" {
 		req.Header.Set("Idempotency-Key", opts.IdempotencyKey)

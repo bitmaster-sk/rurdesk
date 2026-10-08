@@ -47,3 +47,5 @@ func stageCodeHex(stage string) string {
 		return "0"
 	}
 }
+
+const TrackerRunHeader = "X-Rurdesk-Run"

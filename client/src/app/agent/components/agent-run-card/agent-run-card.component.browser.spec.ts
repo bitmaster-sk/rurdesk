@@ -16,6 +16,11 @@ class RunRecoveryBannerStub {
     public readonly restarted = output<void>();
 }
 
+@Component({ selector: 'app-run-wiki-context', template: '', standalone: true })
+class RunWikiContextStub {
+    public readonly run = input<unknown>(null);
+}
+
 @Component({ selector: 'app-run-stats-panel', template: '', standalone: true })
 class RunStatsPanelStub {
     public readonly idRun = input<number>(0);
@@ -31,7 +36,8 @@ describe('AgentRunCardComponent', () => {
                 UiModule,
                 TablerIconStub,
                 RunRecoveryBannerStub,
-                RunStatsPanelStub
+                RunStatsPanelStub,
+                RunWikiContextStub
             ],
             declarations: [AgentRunCardComponent]
         }).compileComponents();

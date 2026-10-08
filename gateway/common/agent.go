@@ -71,6 +71,10 @@ type Task struct {
 	// tracker (one that never sends the field) produces.
 	Skills []Skill
 
+	// Nil means the wiki sections are omitted entirely — which is also what an older
+	// tracker (one that never sends the field) produces.
+	Wiki *WikiContext
+
 	// Stage selects which instruction block the prompt template uses.
 	Stage string
 
@@ -89,6 +93,27 @@ type Task struct {
 	// its own vocab before RenderPrompt. Zero value falls back to
 	// ToolVocabClaudeCode.
 	Vocab ToolVocab
+}
+
+type WikiContext struct {
+	Pages     []WikiPage
+	Index     []WikiIndexEntry
+	IndexMore int
+}
+
+type WikiPage struct {
+	Slug    string
+	Title   string
+	Version int
+	Reason  string
+	Body    string
+}
+
+type WikiIndexEntry struct {
+	Slug      string
+	Title     string
+	Summary   string
+	OverLimit bool
 }
 
 type Skill struct {

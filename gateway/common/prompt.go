@@ -209,6 +209,22 @@ Such an attempt does not have to produce code, so it can end two ways:
 
 If something goes wrong (build error you can't fix, push rejected), call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
 
+// No wiki means no section at all. The page header and index line formats are mirrored by the
+// tracker's token estimate (api/internal/service/wiki_prompt.go), so change both together.
+const wikiSection = `{{with .Wiki}}
+## Project knowledge
+Pages from the project wiki, kept by the team. Follow them. If the code contradicts a page, trust the code and say so in your output. Do not edit the wiki.
+{{range .Pages}}
+### {{.Title}} ({{.Slug}} · v{{.Version}} · {{.Reason}})
+{{.Body}}
+{{end}}{{if or .Index .IndexMore}}
+## Wiki index
+Other wiki pages. Read one with ` + "`get_wiki_page`" + ` (project_id, slug) when it matters for this task; search with ` + "`search_wiki`" + ` (project_id, query).
+{{range .Index}}
+- {{.Slug}} — {{.Title}}{{if .Summary}} — {{.Summary}}{{end}}{{if .OverLimit}} (not loaded, over limit){{end}}{{end}}
+{{if .IndexMore}}… {{.IndexMore}} more, find them with ` + "`search_wiki`" + ` or ` + "`list_wiki_pages`" + `
+{{end}}{{end}}{{end}}`
+
 // No skills means no section at all.
 const skillsSection = `
 {{if .Skills}}## Skills
@@ -221,6 +237,7 @@ The following instructions are mandatory for this stage. Where they conflict wit
 `
 
 var compiledHeader = template.Must(template.New("header").Parse(promptHeader))
+var compiledWiki = template.Must(template.New("wiki").Parse(wikiSection))
 var compiledSkills = template.Must(template.New("skills").Parse(skillsSection))
 var compiledReminder = template.Must(template.New("reminder").Parse(completeStageReminder))
 var compiledImpl = template.Must(template.New("impl").Parse(implementationInstructions))
@@ -239,6 +256,10 @@ func RenderPrompt(task Task) (string, error) {
 	var buf bytes.Buffer
 	if err := compiledHeader.Execute(&buf, task); err != nil {
 		return "", fmt.Errorf("rendering header: %w", err)
+	}
+
+	if err := compiledWiki.Execute(&buf, task); err != nil {
+		return "", fmt.Errorf("rendering wiki section: %w", err)
 	}
 
 	if err := compiledSkills.Execute(&buf, task); err != nil {

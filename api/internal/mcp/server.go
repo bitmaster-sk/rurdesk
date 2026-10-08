@@ -94,6 +94,7 @@ func buildMCPServer(dispatcher *Dispatcher, stage string) *mcpsdk.MCPServer {
 	registerRelationTools(srv, dispatcher, stage)
 	registerMessageTools(srv, dispatcher, stage)
 	registerTrackerTools(srv, dispatcher, stage)
+	registerWikiTools(srv, dispatcher, stage)
 	registerPlanTools(srv, dispatcher, stage)
 	return srv
 }

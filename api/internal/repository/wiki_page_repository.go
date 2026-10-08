@@ -300,7 +300,7 @@ func (r *WikiPageRepository) Search(ctx context.Context, idsSpace []int64, prefi
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		WITH q AS (SELECT to_tsquery('simple', $2) AS query)
-		SELECT p.id_page, p.id_space, p.slug, p.title, p.summary,
+		SELECT p.id_page, p.id_space, p.slug, p.title, p.summary, p.version_no,
 		       ts_headline('simple', p.body, q.query, 'MaxFragments=2, MaxWords=20, MinWords=5, StartSel=<<, StopSel=>>') AS snippet,
 		       ts_rank_cd(p.search_vector, q.query) AS score
 		FROM wiki.page p, q
@@ -358,6 +358,25 @@ func (r *WikiPageRepository) SumAlwaysCharsBySpace(ctx context.Context, idsExclu
 		return nil, fmt.Errorf("iterating always wiki sums: %w", err)
 	}
 	return sums, nil
+}
+
+func (r *WikiPageRepository) LoadAgentPages(ctx context.Context, idsSpace, idsWithBody []int64) ([]*model.WikiAgentPageRow, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT id_page, id_space, slug, title, summary, agent_access, version_no,
+		       CASE WHEN agent_access = 'always' OR id_page = ANY($2) THEN body END AS body
+		FROM wiki.page
+		WHERE id_space = ANY($1) AND deleted_at IS NULL AND agent_access <> 'hidden'
+		ORDER BY id_space, rank, id_page
+	`, idsSpace, append([]int64{}, idsWithBody...))
+	if err != nil {
+		return nil, fmt.Errorf("querying agent wiki pages: %w", err)
+	}
+	pages, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.WikiAgentPageRow])
+	if err != nil {
+		return nil, fmt.Errorf("collecting agent wiki pages: %w", err)
+	}
+	return pages, nil
 }
 
 func (r *WikiPageRepository) collectPage(rows pgx.Rows) (*model.WikiPage, error) {

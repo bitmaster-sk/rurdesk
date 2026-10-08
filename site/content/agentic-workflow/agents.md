@@ -95,6 +95,10 @@ which agent executed each stage (provenance), and timestamps.
 
 ![Agent run card — stage timeline and phase badge](../../site/assets/img/run-card.png)
 
+The card also shows which [wiki](../using-the-tracker/wiki.md#what-the-agent-read)
+pages each stage got in its prompt and which ones the agent opened while it
+worked.
+
 Every phase change can also move the task's own state — see
 [Automatic state changes](../using-the-tracker/features.md#automatic-state-changes).
 

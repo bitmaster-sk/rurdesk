@@ -107,13 +107,14 @@ type WikiTrashItem struct {
 }
 
 type WikiSearchHit struct {
-	IdPage  int64   `json:"idPage"  db:"id_page"`
-	IdSpace int64   `json:"idSpace" db:"id_space"`
-	Slug    string  `json:"slug"    db:"slug"`
-	Title   string  `json:"title"   db:"title"`
-	Summary string  `json:"summary" db:"summary"`
-	Snippet string  `json:"snippet" db:"snippet"`
-	Score   float32 `json:"score"   db:"score"`
+	IdPage    int64   `json:"idPage"    db:"id_page"`
+	IdSpace   int64   `json:"idSpace"   db:"id_space"`
+	Slug      string  `json:"slug"      db:"slug"`
+	Title     string  `json:"title"     db:"title"`
+	Summary   string  `json:"summary"   db:"summary"`
+	VersionNo int     `json:"versionNo" db:"version_no"`
+	Snippet   string  `json:"snippet"   db:"snippet"`
+	Score     float32 `json:"score"     db:"score"`
 }
 
 type CreateWikiPageReq struct {

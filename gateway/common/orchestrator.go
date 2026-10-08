@@ -331,6 +331,7 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 					task.Skills = append(task.Skills, Skill{Name: name, Content: content})
 				}
 			}
+			task.Wiki = parseWiki(ctx["wiki"])
 			if thread, ok := ctx["reviewThread"].([]any); ok {
 				for _, raw := range thread {
 					m, ok := raw.(map[string]any)
@@ -374,6 +375,56 @@ func conversationBody(kind, message string) string {
 	default:
 		return message
 	}
+}
+
+func parseWiki(raw any) *WikiContext {
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+	wiki := &WikiContext{IndexMore: int(int64Field(m, "indexMore"))}
+	if pages, ok := m["pages"].([]any); ok {
+		for _, rawPage := range pages {
+			page, ok := rawPage.(map[string]any)
+			if !ok {
+				continue
+			}
+			slug, body := stringField(page, "slug"), stringField(page, "body")
+			if slug == "" || body == "" {
+				continue
+			}
+			wiki.Pages = append(wiki.Pages, WikiPage{
+				Slug:    slug,
+				Title:   stringField(page, "title"),
+				Version: int(int64Field(page, "version")),
+				Reason:  stringField(page, "reason"),
+				Body:    body,
+			})
+		}
+	}
+	if index, ok := m["index"].([]any); ok {
+		for _, rawEntry := range index {
+			entry, ok := rawEntry.(map[string]any)
+			if !ok {
+				continue
+			}
+			slug := stringField(entry, "slug")
+			if slug == "" {
+				continue
+			}
+			overLimit, _ := entry["overLimit"].(bool)
+			wiki.Index = append(wiki.Index, WikiIndexEntry{
+				Slug:      slug,
+				Title:     stringField(entry, "title"),
+				Summary:   stringField(entry, "summary"),
+				OverLimit: overLimit,
+			})
+		}
+	}
+	if len(wiki.Pages) == 0 && len(wiki.Index) == 0 && wiki.IndexMore == 0 {
+		return nil
+	}
+	return wiki
 }
 
 func int64Field(m map[string]any, key string) int64 {
