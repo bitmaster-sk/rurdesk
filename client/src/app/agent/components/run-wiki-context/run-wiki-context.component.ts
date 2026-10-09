@@ -35,6 +35,7 @@ export class RunWikiContextComponent {
 
     private readonly reads = signal<AgentRunWikiRead[]>([]);
     private readonly openIndexes = signal<ReadonlySet<string>>(new Set());
+    private readonly openStages = signal<ReadonlySet<string>>(new Set());
     private readonly reload$ = new Subject<number>();
 
     private readonly stageLabels: Partial<Record<string, string>> = STAGE_LABELS;
@@ -81,21 +82,31 @@ export class RunWikiContextComponent {
         });
     }
 
+    protected isStageOpen(stage: string): boolean {
+        return this.openStages().has(stage);
+    }
+
+    protected onToggleStage(stage: string): void {
+        this.openStages.update(open => RunWikiContextComponent.toggled(open, stage));
+    }
+
     protected isIndexOpen(stage: string): boolean {
         return this.openIndexes().has(stage);
     }
 
     protected onToggleIndex(stage: string): void {
-        this.openIndexes.update(open => {
-            const next = new Set(open);
-            if (!next.delete(stage)) {
-                next.add(stage);
-            }
-            return next;
-        });
+        this.openIndexes.update(open => RunWikiContextComponent.toggled(open, stage));
     }
 
     protected stageLabel(stage: string): string {
         return this.stageLabels[stage] ?? stage;
+    }
+
+    private static toggled(open: ReadonlySet<string>, stage: string): ReadonlySet<string> {
+        const next = new Set(open);
+        if (!next.delete(stage)) {
+            next.add(stage);
+        }
+        return next;
     }
 }

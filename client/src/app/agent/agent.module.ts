@@ -21,6 +21,8 @@ import {
     IconCircleMinus,
     IconSparkles,
     IconFileText,
+    IconSearch,
+    IconFileOff,
     IconChevronDown
 } from '@tabler/icons-angular';
 import { AgentRunCardComponent } from './components/agent-run-card/agent-run-card.component';
@@ -61,6 +63,8 @@ import { RunWikiContextComponent } from './components/run-wiki-context/run-wiki-
             IconCircleMinus,
             IconSparkles,
             IconFileText,
+            IconSearch,
+            IconFileOff,
             IconChevronDown
         })
     ],

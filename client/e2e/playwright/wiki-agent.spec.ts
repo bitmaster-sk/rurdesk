@@ -28,7 +28,7 @@ test.describe('agent reads the wiki', () => {
     // - create an always-read wiki page and an on-demand wiki page through the API
     // - create an agent on the stub gateway and assign it to the issue
     // - wait until the design stage posts its proposal and the run waits for approval
-    // - assert the Agent Run card shows the design stage's wiki context
+    // - assert the Agent Run card sums up the design stage's wiki context in one line and open it
     // - assert the always page is listed with its version and the on-demand page is only in the index
     // - open the always page from the card and assert the wiki shows it
     test('the agent run shows which wiki pages went into the prompt', async ({
@@ -78,8 +78,10 @@ test.describe('agent reads the wiki', () => {
             timeout: RUN_TIMEOUT_MS
         });
 
-        const design = page.getByTestId('run-wiki-context').filter({ hasText: 'Design' });
+        const design = page.getByTestId('run-wiki-stage').filter({ hasText: 'Design' });
         await expect(design).toBeVisible({ timeout: RUN_TIMEOUT_MS });
+        await expect(design.getByTestId('run-wiki-stage-toggle')).toContainText('in prompt');
+        await design.getByTestId('run-wiki-stage-toggle').click();
         const always = design
             .getByTestId('run-wiki-prompt-page')
             .filter({ hasText: 'How we work' });

@@ -81,6 +81,7 @@ describe('RunWikiContextConverter', () => {
             ['Retention', ['/project', 7, 'wiki', 'instance', 'retention']]
         ]);
         expect(stages[0].calls).toEqual([]);
+        expect([stages[0].openedCount, stages[0].searchCount]).toEqual([0, 0]);
     });
 
     it('groups MCP reads into calls, keeps an empty search and prefixes shared slugs', () => {
@@ -117,6 +118,9 @@ describe('RunWikiContextConverter', () => {
             [false, 'shared:security', 1]
         ]);
         expect(calls[2].pages[0].tokens).toBe(1840);
+        expect([stages[0].openedCount, stages[0].searchCount, stages[0].openedTokens]).toEqual([
+            1, 2, 1840
+        ]);
     });
 
     it('shows only the latest attempt of each stage, in stage order', () => {
