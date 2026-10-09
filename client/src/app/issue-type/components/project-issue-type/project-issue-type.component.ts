@@ -6,15 +6,14 @@ import {
     input,
     OnDestroy,
     OnInit,
+    output,
     signal
 } from '@angular/core';
 import { FormControl, FormGroup, NonNullableFormBuilder } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
-import cloneDeep from 'lodash-es/cloneDeep';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
@@ -43,14 +42,15 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
     private readonly i18n = inject(I18nService);
     private readonly fb = inject(NonNullableFormBuilder);
     private readonly sIssueType = inject(IssueTypeApi);
-    private readonly projectApi = inject(ProjectApi);
     private readonly sWindow = inject(WindowService);
     private readonly issueTypeStore = inject(IssueTypeStore);
 
     public readonly project = input.required<Project>();
+    public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
+    public readonly save = output<Project>();
+    public readonly defaultMigrated = output<Project>();
 
     protected readonly issueTypes = signal<IssueType[]>([]);
-    protected readonly defaultSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
     protected form!: FormGroup<ProjectIssueTypeForm>;
 
     private readonly subscription = new Subscription();
@@ -83,16 +83,11 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        const project: Project = cloneDeep(this.project());
-        project.idIssueTypeDefault = this.idIssueTypeDefaultControl.value;
-        this.defaultSaveStatus.set(UiSaveState.Saving);
-        this.projectApi.update$(project).subscribe({
-            next: savedProject => {
-                this.project().idIssueTypeDefault = savedProject.idIssueTypeDefault;
-                this.defaultSaveStatus.set(UiSaveState.Saved);
-            },
-            error: () => this.defaultSaveStatus.set(UiSaveState.Error)
-        });
+        const project: Project = {
+            ...this.project(),
+            idIssueTypeDefault: this.idIssueTypeDefaultControl.value
+        };
+        this.save.emit(project);
     }
 
     public onNewIssueType(): void {
@@ -186,7 +181,10 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
                 this.removeIssueType(target);
                 this.issueTypeStore.load();
                 if (this.project().idIssueTypeDefault === target.idIssueType) {
-                    this.project().idIssueTypeDefault = choice.migrateTo;
+                    this.defaultMigrated.emit({
+                        ...this.project(),
+                        idIssueTypeDefault: choice.migrateTo
+                    });
                     this.form.patchValue(
                         { idIssueTypeDefault: choice.migrateTo },
                         { emitEvent: false }

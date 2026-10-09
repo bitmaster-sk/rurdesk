@@ -42,7 +42,13 @@
                     </div>
                 </header>
                 <div class="panel-body panel-body--flush">
-                    <app-project-state #projectState [project]="project"></app-project-state>
+                    <app-project-state
+                        #projectState
+                        [project]="project"
+                        [saveStatus]="stateSaveStatus()"
+                        (save)="onStateSave($event)"
+                        (defaultMigrated)="onDefaultMigrated($event)"
+                    ></app-project-state>
                 </div>
             </section>
             } @if (aclStore.canManageSeverity()) {
@@ -66,6 +72,9 @@
                     <app-project-severity
                         #projectSeverity
                         [project]="project"
+                        [saveStatus]="severitySaveStatus()"
+                        (save)="onSeveritySave($event)"
+                        (defaultMigrated)="onDefaultMigrated($event)"
                     ></app-project-severity>
                 </div>
             </section>
@@ -90,6 +99,9 @@
                     <app-project-issue-type
                         #projectIssueType
                         [project]="project"
+                        [saveStatus]="issueTypeSaveStatus()"
+                        (save)="onIssueTypeSave($event)"
+                        (defaultMigrated)="onDefaultMigrated($event)"
                     ></app-project-issue-type>
                 </div>
             </section>

@@ -27,4 +27,8 @@ export class ProjectStore {
             .update$(project)
             .pipe(tap(savedProject => this.project.next(savedProject)));
     }
+
+    public setProject(project: Project): void {
+        this.project.next(project);
+    }
 }
