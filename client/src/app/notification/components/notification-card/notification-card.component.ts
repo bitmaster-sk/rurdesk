@@ -108,6 +108,7 @@ export class NotificationCardComponent {
             [NotificationType.SeverityEscalated]: 'NOTIFICATION.TEXT.SEVERITY_ESCALATED',
             [NotificationType.SeverityDeescalated]: 'NOTIFICATION.TEXT.SEVERITY_DEESCALATED',
             [NotificationType.Assigned]: 'NOTIFICATION.TEXT.ASSIGNED',
+            [NotificationType.TeamJoined]: 'NOTIFICATION.TEXT.TEAM_JOINED',
             [NotificationType.WikiProposalReady]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_READY',
             [NotificationType.WikiProposalConflict]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_CONFLICT'
         };
@@ -135,6 +136,11 @@ export class NotificationCardComponent {
         const { refPublicId, refTitle } = this.notification();
         if (!refPublicId) return null;
         return refTitle ? `#${refPublicId} ${refTitle}` : `#${refPublicId}`;
+    });
+
+    protected readonly teamName = computed<string | null>(() => {
+        const { type, refTitle } = this.notification();
+        return type === NotificationType.TeamJoined ? (refTitle ?? null) : null;
     });
 
     protected readonly stateBody = computed<NotificationBodyState | null>(() => {

@@ -1152,6 +1152,7 @@
             "SEVERITY_ESCALATED": "escalated severity of",
             "SEVERITY_DEESCALATED": "de-escalated severity of",
             "ASSIGNED": "assigned you to",
+            "TEAM_JOINED": "added you to team",
             "TO": "to",
             "WIKI_PROPOSAL_READY": "proposed wiki changes ready to review",
             "WIKI_PROPOSAL_CONFLICT": "made a wiki change that needs resolving after the merge"
