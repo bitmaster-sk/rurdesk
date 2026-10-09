@@ -20,6 +20,12 @@ import {
     WikiSaveRequest,
     WikiSaveResult
 } from '../model/wiki-save.model';
+import {
+    WikiProposal,
+    WikiProposalAcceptRequest,
+    WikiProposalAcceptResult,
+    WikiProposalDetail
+} from '../model/wiki-proposal.model';
 import { WikiSearchHit, WikiTrashItem, WikiTree } from '../model/wiki-tree.model';
 import { WikiVersion, WikiVersionSummary } from '../model/wiki-version.model';
 
@@ -173,5 +179,34 @@ export class WikiApi {
 
     public removeIssueLink$(idIssue: number, idPage: number): Observable<void> {
         return this.http.delete<void>(`/api/private/issue/${idIssue}/wiki/${idPage}`);
+    }
+
+    public loadIssueProposals$(idIssue: number): Observable<WikiProposal[]> {
+        return this.http.get<WikiProposal[]>(`/api/private/issue/${idIssue}/wiki-proposal`);
+    }
+
+    public loadOpenProposals$(idProject: number): Observable<WikiProposal[]> {
+        return this.http.get<WikiProposal[]>(`/api/private/project/${idProject}/wiki/proposal`);
+    }
+
+    public loadProposal$(idProposal: number): Observable<WikiProposalDetail> {
+        return this.http.get<WikiProposalDetail>(`/api/private/wiki/proposal/${idProposal}`);
+    }
+
+    public acceptProposal$(
+        idProposal: number,
+        request: WikiProposalAcceptRequest
+    ): Observable<WikiProposalAcceptResult> {
+        return this.http.post<WikiProposalAcceptResult>(
+            `/api/private/wiki/proposal/${idProposal}/accept`,
+            request,
+            { context: RequestContext.disableErrorToast() }
+        );
+    }
+
+    public rejectProposal$(idProposal: number, reason: string): Observable<WikiProposal> {
+        return this.http.post<WikiProposal>(`/api/private/wiki/proposal/${idProposal}/reject`, {
+            reason
+        });
     }
 }

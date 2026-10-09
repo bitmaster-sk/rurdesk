@@ -21,6 +21,7 @@ export interface StageScript {
     errorDetail?: string;
     /** Report nothing for the stage, leaving the run in_progress. */
     stall?: boolean;
+    wikiProposals?: Record<string, unknown>[];
 }
 
 export type GatewayScript = Record<string, StageScript>;

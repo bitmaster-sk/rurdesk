@@ -17,34 +17,84 @@
         }
 
         <div class="flex flex-col gap-4 min-w-0 flex-1">
-            <div class="ui-color-text">
-                @if (notification().actorName) {
-                    <strong>{{ notification().actorName }}</strong>
-                }
-                @if (actionTextKey()) {
-                    &nbsp;
-                    <span class="ui-color-text-muted">{{ actionTextKey() | translate }}</span>
-                }
-                @if (refAnchorRouterLink(); as link) {
-                    <a
-                        class="notif-card-link pl-1 no-underline ui-color-text ui-color-hover-primary"
-                        [routerLink]="link"
-                        (click)="$event.stopPropagation()"
-                    >
-                        {{ refAnchorText() }}
-                    </a>
-                } @else if (refAnchorText(); as text) {
-                    <span class="pl-1">{{ text }}</span>
-                }
-                @if (stateBody(); as body) {
-                    &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
-                    <strong>{{ body.stateName }}</strong>
-                }
-                @if (severityBody(); as body) {
-                    &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
-                    <strong>{{ body.severityName }}</strong>
-                }
-            </div>
+            @if (wikiProposal(); as proposal) {
+                <div class="ui-color-text flex flex-col gap-1" data-testid="notif-wiki-proposal">
+                    <span>
+                        @if (notification().actorName; as actorName) {
+                            <strong>{{ actorName }}</strong>
+                            &nbsp;
+                        }
+                        <span class="ui-color-text-muted">
+                            {{ actionTextKey() ?? '' | translate }}
+                        </span>
+                    </span>
+                    @if (refAnchorRouterLink(); as link) {
+                        <span>
+                            <span class="ui-color-text-muted">
+                                {{ 'NOTIFICATION.WIKI_PROPOSAL.TASK' | translate }}
+                            </span>
+                            <a
+                                class="notif-card-link pl-1 no-underline ui-color-text ui-color-hover-primary"
+                                data-testid="notif-wiki-proposal-task"
+                                [routerLink]="link"
+                                (click)="$event.stopPropagation()"
+                            >
+                                {{ refAnchorText() }}
+                            </a>
+                        </span>
+                    }
+                    <span>
+                        <span class="ui-color-text-muted">
+                            {{ 'NOTIFICATION.WIKI_PROPOSAL.PROPOSAL' | translate }}
+                        </span>
+                        <a
+                            class="notif-card-link pl-1 no-underline ui-color-text ui-color-hover-primary"
+                            data-testid="notif-wiki-proposal-link"
+                            [routerLink]="proposal.link"
+                            (click)="$event.stopPropagation()"
+                        >
+                            {{ proposal.title ?? ('WIKI.PROPOSAL.TITLE' | translate) }}
+                        </a>
+                        @if (proposal.moreCount > 0) {
+                            <span class="pl-1 ui-color-text-muted">
+                                {{
+                                    'NOTIFICATION.WIKI_PROPOSAL.MORE'
+                                        | translate: { count: proposal.moreCount }
+                                }}
+                            </span>
+                        }
+                    </span>
+                </div>
+            } @else {
+                <div class="ui-color-text">
+                    @if (notification().actorName) {
+                        <strong>{{ notification().actorName }}</strong>
+                    }
+                    @if (actionTextKey()) {
+                        &nbsp;
+                        <span class="ui-color-text-muted">{{ actionTextKey() | translate }}</span>
+                    }
+                    @if (refAnchorRouterLink(); as link) {
+                        <a
+                            class="notif-card-link pl-1 no-underline ui-color-text ui-color-hover-primary"
+                            [routerLink]="link"
+                            (click)="$event.stopPropagation()"
+                        >
+                            {{ refAnchorText() }}
+                        </a>
+                    } @else if (refAnchorText(); as text) {
+                        <span class="pl-1">{{ text }}</span>
+                    }
+                    @if (stateBody(); as body) {
+                        &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
+                        <strong>{{ body.stateName }}</strong>
+                    }
+                    @if (severityBody(); as body) {
+                        &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
+                        <strong>{{ body.severityName }}</strong>
+                    }
+                </div>
+            }
             <div class="flex items-center gap-2">
                 <span [class]="'notif-card-badge flex items-center ' + chip().colorClass">
                     <tabler-icon [icon]="chip().icon" [size]="12" />

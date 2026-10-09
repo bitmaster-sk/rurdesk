@@ -52,7 +52,8 @@ const tree: WikiTree = {
     ],
     alwaysTokens: 0,
     tokenLimit: 0,
-    trashCount: 0
+    trashCount: 0,
+    proposalCount: 0
 };
 
 async function render(

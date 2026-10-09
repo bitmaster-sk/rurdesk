@@ -1,0 +1,237 @@
+@if (proposal(); as proposal) {
+    <div class="wiki-proposal" data-testid="wiki-proposal-detail">
+        <header class="flex flex-wrap items-center gap-2">
+            <h2 class="wiki-proposal__title" data-testid="wiki-proposal-title">
+                {{ proposal.title }}
+            </h2>
+            @if (kindTag(); as tag) {
+                <ui-tag [value]="tag.labelKey | translate" [severity]="tag.severity" />
+            }
+            @if (stateTag(); as tag) {
+                <ui-tag
+                    data-testid="wiki-proposal-state"
+                    [value]="tag.labelKey | translate"
+                    [severity]="tag.severity"
+                />
+            }
+            <span class="grow"></span>
+            @if (canDecide() && action(); as action) {
+                <ui-button
+                    variant="text"
+                    severity="secondary"
+                    data-testid="wiki-proposal-reject"
+                    (click)="isRejectOpen.set(true)"
+                >
+                    {{ 'WIKI.PROPOSAL.REJECT' | translate }}
+                </ui-button>
+                @if (editLink(); as link) {
+                    <ui-button
+                        [variant]="isNeedsResolving() ? 'filled' : 'outlined'"
+                        data-testid="wiki-proposal-edit"
+                        (click)="onEdit(link)"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                        {{ editLabel() | translate }}
+                    </ui-button>
+                }
+                @if (!isApproved() && !(isNeedsResolving() && editLink())) {
+                    <ui-button
+                        data-testid="wiki-proposal-accept"
+                        [loading]="isAccepting()"
+                        (click)="onAccept()"
+                    >
+                        <tabler-icon icon="check" [size]="14" />
+                        {{
+                            (action === Action.Approve
+                                ? 'WIKI.PROPOSAL.APPROVE'
+                                : 'WIKI.PROPOSAL.PUBLISH'
+                            ) | translate
+                        }}
+                    </ui-button>
+                }
+            }
+        </header>
+
+        <div class="wiki-proposal__meta">
+            <a [routerLink]="['/project', idProject(), 'issue', proposal.idIssuePublic]">
+                #{{ proposal.idIssuePublic }} {{ proposal.issueTitle }}
+            </a>
+            · {{ agentName() }} · {{ 'WIKI.PROPOSAL.RUN' | translate: { id: proposal.idRun } }}
+            @if (pageLink(); as link) {
+                ·
+                <a data-testid="wiki-proposal-page" [routerLink]="link">
+                    {{ 'WIKI.PROPOSAL.OPEN_PAGE' | translate }}
+                </a>
+            }
+        </div>
+
+        <div class="wiki-proposal__reason" data-testid="wiki-proposal-reason">
+            <b>{{ 'WIKI.PROPOSAL.REASON' | translate }}</b>
+            {{ proposal.reason }}
+        </div>
+
+        @switch (proposal.kind) {
+            @case (Kind.Move) {
+                <p class="wiki-proposal__change" data-testid="wiki-proposal-move">
+                    {{ 'WIKI.PROPOSAL.MOVE_TEXT' | translate: moveParams() }}
+                </p>
+            }
+            @case (Kind.Delete) {
+                <p class="wiki-proposal__change" data-testid="wiki-proposal-delete">
+                    {{
+                        'WIKI.PROPOSAL.DELETE_TEXT'
+                            | translate: { page: proposal.pageTitle ?? proposal.title }
+                    }}
+                </p>
+            }
+            @default {
+                @if (detail(); as detail) {
+                    <div class="wiki-proposal__diff">
+                        <div class="wiki-proposal__diff-head">
+                            @if (proposal.kind === Kind.Create) {
+                                <span>{{ 'WIKI.PROPOSAL.NEW_PAGE' | translate }}</span>
+                            } @else {
+                                <span>
+                                    {{
+                                        'WIKI.PROPOSAL.BASE'
+                                            | translate: { version: proposal.baseVersion }
+                                    }}
+                                </span>
+                                <span
+                                    class="ui-color-text-muted"
+                                    data-testid="wiki-proposal-merge-hint"
+                                >
+                                    @if (!isPageChanged()) {
+                                        {{
+                                            'WIKI.PROPOSAL.UNCHANGED'
+                                                | translate: { version: proposal.baseVersion }
+                                        }}
+                                    } @else if (detail.conflicts > 0) {
+                                        {{
+                                            'WIKI.PROPOSAL.CHANGED_CONFLICT'
+                                                | translate: { version: proposal.pageVersion }
+                                        }}
+                                    } @else {
+                                        {{
+                                            'WIKI.PROPOSAL.CHANGED_MERGE'
+                                                | translate: { version: proposal.pageVersion }
+                                        }}
+                                    }
+                                </span>
+                            }
+                        </div>
+                        <app-diff-viewer [rawPatch]="detail.diff" />
+                    </div>
+                }
+            }
+        }
+        @switch (proposal.state) {
+            @case (State.Open) {
+                <p class="wiki-proposal__hint" data-testid="wiki-proposal-open">
+                    {{ 'WIKI.PROPOSAL.OPEN_HINT' | translate }}
+                </p>
+            }
+            @case (State.Ready) {
+                <p class="wiki-proposal__hint">
+                    {{
+                        'WIKI.PROPOSAL.ACCEPT_HINT'
+                            | translate: { issue: proposal.idIssuePublic, run: proposal.idRun }
+                    }}
+                </p>
+            }
+            @case (State.Approved) {
+                <p class="wiki-proposal__hint" data-testid="wiki-proposal-decision">
+                    {{
+                        'WIKI.PROPOSAL.APPROVED_BY'
+                            | translate
+                                : {
+                                      name: deciderName(),
+                                      date: (proposal.decidedAt | date: 'short')
+                                  }
+                    }}
+                </p>
+            }
+            @case (State.NeedsResolving) {
+                <p
+                    class="wiki-proposal__hint wiki-proposal__hint--warn"
+                    data-testid="wiki-proposal-resolve-hint"
+                >
+                    {{ 'WIKI.PROPOSAL.NEEDS_RESOLVING_HINT' | translate }}
+                </p>
+            }
+            @case (State.Discarded) {
+                <p class="wiki-proposal__hint">{{ 'WIKI.PROPOSAL.DISCARDED_HINT' | translate }}</p>
+            }
+            @case (State.Accepted) {
+                <p class="wiki-proposal__hint" data-testid="wiki-proposal-decision">
+                    {{
+                        'WIKI.PROPOSAL.ACCEPTED_BY'
+                            | translate
+                                : {
+                                      name: deciderName(),
+                                      date: (proposal.decidedAt | date: 'short')
+                                  }
+                    }}
+                    @if (proposal.resultVersion) {
+                        · v{{ proposal.resultVersion }}
+                    }
+                </p>
+            }
+            @case (State.Rejected) {
+                <p class="wiki-proposal__hint" data-testid="wiki-proposal-decision">
+                    {{
+                        'WIKI.PROPOSAL.REJECTED_BY'
+                            | translate
+                                : {
+                                      name: deciderName(),
+                                      date: (proposal.decidedAt | date: 'short')
+                                  }
+                    }}
+                    @if (proposal.decisionNote) {
+                        — {{ proposal.decisionNote }}
+                    }
+                </p>
+            }
+        }
+    </div>
+} @else {
+    <div class="flex min-h-40 w-full items-center justify-center">
+        <ui-loader [size]="32" />
+    </div>
+}
+
+<ui-dialog
+    [visible]="isRejectOpen()"
+    (visibleChange)="isRejectOpen.set($event)"
+    [header]="'WIKI.PROPOSAL.REJECT_TITLE' | translate"
+    width="30rem"
+>
+    <div class="flex flex-col gap-2">
+        <label class="ui-color-text-muted" for="wiki-proposal-reason">
+            {{ 'WIKI.PROPOSAL.REJECT_REASON' | translate }}
+        </label>
+        <textarea
+            uiTextarea
+            id="wiki-proposal-reason"
+            data-testid="wiki-proposal-reject-reason"
+            rows="4"
+            maxlength="2000"
+            [value]="rejectReason()"
+            (input)="onReasonInput($event)"
+        ></textarea>
+        <small class="ui-color-text-muted">{{ 'WIKI.PROPOSAL.REJECT_HINT' | translate }}</small>
+    </div>
+    <div class="flex justify-end gap-2 mt-3">
+        <ui-button variant="text" severity="secondary" (click)="isRejectOpen.set(false)">
+            {{ 'CANCEL' | translate }}
+        </ui-button>
+        <ui-button
+            severity="danger"
+            data-testid="wiki-proposal-reject-confirm"
+            [loading]="isRejecting()"
+            (click)="onReject()"
+        >
+            {{ 'WIKI.PROPOSAL.REJECT' | translate }}
+        </ui-button>
+    </div>
+</ui-dialog>

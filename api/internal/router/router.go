@@ -32,6 +32,7 @@ func New(
 	cfCtrl *controller.CustomFieldController,
 	wikiCtrl *controller.WikiController,
 	wikiAgentCtrl *controller.WikiAgentController,
+	wikiProposalCtrl *controller.WikiProposalController,
 	stateCtrl *controller.StateController,
 	sprintCtrl *controller.SprintController,
 	savedViewCtrl *controller.SavedViewController,
@@ -248,6 +249,12 @@ func New(
 	pri.GET("/project/:idProject/wiki/agent/page/:slug", wikiAgentCtrl.GetPage)
 	pri.GET("/project/:idProject/wiki/agent/pages", wikiAgentCtrl.GetPages)
 	pri.POST("/project/:idProject/wiki/agent/page", wikiAgentCtrl.UpsertPage)
+	pri.POST("/project/:idProject/wiki/agent/proposal", wikiProposalCtrl.Suggest)
+	pri.GET("/project/:idProject/wiki/agent/proposal", wikiProposalCtrl.GetRunProposals)
+	pri.GET("/project/:idProject/wiki/proposal", wikiProposalCtrl.GetOpenProposals)
+	pri.GET("/wiki/proposal/:idProposal", wikiProposalCtrl.GetProposal)
+	pri.POST("/wiki/proposal/:idProposal/accept", wikiProposalCtrl.Accept)
+	pri.POST("/wiki/proposal/:idProposal/reject", wikiProposalCtrl.Reject)
 	pri.PUT("/wiki/page/:idPage", wikiCtrl.SavePage)
 	pri.POST("/wiki/page/:idPage/merge-preview", wikiCtrl.MergePreview)
 	pri.PUT("/wiki/page/:idPage/position", wikiCtrl.MovePage)
@@ -268,6 +275,7 @@ func New(
 	pri.GET("/issue/:idIssue/wiki", wikiCtrl.GetIssueLinks)
 	pri.POST("/issue/:idIssue/wiki", wikiCtrl.AddIssueLink)
 	pri.DELETE("/issue/:idIssue/wiki/:idPage", wikiCtrl.RemoveIssueLink)
+	pri.GET("/issue/:idIssue/wiki-proposal", wikiProposalCtrl.GetIssueProposals)
 
 	pri.GET("/tracker", trackerCtrl.GetTracker)
 	pri.POST("/tracker", trackerCtrl.CreateTracker)

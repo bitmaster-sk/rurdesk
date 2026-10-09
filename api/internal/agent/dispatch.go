@@ -27,6 +27,7 @@ type Dispatcher struct {
 	skillService *service.SkillService
 	stagePlan    *service.StagePlanService
 	wikiAgent    *service.WikiAgentService
+	proposals    *service.WikiProposalService
 	gwClient     *GatewayClient
 	notifier     *notify.Notifier
 }
@@ -42,6 +43,7 @@ func NewDispatcher(
 	skillService *service.SkillService,
 	stagePlan *service.StagePlanService,
 	wikiAgent *service.WikiAgentService,
+	proposals *service.WikiProposalService,
 	gwClient *GatewayClient,
 	notifier *notify.Notifier,
 ) *Dispatcher {
@@ -56,6 +58,7 @@ func NewDispatcher(
 		skillService: skillService,
 		stagePlan:    stagePlan,
 		wikiAgent:    wikiAgent,
+		proposals:    proposals,
 		gwClient:     gwClient,
 		notifier:     notifier,
 	}
@@ -172,6 +175,15 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		wiki, wikiReads = nil, nil
 	}
 
+	var proposals []model.WikiProposalAgentView
+	if task.Stage == constants.StageImplementation {
+		proposals, err = d.proposals.LoadForPrompt(ctx, run.IdRun)
+		if err != nil {
+			log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("loading wiki proposals — dispatching without them")
+			proposals = nil
+		}
+	}
+
 	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle := map[string]any{
 		"issue":             issue,
@@ -184,6 +196,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"approvedMockupRef": derefStringOrNil(run.ApprovedMockupRef),
 		"skills":            stageSkills,
 		"wiki":              wiki,
+		"wikiProposals":     proposals,
 	}
 	if task.AttemptNo > 1 {
 		for _, t := range priorTasks {

@@ -27,9 +27,10 @@ func handleGatewayEvent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var event struct {
-		IdRun   int64          `json:"idRun"`
-		Event   string         `json:"event"`
-		Payload map[string]any `json:"payload"`
+		IdRun     int64          `json:"idRun"`
+		IdProject int64          `json:"idProject"`
+		Event     string         `json:"event"`
+		Payload   map[string]any `json:"payload"`
 	}
 	if err := json.Unmarshal(body, &event); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
@@ -38,7 +39,7 @@ func handleGatewayEvent(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[stub-gw] event=%s idRun=%d", event.Event, event.IdRun)
 
 	if event.Event == "stage_execute" {
-		go executeStage(target, event.IdRun, event.Payload)
+		go executeStage(target, event.IdRun, event.IdProject, event.Payload)
 	}
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"ok":true}`))

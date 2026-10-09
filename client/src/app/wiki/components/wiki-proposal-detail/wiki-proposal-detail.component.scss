@@ -1,0 +1,54 @@
+.wiki-proposal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-m);
+
+    &__title {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    &__meta {
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__reason {
+        padding: var(--ui-space-s) var(--ui-space-m);
+        border-left: 3px solid var(--ui-color-primary);
+        background: var(--ui-surface-50);
+        border-radius: var(--ui-radius-md);
+        white-space: pre-wrap;
+    }
+
+    &__change {
+        margin: 0;
+    }
+
+    &__diff {
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        overflow: hidden;
+    }
+
+    &__diff-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-s) var(--ui-space-m);
+        border-bottom: 1px solid var(--ui-color-border);
+        background: var(--ui-surface-50);
+        font-size: var(--font-size-s);
+    }
+
+    &__hint {
+        margin: 0;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    &__hint--warn {
+        color: var(--ui-orange-700);
+    }
+}

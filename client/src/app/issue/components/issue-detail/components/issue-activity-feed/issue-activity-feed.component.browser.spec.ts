@@ -12,6 +12,11 @@ import { NEVER, Subject, of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import { AgentThinkingApi } from 'src/app/agent/api/agent-thinking.api.service';
 import { Track } from 'src/app/shared/tracker/model/track.model';
+import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
+import { WikiProposalKind } from 'src/app/wiki/constants/wiki-proposal-kind.enum';
+import { WikiProposalState } from 'src/app/wiki/constants/wiki-proposal-state.enum';
+import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
+import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 
 @Pipe({ name: 'translate', standalone: false })
 class StubTranslatePipe implements PipeTransform {
@@ -63,6 +68,12 @@ class ActivityTimeItemStub {
     public readonly user = input<unknown>(undefined);
 }
 
+@Component({ selector: 'app-wiki-proposal-card', template: '', standalone: true })
+class WikiProposalCardStub {
+    public readonly proposal = input<unknown>(undefined);
+    public readonly agent = input<unknown>(undefined);
+}
+
 function makeUser(id: number, name: string): User {
     return { idUser: id, name, email: '', colorAvatarBg: '' };
 }
@@ -79,7 +90,8 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
 
     const stubNotice = {
         Message: NEVER,
-        agentThinking$: NEVER
+        agentThinking$: NEVER,
+        wikiProposal$: NEVER
     };
 
     const stubProjectMemberStore = {
@@ -101,10 +113,12 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
-                AgentThinkingRowStub
+                AgentThinkingRowStub,
+                WikiProposalCardStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
                 { provide: MessageApi, useValue: stubMessage },
                 { provide: TrackerService, useValue: stubTracker },
                 { provide: NoticeService, useValue: stubNotice },
@@ -387,10 +401,12 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
-                AgentThinkingRowStub
+                AgentThinkingRowStub,
+                WikiProposalCardStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
                 { provide: MessageApi, useValue: { load$: () => of([]) } },
                 {
                     provide: TrackerService,
@@ -399,7 +415,10 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
                         tracksChanged$: tracksChange$.asObservable()
                     }
                 },
-                { provide: NoticeService, useValue: { Message: NEVER, agentThinking$: NEVER } },
+                {
+                    provide: NoticeService,
+                    useValue: { Message: NEVER, agentThinking$: NEVER, wikiProposal$: NEVER }
+                },
                 {
                     provide: ProjectMemberStore,
                     useValue: { load: () => {}, usersMap$: of(new Map<number, User>()) }
@@ -434,5 +453,107 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
 
         expect(timeItem()).toHaveLength(1);
         expect(timeItem()[0].note).toBe('reviewed the migration');
+    });
+});
+
+describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
+    it('shows the proposals of the task and reloads them when one of them changes', async () => {
+        const proposalNotices = new Subject<{ payload: { idProject: number; idIssue: number } }>();
+        const proposal = (idProposal: number): WikiProposal => ({
+            idProposal,
+            idRun: 19,
+            idUserAgent: 3,
+            idIssue: 1,
+            idIssuePublic: 1,
+            issueTitle: 'Task',
+            idProject: 10,
+            idSpace: 2,
+            spaceKind: WikiSpaceKind.Project,
+            kind: WikiProposalKind.Update,
+            idPage: 40,
+            slug: 'runbook',
+            title: 'Runbook',
+            summary: '',
+            body: 'new',
+            idParent: null,
+            parentSlug: null,
+            parentTitle: null,
+            reason: 'r',
+            baseVersion: 1,
+            agentAccess: null,
+            state: WikiProposalState.Open,
+            decidedBy: null,
+            decidedAt: null,
+            decisionNote: null,
+            resultVersion: null,
+            pageVersion: 1,
+            pageTitle: 'Runbook',
+            pageParentTitle: null,
+            isPageLive: true,
+            createAt: '2026-10-08T10:00:00Z',
+            updateAt: '2026-10-08T10:00:00Z'
+        });
+        let loaded = [proposal(1)];
+        const loadIssueProposals = vi.fn(() => of(loaded));
+
+        await TestBed.configureTestingModule({
+            declarations: [IssueActivityFeedComponent, StubTranslatePipe, StubDatePipe],
+            imports: [
+                TranslateModule.forRoot(),
+                MessageEditorStub,
+                TablerIconStub,
+                ActivityCommentItemStub,
+                ActivityTimeItemStub,
+                AgentThinkingRowStub,
+                WikiProposalCardStub
+            ],
+            providers: [
+                { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                { provide: WikiApi, useValue: { loadIssueProposals$: loadIssueProposals } },
+                { provide: MessageApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: TrackerService,
+                    useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
+                },
+                {
+                    provide: NoticeService,
+                    useValue: {
+                        Message: NEVER,
+                        agentThinking$: NEVER,
+                        wikiProposal$: proposalNotices.asObservable()
+                    }
+                },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { load: () => {}, usersMap$: of(new Map<number, User>()) }
+                },
+                {
+                    provide: AuthStore,
+                    useValue: {
+                        user: signal(makeUser(1, 'Me')),
+                        getUser: () => makeUser(1, 'Me')
+                    }
+                }
+            ]
+        }).compileComponents();
+
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+        const cards = (): number =>
+            fixture.nativeElement.querySelectorAll('app-wiki-proposal-card').length;
+
+        expect(cards()).toBe(1);
+        expect(loadIssueProposals).toHaveBeenCalledWith(1);
+
+        loaded = [proposal(1), proposal(2)];
+        proposalNotices.next({ payload: { idProject: 10, idIssue: 99 } });
+        fixture.detectChanges();
+        expect(cards()).toBe(1);
+
+        proposalNotices.next({ payload: { idProject: 10, idIssue: 1 } });
+        fixture.detectChanges();
+        expect(cards()).toBe(2);
     });
 });

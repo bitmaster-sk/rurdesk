@@ -23,6 +23,7 @@ type wikiAgentFixture struct {
 	agentToken  string
 	idAgent     int64
 	mcpSessions map[string]string
+	received    chan []byte
 }
 
 func newWikiAgentFixture(t *testing.T, name string) *wikiAgentFixture {
@@ -316,7 +317,8 @@ func TestWikiAgent_McpReadsAreLoggedOnlyForTheCallersOwnRun(t *testing.T) {
 }
 
 type dispatchedBundle struct {
-	Wiki *model.WikiPromptContext `json:"wiki"`
+	Wiki          *model.WikiPromptContext      `json:"wiki"`
+	WikiProposals []model.WikiProposalAgentView `json:"wikiProposals"`
 }
 
 func (f *wikiAgentFixture) startRun(t *testing.T, idIssue int64, stage string) (*model.AgentRun, *model.AgentTask) {
@@ -331,25 +333,32 @@ func (f *wikiAgentFixture) startRun(t *testing.T, idIssue int64, stage string) (
 }
 
 func (f *wikiAgentFixture) dispatch(t *testing.T, idIssue int64, stage string) (*model.AgentRun, *model.AgentTask, dispatchedBundle) {
-	received := make(chan []byte, 1)
-	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		body, _ := io.ReadAll(r.Body)
-		select {
-		case received <- body:
-		default:
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	t.Cleanup(gateway.Close)
-	res := Request(t, f.app, "POST", fmt.Sprintf("/api/private/admin/user/%d/gateway", f.idAgent), fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), f.adminToken)
-	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
-
 	run, task := f.startRun(t, idIssue, stage)
+	return run, task, f.dispatchTask(t, run, task)
+}
+
+func (f *wikiAgentFixture) dispatchTask(t *testing.T, run *model.AgentRun, task *model.AgentTask) dispatchedBundle {
+	if f.received == nil {
+		received := make(chan []byte, 1)
+		gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, _ := io.ReadAll(r.Body)
+			select {
+			case received <- body:
+			default:
+			}
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(gateway.Close)
+		res := Request(t, f.app, "POST", fmt.Sprintf("/api/private/admin/user/%d/gateway", f.idAgent), fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), f.adminToken)
+		require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+		f.received = received
+	}
+
 	injector.GetDispatcher().DispatchStageExecute(context.Background(), run, task)
 
 	var raw []byte
 	select {
-	case raw = <-received:
+	case raw = <-f.received:
 	case <-time.After(10 * time.Second):
 		t.Fatal("gateway never received the stage_execute event")
 	}
@@ -359,7 +368,7 @@ func (f *wikiAgentFixture) dispatch(t *testing.T, idIssue int64, stage string) (
 		} `json:"payload"`
 	}
 	require.NoError(t, json.Unmarshal(raw, &event))
-	return run, task, event.Payload.ContextBundle
+	return event.Payload.ContextBundle
 }
 
 func (f *wikiAgentFixture) reads(t *testing.T, idRun int64) []model.AgentRunWikiRead {

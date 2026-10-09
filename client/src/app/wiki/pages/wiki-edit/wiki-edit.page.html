@@ -33,12 +33,18 @@
                 (click)="onSave()"
             >
                 <tabler-icon icon="check" [size]="16" />
-                {{ (isCreate ? 'WIKI.SAVE.CREATE' : 'WIKI.SAVE.ACTION') | translate }}
+                {{ saveLabel() | translate }}
             </ui-button>
         </div>
     </div>
 
-    @if (editors().length > 0) {
+    @if (proposal(); as proposal) {
+    <div class="wiki-edit__banner wiki-edit__banner--info" data-testid="wiki-edit-proposal">
+        <tabler-icon icon="bulb" [size]="16" />
+        {{ 'WIKI.PROPOSAL.EDITING' | translate: { issue: proposal.idIssuePublic, run: proposal.idRun
+        } }}
+    </div>
+    } @if (editors().length > 0) {
     <div class="wiki-edit__banner wiki-edit__banner--info" data-testid="wiki-presence">
         <tabler-icon icon="users" [size]="16" />
         {{ 'WIKI.LIVE.EDITING' | translate: { names: editorNames() } }}
@@ -95,7 +101,7 @@
         </div>
 
         <aside class="wiki-edit__settings">
-            @if (isCreate && canChooseShared()) {
+            @if (isCreate && !idProposal && canChooseShared()) {
             <div class="wiki-edit__field">
                 <label for="wiki-space">{{ 'WIKI.FIELD.SPACE' | translate }}</label>
                 <ui-select
@@ -108,7 +114,7 @@
                     (ngModelChange)="onSpaceChange($event)"
                 />
             </div>
-            } @if (isCreate) {
+            } @if (isCreate && !idProposal) {
             <div class="wiki-edit__field">
                 <label for="wiki-parent">{{ 'WIKI.FIELD.PARENT' | translate }}</label>
                 <ui-select

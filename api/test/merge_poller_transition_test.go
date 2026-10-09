@@ -112,6 +112,7 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
+		injector.GetWikiProposalService(),
 		s.pollerNotifier,
 	)
 	s.Require().NotNil(s.poller)
@@ -431,4 +432,54 @@ func (s *MergePollerTransitionSuite) Test_ManualMr_Merged_EmitsTerminalMrStatus(
 
 func TestMergePollerTransitionSuite(t *testing.T) {
 	suite.Run(t, new(MergePollerTransitionSuite))
+}
+
+func (s *MergePollerTransitionSuite) Test_MergedRun_MakesWikiProposalsReadyAndNotifiesTheAuthor() {
+	iss := s.createIssue("merged run with a wiki proposal")
+	s.prState["311"] = "merged"
+	idRun := s.insertPrOpenRun(iss.IdIssue, "311")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+	s.insertWikiProposal(idRun, iss.IdIssue)
+	s.Equal(constants.WikiProposalStateOpen, s.wikiProposalState(idRun))
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	s.Equal(constants.WikiProposalReady, s.wikiProposalState(idRun))
+	var notified int
+	err := s.App.Pool.QueryRow(context.Background(), `
+		SELECT count(*) FROM notification.notification WHERE id_user = $1 AND type = $2 AND ref_id = $3
+	`, iss.CreateBy, constants.NotificationTypeWikiProposalReady, fmt.Sprint(iss.IdIssue)).Scan(&notified)
+	s.Require().NoError(err)
+	s.Equal(1, notified)
+}
+
+func (s *MergePollerTransitionSuite) Test_ClosedRun_DiscardsWikiProposals() {
+	iss := s.createIssue("closed run with a wiki proposal")
+	s.prState["312"] = "closed"
+	idRun := s.insertPrOpenRun(iss.IdIssue, "312")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+	s.insertWikiProposal(idRun, iss.IdIssue)
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	s.Equal(constants.WikiProposalDiscarded, s.wikiProposalState(idRun))
+}
+
+func (s *MergePollerTransitionSuite) insertWikiProposal(idRun, idIssue int64) {
+	ctx := context.Background()
+	space, err := injector.GetWikiSpaceRepository().EnsureProjectSpace(ctx, s.IdProject)
+	s.Require().NoError(err)
+	slug := fmt.Sprintf("merge-proposal-%d", idRun)
+	_, err = s.App.Pool.Exec(ctx, `
+		INSERT INTO wiki.change_proposal (id_run, id_issue, id_project, id_space, kind, slug, title, body, reason)
+		VALUES ($1, $2, $3, $4, 'create', $5, $5, 'body', 'reason')
+	`, idRun, idIssue, s.IdProject, space.IdSpace, slug)
+	s.Require().NoError(err)
+}
+
+func (s *MergePollerTransitionSuite) wikiProposalState(idRun int64) constants.WikiProposalState {
+	proposals, err := injector.GetWikiProposalRepository().Load(context.Background(), model.WikiProposalFilter{IdRun: &idRun})
+	s.Require().NoError(err)
+	s.Require().Len(proposals, 1)
+	return proposals[0].State
 }

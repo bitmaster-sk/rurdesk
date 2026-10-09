@@ -4,6 +4,7 @@ import { WikiEditPage } from './pages/wiki-edit/wiki-edit.page';
 import { WikiHistoryPage } from './pages/wiki-history/wiki-history.page';
 import { WikiHomePage } from './pages/wiki-home/wiki-home.page';
 import { WikiPagePage } from './pages/wiki-page/wiki-page.page';
+import { WikiProposalsPage } from './pages/wiki-proposals/wiki-proposals.page';
 import { WikiShellPage } from './pages/wiki-shell/wiki-shell.page';
 import { WikiTrashPage } from './pages/wiki-trash/wiki-trash.page';
 import { WikiEditLeaveGuard } from './wiki-edit-leave.guard';
@@ -21,6 +22,8 @@ const routes: Routes = [
                 canDeactivate: [WikiEditLeaveGuard.canDeactivate]
             },
             { path: 'trash', component: WikiTrashPage },
+            { path: 'proposals', component: WikiProposalsPage },
+            { path: 'proposals/:idProposal', component: WikiProposalsPage },
             { path: ':space/:slug', component: WikiPagePage },
             {
                 path: ':space/:slug/edit',

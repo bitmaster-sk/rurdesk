@@ -75,6 +75,8 @@ type Task struct {
 	// tracker (one that never sends the field) produces.
 	Wiki *WikiContext
 
+	WikiProposals []WikiProposal
+
 	// Stage selects which instruction block the prompt template uses.
 	Stage string
 
@@ -107,6 +109,14 @@ type WikiPage struct {
 	Version int
 	Reason  string
 	Body    string
+}
+
+type WikiProposal struct {
+	Kind   string
+	Slug   string
+	Title  string
+	Parent string
+	Reason string
 }
 
 type WikiIndexEntry struct {

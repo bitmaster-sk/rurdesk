@@ -592,6 +592,7 @@ func GetDispatcher() *agent.Dispatcher {
 			GetSkillService(),
 			GetStagePlanService(),
 			GetWikiAgentService(),
+			GetWikiProposalService(),
 			GetGatewayClient(),
 			GetNotifier(),
 		), nil
@@ -1016,6 +1017,7 @@ func GetMergePoller() *agent.MergePoller {
 			GetIssueRepository(),
 			GetStateRepository(),
 			GetPhaseStateTransitioner(),
+			GetWikiProposalService(),
 			GetNotifier(),
 		), nil
 	})
@@ -1234,6 +1236,7 @@ func GetRouter() (*router.Router, error) {
 			GetCustomFieldController(),
 			GetWikiController(),
 			GetWikiAgentController(),
+			GetWikiProposalController(),
 			GetStateController(),
 			sprintController,
 			GetSavedViewController(),
@@ -1337,7 +1340,7 @@ func GetWikiService() *service.WikiService {
 		}
 		return service.NewWikiService(pool, GetWikiSpaceRepository(), GetWikiPageRepository(),
 			GetWikiPageVersionRepository(), GetWikiPageDraftRepository(), GetWikiPageLinkRepository(), GetWikiIssuePageRepository(),
-			GetProjectRepository(), GetAclService(), GetNotifier(), cache), nil
+			GetWikiProposalRepository(), GetProjectRepository(), GetAclService(), GetNotifier(), cache), nil
 	})
 	return instance.(*service.WikiService)
 }
@@ -1363,6 +1366,29 @@ func GetWikiAgentController() *controller.WikiAgentController {
 		return controller.NewWikiAgentController(GetWikiAgentService()), nil
 	})
 	return instance.(*controller.WikiAgentController)
+}
+
+func GetWikiProposalRepository() *repository.WikiProposalRepository {
+	instance, _ := di.GetWithNew("wiki-proposal-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewWikiProposalRepository(pool), nil
+	})
+	return instance.(*repository.WikiProposalRepository)
+}
+
+func GetWikiProposalService() *service.WikiProposalService {
+	instance, _ := di.GetWithNew("wiki-proposal-service", func() (any, error) {
+		return service.NewWikiProposalService(GetWikiService(), GetWikiAgentService(), GetWikiProposalRepository(),
+			GetIssueRepository(), GetMessageRepository(), GetUserRepository(), GetNotificationService()), nil
+	})
+	return instance.(*service.WikiProposalService)
+}
+
+func GetWikiProposalController() *controller.WikiProposalController {
+	instance, _ := di.GetWithNew("wiki-proposal-controller", func() (any, error) {
+		return controller.NewWikiProposalController(GetWikiProposalService()), nil
+	})
+	return instance.(*controller.WikiProposalController)
 }
 
 func GetWikiController() *controller.WikiController {

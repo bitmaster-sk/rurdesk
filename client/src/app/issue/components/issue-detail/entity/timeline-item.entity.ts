@@ -1,7 +1,8 @@
 import { Message } from 'src/app/message/model/message.model';
 import { Track } from 'src/app/shared/tracker/model/track.model';
+import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 
-export type TimelineItemType = 'comment' | 'time';
+export type TimelineItemType = 'comment' | 'time' | 'wikiProposal';
 
 export interface CommentTimelineItem {
     type: 'comment';
@@ -15,7 +16,13 @@ export interface TimeTimelineItem {
     data: Track;
 }
 
-export type TimelineItem = CommentTimelineItem | TimeTimelineItem;
+export interface WikiProposalTimelineItem {
+    type: 'wikiProposal';
+    date: Date;
+    data: WikiProposal;
+}
+
+export type TimelineItem = CommentTimelineItem | TimeTimelineItem | WikiProposalTimelineItem;
 
 export interface TimelineDisplayItem {
     item: TimelineItem;

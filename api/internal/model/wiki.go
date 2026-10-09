@@ -178,11 +178,12 @@ type WikiSpaceView struct {
 }
 
 type WikiTree struct {
-	Spaces       []WikiSpaceView `json:"spaces"`
-	Nodes        []*WikiTreeNode `json:"nodes"`
-	AlwaysTokens int             `json:"alwaysTokens"`
-	TokenLimit   int             `json:"tokenLimit"`
-	TrashCount   int             `json:"trashCount"`
+	Spaces        []WikiSpaceView `json:"spaces"`
+	Nodes         []*WikiTreeNode `json:"nodes"`
+	AlwaysTokens  int             `json:"alwaysTokens"`
+	TokenLimit    int             `json:"tokenLimit"`
+	TrashCount    int             `json:"trashCount"`
+	ProposalCount int             `json:"proposalCount"`
 }
 
 type WikiResolvedLink struct {

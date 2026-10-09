@@ -592,6 +592,65 @@
             "RESTORED": "Page restored",
             "PURGED": "Deleted for good"
         },
+        "PROPOSAL": {
+            "TITLE": "Agent proposals",
+            "SUMMARY": "{{toReview}} to review · {{approved}} approved",
+            "TO_REVIEW": "To review",
+            "APPROVED_GROUP": "Approved, published on merge",
+            "NONE_TO_REVIEW": "Nothing to review",
+            "NONE_APPROVED": "Nothing approved",
+            "ALL_SPACES": "All",
+            "EMPTY": "Pick a proposal to review it",
+            "RUN": "run #{{id}}",
+            "CARD": "Wiki proposal",
+            "OPEN": "Open proposal",
+            "OPEN_PAGE": "open the page",
+            "REASON": "Agent's reason:",
+            "KIND": {
+                "CREATE": "New page",
+                "UPDATE": "Change",
+                "MOVE": "Move",
+                "DELETE": "Delete"
+            },
+            "STATE": {
+                "OPEN": "open",
+                "READY": "ready to publish",
+                "APPROVED": "approved · publishes on merge",
+                "NEEDS_RESOLVING": "needs resolving",
+                "DISCARDED": "discarded",
+                "ACCEPTED": "published",
+                "REJECTED": "rejected"
+            },
+            "APPROVE": "Approve",
+            "EDIT_APPROVE": "Edit and approve",
+            "PUBLISH": "Publish",
+            "EDIT_PUBLISH": "Edit and publish",
+            "EDIT": "Edit",
+            "RESOLVE": "Resolve",
+            "REJECT": "Reject",
+            "REJECT_TITLE": "Reject the proposal",
+            "REJECT_REASON": "Reason (optional)",
+            "REJECT_HINT": "The reason is posted as a comment in the task, so the agent sees it on its next run.",
+            "NEW_PAGE": "new page",
+            "BASE": "based on v{{version}} → proposal",
+            "UNCHANGED": "the page has not changed since v{{version}}, no merge needed",
+            "CHANGED_MERGE": "the page is at v{{version}} now; publishing merges both changes",
+            "CHANGED_CONFLICT": "the page is at v{{version}} now and the changes overlap; you resolve them in the editor",
+            "MOVE_TEXT": "Move “{{page}}” from “{{from}}” under “{{to}}”.",
+            "DELETE_TEXT": "Move “{{page}}” and its subpages to the trash.",
+            "OPEN_HINT": "Approving keeps the change until the pull request is merged; then it is published with you as its author. If the agent changes the proposal in a later attempt, the approval is taken back.",
+            "ACCEPT_HINT": "Publishing saves a new version with you as its author and the note “Agent proposal from #{{issue}} (run #{{run}})”. If the page changed meanwhile, it is merged the same way as a normal save.",
+            "APPROVED_BY": "Approved by {{name}} on {{date}}. It is published when the pull request is merged.",
+            "NEEDS_RESOLVING_HINT": "The page changed after the approval and the changes overlap, so nothing was written. Resolve the overlap to publish it.",
+            "DISCARDED_HINT": "The run ended without a merged pull request, so this proposal is no longer offered.",
+            "ACCEPTED_BY": "Published by {{name}} on {{date}}",
+            "REJECTED_BY": "Rejected by {{name}} on {{date}}",
+            "APPROVED": "Proposal approved; it is published when the pull request is merged",
+            "ACCEPTED": "Proposal published",
+            "REJECTED": "Proposal rejected",
+            "CONFLICT": "The page changed and the edits overlap. Resolve them in the editor.",
+            "EDITING": "You are editing an agent proposal from #{{issue}} (run #{{run}})."
+        },
         "SETTINGS": {
             "TITLE": "Wiki",
             "TOKEN_LIMIT": "Token limit for always-read pages",
@@ -1059,7 +1118,11 @@
         "wiki_slug_taken": "A page with this title already exists here.",
         "wiki_token_limit": "Always-read pages would exceed the project token limit.",
         "wiki_invalid_parent": "This page cannot be placed there.",
-        "wiki_invalid_title": "The title must contain at least one letter or digit."
+        "wiki_invalid_title": "The title must contain at least one letter or digit.",
+        "wiki_proposal_not_ready": "The proposal can be accepted once the pull request is merged.",
+        "wiki_proposal_decided": "Someone already accepted or rejected this proposal.",
+        "wiki_proposal_page_gone": "The page this proposal changes no longer exists.",
+        "wiki_proposal_parent_gone": "The parent page of this proposal no longer exists."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
@@ -1079,12 +1142,19 @@
         "ACTION": {
             "MARK_ALL_READ": "Mark all read"
         },
+        "WIKI_PROPOSAL": {
+            "TASK": "Task:",
+            "PROPOSAL": "Proposal:",
+            "MORE": "+{{count}} more"
+        },
         "TEXT": {
             "STATE_CHANGED": "changed state of",
             "SEVERITY_ESCALATED": "escalated severity of",
             "SEVERITY_DEESCALATED": "de-escalated severity of",
             "ASSIGNED": "assigned you to",
-            "TO": "to"
+            "TO": "to",
+            "WIKI_PROPOSAL_READY": "proposed wiki changes ready to review",
+            "WIKI_PROPOSAL_CONFLICT": "made a wiki change that needs resolving after the merge"
         },
         "TYPE": {
             "COMMENT": "Comment",
@@ -1094,7 +1164,9 @@
             "SEVERITY_ESCALATED": "Severity",
             "SEVERITY_DEESCALATED": "Severity",
             "TEAM_JOINED": "Team",
-            "QUALITY_SCORED": "Quality"
+            "QUALITY_SCORED": "Quality",
+            "WIKI_PROPOSAL_READY": "Wiki",
+            "WIKI_PROPOSAL_CONFLICT": "Wiki"
         }
     },
     "AGENT_API_KEY": {

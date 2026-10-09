@@ -21,6 +21,8 @@ import {
     IconFlag,
     IconUserPlus,
     IconStar,
+    IconFileText,
+    IconAlertTriangle,
     IconArchive,
     IconX
 } from '@tabler/icons-angular';
@@ -52,6 +54,8 @@ import {
             IconFlag,
             IconUserPlus,
             IconStar,
+            IconFileText,
+            IconAlertTriangle,
             IconArchive,
             IconX
         })

@@ -1,0 +1,100 @@
+<div class="wiki-proposals" data-testid="wiki-proposals">
+    <section class="panel">
+        <header class="panel-head">
+            <div class="panel-head-l">
+                <app-wiki-tree-show />
+                <tabler-icon icon="bulb" [size]="16" class="panel-icon" />
+                <div>
+                    <div class="panel-title">{{ 'WIKI.PROPOSAL.TITLE' | translate }}</div>
+                    <div class="panel-sub">
+                        {{ 'WIKI.PROPOSAL.SUMMARY' | translate: { toReview:
+                        groups().toReview.length, approved: groups().approved.length } }}
+                    </div>
+                </div>
+            </div>
+            <ui-choice
+                data-testid="wiki-proposals-space"
+                size="small"
+                optionLabel="label"
+                optionValue="value"
+                [options]="spaceOptions"
+                [allowEmpty]="false"
+                [ngModel]="space()"
+                (ngModelChange)="onSpaceChange($event)"
+            />
+        </header>
+        <div class="panel-body wiki-proposals__body">
+            @if (proposals()) {
+            <nav class="wiki-proposals__list">
+                <div class="wiki-proposals__group">{{ 'WIKI.PROPOSAL.TO_REVIEW' | translate }}</div>
+                @for (proposal of groups().toReview; track proposal.idProposal) {
+                <ng-container
+                    [ngTemplateOutlet]="item"
+                    [ngTemplateOutletContext]="{ $implicit: proposal }"
+                />
+                } @empty {
+                <div class="wiki-proposals__empty">
+                    {{ 'WIKI.PROPOSAL.NONE_TO_REVIEW' | translate }}
+                </div>
+                }
+                <div class="wiki-proposals__group">
+                    {{ 'WIKI.PROPOSAL.APPROVED_GROUP' | translate }}
+                </div>
+                @for (proposal of groups().approved; track proposal.idProposal) {
+                <ng-container
+                    [ngTemplateOutlet]="item"
+                    [ngTemplateOutletContext]="{ $implicit: proposal }"
+                />
+                } @empty {
+                <div class="wiki-proposals__empty">
+                    {{ 'WIKI.PROPOSAL.NONE_APPROVED' | translate }}
+                </div>
+                }
+            </nav>
+            <div class="wiki-proposals__detail">
+                @if (idSelected(); as idProposal) {
+                <app-wiki-proposal-detail
+                    [idProject]="idProject"
+                    [idProposal]="idProposal"
+                    (decided)="onDecided()"
+                />
+                } @else {
+                <div class="wiki-proposals__empty" data-testid="wiki-proposals-empty">
+                    {{ 'WIKI.PROPOSAL.EMPTY' | translate }}
+                </div>
+                }
+            </div>
+            } @else {
+            <div class="flex h-full min-h-40 w-full items-center justify-center">
+                <ui-loader [size]="32" />
+            </div>
+            }
+        </div>
+    </section>
+</div>
+
+<ng-template #item let-proposal>
+    <a
+        class="wiki-proposals__item"
+        data-testid="wiki-proposal-item"
+        [class.wiki-proposals__item--active]="proposal.idProposal === idSelected()"
+        [routerLink]="['/project', idProject, 'wiki', 'proposals', proposal.idProposal]"
+    >
+        <b class="truncate">{{ proposal.title }}</b>
+        <span class="flex flex-wrap items-center gap-2">
+            <ui-tag
+                [value]="kindTag(proposal).labelKey | translate"
+                [severity]="kindTag(proposal).severity"
+            />
+            <ui-tag
+                data-testid="wiki-proposal-item-state"
+                [value]="stateTag(proposal).labelKey | translate"
+                [severity]="stateTag(proposal).severity"
+            />
+        </span>
+        <span class="wiki-proposals__item-meta">
+            #{{ proposal.idIssuePublic }} · {{ agentName(proposal) }} · {{ 'WIKI.PROPOSAL.RUN' |
+            translate: { id: proposal.idRun } }}
+        </span>
+    </a>
+</ng-template>

@@ -11,6 +11,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
@@ -26,6 +27,7 @@ type MergePoller struct {
 	issueRepo        *repository.IssueRepository
 	stateRepo        *repository.StateRepository
 	transitioner     *PhaseStateTransitioner
+	wikiProposals    *service.WikiProposalService
 	notifier         *notify.Notifier
 	lastMrStatus     map[int64]*githost.Status
 	lastMrStatusLock sync.Mutex
@@ -39,6 +41,7 @@ func NewMergePoller(
 	issueRepo *repository.IssueRepository,
 	stateRepo *repository.StateRepository,
 	transitioner *PhaseStateTransitioner,
+	wikiProposals *service.WikiProposalService,
 	notifier *notify.Notifier,
 ) *MergePoller {
 	return &MergePoller{
@@ -49,6 +52,7 @@ func NewMergePoller(
 		issueRepo:        issueRepo,
 		stateRepo:        stateRepo,
 		transitioner:     transitioner,
+		wikiProposals:    wikiProposals,
 		notifier:         notifier,
 		lastMrStatus:     make(map[int64]*githost.Status),
 		lastMrStatusLock: sync.Mutex{},
@@ -117,6 +121,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 			}
 			p.notifyRunUpdate(updated)
 			p.broadcastRunMrStatus(ctx, run, status)
+			p.wikiProposals.RunFinished(ctx, updated)
 			merged++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to done")
 
@@ -131,6 +136,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 			}
 			p.notifyRunUpdate(updated)
 			p.broadcastRunMrStatus(ctx, run, status)
+			p.wikiProposals.RunFinished(ctx, updated)
 			closed++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
 

@@ -61,7 +61,7 @@ func (s *WikiService) Save(ctx context.Context, user model.User, idPage int64, r
 		return nil, errs.ErrWikiInvalidTitle
 	}
 	var result *WikiSaveResult
-	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+	err := extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
 		page, access, err := s.loadPageAccess(ctx, user, idPage, true)
 		if err != nil {
 			return err
@@ -263,7 +263,7 @@ func (s *WikiService) DeleteDraft(ctx context.Context, user model.User, idPage i
 }
 
 func (s *WikiService) Move(ctx context.Context, user model.User, idPage int64, req model.MoveWikiPageReq) error {
-	return extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+	return extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
 		page, access, err := s.lockStructure(ctx, user, idPage)
 		if err != nil {
 			return err
@@ -302,7 +302,7 @@ func (s *WikiService) Move(ctx context.Context, user model.User, idPage int64, r
 }
 
 func (s *WikiService) Trash(ctx context.Context, user model.User, idPage int64) error {
-	return extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+	return extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
 		page, access, err := s.lockStructure(ctx, user, idPage)
 		if err != nil {
 			return err

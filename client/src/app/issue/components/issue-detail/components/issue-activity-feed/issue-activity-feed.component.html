@@ -117,6 +117,11 @@
                     [track]="group.item.data"
                     [user]="getUserForTrack(group.item.data)"
                 ></app-activity-time-item>
+            } @else if (group.item.type === 'wikiProposal') {
+                <app-wiki-proposal-card
+                    [proposal]="group.item.data"
+                    [agent]="usersMap().get(group.item.data.idUserAgent)"
+                ></app-wiki-proposal-card>
             }
         }
         @for (row of trailingThinkingRows(); track row.stage.stage) {

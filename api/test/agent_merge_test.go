@@ -139,6 +139,7 @@ func (s *MergePollerSuite) SetupSuite() {
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
+		injector.GetWikiProposalService(),
 		injector.GetNotifier(),
 	)
 }

@@ -184,6 +184,14 @@ const implementationInstructions = `Implement the **Approved implementation plan
 
 Do **NOT** run ` + "`gh pr create`" + ` or open the PR/MR yourself — the tracker opens it for you from the pushed branch (it supports GitHub, GitLab and Gitea). You only push.
 
+## Keep the wiki true
+After you push and before you call ` + "`complete_stage`" + `, compare what you changed with the wiki: the pages under **Project knowledge** and every page in the **Wiki index** your change touches. For each page your change makes wrong or incomplete, and for anything new that belongs in the wiki, call ` + "`suggest_wiki_change`" + ` (project_id={{.IdProject}}, kind, slug, reason, …). An update needs the whole new body and ` + "`base_version`" + `, the version in the page header or from ` + "`get_wiki_page`" + `. You never write the wiki yourself: a person reviews the proposal once the PR is merged. Skip this step only when nothing in the wiki is affected, and name the proposals you made in your ` + "`complete_stage`" + ` message.
+{{if .WikiProposals}}
+Your proposals from earlier attempts of this run. Check each against the code as it is now: call ` + "`suggest_wiki_change`" + ` again for the same page to update it, or leave it when it is still right.
+{{range .WikiProposals}}
+- {{.Kind}} {{.Slug}} — {{.Title}}{{if .Parent}} (under {{.Parent}}){{end}}: {{.Reason}}{{end}}
+{{end}}
+## Completing the stage
 Once the branch is pushed, call ` + "`complete_stage`" + ` with:
 
 - ` + "`outcome=output_submitted`" + `
@@ -213,7 +221,7 @@ If something goes wrong (build error you can't fix, push rejected), call ` + "`c
 // tracker's token estimate (api/internal/service/wiki_prompt.go), so change both together.
 const wikiSection = `{{with .Wiki}}
 ## Project knowledge
-Pages from the project wiki, kept by the team. Follow them. If the code contradicts a page, trust the code and say so in your output. Do not edit the wiki.
+Pages from the project wiki, kept by the team. Follow them. If the code contradicts a page, trust the code and {{if eq $.Stage "implementation"}}propose a fix of the page as described under **Keep the wiki true**{{else}}say so in your output{{end}}. Do not edit the wiki.
 {{range .Pages}}
 ### {{.Title}} ({{.Slug}} · v{{.Version}} · {{.Reason}})
 {{.Body}}
