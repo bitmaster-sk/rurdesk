@@ -77,8 +77,6 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        // Shallow spread is a full copy — Project is flat (primitives only). The
-        // parent owns persistence and the status chip; we only announce the edit.
         const project: Project = {
             ...this.project(),
             idStateDefault: this.form.value.idStateDefault ?? null
@@ -192,8 +190,6 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
                 this.stateStore.load();
                 // refresh the local default so a later save doesn't PATCH the stale id back
                 if (this.project().idStateDefault === target.idState) {
-                    // Backend already repointed the default inside delete$; the
-                    // parent refreshes shared state without a second PATCH.
                     this.defaultMigrated.emit({
                         ...this.project(),
                         idStateDefault: choice.migrateTo

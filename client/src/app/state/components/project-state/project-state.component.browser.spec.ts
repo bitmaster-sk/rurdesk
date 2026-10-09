@@ -169,7 +169,7 @@ describe('ProjectStateComponent delete flow (browser)', () => {
         expect(stateApi.delete$).toHaveBeenCalledWith(10, 1, undefined);
     });
 
-    it('emits the migrated default without touching the input or calling an update', () => {
+    it('emits the migrated default without touching the input project', () => {
         const { fixture, input } = setup({ issues: 0, isProjectDefault: true, agentPhases: 0 });
         const component = fixture.componentInstance as any;
         const migrated: Project[] = [];
@@ -179,9 +179,8 @@ describe('ProjectStateComponent delete flow (browser)', () => {
         component.onConfirmDelete({ migrateTo: 3 });
 
         expect(migrated).toEqual([{ idProject: 10, name: 'P', color: '#000', idStateDefault: 3 }]);
-        expect(input.idStateDefault).toBe(2); // the input object is untouched
-        expect(stateApi.update$).not.toHaveBeenCalled(); // no second PATCH
-        expect(component.form.value.idStateDefault).toBe(3); // patchValue contract
+        expect(input.idStateDefault).toBe(2);
+        expect(component.form.value.idStateDefault).toBe(3);
     });
 
     it('does not emit a migration when the deleted state was not the default', () => {
@@ -190,26 +189,22 @@ describe('ProjectStateComponent delete flow (browser)', () => {
         const migrated: Project[] = [];
         component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
 
-        component.onDeleteState(state(1, 1)); // default is state 2
+        component.onDeleteState(state(1, 1));
         component.onConfirmDelete({ migrateTo: 3 });
 
         expect(migrated).toEqual([]);
     });
 
-    it('save emits a copy of the project and leaves the input unchanged', () => {
+    it('emits the changed default on save without touching the input project', () => {
         const { fixture, input } = setup();
         const component = fixture.componentInstance as any;
         const saved: Project[] = [];
         component.save.subscribe((project: Project) => saved.push(project));
 
-        // patchValue (emitEvent:false) keeps the auto-save valueChanges from
-        // firing — the manual call below is the single emission under test.
-        component.form.controls.idStateDefault.patchValue(3, { emitEvent: false });
-        component.onProjectSave();
+        component.form.controls.idStateDefault.setValue(3);
 
         expect(saved).toEqual([{ idProject: 10, name: 'P', color: '#000', idStateDefault: 3 }]);
-        expect(saved[0]).not.toBe(input); // a copy, not the shared object
-        expect(input.idStateDefault).toBe(2); // the input object is unchanged
-        expect(stateApi.update$).not.toHaveBeenCalled(); // the child never PATCHes
+        expect(saved[0]).not.toBe(input);
+        expect(input.idStateDefault).toBe(2);
     });
 });

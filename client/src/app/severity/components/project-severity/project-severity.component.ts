@@ -85,8 +85,6 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        // Shallow spread is a full copy — Project is flat (primitives only). The
-        // parent owns persistence and the status chip; we only announce the edit.
         const project: Project = {
             ...this.project(),
             idSeverityDefault: this.form.value.idSeverityDefault ?? null
@@ -183,8 +181,6 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
                 this.severityStore.load();
                 // refresh the local default so a later save doesn't PATCH the stale id back
                 if (this.project().idSeverityDefault === target.idSeverity) {
-                    // Backend already repointed the default inside delete$; the
-                    // parent refreshes shared state without a second PATCH.
                     this.defaultMigrated.emit({
                         ...this.project(),
                         idSeverityDefault: choice.migrateTo

@@ -21,7 +21,6 @@ export class ProjectSettingsPage {
 
     /** Auto-save status for the General panel, surfaced as an inline chip. */
     protected readonly generalSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
-    /** One status per settings panel — each child PATCHes through the same helper. */
     protected readonly stateSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
     protected readonly severitySaveStatus = signal<UiSaveState>(UiSaveState.Idle);
     protected readonly issueTypeSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
@@ -42,11 +41,6 @@ export class ProjectSettingsPage {
         this.persist(project, this.issueTypeSaveStatus);
     }
 
-    /**
-     * The delete-migration path: the backend already repointed the project default
-     * inside the delete-transaction, so this only refreshes shared state locally —
-     * no PATCH, no toast.
-     */
     protected onDefaultMigrated(project: Project): void {
         this.projectStore.setProject(project);
     }

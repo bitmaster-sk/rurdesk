@@ -28,11 +28,6 @@ export class ProjectStore {
             .pipe(tap(savedProject => this.project.next(savedProject)));
     }
 
-    /**
-     * Local refresh without an API call — the backend already applied this state
-     * (e.g. it repoints the project default inside the delete-transaction), so the
-     * caller only needs the store to broadcast the new object.
-     */
     public setProject(project: Project): void {
         this.project.next(project);
     }

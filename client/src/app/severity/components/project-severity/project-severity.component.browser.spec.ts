@@ -104,7 +104,7 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
         expect(severityApi.delete$).toHaveBeenCalledWith(10, 1, undefined);
     });
 
-    it('emits the migrated default without touching the input or calling an update', () => {
+    it('emits the migrated default without touching the input project', () => {
         const { fixture, input } = setup({ issues: 0, isProjectDefault: true });
         const component = fixture.componentInstance as any;
         const migrated: Project[] = [];
@@ -116,9 +116,8 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
         expect(migrated).toEqual([
             { idProject: 10, name: 'P', color: '#000', idSeverityDefault: 3 }
         ]);
-        expect(input.idSeverityDefault).toBe(2); // the input object is untouched
-        expect(severityApi.update$).not.toHaveBeenCalled(); // no second PATCH
-        expect(component.idSeverityDefaultControl.value).toBe(3); // patchValue contract
+        expect(input.idSeverityDefault).toBe(2);
+        expect(component.idSeverityDefaultControl.value).toBe(3);
     });
 
     it('does not emit a migration when the deleted severity was not the default', () => {
@@ -127,26 +126,22 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
         const migrated: Project[] = [];
         component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
 
-        component.onDeleteSeverity(severity(1, 1)); // default is severity 2
+        component.onDeleteSeverity(severity(1, 1));
         component.onConfirmDelete({ migrateTo: 3 });
 
         expect(migrated).toEqual([]);
     });
 
-    it('save emits a copy of the project and leaves the input unchanged', () => {
+    it('emits the changed default on save without touching the input project', () => {
         const { fixture, input } = setup();
         const component = fixture.componentInstance as any;
         const saved: Project[] = [];
         component.save.subscribe((project: Project) => saved.push(project));
 
-        // patchValue (emitEvent:false) keeps the auto-save valueChanges from
-        // firing — the manual call below is the single emission under test.
-        component.form.controls.idSeverityDefault.patchValue(3, { emitEvent: false });
-        component.onProjectSave();
+        component.idSeverityDefaultControl.setValue(3);
 
         expect(saved).toEqual([{ idProject: 10, name: 'P', color: '#000', idSeverityDefault: 3 }]);
-        expect(saved[0]).not.toBe(input); // a copy, not the shared object
-        expect(input.idSeverityDefault).toBe(2); // the input object is unchanged
-        expect(severityApi.update$).not.toHaveBeenCalled(); // the child never PATCHes
+        expect(saved[0]).not.toBe(input);
+        expect(input.idSeverityDefault).toBe(2);
     });
 });

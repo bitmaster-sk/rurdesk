@@ -83,8 +83,6 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        // Shallow spread is a full copy — Project is flat (primitives only). The
-        // parent owns persistence and the status chip; we only announce the edit.
         const project: Project = {
             ...this.project(),
             idIssueTypeDefault: this.idIssueTypeDefaultControl.value
@@ -183,8 +181,6 @@ export class ProjectIssueTypeComponent implements OnInit, OnDestroy {
                 this.removeIssueType(target);
                 this.issueTypeStore.load();
                 if (this.project().idIssueTypeDefault === target.idIssueType) {
-                    // Backend already repointed the default inside delete$; the
-                    // parent refreshes shared state without a second PATCH.
                     this.defaultMigrated.emit({
                         ...this.project(),
                         idIssueTypeDefault: choice.migrateTo

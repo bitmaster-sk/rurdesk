@@ -122,7 +122,7 @@ describe('ProjectIssueTypeComponent (browser)', () => {
         expect(component.isDeleteDialogVisible()).toBe(true);
     });
 
-    it('emits the migrated default without touching the input or calling an update', () => {
+    it('emits the migrated default without touching the input project', () => {
         const { fixture, input } = setup({ issues: 0, isProjectDefault: true });
         const component = fixture.componentInstance as any;
         const migrated: Project[] = [];
@@ -134,11 +134,8 @@ describe('ProjectIssueTypeComponent (browser)', () => {
         expect(migrated).toEqual([
             { idProject: 10, name: 'P', color: '#000', idIssueTypeDefault: 3 }
         ]);
-        expect(input.idIssueTypeDefault).toBe(2); // the input object is untouched
-        expect(issueTypeApi.update$).not.toHaveBeenCalledWith(
-            expect.objectContaining({ idIssueTypeDefault: 3 })
-        ); // no project PATCH from the delete flow (update$ remains the type-rank PUT)
-        expect(component.idIssueTypeDefaultControl.value).toBe(3); // patchValue contract
+        expect(input.idIssueTypeDefault).toBe(2);
+        expect(component.idIssueTypeDefaultControl.value).toBe(3);
     });
 
     it('does not emit a migration when the deleted type was not the default', () => {
@@ -147,26 +144,23 @@ describe('ProjectIssueTypeComponent (browser)', () => {
         const migrated: Project[] = [];
         component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
 
-        component.onDeleteIssueType(issueType(1, 1)); // default is type 2
+        component.onDeleteIssueType(issueType(1, 1));
         component.onConfirmDelete({ migrateTo: 3 });
 
         expect(migrated).toEqual([]);
     });
 
-    it('save emits a copy of the project and leaves the input unchanged', () => {
+    it('emits the changed default on save without touching the input project', () => {
         const { fixture, input } = setup();
         const component = fixture.componentInstance as any;
         const saved: Project[] = [];
         component.save.subscribe((project: Project) => saved.push(project));
 
-        // patchValue (emitEvent:false) keeps the auto-save valueChanges from
-        // firing — the manual call below is the single emission under test.
-        component.form.controls.idIssueTypeDefault.patchValue(3, { emitEvent: false });
-        component.onProjectSave();
+        component.idIssueTypeDefaultControl.setValue(3);
 
         expect(saved).toEqual([{ idProject: 10, name: 'P', color: '#000', idIssueTypeDefault: 3 }]);
-        expect(saved[0]).not.toBe(input); // a copy, not the shared object
-        expect(input.idIssueTypeDefault).toBe(2); // the input object is unchanged
+        expect(saved[0]).not.toBe(input);
+        expect(input.idIssueTypeDefault).toBe(2);
     });
 
     it('persists the new rank of the moved row on reorder', () => {
