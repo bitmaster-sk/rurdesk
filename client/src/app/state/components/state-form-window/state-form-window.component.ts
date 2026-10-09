@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CreateIssueStateReq, IssueState } from 'src/app/state/model/issue-state.model';
 import { Project } from 'src/app/project/model/project.model';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
@@ -13,7 +13,8 @@ export interface StateWindowData {
 @Component({
     selector: 'app-state-form-window',
     templateUrl: './state-form-window.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StateFormWindowComponent {
     private winRef = inject(WindowReference);

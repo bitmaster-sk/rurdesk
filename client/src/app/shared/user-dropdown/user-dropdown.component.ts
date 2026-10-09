@@ -1,4 +1,5 @@
 import {
+    ChangeDetectionStrategy,
     Component,
     DestroyRef,
     computed,
@@ -32,7 +33,8 @@ type UserDropdownValue = number | number[] | null;
             multi: true
         }
     ],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserDropdownComponent implements ControlValueAccessor {
     public readonly multi = input(false);
@@ -64,23 +66,23 @@ export class UserDropdownComponent implements ControlValueAccessor {
         });
     });
 
-    public value: UserDropdownValue = null;
+    private readonly valueSignal = signal<UserDropdownValue>(null);
 
     public set selected(value: UserDropdownValue) {
-        this.value = value;
+        this.valueSignal.set(value);
         this.onChange(value);
         this.onTouch(value);
     }
 
     public get selected(): UserDropdownValue {
-        return this.value;
+        return this.valueSignal();
     }
 
     public onChange: (value: UserDropdownValue) => void = () => {};
     public onTouch: (value: UserDropdownValue) => void = () => {};
 
     public writeValue(value: UserDropdownValue): void {
-        this.value = value;
+        this.valueSignal.set(value ?? null);
     }
 
     public registerOnChange(fn: (value: UserDropdownValue) => void): void {
@@ -113,7 +115,7 @@ export class UserDropdownComponent implements ControlValueAccessor {
     // Writes the value WITHOUT emitting: the run already exists, and onChange would
     // re-enter the assignee-change path and create a second one.
     protected onAgentRunCreated(run: AgentRun): void {
-        this.value = run.idUserAgent;
+        this.valueSignal.set(run.idUserAgent);
         this.agentRunCreated.emit(run);
         this.select()?.closePanel();
     }

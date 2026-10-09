@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { ProjectStore } from '../../project.store';
 import { ProjectStatStore } from '../../project-stat.store';
 import { combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
@@ -16,7 +16,8 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
     selector: 'app-project',
     templateUrl: './project.page.html',
     styleUrls: ['./project.page.scss'],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProjectPage implements OnInit {
     private readonly projectStore = inject(ProjectStore);

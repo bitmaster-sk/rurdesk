@@ -1,7 +1,15 @@
 import { AuthApi } from '../api/auth.api.service';
 import { SessionService } from '../service/session.service';
 import { AuthTokenStore } from '../store/auth-token.store';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    OnInit,
+    inject,
+    signal
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 
 interface LoginForm {
@@ -14,7 +22,8 @@ interface LoginForm {
     selector: 'app-login',
     templateUrl: './login.component.html',
     styleUrls: ['./login.component.scss'],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class LoginComponent implements OnInit {
     private fb = inject(FormBuilder);
@@ -22,6 +31,7 @@ export class LoginComponent implements OnInit {
     private tokenStore = inject(AuthTokenStore);
     private session = inject(SessionService);
 
+    private destroyRef = inject(DestroyRef);
     public form: FormGroup<LoginForm>;
     public readonly hasFailed = signal(false);
 
@@ -34,7 +44,9 @@ export class LoginComponent implements OnInit {
             this.session.end();
         }
         // Clear a previous failure as soon as the user edits their credentials.
-        this.form.valueChanges.subscribe(() => this.hasFailed.set(false));
+        this.form.valueChanges
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => this.hasFailed.set(false));
     }
 
     public onLogin(): void {
