@@ -1,3 +1,4 @@
+import { MarkdownCode } from 'src/app/shared/markdown/markdown-code';
 import { WikiSpaceKind } from '../constants/wiki-space-kind.enum';
 import { WikiLinkCandidate } from '../entity/wiki-link-candidate.entity';
 import { WikiResolvedLink } from '../model/wiki-page.model';
@@ -21,7 +22,6 @@ export interface WikiLinkContext {
 
 export abstract class WikiLinkConverter {
     private static readonly sharedPrefixes = ['shared:', 'spolocne:'];
-    private static readonly codePattern = /(```[\s\S]*?```|`[^`\n]*`)/g;
     private static readonly linkPattern = /\[\[([^[\]\n]+?)\]\]/g;
     private static readonly issuePattern = /(^|[\s(])(?<!\]\()#(\d+)\b/g;
     private static readonly taskPattern = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX])\] /gm;
@@ -58,21 +58,15 @@ export abstract class WikiLinkConverter {
     }
 
     public static toMarkdown(body: string, context: WikiLinkContext): string {
-        return body
-            .split(WikiLinkConverter.codePattern)
-            .map((part, index) =>
-                index % 2 === 1 ? part : WikiLinkConverter.replaceOutsideCode(part, context)
-            )
-            .join('');
+        return MarkdownCode.replaceOutsideCode(body, part =>
+            WikiLinkConverter.replaceOutsideCode(part, context)
+        );
     }
 
     public static toPageLinksMarkdown(body: string, context: WikiLinkContext): string {
-        return body
-            .split(WikiLinkConverter.codePattern)
-            .map((part, index) =>
-                index % 2 === 1 ? part : WikiLinkConverter.replaceLinks(part, context)
-            )
-            .join('');
+        return MarkdownCode.replaceOutsideCode(body, part =>
+            WikiLinkConverter.replaceLinks(part, context)
+        );
     }
 
     public static toContext(idProject: number, tree: WikiTree): WikiLinkContext {

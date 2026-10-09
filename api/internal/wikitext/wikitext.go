@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/markdowntext"
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
@@ -15,8 +16,6 @@ const MaxSlugLength = 120
 var sharedPrefixes = []string{"shared:", "spolocne:"}
 
 var linkPattern = regexp.MustCompile(`\[\[([^\[\]\n]+?)\]\]`)
-
-var fencePattern = regexp.MustCompile("(?s)```.*?```|`[^`\n]*`")
 
 type Link struct {
 	Shared bool
@@ -50,7 +49,7 @@ func Slugify(text string) string {
 }
 
 func ParseLinks(body string) []Link {
-	withoutCode := fencePattern.ReplaceAllString(body, "")
+	withoutCode := strings.Join(markdowntext.OutsideCode(body), "")
 	seen := map[Link]bool{}
 	links := make([]Link, 0)
 	for _, match := range linkPattern.FindAllStringSubmatch(withoutCode, -1) {
