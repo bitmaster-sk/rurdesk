@@ -192,26 +192,85 @@ large the budget, the wiki part of a prompt never goes over 60 000 tokens.
 
 The prompt asks the agent to follow the pages, to trust the code when a page
 says something else and point that out in its output, and never to edit the
-wiki.
+wiki itself. In the implementation stage it may [propose changes](#agent-proposals)
+instead.
 
 ### Reading during a run
 
 While it works, the agent can search the wiki and open more pages, including an
 older version of a page. It gets the same pages a person sees except
-**Hidden** ones. Agents only read the wiki; changes stay with people.
+**Hidden** ones. Agents never write the wiki; the most they can do is propose a
+change for a person to accept.
 
 ### What the agent read
 
-The **Agent run** card on the task shows a **Wiki context** for each stage:
+The **Agent run** card on the task shows a **Wiki context** with one line per
+stage. The line sums up the stage: how many pages were in the prompt and in the
+index, how many the agent opened or searched for, and how many tokens it read.
+Open the line to see:
 
-- the pages that went into the prompt, with their version and whether they were
-  sent because they are **always** read or **linked** to the task;
-- how many pages were in the index;
-- what the agent searched for and opened during the stage, with the version and
-  size of each page it read.
+- **Prompt**: the pages that went into the prompt, with their version and whether
+  they were sent because they are **always** read or **linked** to the task;
+- **Looked up**: what the agent searched for and opened during the stage, with the
+  version and size of each page it read;
+- **Index**: the pages offered by title and summary only.
 
 Each page opens in the wiki. For a stage that ran more than once, the card shows
 the latest attempt.
+
+## Agent proposals
+
+When the code an agent writes makes a page wrong, or adds something the wiki
+should describe, the agent proposes a change in the implementation stage: a new
+page, an edit, a move under another parent, or a delete. Nothing in the wiki
+changes until a person approves the proposal and the code is merged.
+
+A proposal belongs to the agent run. When the agent works on the run again, for
+example after a review comment on the pull request, it gets its open and
+approved proposals in the prompt and updates them to match the code; it never adds
+a second proposal for the same page. Changing an approved proposal takes the
+approval back, so a person looks at the new text.
+
+You can decide as soon as the proposal appears, while the pull request is still
+open. Approving does not write the wiki yet: the change is published when the pull
+request is merged, so the wiki never describes code that is not in the main
+branch.
+
+| State | When |
+| --- | --- |
+| **open** | the pull request is still open and nobody has decided yet |
+| **approved · publishes on merge** | a person approved it; it is published when the pull request is merged |
+| **ready to publish** | the pull request was merged before anyone decided; the author and the assignee of the task get a notification |
+| **needs resolving** | it was approved, but the page changed meanwhile and the edits overlap, so nothing was written; the person who approved it gets a notification |
+| **published** | the change is in the wiki |
+| **rejected** | a person rejected it |
+| **discarded** | the run ended without a merged pull request, even if the proposal was approved |
+
+Each proposal shows up as a **Wiki proposal** card in the task's activity.
+Proposals of the whole project are under **Agent proposals** below the wiki tree,
+with the number of proposals that need a person after the merge (ready to publish
+or needs resolving) next to it, and can be filtered by space.
+
+![Agent proposals: the proposals to review on the left, and a proposal ready to publish with the agent's reason, the change against the version it was based on and the Publish, Edit and publish and Reject buttons](../../site/assets/img/wiki-proposals.png)
+
+The proposal page shows the agent's reason and, for a new or edited page, the
+change against the version the agent based it on. If the page changed since, the
+page says whether the edits merge cleanly. Someone who may edit the space can:
+
+- **Approve** (before the merge) or **Publish** (after it): the change is saved as
+  a new version with the person who decided as its author and the note
+  *Agent proposal from #task (run #run)*. When the page changed meanwhile, both
+  changes are merged the same way as when [two people edit at
+  once](#editing-at-the-same-time). A move places the page at the end of its new
+  parent, and a delete moves the page and its subpages to the trash.
+- **Edit and approve** / **Edit and publish**: opens the proposal in the editor;
+  saving decides it with your text. Overlapping edits found while deciding also
+  end up here, to be resolved side by side.
+- **Resolve**: for a proposal that needs resolving, opens the editor with the
+  overlap; saving publishes it. A move or delete has nothing to edit: **Publish**
+  tries again, for example after a missing parent page is restored.
+- **Reject**: with an optional reason. The reason is posted as a comment in the
+  task, so the agent sees it the next time it works on the task.
 
 ## Permissions
 
@@ -220,3 +279,4 @@ the latest attempt.
 | Read and search | viewer and up | everyone |
 | Create, edit, move, delete to trash, restore | member and up | member and up in any project |
 | Set **Always reads**, change the token budget, delete for good | owner | admin |
+| Approve, publish or reject an agent proposal | member and up | member and up in any project |
