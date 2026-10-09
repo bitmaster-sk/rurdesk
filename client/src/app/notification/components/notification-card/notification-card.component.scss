@@ -51,6 +51,11 @@
         color: var(--ui-amber-600);
     }
 
+    &__wiki {
+        background: color-mix(in srgb, var(--ui-rose-500) 15%, transparent);
+        color: var(--ui-rose-600);
+    }
+
     &__project {
         background: var(--ui-color-primary-weak);
         color: var(--ui-color-primary);

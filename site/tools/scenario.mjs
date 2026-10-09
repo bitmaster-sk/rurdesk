@@ -3289,6 +3289,42 @@ const STEPS = [
             await editor.press("Escape");
         },
     },
+    {
+        id: "wiki-proposal-run",
+        type: "manual",
+        title: "Let a Rurdesk agent propose a wiki change (only an agent run can)",
+        instructions:
+            "A wiki proposal can NOT be created through the API or by a person: only a Rurdesk agent\n" +
+            "makes one, from its own run, in the implementation stage (MCP tool suggest_wiki_change).\n" +
+            "In YOUR browser: assign a DevToolbox task whose code touches a wiki page to a bot (Qwen/Glm),\n" +
+            "approve the gated stages and let it reach pr_open. If no Wiki proposal card shows up in the\n" +
+            "task's activity, comment on the task asking the agent to propose the wiki change.\n" +
+            "Leave the proposal OPEN (do not approve or reject it) so the screenshot shows the buttons.",
+    },
+    {
+        id: "wiki-proposals",
+        type: "screenshot",
+        file: "wiki-proposals.png",
+        title: "Agent proposals: the list and an open proposal with its change",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await openWikiPage(page, P, "proposals");
+            const item = page.getByTestId("wiki-proposal-item").first();
+            const found = await item
+                .waitFor({ state: "visible", timeout: 10000 })
+                .then(() => true)
+                .catch(() => false);
+            if (!found)
+                throw new Error(
+                    "no agent proposal in DevToolbox — do the wiki-proposal-run step first",
+                );
+            await page
+                .getByTestId("wiki-proposal-detail")
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(600);
+            await L.shootPage(page, "wiki-proposals.png");
+        },
+    },
 ];
 
 // ─────────────────────────────────── runner ───────────────────────────────────

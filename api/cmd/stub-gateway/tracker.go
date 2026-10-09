@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 )
 
 func sendHeartbeats(ctx context.Context, target *configuredAgent, idTask int64) {
@@ -33,9 +34,16 @@ func sendComplete(ctx context.Context, target *configuredAgent, idTask int64, bo
 
 // sendToTracker signs the body with the agent's secret and posts it to the tracker's REST API.
 func sendToTracker(ctx context.Context, target *configuredAgent, method, path, body string) error {
+	return sendToTrackerInRun(ctx, target, 0, method, path, body)
+}
+
+func sendToTrackerInRun(ctx context.Context, target *configuredAgent, idRun int64, method, path, body string) error {
 	req, err := http.NewRequestWithContext(ctx, method, trackerURL+path, bytes.NewBufferString(body))
 	if err != nil {
 		return err
+	}
+	if idRun != 0 {
+		req.Header.Set(constants.AgentRunHeader, strconv.FormatInt(idRun, 10))
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", target.apiKey)

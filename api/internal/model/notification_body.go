@@ -11,3 +11,9 @@ type NotificationBodySeverity struct {
 	SeverityName  string `json:"severityName"`
 	SeverityColor string `json:"severityColor"`
 }
+
+type NotificationBodyWikiProposal struct {
+	Count      int    `json:"count"`
+	IdProposal int64  `json:"idProposal"`
+	Title      string `json:"title"`
+}

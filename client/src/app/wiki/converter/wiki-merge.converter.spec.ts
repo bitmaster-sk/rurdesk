@@ -37,3 +37,19 @@ describe('WikiMergeConverter', () => {
         expect(WikiMergeConverter.conflictIndexes(chunks)).toEqual([1]);
     });
 });
+
+describe('WikiMergeConverter.toConflict', () => {
+    it('reads the merge out of a 409 that carries one', () => {
+        const conflict = { merge: { chunks, conflicts: 1 } };
+
+        expect(WikiMergeConverter.toConflict({ status: 409, error: conflict })).toBe(conflict);
+    });
+
+    it('ignores other errors, including a 409 without a merge', () => {
+        expect(
+            WikiMergeConverter.toConflict({ status: 409, error: { code: 'WIKI_SLUG_TAKEN' } })
+        ).toBeNull();
+        expect(WikiMergeConverter.toConflict({ status: 500, error: { merge: {} } })).toBeNull();
+        expect(WikiMergeConverter.toConflict(null)).toBeNull();
+    });
+});

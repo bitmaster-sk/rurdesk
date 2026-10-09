@@ -1,8 +1,20 @@
 import { WikiMergeChunkKind } from '../constants/wiki-merge-chunk-kind.enum';
 import { WikiConflictChoice, WikiConflictPick } from '../entity/wiki-conflict-choice.entity';
-import { WikiMergeChunk } from '../model/wiki-save.model';
+import { WikiConflict, WikiMergeChunk } from '../model/wiki-save.model';
 
 export abstract class WikiMergeConverter {
+    public static toConflict(error: unknown): WikiConflict | null {
+        if (typeof error !== 'object' || error === null) {
+            return null;
+        }
+        const status = (error as { status?: unknown }).status;
+        const body = (error as { error?: unknown }).error;
+        if (status !== 409 || typeof body !== 'object' || body === null || !('merge' in body)) {
+            return null;
+        }
+        return body as WikiConflict;
+    }
+
     public static conflictIndexes(chunks: WikiMergeChunk[]): number[] {
         return chunks
             .map((chunk, index) => (chunk.kind === WikiMergeChunkKind.Conflict ? index : -1))

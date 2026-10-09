@@ -2,10 +2,17 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { formatDistanceToNow } from 'date-fns';
 import {
     NotificationBodySeverity,
-    NotificationBodyState
+    NotificationBodyState,
+    NotificationBodyWikiProposal
 } from '../../model/notification-body.model';
 import { NotificationType } from '../../model/notification-type.enum';
 import { Notification } from '../../model/notification.model';
+
+interface WikiProposalRef {
+    link: (string | number)[];
+    title: string | null;
+    moreCount: number;
+}
 
 interface TypeChip {
     icon: string;
@@ -53,8 +60,23 @@ const TYPE_CHIPS: Record<NotificationType, TypeChip> = {
         icon: 'star',
         colorClass: 'notif-card-badge__quality',
         labelKey: 'NOTIFICATION.TYPE.QUALITY_SCORED'
+    },
+    [NotificationType.WikiProposalReady]: {
+        icon: 'file-text',
+        colorClass: 'notif-card-badge__wiki',
+        labelKey: 'NOTIFICATION.TYPE.WIKI_PROPOSAL_READY'
+    },
+    [NotificationType.WikiProposalConflict]: {
+        icon: 'alert-triangle',
+        colorClass: 'notif-card-badge__wiki',
+        labelKey: 'NOTIFICATION.TYPE.WIKI_PROPOSAL_CONFLICT'
     }
 };
+
+const WIKI_PROPOSAL_TYPES: ReadonlySet<NotificationType> = new Set([
+    NotificationType.WikiProposalReady,
+    NotificationType.WikiProposalConflict
+]);
 
 @Component({
     selector: 'app-notification-card',
@@ -85,7 +107,9 @@ export class NotificationCardComponent {
             [NotificationType.StateChanged]: 'NOTIFICATION.TEXT.STATE_CHANGED',
             [NotificationType.SeverityEscalated]: 'NOTIFICATION.TEXT.SEVERITY_ESCALATED',
             [NotificationType.SeverityDeescalated]: 'NOTIFICATION.TEXT.SEVERITY_DEESCALATED',
-            [NotificationType.Assigned]: 'NOTIFICATION.TEXT.ASSIGNED'
+            [NotificationType.Assigned]: 'NOTIFICATION.TEXT.ASSIGNED',
+            [NotificationType.WikiProposalReady]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_READY',
+            [NotificationType.WikiProposalConflict]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_CONFLICT'
         };
         return map[this.notification().type] ?? null;
     });
@@ -100,7 +124,8 @@ export class NotificationCardComponent {
             type !== NotificationType.Assigned &&
             type !== NotificationType.Comment &&
             type !== NotificationType.Mention &&
-            type !== NotificationType.QualityScored
+            type !== NotificationType.QualityScored &&
+            !WIKI_PROPOSAL_TYPES.has(type)
         )
             return null;
         return ['/project', idProject, 'issue', refPublicId];
@@ -124,6 +149,21 @@ export class NotificationCardComponent {
         )
             return null;
         return (this.notification().body as NotificationBodySeverity) ?? null;
+    });
+
+    protected readonly wikiProposal = computed<WikiProposalRef | null>(() => {
+        const { type, idProject, body } = this.notification();
+        if (!WIKI_PROPOSAL_TYPES.has(type) || !idProject) return null;
+        const proposal = (body as NotificationBodyWikiProposal | undefined) ?? { count: 0 };
+        const link: (string | number)[] = ['/project', idProject, 'wiki', 'proposals'];
+        if (!proposal.idProposal) {
+            return { link, title: null, moreCount: 0 };
+        }
+        return {
+            link: [...link, proposal.idProposal],
+            title: proposal.title ?? null,
+            moreCount: Math.max(proposal.count - 1, 0)
+        };
     });
 
     protected onDismiss(): void {

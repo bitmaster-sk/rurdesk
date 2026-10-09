@@ -1,0 +1,45 @@
+<div class="activity-item" data-testid="wiki-proposal-card">
+    <div class="activity-marker">
+        <app-avatar
+            [name]="agent()?.name ?? '?'"
+            [bgColor]="agent()?.colorAvatarBg ?? ''"
+            [height]="1.875"
+            [width]="1.875"
+            [radius]="0.9375"
+        ></app-avatar>
+        <div class="connector"></div>
+    </div>
+    <div class="proposal-card">
+        <div class="kind-badge">
+            <tabler-icon icon="file-text" [size]="14" />
+            <span>{{ 'WIKI.PROPOSAL.CARD' | translate }}</span>
+        </div>
+        <div class="proposal-header">
+            <span class="author">{{ agent()?.name ?? '—' }}</span>
+            <span class="timestamp">{{ proposal().updateAt | date: 'medium' }}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+            <ui-tag [value]="kindTag().labelKey | translate" [severity]="kindTag().severity" />
+            @if (pageLink(); as link) {
+                <a class="page" [routerLink]="link">{{ proposal().title }}</a>
+            } @else {
+                <span class="page">{{ proposal().title }}</span>
+            }
+            <ui-tag
+                data-testid="wiki-proposal-card-state"
+                [value]="stateTag().labelKey | translate"
+                [severity]="stateTag().severity"
+            />
+        </div>
+        <p class="reason">{{ proposal().reason }}</p>
+        <ui-button
+            size="small"
+            variant="outlined"
+            data-testid="wiki-proposal-card-open"
+            [routerLink]="proposalLink()"
+        >
+            <tabler-icon icon="bulb" [size]="14" />
+            {{ 'WIKI.PROPOSAL.OPEN' | translate }}
+        </ui-button>
+    </div>
+</div>

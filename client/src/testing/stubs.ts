@@ -68,6 +68,12 @@ export class UiButtonStub {
     public readonly isIconOnly = input<boolean>(false);
 }
 
+@Component({ selector: 'ui-tag', template: '{{ value() }}', standalone: true })
+export class UiTagStub {
+    public readonly value = input<string>('');
+    public readonly severity = input<string>('secondary');
+}
+
 @Component({ selector: 'ui-badge', template: '', standalone: true })
 export class UiBadgeStub {
     public readonly value = input<unknown>(undefined);

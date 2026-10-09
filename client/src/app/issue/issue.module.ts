@@ -47,6 +47,7 @@ import { IssueActivityFeedComponent } from './components/issue-detail/components
 import { ActivityCommentItemComponent } from './components/issue-detail/components/activity-comment-item/activity-comment-item.component';
 import { AgentThinkingRowComponent } from './components/issue-detail/components/agent-thinking-row/agent-thinking-row.component';
 import { ActivityTimeItemComponent } from './components/issue-detail/components/activity-time-item/activity-time-item.component';
+import { WikiProposalCardComponent } from './components/issue-detail/components/wiki-proposal-card/wiki-proposal-card.component';
 import {
     TablerIconComponent,
     provideTablerIcons,
@@ -65,6 +66,7 @@ import {
     IconDeviceFloppy,
     IconMessage,
     IconClock,
+    IconBulb,
     IconPencil,
     IconArrowLeft,
     IconArrowRight,
@@ -153,6 +155,7 @@ import { AgentModule } from '../agent/agent.module';
         ActivityCommentItemComponent,
         AgentThinkingRowComponent,
         ActivityTimeItemComponent,
+        WikiProposalCardComponent,
         GanttTimelineHeaderComponent,
         GanttTaskBarComponent,
         GanttTimelineBodyComponent,
@@ -208,6 +211,7 @@ import { AgentModule } from '../agent/agent.module';
             IconDeviceFloppy,
             IconMessage,
             IconClock,
+            IconBulb,
             IconPencil,
             IconArrowLeft,
             IconArrowRight,

@@ -16,4 +16,6 @@ var (
 	ErrGitIntegrationDuplicate = errors.New("git integration duplicate")
 
 	ErrAnchorWrongThread = errors.New("anchor parent message belongs to a different thread")
+
+	ErrWikiProposalDecided = errors.New("wiki proposal is already decided")
 )

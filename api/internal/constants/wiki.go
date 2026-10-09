@@ -44,3 +44,68 @@ const (
 )
 
 const WikiSharedSlugPrefix = "shared:"
+
+type WikiProposalKind string
+
+const (
+	WikiProposalCreate WikiProposalKind = "create"
+	WikiProposalUpdate WikiProposalKind = "update"
+	WikiProposalMove   WikiProposalKind = "move"
+	WikiProposalDelete WikiProposalKind = "delete"
+)
+
+func IsValidWikiProposalKind(kind WikiProposalKind) bool {
+	switch kind {
+	case WikiProposalCreate, WikiProposalUpdate, WikiProposalMove, WikiProposalDelete:
+		return true
+	default:
+		return false
+	}
+}
+
+type WikiProposalDecision string
+
+const (
+	WikiProposalOpen           WikiProposalDecision = "open"
+	WikiProposalApproved       WikiProposalDecision = "approved"
+	WikiProposalNeedsResolving WikiProposalDecision = "needs_resolving"
+	WikiProposalAccepted       WikiProposalDecision = "accepted"
+	WikiProposalRejected       WikiProposalDecision = "rejected"
+)
+
+var (
+	WikiProposalRevisable  = []WikiProposalDecision{WikiProposalOpen, WikiProposalApproved}
+	WikiProposalUndecided  = []WikiProposalDecision{WikiProposalOpen, WikiProposalApproved, WikiProposalNeedsResolving}
+	WikiProposalPublishing = []WikiProposalDecision{WikiProposalOpen, WikiProposalNeedsResolving}
+)
+
+type WikiProposalState string
+
+const (
+	WikiProposalStateOpen           WikiProposalState = "open"
+	WikiProposalReady               WikiProposalState = "ready"
+	WikiProposalStateApproved       WikiProposalState = "approved"
+	WikiProposalStateNeedsResolving WikiProposalState = "needs_resolving"
+	WikiProposalDiscarded           WikiProposalState = "discarded"
+	WikiProposalStateAccepted       WikiProposalState = "accepted"
+	WikiProposalStateRejected       WikiProposalState = "rejected"
+)
+
+func WikiProposalStateOf(decision WikiProposalDecision, runPhase string) WikiProposalState {
+	switch {
+	case decision == WikiProposalAccepted:
+		return WikiProposalStateAccepted
+	case decision == WikiProposalRejected:
+		return WikiProposalStateRejected
+	case decision == WikiProposalNeedsResolving:
+		return WikiProposalStateNeedsResolving
+	case runPhase == PhaseFailed || runPhase == PhaseCancelled:
+		return WikiProposalDiscarded
+	case decision == WikiProposalApproved:
+		return WikiProposalStateApproved
+	case runPhase == PhaseDone:
+		return WikiProposalReady
+	default:
+		return WikiProposalStateOpen
+	}
+}

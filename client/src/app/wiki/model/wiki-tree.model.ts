@@ -25,6 +25,7 @@ export interface WikiTree {
     alwaysTokens: number;
     tokenLimit: number;
     trashCount: number;
+    proposalCount: number;
 }
 
 export interface WikiSearchHit {

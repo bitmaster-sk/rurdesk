@@ -97,7 +97,10 @@ which agent executed each stage (provenance), and timestamps.
 
 The card also shows which [wiki](../using-the-tracker/wiki.md#what-the-agent-read)
 pages each stage got in its prompt and which ones the agent opened while it
-worked.
+worked. Changes the agent proposes to the wiki appear as separate cards in the
+task's activity. You can approve them right away; they are published when the
+pull request is merged. See
+[Agent proposals](../using-the-tracker/wiki.md#agent-proposals).
 
 Every phase change can also move the task's own state — see
 [Automatic state changes](../using-the-tracker/features.md#automatic-state-changes).

@@ -140,17 +140,37 @@ describe('RunWikiContextComponent', () => {
         return fixture.nativeElement as HTMLElement;
     }
 
+    function openStages(el: HTMLElement): void {
+        el.querySelectorAll<HTMLButtonElement>('[data-testid="run-wiki-stage-toggle"]').forEach(
+            toggle => toggle.click()
+        );
+        fixture.detectChanges();
+    }
+
     function texts(el: HTMLElement, testId: string): string[] {
         return Array.from(el.querySelectorAll(`[data-testid="${testId}"]`)).map(
             node => node.textContent?.replace(/\s+/g, ' ').trim() ?? ''
         );
     }
 
-    it('shows the pages sent in the prompt, the index and what the agent read over MCP', () => {
+    it('sums up each stage in one collapsed line', () => {
         const el = render(run());
 
         expect(loadWikiReads).toHaveBeenCalledWith(5);
         expect(texts(el, 'run-wiki-context')[0]).toContain('AGENT.WIKI.TITLE');
+        const summary = texts(el, 'run-wiki-stage-toggle');
+        expect(summary).toHaveLength(1);
+        expect(summary[0]).toContain('AGENT.WIKI.IN_PROMPT');
+        expect(summary[0]).toContain('AGENT.WIKI.IN_INDEX');
+        expect(summary[0]).toContain('AGENT.WIKI.OPENED');
+        expect(summary[0]).toContain('AGENT.WIKI.SEARCHES');
+        expect(el.querySelector('[data-testid="run-wiki-prompt-page"]')).toBeNull();
+    });
+
+    it('shows the pages sent in the prompt, the index and what the agent looked up once the stage is opened', () => {
+        const el = render(run());
+        openStages(el);
+
         const pages = texts(el, 'run-wiki-prompt-page');
         expect(pages).toHaveLength(2);
         expect(pages[0]).toContain('How we work');
@@ -161,14 +181,17 @@ describe('RunWikiContextComponent', () => {
         expect(pages[1]).toContain('AGENT.WIKI.LINKED');
         expect(texts(el, 'run-wiki-index')).toEqual(['AGENT.WIKI.INDEX']);
         const calls = texts(el, 'run-wiki-call');
-        expect(calls[0]).toContain('search_wiki("worktree retention")');
+        expect(calls[0]).toContain('AGENT.WIKI.SEARCHED');
+        expect(calls[0]).not.toContain('search_wiki');
         expect(calls[0]).toContain('Worktree retention');
-        expect(calls[1]).toContain('get_wiki_page("shared:security")');
+        expect(calls[1]).toContain('Security');
+        expect(calls[1]).not.toContain('get_wiki_page');
         expect(calls[1]).toContain('v1');
     });
 
     it('lists the index pages only after the reader opens the index', () => {
         const el = render(run());
+        openStages(el);
         expect(el.querySelector('[data-testid="run-wiki-index-list"]')).toBeNull();
         expect(el.textContent).not.toContain('Deploy runbook');
 
@@ -181,6 +204,7 @@ describe('RunWikiContextComponent', () => {
 
     it('links every page into the wiki of the run project', () => {
         const el = render(run());
+        openStages(el);
         const hrefs = Array.from(el.querySelectorAll('a')).map(link => link.getAttribute('href'));
 
         expect(hrefs).toEqual([

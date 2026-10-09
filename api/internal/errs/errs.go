@@ -78,6 +78,10 @@ var (
 	ErrWikiTokenLimit                          = newErr("WIKI_TOKEN_LIMIT", "always-read wiki pages would exceed the project token limit", "error.wiki_token_limit", http.StatusUnprocessableEntity)
 	ErrWikiInvalidParent                       = newErr("WIKI_INVALID_PARENT", "the parent page must be a live page of the same space and not the page itself or its descendant", "error.wiki_invalid_parent", http.StatusUnprocessableEntity)
 	ErrWikiInvalidTitle                        = newErr("WIKI_INVALID_TITLE", "the page title must contain at least one letter or digit", "error.wiki_invalid_title", http.StatusBadRequest)
+	ErrWikiProposalNotReady                    = newErr("WIKI_PROPOSAL_NOT_READY", "the wiki proposal can be accepted only after the pull request of its run is merged", "error.wiki_proposal_not_ready", http.StatusConflict)
+	ErrWikiProposalDecided                     = newErr("WIKI_PROPOSAL_DECIDED", "the wiki proposal was already accepted or rejected", "error.wiki_proposal_decided", http.StatusConflict)
+	ErrWikiProposalPageGone                    = newErr("WIKI_PROPOSAL_PAGE_GONE", "the page this proposal targets no longer exists", "error.wiki_proposal_page_gone", http.StatusConflict)
+	ErrWikiProposalParentGone                  = newErr("WIKI_PROPOSAL_PARENT_GONE", "the parent page this proposal places the page under no longer exists", "error.wiki_proposal_parent_gone", http.StatusConflict)
 	ErrInvalidCustomFieldOptionMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different option of the same field", "error.invalid_custom_field_option_migration_target", http.StatusUnprocessableEntity)
 
 	// ── Issue relations ────────────────────────────────────────────────────

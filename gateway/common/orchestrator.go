@@ -332,6 +332,7 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 				}
 			}
 			task.Wiki = parseWiki(ctx["wiki"])
+			task.WikiProposals = parseWikiProposals(ctx["wikiProposals"])
 			if thread, ok := ctx["reviewThread"].([]any); ok {
 				for _, raw := range thread {
 					m, ok := raw.(map[string]any)
@@ -425,6 +426,32 @@ func parseWiki(raw any) *WikiContext {
 		return nil
 	}
 	return wiki
+}
+
+func parseWikiProposals(raw any) []WikiProposal {
+	list, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	var proposals []WikiProposal
+	for _, rawProposal := range list {
+		proposal, ok := rawProposal.(map[string]any)
+		if !ok {
+			continue
+		}
+		slug := stringField(proposal, "slug")
+		if slug == "" {
+			continue
+		}
+		proposals = append(proposals, WikiProposal{
+			Kind:   stringField(proposal, "kind"),
+			Slug:   slug,
+			Title:  stringField(proposal, "title"),
+			Parent: stringField(proposal, "parent"),
+			Reason: stringField(proposal, "reason"),
+		})
+	}
+	return proposals
 }
 
 func int64Field(m map[string]any, key string) int64 {

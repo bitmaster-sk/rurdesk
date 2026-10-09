@@ -34,8 +34,16 @@ export class WikiTreeStore {
     );
 
     public constructor() {
-        inject(NoticeService)
-            .wikiPage$.pipe(
+        const notices = inject(NoticeService);
+        notices.wikiProposal$
+            .pipe(
+                filter(notice => notice.payload.idProject === this.projectState()),
+                debounceTime(300),
+                takeUntilDestroyed()
+            )
+            .subscribe(() => this.reload());
+        notices.wikiPage$
+            .pipe(
                 filter(notice =>
                     (this.treeState()?.spaces ?? []).some(
                         space => space.idSpace === notice.payload.idSpace

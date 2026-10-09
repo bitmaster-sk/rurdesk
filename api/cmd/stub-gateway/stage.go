@@ -23,10 +23,11 @@ type StageScript struct {
 	ErrorReason string `json:"errorReason"`
 	ErrorDetail string `json:"errorDetail"`
 	// Stall reports nothing for the stage, leaving the run in_progress.
-	Stall bool `json:"stall"`
+	Stall         bool              `json:"stall"`
+	WikiProposals []json.RawMessage `json:"wikiProposals"`
 }
 
-func executeStage(target *configuredAgent, idRun int64, payload map[string]any) {
+func executeStage(target *configuredAgent, idRun, idProject int64, payload map[string]any) {
 	idTaskF, _ := payload["idTask"].(float64)
 	idTask := int64(idTaskF)
 	stage, _ := payload["stage"].(string)
@@ -40,6 +41,13 @@ func executeStage(target *configuredAgent, idRun int64, payload map[string]any) 
 	if script, ok := target.script[stage]; ok && script.Stall {
 		log.Printf("[stub-gw] stalling on stage=%s idRun=%d", stage, idRun)
 		return
+	}
+
+	for _, proposal := range target.script[stage].WikiProposals {
+		path := fmt.Sprintf("/project/%d/wiki/agent/proposal", idProject)
+		if err := sendToTrackerInRun(ctx, target, idRun, http.MethodPost, path, string(proposal)); err != nil {
+			log.Printf("[stub-gw] wiki proposal error: %v", err)
+		}
 	}
 
 	if err := sendComplete(ctx, target, idTask, stagedCannedBody(target, stage)); err != nil {

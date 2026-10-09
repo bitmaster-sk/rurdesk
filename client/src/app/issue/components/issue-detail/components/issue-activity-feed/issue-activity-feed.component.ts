@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest } from 'rxjs';
-import { filter, first, switchMap } from 'rxjs/operators';
+import { filter, first, startWith, switchMap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { MessageApi } from 'src/app/message/api/message.api.service';
@@ -38,6 +38,7 @@ import { AgentThinkingStore } from 'src/app/agent/store/agent-thinking.store';
 import { ThinkingRowConverter } from './converter/thinking-row.converter';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -61,6 +62,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly i18n = inject(I18nService);
 
     private readonly messageApi = inject(MessageApi);
+    private readonly wikiApi = inject(WikiApi);
     private readonly trackerService = inject(TrackerService);
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
@@ -72,13 +74,14 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     private readonly allItems = signal<TimelineItem[]>([]);
     private readonly liveItems = signal<TimelineItem[]>([]);
+    private readonly proposalItems = signal<TimelineItem[]>([]);
     protected readonly usersMap = signal<Map<number, User>>(new Map());
 
     public readonly activeFilters = signal<Set<TimelineItemType>>(new Set());
     public readonly idMessageEdit = signal<number | null>(null);
 
     public readonly displayItems = computed(() =>
-        [...this.allItems(), ...this.liveItems()].sort(
+        [...this.allItems(), ...this.liveItems(), ...this.proposalItems()].sort(
             (a, b) => a.date.getTime() - b.date.getTime()
         )
     );
@@ -241,6 +244,26 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
         this.listenTrackChange();
         this.listenTaskChanges();
+        this.listenProposalChanges();
+    }
+
+    private listenProposalChanges(): void {
+        this.sNotice.wikiProposal$
+            .pipe(
+                filter(notice => notice.payload.idIssue === this.idIssue()),
+                startWith(null),
+                switchMap(() => this.wikiApi.loadIssueProposals$(this.idIssue())),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe(proposals =>
+                this.proposalItems.set(
+                    proposals.map(proposal => ({
+                        type: 'wikiProposal' as const,
+                        date: new Date(proposal.createAt),
+                        data: proposal
+                    }))
+                )
+            );
     }
 
     private listenTrackChange(): void {

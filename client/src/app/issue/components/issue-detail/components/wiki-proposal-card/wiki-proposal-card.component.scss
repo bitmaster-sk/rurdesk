@@ -1,0 +1,78 @@
+.activity-item {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 14px;
+}
+
+.activity-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+
+    .connector {
+        width: 2px;
+        background: var(--ui-surface-200);
+        flex: 1;
+        margin-top: var(--ui-space-s);
+    }
+}
+
+.proposal-card {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px;
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-surface-200);
+    border-left: 3px solid var(--ui-rose-500);
+    border-radius: var(--ui-radius-md);
+
+    .kind-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border-radius: var(--ui-radius-sm);
+        padding: 2px 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: var(--ui-rose-100);
+        color: var(--ui-rose-800);
+    }
+
+    .proposal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+
+        .author {
+            font-weight: 700;
+            font-size: var(--font-size-s);
+            color: var(--ui-color-text);
+        }
+
+        .timestamp {
+            font-size: 0.75rem;
+            color: var(--ui-color-text-muted);
+        }
+    }
+
+    .page {
+        font-weight: 600;
+        color: var(--ui-color-text);
+    }
+
+    .reason {
+        margin: 0;
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text);
+        white-space: pre-wrap;
+    }
+}

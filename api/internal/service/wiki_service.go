@@ -31,6 +31,7 @@ type WikiService struct {
 	draftRepo     *repository.WikiPageDraftRepository
 	linkRepo      *repository.WikiPageLinkRepository
 	issuePageRepo *repository.WikiIssuePageRepository
+	proposalRepo  *repository.WikiProposalRepository
 	projectRepo   *repository.ProjectRepository
 	acl           *AclService
 	notifier      *notify.Notifier
@@ -52,6 +53,7 @@ func NewWikiService(
 	draftRepo *repository.WikiPageDraftRepository,
 	linkRepo *repository.WikiPageLinkRepository,
 	issuePageRepo *repository.WikiIssuePageRepository,
+	proposalRepo *repository.WikiProposalRepository,
 	projectRepo *repository.ProjectRepository,
 	acl *AclService,
 	notifier *notify.Notifier,
@@ -65,6 +67,7 @@ func NewWikiService(
 		draftRepo:     draftRepo,
 		linkRepo:      linkRepo,
 		issuePageRepo: issuePageRepo,
+		proposalRepo:  proposalRepo,
 		projectRepo:   projectRepo,
 		acl:           acl,
 		notifier:      notifier,
@@ -103,15 +106,20 @@ func (s *WikiService) LoadTree(ctx context.Context, user model.User, idProject i
 	if err != nil {
 		return nil, err
 	}
+	proposalCount, err := s.proposalRepo.CountReady(ctx, idProject)
+	if err != nil {
+		return nil, err
+	}
 	return &model.WikiTree{
 		Spaces: []model.WikiSpaceView{
 			{IdSpace: instance.IdSpace, Kind: instance.Kind, CanEdit: instanceAccess.canEdit, CanManage: instanceAccess.canManage},
 			{IdSpace: project.IdSpace, Kind: project.Kind, CanEdit: projectAccess.canEdit, CanManage: projectAccess.canManage, IdHomePage: idHomePage},
 		},
-		Nodes:        nodes,
-		AlwaysTokens: tokensOfChars(alwaysChars),
-		TokenLimit:   limit,
-		TrashCount:   trashCount,
+		Nodes:         nodes,
+		AlwaysTokens:  tokensOfChars(alwaysChars),
+		TokenLimit:    limit,
+		TrashCount:    trashCount,
+		ProposalCount: proposalCount,
 	}, nil
 }
 
@@ -167,7 +175,7 @@ func (s *WikiService) Create(ctx context.Context, user model.User, idProject int
 		agentAccess = constants.WikiAgentAccessOnDemand
 	}
 	var created *model.WikiPage
-	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+	err := extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
 		instance, project, err := s.projectSpaces(ctx, user, idProject)
 		if err != nil {
 			return err

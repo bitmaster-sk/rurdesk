@@ -145,7 +145,8 @@ describe('WikiLinkConverter', () => {
             ],
             alwaysTokens: 0,
             tokenLimit: 0,
-            trashCount: 0
+            trashCount: 0,
+            proposalCount: 0
         };
         const treeContext = WikiLinkConverter.toContext(7, tree);
         expect(

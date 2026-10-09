@@ -7,4 +7,11 @@ export interface NotificationBodySeverity {
     severityColor: string;
 }
 
-export type NotificationBody = NotificationBodyState | NotificationBodySeverity;
+export interface NotificationBodyWikiProposal {
+    count: number;
+    idProposal?: number;
+    title?: string;
+}
+
+export type NotificationBody =
+    NotificationBodyState | NotificationBodySeverity | NotificationBodyWikiProposal;

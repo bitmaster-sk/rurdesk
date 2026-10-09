@@ -105,3 +105,10 @@ func RunInTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) e
 	hooks.run(detach(ctx))
 	return nil
 }
+
+func JoinTx(ctx context.Context, pool *pgxpool.Pool, fn func(context.Context) error) error {
+	if HasTx(ctx) {
+		return fn(ctx)
+	}
+	return RunInTx(ctx, pool, fn)
+}

@@ -1,17 +1,41 @@
 .wiki-context {
     margin-top: var(--ui-space-m);
+    font-size: var(--font-size-s);
+    line-height: 1.4;
 
     &__title {
         font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: var(--ui-color-text-muted);
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
 
-    &__item {
-        font-size: var(--font-size-s);
-        line-height: 1.4;
+    &__toggle {
+        background: none;
+        border: 0;
+        padding: 4px 0;
+        cursor: pointer;
+        text-align: left;
+        color: inherit;
+        font: inherit;
+    }
+
+    &__toggle:hover &__stage-name {
+        color: var(--ui-color-primary);
+    }
+
+    &__stage-name {
+        flex-shrink: 0;
+        font-weight: 600;
+        color: var(--ui-color-text);
+    }
+
+    &__summary {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     &__icon {
@@ -20,20 +44,57 @@
         color: var(--ui-color-text-muted);
     }
 
-    &__toggle {
-        background: none;
-        border: 0;
-        padding: 0;
-        cursor: pointer;
-        text-align: left;
+    &__body {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin: 0 0 8px 22px;
     }
 
-    &__toggle:hover {
-        color: var(--ui-color-text);
+    &__label {
+        margin-top: 6px;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--ui-color-text-muted);
     }
 
-    &__index {
-        margin: 4px 0 0 22px;
+    &__list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    &__item {
+        display: grid;
+        grid-template-columns: 14px minmax(0, 1fr) auto 5.5rem;
+        align-items: center;
+        gap: var(--ui-space-s);
+        min-height: 1.5rem;
+    }
+
+    &__item ui-tag {
+        justify-self: end;
+    }
+
+    &__item--result {
+        min-height: 1.25rem;
+        padding-left: 22px;
+        font-size: 0.75rem;
+    }
+
+    &__meta {
+        color: var(--ui-color-text-muted);
+        white-space: nowrap;
+        justify-self: end;
+    }
+
+    &__index-toggle {
+        margin-top: 6px;
+    }
+
+    &__hint {
+        font-size: 0.75rem;
     }
 
     &__page {
@@ -43,9 +104,5 @@
 
     a.wiki-context__page:hover {
         text-decoration: underline;
-    }
-
-    code {
-        font-family: var(--ui-font-mono);
     }
 }

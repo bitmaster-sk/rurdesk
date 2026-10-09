@@ -59,6 +59,9 @@ export abstract class RunWikiContextConverter {
             }
             calls.set(read.idCall, call);
         }
+        const opened = [...calls.values()]
+            .filter(call => !call.isSearch)
+            .flatMap(call => call.pages);
         return {
             stage,
             prompt: reads
@@ -71,7 +74,10 @@ export abstract class RunWikiContextConverter {
                 .filter(read => read.source === AgentWikiReadSource.PromptIndex)
                 .flatMap(read => read.pages ?? [])
                 .map(page => RunWikiContextConverter.toIndexPage(page, idProject)),
-            calls: [...calls.values()]
+            calls: [...calls.values()],
+            openedCount: opened.length,
+            searchCount: [...calls.values()].filter(call => call.isSearch).length,
+            openedTokens: opened.reduce((sum, page) => sum + page.tokens, 0)
         };
     }
 

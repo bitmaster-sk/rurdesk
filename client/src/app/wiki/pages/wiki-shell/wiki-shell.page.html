@@ -149,6 +149,20 @@
         <div class="wiki-nav__footer">
             <a
                 class="wiki-nav__flat"
+                data-testid="wiki-proposals-link"
+                routerLinkActive="wiki-nav__flat--active"
+                [routerLink]="['/project', idProject(), 'wiki', 'proposals']"
+            >
+                <tabler-icon icon="bulb" [size]="14" />
+                <span class="grow">{{ 'WIKI.PROPOSAL.TITLE' | translate }}</span>
+                @if (store.tree()?.proposalCount; as proposalCount) {
+                <span class="wiki-nav__count" data-testid="wiki-proposals-count">
+                    {{ proposalCount }}
+                </span>
+                }
+            </a>
+            <a
+                class="wiki-nav__flat"
                 data-testid="wiki-trash-link"
                 routerLinkActive="wiki-nav__flat--active"
                 [routerLink]="['/project', idProject(), 'wiki', 'trash']"

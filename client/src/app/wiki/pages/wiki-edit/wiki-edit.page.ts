@@ -32,6 +32,7 @@ import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
 import { WikiBudgetConverter } from '../../converter/wiki-budget.converter';
 import { WikiCalloutConverter } from '../../converter/wiki-callout.converter';
 import { WikiLinkConverter } from '../../converter/wiki-link.converter';
+import { WikiMergeConverter } from '../../converter/wiki-merge.converter';
 import { WikiTreeConverter } from '../../converter/wiki-tree.converter';
 import {
     WikiEditor,
@@ -41,6 +42,10 @@ import {
     WikiSavedNotice
 } from '../../model/wiki-page.model';
 import { WikiTreeNode } from '../../model/wiki-tree.model';
+import { WikiProposalAction } from '../../constants/wiki-proposal-action.enum';
+import { WikiProposalState } from '../../constants/wiki-proposal-state.enum';
+import { WikiProposalConverter } from '../../converter/wiki-proposal.converter';
+import { WikiProposal } from '../../model/wiki-proposal.model';
 import { WikiConflict, WikiMergeChunk, WikiMergeResult } from '../../model/wiki-save.model';
 import { WikiParentOption } from '../../entity/wiki-parent-option.entity';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
@@ -89,6 +94,9 @@ export class WikiEditPage implements OnDestroy {
 
     protected readonly isCreate = this.route.snapshot.data['isCreate'] === true;
     protected readonly idProject = Number(this.route.snapshot.paramMap.get('idProject'));
+    protected readonly idProposal =
+        Number(this.route.snapshot.queryParamMap.get('proposal')) || null;
+    protected readonly proposal = signal<WikiProposal | null>(null);
 
     protected readonly view = signal<WikiPageView | null>(null);
     protected readonly isReady = signal(false);
@@ -229,8 +237,21 @@ export class WikiEditPage implements OnDestroy {
 
     protected readonly incomingName = computed(() => this.incoming()?.userName ?? '');
 
+    protected readonly saveLabel = computed(() => {
+        if (this.idProposal) {
+            const proposal = this.proposal();
+            const action = proposal ? WikiProposalConverter.toAction(proposal.state) : null;
+            return action === WikiProposalAction.Publish
+                ? 'WIKI.PROPOSAL.PUBLISH'
+                : 'WIKI.PROPOSAL.APPROVE';
+        }
+        return this.isCreate ? 'WIKI.SAVE.CREATE' : 'WIKI.SAVE.ACTION';
+    });
+
     public constructor() {
-        if (this.isCreate) {
+        if (this.isCreate && this.idProposal) {
+            this.initCreateFromProposal(this.idProposal);
+        } else if (this.isCreate) {
             this.initCreate();
         } else {
             this.loadForEdit();
@@ -398,6 +419,16 @@ export class WikiEditPage implements OnDestroy {
         const view = this.view();
         this.lastDraft = this.draftSignature();
         this.savedContent = this.contentSignature();
+        if (this.idProposal) {
+            void this.router.navigate([
+                '/project',
+                this.idProject,
+                'wiki',
+                'proposals',
+                this.idProposal
+            ]);
+            return;
+        }
         if (view) {
             this.api.deleteDraft$(view.page.idPage).subscribe();
             void this.router.navigate([
@@ -417,6 +448,10 @@ export class WikiEditPage implements OnDestroy {
             return;
         }
         this.isSaving.set(true);
+        if (this.idProposal) {
+            this.acceptProposal(this.idProposal);
+            return;
+        }
         if (this.isCreate) {
             this.create();
             return;
@@ -450,19 +485,98 @@ export class WikiEditPage implements OnDestroy {
                         result.page.slug
                     ]);
                 },
-                error: (error: unknown) => {
+                error: (error: unknown) => this.onSaveFailed(error)
+            });
+    }
+
+    private acceptProposal(idProposal: number): void {
+        this.api
+            .acceptProposal$(idProposal, {
+                baseVersion: this.isCreate ? undefined : this.baseVersion(),
+                title: this.title(),
+                summary: this.summary(),
+                body: this.body(),
+                agentAccess: this.agentAccess(),
+                note: this.note()
+            })
+            .subscribe({
+                next: result => {
                     this.isSaving.set(false);
-                    const conflict = this.conflictOf(error);
-                    if (conflict) {
-                        this.applyMergedFields(conflict);
-                        this.conflict.set({
-                            chunks: conflict.merge.chunks,
-                            currentVersion: conflict.current.versionNo,
-                            theirsName: this.theirsLabel(conflict.current.updateBy)
-                        });
+                    this.savedContent = this.contentSignature();
+                    this.lastDraft = this.draftSignature();
+                    this.store.reload();
+                    const proposal = result.proposal;
+                    if (proposal.state === WikiProposalState.Approved) {
+                        this.toast.showSuccess('WIKI.PROPOSAL.APPROVED');
+                        void this.router.navigate([
+                            '/project',
+                            this.idProject,
+                            'wiki',
+                            'proposals',
+                            idProposal
+                        ]);
                         return;
                     }
-                    this.toast.showError(ApiError.translateKeyOf(error) ?? 'error.internal');
+                    this.toast.showSuccess('WIKI.PROPOSAL.ACCEPTED');
+                    void this.router.navigate([
+                        '/project',
+                        this.idProject,
+                        'wiki',
+                        proposal.spaceKind,
+                        result.page?.slug ?? proposal.slug
+                    ]);
+                },
+                error: (error: unknown) => this.onSaveFailed(error)
+            });
+    }
+
+    private onSaveFailed(error: unknown): void {
+        this.isSaving.set(false);
+        const conflict = WikiMergeConverter.toConflict(error);
+        if (conflict) {
+            this.applyMergedFields(conflict);
+            this.conflict.set({
+                chunks: conflict.merge.chunks,
+                currentVersion: conflict.current.versionNo,
+                theirsName: this.theirsLabel(conflict.current.updateBy)
+            });
+            return;
+        }
+        this.toast.showError(ApiError.translateKeyOf(error) ?? 'error.internal');
+    }
+
+    private initCreateFromProposal(idProposal: number): void {
+        this.api
+            .loadProposal$(idProposal)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(detail => {
+                const proposal = detail.proposal;
+                this.proposal.set(proposal);
+                this.space.set(proposal.spaceKind);
+                this.idParent.set(proposal.idParent);
+                this.title.set(proposal.title);
+                this.summary.set(proposal.summary);
+                this.body.set(proposal.body ?? '');
+                this.savedContent = this.contentSignature();
+                this.isReady.set(true);
+            });
+    }
+
+    private applyProposal(view: WikiPageView, idProposal: number): void {
+        this.api
+            .loadProposal$(idProposal)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(detail => {
+                const proposal = detail.proposal;
+                this.proposal.set(proposal);
+                this.pendingDraft.set(null);
+                this.title.set(proposal.title);
+                this.summary.set(proposal.summary);
+                this.applyBody(proposal.body ?? '');
+                this.baseVersion.set(proposal.baseVersion ?? view.page.versionNo);
+                this.isReady.set(true);
+                if (this.baseVersion() < view.page.versionNo) {
+                    this.onApplyIncoming();
                 }
             });
     }
@@ -525,9 +639,13 @@ export class WikiEditPage implements OnDestroy {
                 this.agentAccess.set(view.page.agentAccess);
                 this.baseVersion.set(view.page.versionNo);
                 this.lastDraft = this.draftSignature();
+                this.heartbeat();
+                if (this.idProposal) {
+                    this.applyProposal(view, this.idProposal);
+                    return;
+                }
                 this.pendingDraft.set(view.draft);
                 this.isReady.set(true);
-                this.heartbeat();
             });
     }
 
@@ -545,7 +663,13 @@ export class WikiEditPage implements OnDestroy {
     private saveDraft(): void {
         const view = this.view();
         const signature = this.draftSignature();
-        if (!view || this.pendingDraft() || this.isSaving() || signature === this.lastDraft) {
+        if (
+            !view ||
+            this.idProposal ||
+            this.pendingDraft() ||
+            this.isSaving() ||
+            signature === this.lastDraft
+        ) {
             return;
         }
         this.draftState.set(WikiDraftState.Saving);
@@ -600,17 +724,5 @@ export class WikiEditPage implements OnDestroy {
         this.title.set(fields.title);
         this.summary.set(fields.summary);
         this.agentAccess.set(fields.agentAccess);
-    }
-
-    private conflictOf(error: unknown): WikiConflict | null {
-        if (typeof error !== 'object' || error === null) {
-            return null;
-        }
-        const status = (error as { status?: unknown }).status;
-        const body = (error as { error?: unknown }).error;
-        if (status !== 409 || typeof body !== 'object' || body === null || !('merge' in body)) {
-            return null;
-        }
-        return body as WikiConflict;
     }
 }

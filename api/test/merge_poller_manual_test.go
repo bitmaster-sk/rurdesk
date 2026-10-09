@@ -72,6 +72,7 @@ func (s *MergePollerManualSuite) SetupSuite() {
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
+		injector.GetWikiProposalService(),
 		injector.GetNotifier(),
 	)
 	s.Require().NotNil(s.poller)
