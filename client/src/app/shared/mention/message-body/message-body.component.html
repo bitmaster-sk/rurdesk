@@ -14,9 +14,13 @@
         <div
             class="text-run"
             markdown
+            appAttachmentRender
             [data]="seg.content"
             ngPreserveWhitespaces
             (click)="onTextClick($event)"
         ></div>
     }
+}
+@if (gallery.isOpen()) {
+    <app-attachment-lightbox />
 }

@@ -196,6 +196,17 @@ small dense model.
 > against its own `GOOSE_PROVIDER` (local Ollama, Ollama Cloud, Anthropic, or
 > Gemini), not `AI_API_KEY`. See [Agent Gateway](./gateway.md).
 
+## Attachments
+
+Files attached to task comments and chat messages are stored in the database.
+The maximum size of a single file is an application setting, not an environment
+variable: an admin changes **Maximum attachment size (MB)**
+in **Admin → Settings**. The default is 25 MB and the allowed range is 1–100 MB.
+The new value applies to the next upload without a restart.
+
+Your reverse proxy must accept request bodies at least that large — see
+[Installation](./installation.md#attachment-size-and-your-reverse-proxy).
+
 ## Minimal example `docker/api/.env`
 
 ```env

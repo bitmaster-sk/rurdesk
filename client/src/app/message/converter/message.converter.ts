@@ -1,3 +1,4 @@
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { Message } from '../model/message.model';
 
 export abstract class MessageConverter {
@@ -11,5 +12,9 @@ export abstract class MessageConverter {
             m.updatedAt = new Date(m.updatedAt);
         }
         return m;
+    }
+
+    public static toAttachmentScope(m: Message): AttachmentScope {
+        return { idMessageRecipientType: m.idMessageRecipientType, idRecipient: m.idRecipient };
     }
 }

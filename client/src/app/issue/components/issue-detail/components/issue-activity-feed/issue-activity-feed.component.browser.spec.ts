@@ -209,7 +209,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         expect(comp.agentCreator()).toBe(agent);
     });
 
-    it('offers only the comment and time chips', () => {
+    it('offers the comment, time and attachment chips', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
         fixture.componentRef.setInput('idProject', 10);
@@ -218,7 +218,43 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         const chips = [...fixture.nativeElement.querySelectorAll('.chip')].map(
             (chip: HTMLElement) => chip.textContent.trim()
         );
-        expect(chips).toEqual(['All', 'Comments', 'Time']);
+        expect(chips).toEqual(['All', 'Comments', 'Time', 'Attachments']);
+    });
+
+    it('shows only comments with attachments when the attachment chip is on', async () => {
+        const creator = makeUser(2, 'Ann');
+        const withImage = {
+            idMessage: 1,
+            creator,
+            createdAt: new Date(1),
+            message: 'see ![shot.png](attachment:11111111-1111-1111-1111-111111111111)'
+        };
+        const plain = { idMessage: 2, creator, createdAt: new Date(2), message: 'no files here' };
+        const inCode = {
+            idMessage: 3,
+            creator,
+            createdAt: new Date(3),
+            message: '`![shot.png](attachment:11111111-1111-1111-1111-111111111111)`'
+        };
+        TestBed.overrideProvider(MessageApi, {
+            useValue: { load$: () => of([withImage, plain, inCode]) }
+        });
+        TestBed.overrideProvider(TrackerService, {
+            useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
+        });
+        TestBed.overrideProvider(ProjectMemberStore, {
+            useValue: { load: () => {}, usersMap$: of(new Map()) }
+        });
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+        await fixture.whenStable();
+
+        const comp = fixture.componentInstance;
+        comp.setFilter('attachment');
+
+        expect(comp.filteredItems().map(item => item.data)).toEqual([withImage]);
     });
 
     it('does not offer a thinking row for a stage that produced none', () => {

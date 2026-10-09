@@ -7,6 +7,7 @@ const (
 	SettingGanttBacklogPageSize = "pagination.gantt_backlog_page_size"
 	SettingSprintVelocityLimit  = "sprints.velocity_limit"
 	SettingUserApiKeyLimit      = "user.api_key_limit"
+	SettingAttachmentMaxSizeMb  = "attachment.max_size_mb"
 
 	SettingIsAgentThinkingPersisted = "agent.is_thinking_persisted"
 	SettingAgentThinkingMaxKb       = "agent.thinking_max_kb"
@@ -27,6 +28,7 @@ var KnownAppNumericSettings = map[string]AppNumericSettingsSpec{
 	SettingSprintVelocityLimit:  {Default: 10, Min: 1, Max: 50},
 	SettingUserApiKeyLimit:      {Default: 10, Min: 1, Max: 100},
 	SettingAgentThinkingMaxKb:   {Default: 1024, Min: 64, Max: 10240},
+	SettingAttachmentMaxSizeMb:  {Default: 25, Min: 1, Max: 100},
 }
 
 // KnownAppBoolSettings maps each known boolean setting to its default.

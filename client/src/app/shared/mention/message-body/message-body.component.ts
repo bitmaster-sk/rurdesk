@@ -9,6 +9,8 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { User } from 'src/app/auth/model/user.model';
+import { AttachmentGallery } from 'src/app/shared/attachment/service/attachment-gallery.service';
+import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/attachment-link.converter';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 import { MENTION_TOKEN_RE } from 'src/app/shared/mention/mention';
@@ -32,6 +34,7 @@ const AGENT_KINDS = new Set<MessageKind>([
     templateUrl: './message-body.component.html',
     styleUrls: ['./message-body.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [AttachmentGallery],
     standalone: false
 })
 export class MessageBodyComponent {
@@ -46,6 +49,7 @@ export class MessageBodyComponent {
     /** Emits the ref of the mockup the user chose to approve. */
     public readonly useMockup = output<string>();
 
+    protected readonly gallery = inject(AttachmentGallery);
     private readonly router = inject(Router);
     private readonly wikiScope = inject(WikiLinkScope, { optional: true });
     private readonly wikiStore = inject(WikiLinkStore);
@@ -58,14 +62,19 @@ export class MessageBodyComponent {
 
     public readonly segments = computed<RenderSegment[]>(() => {
         const context = this.wikiContext();
-        return this.baseSegments().map(segment =>
-            context && segment.type === 'text' && segment.content.includes('[[')
-                ? {
-                      type: 'text',
-                      content: WikiLinkConverter.toPageLinksMarkdown(segment.content, context)
-                  }
-                : segment
-        );
+        return this.baseSegments().map(segment => {
+            if (segment.type !== 'text') {
+                return segment;
+            }
+            let content = segment.content;
+            if (context && content.includes('[[')) {
+                content = WikiLinkConverter.toPageLinksMarkdown(content, context);
+            }
+            if (content.includes('](attachment:')) {
+                content = AttachmentLinkConverter.toMarkerMarkdown(content);
+            }
+            return content === segment.content ? segment : { type: 'text', content };
+        });
     });
 
     public constructor() {

@@ -249,6 +249,22 @@ func GetWikiIssuePageRepository() *repository.WikiIssuePageRepository {
 	return instance.(*repository.WikiIssuePageRepository)
 }
 
+func GetAttachmentStorage() repository.AttachmentStorage {
+	instance, _ := di.GetWithNew("attachment-storage", func() (any, error) {
+		pool := mustDb()
+		return repository.NewPostgresAttachmentStorage(pool), nil
+	})
+	return instance.(repository.AttachmentStorage)
+}
+
+func GetAttachmentRepository() *repository.AttachmentRepository {
+	instance, _ := di.GetWithNew("attachment-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewAttachmentRepository(pool), nil
+	})
+	return instance.(*repository.AttachmentRepository)
+}
+
 func GetCustomFieldService() *service.CustomFieldService {
 	instance, _ := di.GetWithNew("custom-field-service", func() (any, error) {
 		pool := mustDb()
@@ -663,6 +679,14 @@ func GetJobScheduler() *scheduler.Scheduler {
 				},
 			},
 			scheduler.Task{
+				Name:     "attachment-orphan-purge",
+				Interval: time.Hour,
+				Run: func(ctx context.Context) error {
+					_, err := GetAttachmentRepository().DeleteOrphansOlderThan(ctx, time.Now().UTC().Add(-24*time.Hour))
+					return err
+				},
+			},
+			scheduler.Task{
 				Name:     "agent-thinking-tail-sweep",
 				Interval: time.Hour,
 				Run: func(_ context.Context) error {
@@ -686,6 +710,10 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 		if err != nil {
 			return nil, err
 		}
+		attachmentSvc, err := GetAttachmentService()
+		if err != nil {
+			return nil, err
+		}
 		return controller.NewAgentRunController(
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
@@ -695,6 +723,7 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetIssueRepository(),
 			GetProjectRepository(),
 			GetMessageRepository(),
+			attachmentSvc,
 			GetGitIntegrationRepository(),
 			GetAclService(),
 			GetStagePlanService(),
@@ -719,9 +748,13 @@ func GetAgentGatewayController() *controller.AgentGatewayController {
 	return instance.(*controller.AgentGatewayController)
 }
 
-func GetMessageController() *controller.MessageController {
-	instance, _ := di.GetWithNew("message-controller", func() (any, error) {
+func GetMessageController() (*controller.MessageController, error) {
+	instance, err := di.GetWithNew("message-controller", func() (any, error) {
 		pool := mustDb()
+		attachmentSvc, err := GetAttachmentService()
+		if err != nil {
+			return nil, err
+		}
 		return controller.NewMessageController(
 			GetMessageRepository(),
 			GetTeamRepository(),
@@ -730,12 +763,52 @@ func GetMessageController() *controller.MessageController {
 			GetIssueRepository(),
 			GetNotifier(),
 			GetAclService(),
+			GetMessageAccessService(),
+			attachmentSvc,
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
 			pool,
 		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(), GetDispatcher(), GetNotifier()), nil
 	})
-	return instance.(*controller.MessageController)
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.MessageController), nil
+}
+
+func GetMessageAccessService() *service.MessageAccessService {
+	instance, _ := di.GetWithNew("message-access-service", func() (any, error) {
+		return service.NewMessageAccessService(GetAclService(), GetProjectRepository(), GetUserRepository()), nil
+	})
+	return instance.(*service.MessageAccessService)
+}
+
+func GetAttachmentService() (*service.AttachmentService, error) {
+	instance, err := di.GetWithNew("attachment-service", func() (any, error) {
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
+		return service.NewAttachmentService(mustDb(), GetMessageAccessService(), GetAttachmentRepository(), GetAttachmentStorage(), settings), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*service.AttachmentService), nil
+}
+
+func GetAttachmentController() (*controller.AttachmentController, error) {
+	instance, err := di.GetWithNew("attachment-controller", func() (any, error) {
+		attachmentSvc, err := GetAttachmentService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewAttachmentController(attachmentSvc), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.AttachmentController), nil
 }
 
 func GetIssueParticipantRepository() *repository.IssueParticipantRepository {
@@ -1219,6 +1292,16 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		attachmentController, err := GetAttachmentController()
+		if err != nil {
+			return nil, err
+		}
+
+		messageController, err := GetMessageController()
+		if err != nil {
+			return nil, err
+		}
+
 		return router.New(
 			GetHttpServer(),
 			GetBaseLogger(),
@@ -1228,7 +1311,8 @@ func GetRouter() (*router.Router, error) {
 			GetTeamController(),
 			GetProjectController(),
 			GetProjectMemberController(),
-			GetMessageController(),
+			messageController,
+			attachmentController,
 			GetWebsocketController(),
 			GetIssueController(),
 			GetSeverityController(),

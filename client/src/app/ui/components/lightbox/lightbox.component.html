@@ -1,0 +1,104 @@
+<ui-dialog
+    [(visible)]="visible"
+    [header]="header()"
+    [dismissable]="true"
+    width="96vw"
+    height="94vh"
+    panelClass="!max-h-[94vh] !max-w-[96vw]"
+>
+    <div class="flex h-full flex-col gap-2" data-testid="ui-lightbox">
+        <div class="flex min-h-0 flex-1 items-center justify-center gap-2">
+            @if (hasMany()) {
+                <button
+                    type="button"
+                    class="ui-color-text-muted"
+                    data-testid="ui-lightbox-prev"
+                    [attr.aria-label]="'UI.LIGHTBOX.PREVIOUS' | translate"
+                    (click)="previous.emit()"
+                >
+                    <tabler-icon icon="chevron-left" [size]="28" />
+                </button>
+            }
+            @if (src(); as source) {
+                <div
+                    class="relative h-full min-w-0 flex-1 touch-none overflow-hidden"
+                    [class.cursor-grab]="isZoomed() && !isDragging()"
+                    [class.cursor-grabbing]="isDragging()"
+                    data-testid="ui-lightbox-viewport"
+                    (wheel)="onWheel($event)"
+                    (dblclick)="onDoubleClick($event)"
+                    (pointerdown)="onPointerDown($event)"
+                    (pointermove)="onPointerMove($event)"
+                    (pointerup)="onPointerUp()"
+                    (pointercancel)="onPointerUp()"
+                >
+                    <img
+                        class="h-full w-full select-none object-contain"
+                        [class.transition-transform]="!isDragging()"
+                        draggable="false"
+                        data-testid="ui-lightbox-image"
+                        [src]="source"
+                        [alt]="alt()"
+                        [style.transform]="transform()"
+                    />
+                </div>
+            } @else {
+                <ng-content />
+            }
+            @if (hasMany()) {
+                <button
+                    type="button"
+                    class="ui-color-text-muted"
+                    data-testid="ui-lightbox-next"
+                    [attr.aria-label]="'UI.LIGHTBOX.NEXT' | translate"
+                    (click)="next.emit()"
+                >
+                    <tabler-icon icon="chevron-right" [size]="28" />
+                </button>
+            }
+        </div>
+        @if (src()) {
+            <div class="ui-color-text-muted flex items-center justify-center gap-1 text-sm">
+                <ui-button
+                    severity="secondary"
+                    variant="text"
+                    size="small"
+                    data-testid="ui-lightbox-zoom-out"
+                    [isIconOnly]="true"
+                    [disabled]="!isZoomed()"
+                    [ariaLabel]="'UI.LIGHTBOX.ZOOM_OUT' | translate"
+                    (click)="zoomBy(1 / step)"
+                >
+                    <tabler-icon icon="zoom-out" [size]="18" />
+                </ui-button>
+                <span class="w-12 text-center tabular-nums" data-testid="ui-lightbox-zoom-level">
+                    {{ zoomPercent() }} %
+                </span>
+                <ui-button
+                    severity="secondary"
+                    variant="text"
+                    size="small"
+                    data-testid="ui-lightbox-zoom-in"
+                    [isIconOnly]="true"
+                    [disabled]="isMaxZoom()"
+                    [ariaLabel]="'UI.LIGHTBOX.ZOOM_IN' | translate"
+                    (click)="zoomBy(step)"
+                >
+                    <tabler-icon icon="zoom-in" [size]="18" />
+                </ui-button>
+                <ui-button
+                    severity="secondary"
+                    variant="text"
+                    size="small"
+                    data-testid="ui-lightbox-zoom-reset"
+                    [isIconOnly]="true"
+                    [disabled]="!isZoomed()"
+                    [ariaLabel]="'UI.LIGHTBOX.ZOOM_RESET' | translate"
+                    (click)="resetZoom()"
+                >
+                    <tabler-icon icon="zoom-reset" [size]="18" />
+                </ui-button>
+            </div>
+        }
+    </div>
+</ui-dialog>

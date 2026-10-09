@@ -94,6 +94,10 @@ func (s *AppSettingsService) UserApiKeyLimit() int {
 	return s.getNumeric(constants.SettingUserApiKeyLimit)
 }
 
+func (s *AppSettingsService) AttachmentMaxSizeMb() int {
+	return s.getNumeric(constants.SettingAttachmentMaxSizeMb)
+}
+
 func (s *AppSettingsService) IsAgentThinkingPersisted() bool {
 	return s.getBool(constants.SettingIsAgentThinkingPersisted)
 }

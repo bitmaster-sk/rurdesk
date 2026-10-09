@@ -20,6 +20,7 @@ import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectApi } from 'src/app/project/api/project.api.service';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { Notice } from 'src/app/shared/notice/model/notice.model';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -94,6 +95,13 @@ export class MessagePage implements OnInit, OnDestroy {
             default:
                 return [];
         }
+    });
+
+    protected readonly attachmentScope = computed<AttachmentScope | null>(() => {
+        const idMessageRecipientType = this.idActiveRecipientType();
+        return idMessageRecipientType === null
+            ? null
+            : { idMessageRecipientType, idRecipient: this.idActiveRecipient() };
     });
 
     private readonly unread = toSignal(this.unreadStore.unread$, {

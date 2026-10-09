@@ -4,6 +4,8 @@ import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 
 export type TimelineItemType = 'comment' | 'time' | 'wikiProposal';
 
+export type TimelineFilter = TimelineItemType | 'attachment';
+
 export interface CommentTimelineItem {
     type: 'comment';
     date: Date;

@@ -170,6 +170,12 @@ var (
 	ErrIssueHasActiveRun       = newErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run; hand it over by changing the assignee instead", "error.issue_has_active_run", http.StatusUnprocessableEntity)
 	ErrAgentPostWhileRunPaused = newErr("AGENT_POST_WHILE_RUN_PAUSED", "agent cannot post while run is paused", "error.agent_post_while_run_paused", http.StatusUnprocessableEntity)
 
+	// ── Attachments ────────────────────────────────────────────────────────
+
+	ErrAttachmentTooLarge       = newErr("ATTACHMENT_TOO_LARGE", "attachment exceeds the maximum upload size", "error.attachment_too_large", http.StatusRequestEntityTooLarge)
+	ErrAttachmentTypeNotAllowed = newErr("ATTACHMENT_TYPE_NOT_ALLOWED", "this file type cannot be attached", "error.attachment_type_not_allowed", http.StatusUnsupportedMediaType)
+	ErrAttachmentLinkInvalid    = newErr("ATTACHMENT_LINK_INVALID", "the message links an attachment that does not belong to this conversation", "error.attachment_link_invalid", http.StatusUnprocessableEntity)
+
 	// ── Project builder ────────────────────────────────────────────────────
 
 	ErrInvalidProjectBuilderRefs = newErr("INVALID_PROJECT_BUILDER_REFS", "invalid cross-references in project builder payload", "error.invalid_project_builder_refs", http.StatusUnprocessableEntity)

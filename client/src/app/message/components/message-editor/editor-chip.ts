@@ -1,8 +1,45 @@
+import { IconLoader2, IconPaperclip } from '@tabler/icons-angular';
 import { Mention } from 'src/app/shared/mention/mention';
+import { UiTablerSvg } from 'src/app/ui/util/ui-tabler-svg';
+
+const ATTACHMENT_CHIP_CLASS =
+    'attachment-chip inline-flex max-w-64 select-none items-center gap-1 whitespace-nowrap rounded-[var(--ui-radius-sm)] ui-bg-surface-100 px-[0.35em] align-bottom';
 
 export abstract class EditorChip {
     public static isChip(n: Node): n is HTMLElement {
-        return n.nodeType === 1 && (n as HTMLElement).classList?.contains('mention-chip');
+        const classList = n.nodeType === 1 ? (n as HTMLElement).classList : undefined;
+        return (
+            !!classList &&
+            (classList.contains('mention-chip') || classList.contains('attachment-chip'))
+        );
+    }
+
+    public static buildAttachmentChip(markdown: string, name: string): HTMLElement {
+        const s = document.createElement('span');
+        s.className = `${ATTACHMENT_CHIP_CLASS} ui-color-text`;
+        s.contentEditable = 'false';
+        s.dataset['token'] = markdown;
+        s.append(UiTablerSvg.create(IconPaperclip, 14, 'shrink-0'), EditorChip.chipName(name));
+        return s;
+    }
+
+    public static buildUploadPlaceholder(name: string): HTMLElement {
+        const s = document.createElement('span');
+        s.className = `${ATTACHMENT_CHIP_CLASS} attachment-chip--uploading ui-color-text-muted`;
+        s.contentEditable = 'false';
+        s.dataset['token'] = '';
+        s.append(
+            UiTablerSvg.create(IconLoader2, 14, 'shrink-0 animate-spin'),
+            EditorChip.chipName(name)
+        );
+        return s;
+    }
+
+    private static chipName(name: string): HTMLElement {
+        const label = document.createElement('span');
+        label.className = 'truncate';
+        label.textContent = name;
+        return label;
     }
 
     // Build an atomic chip element for insertion.
@@ -44,9 +81,33 @@ export abstract class EditorChip {
     public static insertChipAtCaret(root: HTMLElement, idUser: number, name: string): void {
         const sel = root.ownerDocument.getSelection();
         if (!sel?.rangeCount) return;
-        const r = sel.getRangeAt(0);
+        EditorChip.insertNodeAtRange(
+            root,
+            sel,
+            sel.getRangeAt(0),
+            EditorChip.buildChip(idUser, name)
+        );
+    }
+
+    public static insertNodeInEditor(root: HTMLElement, node: HTMLElement): void {
+        const sel = root.ownerDocument.getSelection();
+        if (!sel) return;
+        let r = sel.rangeCount ? sel.getRangeAt(0) : null;
+        if (!r || !root.contains(r.commonAncestorContainer)) {
+            r = root.ownerDocument.createRange();
+            r.selectNodeContents(root);
+            r.collapse(false);
+        }
+        EditorChip.insertNodeAtRange(root, sel, r, node);
+    }
+
+    private static insertNodeAtRange(
+        root: HTMLElement,
+        sel: Selection,
+        r: Range,
+        chip: HTMLElement
+    ): void {
         r.deleteContents();
-        const chip = EditorChip.buildChip(idUser, name);
         const space = root.ownerDocument.createTextNode(' ');
         r.insertNode(space);
         r.insertNode(chip);

@@ -25,6 +25,7 @@ func New(
 	projectCtrl *controller.ProjectController,
 	memberCtrl *controller.ProjectMemberController,
 	msgCtrl *controller.MessageController,
+	attachmentCtrl *controller.AttachmentController,
 	wsCtrl *controller.WebsocketController,
 	issueCtrl *controller.IssueController,
 	sevCtrl *controller.SeverityController,
@@ -147,6 +148,9 @@ func New(
 	pri.POST("/message", msgCtrl.CreateMessage)
 	pri.POST("/message/read", msgCtrl.SetReadMessages)
 	pri.PATCH("/message/:id", msgCtrl.UpdateMessage)
+
+	pri.POST("/attachment", attachmentCtrl.Upload)
+	pri.GET("/attachment/:id", attachmentCtrl.Download)
 
 	pri.GET("/project", projectCtrl.GetProjects)
 	pri.GET("/project/:idProject", projectCtrl.GetProject)

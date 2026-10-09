@@ -174,6 +174,19 @@ export class UiGalleryPage {
     protected dialogLockedOpen = false;
     protected dialogDismissableOpen = false;
     protected lastDialogAction = '—';
+    protected lightboxOpen = false;
+    protected lightboxIndex = 0;
+    protected readonly lightboxImages = ['#3b82f6', '#10b981', '#f59e0b'].map(
+        (fill, index) =>
+            `data:image/svg+xml,${encodeURIComponent(
+                `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400"><rect width="640" height="400" fill="${fill}"/><text x="320" y="215" font-size="64" text-anchor="middle" fill="white">${index + 1}</text></svg>`
+            )}`
+    );
+
+    protected onLightboxStep(delta: number): void {
+        const count = this.lightboxImages.length;
+        this.lightboxIndex = (this.lightboxIndex + delta + count) % count;
+    }
 
     // toast demo
     private readonly toastService = inject(UiToastService);

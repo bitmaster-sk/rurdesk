@@ -29,7 +29,8 @@ import {
     IconSend,
     IconDeviceFloppy,
     IconPencil,
-    IconFileText
+    IconFileText,
+    IconPaperclip
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -61,7 +62,8 @@ import {
             IconSend,
             IconDeviceFloppy,
             IconPencil,
-            IconFileText
+            IconFileText,
+            IconPaperclip
         })
     ],
     exports: [MessageEditorComponent, MessageViewComponent, MessageMenuComponent]
