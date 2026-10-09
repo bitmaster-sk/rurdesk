@@ -56,11 +56,6 @@ const TYPE_CHIPS: Record<NotificationType, TypeChip> = {
         colorClass: 'notif-card-badge__team',
         labelKey: 'NOTIFICATION.TYPE.TEAM_JOINED'
     },
-    [NotificationType.QualityScored]: {
-        icon: 'star',
-        colorClass: 'notif-card-badge__quality',
-        labelKey: 'NOTIFICATION.TYPE.QUALITY_SCORED'
-    },
     [NotificationType.WikiProposalReady]: {
         icon: 'file-text',
         colorClass: 'notif-card-badge__wiki',
@@ -125,7 +120,6 @@ export class NotificationCardComponent {
             type !== NotificationType.Assigned &&
             type !== NotificationType.Comment &&
             type !== NotificationType.Mention &&
-            type !== NotificationType.QualityScored &&
             !WIKI_PROPOSAL_TYPES.has(type)
         )
             return null;

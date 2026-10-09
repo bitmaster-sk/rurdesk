@@ -1165,7 +1165,6 @@
             "SEVERITY_ESCALATED": "Severity",
             "SEVERITY_DEESCALATED": "Severity",
             "TEAM_JOINED": "Team",
-            "QUALITY_SCORED": "Quality",
             "WIKI_PROPOSAL_READY": "Wiki",
             "WIKI_PROPOSAL_CONFLICT": "Wiki"
         }

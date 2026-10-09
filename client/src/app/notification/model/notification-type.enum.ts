@@ -6,7 +6,6 @@ export enum NotificationType {
     StateChanged = 'state_changed',
     SeverityEscalated = 'severity_escalated',
     SeverityDeescalated = 'severity_deescalated',
-    QualityScored = 'quality_scored',
     WikiProposalReady = 'wiki_proposal_ready',
     WikiProposalConflict = 'wiki_proposal_conflict'
 }
