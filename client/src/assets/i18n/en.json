@@ -289,6 +289,10 @@
             "PICK_TARGET": "Select target",
             "UNASSIGN": "Leave existing items unassigned",
             "CONFIRM": "Delete"
+        },
+        "MERMAID": {
+            "ERROR": "Diagram could not be rendered",
+            "LOADING": "Loading diagram…"
         }
     },
     "LOGIN": "Login",

@@ -16,6 +16,15 @@ class DiffViewerStub {
     public readonly rawPatch = input<string>('');
 }
 
+@Component({
+    selector: 'app-mermaid-diagram',
+    template: '<div data-testid="mermaid-stub">{{ source() }}</div>',
+    standalone: true
+})
+class MermaidDiagramStub {
+    public readonly source = input<string>('');
+}
+
 async function setup() {
     await TestBed.configureTestingModule({
         imports: [
@@ -26,7 +35,8 @@ async function setup() {
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
-            DiffViewerStub
+            DiffViewerStub,
+            MermaidDiagramStub
         ],
         declarations: [MessageBodyComponent, MockupCardComponent]
     }).compileComponents();
@@ -70,6 +80,49 @@ describe('MessageBodyComponent (browser)', () => {
         // Diff content should not be mangled by mention parsing (no spurious chips).
         const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBe(0);
+    });
+
+    it('routes a Design message with a ```mermaid block to app-mermaid-diagram', async () => {
+        const body = 'Diagram:\n```mermaid\nflowchart TD\n    A --> B\n```';
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.componentRef.setInput('messageKind', MessageKind.Design);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const diagrams = fixture.nativeElement.querySelectorAll('app-mermaid-diagram');
+        expect(diagrams.length).toBe(1);
+        const stub = fixture.nativeElement.querySelector('[data-testid="mermaid-stub"]');
+        expect(stub.textContent).toContain('flowchart TD');
+        expect(fixture.nativeElement.textContent).toContain('Diagram:');
+    });
+
+    it('renders a ```mermaid block in a user comment as a diagram, not a code block', async () => {
+        const body = 'Here is the flow:\n```mermaid\nflowchart LR\n    a --> b\n```\ndone.';
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.componentRef.setInput('messageKind', MessageKind.Comment);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelectorAll('app-mermaid-diagram').length).toBe(1);
+        const stub = fixture.nativeElement.querySelector('[data-testid="mermaid-stub"]');
+        expect(stub.textContent).toContain('flowchart LR');
+    });
+
+    it('keeps a ```diff block in a user comment as plain text, not a diff viewer', async () => {
+        const body = '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```';
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.componentRef.setInput('messageKind', MessageKind.Comment);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelectorAll('app-diff-viewer').length).toBe(0);
+        expect(fixture.nativeElement.textContent).toContain('+x');
     });
 
     it('renders a mention token inside a single-backtick inline span literally (no chip) in a non-agent body', async () => {

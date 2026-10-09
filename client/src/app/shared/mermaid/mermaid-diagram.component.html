@@ -1,0 +1,24 @@
+<div
+    class="my-4 overflow-x-auto rounded-lg border border-[var(--ui-color-border)] bg-[var(--ui-color-surface)] p-4"
+    data-testid="mermaid-diagram"
+>
+    @switch (state().kind) {
+        @case ('svg') {
+            <div #svgHost class="mermaid-diagram__svg"></div>
+        }
+        @case ('error') {
+            <div data-testid="mermaid-error">
+                <div class="mb-2 text-sm font-semibold text-[var(--ui-color-danger)]">
+                    {{ errorLabel }}
+                </div>
+                <pre class="mermaid-diagram__source">{{ source() }}</pre>
+            </div>
+        }
+        @default {
+            <div class="text-sm text-[var(--ui-color-text-muted)]">
+                {{ loadingLabel }}
+                <pre class="mermaid-diagram__source mt-2">{{ source() }}</pre>
+            </div>
+        }
+    }
+</div>
