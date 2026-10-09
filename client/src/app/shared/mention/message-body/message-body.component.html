@@ -10,6 +10,8 @@
             [rejected]="selectedMockupRef() !== null && selectedMockupRef() !== seg.ref"
             (useAndApprove)="useMockup.emit(seg.ref)"
         />
+    } @else if (seg.type === 'mermaid') {
+        <app-mermaid-diagram [source]="seg.content" />
     } @else {
         <div
             class="text-run"

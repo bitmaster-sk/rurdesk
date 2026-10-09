@@ -3,10 +3,12 @@
  * get their own renderer. Text segments retain their markdown content and are
  * rendered via the markdown directive; `diff` segments carry the raw unified-
  * diff string (without fences) rendered via `<app-diff-viewer [rawPatch]>`;
- * `mockup` segments carry raw HTML rendered via `<app-mockup-card [html]>`.
+ * `mockup` segments carry raw HTML rendered via `<app-mockup-card [html]>`;
+ * `mermaid` segments carry the diagram source (without fences) rendered via
+ * `<app-mermaid-diagram [source]>`.
  */
 export interface MessageSegment {
-    type: 'text' | 'diff' | 'mockup';
+    type: 'text' | 'diff' | 'mockup' | 'mermaid';
     content: string;
     /** Optional `title="…"` from a ```mockup fence info string. */
     title?: string;
@@ -15,25 +17,38 @@ export interface MessageSegment {
     ref?: string;
 }
 
-// Matches a fenced code block tagged `diff` or `mockup`. The opening fence may
-// carry extra info (e.g. `diff lang=go`, `mockup title="Login"`); we only
-// require the tag to start the info string. Newlines around the body are
+/** Which fence kinds a parse call recognizes; see `MessageSegmentParser.parse`. */
+export type FenceFilter = 'all' | 'mermaid';
+
+// Matches a fenced code block tagged `diff`, `mockup` or `mermaid`. The opening
+// fence may carry extra info (e.g. `diff lang=go`, `mockup title="Login"`); we
+// only require the tag to start the info string. Newlines around the body are
 // captured non-greedily so adjacent segments don't merge.
-const FENCE_PATTERN = /```(diff|mockup)([^\n]*)\n([\s\S]*?)\n```/g;
+const FENCE_PATTERN = /```(diff|mockup|mermaid)([^\n]*)\n([\s\S]*?)\n```/;
+
+// Matches only mermaid fences — user comments split on diagrams alone, so
+// ```diff and ```mockup fences keep rendering as plain code blocks there
+// (the diff viewer and mockup card stay agent-message features).
+const MERMAID_FENCE_PATTERN = /```(mermaid)([^\n]*)\n([\s\S]*?)\n```/;
 
 export abstract class MessageSegmentParser {
     /**
-     * Split a markdown body into alternating text / diff / mockup segments. Agent
-     * messages are markdown that may contain one or more ```diff or ```mockup
-     * fenced blocks; the activity feed renders each segment with the appropriate
-     * component (markdown for text, diff viewer for diff, mockup card for mockup).
+     * Split a markdown body into alternating text / diff / mockup / mermaid
+     * segments. Agent messages are markdown that may contain one or more
+     * ```diff, ```mockup or ```mermaid fenced blocks; the activity feed renders
+     * each segment with the appropriate component (markdown for text, diff
+     * viewer for diff, mockup card for mockup, mermaid diagram for mermaid).
+     *
+     * `fences: 'mermaid'` recognizes only mermaid fences — used for user
+     * comments and chat messages, where diagrams are a first-class feature but
+     * diff/mockup fences must stay plain code blocks.
      *
      * Empty text segments are dropped so the rendered output doesn't carry stray
      * gaps between consecutive fenced blocks. The method never returns fewer than
      * one segment: a body with no recognized fence becomes a single `text` segment
      * carrying the original string.
      */
-    public static parse(body: string): MessageSegment[] {
+    public static parse(body: string, fences: FenceFilter = 'all'): MessageSegment[] {
         if (!body) {
             return [{ type: 'text', content: '' }];
         }
@@ -44,7 +59,8 @@ export abstract class MessageSegmentParser {
         // Fresh RegExp per call — the `g` flag mutates lastIndex on a shared
         // instance, which would corrupt concurrent calls (e.g. ChangeDetection
         // re-evaluating the computed for multiple messages in a single tick).
-        const pattern = new RegExp(FENCE_PATTERN.source, 'g');
+        const source = fences === 'mermaid' ? MERMAID_FENCE_PATTERN.source : FENCE_PATTERN.source;
+        const pattern = new RegExp(source, 'g');
         let match: RegExpExecArray | null;
 
         while ((match = pattern.exec(body)) !== null) {
@@ -66,6 +82,8 @@ export abstract class MessageSegmentParser {
                     title,
                     ref: title ? `${title} #${mockupNo}` : `#${mockupNo}`
                 });
+            } else if (lang === 'mermaid') {
+                segments.push({ type: 'mermaid', content });
             } else {
                 segments.push({ type: 'diff', content });
             }

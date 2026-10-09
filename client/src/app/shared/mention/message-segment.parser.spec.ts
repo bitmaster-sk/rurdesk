@@ -96,6 +96,37 @@ describe('MessageSegmentParser.parse', () => {
         expect(out[2].content).toBe('<p>m</p>');
     });
 
+    it('splits a body with a mermaid fence into text and mermaid segments', () => {
+        const body =
+            'Intro\n' + '```mermaid\n' + 'flowchart TD\n' + '    A --> B\n' + '```\n' + 'Outro';
+        const out = MessageSegmentParser.parse(body);
+        expect(out.length).toBe(3);
+        expect(out[0]).toEqual({ type: 'text', content: 'Intro\n' });
+        expect(out[1]).toEqual({ type: 'mermaid', content: 'flowchart TD\n    A --> B' });
+        expect(out[2]).toEqual({ type: 'text', content: '\nOutro' });
+    });
+
+    it('keeps a mermaid fence next to a diff fence in order', () => {
+        const body =
+            '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```\n' +
+            '```mermaid\nflowchart TD\n A --> B\n```';
+        const out = MessageSegmentParser.parse(body);
+        expect(out.map(s => s.type)).toEqual(['diff', 'text', 'mermaid']);
+        expect(out[1].content).toBe('\n');
+        expect(out[2].content).toBe('flowchart TD\n A --> B');
+    });
+
+    it('keeps non-mermaid fences as text when only mermaid fences are asked for', () => {
+        const body =
+            '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```\n' +
+            '```mermaid\nflowchart TD\n A --> B\n```';
+        const out = MessageSegmentParser.parse(body, 'mermaid');
+        expect(out.length).toBe(2);
+        expect(out[0].type).toBe('text');
+        expect(out[0].content).toContain('```diff');
+        expect(out[1]).toEqual({ type: 'mermaid', content: 'flowchart TD\n A --> B' });
+    });
+
     describe('mockup ref', () => {
         it('builds ref from the title plus 1-based order when present', () => {
             const body = 'A\n```mockup title="Login"\n<p>x</p>\n```\n';

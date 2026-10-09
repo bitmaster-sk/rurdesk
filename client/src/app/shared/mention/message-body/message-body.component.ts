@@ -19,6 +19,7 @@ import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 export type RenderSegment =
     | { type: 'diff'; content: string }
     | { type: 'mockup'; content: string; title?: string; ref: string }
+    | { type: 'mermaid'; content: string }
     | { type: 'text'; content: string };
 
 const AGENT_KINDS = new Set<MessageKind>([
@@ -92,11 +93,13 @@ export class MessageBodyComponent {
         const kind = this.messageKind();
         const isAgentKind = kind !== undefined && AGENT_KINDS.has(kind);
 
-        // For agent messages: split into text/diff/mockup via MessageSegmentParser.parse.
-        // For user messages: a single text segment (no diff/mockup splitting).
+        // For agent messages: split into text/diff/mockup/mermaid via
+        // MessageSegmentParser.parse. For user messages: split only mermaid
+        // fences (diagrams work in comments and chat) — diff and mockup
+        // fences stay inside the text and keep rendering as code blocks.
         const base = isAgentKind
             ? MessageSegmentParser.parse(this.body())
-            : [{ type: 'text' as const, content: this.resolveMentionNames(this.body()) }];
+            : MessageSegmentParser.parse(this.body(), 'mermaid');
 
         const out: RenderSegment[] = [];
 
@@ -112,6 +115,10 @@ export class MessageBodyComponent {
             }
             if (seg.type === 'diff') {
                 out.push({ type: 'diff', content: seg.content });
+                continue;
+            }
+            if (seg.type === 'mermaid') {
+                out.push({ type: 'mermaid', content: seg.content });
                 continue;
             }
 

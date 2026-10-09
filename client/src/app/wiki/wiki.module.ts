@@ -72,6 +72,7 @@ import { WikiPageAsideComponent } from './components/wiki-page-aside/wiki-page-a
 import { WikiTreeShowComponent } from './components/wiki-tree-show/wiki-tree-show.component';
 import { WikiTablePickerComponent } from './components/wiki-table-picker/wiki-table-picker.component';
 import { WikiHeadingAnchorsDirective } from './directives/wiki-heading-anchors.directive';
+import { WikiMermaidDirective } from './directives/wiki-mermaid.directive';
 import { WikiRoutingModule } from './wiki-routing.module';
 
 @NgModule({
@@ -91,7 +92,8 @@ import { WikiRoutingModule } from './wiki-routing.module';
         WikiTablePickerComponent,
         WikiTreeShowComponent,
         WikiPageAsideComponent,
-        WikiHeadingAnchorsDirective
+        WikiHeadingAnchorsDirective,
+        WikiMermaidDirective
     ],
     imports: [
         CoreModule,
