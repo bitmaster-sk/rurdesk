@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ProjectSeverityComponent } from './project-severity.component';
 import { SeverityApi } from '../../api/severity.api.service';
 import { SeverityStore } from '../../store/severity.store';
-import { ProjectApi } from '../../../project/api/project.api.service';
+import { Project } from '../../../project/model/project.model';
 import { WindowService } from '../../../shared/window/window.service';
 
 /**
@@ -39,28 +39,26 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
             imports: [ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [
                 { provide: SeverityApi, useValue: severityApi },
-                { provide: SeverityStore, useValue: severityStore },
-                {
-                    provide: ProjectApi,
-                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
-                }
+                { provide: SeverityStore, useValue: severityStore }
             ]
         });
         TestBed.overrideComponent(ProjectSeverityComponent, {
             set: { template: '', providers: [{ provide: WindowService, useValue: {} }] }
         });
         const fixture = TestBed.createComponent(ProjectSeverityComponent);
-        fixture.componentRef.setInput('project', {
+        const input: Project = {
             idProject: 10,
             name: 'P',
+            color: '#000',
             idSeverityDefault: 2
-        });
+        };
+        fixture.componentRef.setInput('project', input);
         fixture.detectChanges();
-        return fixture;
+        return { fixture, input };
     }
 
     it('fetches usage then opens the dialog', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false });
         const component = fixture.componentInstance as any;
 
         component.onDeleteSeverity(severity(1, 1));
@@ -71,7 +69,7 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
     });
 
     it('sends the migration choice and closes the dialog on success', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false });
         const component = fixture.componentInstance as any;
 
         component.onDeleteSeverity(severity(1, 1));
@@ -85,7 +83,7 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
     });
 
     it('keeps the dialog open and stops loading on error', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false });
         const component = fixture.componentInstance as any;
         severityApi.delete$ = vi.fn().mockReturnValue(throwError(() => new Error('boom')));
 
@@ -97,7 +95,7 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
     });
 
     it('sends a bare delete (no intent) when there is zero usage', () => {
-        const fixture = setup({ issues: 0, isProjectDefault: false });
+        const { fixture } = setup({ issues: 0, isProjectDefault: false });
         const component = fixture.componentInstance as any;
 
         component.onDeleteSeverity(severity(1, 1));
@@ -106,14 +104,49 @@ describe('ProjectSeverityComponent delete flow (browser)', () => {
         expect(severityApi.delete$).toHaveBeenCalledWith(10, 1, undefined);
     });
 
-    it('refreshes the local default when the deleted severity was the project default', () => {
-        const fixture = setup({ issues: 0, isProjectDefault: true });
+    it('emits the migrated default without touching the input or calling an update', () => {
+        const { fixture, input } = setup({ issues: 0, isProjectDefault: true });
         const component = fixture.componentInstance as any;
+        const migrated: Project[] = [];
+        component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
 
         component.onDeleteSeverity(severity(2, 2));
         component.onConfirmDelete({ migrateTo: 3 });
 
-        expect(component.project().idSeverityDefault).toBe(3);
-        expect(component.idSeverityDefaultControl.value).toBe(3);
+        expect(migrated).toEqual([
+            { idProject: 10, name: 'P', color: '#000', idSeverityDefault: 3 }
+        ]);
+        expect(input.idSeverityDefault).toBe(2); // the input object is untouched
+        expect(severityApi.update$).not.toHaveBeenCalled(); // no second PATCH
+        expect(component.idSeverityDefaultControl.value).toBe(3); // patchValue contract
+    });
+
+    it('does not emit a migration when the deleted severity was not the default', () => {
+        const { fixture } = setup({ issues: 0, isProjectDefault: false });
+        const component = fixture.componentInstance as any;
+        const migrated: Project[] = [];
+        component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
+
+        component.onDeleteSeverity(severity(1, 1)); // default is severity 2
+        component.onConfirmDelete({ migrateTo: 3 });
+
+        expect(migrated).toEqual([]);
+    });
+
+    it('save emits a copy of the project and leaves the input unchanged', () => {
+        const { fixture, input } = setup();
+        const component = fixture.componentInstance as any;
+        const saved: Project[] = [];
+        component.save.subscribe((project: Project) => saved.push(project));
+
+        // patchValue (emitEvent:false) keeps the auto-save valueChanges from
+        // firing — the manual call below is the single emission under test.
+        component.form.controls.idSeverityDefault.patchValue(3, { emitEvent: false });
+        component.onProjectSave();
+
+        expect(saved).toEqual([{ idProject: 10, name: 'P', color: '#000', idSeverityDefault: 3 }]);
+        expect(saved[0]).not.toBe(input); // a copy, not the shared object
+        expect(input.idSeverityDefault).toBe(2); // the input object is unchanged
+        expect(severityApi.update$).not.toHaveBeenCalled(); // the child never PATCHes
     });
 });

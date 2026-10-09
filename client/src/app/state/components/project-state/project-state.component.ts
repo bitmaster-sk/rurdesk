@@ -6,6 +6,7 @@ import {
     input,
     OnDestroy,
     OnInit,
+    output,
     signal
 } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
@@ -16,11 +17,9 @@ interface ProjectStateForm {
     idStateDefault: FormControl<number | null>;
 }
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { StateApi } from '../../api/state.api.service';
 import { StateUsage } from '../../model/state-usage.model';
-import cloneDeep from 'lodash-es/cloneDeep';
 import { Subscription } from 'rxjs';
 import { filter, map } from 'rxjs/operators';
 import { StateStore } from '../../store/state.store';
@@ -43,14 +42,15 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
     private readonly i18n = inject(I18nService);
     private readonly fb = inject(FormBuilder);
     private readonly stateApi = inject(StateApi);
-    private readonly projectApi = inject(ProjectApi);
     private readonly sWindow = inject(WindowService);
     private readonly stateStore = inject(StateStore);
 
     public readonly project = input.required<Project>();
+    public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
+    public readonly save = output<Project>();
+    public readonly defaultMigrated = output<Project>();
 
     protected readonly states = signal<IssueState[]>([]);
-    protected readonly defaultSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
     protected form!: FormGroup<ProjectStateForm>;
 
     private readonly subscription = new Subscription();
@@ -77,16 +77,13 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        const project: Project = cloneDeep(this.project());
-        project.idStateDefault = this.form.value.idStateDefault ?? null;
-        this.defaultSaveStatus.set(UiSaveState.Saving);
-        this.projectApi.update$(project).subscribe({
-            next: savedProject => {
-                this.project().idStateDefault = savedProject.idStateDefault;
-                this.defaultSaveStatus.set(UiSaveState.Saved);
-            },
-            error: () => this.defaultSaveStatus.set(UiSaveState.Error)
-        });
+        // Shallow spread is a full copy — Project is flat (primitives only). The
+        // parent owns persistence and the status chip; we only announce the edit.
+        const project: Project = {
+            ...this.project(),
+            idStateDefault: this.form.value.idStateDefault ?? null
+        };
+        this.save.emit(project);
     }
 
     public onNewState(): void {
@@ -195,7 +192,12 @@ export class ProjectStateComponent implements OnInit, OnDestroy {
                 this.stateStore.load();
                 // refresh the local default so a later save doesn't PATCH the stale id back
                 if (this.project().idStateDefault === target.idState) {
-                    this.project().idStateDefault = choice.migrateTo;
+                    // Backend already repointed the default inside delete$; the
+                    // parent refreshes shared state without a second PATCH.
+                    this.defaultMigrated.emit({
+                        ...this.project(),
+                        idStateDefault: choice.migrateTo
+                    });
                     this.form.patchValue(
                         { idStateDefault: choice.migrateTo },
                         { emitEvent: false }

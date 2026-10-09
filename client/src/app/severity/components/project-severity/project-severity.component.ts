@@ -6,6 +6,7 @@ import {
     input,
     OnDestroy,
     OnInit,
+    output,
     signal
 } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
@@ -16,13 +17,11 @@ interface ProjectSeverityForm {
     idSeverityDefault: FormControl<number | null>;
 }
 import { Project } from 'src/app/project/model/project.model';
-import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { IssueSeverity } from '../../model/issue-severity.model';
 import { SeverityFormWindowComponent } from '../severity-form-window/severity-form-window.component';
 import { SeverityApi } from '../../api/severity.api.service';
 import { SeverityUsage } from '../../model/severity-usage.model';
-import cloneDeep from 'lodash-es/cloneDeep';
 import { filter, map } from 'rxjs/operators';
 import { SeverityStore } from '../../store/severity.store';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -43,14 +42,15 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
     private readonly i18n = inject(I18nService);
     private readonly fb = inject(FormBuilder);
     private readonly sSeverity = inject(SeverityApi);
-    private readonly projectApi = inject(ProjectApi);
     private readonly sWindow = inject(WindowService);
     private readonly severityStore = inject(SeverityStore);
 
     public readonly project = input.required<Project>();
+    public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
+    public readonly save = output<Project>();
+    public readonly defaultMigrated = output<Project>();
 
     protected readonly severities = signal<IssueSeverity[]>([]);
-    protected readonly defaultSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
     protected form!: FormGroup<ProjectSeverityForm>;
 
     private readonly subscription = new Subscription();
@@ -85,16 +85,13 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
     }
 
     protected onProjectSave(): void {
-        const project: Project = cloneDeep(this.project());
-        project.idSeverityDefault = this.form.value.idSeverityDefault ?? null;
-        this.defaultSaveStatus.set(UiSaveState.Saving);
-        this.projectApi.update$(project).subscribe({
-            next: savedProject => {
-                this.project().idSeverityDefault = savedProject.idSeverityDefault;
-                this.defaultSaveStatus.set(UiSaveState.Saved);
-            },
-            error: () => this.defaultSaveStatus.set(UiSaveState.Error)
-        });
+        // Shallow spread is a full copy — Project is flat (primitives only). The
+        // parent owns persistence and the status chip; we only announce the edit.
+        const project: Project = {
+            ...this.project(),
+            idSeverityDefault: this.form.value.idSeverityDefault ?? null
+        };
+        this.save.emit(project);
     }
 
     public onNewSeverity(): void {
@@ -186,7 +183,12 @@ export class ProjectSeverityComponent implements OnInit, OnDestroy {
                 this.severityStore.load();
                 // refresh the local default so a later save doesn't PATCH the stale id back
                 if (this.project().idSeverityDefault === target.idSeverity) {
-                    this.project().idSeverityDefault = choice.migrateTo;
+                    // Backend already repointed the default inside delete$; the
+                    // parent refreshes shared state without a second PATCH.
+                    this.defaultMigrated.emit({
+                        ...this.project(),
+                        idSeverityDefault: choice.migrateTo
+                    });
                     this.form.patchValue(
                         { idSeverityDefault: choice.migrateTo },
                         { emitEvent: false }

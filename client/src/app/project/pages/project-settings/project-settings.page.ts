@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, WritableSignal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
@@ -21,13 +21,42 @@ export class ProjectSettingsPage {
 
     /** Auto-save status for the General panel, surfaced as an inline chip. */
     protected readonly generalSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
+    /** One status per settings panel — each child PATCHes through the same helper. */
+    protected readonly stateSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
+    protected readonly severitySaveStatus = signal<UiSaveState>(UiSaveState.Idle);
+    protected readonly issueTypeSaveStatus = signal<UiSaveState>(UiSaveState.Idle);
 
     protected onProjectSave(project: Project): void {
-        this.generalSaveStatus.set(UiSaveState.Saving);
+        this.persist(project, this.generalSaveStatus);
+    }
+
+    protected onStateSave(project: Project): void {
+        this.persist(project, this.stateSaveStatus);
+    }
+
+    protected onSeveritySave(project: Project): void {
+        this.persist(project, this.severitySaveStatus);
+    }
+
+    protected onIssueTypeSave(project: Project): void {
+        this.persist(project, this.issueTypeSaveStatus);
+    }
+
+    /**
+     * The delete-migration path: the backend already repointed the project default
+     * inside the delete-transaction, so this only refreshes shared state locally —
+     * no PATCH, no toast.
+     */
+    protected onDefaultMigrated(project: Project): void {
+        this.projectStore.setProject(project);
+    }
+
+    private persist(project: Project, status: WritableSignal<UiSaveState>): void {
+        status.set(UiSaveState.Saving);
         this.projectStore.update(project).subscribe({
-            next: () => this.generalSaveStatus.set(UiSaveState.Saved),
+            next: () => status.set(UiSaveState.Saved),
             error: () => {
-                this.generalSaveStatus.set(UiSaveState.Error);
+                status.set(UiSaveState.Error);
                 this.toast.showError('PROJECT.SAVE_ERROR');
             }
         });

@@ -5,7 +5,7 @@ import { of, throwError } from 'rxjs';
 import { ProjectStateComponent } from './project-state.component';
 import { StateApi } from '../../api/state.api.service';
 import { StateStore } from '../../store/state.store';
-import { ProjectApi } from '../../../project/api/project.api.service';
+import { Project } from '../../../project/model/project.model';
 import { WindowService } from '../../../shared/window/window.service';
 
 /**
@@ -42,11 +42,7 @@ describe('ProjectStateComponent reorder (browser)', () => {
             imports: [ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [
                 { provide: StateApi, useValue: stateApi },
-                { provide: StateStore, useValue: { load: vi.fn() } },
-                {
-                    provide: ProjectApi,
-                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
-                }
+                { provide: StateStore, useValue: { load: vi.fn() } }
             ]
         });
         TestBed.overrideComponent(ProjectStateComponent, {
@@ -108,28 +104,26 @@ describe('ProjectStateComponent delete flow (browser)', () => {
             imports: [ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [
                 { provide: StateApi, useValue: stateApi },
-                { provide: StateStore, useValue: stateStore },
-                {
-                    provide: ProjectApi,
-                    useValue: { update$: vi.fn().mockReturnValue(of({})) }
-                }
+                { provide: StateStore, useValue: stateStore }
             ]
         });
         TestBed.overrideComponent(ProjectStateComponent, {
             set: { template: '', providers: [{ provide: WindowService, useValue: {} }] }
         });
         const fixture = TestBed.createComponent(ProjectStateComponent);
-        fixture.componentRef.setInput('project', {
+        const input: Project = {
             idProject: 10,
             name: 'P',
+            color: '#000',
             idStateDefault: 2
-        });
+        };
+        fixture.componentRef.setInput('project', input);
         fixture.detectChanges();
-        return fixture;
+        return { fixture, input };
     }
 
     it('fetches usage then opens the dialog', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
         const component = fixture.componentInstance as any;
 
         component.onDeleteState(state(1, 1));
@@ -140,7 +134,7 @@ describe('ProjectStateComponent delete flow (browser)', () => {
     });
 
     it('sends the migration choice and closes the dialog on success', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
         const component = fixture.componentInstance as any;
 
         component.onDeleteState(state(1, 1));
@@ -154,7 +148,7 @@ describe('ProjectStateComponent delete flow (browser)', () => {
     });
 
     it('keeps the dialog open and stops loading on error', () => {
-        const fixture = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
+        const { fixture } = setup({ issues: 3, isProjectDefault: false, agentPhases: 0 });
         const component = fixture.componentInstance as any;
         stateApi.delete$ = vi.fn().mockReturnValue(throwError(() => new Error('boom')));
 
@@ -166,7 +160,7 @@ describe('ProjectStateComponent delete flow (browser)', () => {
     });
 
     it('sends a bare delete (no intent) when there is zero usage', () => {
-        const fixture = setup({ issues: 0, isProjectDefault: false, agentPhases: 0 });
+        const { fixture } = setup({ issues: 0, isProjectDefault: false, agentPhases: 0 });
         const component = fixture.componentInstance as any;
 
         component.onDeleteState(state(1, 1));
@@ -175,14 +169,47 @@ describe('ProjectStateComponent delete flow (browser)', () => {
         expect(stateApi.delete$).toHaveBeenCalledWith(10, 1, undefined);
     });
 
-    it('refreshes the local default when the deleted state was the project default', () => {
-        const fixture = setup({ issues: 0, isProjectDefault: true, agentPhases: 0 });
+    it('emits the migrated default without touching the input or calling an update', () => {
+        const { fixture, input } = setup({ issues: 0, isProjectDefault: true, agentPhases: 0 });
         const component = fixture.componentInstance as any;
+        const migrated: Project[] = [];
+        component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
 
         component.onDeleteState(state(2, 2));
         component.onConfirmDelete({ migrateTo: 3 });
 
-        expect(component.project().idStateDefault).toBe(3);
-        expect(component.form.value.idStateDefault).toBe(3);
+        expect(migrated).toEqual([{ idProject: 10, name: 'P', color: '#000', idStateDefault: 3 }]);
+        expect(input.idStateDefault).toBe(2); // the input object is untouched
+        expect(stateApi.update$).not.toHaveBeenCalled(); // no second PATCH
+        expect(component.form.value.idStateDefault).toBe(3); // patchValue contract
+    });
+
+    it('does not emit a migration when the deleted state was not the default', () => {
+        const { fixture } = setup({ issues: 0, isProjectDefault: false, agentPhases: 0 });
+        const component = fixture.componentInstance as any;
+        const migrated: Project[] = [];
+        component.defaultMigrated.subscribe((project: Project) => migrated.push(project));
+
+        component.onDeleteState(state(1, 1)); // default is state 2
+        component.onConfirmDelete({ migrateTo: 3 });
+
+        expect(migrated).toEqual([]);
+    });
+
+    it('save emits a copy of the project and leaves the input unchanged', () => {
+        const { fixture, input } = setup();
+        const component = fixture.componentInstance as any;
+        const saved: Project[] = [];
+        component.save.subscribe((project: Project) => saved.push(project));
+
+        // patchValue (emitEvent:false) keeps the auto-save valueChanges from
+        // firing — the manual call below is the single emission under test.
+        component.form.controls.idStateDefault.patchValue(3, { emitEvent: false });
+        component.onProjectSave();
+
+        expect(saved).toEqual([{ idProject: 10, name: 'P', color: '#000', idStateDefault: 3 }]);
+        expect(saved[0]).not.toBe(input); // a copy, not the shared object
+        expect(input.idStateDefault).toBe(2); // the input object is unchanged
+        expect(stateApi.update$).not.toHaveBeenCalled(); // the child never PATCHes
     });
 });
