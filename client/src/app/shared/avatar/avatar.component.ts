@@ -1,38 +1,25 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Color } from 'src/app/shared/color/color';
 
 @Component({
     selector: 'app-avatar',
     templateUrl: './avatar.component.html',
     styleUrls: ['./avatar.component.scss'],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AvatarComponent implements OnChanges {
-    @Input() public height = 3;
+export class AvatarComponent {
+    public readonly height = input(3);
+    public readonly width = input(3);
+    public readonly radius = input(1.5);
+    public readonly name = input('');
+    public readonly bgColor = input('');
 
-    @Input() public width = 3;
-
-    @Input() public radius = 1.5;
-
-    @Input() public name = '';
-
-    @Input() public bgColor = '';
-
-    public initials = '';
-
-    public textColor = '';
-
-    public ngOnChanges(): void {
-        if (this.name) {
-            this.initials = this.buildInitials();
+    public readonly initials = computed(() => {
+        const name = this.name().trim();
+        if (!name) {
+            return '';
         }
-        if (this.bgColor) {
-            this.textColor = Color.getContrastColor(this.bgColor);
-        }
-    }
-
-    private buildInitials(): string {
-        const name = this.name.trim();
         const parts = name.split(' ');
         if (parts.length > 1) {
             return parts
@@ -42,5 +29,10 @@ export class AvatarComponent implements OnChanges {
                 .toUpperCase();
         }
         return parts[0].substring(0, 2).toUpperCase();
-    }
+    });
+
+    public readonly textColor = computed(() => {
+        const bgColor = this.bgColor();
+        return bgColor ? Color.getContrastColor(bgColor) : '';
+    });
 }

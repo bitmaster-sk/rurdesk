@@ -1,4 +1,11 @@
-import { Component, Injector, Type, ViewEncapsulation, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    Injector,
+    Type,
+    ViewEncapsulation,
+    inject
+} from '@angular/core';
 import { WindowConfig } from '../entity/window-config';
 import { WindowReference } from '../window.reference';
 
@@ -7,7 +14,8 @@ import { WindowReference } from '../window.reference';
     templateUrl: './window.component.html',
     styleUrls: ['./window.component.scss'],
     encapsulation: ViewEncapsulation.None,
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class WindowComponent {
     /** typ komponenty zobrazenej vo vnútri okna (vytvorí ju *ngComponentOutlet) */

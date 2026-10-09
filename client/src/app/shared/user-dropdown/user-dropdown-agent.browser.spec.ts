@@ -1,11 +1,11 @@
 import { Component, signal } from '@angular/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { User } from 'src/app/auth/model/user.model';
 import { Fixtures } from 'src/testing/fixtures';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentRunApi } from '../../agent/api/agent-run.api.service';
 import { AgentRun } from '../../agent/model/agent-run.model';
 import { AgentOverview } from '../../agent/model/agent-overview.model';
@@ -139,6 +139,6 @@ describe('UserDropdownComponent agent features (browser)', () => {
         // re-enter the assignee hook and create a second run.
         expect(changeCount).toBe(0);
         expect(fixture.componentInstance.lastAssigned).toEqual(RUN);
-        expect(dropdown.value).toBe(8);
+        expect(dropdown.selected).toBe(8);
     });
 });

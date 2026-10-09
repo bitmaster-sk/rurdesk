@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Project } from 'src/app/project/model/project.model';
 import { WindowConfig } from 'src/app/shared/window/entity/window-config';
 import { WindowReference } from 'src/app/shared/window/window.reference';
@@ -13,7 +13,8 @@ export interface SeverityWindowData {
 @Component({
     selector: 'app-severity-form-window',
     templateUrl: './severity-form-window.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SeverityFormWindowComponent {
     private winRef = inject(WindowReference);

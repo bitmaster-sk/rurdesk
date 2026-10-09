@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AuthTokenStore } from './auth/store/auth-token.store';
 import { SettingsStore } from './core/settings/settings.store';
 import { LicenseStore } from './core/license/license.store';
@@ -8,7 +8,8 @@ import { NotificationStore } from './notification/store/notification.store';
 @Component({
     selector: 'app-root',
     templateUrl: './app.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
     private readonly settingsStore = inject(SettingsStore);

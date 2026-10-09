@@ -1,4 +1,12 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    Input,
+    OnChanges,
+    OnInit,
+    SimpleChanges,
+    inject
+} from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { DurationParser } from 'src/app/shared/duration/duration.parser';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
@@ -17,7 +25,8 @@ interface TrackEditForm {
 @Component({
     selector: 'app-track-form',
     templateUrl: './track-form.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TrackFormComponent implements OnInit, OnChanges {
     private readonly fb = inject(FormBuilder);

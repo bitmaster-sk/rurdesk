@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, output } from '@angular/core';
 import {
     FormBuilder,
     FormControl,
@@ -20,7 +20,8 @@ interface StateForm {
 @Component({
     selector: 'app-state-form',
     templateUrl: './state-form.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StateFormComponent implements OnInit {
     public readonly state = input.required<Partial<IssueState>>();

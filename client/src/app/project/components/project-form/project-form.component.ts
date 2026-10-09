@@ -1,4 +1,13 @@
-import { Component, inject, input, OnDestroy, OnInit, output } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    DestroyRef,
+    inject,
+    input,
+    OnInit,
+    output
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
     FormBuilder,
     FormControl,
@@ -6,7 +15,6 @@ import {
     NonNullableFormBuilder,
     Validators
 } from '@angular/forms';
-import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
 import { Project } from '../../model/project.model';
@@ -19,9 +27,10 @@ interface ProjectForm {
 @Component({
     selector: 'app-project-form',
     templateUrl: './project-form.component.html',
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProjectFormComponent implements OnInit, OnDestroy {
+export class ProjectFormComponent implements OnInit {
     public readonly saveOnBlur = input(false);
 
     /** Auto-save status shown as an inline chip on the name field (settings). */
@@ -37,9 +46,9 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
 
     public form!: FormGroup<ProjectForm>;
 
-    private subscription = new Subscription();
-
     private readonly fb = inject(FormBuilder);
+
+    private readonly destroyRef = inject(DestroyRef);
 
     private readonly nfb = inject(NonNullableFormBuilder);
 
@@ -53,24 +62,18 @@ export class ProjectFormComponent implements OnInit, OnDestroy {
         });
 
         if (this.saveOnBlur()) {
-            this.subscription.add(
-                this.form.valueChanges
-                    // Only auto-save a genuine change: a blur that didn't edit the name
-                    // must not fire a redundant PUT (and flash the save chip).
-                    .pipe(
-                        filter(
-                            () =>
-                                this.form.valid &&
-                                this.form.controls.name.value !== this.project().name
-                        )
-                    )
-                    .subscribe(() => this.onSave())
-            );
+            this.form.valueChanges
+                // Only auto-save a genuine change: a blur that didn't edit the name
+                // must not fire a redundant PUT (and flash the save chip).
+                .pipe(
+                    filter(
+                        () =>
+                            this.form.valid && this.form.controls.name.value !== this.project().name
+                    ),
+                    takeUntilDestroyed(this.destroyRef)
+                )
+                .subscribe(() => this.onSave());
         }
-    }
-
-    public ngOnDestroy(): void {
-        this.subscription.unsubscribe();
     }
 
     public onSave(): void {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, input, output } from '@angular/core';
 import {
     FormBuilder,
     FormControl,
@@ -21,7 +21,8 @@ interface SeverityForm {
     selector: 'app-severity-form',
     templateUrl: './severity-form.component.html',
     styleUrls: ['./severity-form.component.scss'],
-    standalone: false
+    standalone: false,
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SeverityFormComponent implements OnInit {
     public readonly severity = input.required<Partial<IssueSeverity>>();
