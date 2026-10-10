@@ -208,6 +208,57 @@ func (s *MergePollerTransitionSuite) Test_OpenManualMr_CiChange_EmitsMrStatus() 
 	s.Equal(constants.CiStatusSuccess, payload.CiStatus)
 }
 
+func (s *MergePollerTransitionSuite) Test_OpenRunMr_CiChange_EmitsMrStatus() {
+	s.statusMu.Lock()
+	s.lastStatusCi = constants.CiStatusPending
+	s.lastStatusHead = "run111"
+	s.lastStatusReview = false
+	s.statusMu.Unlock()
+
+	iss := s.createIssue("open run mr ci change")
+	s.prState["402"] = "open"
+	s.linkManualMr(iss.IdIssue, "402")
+	idRun := s.insertPrOpenRun(iss.IdIssue, "402")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+	first := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().Len(first, 1)
+	s.Equal(constants.CiStatusPending, first[0].CiStatus)
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+	s.Empty(s.mergedMrStatusNotices(iss.IdIssue), "an unchanged status must not be rebroadcast")
+
+	s.statusMu.Lock()
+	s.lastStatusCi = constants.CiStatusSuccess
+	s.statusMu.Unlock()
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().Len(notices, 1, "a finished pipeline on an agent PR must reach the detail badge without a refresh")
+	s.Equal("open", notices[0].State)
+	s.Equal(constants.CiStatusSuccess, notices[0].CiStatus)
+	s.Equal("402", notices[0].IdMr)
+	s.Equal(s.IdGitIntegration, notices[0].IdGitIntegration)
+	s.Equal("pr_open", s.loadRunPhase(idRun))
+}
+
+func (s *MergePollerTransitionSuite) Test_OpenRunMr_IssueRelinked_DoesNotLabelRunCiAsOtherMr() {
+	iss := s.createIssue("open run mr relinked")
+	s.prState["404"] = "open"
+	s.linkManualMr(iss.IdIssue, "403")
+	idRun := s.insertPrOpenRun(iss.IdIssue, "404")
+	defer s.App.Pool.Exec(context.Background(), `DELETE FROM agent.run WHERE id_run = $1`, idRun) //nolint:errcheck
+
+	s.Require().NoError(s.poller.PollOnce(context.Background()))
+
+	notices := s.mergedMrStatusNotices(iss.IdIssue)
+	s.Require().NotEmpty(notices)
+	for _, notice := range notices {
+		s.Equal("404", notice.IdMr, "the run's PR status must not be sent as the status of the issue's other MR")
+	}
+}
+
 func (s *MergePollerTransitionSuite) TearDownSuite() {
 	if s.gitHub != nil {
 		s.gitHub.Close()

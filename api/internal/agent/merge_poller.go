@@ -141,6 +141,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
 
 		default:
+			p.broadcastRunMrStatusIfChanged(ctx, run, status)
 			open++
 		}
 	}
@@ -176,6 +177,16 @@ func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.Agent
 	p.lastMrStatusLock.Unlock()
 
 	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, issue, status)
+}
+
+func (p *MergePoller) broadcastRunMrStatusIfChanged(ctx context.Context, run *model.AgentRun, status *githost.Status) {
+	runMr := &model.Issue{
+		IdIssue:          run.IdIssue,
+		IdProject:        run.IdProject,
+		IdGitIntegration: run.IdGitIntegration,
+		MrId:             run.PrId,
+	}
+	p.broadcastMrStatusIfChanged(ctx, runMr, status)
 }
 
 func (p *MergePoller) hostFor(ctx context.Context, encKey []byte, idGitIntegration, idProject int64) (githost.GitHost, error) {
