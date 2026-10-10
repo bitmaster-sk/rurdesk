@@ -3,6 +3,10 @@
     height: 70vh;
 }
 
+.notif-header {
+    height: 3.25rem;
+}
+
 //####################################################
 //## LEFT PANEL
 //####################################################
@@ -32,6 +36,16 @@
     }
 }
 
+.notif-project-dot-box {
+    width: 14px;
+    height: 14px;
+}
+
+.notif-project-dot {
+    width: 10px;
+    height: 10px;
+}
+
 .notification-section-label {
     font-size: var(--font-size-s);
     font-weight: 600;
@@ -44,11 +58,6 @@
 //####################################################
 //## RIGHT PANEL
 //####################################################
-
-.notification-mark-all-read-btn {
-    width: 1.6rem;
-    height: 1.6rem;
-}
 
 .notif-empty {
     color: var(--ui-color-text-muted);

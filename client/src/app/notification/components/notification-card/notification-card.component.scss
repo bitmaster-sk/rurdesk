@@ -46,11 +46,6 @@
         color: var(--ui-purple-600);
     }
 
-    &__quality {
-        background: color-mix(in srgb, var(--ui-amber-500) 15%, transparent);
-        color: var(--ui-amber-600);
-    }
-
     &__wiki {
         background: color-mix(in srgb, var(--ui-rose-500) 15%, transparent);
         color: var(--ui-rose-600);

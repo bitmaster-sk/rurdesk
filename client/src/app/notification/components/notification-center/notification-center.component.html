@@ -2,14 +2,16 @@
     <!-- SIDEBAR -->
     <div class="w-3/12 flex flex-col overflow-hidden shrink-0 border-right ui-bg-surface-50">
         <!-- SIDEBAR HEADER -->
-        <div class="flex flex-col gap-1 border-bottom p-2 pb-1">
-            <span class="flex items-center font-semibold gap-2 color-text">
-                <tabler-icon icon="bell" [size]="16" />
-                {{ 'NOTIFICATION.TITLE' | translate }}
-            </span>
-            <span class="text-sm ui-color-text-muted">
-                {{ 'NOTIFICATION.UNREAD' | translate: { count: totalUnread() } }}
-            </span>
+        <div class="notif-header flex items-center gap-2 shrink-0 border-bottom px-2">
+            <tabler-icon icon="bell" [size]="20" svgClass="shrink-0 color-text" />
+            <div class="flex flex-col min-w-0">
+                <span class="font-semibold color-text leading-tight">
+                    {{ 'NOTIFICATION.TITLE' | translate }}
+                </span>
+                <span class="text-sm ui-color-text-muted leading-tight">
+                    {{ 'NOTIFICATION.UNREAD' | translate: { count: totalUnread() } }}
+                </span>
+            </div>
         </div>
 
         <!-- SIDEBAR MENU -->
@@ -80,9 +82,13 @@
                         (click)="onSetFilter({ type: 'project', idProject: group.idProject! })"
                     >
                         <span
-                            class="w-4 h-4 rounded-full shrink-0"
-                            [style.background]="group.projectColor"
-                        ></span>
+                            class="notif-project-dot-box flex items-center justify-center shrink-0"
+                        >
+                            <span
+                                class="notif-project-dot rounded-full"
+                                [style.background]="group.projectColor"
+                            ></span>
+                        </span>
                         <span class="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                             {{ group.projectName }}
                         </span>
@@ -101,13 +107,16 @@
 
     <!-- NOTIFICATION PANEL -->
     <div class="flex-1 flex flex-col overflow-hidden min-w-0">
-        <div class="flex items-center justify-between shrink-0 p-2 border-bottom">
-            <span class="font-semibold color-text">
+        <div
+            class="notif-header flex items-center justify-between gap-2 shrink-0 px-2 border-bottom"
+        >
+            <span class="font-semibold color-text overflow-hidden text-ellipsis whitespace-nowrap">
                 {{ filterTitle() | translate }}
             </span>
             <ui-button
                 variant="text"
-                class="notification-mark-all-read-btn"
+                size="small"
+                class="shrink-0"
                 [title]="'NOTIFICATION.ACTION.MARK_ALL_READ' | translate"
                 (click)="onMarkAllAsRead()"
             >
