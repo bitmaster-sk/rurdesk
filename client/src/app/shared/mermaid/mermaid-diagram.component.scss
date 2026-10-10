@@ -1,5 +1,4 @@
 // The svg arrives via innerHTML, so no Tailwind utility can reach it.
 .mermaid-diagram__svg svg {
-    max-width: 100%;
     height: auto;
 }

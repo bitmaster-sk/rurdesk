@@ -3,7 +3,9 @@ import {
     Component,
     DestroyRef,
     ElementRef,
+    Injector,
     ViewEncapsulation,
+    afterNextRender,
     effect,
     inject,
     input,
@@ -36,6 +38,7 @@ export class MermaidDiagramComponent {
 
     private readonly renderService = inject(MermaidRenderService);
     private readonly svgHost = viewChild<ElementRef<HTMLDivElement>>('svgHost');
+    private readonly injector = inject(Injector);
 
     protected readonly state = signal<DiagramState>({ kind: 'loading' });
 
@@ -44,15 +47,6 @@ export class MermaidDiagramComponent {
 
     public constructor() {
         effect(() => this.applySource(this.source()));
-        effect(() => {
-            const state = this.state();
-            const host = this.svgHost();
-            if (state.kind === 'svg' && host) {
-                // Written to the DOM directly: Angular's [innerHTML] sanitizer
-                // strips svg; trust comes from mermaid's securityLevel 'strict'.
-                host.nativeElement.innerHTML = state.svg;
-            }
-        });
         inject(DestroyRef).onDestroy(() => this.clearTimer());
     }
 
@@ -85,8 +79,37 @@ export class MermaidDiagramComponent {
     }
 
     private settle(result: MermaidResult): void {
-        this.state.set('svg' in result ? { kind: 'svg', svg: result.svg } : { kind: 'error' });
-        this.settled.emit();
+        const state: DiagramState =
+            'svg' in result ? { kind: 'svg', svg: result.svg } : { kind: 'error' };
+        this.state.set(state);
+        afterNextRender(
+            {
+                write: () => {
+                    if (this.state() !== state) {
+                        return;
+                    }
+                    const host = this.svgHost();
+                    if (state.kind === 'svg' && host) {
+                        // Written to the DOM directly: Angular's [innerHTML] sanitizer
+                        // strips svg; trust comes from mermaid's securityLevel 'strict'.
+                        host.nativeElement.innerHTML = state.svg;
+                        this.useNaturalWidth(host.nativeElement.querySelector('svg'));
+                    }
+                    this.settled.emit();
+                }
+            },
+            { injector: this.injector }
+        );
+    }
+
+    private useNaturalWidth(svg: SVGSVGElement | null): void {
+        const naturalWidth = svg?.style.maxWidth;
+        if (!svg || !naturalWidth) {
+            return;
+        }
+        svg.removeAttribute('width');
+        svg.style.width = naturalWidth;
+        svg.style.maxWidth = 'none';
     }
 
     private clearTimer(): void {
