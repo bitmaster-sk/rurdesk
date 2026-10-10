@@ -414,3 +414,98 @@ func TestGenerateBranchName_MatchesPrePushHook(t *testing.T) {
 		t.Errorf("pre-push pattern %q still accepts the legacy agent/b prefix", pattern)
 	}
 }
+
+func TestIsAgentBranch_MatchesPrePushHook(t *testing.T) {
+	if got, want := agentBranchPattern.String(), prePushBranchPattern(t); got != want {
+		t.Errorf("agentBranchPattern = %q, pre-push hook pattern = %q", got, want)
+	}
+	if !IsAgentBranch("agent/a2/i30/1788794379") {
+		t.Error("a generated agent branch is rejected")
+	}
+	for _, branch := range []string{"main", "--upload-pack=x", "agent/a2/i30/1788794379/x"} {
+		if IsAgentBranch(branch) {
+			t.Errorf("IsAgentBranch(%q) = true, want false", branch)
+		}
+	}
+}
+
+func pushAgentBranch(t *testing.T, seed, branch string) string {
+	t.Helper()
+	git(t, seed, "checkout", "-b", branch)
+	if err := os.WriteFile(filepath.Join(seed, "first-attempt.txt"), []byte("first attempt\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, seed, "add", ".")
+	git(t, seed, "commit", "-m", "first attempt")
+	git(t, seed, "push", "origin", branch)
+	sha := headSha(t, seed)
+	git(t, seed, "checkout", "main")
+	return sha
+}
+
+func TestResumeWorktree_ContinuesOnExistingBranch(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, seed := seedOrigin(t, tmp, "main")
+	const branch = "agent/a1/i48/1790053695"
+	want := pushAgentBranch(t, seed, branch)
+
+	cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
+	if err := CloneRepo(cfg); err != nil {
+		t.Fatalf("CloneRepo: %v", err)
+	}
+	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+
+	worktreePath, err := ResumeWorktree(repoPath, branch, 5)
+	if err != nil {
+		t.Fatalf("ResumeWorktree: %v", err)
+	}
+
+	if got := headSha(t, worktreePath); got != want {
+		t.Errorf("worktree HEAD = %s, want the branch head %s", got, want)
+	}
+	if got, _ := branchOfWorktree(worktreePath); got != branch {
+		t.Errorf("worktree branch = %q, want %q", got, branch)
+	}
+	assertFile(t, filepath.Join(worktreePath, "first-attempt.txt"), "first attempt\n")
+
+	if err := os.WriteFile(filepath.Join(worktreePath, "second-attempt.txt"), []byte("fix\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, worktreePath, "add", ".")
+	git(t, worktreePath, "commit", "-m", "second attempt")
+	git(t, worktreePath, "push", "origin", branch)
+	remoteHead, err := runGitOutput(repoPath, "ls-remote", "origin", "refs/heads/"+branch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(remoteHead, headSha(t, worktreePath)) {
+		t.Errorf("origin %s = %q, want it fast-forwarded to the new commit", branch, remoteHead)
+	}
+}
+
+func TestResumeWorktree_TakesBranchFromStaleWorktree(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, seed := seedOrigin(t, tmp, "main")
+	const branch = "agent/a1/i48/1790053695"
+	want := pushAgentBranch(t, seed, branch)
+
+	cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
+	if err := CloneRepo(cfg); err != nil {
+		t.Fatalf("CloneRepo: %v", err)
+	}
+	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+
+	if _, err := ResumeWorktree(repoPath, branch, 1); err != nil {
+		t.Fatalf("ResumeWorktree for the old run: %v", err)
+	}
+	worktreePath, err := ResumeWorktree(repoPath, branch, 2)
+	if err != nil {
+		t.Fatalf("ResumeWorktree for the new run while the old worktree holds the branch: %v", err)
+	}
+	if got, _ := branchOfWorktree(worktreePath); got != branch {
+		t.Errorf("worktree branch = %q, want %q", got, branch)
+	}
+	if got := headSha(t, worktreePath); got != want {
+		t.Errorf("worktree HEAD = %s, want %s", got, want)
+	}
+}

@@ -190,6 +190,25 @@ func (r *AgentRunRepository) LoadLatestByIssue(ctx context.Context, idIssue int6
 	return run, err
 }
 
+func (r *AgentRunRepository) LoadLatestWithPrByIssue(ctx context.Context, idIssue int64) (*model.AgentRun, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	row := db.QueryRow(ctx, fmt.Sprintf(`
+		SELECT %s FROM agent.run
+		WHERE id_issue = $1
+		  AND pr_id <> ''
+		  AND branch_name <> ''
+		  AND id_git_integration IS NOT NULL
+		ORDER BY created_at DESC, id_run DESC
+		LIMIT 1`, agentRunColumns),
+		idIssue,
+	)
+	run, err := scanAgentRun(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return run, err
+}
+
 func (r *AgentRunRepository) LoadByProject(ctx context.Context, idProject int64, limit int) ([]*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, fmt.Sprintf(`
