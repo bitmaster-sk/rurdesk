@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
+	"github.com/bitmaster-sk/rurdesk/api/internal/attachmenttext"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -34,6 +35,8 @@ type MessageController struct {
 	dispatcher      *agent.Dispatcher
 	notifier        *notify.Notifier
 	acl             *service.AclService
+	messageAccess   *service.MessageAccessService
+	attachmentSvc   *service.AttachmentService
 	notifSvc        *service.NotificationService
 	pool            *pgxpool.Pool
 }
@@ -46,6 +49,8 @@ func NewMessageController(
 	ir *repository.IssueRepository,
 	nf *notify.Notifier,
 	acl *service.AclService,
+	messageAccess *service.MessageAccessService,
+	attachmentSvc *service.AttachmentService,
 	notifSvc *service.NotificationService,
 	participantRepo *repository.IssueParticipantRepository,
 	pool *pgxpool.Pool,
@@ -58,6 +63,8 @@ func NewMessageController(
 		issueRepo:       ir,
 		notifier:        nf,
 		acl:             acl,
+		messageAccess:   messageAccess,
+		attachmentSvc:   attachmentSvc,
 		notifSvc:        notifSvc,
 		participantRepo: participantRepo,
 		pool:            pool,
@@ -97,49 +104,22 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
+	if accessErr := mc.messageAccess.CheckContextAccess(ctx, user.IdUser, recipientType, idRecipient); accessErr != nil {
+		ResponseErr(c, accessErr)
+		return
+	}
+
 	var msgs []*model.Message
 
 	switch recipientType {
 	case model.TeammateRecipientType:
-		// DMs are open to all users — reading an empty conversation is harmless.
 		msgs, err = mc.messageRepo.LoadTeammateMessages(ctx, idRecipient, user.IdUser, nil)
-
 	case model.TeamRecipientType:
-		if !mc.acl.CanReadTeam(ctx, user.IdUser, idRecipient) {
-			_ = c.Error(errs.ErrForbidden)
-			c.Status(http.StatusForbidden)
-			return
-		}
 		msgs, err = mc.messageRepo.LoadTeamMessages(ctx, []int64{idRecipient}, user.IdUser, nil)
-
 	case model.ProjectRecipientType:
-		if !mc.acl.CanReadProject(ctx, user.IdUser, idRecipient) {
-			_ = c.Error(errs.ErrForbidden)
-			c.Status(http.StatusForbidden)
-			return
-		}
 		msgs, err = mc.messageRepo.LoadProjectMessages(ctx, []int64{idRecipient}, user.IdUser, nil)
-
 	case model.IssueRecipientType:
-		project, e := mc.projectRepo.LoadProjectByIssue(ctx, idRecipient)
-		if e != nil {
-			_ = c.Error(e)
-			c.Status(http.StatusInternalServerError)
-			return
-		}
-		if !mc.acl.CanReadProject(ctx, user.IdUser, project.IdProject) {
-			_ = c.Error(errs.ErrForbidden)
-			c.Status(http.StatusForbidden)
-			return
-		}
 		msgs, err = mc.messageRepo.LoadIssueMessages(ctx, idRecipient, user.IdUser, nil)
-
-	default:
-		// Falling through returned an empty list, which reads as "this
-		// conversation is empty" rather than "that recipient type does not exist".
-		_ = c.Error(errs.ErrBadRequest)
-		c.Status(http.StatusBadRequest)
-		return
 	}
 
 	if err != nil {
@@ -245,35 +225,21 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 	mentionedIds := map[int64]bool{}
 
 	err := extctx.RunInTx(ctx, mc.pool, func(ctx context.Context) error {
+		if accessErr := mc.messageAccess.CheckContextAccess(ctx, user.IdUser, dto.IdMessageRecipientType, dto.IdRecipient); accessErr != nil {
+			return accessErr
+		}
 		var err error
 		switch dto.IdMessageRecipientType {
 		case model.TeammateRecipientType:
-			// DMs are open to all users — only require that the recipient exists.
-			if _, lErr := mc.userRepo.LoadUser(ctx, dto.IdRecipient); lErr != nil {
-				return errs.ErrForbidden
-			}
 			msg, err = mc.messageRepo.InsertTeammateMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.TeamRecipientType:
-			if !mc.acl.CanReadTeam(ctx, user.IdUser, dto.IdRecipient) {
-				return errs.ErrForbidden
-			}
 			msg, err = mc.messageRepo.InsertTeamMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.ProjectRecipientType:
-			if !mc.acl.CanReadProject(ctx, user.IdUser, dto.IdRecipient) {
-				return errs.ErrForbidden
-			}
 			msg, err = mc.messageRepo.InsertProjectMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.IssueRecipientType:
-			project, e := mc.projectRepo.LoadProjectByIssue(ctx, dto.IdRecipient)
-			if e != nil {
-				return e
-			}
-			if !mc.acl.CanReadProject(ctx, user.IdUser, project.IdProject) {
-				return errs.ErrForbidden
-			}
 			var anchor *model.MessageAnchor
 			if dto.IdParentMessage != nil {
 				anchor = &model.MessageAnchor{
@@ -294,6 +260,10 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 			// Mentions are detected from the token format @[name](user:<id>).
 			mentionIds := parseMentionUserIds(dto.Message)
 			if len(mentionIds) > 0 {
+				project, projectErr := mc.projectRepo.LoadProjectByIssue(ctx, dto.IdRecipient)
+				if projectErr != nil {
+					return projectErr
+				}
 				members, membersErr := mc.projectRepo.LoadProjectsMembers(ctx, []int64{project.IdProject})
 				if membersErr != nil {
 					return fmt.Errorf("loading project members for mention resolution: %w", membersErr)
@@ -313,21 +283,17 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 				}
 			}
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		return mc.attachmentSvc.LinkMessageAttachments(ctx, msg)
 	})
-	if err == errs.ErrForbidden {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
-		return
-	}
 	if errors.Is(err, repository.ErrAnchorWrongThread) {
-		_ = c.Error(errs.ErrBadRequest.WithMessage(err.Error()))
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
@@ -439,7 +405,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 						RefId:         strconv.FormatInt(dto.IdRecipient, 10),
 						RefTitle:      refTitle,
 						RefPublicId:   refPublicId,
-						Body:          truncate(stripMentionTokens(dto.Message), 200),
+						Body:          truncate(stripMentionTokens(attachmenttext.StripLinks(dto.Message)), 200),
 						Source:        source,
 					}); notifErr != nil {
 						log.Warn().Err(notifErr).Int64("idUser", idRecipient).Int64("idIssue", dto.IdRecipient).Msg("CreateMessage: failed to create notification")
@@ -518,11 +484,17 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 	err = extctx.RunInTx(ctx, mc.pool, func(ctx context.Context) error {
 		var txErr error
 		updatedMsg, txErr = mc.messageRepo.UpdateMessage(ctx, idMessage, user.IdUser, dto.Message)
-		return txErr
+		if txErr != nil || updatedMsg == nil {
+			return txErr
+		}
+		updatedMsg.IdRecipient, updatedMsg.IdMessageRecipientType, txErr = mc.messageRepo.LoadMessageRecipientInfo(ctx, idMessage)
+		if txErr != nil {
+			return txErr
+		}
+		return mc.attachmentSvc.LinkMessageAttachments(ctx, updatedMsg)
 	})
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	if updatedMsg == nil {
@@ -530,15 +502,7 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-
-	idRecipient, recipientType, err := mc.messageRepo.LoadMessageRecipientInfo(ctx, idMessage)
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	updatedMsg.IdRecipient = idRecipient
-	updatedMsg.IdMessageRecipientType = recipientType
+	idRecipient, recipientType := updatedMsg.IdRecipient, updatedMsg.IdMessageRecipientType
 
 	updateSource := ""
 	if isAgent, err := mc.userRepo.IsAgentUser(ctx, user.IdUser); err == nil && isAgent {

@@ -82,6 +82,13 @@
         },
         "DATE_RANGE": {
             "CUSTOM": "Custom range"
+        },
+        "LIGHTBOX": {
+            "PREVIOUS": "Previous image",
+            "NEXT": "Next image",
+            "ZOOM_IN": "Zoom in",
+            "ZOOM_OUT": "Zoom out",
+            "ZOOM_RESET": "Fit to screen"
         }
     },
     "AGENT": {
@@ -323,7 +330,8 @@
         "SPRINT_VELOCITY_LIMIT": "Cycles averaged for velocity",
         "USER_API_KEY_LIMIT": "API keys per user",
         "IS_AGENT_THINKING_PERSISTED": "Keep the full agent thinking",
-        "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)"
+        "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)",
+        "ATTACHMENT_MAX_SIZE_MB": "Maximum attachment size (MB)"
     },
     "CANCEL": "Cancel",
     "BACK": "Back",
@@ -1114,6 +1122,9 @@
         "task_not_found": "Task not found.",
         "issue_has_active_run": "This issue already has an active run. Change the assignee to hand it over.",
         "agent_post_while_run_paused": "The agent cannot post while the run is paused.",
+        "attachment_too_large": "The file is larger than the allowed upload size.",
+        "attachment_type_not_allowed": "This file type cannot be attached.",
+        "attachment_link_invalid": "The message links a file that was not uploaded to this conversation.",
         "invalid_project_builder_refs": "Some cross-references in the project plan are invalid.",
         "wiki_slug_taken": "A page with this title already exists here.",
         "wiki_token_limit": "Always-read pages would exceed the project token limit.",
@@ -1394,6 +1405,11 @@
         "SCROLL_LEFT": "Scroll sprints left",
         "SCROLL_RIGHT": "Scroll sprints right"
     },
+    "ATTACHMENT": {
+        "MISSING": "Attachment unavailable",
+        "LOADING": "Loading…",
+        "DOWNLOAD": "Download"
+    },
     "MESSAGE_EDITOR": {
         "BOLD": "Bold",
         "ITALIC": "Italic",
@@ -1402,6 +1418,7 @@
         "ORDERED_LIST": "Ordered list",
         "CODE_BLOCK": "Code block",
         "EMOJI": "Emoji",
+        "ATTACH": "Attach file",
         "EMOJI_GROUP": {
             "REACTIONS": "Reactions",
             "PEOPLE": "People",

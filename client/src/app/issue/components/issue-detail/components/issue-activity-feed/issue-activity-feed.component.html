@@ -30,6 +30,16 @@
             <tabler-icon icon="clock" [size]="14" />
             Time
         </button>
+        <button
+            type="button"
+            class="chip"
+            [class.active]="activeFilters().has('attachment')"
+            [attr.aria-pressed]="activeFilters().has('attachment')"
+            (click)="setFilter('attachment')"
+        >
+            <tabler-icon icon="paperclip" [size]="14" />
+            Attachments
+        </button>
     </div>
 
     <div class="feed-scroll" #scrollContainer>
@@ -94,6 +104,7 @@
                             </div>
                             <app-message-editor
                                 [mentionCandidates]="mentionCandidates()"
+                                [attachmentScope]="attachmentScope()"
                                 (messageChange)="onMessage($event)"
                             ></app-message-editor>
                         </div>
@@ -140,6 +151,7 @@
     <div class="feed-editor">
         <app-message-editor
             [mentionCandidates]="mentionCandidates()"
+            [attachmentScope]="attachmentScope()"
             (messageChange)="onMessage($event)"
         ></app-message-editor>
     </div>

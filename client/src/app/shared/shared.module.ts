@@ -26,6 +26,8 @@ import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
+import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
+import { AttachmentLightboxComponent } from './attachment/components/attachment-lightbox/attachment-lightbox.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
 import { DeleteMigrationDialogComponent } from './components/delete-migration-dialog/delete-migration-dialog.component';
 import { AgentDockComponent } from './components/agent-dock/agent-dock.component';
@@ -74,6 +76,8 @@ import {
         StagedIssueComponent,
         MockupCardComponent,
         MessageBodyComponent,
+        AttachmentRenderDirective,
+        AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
         AgentDockComponent,

@@ -5,7 +5,7 @@ import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options'
 import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
-import { TablerIconStub } from 'src/testing/stubs';
+import { AttachmentLightboxStub, TablerIconStub } from 'src/testing/stubs';
 import { MessageBodyComponent } from './message-body.component';
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
@@ -26,6 +26,7 @@ async function setup() {
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
+            AttachmentLightboxStub,
             DiffViewerStub
         ],
         declarations: [MessageBodyComponent, MockupCardComponent]

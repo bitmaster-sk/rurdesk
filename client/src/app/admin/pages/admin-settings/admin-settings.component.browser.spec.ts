@@ -66,7 +66,8 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         sprintVelocityLimit: 10,
         userApiKeyLimit: 10,
         isAgentThinkingPersisted: false,
-        agentThinkingMaxKb: 1024
+        agentThinkingMaxKb: 1024,
+        attachmentMaxSizeMb: 25
     };
 
     async function setup() {

@@ -31,6 +31,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		UserApiKeyLimit:          sc.settings.UserApiKeyLimit(),
 		IsAgentThinkingPersisted: sc.settings.IsAgentThinkingPersisted(),
 		AgentThinkingMaxKb:       sc.settings.AgentThinkingMaxKb(),
+		AttachmentMaxSizeMb:      sc.settings.AttachmentMaxSizeMb(),
 	})
 }
 
@@ -60,6 +61,9 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.AgentThinkingMaxKb != nil {
 		numericChanges[constants.SettingAgentThinkingMaxKb] = *req.AgentThinkingMaxKb
+	}
+	if req.AttachmentMaxSizeMb != nil {
+		numericChanges[constants.SettingAttachmentMaxSizeMb] = *req.AttachmentMaxSizeMb
 	}
 	boolChanges := map[string]bool{}
 	if req.IsAgentThinkingPersisted != nil {

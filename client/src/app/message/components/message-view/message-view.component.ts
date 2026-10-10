@@ -1,6 +1,7 @@
 import {
     ChangeDetectionStrategy,
     Component,
+    computed,
     effect,
     input,
     output,
@@ -8,6 +9,7 @@ import {
 } from '@angular/core';
 import { MessageEditorComponent } from '../message-editor/message-editor.component';
 import { Message } from '../../model/message.model';
+import { MessageConverter } from '../../converter/message.converter';
 import { User } from 'src/app/auth/model/user.model';
 
 @Component({
@@ -24,6 +26,10 @@ export class MessageViewComponent {
     public readonly isEditing = input(false);
     public readonly candidates = input<Map<number, User> | User[] | null>(null);
     public readonly mentionCandidates = input<User[]>([]);
+
+    protected readonly attachmentScope = computed(() =>
+        MessageConverter.toAttachmentScope(this.message())
+    );
 
     public readonly editRequest = output();
     public readonly editSave = output<string>();

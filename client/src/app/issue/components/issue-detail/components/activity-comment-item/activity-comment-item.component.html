@@ -56,6 +56,7 @@
                     change="onaction"
                     [message]="message().message"
                     [mentionCandidates]="mentionCandidates()"
+                    [attachmentScope]="attachmentScope()"
                     (messageChange)="editSave.emit($event)"
                     (cancelled)="onEditCancel()"
                 ></app-message-editor>

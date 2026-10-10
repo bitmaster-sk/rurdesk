@@ -1,0 +1,14 @@
+<ui-lightbox
+    [visible]="gallery.isOpen()"
+    (visibleChange)="onVisibleChange($event)"
+    [header]="gallery.active()?.name ?? ''"
+    [src]="url()"
+    [alt]="gallery.active()?.name ?? ''"
+    [hasMany]="hasMany()"
+    (previous)="gallery.previous()"
+    (next)="gallery.next()"
+>
+    <span class="ui-color-text-muted" data-testid="attachment-lightbox-missing">
+        {{ 'ATTACHMENT.MISSING' | translate }}
+    </span>
+</ui-lightbox>
