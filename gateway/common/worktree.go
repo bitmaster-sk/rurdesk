@@ -39,76 +39,74 @@ func CloneRepo(cfg *Config) error {
 		return fmt.Errorf("creating workspace base: %w", err)
 	}
 
-	{
-		rawURL := cfg.RepoUrl
-		repoName := repoNameFromURL(rawURL)
-		repoPath := filepath.Join(cfg.WorkspaceBase, repoName)
-		authenticatedURL := injectToken(rawURL, cfg.GitAccessToken)
+	rawURL := cfg.RepoUrl
+	repoName := repoNameFromURL(rawURL)
+	repoPath := filepath.Join(cfg.WorkspaceBase, repoName)
+	authenticatedURL := injectToken(rawURL, cfg.GitAccessToken)
 
-		if _, err := os.Stat(filepath.Join(repoPath, ".git")); os.IsNotExist(err) {
-			log.Info().Str("url", rawURL).Str("path", repoPath).Msg("cloning repo")
-			if err := runGit(".", "clone", authenticatedURL, repoPath); err != nil {
-				return fmt.Errorf("cloning %s: %w", rawURL, err)
-			}
-		} else {
-			log.Info().Str("path", repoPath).Str("branch", cfg.RepoBranchBase).Msg("pulling repo")
-			// Refresh the stored remote URL with the current PAT — the workspace
-			// is a persistent volume, so a stale token would otherwise survive
-			// restarts and break both the pull here and the agent's push.
-			if err := runGit(repoPath, "remote", "set-url", "origin", authenticatedURL); err != nil {
-				return fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
-			}
+	if _, err := os.Stat(filepath.Join(repoPath, ".git")); os.IsNotExist(err) {
+		log.Info().Str("url", rawURL).Str("path", repoPath).Msg("cloning repo")
+		if err := runGit(".", "clone", authenticatedURL, repoPath); err != nil {
+			return fmt.Errorf("cloning %s: %w", rawURL, err)
 		}
-
-		if cfg.RepoBranchBase == "" {
-			resolved, err := detectDefaultBranch(repoPath)
-			if err != nil {
-				return fmt.Errorf("detecting default branch in %s: %w", repoPath, err)
-			}
-			if resolved == "" {
-				resolved = fallbackBaseBranch
-			}
-			log.Info().Str("branch", resolved).Msg("REPO_BRANCH_BASE unset — using the repo's default branch")
-			cfg.RepoBranchBase = resolved
+	} else {
+		log.Info().Str("path", repoPath).Str("branch", cfg.RepoBranchBase).Msg("pulling repo")
+		// Refresh the stored remote URL with the current PAT — the workspace
+		// is a persistent volume, so a stale token would otherwise survive
+		// restarts and break both the pull here and the agent's push.
+		if err := runGit(repoPath, "remote", "set-url", "origin", authenticatedURL); err != nil {
+			return fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
 		}
+	}
 
-		// A brand-new (empty) repo has no branches: `fetch origin main` would
-		// fatal with "couldn't find remote ref main" and take the gateway down.
-		hasBase, err := remoteHasBranch(repoPath, cfg.RepoBranchBase)
+	if cfg.RepoBranchBase == "" {
+		resolved, err := detectDefaultBranch(repoPath)
 		if err != nil {
-			return fmt.Errorf("checking base branch on origin in %s: %w", repoPath, err)
+			return fmt.Errorf("detecting default branch in %s: %w", repoPath, err)
 		}
-		if hasBase {
-			if err := syncBaseToOrigin(repoPath, cfg.RepoBranchBase); err != nil {
-				return err
-			}
-		} else {
-			empty, err := remoteIsEmpty(repoPath)
-			if err != nil {
-				return fmt.Errorf("checking whether origin is empty in %s: %w", repoPath, err)
-			}
-			if !empty {
-				// Branches exist, just not the configured base one — a genuine
-				// misconfiguration (e.g. the repo's default is `master`). Don't
-				// guess; fail with a message pointing at the actual cause.
-				return fmt.Errorf(
-					"base branch %q not found on origin in %s (the repo has other branches — set REPO_BRANCH_BASE to the correct default)",
-					cfg.RepoBranchBase, repoPath,
-				)
-			}
-			if err := seedEmptyRemote(repoPath, cfg.RepoBranchBase); err != nil {
-				return fmt.Errorf("seeding empty remote in %s: %w", repoPath, err)
-			}
+		if resolved == "" {
+			resolved = fallbackBaseBranch
 		}
+		log.Info().Str("branch", resolved).Msg("REPO_BRANCH_BASE unset — using the repo's default branch")
+		cfg.RepoBranchBase = resolved
+	}
 
-		if err := InstallHooks(repoPath); err != nil {
-			return fmt.Errorf("installing hooks in %s: %w", repoPath, err)
+	// A brand-new (empty) repo has no branches: `fetch origin main` would
+	// fatal with "couldn't find remote ref main" and take the gateway down.
+	hasBase, err := remoteHasBranch(repoPath, cfg.RepoBranchBase)
+	if err != nil {
+		return fmt.Errorf("checking base branch on origin in %s: %w", repoPath, err)
+	}
+	if hasBase {
+		if err := syncBaseToOrigin(repoPath, cfg.RepoBranchBase); err != nil {
+			return err
 		}
+	} else {
+		empty, err := remoteIsEmpty(repoPath)
+		if err != nil {
+			return fmt.Errorf("checking whether origin is empty in %s: %w", repoPath, err)
+		}
+		if !empty {
+			// Branches exist, just not the configured base one — a genuine
+			// misconfiguration (e.g. the repo's default is `master`). Don't
+			// guess; fail with a message pointing at the actual cause.
+			return fmt.Errorf(
+				"base branch %q not found on origin in %s (the repo has other branches — set REPO_BRANCH_BASE to the correct default)",
+				cfg.RepoBranchBase, repoPath,
+			)
+		}
+		if err := seedEmptyRemote(repoPath, cfg.RepoBranchBase); err != nil {
+			return fmt.Errorf("seeding empty remote in %s: %w", repoPath, err)
+		}
+	}
 
-		agentRunsPath := filepath.Join(repoPath, agentRunsDir)
-		if err := os.MkdirAll(agentRunsPath, 0o755); err != nil {
-			return fmt.Errorf("creating agent-runs dir: %w", err)
-		}
+	if err := InstallHooks(repoPath); err != nil {
+		return fmt.Errorf("installing hooks in %s: %w", repoPath, err)
+	}
+
+	agentRunsPath := filepath.Join(repoPath, agentRunsDir)
+	if err := os.MkdirAll(agentRunsPath, 0o755); err != nil {
+		return fmt.Errorf("creating agent-runs dir: %w", err)
 	}
 	return nil
 }

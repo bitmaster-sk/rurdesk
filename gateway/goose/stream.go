@@ -13,7 +13,7 @@ import (
 )
 
 // scanGooseStream reads goose's stream-json stdout line-by-line and feeds each
-// line to the aggregator. The buffer cap matches drainStderr so a long single
+// line to the aggregator. The buffer cap matches common.DrainStderr so a long single
 // event line doesn't overflow the default scanner limit.
 func scanGooseStream(r io.Reader, agg *streamAggregator) {
 	scanner := bufio.NewScanner(r)

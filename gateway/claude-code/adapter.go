@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
@@ -21,13 +20,6 @@ import (
 )
 
 const defaultClaudeBinary = "claude"
-
-// claudeSession holds the running claude CLI subprocess and a cancel hook so
-// orchestrator-driven Cancel calls can SIGTERM the right child.
-type claudeSession struct {
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
-}
 
 // ClaudeCodeAdapter implements common.Agent by driving the official Claude
 // Code CLI (`claude`, installed via npm) headlessly. It authenticates against
@@ -38,14 +30,13 @@ type claudeSession struct {
 // pay-per-token bucket.
 type ClaudeCodeAdapter struct {
 	cfg      *common.Config
-	mu       sync.Mutex
-	sessions map[common.RunID]*claudeSession
+	sessions *common.ProcessSessions
 }
 
 func NewClaudeCodeAdapter(cfg *common.Config) *ClaudeCodeAdapter {
 	return &ClaudeCodeAdapter{
 		cfg:      cfg,
-		sessions: make(map[common.RunID]*claudeSession),
+		sessions: common.NewProcessSessions(),
 	}
 }
 
@@ -73,17 +64,13 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
-	session := &claudeSession{cancel: cancel}
+	session := &common.ProcessSession{Cancel: cancel}
 
 	runIDKey := common.RunID(fmt.Sprintf("%d", task.IdRun))
-	a.mu.Lock()
-	a.sessions[runIDKey] = session
-	a.mu.Unlock()
+	a.sessions.Add(runIDKey, session)
 	defer func() {
 		cancel()
-		a.mu.Lock()
-		delete(a.sessions, runIDKey)
-		a.mu.Unlock()
+		a.sessions.Remove(runIDKey)
 	}()
 
 	args := []string{
@@ -119,7 +106,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		return stats, fmt.Errorf("stderr pipe: %w", err)
 	}
 
-	session.cmd = cmd
+	session.Cmd = cmd
 
 	log.Info().
 		Int64("idRun", task.IdRun).
@@ -174,7 +161,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}()
 	stderrDone := make(chan struct{})
 	go func() {
-		drainStderr(stderrPipe, task.IdRun)
+		common.DrainStderr(stderrPipe, task.IdRun, "claude code")
 		close(stderrDone)
 	}()
 
@@ -355,13 +342,13 @@ func extractTotalTokens(ev map[string]any) int {
 }
 
 func tokensFromMap(m map[string]any) int {
-	if t, ok := numberField(m, "total_tokens"); ok && t > 0 {
+	if t, ok := common.NumberField(m, "total_tokens"); ok && t > 0 {
 		return t
 	}
-	in, _ := numberField(m, "input_tokens")
-	out, _ := numberField(m, "output_tokens")
-	cacheCreate, _ := numberField(m, "cache_creation_input_tokens")
-	cacheRead, _ := numberField(m, "cache_read_input_tokens")
+	in, _ := common.NumberField(m, "input_tokens")
+	out, _ := common.NumberField(m, "output_tokens")
+	cacheCreate, _ := common.NumberField(m, "cache_creation_input_tokens")
+	cacheRead, _ := common.NumberField(m, "cache_read_input_tokens")
 	total := in + out + cacheCreate + cacheRead
 	if total > 0 {
 		return total
@@ -369,79 +356,8 @@ func tokensFromMap(m map[string]any) int {
 	return 0
 }
 
-func numberField(m map[string]any, key string) (int, bool) {
-	switch v := m[key].(type) {
-	case float64:
-		return int(v), true
-	case int:
-		return v, true
-	case int64:
-		return int(v), true
-	}
-	return 0, false
-}
-
-func drainStderr(r io.Reader, idRun int64) {
-	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
-		line := strings.TrimRight(scanner.Text(), "\r\n")
-		if line == "" {
-			continue
-		}
-		forwardStderrLine(line, idRun)
-	}
-}
-
-// forwardStderrLine maps claude CLI's stderr lines to zerolog at the right
-// severity by prefix-matching, so a real failure doesn't read as routine
-// debug noise.
-func forwardStderrLine(line string, idRun int64) {
-	trim := strings.TrimLeft(line, " \t")
-	switch {
-	case hasPrefixFold(trim, "Error"),
-		hasPrefixFold(trim, "Fatal"),
-		hasPrefixFold(trim, "panic"):
-		log.Error().Int64("idRun", idRun).Str("line", line).Msg("claude code stderr")
-	case hasPrefixFold(trim, "Warning"),
-		hasPrefixFold(trim, "Warn"),
-		hasPrefixFold(trim, "Deprecated"):
-		log.Warn().Int64("idRun", idRun).Str("line", line).Msg("claude code stderr")
-	default:
-		log.Debug().Int64("idRun", idRun).Str("line", line).Msg("claude code stderr")
-	}
-}
-
-func hasPrefixFold(s, prefix string) bool {
-	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
-}
-
 func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error {
-	a.mu.Lock()
-	session, ok := a.sessions[runID]
-	if ok {
-		delete(a.sessions, runID)
-	}
-	a.mu.Unlock()
-
-	if !ok || session.cmd == nil {
-		return nil
-	}
-
-	session.cancel()
-	if session.cmd.Process != nil {
-		_ = session.cmd.Process.Signal(syscall.SIGTERM)
-		done := make(chan struct{})
-		go func() {
-			_ = session.cmd.Wait()
-			close(done)
-		}()
-		select {
-		case <-done:
-		case <-time.After(10 * time.Second):
-			_ = session.cmd.Process.Kill()
-		}
-	}
+	a.sessions.Terminate(runID)
 	return nil
 }
 
