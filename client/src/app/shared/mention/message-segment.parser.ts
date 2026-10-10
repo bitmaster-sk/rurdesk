@@ -42,10 +42,12 @@ export abstract class MessageSegmentParser {
      * recognized fence becomes a single `text` segment carrying the original
      * string.
      */
-    public static parse(body: string, fences: FenceFilter = 'all'): MessageSegment[] {
-        if (!body) {
+    public static parse(raw: string, fences: FenceFilter = 'all'): MessageSegment[] {
+        if (!raw) {
             return [{ type: 'text', content: '' }];
         }
+        // marked lexes CRLF as LF, so token offsets only match an LF body.
+        const body = raw.replace(/\r\n?/g, '\n');
 
         const segments: MessageSegment[] = [];
         let mockupNo = 0;

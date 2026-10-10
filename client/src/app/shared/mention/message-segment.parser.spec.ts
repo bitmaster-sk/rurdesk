@@ -177,6 +177,23 @@ describe('MessageSegmentParser.parse', () => {
         expect(out[1]).toEqual({ type: 'mermaid', content: 'flowchart TD\n A --> B' });
     });
 
+    it('splits a CRLF body without leaking a fence into the following text', () => {
+        const body = 'Plan:\r\n\r\n```mermaid\r\nflowchart TD\r\nA --> B\r\n```\r\nNext steps.';
+        const out = MessageSegmentParser.parse(body, 'mermaid');
+        expect(out.map(s => s.type)).toEqual(['text', 'mermaid', 'text']);
+        expect(out[1].content).toBe('flowchart TD\nA --> B');
+        expect(out[2].content).not.toContain('```');
+        expect(out[2].content).toContain('Next steps.');
+    });
+
+    it('splits a CRLF body with a diff fence without leaking a fence into the following text', () => {
+        const body = 'Change:\r\n```diff\r\n--- a/f\r\n+++ b/f\r\n@@ @@\r\n+x\r\n```\r\nDone.';
+        const out = MessageSegmentParser.parse(body);
+        expect(out.map(s => s.type)).toEqual(['text', 'diff', 'text']);
+        expect(out[2].content).not.toContain('```');
+        expect(out[2].content).toContain('Done.');
+    });
+
     describe('mockup ref', () => {
         it('builds ref from the title plus 1-based order when present', () => {
             const body = 'A\n```mockup title="Login"\n<p>x</p>\n```\n';
