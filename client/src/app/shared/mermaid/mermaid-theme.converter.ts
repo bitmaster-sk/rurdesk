@@ -1,11 +1,7 @@
 /**
- * Maps the app's `--ui-*` design tokens to mermaid `themeVariables` so diagrams
- * follow the same palette as the rest of the UI. Light theme only — the app has
- * no dark mode. Pure: the caller passes a token reader (so the unit spec needs
- * no DOM) and the computed body font family.
- *
- * mermaid declares `themeVariables` as `any`, so this returns a concrete
- * `Record<string, string>` instead of indexing that hole.
+ * Maps the app's `--ui-*` design tokens to mermaid `themeVariables`. Pure: the
+ * caller passes a token reader (so the unit spec needs no DOM) and the body
+ * font family. Light theme only — the app has no dark mode.
  */
 export abstract class MermaidThemeConverter {
     public static toThemeVariables(

@@ -93,10 +93,8 @@ export class MessageBodyComponent {
         const kind = this.messageKind();
         const isAgentKind = kind !== undefined && AGENT_KINDS.has(kind);
 
-        // For agent messages: split into text/diff/mockup/mermaid via
-        // MessageSegmentParser.parse. For user messages: split only mermaid
-        // fences (diagrams work in comments and chat) — diff and mockup
-        // fences stay inside the text and keep rendering as code blocks.
+        // Agent messages split diff/mockup/mermaid fences; user messages split
+        // mermaid fences only — diff and mockup stay plain code blocks.
         const base = isAgentKind
             ? MessageSegmentParser.parse(this.body())
             : MessageSegmentParser.parse(this.body(), 'mermaid');

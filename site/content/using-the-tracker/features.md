@@ -437,9 +437,10 @@ a strict content-security policy, so previewing an AI-proposed design is safe.
     ```
 
 The mockup card renders alongside the agent's design write-up, next to the same
-` ```diff ` blocks the plan stage produces. A fenced ` ```mermaid ` block works
-in comments too: it renders as a diagram, with the same syntax as in the
-[wiki](wiki.md). The agent only attaches a mockup when the task explicitly
-asks for one.
+` ```diff ` blocks the plan stage produces. The agent only attaches a mockup when
+the task explicitly asks for one.
+
+A fenced ` ```mermaid ` block in a comment renders as a diagram, with the same
+syntax as in the [wiki](wiki.md).
 
 ![UI mockup cards in a design comment — one chosen](../../site/assets/img/message-mockup.png)

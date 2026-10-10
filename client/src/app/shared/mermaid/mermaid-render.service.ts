@@ -1,18 +1,19 @@
 import { Injectable, inject } from '@angular/core';
+import type { Mermaid } from 'mermaid';
 import { MermaidLoaderService } from './mermaid-loader.service';
 
 /** A rendered diagram: either the SVG markup or the failure message. */
 export type MermaidResult = { svg: string } | { error: string };
 
+/** Maximum cached results; the oldest entry is evicted beyond that. */
+const CACHE_LIMIT = 50;
+
 /**
- * Renders mermaid sources and memoizes the outcome in a Map keyed by source.
- * `cached()` answers synchronously so re-renders of the same source (the wiki
- * editor preview fires on every keystroke) swap the SVG in without another
- * debounce round-trip — no blink, no render cost.
- *
- * Renders are serialized on one internal promise chain: mermaid keeps
- * module-level state between renders, so two diagrams in flight at once cannot
- * be trusted to stay independent.
+ * Renders mermaid sources and memoizes the outcome in a Map keyed by source
+ * (`cached()` answers synchronously so re-renders of the same source — the
+ * wiki editor preview re-renders on every keystroke — swap the SVG in without
+ * a debounce round-trip). Renders are serialized on one internal promise
+ * chain: mermaid keeps module-level state between renders.
  */
 @Injectable({ providedIn: 'root' })
 export class MermaidRenderService {
@@ -33,8 +34,6 @@ export class MermaidRenderService {
             return Promise.resolve(cached);
         }
         const run = this.queue.then(() => this.renderNow(source));
-        // The outcome flows to `run`'s consumer; the queue only tracks
-        // completion, so a failed render keeps the chain alive.
         this.queue = run.then(
             () => undefined,
             () => undefined
@@ -43,23 +42,41 @@ export class MermaidRenderService {
     }
 
     private async renderNow(source: string): Promise<MermaidResult> {
-        const mermaid = await this.loader.load();
+        let mermaid: Mermaid;
+        try {
+            mermaid = await this.loader.load();
+        } catch (error) {
+            // Load failures are not cached: the loader itself retries the
+            // import on the next call, so a later render can still succeed.
+            return { error: error instanceof Error ? error.message : String(error) };
+        }
         const id = `mermaid-${this.nextId++}`;
         try {
             const { svg } = await mermaid.render(id, source);
             const result: MermaidResult = { svg };
-            this.cache.set(source, result);
+            this.cacheResult(source, result);
             return result;
         } catch (error) {
             // `suppressErrorRendering` makes mermaid throw instead of drawing
-            // an error bomb — but it leaves its scratch `#d<id>` element in
-            // the body, which would leak one div per failed render.
+            // an error bomb — but it still leaves a scratch `#d<id>` element
+            // in the body, which would leak one node per failed render.
             document.getElementById(`d${id}`)?.remove();
             const result: MermaidResult = {
                 error: error instanceof Error ? error.message : String(error)
             };
-            this.cache.set(source, result);
+            this.cacheResult(source, result);
             return result;
+        }
+    }
+
+    private cacheResult(source: string, result: MermaidResult): void {
+        this.cache.set(source, result);
+        while (this.cache.size > CACHE_LIMIT) {
+            const oldest = this.cache.keys().next();
+            if (oldest.done) {
+                return;
+            }
+            this.cache.delete(oldest.value);
         }
     }
 }

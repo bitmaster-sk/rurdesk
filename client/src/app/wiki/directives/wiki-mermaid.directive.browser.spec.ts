@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { Component, input } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { MarkdownModule } from 'ngx-markdown';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,19 +11,17 @@ import { WikiMermaidDirective } from './wiki-mermaid.directive';
 @Component({
     standalone: false,
     template: `
-        <div markdown appWikiMermaid [data]="body"></div>
+        <div markdown appWikiMermaid [data]="body()"></div>
     `
 })
 class HostComponent {
-    public body = '';
+    public readonly body = input('');
 }
 
 describe('WikiMermaidDirective (browser)', () => {
     let loader: { load: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
-        // Backing fake mermaid so a diagram component whose debounce fires
-        // inside the test still resolves instead of crashing on a stub.
         loader = {
             load: vi
                 .fn()
@@ -35,13 +34,24 @@ describe('WikiMermaidDirective (browser)', () => {
         }).compileComponents();
     });
 
-    async function render(body: string) {
+    function create(body: string): ComponentFixture<HostComponent> {
         const fixture = TestBed.createComponent(HostComponent);
-        fixture.componentInstance.body = body;
+        fixture.componentRef.setInput('body', body);
+        return fixture;
+    }
+
+    async function render(body: string) {
+        const fixture = create(body);
         fixture.detectChanges();
         await fixture.whenStable();
         fixture.detectChanges();
         return fixture;
+    }
+
+    function directive(fixture: ComponentFixture<HostComponent>): WikiMermaidDirective {
+        return fixture.debugElement
+            .query(By.directive(WikiMermaidDirective))
+            .injector.get(WikiMermaidDirective);
     }
 
     it('does not load mermaid when the page has no diagram', async () => {
@@ -60,5 +70,45 @@ describe('WikiMermaidDirective (browser)', () => {
         // component is its own markup, so assert on the fence specifically.
         expect(fixture.nativeElement.querySelector('pre > code.language-mermaid')).toBeNull();
         expect(fixture.nativeElement.textContent).toContain('Intro');
+    });
+
+    it('emits settled after every diagram of a markdown render has settled', async () => {
+        const settled = vi.fn();
+        const body =
+            '```mermaid\nflowchart TD\n    A --> B\n```\n' +
+            'text between\n' +
+            '```mermaid\nflowchart LR\n    C --> D\n```';
+        const fixture = create(body);
+        directive(fixture).settled.subscribe(settled);
+        fixture.detectChanges();
+
+        await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(1));
+        await fixture.whenStable();
+
+        const diagrams = fixture.nativeElement.querySelectorAll('app-mermaid-diagram');
+        expect(diagrams.length).toBe(2);
+        expect(loader.load).toHaveBeenCalled();
+    });
+
+    it('emits settled again when the markdown re-renders with another diagram', async () => {
+        const settled = vi.fn();
+        const fixture = create('```mermaid\nflowchart TD\n    A --> B\n```');
+        directive(fixture).settled.subscribe(settled);
+        fixture.detectChanges();
+        await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(1));
+        await fixture.whenStable();
+
+        fixture.componentRef.setInput('body', '```mermaid\nflowchart LR\n    B --> C\n```');
+        await vi.waitFor(() => expect(settled).toHaveBeenCalledTimes(2));
+        await fixture.whenStable();
+    });
+
+    it('does not emit settled for a markdown render without diagrams', async () => {
+        const settled = vi.fn();
+        const fixture = create('# Just a heading');
+        directive(fixture).settled.subscribe(settled);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(settled).not.toHaveBeenCalled();
     });
 });

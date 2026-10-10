@@ -116,6 +116,56 @@ describe('MessageSegmentParser.parse', () => {
         expect(out[2].content).toBe('flowchart TD\n A --> B');
     });
 
+    it('keeps a mermaid fence indented in a list item inside the text segment', () => {
+        const body =
+            'Some list:\n' +
+            '- item one\n' +
+            '  ```mermaid\n' +
+            '  flowchart TD\n' +
+            '  A --> B\n' +
+            '  ```\n' +
+            '  text after the fence\n' +
+            '- item two';
+        const out = MessageSegmentParser.parse(body);
+        expect(out).toEqual([{ type: 'text', content: body }]);
+    });
+
+    it('keeps a mermaid fence inside a longer fence inside the text segment', () => {
+        const body =
+            'Example syntax:\n' +
+            '````\n' +
+            '```mermaid\n' +
+            'flowchart TD\n' +
+            'A --> B\n' +
+            '```\n' +
+            '````\n' +
+            'Tail text';
+        const out = MessageSegmentParser.parse(body);
+        expect(out).toEqual([{ type: 'text', content: body }]);
+    });
+
+    it('keeps a ```js fence after a mermaid block inside the following text segment', () => {
+        const body =
+            'Head text\n' +
+            '```mermaid\n' +
+            'flowchart TD\n' +
+            'A --> B\n' +
+            '```\n' +
+            'middle text\n' +
+            '```js\n' +
+            'console.log(1)\n' +
+            '```\n' +
+            'tail text';
+        const out = MessageSegmentParser.parse(body);
+        expect(out.length).toBe(3);
+        expect(out[0]).toEqual({ type: 'text', content: 'Head text\n' });
+        expect(out[1]).toEqual({ type: 'mermaid', content: 'flowchart TD\nA --> B' });
+        expect(out[2].type).toBe('text');
+        expect(out[2].content).toContain('middle text');
+        expect(out[2].content).toContain('```js');
+        expect(out[2].content).toContain('tail text');
+    });
+
     it('keeps non-mermaid fences as text when only mermaid fences are asked for', () => {
         const body =
             '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```\n' +

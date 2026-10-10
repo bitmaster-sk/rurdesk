@@ -9,15 +9,19 @@
         @case ('error') {
             <div data-testid="mermaid-error">
                 <div class="mb-2 text-sm font-semibold text-[var(--ui-color-danger)]">
-                    {{ errorLabel }}
+                    {{ 'SHARED.MERMAID.ERROR' | translate }}
                 </div>
-                <pre class="mermaid-diagram__source">{{ source() }}</pre>
+                <pre
+                    class="m-0 overflow-x-auto whitespace-pre rounded-[var(--ui-radius-md)] bg-[var(--ui-color-canvas)] p-[var(--ui-space-m)] font-mono text-sm text-[var(--ui-color-text)]"
+                    >{{ source() }}</pre>
             </div>
         }
         @default {
             <div class="text-sm text-[var(--ui-color-text-muted)]">
-                {{ loadingLabel }}
-                <pre class="mermaid-diagram__source mt-2">{{ source() }}</pre>
+                {{ 'SHARED.MERMAID.LOADING' | translate }}
+                <pre
+                    class="mt-2 m-0 overflow-x-auto whitespace-pre rounded-[var(--ui-radius-md)] bg-[var(--ui-color-canvas)] p-[var(--ui-space-m)] font-mono text-sm text-[var(--ui-color-text)]"
+                    >{{ source() }}</pre>
             </div>
         }
     }

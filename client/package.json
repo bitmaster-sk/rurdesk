@@ -85,7 +85,6 @@
         "@angular/compiler-cli": "^21.0.0",
         "@eslint/js": "^10.0.1",
         "@playwright/test": "1.60.0",
-        "type-fest": "^4.41.0",
         "@tailwindcss/postcss": "^4.3.2",
         "@types/lodash-es": "^4.17.12",
         "@types/node": "^22.10.2",
@@ -99,6 +98,7 @@
         "playwright": "1.60.0",
         "prettier": "3.9.6",
         "tailwindcss": "^4.3.2",
+        "type-fest": "^4.41.0",
         "typescript": "~5.9.2",
         "typescript-eslint": "^8.67.0",
         "vitest": "^4.1.10"

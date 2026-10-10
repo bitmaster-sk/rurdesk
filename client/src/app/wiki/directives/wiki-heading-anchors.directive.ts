@@ -6,6 +6,7 @@ import { ClipboardService } from 'src/app/core/clipboard.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WikiAnchorConverter } from '../converter/wiki-anchor.converter';
+import { WikiMermaidDirective } from './wiki-mermaid.directive';
 
 @Directive({
     selector: '[appWikiHeadingAnchors]',
@@ -30,6 +31,11 @@ export class WikiHeadingAnchorsDirective {
         this.route.fragment
             .pipe(takeUntilDestroyed(destroyRef))
             .subscribe(fragment => this.scrollTo(fragment));
+        // Diagrams settle after `ready` and shift the page layout, so the
+        // anchor scroll has to be repeated once they are rendered.
+        inject(WikiMermaidDirective, { self: true, optional: true })
+            ?.settled.pipe(takeUntilDestroyed(destroyRef))
+            .subscribe(() => this.scrollTo(this.route.snapshot.fragment));
     }
 
     private decorate(): void {

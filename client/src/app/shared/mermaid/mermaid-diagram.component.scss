@@ -1,19 +1,5 @@
-// The svg arrives via innerHTML, so no Tailwind utility can target it.
-// Wide diagrams scroll horizontally inside the bordered box instead of
-// stretching the page; height follows the diagram's own aspect ratio.
+// The svg arrives via innerHTML, so no Tailwind utility can reach it.
 .mermaid-diagram__svg svg {
     max-width: 100%;
     height: auto;
-}
-
-.mermaid-diagram__source {
-    margin: 0;
-    padding: var(--ui-space-m);
-    border-radius: var(--ui-radius-md);
-    background: var(--ui-color-canvas);
-    color: var(--ui-color-text);
-    font-family: var(--ui-font-mono);
-    font-size: var(--font-size-s);
-    white-space: pre;
-    overflow-x: auto;
 }
