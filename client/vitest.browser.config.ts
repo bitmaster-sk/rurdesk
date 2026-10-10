@@ -30,7 +30,7 @@ export default defineConfig({
         // context") or as "Vitest failed to find the current suite" (setup file
         // re-evaluated in the wrong context) across unrelated suites. Forcing it
         // here keeps optimization to a single up-front pass.
-        include: ['@angular/router', '@angular/common/testing'],
+        include: ['@angular/router', '@angular/common/testing', 'marked', 'mermaid'],
         exclude: ['ngx-markdown']
     },
     test: {
