@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -20,6 +21,7 @@ type Dispatcher struct {
 	agentRunRepo *repository.AgentRunRepository
 	taskRepo     *repository.AgentTaskRepository
 	agentGwRepo  *repository.AgentGatewayRepository
+	gitIntRepo   *repository.GitIntegrationRepository
 	issueRepo    *repository.IssueRepository
 	messageRepo  *repository.MessageRepository
 	projectRepo  *repository.ProjectRepository
@@ -36,6 +38,7 @@ func NewDispatcher(
 	agentRunRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	agentGwRepo *repository.AgentGatewayRepository,
+	gitIntRepo *repository.GitIntegrationRepository,
 	issueRepo *repository.IssueRepository,
 	messageRepo *repository.MessageRepository,
 	projectRepo *repository.ProjectRepository,
@@ -51,6 +54,7 @@ func NewDispatcher(
 		agentRunRepo: agentRunRepo,
 		taskRepo:     taskRepo,
 		agentGwRepo:  agentGwRepo,
+		gitIntRepo:   gitIntRepo,
 		issueRepo:    issueRepo,
 		messageRepo:  messageRepo,
 		projectRepo:  projectRepo,
@@ -77,6 +81,11 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			return
 		}
 
+		prBranch, err := d.openPrBranch(bgCtx, run)
+		if err != nil {
+			log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
+		}
+
 		event := WebhookEvent{
 			IdRun:       run.IdRun,
 			IdProject:   run.IdProject,
@@ -89,6 +98,7 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 				"attemptNo":     task.AttemptNo,
 				"stagePlan":     run.StagePlan,
 				"contextBundle": bundle,
+				"prBranch":      prBranch,
 			},
 		}
 		if err := d.DispatchEvent(bgCtx, run, event); err != nil {
@@ -100,6 +110,44 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("recording wiki reads of the prompt")
 		}
 	}()
+}
+
+func (d *Dispatcher) openPrBranch(ctx context.Context, run *model.AgentRun) (string, error) {
+	prRun, err := d.agentRunRepo.LoadLatestWithPrByIssue(ctx, run.IdIssue)
+	if err != nil {
+		return "", fmt.Errorf("loading the issue's latest PR run: %w", err)
+	}
+	if prRun == nil {
+		return "", nil
+	}
+	isOpen, err := d.isPrOpen(ctx, prRun)
+	if err != nil {
+		// A fresh branch here would stick for the whole run and open a duplicate PR.
+		return *prRun.BranchName, err
+	}
+	if !isOpen {
+		return "", nil
+	}
+	return *prRun.BranchName, nil
+}
+
+func (d *Dispatcher) isPrOpen(ctx context.Context, prRun *model.AgentRun) (bool, error) {
+	integration, err := d.gitIntRepo.LoadByID(ctx, *prRun.IdGitIntegration, prRun.IdProject)
+	if err != nil {
+		return false, fmt.Errorf("loading git integration %d: %w", *prRun.IdGitIntegration, err)
+	}
+	if integration == nil {
+		return false, fmt.Errorf("git integration %d not found", *prRun.IdGitIntegration)
+	}
+	host, err := githost.BuildFromIntegration(integration)
+	if err != nil {
+		return false, fmt.Errorf("building git host: %w", err)
+	}
+	status, err := host.GetMergeRequestStatus(ctx, *prRun.PrId)
+	if err != nil {
+		return false, fmt.Errorf("loading PR %s status: %w", *prRun.PrId, err)
+	}
+	return status.State == constants.MrStateOpen, nil
 }
 
 func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun) error {

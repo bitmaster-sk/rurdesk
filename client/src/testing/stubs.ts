@@ -21,6 +21,9 @@ export class TablerIconStub {
     public readonly svgClass = input<string>('');
 }
 
+@Component({ selector: 'app-attachment-lightbox', template: '', standalone: true })
+export class AttachmentLightboxStub {}
+
 @Component({ selector: 'app-avatar', template: '', standalone: true })
 export class AvatarStub {
     public readonly name = input<string>('');
@@ -39,6 +42,8 @@ export class MessageEditorStub {
     public readonly sendIcon = input<string>('');
     public readonly sendLabel = input<string>('');
     public readonly disableCancelButton = input<boolean>(true);
+    public readonly allowAttachments = input<boolean>(true);
+    public readonly attachmentScope = input<unknown>(null);
     public readonly messageChange = output<string>();
     public readonly cancelled = output<void>();
 }

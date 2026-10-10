@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { SettingsStore } from '../../core/settings/settings.store';
 import { LicenseStore } from '../../core/license/license.store';
 import { NotificationStore } from '../../notification/store/notification.store';
+import { AttachmentStore } from '../../shared/attachment/store/attachment.store';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 
@@ -14,6 +15,7 @@ export class SessionService {
     private readonly settingsStore = inject(SettingsStore);
     private readonly licenseStore = inject(LicenseStore);
     private readonly notificationStore = inject(NotificationStore);
+    private readonly attachmentStore = inject(AttachmentStore);
 
     public start(token: string): void {
         this.tokenStore.saveToken(token);
@@ -30,6 +32,7 @@ export class SessionService {
     public end(redirectTo?: string): void {
         const done = (): void => {
             this.tokenStore.clearToken();
+            this.attachmentStore.revokeAll();
             if (redirectTo !== undefined) {
                 void this.router.navigate([redirectTo]);
             }

@@ -30,7 +30,8 @@ describe('SettingsStore', () => {
             sprintVelocityLimit: 15,
             userApiKeyLimit: 25,
             isAgentThinkingPersisted: false,
-            agentThinkingMaxKb: 2048
+            agentThinkingMaxKb: 2048,
+            attachmentMaxSizeMb: 40
         });
         store.load();
         expect(store.tablePageSize()).toBe(75);

@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { SettingsStore } from '../../core/settings/settings.store';
 import { LicenseStore } from '../../core/license/license.store';
 import { NotificationStore } from '../../notification/store/notification.store';
+import { AttachmentStore } from '../../shared/attachment/store/attachment.store';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 import { SessionService } from './session.service';
@@ -15,6 +16,7 @@ function build(logout$ = () => of(undefined)) {
     const saveToken = vi.fn();
     const clearToken = vi.fn();
     const init = vi.fn();
+    const revokeAll = vi.fn();
     const injector = Injector.create({
         providers: [
             { provide: Router, useValue: { navigate } },
@@ -22,11 +24,12 @@ function build(logout$ = () => of(undefined)) {
             { provide: AuthTokenStore, useValue: { saveToken, clearToken } },
             { provide: SettingsStore, useValue: { load } },
             { provide: LicenseStore, useValue: { load: loadLicense } },
-            { provide: NotificationStore, useValue: { init } }
+            { provide: NotificationStore, useValue: { init } },
+            { provide: AttachmentStore, useValue: { revokeAll } }
         ]
     });
     const session = runInInjectionContext(injector, () => new SessionService());
-    return { session, navigate, load, loadLicense, saveToken, clearToken, init };
+    return { session, navigate, load, loadLicense, saveToken, clearToken, init, revokeAll };
 }
 
 describe('SessionService.start', () => {
@@ -60,6 +63,14 @@ describe('SessionService.end', () => {
 
         expect(clearToken).toHaveBeenCalled();
         expect(navigate).toHaveBeenCalledWith(['/login']);
+    });
+
+    it('forgets downloaded attachments so the next user cannot see them', () => {
+        const { session, revokeAll } = build();
+
+        session.end('/login');
+
+        expect(revokeAll).toHaveBeenCalled();
     });
 
     it('drops the token even when the server rejects the logout', () => {

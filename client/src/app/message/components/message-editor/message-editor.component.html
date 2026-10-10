@@ -8,6 +8,8 @@
             aria-multiline="true"
             (input)="onInput()"
             (keydown)="onKeydown($event)"
+            (dragover)="onDragOver($event)"
+            (drop)="onDrop($event)"
         ></div>
         @if (mentionQuery() && filteredCandidates().length) {
             <div
@@ -241,6 +243,26 @@
                         </div>
                     }
                 </div>
+                @if (canAttach()) {
+                    <ui-button
+                        variant="text"
+                        severity="primary"
+                        size="small"
+                        data-testid="message-editor-attach"
+                        [uiTooltip]="'MESSAGE_EDITOR.ATTACH' | translate"
+                        (click)="fileInput.click()"
+                    >
+                        <tabler-icon icon="paperclip" [size]="14" />
+                    </ui-button>
+                    <input
+                        #fileInput
+                        type="file"
+                        multiple
+                        class="hidden"
+                        data-testid="message-editor-file-input"
+                        (change)="onFilesPicked(fileInput)"
+                    />
+                }
             </div>
         </div>
 
@@ -250,6 +272,8 @@
                     variant="text"
                     severity="primary"
                     size="small"
+                    data-testid="message-editor-send"
+                    [disabled]="pendingUploads() > 0"
                     (click)="onSend()"
                     [uiTooltip]="sendShortcutHint()"
                 >

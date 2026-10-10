@@ -50,7 +50,8 @@ export class AdminSettingsComponent {
             agentThinkingMaxKb: [
                 1024,
                 [Validators.required, Validators.min(64), Validators.max(10240)]
-            ]
+            ],
+            attachmentMaxSizeMb: [25, [Validators.required, Validators.min(1), Validators.max(100)]]
         },
         { updateOn: 'blur' }
     );

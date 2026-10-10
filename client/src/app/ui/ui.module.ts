@@ -40,6 +40,9 @@ import {
     IconTrash,
     IconUser,
     IconX,
+    IconZoomIn,
+    IconZoomOut,
+    IconZoomReset,
     TablerIconComponent,
     provideTablerIcons
 } from '@tabler/icons-angular';
@@ -53,6 +56,7 @@ import { UiButtonComponent } from './components/button/button.component';
 import { UiChoiceComponent } from './components/choice/choice.component';
 import { UiConfirmPopupComponent } from './components/confirm-popup/confirm-popup.component';
 import { UiDialogComponent } from './components/dialog/dialog.component';
+import { UiLightboxComponent } from './components/lightbox/lightbox.component';
 import { UiDividerComponent } from './components/divider/divider.component';
 import { UiLoaderComponent } from './components/loader/loader.component';
 import { UiMessageComponent } from './components/message/message.component';
@@ -104,6 +108,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiMenuComponent,
         UiTooltipComponent,
         UiDialogComponent,
+        UiLightboxComponent,
         UiSaveStatusChipComponent,
         UiSplitPaneComponent,
         UiTableSortDirective,
@@ -148,6 +153,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiPopoverComponent,
         UiMenuComponent,
         UiDialogComponent,
+        UiLightboxComponent,
         UiSplitPaneComponent,
         UiTableSortDirective,
         UiSortColumnDirective,
@@ -169,6 +175,9 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
             IconChevronRight,
             IconLoader2,
             IconX,
+            IconZoomIn,
+            IconZoomOut,
+            IconZoomReset,
             IconInfoCircle,
             IconCircleCheck,
             IconAlertTriangle,

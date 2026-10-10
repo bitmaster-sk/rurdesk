@@ -85,6 +85,10 @@
                     } @else if (refAnchorText(); as text) {
                         <span class="pl-1">{{ text }}</span>
                     }
+                    @if (teamName(); as name) {
+                        &nbsp;
+                        <strong data-testid="notif-team-name">{{ name }}</strong>
+                    }
                     @if (stateBody(); as body) {
                         &nbsp;{{ 'NOTIFICATION.TEXT.TO' | translate }}&nbsp;
                         <strong>{{ body.stateName }}</strong>

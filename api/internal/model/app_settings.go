@@ -9,6 +9,7 @@ type AppSettingsRes struct {
 	UserApiKeyLimit          int  `json:"userApiKeyLimit"`
 	IsAgentThinkingPersisted bool `json:"isAgentThinkingPersisted"`
 	AgentThinkingMaxKb       int  `json:"agentThinkingMaxKb"`
+	AttachmentMaxSizeMb      int  `json:"attachmentMaxSizeMb"`
 }
 
 // UpdateAppSettingsReq is a partial update — nil fields are left unchanged.
@@ -20,4 +21,5 @@ type UpdateAppSettingsReq struct {
 	UserApiKeyLimit          *int  `json:"userApiKeyLimit"`
 	IsAgentThinkingPersisted *bool `json:"isAgentThinkingPersisted"`
 	AgentThinkingMaxKb       *int  `json:"agentThinkingMaxKb"`
+	AttachmentMaxSizeMb      *int  `json:"attachmentMaxSizeMb"`
 }

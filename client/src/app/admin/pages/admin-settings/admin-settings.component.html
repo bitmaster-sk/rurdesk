@@ -78,6 +78,18 @@
                     data-testid="settings-agent-thinking-max-kb"
                 />
             </div>
+            <div class="flex flex-col gap-1">
+                <label for="attachmentMaxSizeMb">
+                    {{ 'SETTINGS.ATTACHMENT_MAX_SIZE_MB' | translate }}
+                </label>
+                <input
+                    id="attachmentMaxSizeMb"
+                    uiInput
+                    type="number"
+                    formControlName="attachmentMaxSizeMb"
+                    data-testid="settings-attachment-max-size-mb"
+                />
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

@@ -10,7 +10,8 @@ const FALLBACK: AppSettings = {
     sprintVelocityLimit: 10,
     userApiKeyLimit: 10,
     isAgentThinkingPersisted: true,
-    agentThinkingMaxKb: 1024
+    agentThinkingMaxKb: 1024,
+    attachmentMaxSizeMb: 25
 };
 
 @Injectable({ providedIn: 'root' })

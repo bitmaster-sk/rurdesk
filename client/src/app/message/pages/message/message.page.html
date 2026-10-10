@@ -63,6 +63,7 @@
                 mode="create"
                 change="onaction"
                 [mentionCandidates]="mentionCandidates()"
+                [attachmentScope]="attachmentScope()"
                 (messageChange)="onMessage($event)"
             ></app-message-editor>
         </div>

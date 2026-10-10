@@ -171,6 +171,20 @@ by hand.
 > you, and drop the `rurdesk.db` service. The same applies to `rurdesk.cache`
 > (Redis) if you rely on its data. Keep regular backups either way.
 
+### Attachment size and your reverse proxy
+
+Uploaded attachments are limited by the **Maximum attachment size (MB)** admin
+setting (default 25 MB, see [Configuration](./configuration.md#attachments)).
+The tracker enforces that limit itself, but the production image has no nginx in
+front of it, so your own reverse proxy or load balancer must not reject uploads
+first. Raise its request body limit to at least the configured size (for nginx,
+`client_max_body_size 100m;` covers the maximum; the nginx default is 1 MB and
+would refuse almost every upload).
+
+Attachments are stored in PostgreSQL, so the database and its backups grow with
+every uploaded file. Plan disk space and backup retention accordingly. Files that
+are uploaded but never sent in a message are removed automatically after 24 hours.
+
 ## 3. Open the app
 
 Navigate to **http://localhost/** (served by the tracker). The API is reachable

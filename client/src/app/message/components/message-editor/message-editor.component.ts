@@ -15,8 +15,13 @@ import {
     viewChild,
     AfterViewInit
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize, take } from 'rxjs';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { User } from 'src/app/auth/model/user.model';
+import { AttachmentLink } from 'src/app/shared/attachment/util/attachment-link';
+import { AttachmentUploader } from 'src/app/shared/attachment/service/attachment-uploader.service';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { AsciiEmoji } from './ascii-emoji';
 import { CodeBlockLanguage } from './constant/code-block-language.enum';
 import { EMOJI_GROUPS, EmojiGroup } from './constant/emoji-picker.constant';
@@ -68,13 +73,25 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public readonly disableSendButton = input(false);
 
+    protected readonly pendingUploads = signal(0);
+
     public readonly disableCancelButton = input(true);
 
     public readonly message = model('');
 
     public readonly mentionCandidates = input<User[]>([]);
 
+    public readonly allowAttachments = input(true);
+
+    public readonly attachmentScope = input<AttachmentScope | null>(null);
+
     public readonly cancelled = output<void>();
+
+    private readonly uploader = inject(AttachmentUploader);
+
+    protected readonly canAttach = computed(
+        () => this.allowAttachments() && this.attachmentScope() !== null
+    );
 
     // Internal source of truth for the editor content. Derived from the model()
     // input via linkedSignal, so an inbound [message] push (or CVA writeValue,
@@ -384,18 +401,85 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         // 'onchange' mode. Propagating unconditionally made consumers wired to
         // messageChange/onaction treat a mention pick as a send (auto-sent the chat
         // message / saved the comment).
-        const next = EditorText.serialize(root);
+        this.syncFromDom();
+        this.mentionQuery.set(null);
+    }
+
+    private syncFromDom(): void {
+        const next = EditorText.serialize(this.editorRef().nativeElement);
         this.lastRendered = next;
         this.text.set(next);
         if (this.change() === 'onchange') {
             this.propagateChange(next);
         }
-        this.mentionQuery.set(null);
+    }
+
+    protected onFilesPicked(input: HTMLInputElement): void {
+        const files = Array.from(input.files ?? []);
+        input.value = '';
+        this.uploadFiles(files);
+    }
+
+    protected onDragOver(evt: DragEvent): void {
+        if (this.canAttach() && evt.dataTransfer?.types.includes('Files')) {
+            evt.preventDefault();
+        }
+    }
+
+    protected onDrop(evt: DragEvent): void {
+        const files = Array.from(evt.dataTransfer?.files ?? []);
+        if (!this.canAttach() || !files.length) {
+            return;
+        }
+        evt.preventDefault();
+        this.uploadFiles(files);
+    }
+
+    private uploadFiles(files: File[]): void {
+        const scope = this.attachmentScope();
+        if (!this.canAttach() || !scope) {
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        root.focus();
+        for (const file of files) {
+            const placeholder = EditorChip.buildUploadPlaceholder(file.name);
+            EditorChip.insertNodeInEditor(root, placeholder);
+            this.syncFromDom();
+            this.pendingUploads.update(count => count + 1);
+            this.uploader
+                .upload$(file, scope)
+                .pipe(
+                    take(1),
+                    finalize(() => this.pendingUploads.update(count => count - 1)),
+                    takeUntilDestroyed(this.destroyRef)
+                )
+                .subscribe({
+                    next: ({ name, markdown }) =>
+                        this.replacePlaceholder(
+                            placeholder,
+                            EditorChip.buildAttachmentChip(markdown, name)
+                        ),
+                    error: () => this.replacePlaceholder(placeholder, null)
+                });
+        }
+    }
+
+    private replacePlaceholder(placeholder: HTMLElement, chip: HTMLElement | null): void {
+        if (!placeholder.isConnected) {
+            return;
+        }
+        if (chip) {
+            placeholder.replaceWith(chip);
+        } else {
+            placeholder.remove();
+        }
+        this.syncFromDom();
     }
 
     public onSend(): void {
         const value = this.text();
-        if (!value || value.trim() === '') {
+        if (!value || value.trim() === '' || this.pendingUploads() > 0) {
             return;
         }
         if (this.change() === 'onaction') {
@@ -505,11 +589,19 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         root.replaceChildren();
         for (const part of Mention.parse(body)) {
             if (part.type === 'text') {
-                if (part.text.length) {
-                    root.appendChild(document.createTextNode(part.text));
-                }
+                this.renderText(root, part.text);
             } else {
                 root.appendChild(EditorChip.buildChip(part.idUser, part.name));
+            }
+        }
+    }
+
+    private renderText(root: HTMLElement, text: string): void {
+        for (const part of AttachmentLink.parse(text)) {
+            if (part.type === 'attachment') {
+                root.appendChild(EditorChip.buildAttachmentChip(part.markdown, part.name));
+            } else if (part.text.length) {
+                root.appendChild(document.createTextNode(part.text));
             }
         }
     }
@@ -536,6 +628,11 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     private installPasteSanitizer(root: HTMLElement): () => void {
         const handler = (e: ClipboardEvent): void => {
             e.preventDefault();
+            const files = Array.from(e.clipboardData?.files ?? []);
+            if (files.length && this.canAttach()) {
+                this.uploadFiles(files);
+                return;
+            }
             const text = e.clipboardData?.getData('text/plain') ?? '';
             root.ownerDocument.execCommand('insertText', false, text);
         };

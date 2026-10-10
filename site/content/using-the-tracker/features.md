@@ -86,6 +86,35 @@ peer (in direct messages). Click to insert a mention as a structured token
 Mentions are reliably detected by user ID — no false positives from similar names,
 case sensitivity, or word boundaries.
 
+### Attachments
+
+Task comments and chat messages (team, project and direct) accept images and
+other files. Add a file in any of three ways:
+
+- **Paste** an image or file from the clipboard into the composer
+- **Drag and drop** a file onto the composer
+- Click the **paperclip** button in the composer toolbar
+
+The file uploads immediately and appears in the composer as a chip. Task
+descriptions do not accept attachments.
+
+Allowed types are images (PNG, JPEG, GIF, WebP), PDF, plain text and ZIP, among
+others. SVG is not allowed. The type is checked from the file content, not its
+extension. A file over the size limit is rejected; admins set the limit in
+**Admin → Settings** (default 25 MB).
+
+In a posted message, images show as uniform thumbnails. Click one to open it
+enlarged, move between the images of that message with the arrow keys or buttons,
+and press `Esc` to close. Zoom with the mouse wheel, the zoom buttons or the `+`
+and `-` keys, drag the zoomed image to move around, and double-click or press `0`
+to fit it back to the screen. Other files show as a card with the name and size;
+click the card to download the file. PDFs open in a new tab instead. Only people who can read the task or
+conversation can open its attachments. Files uploaded but never sent are deleted
+after 24 hours.
+
+To find a file shared on a task, switch the activity feed to the **Attachments**
+chip. It shows only the comments that carry an attachment.
+
 ### Emoji shortcuts
 
 The composer turns common ASCII smileys into emoji as you type: write `:)`, `:D`,

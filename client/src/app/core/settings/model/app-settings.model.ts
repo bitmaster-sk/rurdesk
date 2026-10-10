@@ -6,6 +6,7 @@ export interface AppSettings {
     userApiKeyLimit: number;
     isAgentThinkingPersisted: boolean;
     agentThinkingMaxKb: number;
+    attachmentMaxSizeMb: number;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;

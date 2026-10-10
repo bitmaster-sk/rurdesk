@@ -32,6 +32,7 @@ type AgentRunController struct {
 	issueRepo     *repository.IssueRepository
 	projectRepo   *repository.ProjectRepository
 	messageRepo   *repository.MessageRepository
+	attachmentSvc *service.AttachmentService
 	gitIntRepo    *repository.GitIntegrationRepository
 	acl           *service.AclService
 	stagePlan     *service.StagePlanService
@@ -49,6 +50,7 @@ func NewAgentRunController(
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
 	messageRepo *repository.MessageRepository,
+	attachmentSvc *service.AttachmentService,
 	gitIntRepo *repository.GitIntegrationRepository,
 	acl *service.AclService,
 	stagePlan *service.StagePlanService,
@@ -65,6 +67,7 @@ func NewAgentRunController(
 		issueRepo:     issueRepo,
 		projectRepo:   projectRepo,
 		messageRepo:   messageRepo,
+		attachmentSvc: attachmentSvc,
 		gitIntRepo:    gitIntRepo,
 		acl:           acl,
 		stagePlan:     stagePlan,
@@ -751,6 +754,10 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 			c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
 			return
 		}
+		if errors.Is(txErr, errs.ErrAttachmentLinkInvalid) {
+			ResponseErr(c, txErr)
+			return
+		}
 		_ = c.Error(errs.ErrInternal.WithMessage(txErr.Error()))
 		c.Status(http.StatusInternalServerError)
 		return
@@ -815,6 +822,9 @@ func (ctrl *AgentRunController) applyCompleteStage(
 		)
 		if err != nil {
 			return completeStageResult{}, fmt.Errorf("writing message: %w", err)
+		}
+		if err := ctrl.attachmentSvc.LinkMessageAttachments(ctx, msg); err != nil {
+			return completeStageResult{}, fmt.Errorf("linking message attachments: %w", err)
 		}
 		id := msg.IdMessage
 		idMessage = &id

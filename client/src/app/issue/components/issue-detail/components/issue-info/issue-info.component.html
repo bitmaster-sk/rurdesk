@@ -130,6 +130,7 @@
                         change="onchange"
                         formControlName="description"
                         [disableSendButton]="true"
+                        [allowAttachments]="false"
                     ></app-message-editor>
                 </div>
             } @else {
@@ -140,6 +141,7 @@
                             mode="edit"
                             formControlName="description"
                             [disableSendButton]="true"
+                            [allowAttachments]="false"
                             change="onblur"
                             (messageChange)="onInputDescriptionChange()"
                         ></app-message-editor>

@@ -99,4 +99,23 @@ describe('NotificationCardComponent', () => {
         expect(el.querySelector('[data-testid="notif-wiki-proposal"]')).toBeNull();
         expect(el.textContent).toContain('NOTIFICATION.TEXT.ASSIGNED');
     });
+
+    it('says who added the user to which team', () => {
+        const el = render(
+            notification({
+                type: NotificationType.TeamJoined,
+                idProject: undefined,
+                projectName: undefined,
+                refType: 'team',
+                refId: '5',
+                refTitle: 'Backend',
+                refPublicId: undefined,
+                body: undefined
+            })
+        );
+
+        expect(el.querySelector('strong')?.textContent).toBe('Kimi');
+        expect(el.textContent).toContain('NOTIFICATION.TEXT.TEAM_JOINED');
+        expect(el.querySelector('[data-testid="notif-team-name"]')?.textContent).toBe('Backend');
+    });
 });

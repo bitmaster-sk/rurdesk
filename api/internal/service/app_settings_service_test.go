@@ -132,6 +132,30 @@ func TestAppSettings_BoolSettingFallsBackToDefaultWhenStoredValueIsGarbage(t *te
 	}
 }
 
+func TestAppSettings_AttachmentMaxSizeMb(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.AttachmentMaxSizeMb(); got != 25 {
+		t.Fatalf("want default 25, got %d", got)
+	}
+
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 40}, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.AttachmentMaxSizeMb(); got != 40 {
+		t.Fatalf("want 40 after update, got %d", got)
+	}
+
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 0}, nil); err == nil {
+		t.Fatal("expected out-of-range error for 0")
+	}
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 101}, nil); err == nil {
+		t.Fatal("expected out-of-range error for 101")
+	}
+}
+
 func TestAppSettings_UpdateRejectsUnknownBoolSetting(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
 	if err := svc.Update(context.Background(), nil, map[string]bool{"agent.bogus": true}); err == nil {

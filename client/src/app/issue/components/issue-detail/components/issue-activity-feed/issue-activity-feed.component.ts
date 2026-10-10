@@ -21,12 +21,14 @@ import { MessageApi } from 'src/app/message/api/message.api.service';
 import { Message } from 'src/app/message/model/message.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
+import { AttachmentLink } from 'src/app/shared/attachment/util/attachment-link';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { isToday, isYesterday, format } from 'date-fns';
 import {
     CommentTimelineItem,
-    TimelineItemType,
+    TimelineFilter,
     TimelineDisplayItem,
     TimelineItem
 } from '../../entity/timeline-item.entity';
@@ -77,7 +79,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly proposalItems = signal<TimelineItem[]>([]);
     protected readonly usersMap = signal<Map<number, User>>(new Map());
 
-    public readonly activeFilters = signal<Set<TimelineItemType>>(new Set());
+    public readonly activeFilters = signal<Set<TimelineFilter>>(new Set());
     public readonly idMessageEdit = signal<number | null>(null);
 
     public readonly displayItems = computed(() =>
@@ -89,7 +91,15 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     public readonly filteredItems = computed(() => {
         const filters = this.activeFilters();
         const items = this.displayItems();
-        return filters.size === 0 ? items : items.filter(i => filters.has(i.type));
+        return filters.size === 0
+            ? items
+            : items.filter(
+                  i =>
+                      filters.has(i.type) ||
+                      (filters.has('attachment') &&
+                          i.type === 'comment' &&
+                          AttachmentLink.hasAny(i.data.message))
+              );
     });
 
     public readonly currentAgentStage = computed<AgentStageProgress | null>(() =>
@@ -158,6 +168,11 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     });
 
     public readonly mentionCandidates = computed(() => Array.from(this.usersMap().values()));
+
+    protected readonly attachmentScope = computed<AttachmentScope>(() => ({
+        idMessageRecipientType: MessageRecipientType.issue,
+        idRecipient: this.idIssue()
+    }));
 
     public readonly childrenByParent = computed<Map<number, Message[]>>(() => {
         const result = new Map<number, Message[]>();
@@ -302,7 +317,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         });
     }
 
-    public setFilter(type: 'all' | TimelineItemType): void {
+    public setFilter(type: 'all' | TimelineFilter): void {
         if (type === 'all') {
             this.activeFilters.set(new Set());
             return;

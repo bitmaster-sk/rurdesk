@@ -5,7 +5,12 @@ import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options'
 import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from 'src/app/ui/ui.module';
-import { AvatarStub, MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
+import {
+    AttachmentLightboxStub,
+    AvatarStub,
+    MessageEditorStub,
+    TablerIconStub
+} from 'src/testing/stubs';
 import { ActivityCommentItemComponent } from './activity-comment-item.component';
 import { MessageBodyComponent } from 'src/app/shared/mention/message-body/message-body.component';
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
@@ -93,6 +98,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
                 AvatarStub,
                 MessageEditorStub,
                 TablerIconStub,
+                AttachmentLightboxStub,
                 DiffViewerStub,
                 AnchorReplyStub,
                 PlanActionsStub
@@ -181,6 +187,7 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
                 AvatarStub,
                 MessageEditorStub,
                 TablerIconStub,
+                AttachmentLightboxStub,
                 DiffViewerStub,
                 AnchorReplyStub,
                 PlanActionsStub

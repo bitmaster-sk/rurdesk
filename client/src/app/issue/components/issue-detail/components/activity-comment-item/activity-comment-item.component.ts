@@ -10,6 +10,7 @@ import {
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Message } from 'src/app/message/model/message.model';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
+import { MessageConverter } from 'src/app/message/converter/message.converter';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 import { User } from 'src/app/auth/model/user.model';
@@ -44,6 +45,10 @@ export class ActivityCommentItemComponent {
     public readonly addAnchor = output<{ lineStart: number; lineEnd: number }>();
 
     protected readonly MessageKind = MessageKind;
+
+    protected readonly attachmentScope = computed(() =>
+        MessageConverter.toAttachmentScope(this.message())
+    );
 
     // Per-kind chrome — tabler icon + i18n title. Empty title falls back to no header.
     protected readonly kindIcon: Record<string, string> = {

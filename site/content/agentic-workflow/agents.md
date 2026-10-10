@@ -234,6 +234,10 @@ Not every comment produces a commit. When you ask a question, or the agent objec
 to a request, it answers with a **review reply** comment and nothing is pushed.
 Your next comment picks the conversation back up.
 
+Every attempt pushes to the **same branch and PR** for as long as that PR stays
+open, even days later or after the gateway cleaned up its working copy. A new
+branch and PR are opened only once the previous PR was merged or closed.
+
 ### Surviving a restart
 
 Agent work runs in the gateway, a separate process from the tracker. If the
@@ -247,8 +251,7 @@ If the **gateway** itself restarts (its subprocess dies with it), the affected r
 is failed and you resume it with **Continue** or **Restart**.
 
 Because a reconciled run already carries its pull request, **Restart is refused on
-a run that has a PR** — use **Continue** instead (restarting would push a new branch
-and open a duplicate PR).
+a run that has a PR** — use **Continue** instead.
 
 ## Troubleshooting
 
@@ -260,7 +263,7 @@ and open a duplicate PR).
 | Agent can't push                                                  | `GIT_ACCESS_TOKEN` lacks write on the repo, or `REPO_URL` wrong                                                                             |
 | Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                           |
 | Run briefly shows `failed` after a tracker restart, then recovers | Expected — the tracker reconciles the live gateway's completion automatically                                                               |
-| **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue** (Restart would open a duplicate PR)                                                       |
+| **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue**                                                                                           |
 
 See the [gateway verifying-a-deploy steps](./gateway.md#healthcheck--verifying-a-deploy)
 to confirm the gateway side is healthy.

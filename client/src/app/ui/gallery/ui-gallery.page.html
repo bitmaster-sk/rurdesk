@@ -1121,7 +1121,23 @@
                 </ui-button>
                 <code>[dismissable]=true (backdrop)</code>
             </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-button size="small" severity="secondary" (click)="lightboxOpen = true">
+                    Open lightbox
+                </ui-button>
+                <code>ui-lightbox: arrows, zoom, Esc</code>
+            </div>
         </div>
+
+        <ui-lightbox
+            [(visible)]="lightboxOpen"
+            [header]="'Image ' + (lightboxIndex + 1) + ' / ' + lightboxImages.length"
+            [src]="lightboxImages[lightboxIndex]"
+            alt="Lightbox demo"
+            [hasMany]="true"
+            (previous)="onLightboxStep(-1)"
+            (next)="onLightboxStep(1)"
+        />
 
         <ui-dialog [(visible)]="dialogBasicOpen" header="Basic dialog" width="26rem">
             <p>

@@ -41,6 +41,7 @@ type Task struct {
 	IdProject     int64
 	IdIssuePublic int64
 	Branch        string
+	PrBranch      string
 	WorktreePath  string
 	IssueTitle    string
 	IssueDesc     string

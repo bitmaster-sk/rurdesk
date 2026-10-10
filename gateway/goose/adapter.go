@@ -1,16 +1,12 @@
 package goose
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
@@ -18,13 +14,6 @@ import (
 )
 
 const defaultGooseBinary = "goose"
-
-// gooseSession holds the running goose subprocess and a cancel hook so
-// orchestrator-driven Cancel calls can SIGTERM the right child.
-type gooseSession struct {
-	cmd    *exec.Cmd
-	cancel context.CancelFunc
-}
 
 // GooseAdapter implements common.Agent by driving Block's Goose agent
 // (`goose run`, a pinned Rust binary) headlessly. Unlike the claude adapter it
@@ -37,15 +26,14 @@ type gooseSession struct {
 type GooseAdapter struct {
 	cfg            *common.Config
 	thinkingSender common.ThinkingSender
-	mu             sync.Mutex
-	sessions       map[common.RunID]*gooseSession
+	sessions       *common.ProcessSessions
 }
 
 func NewGooseAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) *GooseAdapter {
 	return &GooseAdapter{
 		cfg:            cfg,
 		thinkingSender: thinkingSender,
-		sessions:       make(map[common.RunID]*gooseSession),
+		sessions:       common.NewProcessSessions(),
 	}
 }
 
@@ -71,17 +59,13 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
-	session := &gooseSession{cancel: cancel}
+	session := &common.ProcessSession{Cancel: cancel}
 
 	runIDKey := common.RunID(fmt.Sprintf("%d", task.IdRun))
-	a.mu.Lock()
-	a.sessions[runIDKey] = session
-	a.mu.Unlock()
+	a.sessions.Add(runIDKey, session)
 	defer func() {
 		cancel()
-		a.mu.Lock()
-		delete(a.sessions, runIDKey)
-		a.mu.Unlock()
+		a.sessions.Remove(runIDKey)
 	}()
 
 	args := []string{
@@ -122,7 +106,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		return stats, fmt.Errorf("stderr pipe: %w", err)
 	}
 
-	session.cmd = cmd
+	session.Cmd = cmd
 
 	log.Info().
 		Int64("idRun", task.IdRun).
@@ -154,7 +138,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	}()
 	stderrDone := make(chan struct{})
 	go func() {
-		drainStderr(stderrPipe, task.IdRun)
+		common.DrainStderr(stderrPipe, task.IdRun, "goose")
 		close(stderrDone)
 	}()
 
@@ -303,19 +287,19 @@ func toStreamableHTTP(mcpURL string) string {
 // tokensFromMap sums a token total, tolerating a couple of key layouts
 // (total_tokens/total, or input+output). Returns 0 if none.
 func tokensFromMap(m map[string]any) int {
-	if t, ok := numberField(m, "total_tokens"); ok && t > 0 {
+	if t, ok := common.NumberField(m, "total_tokens"); ok && t > 0 {
 		return t
 	}
-	if t, ok := numberField(m, "total"); ok && t > 0 {
+	if t, ok := common.NumberField(m, "total"); ok && t > 0 {
 		return t
 	}
-	in, _ := numberField(m, "input_tokens")
-	out, _ := numberField(m, "output_tokens")
+	in, _ := common.NumberField(m, "input_tokens")
+	out, _ := common.NumberField(m, "output_tokens")
 	if in == 0 {
-		in, _ = numberField(m, "input")
+		in, _ = common.NumberField(m, "input")
 	}
 	if out == 0 {
-		out, _ = numberField(m, "output")
+		out, _ = common.NumberField(m, "output")
 	}
 	if in+out > 0 {
 		return in + out
@@ -323,79 +307,8 @@ func tokensFromMap(m map[string]any) int {
 	return 0
 }
 
-func numberField(m map[string]any, key string) (int, bool) {
-	switch v := m[key].(type) {
-	case float64:
-		return int(v), true
-	case int:
-		return v, true
-	case int64:
-		return int(v), true
-	}
-	return 0, false
-}
-
-func drainStderr(r io.Reader, idRun int64) {
-	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
-		line := strings.TrimRight(scanner.Text(), "\r\n")
-		if line == "" {
-			continue
-		}
-		forwardStderrLine(line, idRun)
-	}
-}
-
-// forwardStderrLine maps goose's stderr lines to zerolog at the right
-// severity by prefix-matching, so a real failure doesn't read as routine
-// debug noise (parity with the claude adapter).
-func forwardStderrLine(line string, idRun int64) {
-	trim := strings.TrimLeft(line, " \t")
-	switch {
-	case hasPrefixFold(trim, "Error"),
-		hasPrefixFold(trim, "Fatal"),
-		hasPrefixFold(trim, "panic"):
-		log.Error().Int64("idRun", idRun).Str("line", line).Msg("goose stderr")
-	case hasPrefixFold(trim, "Warning"),
-		hasPrefixFold(trim, "Warn"),
-		hasPrefixFold(trim, "Deprecated"):
-		log.Warn().Int64("idRun", idRun).Str("line", line).Msg("goose stderr")
-	default:
-		log.Debug().Int64("idRun", idRun).Str("line", line).Msg("goose stderr")
-	}
-}
-
-func hasPrefixFold(s, prefix string) bool {
-	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
-}
-
 func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
-	a.mu.Lock()
-	session, ok := a.sessions[runID]
-	if ok {
-		delete(a.sessions, runID)
-	}
-	a.mu.Unlock()
-
-	if !ok || session.cmd == nil {
-		return nil
-	}
-
-	session.cancel()
-	if session.cmd.Process != nil {
-		_ = session.cmd.Process.Signal(syscall.SIGTERM)
-		done := make(chan struct{})
-		go func() {
-			_ = session.cmd.Wait()
-			close(done)
-		}()
-		select {
-		case <-done:
-		case <-time.After(10 * time.Second):
-			_ = session.cmd.Process.Kill()
-		}
-	}
+	a.sessions.Terminate(runID)
 	return nil
 }
 

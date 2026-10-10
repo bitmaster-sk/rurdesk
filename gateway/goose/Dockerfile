@@ -11,7 +11,7 @@ FROM node:22-slim
 # install script's `tar` extraction fails without it.
 # libgomp1: the goose binary links libgomp.so.1 (OpenMP runtime) — missing in
 # node:22-slim, so `goose` won't even print --version without it.
-RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates procps ripgrep bzip2 libgomp1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates procps ripgrep bzip2 libgomp1 tini && rm -rf /var/lib/apt/lists/*
 
 # Pin the Goose CLI version so a surprise upstream release can't flip flags or
 # the stream-json schema under us. GOOSE_VERSION pins the binary; bump it
@@ -60,4 +60,5 @@ HEALTHCHECK --interval=30s --timeout=5s CMD curl -f http://localhost:${LISTEN_PO
 
 # The entrypoint seeds ~/.config/goose/config.yaml (tracker MCP extension) then
 # execs the gateway in goose mode.
-ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+# tini must stay PID 1: the gateway does not reap orphaned agent children (esbuild, vitest), so without it they pile up as zombies.
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint.sh"]

@@ -14,7 +14,7 @@ import { WikiAgentAccess } from 'src/app/wiki/constants/wiki-agent-access.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiTree } from 'src/app/wiki/model/wiki-tree.model';
 import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
-import { TablerIconStub } from 'src/testing/stubs';
+import { AttachmentLightboxStub, TablerIconStub } from 'src/testing/stubs';
 import { MessageBodyComponent } from './message-body.component';
 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
@@ -82,6 +82,7 @@ async function render(
             UiModule,
             TranslateModule.forRoot(),
             TablerIconStub,
+            AttachmentLightboxStub,
             DiffViewerStub
         ],
         declarations: [MessageBodyComponent, MockupCardComponent],

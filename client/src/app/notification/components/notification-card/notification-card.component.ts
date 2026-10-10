@@ -56,11 +56,6 @@ const TYPE_CHIPS: Record<NotificationType, TypeChip> = {
         colorClass: 'notif-card-badge__team',
         labelKey: 'NOTIFICATION.TYPE.TEAM_JOINED'
     },
-    [NotificationType.QualityScored]: {
-        icon: 'star',
-        colorClass: 'notif-card-badge__quality',
-        labelKey: 'NOTIFICATION.TYPE.QUALITY_SCORED'
-    },
     [NotificationType.WikiProposalReady]: {
         icon: 'file-text',
         colorClass: 'notif-card-badge__wiki',
@@ -108,6 +103,7 @@ export class NotificationCardComponent {
             [NotificationType.SeverityEscalated]: 'NOTIFICATION.TEXT.SEVERITY_ESCALATED',
             [NotificationType.SeverityDeescalated]: 'NOTIFICATION.TEXT.SEVERITY_DEESCALATED',
             [NotificationType.Assigned]: 'NOTIFICATION.TEXT.ASSIGNED',
+            [NotificationType.TeamJoined]: 'NOTIFICATION.TEXT.TEAM_JOINED',
             [NotificationType.WikiProposalReady]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_READY',
             [NotificationType.WikiProposalConflict]: 'NOTIFICATION.TEXT.WIKI_PROPOSAL_CONFLICT'
         };
@@ -124,7 +120,6 @@ export class NotificationCardComponent {
             type !== NotificationType.Assigned &&
             type !== NotificationType.Comment &&
             type !== NotificationType.Mention &&
-            type !== NotificationType.QualityScored &&
             !WIKI_PROPOSAL_TYPES.has(type)
         )
             return null;
@@ -135,6 +130,11 @@ export class NotificationCardComponent {
         const { refPublicId, refTitle } = this.notification();
         if (!refPublicId) return null;
         return refTitle ? `#${refPublicId} ${refTitle}` : `#${refPublicId}`;
+    });
+
+    protected readonly teamName = computed<string | null>(() => {
+        const { type, refTitle } = this.notification();
+        return type === NotificationType.TeamJoined ? (refTitle ?? null) : null;
     });
 
     protected readonly stateBody = computed<NotificationBodyState | null>(() => {
