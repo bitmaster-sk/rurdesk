@@ -156,10 +156,7 @@ func (o *Orchestrator) runStage(task Task) {
 	}
 	defer func() { <-o.sem }()
 
-	// New branch on the first Implementation attempt, reused for every later
-	// stage of the same run. Branch name is deterministic from
-	// idUserAgent+idIssue, so a redispatched run with the same idRun lands on
-	// the same worktree.
+	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
 	repoPath := RepoPathFromURL(o.cfg.WorkspaceBase, o.cfg.RepoUrl)
 	if WorktreeExists(repoPath, task.IdRun) {
 		task.WorktreePath = WorktreePath(repoPath, task.IdRun)
@@ -167,15 +164,14 @@ func (o *Orchestrator) runStage(task Task) {
 			task.Branch = branch
 		}
 	} else {
-		branch := GenerateBranchName(task.IdUserAgent, task.IdIssue)
-		task.Branch = branch
-		path, err := CreateWorktree(repoPath, o.cfg.RepoBranchBase, branch, task.IdRun)
+		path, branch, err := o.createRunWorktree(repoPath, task)
 		if err != nil {
 			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
 			o.failTask(task, "worktree_error", err.Error())
 			return
 		}
 		task.WorktreePath = path
+		task.Branch = branch
 	}
 
 	// Tells the tracker which repo this run pushes to, so it can resolve the
@@ -210,6 +206,32 @@ func (o *Orchestrator) runStage(task Task) {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}
 	}
+}
+
+func (o *Orchestrator) createRunWorktree(repoPath string, task Task) (path, branch string, err error) {
+	if o.canResumePrBranch(repoPath, task) {
+		path, err = ResumeWorktree(repoPath, task.PrBranch, task.IdRun)
+		return path, task.PrBranch, err
+	}
+	branch = GenerateBranchName(task.IdUserAgent, task.IdIssue)
+	path, err = CreateWorktree(repoPath, o.cfg.RepoBranchBase, branch, task.IdRun)
+	return path, branch, err
+}
+
+func (o *Orchestrator) canResumePrBranch(repoPath string, task Task) bool {
+	if task.PrBranch == "" {
+		return false
+	}
+	if !IsAgentBranch(task.PrBranch) {
+		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Msg("PR branch is not an agent branch — starting a new one")
+		return false
+	}
+	hasBranch, err := remoteHasBranch(repoPath, task.PrBranch)
+	if err != nil {
+		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Err(err).Msg("checking PR branch on origin failed — starting a new one")
+		return false
+	}
+	return hasBranch
 }
 
 // agentErrorReason extracts the stable error-reason code + detail from an
@@ -298,6 +320,7 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		task.IdTask = int64Field(inner, "idTask")
 		task.Stage, _ = inner["stage"].(string)
 		task.AttemptNo = int(int64Field(inner, "attemptNo"))
+		task.PrBranch = stringField(inner, "prBranch")
 
 		if ctx, ok := inner["contextBundle"].(map[string]any); ok {
 			if issue, ok := ctx["issue"].(map[string]any); ok {

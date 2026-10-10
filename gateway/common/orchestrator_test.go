@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -164,6 +165,71 @@ func TestParseStageExecutePayload_Minimal(t *testing.T) {
 	}
 	if task.IssueTitle != "Fix login" || task.IdIssuePublic != 11 {
 		t.Errorf("context bundle not parsed: %+v", task)
+	}
+}
+
+func TestParseStageExecutePayload_CarriesPrBranch(t *testing.T) {
+	payload := map[string]any{
+		"idRun": float64(42),
+		"payload": map[string]any{
+			"idTask":   float64(123),
+			"stage":    "implementation",
+			"prBranch": "agent/a3/i48/1790053695",
+		},
+	}
+	task, err := parseStageExecutePayload(payload)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.PrBranch != "agent/a3/i48/1790053695" {
+		t.Errorf("PrBranch = %q, want the branch from the payload", task.PrBranch)
+	}
+}
+
+func TestCreateRunWorktree_PicksBranch(t *testing.T) {
+	const prBranch = "agent/a3/i48/1790053695"
+	tests := []struct {
+		name         string
+		prBranch     string
+		wantPrBranch bool
+	}{
+		{"resumes the open PR branch that exists on origin", prBranch, true},
+		{"starts a new branch without a PR branch", "", false},
+		{"starts a new branch when the PR branch is gone from origin", "agent/a3/i48/1", false},
+		{"starts a new branch when the PR branch is not an agent branch", "main", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tmp := newGitEnv(t)
+			originPath, seed := seedOrigin(t, tmp, "main")
+			pushAgentBranch(t, seed, prBranch)
+			cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
+			if err := CloneRepo(cfg); err != nil {
+				t.Fatalf("CloneRepo: %v", err)
+			}
+			repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+			orchestrator := NewOrchestrator(cfg, nil, NewTrackerClient(cfg), NewState())
+
+			task := Task{IdRun: 9, IdUserAgent: 3, IdIssue: 48, PrBranch: tc.prBranch}
+			path, branch, err := orchestrator.createRunWorktree(repoPath, task)
+			if err != nil {
+				t.Fatalf("createRunWorktree: %v", err)
+			}
+
+			if tc.wantPrBranch {
+				if branch != prBranch {
+					t.Errorf("branch = %q, want the PR branch %q", branch, prBranch)
+				}
+				assertFile(t, filepath.Join(path, "first-attempt.txt"), "first attempt\n")
+				return
+			}
+			if branch == prBranch || branch == tc.prBranch || !IsAgentBranch(branch) {
+				t.Errorf("branch = %q, want a freshly generated agent branch", branch)
+			}
+			if got, want := headSha(t, path), headSha(t, seed); got != want {
+				t.Errorf("new branch starts at %s, want origin/main %s", got, want)
+			}
+		})
 	}
 }
 

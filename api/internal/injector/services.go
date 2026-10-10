@@ -601,6 +601,7 @@ func GetDispatcher() *agent.Dispatcher {
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
 			GetAgentGatewayRepository(),
+			GetGitIntegrationRepository(),
 			GetIssueRepository(),
 			GetMessageRepository(),
 			GetProjectRepository(),

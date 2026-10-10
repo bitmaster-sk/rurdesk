@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -239,6 +240,47 @@ func CreateWorktree(repoPath, baseBranch, branch string, idRun int64) (string, e
 	return worktreePath, nil
 }
 
+func ResumeWorktree(repoPath, branch string, idRun int64) (string, error) {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
+	worktreePath := WorktreePath(repoPath, idRun)
+	if err := runGit(repoPath, "fetch", "origin", branch); err != nil {
+		return "", fmt.Errorf("fetching %s: %w", branch, err)
+	}
+	if err := releaseBranch(repoPath, branch); err != nil {
+		return "", err
+	}
+	if err := runGit(repoPath, "worktree", "add", "-B", branch, worktreePath, "origin/"+branch); err != nil {
+		return "", fmt.Errorf("creating worktree on %s: %w", branch, err)
+	}
+	return worktreePath, nil
+}
+
+func releaseBranch(repoPath, branch string) error {
+	if err := runGit(repoPath, "worktree", "prune"); err != nil {
+		return fmt.Errorf("pruning worktrees: %w", err)
+	}
+	out, err := runGitOutput(repoPath, "worktree", "list", "--porcelain")
+	if err != nil {
+		return fmt.Errorf("listing worktrees: %w", err)
+	}
+	var currentPath string
+	for _, line := range strings.Split(out, "\n") {
+		if path, ok := strings.CutPrefix(line, "worktree "); ok {
+			currentPath = path
+			continue
+		}
+		if line != "branch refs/heads/"+branch {
+			continue
+		}
+		if err := runGit(currentPath, "checkout", "--detach"); err != nil {
+			return fmt.Errorf("detaching %s from %s: %w", currentPath, branch, err)
+		}
+	}
+	return nil
+}
+
 // WorktreePath returns the deterministic on-disk path for a run's worktree.
 func WorktreePath(repoPath string, idRun int64) string {
 	return filepath.Join(repoPath, agentRunsDir, fmt.Sprintf("%d", idRun))
@@ -284,6 +326,13 @@ func runGitQuiet(dir string, args ...string) error {
 // the pattern in git-hooks/pre-push, or the agent cannot push.
 func GenerateBranchName(idUserAgent, idIssue int64) string {
 	return fmt.Sprintf("agent/a%d/i%d/%d", idUserAgent, idIssue, time.Now().Unix())
+}
+
+// Must stay identical to the pattern in git-hooks/pre-push.
+var agentBranchPattern = regexp.MustCompile(`^agent/a[0-9]+/i[0-9]+/[0-9]+$`)
+
+func IsAgentBranch(branch string) bool {
+	return agentBranchPattern.MatchString(branch)
 }
 
 // RepoPathFromURL returns the local filesystem path for a given repo URL.
