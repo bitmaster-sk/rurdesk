@@ -89,6 +89,28 @@ form for a new page with that title.
 The panel on the right holds the page's **parent**, **agent access**, a short
 **summary** and a **change note** that ends up in the history.
 
+## Diagrams
+
+A fenced code block tagged `mermaid` renders as a diagram instead of a code
+block:
+
+    ```mermaid
+    flowchart LR
+        idea --> build --> deploy
+    ```
+
+The editor preview draws the diagram live while you type; a diagram you did not
+change keeps showing without a flash. Supported types include **flowchart**,
+**sequence**, **state**, **ER** and **gantt** diagrams (plus class, pie and the
+other mermaid diagram kinds — mermaid's own documentation covers their syntax).
+Diagrams pick up the app's colours, and a diagram wider than the page scrolls
+sideways inside its box instead of stretching the text.
+
+When the source of a diagram is broken, the page never shows a blank area: it
+shows an error box with the source text underneath, so you can see what went
+wrong and fix it. The page keeps the text exactly as you typed it, so the agent
+can still read and edit diagrams as plain text.
+
 ## History
 
 Every save creates a new version with its author, time and note. Nothing is

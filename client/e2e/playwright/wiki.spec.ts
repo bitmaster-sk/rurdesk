@@ -414,3 +414,28 @@ test('a comment links a wiki page picked after typing [[', async ({ page, reques
     await expect(page).toHaveURL(/\/wiki\/project\/deploy-runbook$/);
     await expect(page.getByTestId('wiki-page-title')).toHaveText('Deploy runbook');
 });
+
+// Scenario:
+// - create a page whose body holds a mermaid flowchart fence
+// - open the page and assert the fenced block renders as an SVG diagram,
+//   not as a code block
+test('a mermaid block in a wiki page renders as a diagram', async ({ page, request, baseURL }) => {
+    const user = await createUser(request, baseURL!, 'wiki-mermaid');
+    await Interaction.login(page, user);
+    const idProject = await Interaction.createBlankProject(page, 'Wiki Mermaid Project');
+
+    await Interaction.createWikiPage(
+        page,
+        idProject,
+        'Release flow',
+        'How a change reaches production:\n\n' +
+            '```mermaid\n' +
+            'flowchart TD\n' +
+            '    dev --> review --> deploy\n' +
+            '```\n'
+    );
+
+    const diagram = page.getByTestId('mermaid-diagram');
+    await expect(diagram).toBeVisible();
+    await expect(diagram.locator('svg')).toBeVisible();
+});

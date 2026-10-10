@@ -469,4 +469,7 @@ The mockup card renders alongside the agent's design write-up, next to the same
 ` ```diff ` blocks the plan stage produces. The agent only attaches a mockup when
 the task explicitly asks for one.
 
+A fenced ` ```mermaid ` block in a comment renders as a diagram, with the same
+syntax as in the [wiki](wiki.md).
+
 ![UI mockup cards in a design comment — one chosen](../../site/assets/img/message-mockup.png)

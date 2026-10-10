@@ -26,6 +26,7 @@ import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
+import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
 import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
 import { AttachmentLightboxComponent } from './attachment/components/attachment-lightbox/attachment-lightbox.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
@@ -76,6 +77,7 @@ import {
         StagedIssueComponent,
         MockupCardComponent,
         MessageBodyComponent,
+        MermaidDiagramComponent,
         AttachmentRenderDirective,
         AttachmentLightboxComponent,
         DiffViewerComponent,
@@ -135,6 +137,7 @@ import {
         StagedIssueComponent,
         MockupCardComponent,
         MessageBodyComponent,
+        MermaidDiagramComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
         AgentDockComponent,

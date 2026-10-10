@@ -68,6 +68,7 @@
         "flatpickr": "4.6.13",
         "lodash-es": "^4.17.21",
         "marked": "^17.0.2",
+        "mermaid": "^11.16.0",
         "mind-elixir": "^1.1.4",
         "ng-click-outside2": "19.0.0",
         "ng2-charts": "^10.0.0",
@@ -97,6 +98,7 @@
         "playwright": "1.60.0",
         "prettier": "3.9.6",
         "tailwindcss": "^4.3.2",
+        "type-fest": "^4.41.0",
         "typescript": "~5.9.2",
         "typescript-eslint": "^8.67.0",
         "vitest": "^4.1.10"

@@ -1,0 +1,28 @@
+<div
+    class="my-4 overflow-x-auto rounded-lg border border-[var(--ui-color-border)] bg-[var(--ui-color-surface)] p-4"
+    data-testid="mermaid-diagram"
+>
+    @switch (state().kind) {
+        @case ('svg') {
+            <div #svgHost class="mermaid-diagram__svg"></div>
+        }
+        @case ('error') {
+            <div data-testid="mermaid-error">
+                <div class="mb-2 text-sm font-semibold text-[var(--ui-color-danger)]">
+                    {{ 'SHARED.MERMAID.ERROR' | translate }}
+                </div>
+                <pre
+                    class="m-0 overflow-x-auto whitespace-pre rounded-[var(--ui-radius-md)] bg-[var(--ui-color-canvas)] p-[var(--ui-space-m)] font-mono text-sm text-[var(--ui-color-text)]"
+                    >{{ source() }}</pre>
+            </div>
+        }
+        @default {
+            <div class="text-sm text-[var(--ui-color-text-muted)]">
+                {{ 'SHARED.MERMAID.LOADING' | translate }}
+                <pre
+                    class="mt-2 m-0 overflow-x-auto whitespace-pre rounded-[var(--ui-radius-md)] bg-[var(--ui-color-canvas)] p-[var(--ui-space-m)] font-mono text-sm text-[var(--ui-color-text)]"
+                    >{{ source() }}</pre>
+            </div>
+        }
+    }
+</div>
