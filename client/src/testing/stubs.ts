@@ -42,7 +42,6 @@ export class MessageEditorStub {
     public readonly sendIcon = input<string>('');
     public readonly sendLabel = input<string>('');
     public readonly disableCancelButton = input<boolean>(true);
-    public readonly allowAttachments = input<boolean>(true);
     public readonly attachmentScope = input<unknown>(null);
     public readonly messageChange = output<string>();
     public readonly cancelled = output<void>();

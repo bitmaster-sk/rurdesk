@@ -24,21 +24,21 @@ import (
 )
 
 type AgentRunController struct {
-	agentRunRepo  *repository.AgentRunRepository
-	agentTaskRepo *repository.AgentTaskRepository
-	tasks         *agent.TaskService
-	thinking      *agent.ThinkingService
-	agentGwRepo   *repository.AgentGatewayRepository
-	issueRepo     *repository.IssueRepository
-	projectRepo   *repository.ProjectRepository
-	messageRepo   *repository.MessageRepository
-	attachmentSvc *service.AttachmentService
-	gitIntRepo    *repository.GitIntegrationRepository
-	acl           *service.AclService
-	stagePlan     *service.StagePlanService
-	dispatcher    *agent.Dispatcher
-	notifier      *notify.Notifier
-	pool          *pgxpool.Pool
+	agentRunRepo      *repository.AgentRunRepository
+	agentTaskRepo     *repository.AgentTaskRepository
+	tasks             *agent.TaskService
+	thinking          *agent.ThinkingService
+	agentGwRepo       *repository.AgentGatewayRepository
+	issueRepo         *repository.IssueRepository
+	projectRepo       *repository.ProjectRepository
+	messageRepo       *repository.MessageRepository
+	attachmentLinkSvc *service.AttachmentLinkService
+	gitIntRepo        *repository.GitIntegrationRepository
+	acl               *service.AclService
+	stagePlan         *service.StagePlanService
+	dispatcher        *agent.Dispatcher
+	notifier          *notify.Notifier
+	pool              *pgxpool.Pool
 }
 
 func NewAgentRunController(
@@ -50,7 +50,7 @@ func NewAgentRunController(
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
 	messageRepo *repository.MessageRepository,
-	attachmentSvc *service.AttachmentService,
+	attachmentLinkSvc *service.AttachmentLinkService,
 	gitIntRepo *repository.GitIntegrationRepository,
 	acl *service.AclService,
 	stagePlan *service.StagePlanService,
@@ -59,21 +59,21 @@ func NewAgentRunController(
 	pool *pgxpool.Pool,
 ) *AgentRunController {
 	return &AgentRunController{
-		agentRunRepo:  agentRunRepo,
-		agentTaskRepo: agentTaskRepo,
-		tasks:         tasks,
-		thinking:      thinking,
-		agentGwRepo:   agentGwRepo,
-		issueRepo:     issueRepo,
-		projectRepo:   projectRepo,
-		messageRepo:   messageRepo,
-		attachmentSvc: attachmentSvc,
-		gitIntRepo:    gitIntRepo,
-		acl:           acl,
-		stagePlan:     stagePlan,
-		dispatcher:    dispatcher,
-		notifier:      notifier,
-		pool:          pool,
+		agentRunRepo:      agentRunRepo,
+		agentTaskRepo:     agentTaskRepo,
+		tasks:             tasks,
+		thinking:          thinking,
+		agentGwRepo:       agentGwRepo,
+		issueRepo:         issueRepo,
+		projectRepo:       projectRepo,
+		messageRepo:       messageRepo,
+		attachmentLinkSvc: attachmentLinkSvc,
+		gitIntRepo:        gitIntRepo,
+		acl:               acl,
+		stagePlan:         stagePlan,
+		dispatcher:        dispatcher,
+		notifier:          notifier,
+		pool:              pool,
 	}
 }
 
@@ -823,7 +823,7 @@ func (ctrl *AgentRunController) applyCompleteStage(
 		if err != nil {
 			return completeStageResult{}, fmt.Errorf("writing message: %w", err)
 		}
-		if err := ctrl.attachmentSvc.LinkMessageAttachments(ctx, msg); err != nil {
+		if err := ctrl.attachmentLinkSvc.LinkMessageAttachments(ctx, msg); err != nil {
 			return completeStageResult{}, fmt.Errorf("linking message attachments: %w", err)
 		}
 		id := msg.IdMessage

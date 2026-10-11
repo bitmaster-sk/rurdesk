@@ -711,10 +711,6 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 		if err != nil {
 			return nil, err
 		}
-		attachmentSvc, err := GetAttachmentService()
-		if err != nil {
-			return nil, err
-		}
 		return controller.NewAgentRunController(
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
@@ -724,7 +720,7 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetIssueRepository(),
 			GetProjectRepository(),
 			GetMessageRepository(),
-			attachmentSvc,
+			GetAttachmentLinkService(),
 			GetGitIntegrationRepository(),
 			GetAclService(),
 			GetStagePlanService(),
@@ -752,10 +748,6 @@ func GetAgentGatewayController() *controller.AgentGatewayController {
 func GetMessageController() (*controller.MessageController, error) {
 	instance, err := di.GetWithNew("message-controller", func() (any, error) {
 		pool := mustDb()
-		attachmentSvc, err := GetAttachmentService()
-		if err != nil {
-			return nil, err
-		}
 		return controller.NewMessageController(
 			GetMessageRepository(),
 			GetTeamRepository(),
@@ -765,7 +757,7 @@ func GetMessageController() (*controller.MessageController, error) {
 			GetNotifier(),
 			GetAclService(),
 			GetMessageAccessService(),
-			attachmentSvc,
+			GetAttachmentLinkService(),
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
 			pool,
@@ -784,13 +776,20 @@ func GetMessageAccessService() *service.MessageAccessService {
 	return instance.(*service.MessageAccessService)
 }
 
+func GetAttachmentLinkService() *service.AttachmentLinkService {
+	instance, _ := di.GetWithNew("attachment-link-service", func() (any, error) {
+		return service.NewAttachmentLinkService(GetAttachmentRepository()), nil
+	})
+	return instance.(*service.AttachmentLinkService)
+}
+
 func GetAttachmentService() (*service.AttachmentService, error) {
 	instance, err := di.GetWithNew("attachment-service", func() (any, error) {
 		settings, err := GetAppSettingsService()
 		if err != nil {
 			return nil, err
 		}
-		return service.NewAttachmentService(mustDb(), GetMessageAccessService(), GetAttachmentRepository(), GetAttachmentStorage(), settings), nil
+		return service.NewAttachmentService(mustDb(), GetMessageAccessService(), GetWikiService(), GetAttachmentRepository(), GetAttachmentStorage(), settings), nil
 	})
 	if err != nil {
 		return nil, err
@@ -836,6 +835,7 @@ func GetIssueController() *controller.IssueController {
 			GetCustomFieldValueService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).WithWiki(GetWikiService()).
+			WithAttachments(GetAttachmentLinkService()).
 			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
 				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
 	})
@@ -1425,7 +1425,7 @@ func GetWikiService() *service.WikiService {
 		}
 		return service.NewWikiService(pool, GetWikiSpaceRepository(), GetWikiPageRepository(),
 			GetWikiPageVersionRepository(), GetWikiPageDraftRepository(), GetWikiPageLinkRepository(), GetWikiIssuePageRepository(),
-			GetWikiProposalRepository(), GetProjectRepository(), GetAclService(), GetNotifier(), cache), nil
+			GetWikiProposalRepository(), GetProjectRepository(), GetAclService(), GetNotifier(), cache, GetAttachmentLinkService()), nil
 	})
 	return instance.(*service.WikiService)
 }

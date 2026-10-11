@@ -138,6 +138,8 @@ import {
         MockupCardComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
+        AttachmentRenderDirective,
+        AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
         AgentDockComponent,

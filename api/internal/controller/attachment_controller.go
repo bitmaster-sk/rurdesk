@@ -43,23 +43,17 @@ func (ac *AttachmentController) Upload(c *gin.Context) {
 	}
 	defer func() { _ = file.Close() }()
 
-	recipientType, err := strconv.ParseInt(c.Request.FormValue("idMessageRecipientType"), 10, 64)
+	scope, err := parseAttachmentScope(c)
 	if err != nil {
-		ResponseErr(c, errs.ErrBadRequest.WithMessage("idMessageRecipientType is required"))
-		return
-	}
-	idRecipient, err := strconv.ParseInt(c.Request.FormValue("idRecipient"), 10, 64)
-	if err != nil {
-		ResponseErr(c, errs.ErrBadRequest.WithMessage("idRecipient is required"))
+		ResponseErr(c, err)
 		return
 	}
 
-	attachment, err := ac.attachmentSvc.Upload(ctx, user.IdUser, service.AttachmentUpload{
-		RecipientType: model.MessageRecipientType(recipientType),
-		IdRecipient:   idRecipient,
-		FileName:      header.Filename,
-		Size:          header.Size,
-		Content:       file,
+	attachment, err := ac.attachmentSvc.Upload(ctx, user, service.AttachmentUpload{
+		Scope:    scope,
+		FileName: header.Filename,
+		Size:     header.Size,
+		Content:  file,
 	})
 	if err != nil {
 		ResponseErr(c, err)
@@ -83,7 +77,7 @@ func (ac *AttachmentController) Download(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	attachment, content, err := ac.attachmentSvc.Open(ctx, user.IdUser, idAttachment)
+	attachment, content, err := ac.attachmentSvc.Open(ctx, user, idAttachment)
 	if err != nil {
 		ResponseErr(c, err)
 		return
@@ -95,6 +89,32 @@ func (ac *AttachmentController) Download(c *gin.Context) {
 		"X-Content-Type-Options": "nosniff",
 		"Cache-Control":          "private, max-age=31536000, immutable",
 	})
+}
+
+func parseAttachmentScope(c *gin.Context) (model.AttachmentScope, error) {
+	if rawIdSpace := c.Request.FormValue("idSpace"); rawIdSpace != "" {
+		if c.Request.FormValue("idMessageRecipientType") != "" || c.Request.FormValue("idRecipient") != "" {
+			return model.AttachmentScope{}, errs.ErrBadRequest.WithMessage("send either idSpace or idMessageRecipientType with idRecipient")
+		}
+		idSpace, err := strconv.ParseInt(rawIdSpace, 10, 64)
+		if err != nil {
+			return model.AttachmentScope{}, errs.ErrBadRequest.WithMessage("invalid idSpace")
+		}
+		return model.AttachmentScope{IdSpace: &idSpace}, nil
+	}
+	recipientType, err := strconv.ParseInt(c.Request.FormValue("idMessageRecipientType"), 10, 64)
+	if err != nil {
+		return model.AttachmentScope{}, errs.ErrBadRequest.WithMessage("idMessageRecipientType is required")
+	}
+	idRecipient, err := strconv.ParseInt(c.Request.FormValue("idRecipient"), 10, 64)
+	if err != nil {
+		return model.AttachmentScope{}, errs.ErrBadRequest.WithMessage("idRecipient is required")
+	}
+	scope, ok := model.AttachmentScopeOf(model.MessageRecipientType(recipientType), idRecipient)
+	if !ok {
+		return model.AttachmentScope{}, errs.ErrBadRequest.WithMessage("unknown idMessageRecipientType")
+	}
+	return scope, nil
 }
 
 func attachmentDisposition(attachment *model.Attachment) string {

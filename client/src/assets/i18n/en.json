@@ -507,7 +507,11 @@
             "CODE_BLOCK": "Code block",
             "TABLE": "Table",
             "TABLE_SIZE": "Table size {{size}}",
-            "CALLOUT": "Info, warning or error block"
+            "CALLOUT": "Info, warning or error block",
+            "ATTACH": "Attach an image or file"
+        },
+        "ATTACHMENT": {
+            "UPLOADING": "Uploading {{name}}…"
         },
         "CALLOUT": {
             "NOTE": "Info",
@@ -1128,7 +1132,7 @@
         "agent_post_while_run_paused": "The agent cannot post while the run is paused.",
         "attachment_too_large": "The file is larger than the allowed upload size.",
         "attachment_type_not_allowed": "This file type cannot be attached.",
-        "attachment_link_invalid": "The message links a file that was not uploaded to this conversation.",
+        "attachment_link_invalid": "The text links a file that was uploaded somewhere else. Remove the link or upload the file again here.",
         "invalid_project_builder_refs": "Some cross-references in the project plan are invalid.",
         "wiki_slug_taken": "A page with this title already exists here.",
         "wiki_token_limit": "Always-read pages would exceed the project token limit.",

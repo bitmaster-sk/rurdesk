@@ -76,6 +76,71 @@ export abstract class EditorChip {
         );
     }
 
+    public static placeCaretBeside(root: HTMLElement, chip: HTMLElement, clientX: number): void {
+        const box = chip.getBoundingClientRect();
+        const range = root.ownerDocument.createRange();
+        if (clientX < box.left + box.width / 2) {
+            range.setStartBefore(chip);
+        } else {
+            range.setStartAfter(chip);
+        }
+        range.collapse(true);
+        root.focus();
+        const sel = root.ownerDocument.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+    }
+
+    // Chrome deletes the chip instead of a line break next to it, so that line break is removed by hand.
+    public static deleteBesideChip(root: HTMLElement, isBackward: boolean): boolean {
+        const sel = root.ownerDocument.getSelection();
+        if (!sel?.rangeCount || !sel.isCollapsed) {
+            return false;
+        }
+        const { startContainer: container, startOffset: offset } = sel.getRangeAt(0);
+        const isText = container.nodeType === Node.TEXT_NODE;
+        const before = isText
+            ? offset > 0
+                ? container
+                : container.previousSibling
+            : (container.childNodes[offset - 1] ?? null);
+        const after = isText
+            ? offset < (container as Text).length
+                ? container
+                : container.nextSibling
+            : (container.childNodes[offset] ?? null);
+        const chip = isBackward ? after : before;
+        const target = isBackward ? before : after;
+        if (!chip || !target || chip === target || !EditorChip.isChip(chip)) {
+            return false;
+        }
+        if (target.nodeType === Node.TEXT_NODE) {
+            const text = target as Text;
+            const index = isBackward ? text.length - 1 : 0;
+            if (text.data[index] !== '\n') {
+                return false;
+            }
+            text.deleteData(index, 1);
+            if (!text.length) {
+                text.remove();
+            }
+        } else if (target instanceof HTMLBRElement) {
+            target.remove();
+        } else {
+            return false;
+        }
+        const range = root.ownerDocument.createRange();
+        if (isBackward) {
+            range.setStartBefore(chip);
+        } else {
+            range.setStartAfter(chip);
+        }
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return true;
+    }
+
     // Insert a chip at the caret position, then place the caret after the trailing space.
     // Range.insertNode (not execCommand) so the chip stays one atomic node.
     public static insertChipAtCaret(root: HTMLElement, idUser: number, name: string): void {

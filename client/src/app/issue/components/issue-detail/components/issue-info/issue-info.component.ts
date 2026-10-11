@@ -48,6 +48,8 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ElementRef, OnInit } from '@angular/core';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Project } from 'src/app/project/model/project.model';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
+import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { IssueApi } from '../../../../api/issue.api.service';
@@ -92,6 +94,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 export class IssueInfoComponent implements OnInit {
     private readonly inputTitle = viewChild<ElementRef<HTMLInputElement>>('inputTitle');
     private readonly inputDescription = viewChild<MessageEditorComponent>('inputDescription');
+    private readonly createDescription = viewChild<MessageEditorComponent>('createDescription');
 
     public readonly issue = input<Issue | null>(null);
     public readonly project = input<Project | null>(null);
@@ -128,11 +131,30 @@ export class IssueInfoComponent implements OnInit {
 
     protected readonly canEditWiki = computed(() => this.aclStore.canUpdateIssue());
 
+    protected readonly isDescriptionUploading = computed(
+        () => this.createDescription()?.isUploading() ?? false
+    );
+
+    protected readonly descriptionAttachmentScope = computed<AttachmentScope | null>(() => {
+        const issue = this.currentIssue();
+        if (issue?.idIssue) {
+            return {
+                idMessageRecipientType: MessageRecipientType.issue,
+                idRecipient: issue.idIssue
+            };
+        }
+        const idProject = issue?.idProject ?? this.project()?.idProject;
+        return idProject
+            ? { idMessageRecipientType: MessageRecipientType.project, idRecipient: idProject }
+            : null;
+    });
+
     public currentUserId(): number {
         return this.authStore.getUser().idUser;
     }
     public readonly showInputTitle = signal(false);
     public readonly showInputDescription = signal(false);
+    private readonly isDescriptionClosing = signal(false);
 
     private readonly descriptionMousedownCoords = signal<{ x: number; y: number } | null>(null);
     private readonly descriptionPreviewMoveThreshold = 5;
@@ -305,6 +327,13 @@ export class IssueInfoComponent implements OnInit {
                 this.syncMrPanel(issue);
             });
         });
+
+        effect(() => {
+            if (this.isDescriptionClosing() && !this.inputDescription()?.isUploading()) {
+                this.isDescriptionClosing.set(false);
+                this.showInputDescription.set(false);
+            }
+        });
     }
 
     public ngOnInit(): void {
@@ -439,6 +468,9 @@ export class IssueInfoComponent implements OnInit {
 
     public onToggleInputDescription(event?: MouseEvent): void {
         if (event) {
+            if ((event.target as HTMLElement | null)?.closest('a, button')) {
+                return;
+            }
             const start = this.descriptionMousedownCoords();
             const end = { x: event.clientX, y: event.clientY };
             if (start) {
@@ -467,7 +499,11 @@ export class IssueInfoComponent implements OnInit {
     }
 
     public onInputDescriptionChange(): void {
-        this.showInputDescription.set(false);
+        this.isDescriptionClosing.set(true);
+    }
+
+    protected onInputDescriptionFocusin(): void {
+        this.isDescriptionClosing.set(false);
     }
 
     protected onCustomFieldValuesChange(

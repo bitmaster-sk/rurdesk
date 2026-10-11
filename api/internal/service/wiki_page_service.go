@@ -235,16 +235,21 @@ func (s *WikiService) Diff(ctx context.Context, user model.User, idPage int64, f
 }
 
 func (s *WikiService) SaveDraft(ctx context.Context, user model.User, idPage int64, req model.WikiDraftReq) error {
-	page, access, err := s.loadPageAccess(ctx, user, idPage, false)
-	if err != nil {
-		return err
-	}
-	if !access.canEdit {
-		return errs.ErrForbidden
-	}
-	return s.draftRepo.Upsert(ctx, &model.WikiPageDraft{
-		IdPage: page.IdPage, IdUser: user.IdUser, BaseVersion: req.BaseVersion,
-		Title: req.Title, Summary: req.Summary, Body: req.Body,
+	return extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
+		page, access, err := s.loadPageAccess(ctx, user, idPage, false)
+		if err != nil {
+			return err
+		}
+		if !access.canEdit {
+			return errs.ErrForbidden
+		}
+		if err := s.attachments.LinkWikiDraftAttachments(ctx, page.IdSpace, page.IdPage, req.Body); err != nil {
+			return err
+		}
+		return s.draftRepo.Upsert(ctx, &model.WikiPageDraft{
+			IdPage: page.IdPage, IdUser: user.IdUser, BaseVersion: req.BaseVersion,
+			Title: req.Title, Summary: req.Summary, Body: req.Body,
+		})
 	})
 }
 

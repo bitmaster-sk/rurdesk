@@ -112,6 +112,7 @@
             markdown
             appWikiHeadingAnchors
             appWikiMermaid
+            appAttachmentRender
             ngPreserveWhitespaces
             [data]="renderedBody()"
             (click)="onBodyClick($event)"
@@ -138,6 +139,8 @@
     [rootLabel]="'WIKI.MOVE.ROOT' | translate"
     (confirmed)="onMove($event)"
 />
+} @if (gallery.isOpen()) {
+<app-attachment-lightbox />
 } } @else if (isNotFound()) {
 <div class="wiki-page__missing">
     <tabler-icon icon="file-off" [size]="32" />

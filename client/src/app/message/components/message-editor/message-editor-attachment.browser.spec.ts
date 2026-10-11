@@ -17,7 +17,7 @@ import { MessageEditorComponent } from './message-editor.component';
     template: `
         <app-message-editor
             [message]="message"
-            [allowAttachments]="allowAttachments"
+            [change]="change"
             [attachmentScope]="scope"
             (messageChange)="sent.push($event)"
         ></app-message-editor>
@@ -26,7 +26,7 @@ import { MessageEditorComponent } from './message-editor.component';
 class HostComponent {
     public readonly editor = viewChild.required(MessageEditorComponent);
     public message = '';
-    public allowAttachments = true;
+    public change: 'onaction' | 'onblur' = 'onaction';
     public scope: AttachmentScope | null = {
         idMessageRecipientType: MessageRecipientType.project,
         idRecipient: 42
@@ -203,8 +203,8 @@ describe('MessageEditorComponent attachments', () => {
         expect(EditorText.serialize(editor)).toBe(body);
     });
 
-    it('keeps pasting plain text and hides the paperclip when attachments are off', async () => {
-        const { fixture, upload } = await render(host => (host.allowAttachments = false));
+    it('keeps pasting plain text and hides the paperclip without an attachment scope', async () => {
+        const { fixture, upload } = await render(host => (host.scope = null));
         const editor = typeText(fixture, '');
         const data = new DataTransfer();
         data.items.add(pngFile());
@@ -217,5 +217,144 @@ describe('MessageEditorComponent attachments', () => {
         expect(upload).not.toHaveBeenCalled();
         expect(attachButton(fixture)).toBeNull();
         expect(EditorText.serialize(editor)).toBe('just text');
+    });
+
+    it('hands an onblur value over again once a running upload has finished', async () => {
+        const { fixture, response } = await render(host => (host.change = 'onblur'));
+        const editor = typeText(fixture, 'spec ');
+        const data = new DataTransfer();
+        data.items.add(pngFile());
+        paste(editor, data);
+        fixture.detectChanges();
+
+        editor.blur();
+        fixture.detectChanges();
+        response.next(uploaded);
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.sent.at(-1)).toBe(
+            `spec ![shot.png](attachment:${idAttachment}) `
+        );
+    });
+
+    it('does not hand an onblur value over while the file picker is open', async () => {
+        const { fixture } = await render(host => (host.change = 'onblur'));
+        const editor = typeText(fixture, 'draft');
+        const input = (fixture.nativeElement as HTMLElement).querySelector(
+            '[data-testid="message-editor-file-input"]'
+        ) as HTMLInputElement;
+        input.click = (): void => undefined;
+
+        attachButton(fixture)!.click();
+        editor.blur();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.sent).toEqual([]);
+
+        input.dispatchEvent(new Event('cancel'));
+        editor.focus();
+        editor.blur();
+        fixture.detectChanges();
+        expect(fixture.componentInstance.sent).toEqual(['draft']);
+    });
+
+    it('pastes the text when the clipboard also carries a picture of it', async () => {
+        const { fixture, upload } = await render();
+        const editor = typeText(fixture, '');
+        const data = new DataTransfer();
+        data.items.add(pngFile());
+        data.setData('text/plain', 'A1\tB1');
+        data.setData('text/html', '<table><tr><td>A1</td><td>B1</td></tr></table>');
+
+        paste(editor, data);
+        editor.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+
+        expect(upload).not.toHaveBeenCalled();
+        expect(EditorText.serialize(editor)).toBe('A1\tB1');
+    });
+
+    describe('two attachments on separate lines', () => {
+        const first = `![a.png](attachment:${idAttachment})`;
+        const second = '![b.png](attachment:0b6f1c1e-7a52-4d4b-9a51-2f7c3f0d9e12)';
+
+        async function renderTwo(): Promise<{
+            fixture: ComponentFixture<HostComponent>;
+            editor: HTMLDivElement;
+            chips: HTMLElement[];
+        }> {
+            const { fixture } = await render(host => (host.message = `${first}\n${second}`));
+            const editor = editorEl(fixture);
+            editor.focus();
+            return {
+                fixture,
+                editor,
+                chips: Array.from(editor.querySelectorAll<HTMLElement>('.attachment-chip'))
+            };
+        }
+
+        function press(editor: HTMLElement, key: string): void {
+            editor.dispatchEvent(
+                new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+            );
+        }
+
+        function clickChip(chip: HTMLElement, side: 'left' | 'right'): void {
+            const box = chip.getBoundingClientRect();
+            chip.dispatchEvent(
+                new MouseEvent('mousedown', {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: side === 'left' ? box.left + 1 : box.right - 1,
+                    clientY: box.top + box.height / 2
+                })
+            );
+        }
+
+        it('puts them side by side with Backspace in front of the second one', async () => {
+            const { editor, chips } = await renderTwo();
+
+            clickChip(chips[1], 'left');
+            press(editor, 'Backspace');
+
+            expect(EditorText.serialize(editor)).toBe(`${first}${second}`);
+            expect(editor.querySelectorAll('.attachment-chip')).toHaveLength(2);
+        });
+
+        it('puts them side by side with Delete behind the first one', async () => {
+            const { editor, chips } = await renderTwo();
+
+            clickChip(chips[0], 'right');
+            press(editor, 'Delete');
+
+            expect(EditorText.serialize(editor)).toBe(`${first}${second}`);
+        });
+
+        it('leaves deleting ordinary text beside a chip to the browser', async () => {
+            const { fixture } = await render(host => (host.message = `ok 😀${first}`));
+            const editor = editorEl(fixture);
+            editor.focus();
+            clickChip(editor.querySelector<HTMLElement>('.attachment-chip')!, 'left');
+            const event = new KeyboardEvent('keydown', {
+                key: 'Backspace',
+                bubbles: true,
+                cancelable: true
+            });
+
+            editor.dispatchEvent(event);
+
+            expect(event.defaultPrevented).toBe(false);
+            expect(EditorText.serialize(editor)).toBe(`ok 😀${first}`);
+        });
+
+        it('lets a line break go back between them', async () => {
+            const { editor, chips } = await renderTwo();
+            clickChip(chips[1], 'left');
+            press(editor, 'Backspace');
+
+            document.execCommand('insertText', false, '\n');
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
+
+            expect(EditorText.serialize(editor)).toBe(`${first}\n${second}`);
+        });
     });
 });

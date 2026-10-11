@@ -103,6 +103,25 @@ describe('IssueInfoComponent — description preview click behaviour (browser)',
         expect(fixture.componentInstance.showInputDescription()).toBe(true);
     });
 
+    it('leaves a click on an attachment thumbnail or file card to the attachment', () => {
+        const fixture = setup();
+        const el = preview(fixture);
+        const thumb = document.createElement('button');
+        const card = document.createElement('a');
+        thumb.append(document.createElement('img'));
+        el.append(thumb, card);
+
+        for (const target of [thumb.firstElementChild as HTMLElement, card]) {
+            dispatchMouseSequence(target, [
+                { type: 'mousedown', clientX: 10, clientY: 10 },
+                { type: 'mouseup', clientX: 10, clientY: 10 },
+                { type: 'click', clientX: 10, clientY: 10 }
+            ]);
+        }
+
+        expect(fixture.componentInstance.showInputDescription()).toBe(false);
+    });
+
     it('does not enter edit mode when the pointer moves more than the drag threshold', () => {
         const fixture = setup();
         const el = preview(fixture);

@@ -50,7 +50,7 @@
         font-size: var(--font-size-m);
     }
 
-    a {
+    a:not([href^='blob:']) {
         color: var(--ui-color-primary);
         text-decoration: none;
         border-bottom: 1px dashed var(--ui-color-primary-accent);

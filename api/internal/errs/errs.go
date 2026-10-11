@@ -174,7 +174,7 @@ var (
 
 	ErrAttachmentTooLarge       = newErr("ATTACHMENT_TOO_LARGE", "attachment exceeds the maximum upload size", "error.attachment_too_large", http.StatusRequestEntityTooLarge)
 	ErrAttachmentTypeNotAllowed = newErr("ATTACHMENT_TYPE_NOT_ALLOWED", "this file type cannot be attached", "error.attachment_type_not_allowed", http.StatusUnsupportedMediaType)
-	ErrAttachmentLinkInvalid    = newErr("ATTACHMENT_LINK_INVALID", "the message links an attachment that does not belong to this conversation", "error.attachment_link_invalid", http.StatusUnprocessableEntity)
+	ErrAttachmentLinkInvalid    = newErr("ATTACHMENT_LINK_INVALID", "the text links an attachment that does not belong here", "error.attachment_link_invalid", http.StatusUnprocessableEntity)
 
 	// ── Project builder ────────────────────────────────────────────────────
 
