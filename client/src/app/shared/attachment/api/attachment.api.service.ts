@@ -11,8 +11,12 @@ export class AttachmentApi {
 
     public upload$(file: File, scope: AttachmentScope): Observable<UploadedAttachment> {
         const body = new FormData();
-        body.append('idMessageRecipientType', String(scope.idMessageRecipientType));
-        body.append('idRecipient', String(scope.idRecipient));
+        if ('idSpace' in scope) {
+            body.append('idSpace', String(scope.idSpace));
+        } else {
+            body.append('idMessageRecipientType', String(scope.idMessageRecipientType));
+            body.append('idRecipient', String(scope.idRecipient));
+        }
         body.append('file', file, file.name);
         return this.http.post<UploadedAttachment>('/api/private/attachment', body);
     }

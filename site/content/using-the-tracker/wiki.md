@@ -89,6 +89,25 @@ form for a new page with that title.
 The panel on the right holds the page's **parent**, **agent access**, a short
 **summary** and a **change note** that ends up in the history.
 
+## Images and files
+
+Paste an image or file into the editor, drop it onto the text, or click the
+**paperclip** button in the toolbar. While the file uploads, the text shows an
+**Uploading…** marker and the page cannot be saved; the marker then turns into
+a link such as `![diagram.png](attachment:…)`. The same file types and size
+limit apply as for [task attachments](features.md#attachments).
+
+On the page and in the editor preview, images show as thumbnails and other files
+as a card with the name and size. Click a thumbnail to open it enlarged and move
+through all the images of the page with the arrow keys.
+
+A file belongs to its space: anyone who can read the space can open it, and it
+cannot be linked from a page in another space. Once you pick a file for a new
+page, the space of the page can no longer be changed. A file added to a page or
+its draft stays with the page even after you remove the link, so restoring an
+old version brings its images back. The page lets go of its files only when it is
+deleted for good from the trash.
+
 ## Diagrams
 
 A fenced code block tagged `mermaid` renders as a diagram instead of a code

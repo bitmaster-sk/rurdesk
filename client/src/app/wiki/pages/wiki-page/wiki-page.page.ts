@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { User } from 'src/app/auth/model/user.model';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/attachment-link.converter';
+import { AttachmentGallery } from 'src/app/shared/attachment/service/attachment-gallery.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, filter, map, merge, of, switchMap } from 'rxjs';
 import { ClipboardService } from 'src/app/core/clipboard.service';
@@ -24,7 +26,8 @@ import { WikiTreeStore } from '../../store/wiki-tree.store';
     templateUrl: './wiki-page.page.html',
     styleUrls: ['./wiki-page.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    standalone: false,
+    providers: [AttachmentGallery]
 })
 export class WikiPagePage {
     private readonly route = inject(ActivatedRoute);
@@ -35,6 +38,7 @@ export class WikiPagePage {
     private readonly toast = inject(ToastNotificationService);
     protected readonly store = inject(WikiTreeStore);
     protected readonly layout = inject(WikiLayoutStore);
+    protected readonly gallery = inject(AttachmentGallery);
 
     private readonly calloutLabels = WikiCalloutConverter.toLabels(key =>
         this.translate.instant(key)
@@ -69,13 +73,15 @@ export class WikiPagePage {
         if (!view) {
             return '';
         }
-        return WikiLinkConverter.toMarkdown(
-            WikiCalloutConverter.toHtml(view.page.body, this.calloutLabels),
-            {
-                idProject: this.idProject(),
-                links: view.links,
-                sharedIdSpace: this.store.sharedSpace()?.idSpace ?? null
-            }
+        return AttachmentLinkConverter.toMarkerMarkdown(
+            WikiLinkConverter.toMarkdown(
+                WikiCalloutConverter.toHtml(view.page.body, this.calloutLabels),
+                {
+                    idProject: this.idProject(),
+                    links: view.links,
+                    sharedIdSpace: this.store.sharedSpace()?.idSpace ?? null
+                }
+            )
         );
     });
 

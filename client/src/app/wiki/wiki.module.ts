@@ -50,6 +50,7 @@ import {
     IconSourceCode,
     IconStrikethrough,
     IconTable,
+    IconPaperclip,
     TablerIconComponent,
     provideTablerIcons
 } from '@tabler/icons-angular';
@@ -146,6 +147,7 @@ import { WikiRoutingModule } from './wiki-routing.module';
             IconSourceCode,
             IconStrikethrough,
             IconTable,
+            IconPaperclip,
             IconHomeOff,
             IconHome,
             IconArrowsMinimize,

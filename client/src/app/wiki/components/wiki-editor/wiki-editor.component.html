@@ -48,6 +48,30 @@
             <tabler-icon icon="info-square-rounded" [size]="15" />
         </ui-button>
     </div>
+    @if (attachmentScope()) {
+        <div class="ui-button-group">
+            <ui-button
+                variant="text"
+                severity="secondary"
+                size="small"
+                data-testid="wiki-format-attach"
+                [ariaLabel]="'WIKI.FORMAT.ATTACH' | translate"
+                [uiTooltip]="'WIKI.FORMAT.ATTACH' | translate"
+                (mousedown)="$event.preventDefault()"
+                (click)="fileInput.click()"
+            >
+                <tabler-icon icon="paperclip" [size]="15" />
+            </ui-button>
+            <input
+                #fileInput
+                type="file"
+                multiple
+                class="hidden"
+                data-testid="wiki-attach-input"
+                (change)="onFilesPicked(fileInput)"
+            />
+        </div>
+    }
 </div>
 <ui-popover #tablePopover>
     <app-wiki-table-picker (picked)="tablePopover.hide(); onTablePicked($event)" />

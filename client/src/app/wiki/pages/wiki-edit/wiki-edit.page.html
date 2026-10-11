@@ -29,7 +29,7 @@
             <ui-button
                 data-testid="wiki-save"
                 [loading]="isSaving()"
-                [disabled]="!title().trim() || isOverBudget()"
+                [disabled]="!title().trim() || isOverBudget() || isUploading()"
                 (click)="onSave()"
             >
                 <tabler-icon icon="check" [size]="16" />
@@ -85,6 +85,7 @@
                     [placeholderText]="'WIKI.FIELD.BODY_PLACEHOLDER' | translate"
                     [pages]="pageOptions()"
                     [issues]="issueOptions()"
+                    [attachmentScope]="attachmentScope()"
                     (valueChange)="onBodyChange($event)"
                     (issuesRequested)="onIssuesRequested()"
                 />
@@ -95,6 +96,7 @@
                     class="wiki-article"
                     markdown
                     appWikiMermaid
+                    appAttachmentRender
                     [mermaidDebounce]="300"
                     ngPreserveWhitespaces
                     [data]="preview()"
@@ -113,6 +115,7 @@
                     optionLabel="label"
                     optionValue="value"
                     [ngModel]="space()"
+                    [disabled]="hasAttachments() || isUploading()"
                     (ngModelChange)="onSpaceChange($event)"
                 />
             </div>
@@ -271,7 +274,9 @@
     </div>
     }
 </ui-dialog>
-} @else {
+@if (gallery.isOpen()) {
+<app-attachment-lightbox />
+} } @else {
 <div class="flex h-full min-h-40 w-full items-center justify-center">
     <ui-loader [size]="32" />
 </div>

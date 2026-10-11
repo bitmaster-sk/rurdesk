@@ -126,22 +126,23 @@
                 <div class="edit ui-field col-span-12 p-0">
                     <label class="required">{{ 'DESCRIPTION' | translate }}</label>
                     <app-message-editor
+                        #createDescription
                         mode="create"
                         change="onchange"
                         formControlName="description"
                         [disableSendButton]="true"
-                        [allowAttachments]="false"
+                        [attachmentScope]="descriptionAttachmentScope()"
                     ></app-message-editor>
                 </div>
             } @else {
                 @if (showInputDescription()) {
-                    <div class="edit col-span-12 p-0">
+                    <div class="edit col-span-12 p-0" (focusin)="onInputDescriptionFocusin()">
                         <app-message-editor
                             #inputDescription
                             mode="edit"
                             formControlName="description"
                             [disableSendButton]="true"
-                            [allowAttachments]="false"
+                            [attachmentScope]="descriptionAttachmentScope()"
                             change="onblur"
                             (messageChange)="onInputDescriptionChange()"
                         ></app-message-editor>
@@ -304,7 +305,10 @@
         @if (isNewIssue()) {
             <div class="col-span-12 mt-2 flex justify-end">
                 <ui-button
-                    [disabled]="!form.valid || isMissingRequiredCustomField()"
+                    data-testid="issue-create-save"
+                    [disabled]="
+                        !form.valid || isMissingRequiredCustomField() || isDescriptionUploading()
+                    "
                     severity="primary"
                     [label]="'SAVE' | translate"
                     (click)="onSave()"

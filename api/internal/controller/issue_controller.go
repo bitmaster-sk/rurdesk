@@ -44,6 +44,7 @@ type IssueController struct {
 	notifSvc            *service.NotificationService
 	customFieldValueSvc *service.CustomFieldValueService
 	wikiSvc             *service.WikiService
+	attachmentLinkSvc   *service.AttachmentLinkService
 	pool                *pgxpool.Pool
 }
 
@@ -77,6 +78,11 @@ func NewIssueController(
 
 func (ic *IssueController) WithWiki(wikiSvc *service.WikiService) *IssueController {
 	ic.wikiSvc = wikiSvc
+	return ic
+}
+
+func (ic *IssueController) WithAttachments(attachmentLinkSvc *service.AttachmentLinkService) *IssueController {
+	ic.attachmentLinkSvc = attachmentLinkSvc
 	return ic
 }
 
@@ -310,7 +316,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		if err := ic.customFieldValueSvc.Apply(ctx, dto.IdProject, result.IdIssue, dto.CustomFields, true); err != nil {
 			return err
 		}
-		return ic.syncWikiLinks(ctx, result)
+		if err := ic.syncWikiLinks(ctx, result); err != nil {
+			return err
+		}
+		return ic.linkAttachments(ctx, result, "")
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -463,7 +472,13 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if err := ic.customFieldValueSvc.Apply(ctx, dto.IdProject, issue.IdIssue, dto.CustomFields, false); err != nil {
 			return err
 		}
-		return ic.syncWikiLinks(ctx, issue)
+		if err := ic.syncWikiLinks(ctx, issue); err != nil {
+			return err
+		}
+		if issue.Description == snapshot.Description {
+			return nil
+		}
+		return ic.linkAttachments(ctx, issue, snapshot.Description)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -1140,4 +1155,11 @@ func (ic *IssueController) syncWikiLinks(ctx context.Context, issue *model.Issue
 		return nil
 	}
 	return ic.wikiSvc.SyncIssueDescription(ctx, issue.IdIssue, issue.IdProject, issue.Description)
+}
+
+func (ic *IssueController) linkAttachments(ctx context.Context, issue *model.Issue, previousDescription string) error {
+	if ic.attachmentLinkSvc == nil {
+		return nil
+	}
+	return ic.attachmentLinkSvc.LinkIssueAttachments(ctx, issue, previousDescription)
 }

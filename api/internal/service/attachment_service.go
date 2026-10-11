@@ -10,7 +10,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/attachmenttext"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -56,27 +55,30 @@ type AttachmentSizeLimiter interface {
 }
 
 type AttachmentUpload struct {
-	RecipientType model.MessageRecipientType
-	IdRecipient   int64
-	FileName      string
-	Size          int64
-	Content       io.Reader
+	Scope    model.AttachmentScope
+	FileName string
+	Size     int64
+	Content  io.Reader
 }
 
 type MessageContextChecker interface {
 	CheckContextAccess(ctx context.Context, idUser int64, recipientType model.MessageRecipientType, idRecipient int64) error
 }
 
+type WikiSpaceAccessChecker interface {
+	CheckSpaceRead(ctx context.Context, user model.User, idSpace int64) error
+	CheckSpaceEdit(ctx context.Context, user model.User, idSpace int64) error
+}
+
 type AttachmentStorer interface {
 	Insert(ctx context.Context, attachment *model.Attachment) error
 	LoadById(ctx context.Context, idAttachment uuid.UUID) (*model.Attachment, error)
-	LoadByIds(ctx context.Context, idsAttachment []uuid.UUID) ([]*model.Attachment, error)
-	ReplaceMessageLinks(ctx context.Context, idMessage int64, idsAttachment []uuid.UUID) error
 }
 
 type AttachmentService struct {
 	pool           *pgxpool.Pool
 	contextChecker MessageContextChecker
+	spaceChecker   WikiSpaceAccessChecker
 	repo           AttachmentStorer
 	storage        repository.AttachmentStorage
 	sizeLimiter    AttachmentSizeLimiter
@@ -85,26 +87,30 @@ type AttachmentService struct {
 func NewAttachmentService(
 	pool *pgxpool.Pool,
 	contextChecker MessageContextChecker,
+	spaceChecker WikiSpaceAccessChecker,
 	repo AttachmentStorer,
 	storage repository.AttachmentStorage,
 	sizeLimiter AttachmentSizeLimiter,
 ) *AttachmentService {
-	return &AttachmentService{pool: pool, contextChecker: contextChecker, repo: repo, storage: storage, sizeLimiter: sizeLimiter}
+	return &AttachmentService{
+		pool:           pool,
+		contextChecker: contextChecker,
+		spaceChecker:   spaceChecker,
+		repo:           repo,
+		storage:        storage,
+		sizeLimiter:    sizeLimiter,
+	}
 }
 
 func (s *AttachmentService) MaxSizeBytes() int64 {
 	return int64(s.sizeLimiter.AttachmentMaxSizeMb()) << 20
 }
 
-func (s *AttachmentService) Upload(ctx context.Context, idUser int64, upload AttachmentUpload) (*model.Attachment, error) {
-	scope, ok := model.AttachmentScopeOf(upload.RecipientType, upload.IdRecipient)
-	if !ok {
-		return nil, errs.ErrBadRequest.WithMessage("unknown idMessageRecipientType")
-	}
+func (s *AttachmentService) Upload(ctx context.Context, user model.User, upload AttachmentUpload) (*model.Attachment, error) {
 	if upload.Size > s.MaxSizeBytes() {
 		return nil, errs.ErrAttachmentTooLarge
 	}
-	if err := s.checkScopeAccess(ctx, idUser, scope); err != nil {
+	if err := s.checkUploadAccess(ctx, user, upload.Scope); err != nil {
 		return nil, err
 	}
 
@@ -123,8 +129,8 @@ func (s *AttachmentService) Upload(ctx context.Context, idUser int64, upload Att
 		FileName:        sanitizeAttachmentFileName(upload.FileName),
 		MimeType:        mimeType,
 		Size:            upload.Size,
-		AttachmentScope: scope,
-		CreateBy:        &idUser,
+		AttachmentScope: upload.Scope,
+		CreateBy:        &user.IdUser,
 	}
 	err = extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
 		if err := s.repo.Insert(ctx, attachment); err != nil {
@@ -150,7 +156,7 @@ func sanitizeAttachmentFileName(raw string) string {
 	return name
 }
 
-func (s *AttachmentService) Open(ctx context.Context, idUser int64, idAttachment uuid.UUID) (*model.Attachment, io.ReadCloser, error) {
+func (s *AttachmentService) Open(ctx context.Context, user model.User, idAttachment uuid.UUID) (*model.Attachment, io.ReadCloser, error) {
 	attachment, err := s.repo.LoadById(ctx, idAttachment)
 	if errors.Is(err, repository.ErrAttachmentNotFound) {
 		return nil, nil, errs.ErrNotFound
@@ -158,7 +164,7 @@ func (s *AttachmentService) Open(ctx context.Context, idUser int64, idAttachment
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := s.checkReadAccess(ctx, idUser, attachment); err != nil {
+	if err := s.checkReadAccess(ctx, user, attachment); err != nil {
 		return nil, nil, err
 	}
 	content, err := s.storage.Get(ctx, idAttachment)
@@ -171,59 +177,33 @@ func (s *AttachmentService) Open(ctx context.Context, idUser int64, idAttachment
 	return attachment, content, nil
 }
 
-func (s *AttachmentService) LinkMessageAttachments(ctx context.Context, msg *model.Message) error {
-	scope, ok := model.AttachmentScopeOf(msg.IdMessageRecipientType, msg.IdRecipient)
-	if !ok {
-		return errs.ErrBadRequest
+func (s *AttachmentService) checkUploadAccess(ctx context.Context, user model.User, scope model.AttachmentScope) error {
+	if scope.IdSpace != nil {
+		return s.spaceChecker.CheckSpaceEdit(ctx, user, *scope.IdSpace)
 	}
-	idsAttachment := attachmenttext.ParseIds(msg.Message)
-	if len(idsAttachment) > 0 {
-		attachments, err := s.repo.LoadByIds(ctx, idsAttachment)
-		if err != nil {
-			return fmt.Errorf("loading linked attachments of message %d: %w", msg.IdMessage, err)
-		}
-		if len(attachments) != len(idsAttachment) {
-			return errs.ErrAttachmentLinkInvalid
-		}
-		for _, attachment := range attachments {
-			if !canLinkAttachment(attachment, msg.Creator.IdUser, scope) {
-				return errs.ErrAttachmentLinkInvalid
-			}
-		}
-	}
-	if err := s.repo.ReplaceMessageLinks(ctx, msg.IdMessage, idsAttachment); err != nil {
-		return fmt.Errorf("replacing attachment links of message %d: %w", msg.IdMessage, err)
-	}
-	return nil
+	return s.checkContextAccess(ctx, user.IdUser, scope)
 }
 
-func canLinkAttachment(attachment *model.Attachment, idAuthor int64, scope model.AttachmentScope) bool {
-	if !attachment.HasScope(scope) {
-		return false
+func (s *AttachmentService) checkReadAccess(ctx context.Context, user model.User, attachment *model.Attachment) error {
+	if attachment.CreateBy != nil && *attachment.CreateBy == user.IdUser {
+		return nil
 	}
-	if scope.IdUserTo != nil {
-		return attachment.CreateBy != nil && *attachment.CreateBy == idAuthor
+	if attachment.IdUserTo != nil {
+		if *attachment.IdUserTo == user.IdUser {
+			return nil
+		}
+		return errs.ErrForbidden
 	}
-	return true
+	if attachment.IdSpace != nil {
+		return s.spaceChecker.CheckSpaceRead(ctx, user, *attachment.IdSpace)
+	}
+	return s.checkContextAccess(ctx, user.IdUser, attachment.AttachmentScope)
 }
 
-func (s *AttachmentService) checkScopeAccess(ctx context.Context, idUser int64, scope model.AttachmentScope) error {
+func (s *AttachmentService) checkContextAccess(ctx context.Context, idUser int64, scope model.AttachmentScope) error {
 	recipientType, idRecipient, ok := scope.Recipient()
 	if !ok {
 		return errs.ErrBadRequest
 	}
 	return s.contextChecker.CheckContextAccess(ctx, idUser, recipientType, idRecipient)
-}
-
-func (s *AttachmentService) checkReadAccess(ctx context.Context, idUser int64, attachment *model.Attachment) error {
-	if attachment.CreateBy != nil && *attachment.CreateBy == idUser {
-		return nil
-	}
-	if attachment.IdUserTo != nil {
-		if *attachment.IdUserTo == idUser {
-			return nil
-		}
-		return errs.ErrForbidden
-	}
-	return s.checkScopeAccess(ctx, idUser, attachment.AttachmentScope)
 }

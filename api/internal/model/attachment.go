@@ -11,6 +11,7 @@ type AttachmentScope struct {
 	IdProject *int64 `json:"idProject" db:"id_project"`
 	IdTeam    *int64 `json:"idTeam"    db:"id_team"`
 	IdUserTo  *int64 `json:"idUserTo"  db:"id_user_to"`
+	IdSpace   *int64 `json:"idSpace"   db:"id_space"`
 }
 
 func AttachmentScopeOf(recipientType MessageRecipientType, idRecipient int64) (AttachmentScope, bool) {
@@ -44,6 +45,9 @@ func (s AttachmentScope) Recipient() (MessageRecipientType, int64, bool) {
 }
 
 func (s AttachmentScope) HasScope(other AttachmentScope) bool {
+	if s.IdSpace != nil || other.IdSpace != nil {
+		return s.IdSpace != nil && other.IdSpace != nil && *s.IdSpace == *other.IdSpace
+	}
 	recipientType, idRecipient, ok := s.Recipient()
 	otherType, otherIdRecipient, otherOk := other.Recipient()
 	return ok && otherOk && recipientType == otherType && idRecipient == otherIdRecipient

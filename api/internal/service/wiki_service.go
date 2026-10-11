@@ -23,6 +23,11 @@ const (
 	wikiListMaxPageSize = 100
 )
 
+type WikiAttachmentLinker interface {
+	LinkWikiAttachments(ctx context.Context, idSpace, idPage int64, body string) error
+	LinkWikiDraftAttachments(ctx context.Context, idSpace, idPage int64, body string) error
+}
+
 type WikiService struct {
 	pool          *pgxpool.Pool
 	spaceRepo     *repository.WikiSpaceRepository
@@ -36,6 +41,7 @@ type WikiService struct {
 	acl           *AclService
 	notifier      *notify.Notifier
 	cache         *redis.Client
+	attachments   WikiAttachmentLinker
 }
 
 type wikiAccess struct {
@@ -58,6 +64,7 @@ func NewWikiService(
 	acl *AclService,
 	notifier *notify.Notifier,
 	cache *redis.Client,
+	attachments WikiAttachmentLinker,
 ) *WikiService {
 	return &WikiService{
 		pool:          pool,
@@ -72,6 +79,7 @@ func NewWikiService(
 		acl:           acl,
 		notifier:      notifier,
 		cache:         cache,
+		attachments:   attachments,
 	}
 }
 
@@ -440,6 +448,39 @@ func (s *WikiService) spaceAccess(ctx context.Context, user model.User, space *m
 	return access
 }
 
+func (s *WikiService) CheckSpaceRead(ctx context.Context, user model.User, idSpace int64) error {
+	access, err := s.spaceAccessById(ctx, user, idSpace)
+	if err != nil {
+		return err
+	}
+	if !access.canRead {
+		return errs.ErrForbidden
+	}
+	return nil
+}
+
+func (s *WikiService) CheckSpaceEdit(ctx context.Context, user model.User, idSpace int64) error {
+	access, err := s.spaceAccessById(ctx, user, idSpace)
+	if err != nil {
+		return err
+	}
+	if !access.canEdit {
+		return errs.ErrForbidden
+	}
+	return nil
+}
+
+func (s *WikiService) spaceAccessById(ctx context.Context, user model.User, idSpace int64) (wikiAccess, error) {
+	space, err := s.spaceRepo.LoadSpace(ctx, idSpace)
+	if err != nil {
+		return wikiAccess{}, err
+	}
+	if space == nil {
+		return wikiAccess{}, errs.ErrNotFound
+	}
+	return s.spaceAccess(ctx, user, space), nil
+}
+
 func (s *WikiService) projectSpaces(ctx context.Context, user model.User, idProject int64) (*model.WikiSpace, *model.WikiSpace, error) {
 	if !s.acl.CanReadWiki(ctx, user.IdUser, idProject) {
 		return nil, nil, errs.ErrForbidden
@@ -558,7 +599,10 @@ func (s *WikiService) storeLinks(ctx context.Context, page *model.WikiPage, curr
 	for i, link := range resolved {
 		links[i] = model.WikiLink{IdSpaceTo: link.IdSpace, TargetSlug: link.Slug}
 	}
-	return s.linkRepo.Replace(ctx, page.IdPage, links)
+	if err := s.linkRepo.Replace(ctx, page.IdPage, links); err != nil {
+		return err
+	}
+	return s.attachments.LinkWikiAttachments(ctx, page.IdSpace, page.IdPage, page.Body)
 }
 
 func (s *WikiService) validateParent(ctx context.Context, idSpace int64, idParent *int64, idPage int64) error {

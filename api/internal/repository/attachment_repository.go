@@ -24,11 +24,11 @@ func NewAttachmentRepository(pool *pgxpool.Pool) *AttachmentRepository {
 func (r *AttachmentRepository) Insert(ctx context.Context, attachment *model.Attachment) error {
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
-		INSERT INTO files.attachment (file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, create_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO files.attachment (file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, id_space, create_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id_attachment, create_at
 	`, attachment.FileName, attachment.MimeType, attachment.Size,
-		attachment.IdIssue, attachment.IdProject, attachment.IdTeam, attachment.IdUserTo, attachment.CreateBy,
+		attachment.IdIssue, attachment.IdProject, attachment.IdTeam, attachment.IdUserTo, attachment.IdSpace, attachment.CreateBy,
 	).Scan(&attachment.IdAttachment, &attachment.CreateAt)
 	if err != nil {
 		return fmt.Errorf("inserting attachment: %w", err)
@@ -39,7 +39,7 @@ func (r *AttachmentRepository) Insert(ctx context.Context, attachment *model.Att
 func (r *AttachmentRepository) LoadById(ctx context.Context, idAttachment uuid.UUID) (*model.Attachment, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_attachment, file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, create_by, create_at
+		SELECT id_attachment, file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, id_space, create_by, create_at
 		FROM files.attachment
 		WHERE id_attachment = $1
 	`, idAttachment)
@@ -59,7 +59,7 @@ func (r *AttachmentRepository) LoadById(ctx context.Context, idAttachment uuid.U
 func (r *AttachmentRepository) LoadByIds(ctx context.Context, idsAttachment []uuid.UUID) ([]*model.Attachment, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_attachment, file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, create_by, create_at
+		SELECT id_attachment, file_name, mime_type, size, id_issue, id_project, id_team, id_user_to, id_space, create_by, create_at
 		FROM files.attachment
 		WHERE id_attachment = ANY($1)
 	`, idsAttachment)
@@ -91,6 +91,40 @@ func (r *AttachmentRepository) ReplaceMessageLinks(ctx context.Context, idMessag
 	return nil
 }
 
+func (r *AttachmentRepository) AddWikiLinks(ctx context.Context, idPage int64, idsAttachment []uuid.UUID) error {
+	if len(idsAttachment) == 0 {
+		return nil
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO wiki.page_attachment (id_page, id_attachment)
+		SELECT $1, unnest($2::uuid[])
+		ON CONFLICT DO NOTHING
+	`, idPage, idsAttachment)
+	if err != nil {
+		return fmt.Errorf("inserting attachment links of wiki page %d: %w", idPage, err)
+	}
+	return nil
+}
+
+func (r *AttachmentRepository) ReplaceIssueLinks(ctx context.Context, idIssue int64, idsAttachment []uuid.UUID) error {
+	db := extctx.GetDb(ctx, r.pool)
+	if _, err := db.Exec(ctx, `DELETE FROM issues.issue_attachment WHERE id_issue = $1`, idIssue); err != nil {
+		return fmt.Errorf("deleting attachment links of issue %d: %w", idIssue, err)
+	}
+	if len(idsAttachment) == 0 {
+		return nil
+	}
+	_, err := db.Exec(ctx, `
+		INSERT INTO issues.issue_attachment (id_issue, id_attachment)
+		SELECT $1, unnest($2::uuid[])
+	`, idIssue, idsAttachment)
+	if err != nil {
+		return fmt.Errorf("inserting attachment links of issue %d: %w", idIssue, err)
+	}
+	return nil
+}
+
 func (r *AttachmentRepository) DeleteOrphansOlderThan(ctx context.Context, cutoff time.Time) (int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	tag, err := db.Exec(ctx, `
@@ -98,6 +132,14 @@ func (r *AttachmentRepository) DeleteOrphansOlderThan(ctx context.Context, cutof
 		WHERE attachment.create_at < $1
 		  AND NOT EXISTS (
 			SELECT 1 FROM messages.message_attachment link
+			WHERE link.id_attachment = attachment.id_attachment
+		  )
+		  AND NOT EXISTS (
+			SELECT 1 FROM wiki.page_attachment link
+			WHERE link.id_attachment = attachment.id_attachment
+		  )
+		  AND NOT EXISTS (
+			SELECT 1 FROM issues.issue_attachment link
 			WHERE link.id_attachment = attachment.id_attachment
 		  )
 	`, cutoff)

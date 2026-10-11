@@ -20,6 +20,10 @@ import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ApiError } from 'src/app/shared/model/api-error.model';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
+import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/attachment-link.converter';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
+import { AttachmentGallery } from 'src/app/shared/attachment/service/attachment-gallery.service';
+import { AttachmentLink } from 'src/app/shared/attachment/util/attachment-link';
 import { WikiApi } from '../../api/wiki.api.service';
 import {
     WikiEditorComponent,
@@ -71,7 +75,8 @@ const HEARTBEAT_INTERVAL_MS = 15000;
     styleUrls: ['./wiki-edit.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false,
-    host: { '(window:beforeunload)': 'onBeforeUnload($event)' }
+    host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
+    providers: [AttachmentGallery]
 })
 export class WikiEditPage implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
@@ -83,6 +88,7 @@ export class WikiEditPage implements OnDestroy {
     private readonly destroyRef = inject(DestroyRef);
     private readonly i18n = inject(I18nService);
     protected readonly store = inject(WikiTreeStore);
+    protected readonly gallery = inject(AttachmentGallery);
 
     private readonly calloutLabels = WikiCalloutConverter.toLabels(key => this.i18n.instant(key));
 
@@ -137,6 +143,15 @@ export class WikiEditPage implements OnDestroy {
     );
 
     protected readonly canChooseShared = computed(() => !!this.store.sharedSpace()?.canEdit);
+
+    protected readonly attachmentScope = computed<AttachmentScope | null>(() => {
+        const idSpace = this.view()?.page.idSpace ?? this.spaceView()?.idSpace;
+        return idSpace === undefined ? null : { idSpace };
+    });
+
+    protected readonly hasAttachments = computed(() => AttachmentLink.hasAny(this.body()));
+
+    protected readonly isUploading = computed(() => this.editor()?.isUploading() ?? false);
 
     protected readonly budgetTokens = computed(() => {
         const tree = this.store.tree();
@@ -196,11 +211,16 @@ export class WikiEditPage implements OnDestroy {
     });
 
     protected readonly preview = computed(() =>
-        WikiLinkConverter.toMarkdown(WikiCalloutConverter.toHtml(this.body(), this.calloutLabels), {
-            idProject: this.idProject,
-            links: this.previewLinks(),
-            sharedIdSpace: this.store.sharedSpace()?.idSpace ?? null
-        })
+        AttachmentLinkConverter.toMarkerMarkdown(
+            WikiLinkConverter.toMarkdown(
+                WikiCalloutConverter.toHtml(this.body(), this.calloutLabels),
+                {
+                    idProject: this.idProject,
+                    links: this.previewLinks(),
+                    sharedIdSpace: this.store.sharedSpace()?.idSpace ?? null
+                }
+            )
+        )
     );
 
     private readonly previewLinks = computed(() => {
@@ -444,7 +464,7 @@ export class WikiEditPage implements OnDestroy {
     }
 
     protected onSave(): void {
-        if (!this.title().trim() || this.isSaving()) {
+        if (!this.title().trim() || this.isSaving() || this.isUploading()) {
             return;
         }
         this.isSaving.set(true);

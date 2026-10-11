@@ -31,10 +31,19 @@ func uploadAttachment(
 	content []byte,
 ) *http.Response {
 	t.Helper()
+	return uploadAttachmentForm(t, app, token, map[string]string{
+		"idMessageRecipientType": strconv.Itoa(int(recipientType)),
+		"idRecipient":            strconv.FormatInt(idRecipient, 10),
+	}, fileName, content)
+}
+
+func uploadAttachmentForm(t *testing.T, app *issue.Application, token string, fields map[string]string, fileName string, content []byte) *http.Response {
+	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
-	require.NoError(t, writer.WriteField("idMessageRecipientType", strconv.Itoa(int(recipientType))))
-	require.NoError(t, writer.WriteField("idRecipient", strconv.FormatInt(idRecipient, 10)))
+	for name, value := range fields {
+		require.NoError(t, writer.WriteField(name, value))
+	}
 	part, err := writer.CreateFormFile("file", fileName)
 	require.NoError(t, err)
 	_, err = part.Write(content)
@@ -49,6 +58,15 @@ func uploadAttachment(
 	return recorder.Result()
 }
 
+func decodeUploaded(t *testing.T, res *http.Response) model.AttachmentRes {
+	t.Helper()
+	body := readBody(t, res)
+	require.Equal(t, http.StatusOK, res.StatusCode, body)
+	var uploaded model.AttachmentRes
+	require.NoError(t, json.Unmarshal([]byte(body), &uploaded))
+	return uploaded
+}
+
 func uploadAttachmentOk(
 	t *testing.T,
 	app *issue.Application,
@@ -59,12 +77,7 @@ func uploadAttachmentOk(
 	content []byte,
 ) model.AttachmentRes {
 	t.Helper()
-	res := uploadAttachment(t, app, token, recipientType, idRecipient, fileName, content)
-	body := readBody(t, res)
-	require.Equal(t, http.StatusOK, res.StatusCode, body)
-	var uploaded model.AttachmentRes
-	require.NoError(t, json.Unmarshal([]byte(body), &uploaded))
-	return uploaded
+	return decodeUploaded(t, uploadAttachment(t, app, token, recipientType, idRecipient, fileName, content))
 }
 
 func downloadAttachment(t *testing.T, app *issue.Application, token string, idAttachment uuid.UUID) *http.Response {

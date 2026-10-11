@@ -26,6 +26,7 @@ import { AsciiEmoji } from './ascii-emoji';
 import { CodeBlockLanguage } from './constant/code-block-language.enum';
 import { EMOJI_GROUPS, EmojiGroup } from './constant/emoji-picker.constant';
 import { EditorCharacters } from './constant/editor-characters.enum';
+import { ClipboardContent } from 'src/app/shared/attachment/util/clipboard-content';
 import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
@@ -61,6 +62,7 @@ interface PickerPosition {
 })
 export class MessageEditorComponent implements ControlValueAccessor, AfterViewInit {
     private readonly editorRef = viewChild.required<ElementRef<HTMLDivElement>>('editor');
+    private readonly wrapperRef = viewChild.required<ElementRef<HTMLDivElement>>('wrapper');
     private readonly destroyRef = inject(DestroyRef);
 
     public readonly mode = input<'edit' | 'create'>('create');
@@ -73,7 +75,8 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public readonly disableSendButton = input(false);
 
-    protected readonly pendingUploads = signal(0);
+    private readonly pendingUploads = signal(0);
+    private isPickingFiles = false;
 
     public readonly disableCancelButton = input(true);
 
@@ -81,17 +84,15 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public readonly mentionCandidates = input<User[]>([]);
 
-    public readonly allowAttachments = input(true);
-
     public readonly attachmentScope = input<AttachmentScope | null>(null);
 
     public readonly cancelled = output<void>();
 
     private readonly uploader = inject(AttachmentUploader);
 
-    protected readonly canAttach = computed(
-        () => this.allowAttachments() && this.attachmentScope() !== null
-    );
+    protected readonly canAttach = computed(() => this.attachmentScope() !== null);
+
+    public readonly isUploading = computed(() => this.pendingUploads() > 0);
 
     // Internal source of truth for the editor content. Derived from the model()
     // input via linkedSignal, so an inbound [message] push (or CVA writeValue,
@@ -184,16 +185,33 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public onComponentFocusout(event: FocusEvent): void {
         const container = event.currentTarget as HTMLElement;
-        if (!container.contains(event.relatedTarget as Node)) {
-            if (this.change() === 'onblur') {
-                this.propagateChange(this.text());
-            }
+        if (container.contains(event.relatedTarget as Node)) {
+            return;
+        }
+        // The file picker blurs the window; handing the value over here would close an onblur editor before the file arrives.
+        if (this.isPickingFiles) {
+            return;
+        }
+        if (this.change() === 'onblur') {
+            this.propagateChange(this.text());
         }
     }
 
     public onSendShortcut(evt: Event): void {
         evt.preventDefault();
         this.onSend();
+    }
+
+    protected onEditorMousedown(evt: MouseEvent): void {
+        const root = this.editorRef().nativeElement;
+        const chip = (evt.target as HTMLElement | null)?.closest<HTMLElement>(
+            '.attachment-chip, .mention-chip'
+        );
+        if (!chip || !root.contains(chip)) {
+            return;
+        }
+        evt.preventDefault();
+        EditorChip.placeCaretBeside(root, chip, evt.clientX);
     }
 
     protected onKeydown(evt: KeyboardEvent): void {
@@ -249,6 +267,16 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             evt.preventDefault();
             this.wikiQuery.set(null);
             return;
+        }
+
+        const isDelete = evt.key === 'Backspace' || evt.key === 'Delete';
+        if (isDelete && !evt.ctrlKey && !evt.metaKey && !evt.altKey) {
+            const root = this.editorRef().nativeElement;
+            if (EditorChip.deleteBesideChip(root, evt.key === 'Backspace')) {
+                evt.preventDefault();
+                this.syncFromDom();
+                return;
+            }
         }
 
         // Ctrl+Enter (Windows/Linux) or Cmd+Enter (macOS) sends; plain Enter and
@@ -414,7 +442,17 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
     }
 
+    protected onPickFiles(input: HTMLInputElement): void {
+        this.isPickingFiles = true;
+        input.click();
+    }
+
+    protected onPickCancelled(): void {
+        this.isPickingFiles = false;
+    }
+
     protected onFilesPicked(input: HTMLInputElement): void {
+        this.isPickingFiles = false;
         const files = Array.from(input.files ?? []);
         input.value = '';
         this.uploadFiles(files);
@@ -451,7 +489,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
                 .upload$(file, scope)
                 .pipe(
                     take(1),
-                    finalize(() => this.pendingUploads.update(count => count - 1)),
+                    finalize(() => this.onUploadSettled()),
                     takeUntilDestroyed(this.destroyRef)
                 )
                 .subscribe({
@@ -462,6 +500,17 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
                         ),
                     error: () => this.replacePlaceholder(placeholder, null)
                 });
+        }
+    }
+
+    private onUploadSettled(): void {
+        this.pendingUploads.update(count => count - 1);
+        if (this.destroyRef.destroyed || this.isUploading() || this.change() !== 'onblur') {
+            return;
+        }
+        const wrapper = this.wrapperRef().nativeElement;
+        if (!wrapper.contains(wrapper.ownerDocument.activeElement)) {
+            this.propagateChange(this.text());
         }
     }
 
@@ -479,7 +528,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public onSend(): void {
         const value = this.text();
-        if (!value || value.trim() === '' || this.pendingUploads() > 0) {
+        if (!value || value.trim() === '' || this.isUploading()) {
             return;
         }
         if (this.change() === 'onaction') {
@@ -629,11 +678,15 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const handler = (e: ClipboardEvent): void => {
             e.preventDefault();
             const files = Array.from(e.clipboardData?.files ?? []);
-            if (files.length && this.canAttach()) {
+            const text = e.clipboardData?.getData('text/plain') ?? '';
+            if (
+                files.length &&
+                !ClipboardContent.isOfficeText(e.clipboardData) &&
+                this.canAttach()
+            ) {
                 this.uploadFiles(files);
                 return;
             }
-            const text = e.clipboardData?.getData('text/plain') ?? '';
             root.ownerDocument.execCommand('insertText', false, text);
         };
         root.addEventListener('paste', handler);

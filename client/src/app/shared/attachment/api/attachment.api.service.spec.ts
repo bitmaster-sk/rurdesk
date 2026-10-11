@@ -25,6 +25,18 @@ describe('AttachmentApi', () => {
         expect(body.get('idMessageRecipientType')).toBe('2');
         expect(body.get('idRecipient')).toBe('7');
         expect((body.get('file') as File).name).toBe('a.txt');
+        expect(body.has('idSpace')).toBe(false);
+    });
+
+    it('uploads into a wiki space', () => {
+        const post = vi.fn().mockReturnValue(of({}));
+        const api = buildApi({ post });
+
+        api.upload$(new File(['x'], 'a.png'), { idSpace: 4 }).subscribe();
+
+        const [, body] = post.mock.calls[0] as [string, FormData];
+        expect(body.get('idSpace')).toBe('4');
+        expect(body.has('idMessageRecipientType')).toBe(false);
     });
 
     it('downloads as a blob with the error toast silenced', () => {

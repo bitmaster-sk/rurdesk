@@ -1,4 +1,4 @@
-<div class="editor-wrapper" (focusout)="onComponentFocusout($event)">
+<div #wrapper class="editor-wrapper" (focusout)="onComponentFocusout($event)">
     <div class="editor-mention-container">
         <div
             #editor
@@ -8,6 +8,7 @@
             aria-multiline="true"
             (input)="onInput()"
             (keydown)="onKeydown($event)"
+            (mousedown)="onEditorMousedown($event)"
             (dragover)="onDragOver($event)"
             (drop)="onDrop($event)"
         ></div>
@@ -250,7 +251,7 @@
                         size="small"
                         data-testid="message-editor-attach"
                         [uiTooltip]="'MESSAGE_EDITOR.ATTACH' | translate"
-                        (click)="fileInput.click()"
+                        (click)="onPickFiles(fileInput)"
                     >
                         <tabler-icon icon="paperclip" [size]="14" />
                     </ui-button>
@@ -261,6 +262,7 @@
                         class="hidden"
                         data-testid="message-editor-file-input"
                         (change)="onFilesPicked(fileInput)"
+                        (cancel)="onPickCancelled()"
                     />
                 }
             </div>
@@ -273,7 +275,7 @@
                     severity="primary"
                     size="small"
                     data-testid="message-editor-send"
-                    [disabled]="pendingUploads() > 0"
+                    [disabled]="isUploading()"
                     (click)="onSend()"
                     [uiTooltip]="sendShortcutHint()"
                 >

@@ -2,12 +2,17 @@ import {
     AfterViewInit,
     ChangeDetectionStrategy,
     Component,
+    DestroyRef,
     ElementRef,
     OnDestroy,
+    computed,
+    inject,
     input,
     output,
+    signal,
     viewChild
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
     Completion,
     CompletionContext,
@@ -27,6 +32,11 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { GFM, parser as markdownParser } from '@lezer/markdown';
+import { finalize, take } from 'rxjs';
+import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
+import { AttachmentUploader } from 'src/app/shared/attachment/service/attachment-uploader.service';
+import { ClipboardContent } from 'src/app/shared/attachment/util/clipboard-content';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { WikiCalloutKind } from '../../constants/wiki-callout-kind.enum';
 import { WikiFormat } from '../../constants/wiki-format.enum';
@@ -35,6 +45,7 @@ import { WikiFormatConverter } from '../../converter/wiki-format.converter';
 import { WikiFormatTool } from '../../entity/wiki-format-tool.entity';
 import { WikiTableSize } from '../../entity/wiki-table-size.entity';
 import { WikiTextEdit } from '../../entity/wiki-text-edit.entity';
+import { WikiUploadPlaceholder } from '../../entity/wiki-upload-placeholder.entity';
 
 export interface WikiEditorPageOption {
     title: string;
@@ -59,9 +70,18 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
     public readonly placeholderText = input<string>('');
     public readonly pages = input<WikiEditorPageOption[]>([]);
     public readonly issues = input<WikiEditorIssueOption[]>([]);
+    public readonly attachmentScope = input<AttachmentScope | null>(null);
 
     public readonly valueChange = output<string>();
     public readonly issuesRequested = output<void>();
+
+    private readonly uploader = inject(AttachmentUploader);
+    private readonly i18n = inject(I18nService);
+    private readonly destroyRef = inject(DestroyRef);
+    private readonly pendingUploads = signal(0);
+    private placeholders: WikiUploadPlaceholder[] = [];
+
+    public readonly isUploading = computed(() => this.pendingUploads() > 0);
 
     protected readonly toolGroups: WikiFormatTool[][] = [
         [
@@ -164,8 +184,19 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
                         ...historyKeymap,
                         indentWithTab
                     ]),
+                    EditorView.domEventHandlers({
+                        paste: event => this.onPasteFiles(event),
+                        drop: (event, view) => this.onDropFiles(event, view)
+                    }),
                     EditorView.updateListener.of(update => {
-                        if (update.docChanged && !this.isApplyingExternalValue) {
+                        if (!update.docChanged) {
+                            return;
+                        }
+                        for (const placeholder of this.placeholders) {
+                            placeholder.from = update.changes.mapPos(placeholder.from, 1);
+                            placeholder.to = update.changes.mapPos(placeholder.to, -1);
+                        }
+                        if (!this.isApplyingExternalValue) {
                             this.valueChange.emit(update.state.doc.toString());
                         }
                     })
@@ -199,12 +230,100 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
         this.view?.focus();
     }
 
+    protected onFilesPicked(fileInput: HTMLInputElement): void {
+        const files = Array.from(fileInput.files ?? []);
+        fileInput.value = '';
+        this.uploadFiles(files);
+    }
+
     protected onFormat(format: WikiFormat): void {
         this.applyFormat(format);
     }
 
     protected onTablePicked(size: WikiTableSize): void {
         this.applyEdit((doc, from, to) => WikiFormatConverter.toTableEdit(doc, from, to, size));
+    }
+
+    private onPasteFiles(event: ClipboardEvent): boolean {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        if (
+            !files.length ||
+            ClipboardContent.isOfficeText(event.clipboardData) ||
+            !this.attachmentScope()
+        ) {
+            return false;
+        }
+        event.preventDefault();
+        this.uploadFiles(files);
+        return true;
+    }
+
+    private onDropFiles(event: DragEvent, view: EditorView): boolean {
+        const files = Array.from(event.dataTransfer?.files ?? []);
+        if (!files.length || !this.attachmentScope()) {
+            return false;
+        }
+        event.preventDefault();
+        const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
+        if (position !== null) {
+            view.dispatch({ selection: { anchor: position } });
+        }
+        this.uploadFiles(files);
+        return true;
+    }
+
+    private uploadFiles(files: File[]): void {
+        const scope = this.attachmentScope();
+        const view = this.view;
+        if (!scope || !view) {
+            return;
+        }
+        for (const file of files) {
+            const placeholder = this.insertPlaceholder(view, file.name);
+            this.uploader
+                .upload$(file, scope)
+                .pipe(
+                    take(1),
+                    finalize(() => {
+                        this.placeholders = this.placeholders.filter(
+                            pending => pending !== placeholder
+                        );
+                        this.pendingUploads.update(count => count - 1);
+                    }),
+                    takeUntilDestroyed(this.destroyRef)
+                )
+                .subscribe({
+                    next: ({ markdown }) => this.replacePlaceholder(placeholder, markdown),
+                    error: () => this.replacePlaceholder(placeholder, '')
+                });
+        }
+        view.focus();
+    }
+
+    private insertPlaceholder(view: EditorView, name: string): WikiUploadPlaceholder {
+        const text = `[${this.i18n.instant('WIKI.ATTACHMENT.UPLOADING', { name })}]`;
+        const { from, to } = view.state.selection.main;
+        view.dispatch({
+            changes: { from, to, insert: text },
+            selection: { anchor: from + text.length },
+            scrollIntoView: true,
+            userEvent: 'input.paste'
+        });
+        const placeholder: WikiUploadPlaceholder = { from, to: from + text.length, text };
+        this.placeholders.push(placeholder);
+        this.pendingUploads.update(count => count + 1);
+        return placeholder;
+    }
+
+    private replacePlaceholder(placeholder: WikiUploadPlaceholder, insert: string): void {
+        const view = this.view;
+        if (view?.state.sliceDoc(placeholder.from, placeholder.to) !== placeholder.text) {
+            return;
+        }
+        view.dispatch({
+            changes: { from: placeholder.from, to: placeholder.to, insert },
+            userEvent: 'input.paste'
+        });
     }
 
     private applyCallout(kind: WikiCalloutKind): void {

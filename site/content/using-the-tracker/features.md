@@ -88,15 +88,19 @@ case sensitivity, or word boundaries.
 
 ### Attachments
 
-Task comments and chat messages (team, project and direct) accept images and
-other files. Add a file in any of three ways:
+Task descriptions, task comments, chat messages (team, project and direct) and
+[wiki pages](wiki.md#images-and-files) accept images and other files. Add a file
+in any of three ways:
 
 - **Paste** an image or file from the clipboard into the composer
 - **Drag and drop** a file onto the composer
 - Click the **paperclip** button in the composer toolbar
 
-The file uploads immediately and appears in the composer as a chip. Task
-descriptions do not accept attachments.
+The file uploads immediately and appears in the composer as a chip. Click the
+left or right half of a chip to put the cursor in front of or behind it.
+Attachments on the same line show side by side; put each on its own line to
+show them one under another. While a file
+is still uploading, the message cannot be sent and a new task cannot be saved.
 
 Allowed types are images (PNG, JPEG, GIF, WebP), PDF, plain text and ZIP, among
 others. SVG is not allowed. The type is checked from the file content, not its
@@ -109,8 +113,9 @@ and press `Esc` to close. Zoom with the mouse wheel, the zoom buttons or the `+`
 and `-` keys, drag the zoomed image to move around, and double-click or press `0`
 to fit it back to the screen. Other files show as a card with the name and size;
 click the card to download the file. PDFs open in a new tab instead. Only people who can read the task or
-conversation can open its attachments. Files uploaded but never sent are deleted
-after 24 hours.
+conversation can open its attachments. Files uploaded but never sent or saved
+are deleted after 24 hours; removing a file from a description or message makes
+it count as never sent.
 
 To find a file shared on a task, switch the activity feed to the **Attachments**
 chip. It shows only the comments that carry an attachment.

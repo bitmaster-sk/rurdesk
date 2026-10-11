@@ -23,22 +23,22 @@ import (
 )
 
 type MessageController struct {
-	messageRepo     *repository.MessageRepository
-	teamRepo        *repository.TeamRepository
-	projectRepo     *repository.ProjectRepository
-	userRepo        *repository.UserRepository
-	issueRepo       *repository.IssueRepository
-	agentRunRepo    *repository.AgentRunRepository
-	agentTaskRepo   *repository.AgentTaskRepository
-	agentGwRepo     *repository.AgentGatewayRepository
-	participantRepo *repository.IssueParticipantRepository
-	dispatcher      *agent.Dispatcher
-	notifier        *notify.Notifier
-	acl             *service.AclService
-	messageAccess   *service.MessageAccessService
-	attachmentSvc   *service.AttachmentService
-	notifSvc        *service.NotificationService
-	pool            *pgxpool.Pool
+	messageRepo       *repository.MessageRepository
+	teamRepo          *repository.TeamRepository
+	projectRepo       *repository.ProjectRepository
+	userRepo          *repository.UserRepository
+	issueRepo         *repository.IssueRepository
+	agentRunRepo      *repository.AgentRunRepository
+	agentTaskRepo     *repository.AgentTaskRepository
+	agentGwRepo       *repository.AgentGatewayRepository
+	participantRepo   *repository.IssueParticipantRepository
+	dispatcher        *agent.Dispatcher
+	notifier          *notify.Notifier
+	acl               *service.AclService
+	messageAccess     *service.MessageAccessService
+	attachmentLinkSvc *service.AttachmentLinkService
+	notifSvc          *service.NotificationService
+	pool              *pgxpool.Pool
 }
 
 func NewMessageController(
@@ -50,24 +50,24 @@ func NewMessageController(
 	nf *notify.Notifier,
 	acl *service.AclService,
 	messageAccess *service.MessageAccessService,
-	attachmentSvc *service.AttachmentService,
+	attachmentLinkSvc *service.AttachmentLinkService,
 	notifSvc *service.NotificationService,
 	participantRepo *repository.IssueParticipantRepository,
 	pool *pgxpool.Pool,
 ) *MessageController {
 	return &MessageController{
-		messageRepo:     mr,
-		teamRepo:        tr,
-		projectRepo:     pr,
-		userRepo:        ur,
-		issueRepo:       ir,
-		notifier:        nf,
-		acl:             acl,
-		messageAccess:   messageAccess,
-		attachmentSvc:   attachmentSvc,
-		notifSvc:        notifSvc,
-		participantRepo: participantRepo,
-		pool:            pool,
+		messageRepo:       mr,
+		teamRepo:          tr,
+		projectRepo:       pr,
+		userRepo:          ur,
+		issueRepo:         ir,
+		notifier:          nf,
+		acl:               acl,
+		messageAccess:     messageAccess,
+		attachmentLinkSvc: attachmentLinkSvc,
+		notifSvc:          notifSvc,
+		participantRepo:   participantRepo,
+		pool:              pool,
 	}
 }
 
@@ -286,7 +286,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-		return mc.attachmentSvc.LinkMessageAttachments(ctx, msg)
+		return mc.attachmentLinkSvc.LinkMessageAttachments(ctx, msg)
 	})
 	if errors.Is(err, repository.ErrAnchorWrongThread) {
 		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
@@ -491,7 +491,7 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 		if txErr != nil {
 			return txErr
 		}
-		return mc.attachmentSvc.LinkMessageAttachments(ctx, updatedMsg)
+		return mc.attachmentLinkSvc.LinkMessageAttachments(ctx, updatedMsg)
 	})
 	if err != nil {
 		ResponseErr(c, err)
