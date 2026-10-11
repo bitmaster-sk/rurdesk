@@ -5,6 +5,110 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-10-11
+
+A wiki your agents read and help keep up to date, your own fields on every task, and
+images and files wherever you write.
+
+### Highlights
+
+- **Wiki** — Markdown pages for each project plus a shared space, with versions, merged
+  concurrent edits, trash, search and a home page. Tasks link pages from the description
+  or by hand, and `[[links]]` work in descriptions and comments.
+- **Agents read and propose wiki changes** — every stage prompt gets the pages that are
+  always read and the ones linked to the task, plus an index of the rest. Agents search
+  and open pages over MCP, and the run card lists what they read. During implementation
+  an agent can propose creating, editing, moving or deleting a page. Nothing is written
+  until a person approves it, and the change is published when the pull request merges.
+- **Custom fields** — typed fields you define per project. Every task carries them, and
+  the API and the agent tools read and write them.
+- **Images and files** — paste, drop or pick files in task comments, chat messages, task
+  descriptions and wiki pages. Images show as thumbnails that open in a lightbox, PDFs
+  open in a new tab and other files download.
+
+### Added
+
+- Project and shared wiki: page tree, versions with restore, trash and purge, search,
+  per-page agent access, a home page per space, and the tasks and pages linked to a page,
+  loaded in batches of 20.
+- Agent wiki reads logged per run and summed up in one line per stage on the run card.
+- Agent wiki change proposals with approve, reject and conflict resolution, published on
+  merge.
+- Custom fields in project settings, on the task, in bulk edit and in the MCP tools, with
+  five types, defaults and required fields.
+- Attachments stored in PostgreSQL, with a **Maximum attachment size (MB)** admin setting
+  (default 25 MB). Files that are uploaded but never used are removed after 24 hours.
+- Mermaid diagrams in the wiki and in messages. Wide diagrams scroll.
+- Expand more context in a pull request diff, loaded from the git host on demand.
+- The issue list remembers its filter and position per project and view, so going back
+  from a task restores the table, board, calendar or gantt where you left it.
+- Delete a task from its detail page. You land back on the list view you came from.
+- Clone a task and start a new task from the task detail menu, which now has icons.
+- Documentation for the wiki, agent wiki proposals, custom fields and attachments.
+
+### Changed
+
+- **Send a message with Ctrl+Enter (Cmd+Enter on macOS).** Enter and Shift+Enter now both
+  insert a new line. The send button shows the shortcut.
+- Live CI status reaches the task detail while an agent's pull request is open, not only
+  after it merges or closes.
+- When an agent tries again, it keeps pushing to the branch of the task's open pull
+  request instead of opening a duplicate one.
+- The gateway runs under `tini`, so orphaned agent processes are reaped and signals reach
+  the agent.
+- Mentions render as part of the Markdown, so tables and lists that contain mentions or
+  inline code no longer fall apart.
+- Quick actions are more compact, with Track and Split in the footer row.
+- Confirmations open in a modal.
+- Notification panel headers line up, and the "team joined" card names the team.
+
+### Removed
+
+- The `quality_scored` notification type, which nothing sent.
+
+### Fixed
+
+- A duplicated tab or a fresh deploy could show a blank page. Missing static files now
+  return 404, `index.html` is never cached, and a stale chunk reloads the page once.
+- The description preview opened the editor after a drag or a double click.
+- The quick actions popover closed when a right click was released.
+- Editing a message dropped its kind from the response.
+- Project settings panels changed the project they were given instead of a copy.
+- The issue filter store failed when no filter was set yet.
+- The thinking comment in the activity feed scrolled wrong and had no empty state.
+- Notification links lost their hover underline.
+- The task ID and clock in the timer used different fonts.
+
+### Database
+
+Seven migrations, applied automatically on startup:
+
+| Migration                                  | Purpose                                                      |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `20260917120000_custom_field.sql`          | custom field definitions and their values on tasks           |
+| `20261002120000_wiki.sql`                  | wiki spaces, pages, versions and links to tasks              |
+| `20261003120000_wiki_home.sql`             | a home page per wiki space                                   |
+| `20261007120000_agent_run_wiki_read.sql`   | the log of wiki pages an agent read during a run             |
+| `20261008120000_wiki_change_proposal.sql`  | agent wiki change proposals                                  |
+| `20261009120000_attachment.sql`            | attachments, their content and links to messages             |
+| `20261010120000_attachment_wiki_issue.sql` | attachments in a wiki space, and links to pages and tasks    |
+
+Rolling back to 1.3.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. If a reverse proxy sits in front of rurdesk, raise its upload
+limit to at least the maximum attachment size. For nginx, `client_max_body_size 100m;`
+is enough. The nginx default of 1 MB refuses almost every upload. Attachments live in
+the database, so plan disk space and backup retention for it.
+
+[1.4.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.3.0...v1.4.0
+
 ## [1.3.0] - 2026-09-09
 
 Watch an agent think while it works, answer its review comments without sending it back
