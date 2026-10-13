@@ -16,7 +16,7 @@ import (
 // must echo the "Authorization" marker — never the token, which would leak it
 // into response logs.
 func TestUpgraderSelectsAuthorizationSubprotocol(t *testing.T) {
-	const token = "jwt-token-value"
+	const token = "session-token-value"
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, err := wsUpgrader.Upgrade(w, r, nil)

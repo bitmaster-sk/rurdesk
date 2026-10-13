@@ -77,14 +77,14 @@ func TestAuthMissingBearerIsUnauthorized(t *testing.T) {
 
 func TestAuthValidSessionPasses(t *testing.T) {
 	cache := &fakeSessionCache{value: sessionJSON(t)}
-	recorder := performAuthRequest(t, cache, &fakeApiKeyAuth{}, "some-jwt-token")
+	recorder := performAuthRequest(t, cache, &fakeApiKeyAuth{}, "some-session-token")
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
 func TestAuthUnknownTokenIsUnauthorized(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{}
-	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, "expired-jwt-token")
+	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, "expired-session-token")
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
 	assert.True(t, apiKeyAuth.lookupCalled)
@@ -93,7 +93,7 @@ func TestAuthUnknownTokenIsUnauthorized(t *testing.T) {
 func TestAuthCacheInfraErrorIsServiceUnavailable(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{}
 	cache := &fakeSessionCache{err: errors.New("dial tcp: connection refused")}
-	recorder := performAuthRequest(t, cache, apiKeyAuth, "some-jwt-token")
+	recorder := performAuthRequest(t, cache, apiKeyAuth, "some-session-token")
 
 	assert.Equal(t, http.StatusServiceUnavailable, recorder.Code)
 	assert.False(t, apiKeyAuth.lookupCalled, "infra error must not fall through to the api-key path")
@@ -166,13 +166,13 @@ func performSubprotocolRequest(t *testing.T, cache SessionCache, protocols strin
 
 func TestAuthAcceptsTokenFromWebsocketSubprotocol(t *testing.T) {
 	cache := &fakeSessionCache{value: sessionJSON(t)}
-	recorder := performSubprotocolRequest(t, cache, "Authorization, some-jwt-token")
+	recorder := performSubprotocolRequest(t, cache, "Authorization, some-session-token")
 
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
 func TestAuthUnknownSubprotocolTokenIsUnauthorized(t *testing.T) {
-	recorder := performSubprotocolRequest(t, &fakeSessionCache{err: redis.Nil}, "Authorization, expired-jwt-token")
+	recorder := performSubprotocolRequest(t, &fakeSessionCache{err: redis.Nil}, "Authorization, expired-session-token")
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
 }

@@ -21,7 +21,7 @@ func NewTaskService(tasks taskAgentLoader) *TaskService {
 // back as repository.ErrTaskNotFound, not as a false.
 //
 // The gateway callbacks sit in the ordinary authenticated group, which accepts
-// any user JWT — the API key is not a distinct principal — so this match is the
+// any user session token — the API key is not a distinct principal — so this match is the
 // whole authorization boundary.
 func (s *TaskService) IsAgentAssignedToTask(ctx context.Context, idUser, idTask int64) (bool, error) {
 	idUserAgent, err := s.tasks.LoadAgentForTask(ctx, idTask)
