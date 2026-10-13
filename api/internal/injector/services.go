@@ -633,6 +633,7 @@ func GetSweep() *agent.Sweep {
 func GetScheduler() *agent.Scheduler {
 	instance, _ := di.GetWithNew("scheduler", func() (any, error) {
 		return agent.NewScheduler(
+			mustDb(),
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
 			GetProjectRepository(),
