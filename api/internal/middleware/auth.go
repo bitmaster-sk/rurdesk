@@ -22,7 +22,7 @@ type ApiKeyAuthenticator interface {
 }
 
 // SessionCache is the narrow slice of *redis.Client the Auth middleware needs
-// to resolve a JWT session token.
+// to resolve an opaque, Redis-backed session token.
 type SessionCache interface {
 	Get(ctx context.Context, key string) *redis.StringCmd
 }
@@ -73,7 +73,7 @@ func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
 			return
 		}
 
-		// Skip JWT Redis lookup when the token has the shape of an API key.
+		// Skip the Redis session lookup when the token has the shape of an API key.
 		if !looksLikeApiKey(bearer) {
 			var user model.User
 			err := cache.Get(c.Request.Context(), bearer).Scan(&user)

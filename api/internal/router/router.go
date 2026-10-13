@@ -337,7 +337,7 @@ func New(
 	pri.GET("/project/:idProject/issue/:idIssuePublic/agent/run", agentRunCtrl.GetRunByIssue)
 
 	// Gateway-facing callbacks. These share the ordinary authenticated group —
-	// middleware.Auth accepts user JWTs and agent API keys alike — so each handler
+	// middleware.Auth accepts user session tokens and agent API keys alike — so each handler
 	// authorizes itself against the run's own agent (agent.TaskService).
 	// Do not add a callback here without that check.
 	pri.POST("/agent/run/:idRun/repo", agentRunCtrl.ReportRunRepo)
