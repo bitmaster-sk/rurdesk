@@ -1,11 +1,13 @@
 package common
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"os/exec"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -91,27 +93,16 @@ func TestNumberField(t *testing.T) {
 	}
 }
 
-func TestProcessSessionsTerminateStopsRunningChild(t *testing.T) {
+func TestProcessSessionsTerminateCancelsTheRunOnce(t *testing.T) {
 	sessions := NewProcessSessions()
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-	cmd := exec.Command("sleep", "30")
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("starting sleep: %v", err)
-	}
-	sessions.Add("1", &ProcessSession{Cmd: cmd, Cancel: cancel})
+	cancelCount := 0
+	sessions.Add("1", &ProcessSession{Cancel: func() { cancelCount++ }})
 
-	start := time.Now()
+	sessions.Terminate("1")
 	sessions.Terminate("1")
 
-	if ctx.Err() == nil {
-		t.Error("run context was not cancelled")
-	}
-	if cmd.ProcessState == nil || cmd.ProcessState.Success() {
-		t.Errorf("child should have exited from SIGTERM, state = %v", cmd.ProcessState)
-	}
-	if elapsed := time.Since(start); elapsed >= processKillGrace {
-		t.Errorf("Terminate took %v, the child should stop on SIGTERM before the kill grace", elapsed)
+	if cancelCount != 1 {
+		t.Errorf("cancel called %d times, want 1", cancelCount)
 	}
 }
 
@@ -120,11 +111,64 @@ func TestProcessSessionsTerminateIsNoOpForUnknownOrRemovedRun(t *testing.T) {
 	sessions.Terminate("missing")
 
 	cancelled := false
-	sessions.Add("2", &ProcessSession{Cmd: exec.Command("true"), Cancel: func() { cancelled = true }})
+	sessions.Add("2", &ProcessSession{Cancel: func() { cancelled = true }})
 	sessions.Remove("2")
 	sessions.Terminate("2")
 
 	if cancelled {
 		t.Error("Terminate cancelled a run that was already removed")
+	}
+}
+
+func TestStopGracefullyEndsTheChildOnCancel(t *testing.T) {
+	const grace = 300 * time.Millisecond
+	tests := []struct {
+		name        string
+		script      string
+		wantSignal  syscall.Signal
+		wantAtLeast time.Duration
+	}{
+		{"exits on SIGTERM", "echo ready; exec sleep 30", syscall.SIGTERM, 0},
+		{"killed after grace when SIGTERM is ignored", "trap '' TERM; echo ready; while :; do sleep 0.05; done", syscall.SIGKILL, grace},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
+			cmd := exec.CommandContext(ctx, "sh", "-c", tt.script)
+			StopGracefully(cmd, grace)
+			stdout, err := cmd.StdoutPipe()
+			if err != nil {
+				t.Fatalf("stdout pipe: %v", err)
+			}
+			if err := cmd.Start(); err != nil {
+				t.Fatalf("starting child: %v", err)
+			}
+			if _, err := bufio.NewReader(stdout).ReadString('\n'); err != nil {
+				t.Fatalf("waiting for child to be ready: %v", err)
+			}
+
+			start := time.Now()
+			cancel()
+			waitDone := make(chan struct{})
+			go func() {
+				_ = cmd.Wait()
+				close(waitDone)
+			}()
+			select {
+			case <-waitDone:
+			case <-time.After(5 * time.Second):
+				t.Fatal("Wait did not return after the run was cancelled")
+			}
+
+			elapsed := time.Since(start)
+			if elapsed < tt.wantAtLeast {
+				t.Errorf("child ended after %v, want at least %v", elapsed, tt.wantAtLeast)
+			}
+			status, ok := cmd.ProcessState.Sys().(syscall.WaitStatus)
+			if !ok || !status.Signaled() || status.Signal() != tt.wantSignal {
+				t.Errorf("child state = %v, want killed by %v", cmd.ProcessState, tt.wantSignal)
+			}
+		})
 	}
 }
