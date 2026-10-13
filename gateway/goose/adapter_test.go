@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
 )
@@ -320,4 +321,65 @@ func writeStubGoose(t *testing.T, argsFile, streamOut string, exitCode int) stri
 		t.Fatalf("writing stub: %v", err)
 	}
 	return path
+}
+
+func TestCancelAlwaysEndsARunningStage(t *testing.T) {
+	stub, startedFile := writeHangingStub(t, "goose-stub.sh")
+	t.Setenv("GOOSE_BINARY", stub)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := &common.Config{
+		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
+		AgentApiKey:   "deadbeef",
+		Goose:         &common.GooseConfig{Provider: "anthropic", MaxTurnsImplement: 60},
+	}
+	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
+
+	for attempt := range 20 {
+		_ = os.Remove(startedFile)
+		ctx, cancel := context.WithCancel(context.Background())
+		task := common.Task{IdRun: 7, IdTask: int64(attempt + 1), Stage: common.StageImplementation, WorktreePath: t.TempDir()}
+		result := make(chan error, 1)
+		go func() {
+			_, err := adapter.Run(ctx, task)
+			result <- err
+		}()
+		waitForFile(t, startedFile)
+
+		cancel()
+		if err := adapter.Cancel(context.Background(), "7"); err != nil {
+			t.Fatalf("Cancel: %v", err)
+		}
+		select {
+		case err := <-result:
+			if err == nil || !strings.Contains(err.Error(), "goose cancelled") {
+				t.Fatalf("attempt %d: Run returned %v, want goose cancelled", attempt, err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("attempt %d: Run did not return after Cancel", attempt)
+		}
+	}
+}
+
+func writeHangingStub(t *testing.T, name string) (stub, startedFile string) {
+	t.Helper()
+	dir := t.TempDir()
+	startedFile = filepath.Join(dir, "started")
+	stub = filepath.Join(dir, name)
+	script := "#!/bin/sh\ntouch " + startedFile + "\nexec sleep 30\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	return stub, startedFile
+}
+
+func waitForFile(t *testing.T, path string) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(path); err == nil {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("stub never started (%s missing)", path)
 }

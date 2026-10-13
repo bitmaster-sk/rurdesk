@@ -14,12 +14,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const processKillGrace = 10 * time.Second
+const ProcessKillGrace = 10 * time.Second
 
 // ProcessSession holds a running agent subprocess and a cancel hook so
-// orchestrator-driven Cancel calls can SIGTERM the right child.
+// orchestrator-driven Cancel calls can stop the right child.
 type ProcessSession struct {
-	Cmd    *exec.Cmd
 	Cancel context.CancelFunc
 }
 
@@ -56,25 +55,18 @@ func (s *ProcessSessions) take(runID RunID) (*ProcessSession, bool) {
 
 func (s *ProcessSessions) Terminate(runID RunID) {
 	session, ok := s.take(runID)
-	if !ok || session.Cmd == nil {
+	if !ok {
 		return
 	}
-
 	session.Cancel()
-	if session.Cmd.Process == nil {
-		return
+}
+
+// Only the goroutine that started cmd may call Wait: a second concurrent Wait blocks forever.
+func StopGracefully(cmd *exec.Cmd, grace time.Duration) {
+	cmd.Cancel = func() error {
+		return cmd.Process.Signal(syscall.SIGTERM)
 	}
-	_ = session.Cmd.Process.Signal(syscall.SIGTERM)
-	done := make(chan struct{})
-	go func() {
-		_ = session.Cmd.Wait()
-		close(done)
-	}()
-	select {
-	case <-done:
-	case <-time.After(processKillGrace):
-		_ = session.Cmd.Process.Kill()
-	}
+	cmd.WaitDelay = grace
 }
 
 func DrainStderr(reader io.Reader, idRun int64, source string) {

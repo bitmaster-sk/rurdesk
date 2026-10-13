@@ -94,6 +94,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	}
 
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
+	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
 	cmd.Env = childEnv(a.cfg.Goose)
 
@@ -105,8 +106,6 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	if err != nil {
 		return stats, fmt.Errorf("stderr pipe: %w", err)
 	}
-
-	session.Cmd = cmd
 
 	log.Info().
 		Int64("idRun", task.IdRun).
