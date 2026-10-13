@@ -110,6 +110,7 @@ var (
 	ErrSkillStageDispatched = newErr("SKILL_STAGE_DISPATCHED", "stage already started; its skills can no longer be changed", "error.skill_stage_dispatched", http.StatusConflict)
 	ErrUnknownSkill         = newErr("UNKNOWN_SKILL", "the request references a skill that does not exist", "error.unknown_skill", http.StatusBadRequest)
 	ErrStageNotInPlan       = newErr("STAGE_NOT_IN_PLAN", "stage is not in the run's stage plan", "error.stage_not_in_plan", http.StatusBadRequest)
+	ErrWorkflowLocked       = newErr("WORKFLOW_LOCKED", "design, plan or implementation already started; the workflow length can no longer be changed", "error.workflow_locked", http.StatusConflict)
 
 	// ── Roles / users ──────────────────────────────────────────────────────
 
@@ -160,7 +161,7 @@ var (
 	ErrRunTerminal            = newErr("RUN_TERMINAL", "run is already in a terminal phase", "error.run_terminal", http.StatusUnprocessableEntity)
 	ErrRunContinueInvalid     = newErr("RUN_CONTINUE_INVALID", "continue only valid on failed or cancelled runs", "error.run_continue_invalid", http.StatusUnprocessableEntity)
 	ErrNoStageToContinue      = newErr("NO_STAGE_TO_CONTINUE", "no stage to continue", "error.no_stage_to_continue", http.StatusUnprocessableEntity)
-	ErrRunHasPr               = newErr("RUN_HAS_PR", "cannot restart a run that already has a pull request; continue or close it instead", "error.run_has_pr", http.StatusUnprocessableEntity)
+	ErrRunHasPr               = newErr("RUN_HAS_PR", "cannot restart a run that already has a pull request; continue or close it instead", "error.run_has_pr", http.StatusConflict)
 	ErrTaskNotFound           = newErr("TASK_NOT_FOUND", "task not found", "error.task_not_found", http.StatusUnprocessableEntity)
 	ErrTaskNotRunningByAgent  = newErr("TASK_NOT_RUNNING_BY_AGENT", "agent task is not being executed by an agent", "error.task_not_running_by_agent", http.StatusConflict)
 	ErrImplementationNoBranch = newErr("IMPLEMENTATION_NO_BRANCH", "implementation output_submitted needs branch_name until the run has a pull request; push your work and pass the branch you pushed to", "error.implementation_no_branch", http.StatusConflict)

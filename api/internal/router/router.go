@@ -333,6 +333,7 @@ func New(
 	pri.GET("/agent/run/:idRun/skills", agentRunCtrl.GetSkills)
 	pri.GET("/agent/run/:idRun/wiki-read", wikiAgentCtrl.GetRunReads)
 	pri.PATCH("/agent/run/:idRun/skills", agentRunCtrl.PatchSkills)
+	pri.PATCH("/agent/run/:idRun/workflow", agentRunCtrl.PatchWorkflow)
 	pri.GET("/project/:idProject/agent/runs", agentRunCtrl.GetRunsByProject)
 	pri.GET("/project/:idProject/issue/:idIssuePublic/agent/run", agentRunCtrl.GetRunByIssue)
 

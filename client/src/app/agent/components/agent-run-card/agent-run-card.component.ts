@@ -5,6 +5,7 @@ import {
     computed,
     inject,
     input,
+    linkedSignal,
     output,
     signal
 } from '@angular/core';
@@ -31,6 +32,7 @@ import {
     FailedStageError,
     FailedStageErrorConverter
 } from '../../converter/failed-stage-error.converter';
+import { ShortWorkflow } from '../../util/short-workflow';
 
 interface TimelineRow {
     label: string; // i18n key for the stage name
@@ -103,6 +105,14 @@ export class AgentRunCardComponent {
             phase !== AgentPhase.Cancelled
         );
     });
+
+    protected readonly isShortWorkflow = linkedSignal(() =>
+        ShortWorkflow.isShort(this.run()?.stagePlan)
+    );
+    protected readonly isWorkflowLocked = computed(() =>
+        ShortWorkflow.isLocked(this.run()?.stages ?? [])
+    );
+    protected readonly isSavingWorkflow = signal(false);
 
     protected readonly AgentPhase = AgentPhase;
     protected readonly phaseSeverity = PHASE_BADGE_SEVERITY;
@@ -292,6 +302,32 @@ export class AgentRunCardComponent {
                         return;
                     }
                     this.toast.showError('AGENT.RUN_SKILLS.SAVE_ERROR');
+                }
+            });
+    }
+
+    protected onToggleShortWorkflow(event: Event): void {
+        event.preventDefault();
+        const run = this.run();
+        if (!run) {
+            return;
+        }
+        const isShortWorkflow = !this.isShortWorkflow();
+        this.isShortWorkflow.set(isShortWorkflow);
+        this.isSavingWorkflow.set(true);
+        this.agentRunApi
+            .updateWorkflow$(run.idRun, isShortWorkflow)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: () => this.isSavingWorkflow.set(false),
+                error: (err: { status?: number }) => {
+                    this.isSavingWorkflow.set(false);
+                    this.isShortWorkflow.set(!isShortWorkflow);
+                    this.toast.showError(
+                        err?.status === 409
+                            ? 'AGENT.WORKFLOW.RACE_ERROR'
+                            : 'AGENT.WORKFLOW.SAVE_ERROR'
+                    );
                 }
             });
     }

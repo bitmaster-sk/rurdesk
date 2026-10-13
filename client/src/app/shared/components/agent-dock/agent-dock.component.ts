@@ -53,6 +53,7 @@ export class AgentDockComponent implements OnInit {
     protected readonly skills = signal<Skill[]>([]);
     protected readonly isLoading = signal(false);
     protected readonly isAssigning = signal(false);
+    protected readonly isShortWorkflow = signal(false);
     private readonly chosen = signal<Set<string>>(new Set());
 
     public ngOnInit(): void {
@@ -94,6 +95,10 @@ export class AgentDockComponent implements OnInit {
         this.chosen.set(next);
     }
 
+    protected onToggleShortWorkflow(event: Event): void {
+        this.isShortWorkflow.set((event.target as HTMLInputElement).checked);
+    }
+
     protected onCancel(): void {
         this.close()();
     }
@@ -101,7 +106,8 @@ export class AgentDockComponent implements OnInit {
     protected onAssign(): void {
         const body: CreateAgentRunReq = {
             idUserAgent: this.agent().idUser,
-            idsSkillByStage: this.idsSkillByStage()
+            idsSkillByStage: this.idsSkillByStage(),
+            isShortWorkflow: this.isShortWorkflow()
         };
         this.isAssigning.set(true);
         this.agentRunApi.assignAgent$(this.idProject(), this.idIssuePublic(), body).subscribe({

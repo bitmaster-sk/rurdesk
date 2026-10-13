@@ -181,7 +181,7 @@ func (s *RunSkillsSuite) TestInsertMaterializesSkillsIntoStagePlan() {
 	var iss model.Issue
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&iss))
 
-	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"design": {s.IdSkill}})
+	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"design": {s.IdSkill}}, false)
 	s.Require().NoError(err)
 	run, err := repo.Insert(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, stagePlan)
 	s.Require().NoError(err)

@@ -118,7 +118,7 @@ FORBIDDEN in this stage: {{.Vocab.WriteFile}}, {{.Vocab.Replace}}, {{.Vocab.RunS
 
 Outcomes:
 - If you have a question that materially affects the design, call ` + "`complete_stage`" + ` with ` + "`outcome=question_asked`" + `, ` + "`message=<your question>`" + `, ` + "`message_kind=brainstorming_question`" + `. That call ends your turn — stop right after it. The run goes to awaiting_input; the user's reply arrives later as a separate new run, so do NOT wait for it or keep working.
-- If the issue is clear enough to proceed, call ` + "`complete_stage`" + ` with ` + "`outcome=no_action_needed`" + `, ` + "`message=No clarifications needed.`" + `, ` + "`message_kind=brainstorming_complete`" + `. The run advances to the Design stage.`
+- If the issue is clear enough to proceed, call ` + "`complete_stage`" + ` with ` + "`outcome=no_action_needed`" + `, ` + "`message=No clarifications needed.`" + `, ` + "`message_kind=brainstorming_complete`" + `.{{if .IsShortWorkflow}} The next stage is the implementation, so this is your last chance to ask questions.{{else}} The run advances to the Design stage.{{end}}`
 
 const designBody = `You are in the DESIGN stage. The brainstorming stage is complete. Your job is to write a high-level design document — explain the approach, the components involved, and the key changes. NO code, NO files modified. Use read tools to verify file paths and symbols.
 
@@ -180,7 +180,7 @@ FORBIDDEN: {{.Vocab.WriteFile}}, {{.Vocab.Replace}}, {{.Vocab.RunShell}}. Nothin
 3. List the tests to add, also as ` + "```diff" + ` blocks where possible.
 4. Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + `, ` + "`message=<plan markdown>`" + `, ` + "`message_kind=implementation_plan`" + `.`
 
-const implementationInstructions = `Implement the **Approved implementation plan** above, together with anything the conversation has asked for since it was written; do not re-fetch it from the tracker. Work in this worktree. Commit and **push** to branch ` + "`{{.Branch}}`" + `.
+const implementationInstructions = `{{if not .IsShortWorkflow}}Implement the **Approved implementation plan** above, together with anything the conversation has asked for since it was written; do not re-fetch it from the tracker.{{else}}Implement the task from its **Description** and the conversation above. Read the relevant code before you change it and keep the change as small as the task allows.{{end}} Work in this worktree. Commit and **push** to branch ` + "`{{.Branch}}`" + `.
 
 Do **NOT** run ` + "`gh pr create`" + ` or open the PR/MR yourself — the tracker opens it for you from the pushed branch (it supports GitHub, GitLab and Gitea). You only push.
 

@@ -100,6 +100,29 @@
 
                 @if (canEditSkills()) {
                     <div class="section">
+                        <label class="flex items-start gap-2">
+                            <input
+                                type="checkbox"
+                                uiToggle
+                                data-testid="run-short-workflow"
+                                [checked]="isShortWorkflow()"
+                                [disabled]="isWorkflowLocked() || isSavingWorkflow()"
+                                (click)="onToggleShortWorkflow($event)"
+                            />
+                            <span class="flex flex-col">
+                                <span>{{ 'AGENT.WORKFLOW.SHORT' | translate }}</span>
+                                <span class="ui-color-text-muted text-xs">
+                                    {{
+                                        (isWorkflowLocked()
+                                            ? 'AGENT.WORKFLOW.LOCKED'
+                                            : 'AGENT.WORKFLOW.HINT'
+                                        ) | translate
+                                    }}
+                                </span>
+                            </span>
+                        </label>
+                    </div>
+                    <div class="section">
                         <button
                             type="button"
                             class="skills-chip"

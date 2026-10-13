@@ -57,6 +57,8 @@ type Task struct {
 	ApprovedDesign   string
 	ApprovedImplPlan string
 
+	IsShortWorkflow bool
+
 	// RejectedOutput is the markdown body of this stage's previous, rejected
 	// attempt — shipped only when re-executing after rejection. Rendered with
 	// an explicit "rejected, revise it" label; must never look approved.

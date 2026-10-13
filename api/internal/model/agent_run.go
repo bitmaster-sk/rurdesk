@@ -143,6 +143,11 @@ type AgentStatsNotice struct {
 type CreateAgentRunReq struct {
 	IdUserAgent     int64              `json:"idUserAgent"       binding:"required"`
 	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
+	IsShortWorkflow bool               `json:"isShortWorkflow"`
+}
+
+type UpdateAgentRunWorkflowReq struct {
+	IsShortWorkflow bool `json:"isShortWorkflow"`
 }
 
 // SetRunPrReq is consumed by AgentRunRepository.SetPrInfo, populated from the

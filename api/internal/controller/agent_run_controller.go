@@ -172,17 +172,15 @@ func (ctrl *AgentRunController) GetRunByIssue(c *gin.Context) {
 
 	events, err := ctrl.agentRunRepo.LoadEvents(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, agent.BuildRunSnapshot(run, events, tasks))
+	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks))
 }
 
 func (ctrl *AgentRunController) GetRunsByProject(c *gin.Context) {
@@ -405,26 +403,22 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	ctx := c.Request.Context()
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 	user, _ := extctx.GetUser(ctx)
 
 	oldRun, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrNotFound)
 		return
 	}
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, oldRun.IdProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
@@ -432,8 +426,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	// branch and open a duplicate PR while orphaning the existing one. Guard on
 	// pr_id, not phase: `phase == pr_open` alone misses edge phases.
 	if oldRun.PrId != nil && *oldRun.PrId != "" {
-		_ = c.Error(errs.ErrRunHasPr)
-		c.Status(http.StatusConflict)
+		ResponseErr(c, errs.ErrRunHasPr)
 		return
 	}
 
@@ -447,20 +440,21 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
-	stagePlan, err := ctrl.stagePlan.Build(ctrl.stagePlan.IdsSkillByStage(oldRun.StagePlan))
+	stagePlan, err := ctrl.stagePlan.Build(
+		ctrl.stagePlan.IdsSkillByStage(oldRun.StagePlan),
+		ctrl.stagePlan.IsShortWorkflow(oldRun.StagePlan),
+	)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserAgent, oldRun.IdProject, stagePlan)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	ctrl.notifyRunUpdate(newRun)
-	c.JSON(http.StatusOK, gin.H{"oldIdRun": idRun, "newIdRun": newRun.IdRun})
+	ResponseOk(c, gin.H{"oldIdRun": idRun, "newIdRun": newRun.IdRun})
 }
 
 func (ctrl *AgentRunController) GetSkills(c *gin.Context) {
@@ -512,6 +506,29 @@ func (ctrl *AgentRunController) PatchSkills(c *gin.Context) {
 	ctrl.respondRunSkills(c, updated)
 }
 
+func (ctrl *AgentRunController) PatchWorkflow(c *gin.Context) {
+	ctx := c.Request.Context()
+	run, ok := ctrl.loadRunForSkills(c, true)
+	if !ok {
+		return
+	}
+
+	var dto model.UpdateAgentRunWorkflowReq
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
+		return
+	}
+
+	updated, err := ctrl.stagePlan.SetShortWorkflow(ctx, run.IdRun, dto.IsShortWorkflow)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+
+	ctrl.notifyRunUpdate(updated)
+	ctrl.respondRunSnapshot(ctx, c, updated)
+}
+
 func (ctrl *AgentRunController) respondRunSkills(c *gin.Context, run *model.AgentRun) {
 	dispatched, err := ctrl.dispatchedStages(c.Request.Context(), run.IdRun)
 	if err != nil {
@@ -548,8 +565,7 @@ func (ctrl *AgentRunController) respondRunSkills(c *gin.Context, run *model.Agen
 func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (*model.AgentRun, bool) {
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return nil, false
 	}
 
@@ -558,13 +574,11 @@ func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrNotFound)
 		return nil, false
 	}
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return nil, false
 	}
 
@@ -573,8 +587,7 @@ func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (
 		hasAccess = ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject)
 	}
 	if !hasAccess {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return nil, false
 	}
 	return run, true
@@ -1359,15 +1372,13 @@ func (ctrl *AgentRunController) notifyRunUpdate(run *model.AgentRun) {
 func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.Context, run *model.AgentRun) {
 	events, err := ctrl.agentRunRepo.LoadEvents(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, agent.BuildRunSnapshot(run, events, tasks))
+	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks))
 }

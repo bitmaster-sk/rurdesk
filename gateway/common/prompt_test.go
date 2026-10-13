@@ -350,6 +350,54 @@ func TestRenderPrompt_ImplementationCarriesBranch(t *testing.T) {
 	}
 }
 
+func TestRenderPrompt_ImplementationFollowsWorkflowLength(t *testing.T) {
+	tests := []struct {
+		name             string
+		task             Task
+		expectedContains []string
+		expectedMissing  []string
+	}{
+		{
+			name:             "full run with a plan",
+			task:             Task{ApprovedImplPlan: "PLAN"},
+			expectedContains: []string{"Implement the **Approved implementation plan** above"},
+			expectedMissing:  []string{"Implement the task from its **Description**"},
+		},
+		{
+			name:             "full run whose plan failed to load still points at the plan",
+			task:             Task{},
+			expectedContains: []string{"Implement the **Approved implementation plan** above"},
+			expectedMissing:  []string{"Implement the task from its **Description**"},
+		},
+		{
+			name:             "short run",
+			task:             Task{IsShortWorkflow: true},
+			expectedContains: []string{"Implement the task from its **Description**"},
+			expectedMissing:  []string{"Approved implementation plan", "no design"},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			task := tc.task
+			task.IdTask, task.IdRun, task.Stage, task.AttemptNo, task.Branch = 1, 1, StageImplementation, 1, "b"
+			out, err := RenderPrompt(task)
+			if err != nil {
+				t.Fatalf("RenderPrompt error: %v", err)
+			}
+			for _, want := range tc.expectedContains {
+				if !strings.Contains(out, want) {
+					t.Errorf("prompt missing %q:\n%s", want, out)
+				}
+			}
+			for _, unwanted := range tc.expectedMissing {
+				if strings.Contains(out, unwanted) {
+					t.Errorf("prompt must not contain %q:\n%s", unwanted, out)
+				}
+			}
+		})
+	}
+}
+
 func TestRenderPrompt_ChosenMockup(t *testing.T) {
 	t.Run("renders the chosen-mockup instruction when a ref is present", func(t *testing.T) {
 		task := Task{
@@ -378,4 +426,56 @@ func TestRenderPrompt_ChosenMockup(t *testing.T) {
 			t.Errorf("unexpected chosen-mockup section when none chosen:\n%s", out)
 		}
 	})
+}
+
+func TestRenderPrompt_BrainstormingNamesTheNextStage(t *testing.T) {
+	tests := []struct {
+		name             string
+		isShortWorkflow  bool
+		expectedContains string
+		expectedMissing  string
+	}{
+		{"full run goes to design", false, "The run advances to the Design stage.", "last chance to ask"},
+		{"short run goes straight to implementation", true, "The next stage is the implementation, so this is your last chance to ask questions.", "Design"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			out, err := RenderPrompt(Task{
+				IdTask: 1, IdRun: 1, Stage: StageBrainstorming, AttemptNo: 1, Branch: "b",
+				IsShortWorkflow: tc.isShortWorkflow,
+			})
+			if err != nil {
+				t.Fatalf("RenderPrompt error: %v", err)
+			}
+			if !strings.Contains(out, tc.expectedContains) {
+				t.Errorf("prompt missing %q:\n%s", tc.expectedContains, out)
+			}
+			if strings.Contains(out, tc.expectedMissing) {
+				t.Errorf("prompt must not contain %q:\n%s", tc.expectedMissing, out)
+			}
+		})
+	}
+}
+
+func TestParseStageExecute_ReadsShortWorkflowFlag(t *testing.T) {
+	tests := []struct {
+		name     string
+		bundle   map[string]any
+		expected bool
+	}{
+		{"short run", map[string]any{"isShortWorkflow": true}, true},
+		{"full run", map[string]any{"isShortWorkflow": false}, false},
+		{"older tracker without the flag", map[string]any{}, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			task, err := parseStageExecutePayload(stagePayload(tc.bundle))
+			if err != nil {
+				t.Fatalf("parseStageExecutePayload error: %v", err)
+			}
+			if task.IsShortWorkflow != tc.expected {
+				t.Errorf("IsShortWorkflow = %v, want %v", task.IsShortWorkflow, tc.expected)
+			}
+		})
+	}
 }

@@ -24,8 +24,8 @@
         "AGENT_BUSY": "working · {{queue}} queued"
     },
     "AGENT_DOCK": {
-        "SKILLS_TITLE": "{{name}} — skills for this run",
-        "PREFILLED": "prefilled from project",
+        "SKILLS_TITLE": "{{name}} — this run",
+        "PREFILLED": "Skills · prefilled from project",
         "ASSIGN": "Assign",
         "CANCEL": "Cancel",
         "INFO_TITLE": "{{name}} — workload",
@@ -36,7 +36,9 @@
         "AVG_DURATION": "Avg run duration",
         "FAILED_7D": "Failed attempts (7 days)",
         "ASSIGN_ERROR": "Failed to assign the agent",
-        "NONE": "none"
+        "NONE": "none",
+        "SHORT_WORKFLOW": "Short workflow",
+        "SHORT_WORKFLOW_HINT": "Skips design and implementation plan; the agent brainstorms, then goes straight to the pull request"
     },
     "ONBOARDING": {
         "WELCOME": "Welcome",
@@ -222,6 +224,13 @@
             "RACE_ERROR": "This stage just started; skills were not changed",
             "LOAD_ERROR": "Failed to load run skills",
             "SAVE_ERROR": "Failed to save run skills"
+        },
+        "WORKFLOW": {
+            "SHORT": "Short workflow",
+            "HINT": "Skips design and implementation plan",
+            "LOCKED": "Design or implementation already started — workflow locked",
+            "RACE_ERROR": "The next stage just started; the workflow was not changed",
+            "SAVE_ERROR": "Failed to change the workflow"
         },
         "THINKING": {
             "WORKING": "Agent is working",

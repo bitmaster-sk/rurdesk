@@ -44,18 +44,29 @@ describe('AgentRunApi skills endpoints', () => {
         request.flush([]);
     });
 
-    it('assigns an agent with explicit per-stage skills', () => {
+    it('assigns an agent with explicit per-stage skills and workflow length', () => {
         api.assignAgent$(3, 42, {
             idUserAgent: 8,
-            idsSkillByStage: { implementation: [1] }
+            idsSkillByStage: { implementation: [1] },
+            isShortWorkflow: true
         }).subscribe();
 
         const request = http.expectOne('/api/private/project/3/issue/42/assign-agent');
         expect(request.request.method).toBe('POST');
         expect(request.request.body).toEqual({
             idUserAgent: 8,
-            idsSkillByStage: { implementation: [1] }
+            idsSkillByStage: { implementation: [1] },
+            isShortWorkflow: true
         });
+        request.flush({});
+    });
+
+    it('patches the workflow length of a run', () => {
+        api.updateWorkflow$(55, true).subscribe();
+
+        const request = http.expectOne('/api/private/agent/run/55/workflow');
+        expect(request.request.method).toBe('PATCH');
+        expect(request.request.body).toEqual({ isShortWorkflow: true });
         request.flush({});
     });
 });

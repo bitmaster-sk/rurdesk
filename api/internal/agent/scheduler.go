@@ -7,9 +7,11 @@ import (
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,6 +22,7 @@ type StageDispatcher interface {
 }
 
 type Scheduler struct {
+	pool        *pgxpool.Pool
 	runRepo     *repository.AgentRunRepository
 	taskRepo    *repository.AgentTaskRepository
 	projectRepo *repository.ProjectRepository
@@ -30,6 +33,7 @@ type Scheduler struct {
 }
 
 func NewScheduler(
+	pool *pgxpool.Pool,
 	runRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	projectRepo *repository.ProjectRepository,
@@ -37,6 +41,7 @@ func NewScheduler(
 	notifier *notify.Notifier,
 ) *Scheduler {
 	return &Scheduler{
+		pool:        pool,
 		runRepo:     runRepo,
 		taskRepo:    taskRepo,
 		projectRepo: projectRepo,
@@ -100,24 +105,43 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 		return nil
 	}
 
-	existing, err := s.taskRepo.LoadByRun(ctx, run.IdRun)
+	// Hold the run row lock: SetShortWorkflow edits the stage plan under the same lock.
+	var task *model.AgentTask
+	isDrained := false
+	err = extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+		locked, err := s.runRepo.LoadByIdForUpdate(ctx, run.IdRun)
+		if err != nil {
+			return err
+		}
+		existing, err := s.taskRepo.LoadByRun(ctx, run.IdRun)
+		if err != nil {
+			return err
+		}
+
+		// A pending task can already exist (a revision or other re-queue created
+		// it directly). Dispatch it — ResolveNextStage may miss it if its stage
+		// already shows completed, and without this the run stays queued
+		// forever, shadowing newer runs for the same agent.
+		if pending := latestPendingTask(existing); pending != nil {
+			task = pending
+			return nil
+		}
+
+		stage, err := ResolveNextStage(locked, existing)
+		if err != nil {
+			return err
+		}
+		if stage == "" {
+			isDrained = true
+			return nil
+		}
+		task, err = s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, stage, ResolveNextAttemptNo(existing, stage))
+		return err
+	})
 	if err != nil {
 		return err
 	}
-
-	// A pending task can already exist (a revision or other re-queue created
-	// it directly). Dispatch it — ResolveNextStage may miss it if its stage
-	// already shows completed, and without this the run stays queued
-	// forever, shadowing newer runs for the same agent.
-	if pending := latestPendingTask(existing); pending != nil {
-		return s.activateAndDispatch(ctx, run, pending)
-	}
-
-	stage, err := ResolveNextStage(run, existing)
-	if err != nil {
-		return err
-	}
-	if stage == "" {
+	if isDrained {
 		// Queued with nothing left to dispatch is inconsistent (e.g. a
 		// re-queue after all stages completed). Mark it done so it stops
 		// blocking newer runs.
@@ -129,12 +153,6 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 			}
 		}
 		return nil
-	}
-
-	attemptNo := ResolveNextAttemptNo(existing, stage)
-	task, err := s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, stage, attemptNo)
-	if err != nil {
-		return err
 	}
 	return s.activateAndDispatch(ctx, run, task)
 }

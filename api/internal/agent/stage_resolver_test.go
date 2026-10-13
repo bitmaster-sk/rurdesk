@@ -52,6 +52,31 @@ func TestResolveNextStage_SkipsSkippedStages(t *testing.T) {
 	}
 }
 
+func TestResolveNextStage_ShortWorkflowGoesFromBrainstormingToImplementation(t *testing.T) {
+	plan, err := json.Marshal(model.StagePlan{Stages: []model.StagePlanEntry{
+		{Name: constants.StagePickup},
+		{Name: constants.StageBrainstorming},
+		{Name: constants.StageDesign, Skip: true},
+		{Name: constants.StageImplementationPlan, Skip: true},
+		{Name: constants.StageImplementation},
+	}})
+	if err != nil {
+		t.Fatalf("marshal plan: %v", err)
+	}
+	run := &model.AgentRun{StagePlan: plan}
+	tasks := []*model.AgentTask{
+		{Stage: constants.StagePickup, Status: constants.TaskStatusCompleted, AttemptNo: 1, CreatedAt: time.Now().Add(-time.Minute)},
+		{Stage: constants.StageBrainstorming, Status: constants.TaskStatusCompleted, AttemptNo: 1, CreatedAt: time.Now()},
+	}
+	next, err := ResolveNextStage(run, tasks)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if next != constants.StageImplementation {
+		t.Errorf("got %q, want %q", next, constants.StageImplementation)
+	}
+}
+
 func TestResolveNextStage_FailedAttempt_RetriesSameStage(t *testing.T) {
 	run := &model.AgentRun{StagePlan: planJSON(t, false, false)}
 	tasks := []*model.AgentTask{

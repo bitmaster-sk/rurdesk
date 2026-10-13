@@ -3,6 +3,22 @@
         <div class="font-semibold">
             {{ 'AGENT_DOCK.SKILLS_TITLE' | translate: { name: agent().name } }}
         </div>
+        <label class="flex items-start gap-2">
+            <input
+                type="checkbox"
+                uiToggle
+                data-testid="agent-dock-short-workflow"
+                [checked]="isShortWorkflow()"
+                (change)="onToggleShortWorkflow($event)"
+            />
+            <span class="flex flex-col">
+                <span>{{ 'AGENT_DOCK.SHORT_WORKFLOW' | translate }}</span>
+                <span class="ui-color-text-muted text-xs">
+                    {{ 'AGENT_DOCK.SHORT_WORKFLOW_HINT' | translate }}
+                </span>
+            </span>
+        </label>
+
         <div class="ui-color-text-muted">{{ 'AGENT_DOCK.PREFILLED' | translate }}</div>
 
         @if (isLoading()) {
@@ -29,7 +45,10 @@
             }
         }
 
-        <div class="flex justify-end gap-2">
+        <div
+            class="sticky bottom-0 -mx-3 -mb-3 flex justify-end gap-2 border-t border-[var(--ui-select-panel-border)] bg-[var(--ui-select-panel-bg)] px-3 py-2"
+            data-testid="agent-dock-footer"
+        >
             <ui-button variant="text" size="small" (click)="onCancel()">
                 {{ 'AGENT_DOCK.CANCEL' | translate }}
             </ui-button>
