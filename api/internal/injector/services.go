@@ -1140,7 +1140,7 @@ func GetProjectSkillService() *service.ProjectSkillService {
 func GetStagePlanService() *service.StagePlanService {
 	instance, _ := di.GetWithNew("stage-plan-service", func() (any, error) {
 		pool := mustDb()
-		return service.NewStagePlanService(pool, GetAgentRunRepository()), nil
+		return service.NewStagePlanService(pool, GetAgentRunRepository(), GetAgentTaskRepository()), nil
 	})
 	return instance.(*service.StagePlanService)
 }

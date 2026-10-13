@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
@@ -14,21 +15,22 @@ import (
 )
 
 type StagePlanService struct {
-	pool         *pgxpool.Pool
-	agentRunRepo *repository.AgentRunRepository
+	pool          *pgxpool.Pool
+	agentRunRepo  *repository.AgentRunRepository
+	agentTaskRepo *repository.AgentTaskRepository
 }
 
-func NewStagePlanService(pool *pgxpool.Pool, agentRunRepo *repository.AgentRunRepository) *StagePlanService {
-	return &StagePlanService{pool: pool, agentRunRepo: agentRunRepo}
+func NewStagePlanService(pool *pgxpool.Pool, agentRunRepo *repository.AgentRunRepository, agentTaskRepo *repository.AgentTaskRepository) *StagePlanService {
+	return &StagePlanService{pool: pool, agentRunRepo: agentRunRepo, agentTaskRepo: agentTaskRepo}
 }
 
-func (s *StagePlanService) Build(idsSkillByStage map[string][]int64) (json.RawMessage, error) {
+func (s *StagePlanService) Build(idsSkillByStage map[string][]int64, isShortWorkflow bool) (json.RawMessage, error) {
 	plan := model.StagePlan{Stages: make([]model.StagePlanEntry, len(constants.StageDefinitions))}
 	for i, def := range constants.StageDefinitions {
 		plan.Stages[i] = model.StagePlanEntry{
 			Name:      def.Name,
 			Skippable: def.Skippable,
-			Skip:      false,
+			Skip:      isShortWorkflow && slices.Contains(constants.ShortWorkflowSkippedStages, def.Name),
 			IdsSkill:  idsSkillByStage[def.Name],
 		}
 	}
@@ -45,6 +47,20 @@ func (s *StagePlanService) Parse(stagePlan json.RawMessage) (model.StagePlan, er
 		return model.StagePlan{}, fmt.Errorf("unmarshalling stage plan: %w", err)
 	}
 	return plan, nil
+}
+
+func (s *StagePlanService) IsShortWorkflow(stagePlan json.RawMessage) bool {
+	plan, err := s.Parse(stagePlan)
+	if err != nil {
+		return false
+	}
+	skipped := 0
+	for _, entry := range plan.Stages {
+		if entry.Skip && slices.Contains(constants.ShortWorkflowSkippedStages, entry.Name) {
+			skipped++
+		}
+	}
+	return skipped == len(constants.ShortWorkflowSkippedStages)
 }
 
 // The inverse of Build. An unparseable plan yields no skills rather than an
@@ -101,6 +117,47 @@ func (s *StagePlanService) SetStageSkills(ctx context.Context, idRun int64, stag
 		}
 		if !found {
 			return errs.ErrStageNotInPlan
+		}
+
+		planJSON, err := json.Marshal(plan)
+		if err != nil {
+			return fmt.Errorf("marshalling stage plan: %w", err)
+		}
+		updated, err = s.agentRunRepo.UpdateStagePlan(ctx, idRun, planJSON)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+// Takes the same run row lock as the scheduler, so no stage is dispatched under a stale plan.
+func (s *StagePlanService) SetShortWorkflow(ctx context.Context, idRun int64, isShortWorkflow bool) (*model.AgentRun, error) {
+	var updated *model.AgentRun
+	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+		run, err := s.agentRunRepo.LoadByIdForUpdate(ctx, idRun)
+		if err != nil {
+			return err
+		}
+		tasks, err := s.agentTaskRepo.LoadByRun(ctx, idRun)
+		if err != nil {
+			return err
+		}
+		for _, task := range tasks {
+			if task.Status != constants.TaskStatusCancelled && slices.Contains(constants.ShortWorkflowLockingStages, task.Stage) {
+				return errs.ErrWorkflowLocked
+			}
+		}
+
+		plan, err := s.Parse(run.StagePlan)
+		if err != nil {
+			return err
+		}
+		for i := range plan.Stages {
+			if slices.Contains(constants.ShortWorkflowSkippedStages, plan.Stages[i].Name) {
+				plan.Stages[i].Skip = isShortWorkflow
+			}
 		}
 
 		planJSON, err := json.Marshal(plan)

@@ -245,6 +245,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"skills":            stageSkills,
 		"wiki":              wiki,
 		"wikiProposals":     proposals,
+		"isShortWorkflow":   d.stagePlan.IsShortWorkflow(run.StagePlan),
 	}
 	if task.AttemptNo > 1 {
 		for _, t := range priorTasks {

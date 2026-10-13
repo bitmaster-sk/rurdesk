@@ -340,6 +340,7 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 			if ref, ok := ctx["approvedMockupRef"].(string); ok {
 				task.ApprovedMockupRef = ref
 			}
+			task.IsShortWorkflow, _ = ctx["isShortWorkflow"].(bool)
 			if rawSkills, ok := ctx["skills"].([]any); ok {
 				for _, raw := range rawSkills {
 					m, ok := raw.(map[string]any)

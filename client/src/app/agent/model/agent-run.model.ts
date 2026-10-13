@@ -73,4 +73,9 @@ export interface RunStats {
 export interface CreateAgentRunReq {
     idUserAgent: number;
     idsSkillByStage: Record<string, number[]>;
+    isShortWorkflow: boolean;
+}
+
+export interface UpdateAgentRunWorkflowReq {
+    isShortWorkflow: boolean;
 }

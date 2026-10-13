@@ -58,9 +58,15 @@ var StageDefinitions = []StageDef{
 	{Name: StagePickup, Skippable: false},
 	{Name: StageBrainstorming, Skippable: true},
 	{Name: StageDesign, Skippable: true},
-	{Name: StageImplementationPlan, Skippable: false},
+	{Name: StageImplementationPlan, Skippable: true},
 	{Name: StageImplementation, Skippable: false},
 }
+
+var ShortWorkflowSkippedStages = []string{StageDesign, StageImplementationPlan}
+
+// Once any of these stages is dispatched, switching the workflow length would
+// rewrite a stage the agent already ran or skipped.
+var ShortWorkflowLockingStages = []string{StageDesign, StageImplementationPlan, StageImplementation}
 
 // Pickup is absent: no prompt is rendered for it, so a skill attached there
 // would never reach an agent.

@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDispatchCarriesResolvedSkills(t *testing.T) {
+func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	app := Setup(t)
 	token := Token(t, app)
 	seedBuiltinSkills(t)
@@ -58,7 +58,7 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 	require.NoError(t, json.NewDecoder(issRes.Body).Decode(&iss))
 
 	skill := skillByName(t, listSkills(t, app, token), "Verification rules")
-	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"implementation": {skill.IdSkill}})
+	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"implementation": {skill.IdSkill}}, true)
 	require.NoError(t, err)
 	run, err := injector.GetAgentRunRepository().Insert(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
@@ -79,7 +79,8 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 		Event   string `json:"event"`
 		Payload struct {
 			ContextBundle struct {
-				Skills []model.Skill `json:"skills"`
+				Skills          []model.Skill `json:"skills"`
+				IsShortWorkflow bool          `json:"isShortWorkflow"`
 			} `json:"contextBundle"`
 		} `json:"payload"`
 	}
@@ -88,4 +89,5 @@ func TestDispatchCarriesResolvedSkills(t *testing.T) {
 	require.Len(t, event.Payload.ContextBundle.Skills, 1)
 	require.Equal(t, "Verification rules", event.Payload.ContextBundle.Skills[0].Name)
 	require.Contains(t, event.Payload.ContextBundle.Skills[0].Content, "Never push red")
+	require.True(t, event.Payload.ContextBundle.IsShortWorkflow, "the gateway picks the implementation prompt from this flag")
 }

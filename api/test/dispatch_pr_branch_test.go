@@ -95,7 +95,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 	var iss model.Issue
 	require.NoError(t, json.NewDecoder(issRes.Body).Decode(&iss))
 
-	stagePlan, err := injector.GetStagePlanService().Build(nil)
+	stagePlan, err := injector.GetStagePlanService().Build(nil, false)
 	require.NoError(t, err)
 	runRepo := injector.GetAgentRunRepository()
 

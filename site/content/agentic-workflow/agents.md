@@ -68,6 +68,20 @@ PR:
 
 ![The agent workflow end to end](../../site/assets/img/agent-workflow.webm)
 
+### Short workflow for small tasks
+
+When you assign an agent from the task, the dialog has a **Short workflow**
+switch. With it on, the run skips the design and implementation plan stages:
+the agent still brainstorms (and asks if something is unclear), then goes
+straight to implementation and opens the pull request. There is nothing to
+approve along the way; the pull request is your review point. Use it for small,
+clearly described tasks.
+
+You can also flip the switch on the run card until the design (or, in a short
+run, the implementation) starts. After that it is locked. A restarted run keeps
+the workflow it had. Assigning the agent through the assignee field always
+starts the full workflow.
+
 ### Custom fields in a run
 
 If the project defines [custom fields](../using-the-tracker/custom-fields.html),
@@ -201,7 +215,8 @@ Both settings apply to the next batch of thinking; no restart is needed.
 When a stage reaches `awaiting_approval` (the design and plan gates), review the
 agent's output in the activity feed and click **Approve** to let it continue to
 the next stage. This is the human-in-the-loop gate — nothing proceeds without
-your sign-off.
+your sign-off. A [short workflow](#short-workflow-for-small-tasks) run has no
+such gates.
 
 When a design offers **more than one mockup**, there's no single Approve button
 — each mockup card carries its own **Use & approve design** action. Click it on

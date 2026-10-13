@@ -10,9 +10,9 @@ import (
 )
 
 func TestStagePlanBuildCoversEveryStageInOrder(t *testing.T) {
-	planner := NewStagePlanService(nil, nil)
+	planner := NewStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.Build(map[string][]int64{"design": {7, 9}})
+	planJSON, err := planner.Build(map[string][]int64{"design": {7, 9}}, false)
 	require.NoError(t, err)
 
 	plan, err := planner.Parse(planJSON)
@@ -29,9 +29,9 @@ func TestStagePlanBuildCoversEveryStageInOrder(t *testing.T) {
 }
 
 func TestStagePlanBuildIgnoresUnknownStage(t *testing.T) {
-	planner := NewStagePlanService(nil, nil)
+	planner := NewStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.Build(map[string][]int64{"nope": {1}})
+	planJSON, err := planner.Build(map[string][]int64{"nope": {1}}, false)
 	require.NoError(t, err)
 
 	plan, err := planner.Parse(planJSON)
@@ -42,7 +42,7 @@ func TestStagePlanBuildIgnoresUnknownStage(t *testing.T) {
 }
 
 func TestIdsSkillForStage(t *testing.T) {
-	planner := NewStagePlanService(nil, nil)
+	planner := NewStagePlanService(nil, nil, nil)
 
 	plan := json.RawMessage(`{"stages":[
 		{"name":"pickup","skippable":false,"skip":false},
@@ -70,13 +70,48 @@ func TestIdsSkillForStage(t *testing.T) {
 }
 
 func TestIdsSkillByStageRoundTripsThroughBuild(t *testing.T) {
-	planner := NewStagePlanService(nil, nil)
+	planner := NewStagePlanService(nil, nil, nil)
 
 	original := map[string][]int64{"design": {7, 9}, "implementation": {3}}
 
-	planJSON, err := planner.Build(original)
+	planJSON, err := planner.Build(original, false)
 	require.NoError(t, err)
 
 	assert.Equal(t, original, planner.IdsSkillByStage(planJSON), "a restart carries the same choices over")
 	assert.Nil(t, planner.IdsSkillByStage(json.RawMessage(`not json`)))
+}
+
+func TestStagePlanBuildShortSkipsDesignAndPlanOnly(t *testing.T) {
+	planner := NewStagePlanService(nil, nil, nil)
+
+	planJSON, err := planner.Build(nil, true)
+	require.NoError(t, err)
+
+	plan, err := planner.Parse(planJSON)
+	require.NoError(t, err)
+	skipped := map[string]bool{}
+	for _, entry := range plan.Stages {
+		skipped[entry.Name] = entry.Skip
+	}
+	assert.Equal(t, map[string]bool{
+		constants.StagePickup:             false,
+		constants.StageBrainstorming:      false,
+		constants.StageDesign:             true,
+		constants.StageImplementationPlan: true,
+		constants.StageImplementation:     false,
+	}, skipped)
+}
+
+func TestIsShortWorkflow(t *testing.T) {
+	planner := NewStagePlanService(nil, nil, nil)
+
+	short, err := planner.Build(nil, true)
+	require.NoError(t, err)
+	full, err := planner.Build(nil, false)
+	require.NoError(t, err)
+
+	assert.True(t, planner.IsShortWorkflow(short))
+	assert.False(t, planner.IsShortWorkflow(full))
+	assert.False(t, planner.IsShortWorkflow(json.RawMessage(`{"stages":[{"name":"design","skip":true}]}`)), "skipping only the design is not the short workflow")
+	assert.False(t, planner.IsShortWorkflow(json.RawMessage(`not json`)))
 }

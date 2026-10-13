@@ -116,10 +116,27 @@ describe('AgentDockComponent (browser)', () => {
 
         expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(7, 42, {
             idUserAgent: 8,
-            idsSkillByStage: { implementation: [1], design: [2] }
+            idsSkillByStage: { implementation: [1], design: [2] },
+            isShortWorkflow: false
         });
         expect(assigned).toHaveBeenCalledWith(RUN);
         expect(closeSpy).toHaveBeenCalled();
+    });
+
+    it('assigns with the short workflow when the user turns it on', async () => {
+        const fixture = await setup(AgentDockKind.Skills);
+        const root = fixture.nativeElement as HTMLElement;
+
+        Dom.byTestId(root, 'agent-dock-short-workflow').click();
+        fixture.detectChanges();
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(
+            7,
+            42,
+            expect.objectContaining({ isShortWorkflow: true })
+        );
     });
 
     it('a failed assign toasts and does not emit', async () => {

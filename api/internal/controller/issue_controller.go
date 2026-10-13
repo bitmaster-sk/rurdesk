@@ -645,7 +645,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, agentUser.IdUser, "assignee", &user.IdUser); txErr != nil {
 			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
 		}
-		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage)
+		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage, dto.IsShortWorkflow)
 		if txErr != nil {
 			return txErr
 		}
@@ -745,7 +745,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 			Msg("loading project skill defaults — creating run without skills")
 		idsSkillByStage = nil
 	}
-	stagePlan, err := ic.stagePlan.Build(idsSkillByStage)
+	stagePlan, err := ic.stagePlan.Build(idsSkillByStage, false)
 	if err != nil {
 		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("building stage plan — run not created")
 		return
