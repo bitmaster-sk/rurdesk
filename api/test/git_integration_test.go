@@ -265,71 +265,32 @@ func (s *GitIntegrationSuite) Test_Create_ViewerForbidden() {
 }
 
 func (s *GitIntegrationSuite) Test_Create_MemberForbidden() {
-	Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"member-git","email":"member-git@test.sk","password":"kreslo"}`, Token(s.T(), s.App))
-	loginRes := Request(s.T(), s.App, "POST", "/api/public/login",
-		`{"email":"member-git@test.sk","password":"kreslo"}`, "")
-	var mTk struct{ Token string }
-	json.NewDecoder(loginRes.Body).Decode(&mTk)
-
-	memberUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", mTk.Token)
-	var memberUser model.User
-	json.NewDecoder(memberUserRes.Body).Decode(&memberUser)
-
-	Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/project/%d/member/user", s.ProjectID),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.Token)
+	memberToken := registerMemberInProject(s.T(), s.App, s.Token, s.ProjectID, "member-git@test.sk")
 
 	res := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID),
 		`{"name":"member-test","hostType":"github","baseUrl":"https://github.com","repoPath":"org/member","accessToken":"tok"}`,
-		mTk.Token)
+		memberToken)
 	s.Equal(http.StatusForbidden, res.StatusCode)
 }
 
 func (s *GitIntegrationSuite) Test_List_MemberAllowed() {
-	Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"member-list","email":"member-list@test.sk","password":"kreslo"}`, Token(s.T(), s.App))
-	loginRes := Request(s.T(), s.App, "POST", "/api/public/login",
-		`{"email":"member-list@test.sk","password":"kreslo"}`, "")
-	var mTk struct{ Token string }
-	json.NewDecoder(loginRes.Body).Decode(&mTk)
-
-	memberUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", mTk.Token)
-	var memberUser model.User
-	json.NewDecoder(memberUserRes.Body).Decode(&memberUser)
-
-	Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/project/%d/member/user", s.ProjectID),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.Token)
+	memberToken := registerMemberInProject(s.T(), s.App, s.Token, s.ProjectID, "member-list@test.sk")
 
 	res := Request(s.T(), s.App, "GET",
 		fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID),
-		"", mTk.Token)
+		"", memberToken)
 	s.Equal(http.StatusOK, res.StatusCode)
 }
 
 func (s *GitIntegrationSuite) Test_Delete_MemberForbidden() {
 	created := s.createIntegration("member-del", "org/member-del")
 
-	Request(s.T(), s.App, "POST", "/api/private/admin/user",
-		`{"name":"member-del","email":"member-del@test.sk","password":"kreslo"}`, Token(s.T(), s.App))
-	loginRes := Request(s.T(), s.App, "POST", "/api/public/login",
-		`{"email":"member-del@test.sk","password":"kreslo"}`, "")
-	var mTk struct{ Token string }
-	json.NewDecoder(loginRes.Body).Decode(&mTk)
-
-	memberUserRes := Request(s.T(), s.App, "GET", "/api/private/user", "", mTk.Token)
-	var memberUser model.User
-	json.NewDecoder(memberUserRes.Body).Decode(&memberUser)
-
-	Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/project/%d/member/user", s.ProjectID),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, memberUser.IdUser), s.Token)
+	memberToken := registerMemberInProject(s.T(), s.App, s.Token, s.ProjectID, "member-del@test.sk")
 
 	res := Request(s.T(), s.App, "DELETE",
 		fmt.Sprintf("/api/private/project/%d/git-integration/%d", s.ProjectID, created.IdGitIntegration),
-		"", mTk.Token)
+		"", memberToken)
 	s.Equal(http.StatusForbidden, res.StatusCode)
 }
 
