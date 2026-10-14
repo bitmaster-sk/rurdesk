@@ -427,3 +427,59 @@ func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
 		t.Errorf("subtype = %q, want the result event after the long line to be read", subtype)
 	}
 }
+
+func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
+	const marker = "vite-scaffold-marker"
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args.txt")
+	stdinFile := filepath.Join(dir, "stdin.txt")
+	stub := filepath.Join(dir, "claude-stub.sh")
+	script := "#!/bin/sh\n" +
+		`printf '%s\n' "$@" > ` + argsFile + "\n" +
+		"cat > " + stdinFile + "\n" +
+		`echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__tracker__complete_stage"}]}}'` + "\n" +
+		`echo '{"type":"result","subtype":"success","is_error":false}'` + "\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	cfg := &common.Config{
+		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
+		AgentApiKey:   "deadbeef",
+		ClaudeCode:    &common.ClaudeCodeConfig{MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+	}
+	adapter := NewClaudeCodeAdapter(cfg)
+	task := common.Task{
+		IdRun:        7,
+		IdTask:       1,
+		Stage:        common.StageImplementation,
+		WorktreePath: t.TempDir(),
+		IssueTitle:   "Scaffold",
+		IssueDesc:    "Run " + marker + " then stop it",
+	}
+
+	if _, err := adapter.Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatalf("reading args: %v", err)
+	}
+	if strings.Contains(string(args), marker) {
+		t.Errorf("claude command line contains the prompt\n--- args ---\n%s", args)
+	}
+	stdin, err := os.ReadFile(stdinFile)
+	if err != nil {
+		t.Fatalf("reading stdin: %v", err)
+	}
+	task.MaxTurns = 60
+	task.Vocab = common.ToolVocabClaudeCode
+	wantPrompt, err := common.RenderPrompt(task)
+	if err != nil {
+		t.Fatalf("rendering prompt: %v", err)
+	}
+	if string(stdin) != wantPrompt {
+		t.Errorf("claude stdin is not the full prompt\n--- got ---\n%s\n--- want ---\n%s", stdin, wantPrompt)
+	}
+}
