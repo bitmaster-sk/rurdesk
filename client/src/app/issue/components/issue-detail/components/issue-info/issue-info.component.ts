@@ -645,6 +645,10 @@ export class IssueInfoComponent implements OnInit {
     private issueToForm(): FormGroup<IssueInfoForm> {
         const issue = this.currentIssue();
         const project = this.project();
+        // The create form is saved by the manual save button bound to form.valid,
+        // so its controls commit per keystroke. An edit autosaves on settle, so
+        // it keeps 'blur' to avoid a PUT on every keystroke.
+        const updateOn: 'blur' | 'change' = this.isNewIssue() ? 'change' : 'blur';
         return this.fb.group<IssueInfoForm>({
             idIssue: this.fb.control<number | null>(issue?.idIssue ?? null),
             idIssuePublic: this.fb.control<number | null>(issue?.idIssuePublic ?? null),
@@ -664,22 +668,22 @@ export class IssueInfoComponent implements OnInit {
             ),
             title: this.fb.control<string | null>(issue?.title ?? null, {
                 validators: [Validators.required, Validators.maxLength(100)],
-                updateOn: 'blur'
+                updateOn
             }),
             description: this.fb.control<string | null>(issue?.description ?? null, {
                 validators: [Validators.required],
-                updateOn: 'blur'
+                updateOn
             }),
             assignedTo: this.fb.control<number | null>(issue?.assignedTo ?? null),
             estimated: this.fb.control<string | null>(
                 DurationFormatter.durationToString(
                     DurationConverter.secondsToDuration(issue?.estimated ?? 0)
                 ),
-                { validators: [DurationValidator.duration], updateOn: 'blur' }
+                { validators: [DurationValidator.duration], updateOn }
             ),
             points: this.fb.control<number | null>(issue?.points ?? null, {
                 validators: [Validators.min(0)],
-                updateOn: 'blur'
+                updateOn
             }),
             scheduledAt: this.fb.control<Date | null>(issue?.scheduledAt ?? null)
         });
