@@ -61,7 +61,7 @@ func TestDrainEventsExtractsStatsFromStreamJSON(t *testing.T) {
 	var isError bool
 	var toolCalls int
 	var tokens int
-	drainEvents(r, 42,
+	drainEvents(r, common.DefaultMaxOutputLineBytes, 42,
 		func(s string, e bool) { subtype = s; isError = e },
 		func(n int, _ bool) { toolCalls += n },
 		func(tk int) {
@@ -112,7 +112,7 @@ func TestDrainEventsDetectsCompleteStage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			saw := false
-			drainEvents(strings.NewReader(tt.line+"\n"), 7,
+			drainEvents(strings.NewReader(tt.line+"\n"), common.DefaultMaxOutputLineBytes, 7,
 				nil,
 				func(_ int, sawCompleteStage bool) {
 					if sawCompleteStage {
@@ -286,8 +286,13 @@ func TestRunWithStubBinary(t *testing.T) {
 				IssueTitle:   "Test",
 				IssueDesc:    "Body",
 			}
+			isReportedSubmitted := false
+			task.OnStageSubmitted = func() { isReportedSubmitted = true }
 
 			stats, err := adapter.Run(context.Background(), task)
+			if isReportedSubmitted != tt.submitsStage {
+				t.Errorf("reported stage submitted = %v, want %v", isReportedSubmitted, tt.submitsStage)
+			}
 			if tt.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
@@ -407,4 +412,18 @@ func waitForFile(t *testing.T, path string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("stub never started (%s missing)", path)
+}
+
+func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
+	input := strings.Repeat("x", 300*1024) + "\n" +
+		`{"type":"result","subtype":"success","is_error":false}` + "\n"
+	var subtype string
+	drainEvents(strings.NewReader(input), 1024, 42,
+		func(s string, _ bool) { subtype = s },
+		nil,
+		nil,
+	)
+	if subtype != "success" {
+		t.Errorf("subtype = %q, want the result event after the long line to be read", subtype)
+	}
 }

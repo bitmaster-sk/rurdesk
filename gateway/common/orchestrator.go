@@ -7,10 +7,13 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
+
+var errTaskGone = errors.New("tracker no longer runs this task")
 
 type activeTask struct {
 	task   Task
@@ -129,12 +132,12 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 }
 
 func (o *Orchestrator) runStage(task Task) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 	o.mu.Lock()
-	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: cancel}
+	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
 	o.mu.Unlock()
 	defer func() {
-		cancel()
+		cancel(nil)
 		o.mu.Lock()
 		delete(o.activeTasks, task.IdTask)
 		o.mu.Unlock()
@@ -145,7 +148,15 @@ func (o *Orchestrator) runStage(task Task) {
 	// while queued. Covers the whole stage attempt.
 	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
 	defer cancelHeartbeat()
-	go o.heartbeatLoop.Start(heartbeatCtx, task.IdTask)
+	var isStageSubmitted atomic.Bool
+	task.OnStageSubmitted = func() { isStageSubmitted.Store(true) }
+	go o.heartbeatLoop.Start(heartbeatCtx, task.IdTask, func() {
+		if isStageSubmitted.Load() {
+			return
+		}
+		log.Warn().Int64("idTask", task.IdTask).Msg("tracker no longer runs this task — stopping the agent")
+		cancel(errTaskGone)
+	})
 
 	// At most MaxConcurrent stage attempts run the agent at once; respects
 	// cancellation so a `cancelled` event releases a queued task.
@@ -189,6 +200,10 @@ func (o *Orchestrator) runStage(task Task) {
 		Msg("dispatching agent")
 	start := time.Now()
 	stats, err := o.agent.Run(ctx, task)
+	if errors.Is(context.Cause(ctx), errTaskGone) {
+		_ = RemoveWorktree(repoPath, task.IdRun)
+		return
+	}
 	if err != nil {
 		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("agent run failed")
 		reason, detail := agentErrorReason(err)
