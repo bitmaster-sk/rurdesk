@@ -252,32 +252,19 @@ func (r *AgentTaskRepository) RecordHeartbeat(ctx context.Context, idTask int64)
 
 // FailStaleHeartbeats marks active tasks with no heartbeat for longer than
 // maxAge as failed, returning the distinct affected run ids so the caller can
-// fail those runs too. maxAge=0 fails every active task (startup crash recovery).
+// fail those runs too.
 func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge time.Duration) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
-
-	var rows pgx.Rows
-	var err error
-	if maxAge == 0 {
-		rows, err = db.Query(ctx, `
-			UPDATE agent.task
-			SET status = 'failed',
-			    finished_at = now(),
-			    error_reason = COALESCE(error_reason, 'crash_recovery')
-			WHERE status = 'active'
-			RETURNING id_run`)
-	} else {
-		rows, err = db.Query(ctx, `
-			UPDATE agent.task
-			SET status = 'failed',
-			    finished_at = now(),
-			    error_reason = COALESCE(error_reason, 'heartbeat_stale')
-			WHERE status = 'active'
-			  AND last_heartbeat_at < now() - $1::interval
-			RETURNING id_run`,
-			fmt.Sprintf("%d milliseconds", maxAge.Milliseconds()),
-		)
-	}
+	rows, err := db.Query(ctx, `
+		UPDATE agent.task
+		SET status = 'failed',
+		    finished_at = now(),
+		    error_reason = COALESCE(error_reason, 'heartbeat_stale')
+		WHERE status = 'active'
+		  AND last_heartbeat_at < now() - $1::interval
+		RETURNING id_run`,
+		fmt.Sprintf("%d milliseconds", maxAge.Milliseconds()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failing stale heartbeats: %w", err)
 	}
