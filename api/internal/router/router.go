@@ -304,6 +304,7 @@ func New(
 	// Git integration CRUD
 	pri.GET("/project/:idProject/git-integration", gitIntCtrl.List)
 	pri.POST("/project/:idProject/git-integration", gitIntCtrl.Create)
+	pri.POST("/project/:idProject/git-integration/check", gitIntCtrl.Check)
 	pri.GET("/project/:idProject/git-integration/:idGitIntegration", gitIntCtrl.Get)
 	pri.PUT("/project/:idProject/git-integration/:idGitIntegration", gitIntCtrl.Update)
 	pri.DELETE("/project/:idProject/git-integration/:idGitIntegration", gitIntCtrl.Delete)

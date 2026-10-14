@@ -57,7 +57,8 @@ import {
     IconHistory,
     IconInfoCircle,
     IconCategory,
-    IconListDetails
+    IconListDetails,
+    IconPlugConnected
 } from '@tabler/icons-angular';
 import { WorkflowEventStateMapComponent } from './components/workflow-event-state-map/workflow-event-state-map.component';
 import { AgentSkillMatrixComponent } from './components/agent-skill-matrix/agent-skill-matrix.component';
@@ -135,7 +136,8 @@ import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
             IconHistory,
             IconInfoCircle,
             IconCategory,
-            IconListDetails
+            IconListDetails,
+            IconPlugConnected
         })
     ]
 })

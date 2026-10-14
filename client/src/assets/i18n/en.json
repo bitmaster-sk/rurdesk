@@ -1292,6 +1292,15 @@
         "REPO_PATH": "Repository path",
         "ACCESS_TOKEN": "Access token",
         "TOKEN_HINT": "Leave blank to keep the existing token",
+        "CHECK": "Check connection",
+        "SAVE_ANYWAY": "Save anyway",
+        "CHECK_RESULT": {
+            "OK": "Connected. The token can open pull requests (default branch: {{branch}}).",
+            "READ_ONLY": "Connected, but the token cannot write to this repository. Agent runs will fail to open pull requests.",
+            "INVALID_TOKEN": "The host rejected the access token. It may be wrong, expired or revoked.",
+            "REPO_NOT_FOUND": "Repository not found, or the token has no access to it. Check the repository path and the token permissions.",
+            "UNREACHABLE": "Could not reach the git host API. Check the base URL."
+        },
         "SELECT": "Select integration",
         "MR": "Merge request",
         "PR_MR": {
