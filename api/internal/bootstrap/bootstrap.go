@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"context"
-	"log"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
@@ -33,9 +32,6 @@ func Run(ctx context.Context) error {
 	injector.GetIssueService().StartIdempotencyCleanup(ctx)
 
 	sweep := injector.GetSweep()
-	if err := sweep.RunCrashRecovery(ctx); err != nil {
-		log.Printf("crash recovery error: %v", err)
-	}
 	go sweep.StartHeartbeatSweep(ctx)
 	go injector.GetMergePoller().Start(ctx)
 	go injector.GetScheduler().Start(ctx)

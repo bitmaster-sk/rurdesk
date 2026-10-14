@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -17,6 +18,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 )
+
+const accessCheckTimeout = 15 * time.Second
 
 type GitIntegrationController struct {
 	gitIntRepo *repository.GitIntegrationRepository
@@ -232,6 +235,60 @@ func (gc *GitIntegrationController) Delete(c *gin.Context) {
 
 	gc.diffCache.PurgeIntegration(idGitIntegration)
 	c.Status(http.StatusNoContent)
+}
+
+func (gc *GitIntegrationController) Check(c *gin.Context) {
+	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
+	if err != nil {
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
+		return
+	}
+
+	var req model.CheckGitIntegrationReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
+		return
+	}
+
+	ctx := c.Request.Context()
+	user, _ := extctx.GetUser(ctx)
+
+	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
+		ResponseErr(c, errs.ErrForbidden)
+		return
+	}
+
+	token, err := gc.checkToken(ctx, idProject, req)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+
+	checkCtx, cancel := context.WithTimeout(ctx, accessCheckTimeout)
+	defer cancel()
+	result, err := githost.CheckAccess(checkCtx, req.HostType, req.BaseUrl, req.RepoPath, token)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, result)
+}
+
+func (gc *GitIntegrationController) checkToken(ctx context.Context, idProject int64, req model.CheckGitIntegrationReq) (string, error) {
+	if req.AccessToken != "" {
+		return req.AccessToken, nil
+	}
+	if req.IdGitIntegration == 0 {
+		return "", errs.ErrValidation.WithMessage("accessToken is required for a new integration")
+	}
+	integration, err := gc.gitIntRepo.LoadByID(ctx, req.IdGitIntegration, idProject)
+	if err != nil {
+		return "", err
+	}
+	if integration == nil {
+		return "", errs.ErrGitIntegrationNotFound
+	}
+	return githost.DecryptToken(integration)
 }
 
 func (gc *GitIntegrationController) GetDiff(c *gin.Context) {

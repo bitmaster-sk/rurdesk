@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -136,12 +137,30 @@ func (tc *TrackerClient) post(ctx context.Context, path string, body any) error 
 			Str("code", apiErr.Code).
 			Str("body", string(responseBody)).
 			Msg("tracker API error")
-		if apiErr.Code != "" {
-			return fmt.Errorf("POST %s: status %d (%s: %s)", path, resp.StatusCode, apiErr.Code, apiErr.Message)
-		}
-		return fmt.Errorf("POST %s: status %d", path, resp.StatusCode)
+		return &TrackerAPIError{Path: path, Status: resp.StatusCode, Code: apiErr.Code, Message: apiErr.Message}
 	}
 	return nil
+}
+
+const ErrCodeTaskNotRunningByAgent = "TASK_NOT_RUNNING_BY_AGENT"
+
+type TrackerAPIError struct {
+	Path    string
+	Status  int
+	Code    string
+	Message string
+}
+
+func (e *TrackerAPIError) Error() string {
+	if e.Code != "" {
+		return fmt.Sprintf("POST %s: status %d (%s: %s)", e.Path, e.Status, e.Code, e.Message)
+	}
+	return fmt.Sprintf("POST %s: status %d", e.Path, e.Status)
+}
+
+func IsTrackerErrorCode(err error, code string) bool {
+	var apiErr *TrackerAPIError
+	return errors.As(err, &apiErr) && apiErr.Code == code
 }
 
 func (tc *TrackerClient) signRequest(req *http.Request, body []byte) {

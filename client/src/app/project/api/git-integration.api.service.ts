@@ -2,7 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+    CheckGitIntegrationReq,
     CreateGitIntegrationReq,
+    GitAccessCheckRes,
     GitIntegrationRes,
     UpdateGitIntegrationReq
 } from '../model/git-integration.model';
@@ -26,6 +28,13 @@ export class GitIntegrationApi {
     public insert$(idProject: number, req: CreateGitIntegrationReq): Observable<GitIntegrationRes> {
         return this.http.post<GitIntegrationRes>(
             `/api/private/project/${idProject}/git-integration`,
+            req
+        );
+    }
+
+    public check$(idProject: number, req: CheckGitIntegrationReq): Observable<GitAccessCheckRes> {
+        return this.http.post<GitAccessCheckRes>(
+            `/api/private/project/${idProject}/git-integration/check`,
             req
         );
     }

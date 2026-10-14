@@ -46,6 +46,8 @@ type Task struct {
 	IssueTitle    string
 	IssueDesc     string
 
+	OnStageSubmitted func()
+
 	// Conversation is the whole issue thread oldest-first, the agent's own output
 	// included. Never trim it to the current review round.
 	Conversation []TaskMessage
@@ -165,4 +167,10 @@ type RunStats struct {
 type Agent interface {
 	Run(ctx context.Context, task Task) (RunStats, error)
 	Cancel(ctx context.Context, runID RunID) error
+}
+
+func (t Task) ReportStageSubmitted() {
+	if t.OnStageSubmitted != nil {
+		t.OnStageSubmitted()
+	}
 }

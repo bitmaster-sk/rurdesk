@@ -18,20 +18,21 @@ const (
 type Config struct {
 	// TrackerMCPUrl / TrackerAPIUrl are derived from TRACKER_URL + the fixed
 	// paths above.
-	TrackerMCPUrl  string
-	TrackerAPIUrl  string
-	AgentApiKey    string
-	WebhookSecret  []byte
-	ListenPort     int
-	RepoUrl        string
-	RepoBranchBase string
-	GitAccessToken string
-	MaxConcurrent  int
-	AdapterType    string
-	LogLevel       string
-	WorkspaceBase  string
-	ClaudeCode     *ClaudeCodeConfig
-	Goose          *GooseConfig
+	TrackerMCPUrl      string
+	TrackerAPIUrl      string
+	AgentApiKey        string
+	WebhookSecret      []byte
+	ListenPort         int
+	RepoUrl            string
+	RepoBranchBase     string
+	GitAccessToken     string
+	MaxConcurrent      int
+	MaxOutputLineBytes int
+	AdapterType        string
+	LogLevel           string
+	WorkspaceBase      string
+	ClaudeCode         *ClaudeCodeConfig
+	Goose              *GooseConfig
 }
 
 // ClaudeCodeConfig configures the Claude Code CLI adapter, which authenticates
@@ -107,19 +108,21 @@ func LoadConfig(adapterType string) (*Config, error) {
 	repoBranchBase := strings.TrimSpace(os.Getenv("REPO_BRANCH_BASE"))
 	logLevel := envOrDefault("LOG_LEVEL", "info")
 	workspaceBase := envOrDefault("WORKSPACE_BASE", "/worktrees")
+	maxOutputLineBytes := envInt("MAX_OUTPUT_LINE_MB", 0) * 1024 * 1024
 	cfg := &Config{
-		TrackerMCPUrl:  trackerURL + trackerMCPPath,
-		TrackerAPIUrl:  trackerURL + trackerAPIPath,
-		AgentApiKey:    agentApiKey,
-		WebhookSecret:  webhookSecret,
-		ListenPort:     listenPort,
-		RepoUrl:        repoUrl,
-		RepoBranchBase: repoBranchBase,
-		GitAccessToken: gitAccessToken,
-		MaxConcurrent:  maxConcurrent,
-		AdapterType:    adapterType,
-		LogLevel:       logLevel,
-		WorkspaceBase:  workspaceBase,
+		TrackerMCPUrl:      trackerURL + trackerMCPPath,
+		TrackerAPIUrl:      trackerURL + trackerAPIPath,
+		AgentApiKey:        agentApiKey,
+		WebhookSecret:      webhookSecret,
+		ListenPort:         listenPort,
+		RepoUrl:            repoUrl,
+		RepoBranchBase:     repoBranchBase,
+		GitAccessToken:     gitAccessToken,
+		MaxConcurrent:      maxConcurrent,
+		MaxOutputLineBytes: maxOutputLineBytes,
+		AdapterType:        adapterType,
+		LogLevel:           logLevel,
+		WorkspaceBase:      workspaceBase,
 	}
 
 	switch adapterType {

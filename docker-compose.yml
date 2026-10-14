@@ -134,6 +134,20 @@ services:
         networks:
             rurdesk_network:
 
+    gateway-goose-kimi-gitea:
+        image: rurdesk-gateway-goose:latest
+        container_name: gateway_goose_kimi_gitea
+        env_file:
+            - ./docker/gateway-goose-kimi-gitea/.env
+        volumes:
+            - gateway-goose-kimi-gitea-workspace:/worktrees
+            - gateway-goose-kimi-gitea-state:/var/lib/gateway
+        depends_on:
+            - rurdesk.api
+            - rurdesk.proxy
+        networks:
+            rurdesk_network:
+
 volumes:
     rurdesk_data:
     cache_data:
@@ -143,6 +157,8 @@ volumes:
     gateway-goose-qwen-cloud-state:
     gateway-goose-kimi-cloud-workspace:
     gateway-goose-kimi-cloud-state:
+    gateway-goose-kimi-gitea-workspace:
+    gateway-goose-kimi-gitea-state:
 
 networks:
     rurdesk_network:

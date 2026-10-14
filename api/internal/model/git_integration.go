@@ -61,6 +61,14 @@ type CreateGitIntegrationReq struct {
 	AccessToken string `json:"accessToken" binding:"required,min=1,max=500"`
 }
 
+type CheckGitIntegrationReq struct {
+	IdGitIntegration int64  `json:"idGitIntegration" binding:"omitempty,min=1"`
+	HostType         string `json:"hostType"         binding:"required,oneof=github gitlab gitea"`
+	BaseUrl          string `json:"baseUrl"          binding:"required,url"`
+	RepoPath         string `json:"repoPath"         binding:"required,max=500"`
+	AccessToken      string `json:"accessToken"      binding:"omitempty,max=500"`
+}
+
 type UpdateGitIntegrationReq struct {
 	Name        string `json:"name"        binding:"required,max=100"`
 	HostType    string `json:"hostType"    binding:"required,oneof=github gitlab gitea"`

@@ -1,7 +1,6 @@
 package claudecode
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -74,7 +73,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}()
 
 	args := []string{
-		"-p", prompt,
+		"-p",
 		"--output-format", "stream-json",
 		// stream-json on stdout requires --verbose in print mode, or the CLI
 		// buffers one result object instead of emitting per-event lines.
@@ -97,6 +96,8 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
 	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken)
+	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
+	cmd.Stdin = strings.NewReader(prompt)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -133,7 +134,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 
 	done := make(chan struct{})
 	go func() {
-		drainEvents(stdoutPipe, task.IdRun,
+		drainEvents(stdoutPipe, a.cfg.MaxOutputLineBytes, task.IdRun,
 			func(subtype string, isError bool) {
 				statsMu.Lock()
 				finalSubtype = subtype
@@ -145,6 +146,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 				toolCalls += n
 				if sawCompleteStage {
 					completeStageCalled = true
+					task.ReportStageSubmitted()
 				}
 				statsMu.Unlock()
 			},
@@ -160,7 +162,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}()
 	stderrDone := make(chan struct{})
 	go func() {
-		common.DrainStderr(stderrPipe, task.IdRun, "claude code")
+		common.DrainStderr(stderrPipe, a.cfg.MaxOutputLineBytes, task.IdRun, "claude code")
 		close(stderrDone)
 	}()
 
@@ -237,17 +239,15 @@ func mapTerminalStatus(exitCode int, subtype string, isError bool) error {
 // with its subtype/is_error for error mapping.
 func drainEvents(
 	r io.Reader,
+	maxLineBytes int,
 	idRun int64,
 	onFinal func(subtype string, isError bool),
 	onToolCalls func(count int, sawCompleteStage bool),
 	onTokens func(int),
 ) {
-	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
-		line := scanner.Bytes()
+	skipped, err := common.ReadLines(r, maxLineBytes, func(line []byte) {
 		if len(line) == 0 {
-			continue
+			return
 		}
 		var ev map[string]any
 		if err := json.Unmarshal(line, &ev); err != nil {
@@ -255,7 +255,7 @@ func drainEvents(
 				Int64("idRun", idRun).
 				Str("line", string(line)).
 				Msg("claude code stdout: non-JSON line")
-			continue
+			return
 		}
 		evType, _ := ev["type"].(string)
 		switch evType {
@@ -287,10 +287,8 @@ func drainEvents(
 			Str("type", evType).
 			Interface("event", ev).
 			Msg("agent event")
-	}
-	if err := scanner.Err(); err != nil {
-		log.Warn().Int64("idRun", idRun).Err(err).Msg("claude code stdout scan ended with error")
-	}
+	})
+	common.LogReadOutcome(idRun, "claude code stdout", skipped, err)
 }
 
 // countToolUses counts tool_use content blocks in an `assistant` event.

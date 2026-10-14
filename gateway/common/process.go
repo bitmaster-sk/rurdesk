@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"context"
 	"io"
 	"os/exec"
@@ -69,16 +68,24 @@ func StopGracefully(cmd *exec.Cmd, grace time.Duration) {
 	cmd.WaitDelay = grace
 }
 
-func DrainStderr(reader io.Reader, idRun int64, source string) {
-	scanner := bufio.NewScanner(reader)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
+func DrainStderr(reader io.Reader, maxLineBytes int, idRun int64, source string) {
 	message := source + " stderr"
-	for scanner.Scan() {
-		line := strings.TrimRight(scanner.Text(), "\r\n")
+	skipped, err := ReadLines(reader, maxLineBytes, func(raw []byte) {
+		line := strings.TrimRight(string(raw), "\r\n")
 		if line == "" {
-			continue
+			return
 		}
 		log.WithLevel(stderrLineLevel(line)).Int64("idRun", idRun).Str("line", line).Msg(message)
+	})
+	LogReadOutcome(idRun, message, skipped, err)
+}
+
+func LogReadOutcome(idRun int64, stream string, skipped int, err error) {
+	if skipped > 0 {
+		log.Warn().Int64("idRun", idRun).Str("stream", stream).Int("skipped", skipped).Msg("skipped output lines over MAX_OUTPUT_LINE_MB")
+	}
+	if err != nil {
+		log.Warn().Int64("idRun", idRun).Str("stream", stream).Err(err).Msg("reading agent output failed")
 	}
 }
 

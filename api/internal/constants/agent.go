@@ -100,7 +100,7 @@ var HeartbeatTaskStatuses = map[string]bool{
 // Task failure reasons stamped by infrastructure recovery paths, not the agent
 // itself — these mark a task orphaned by a restart, not a genuine agent/dispatch error.
 const (
-	FailReasonCrashRecovery  = "crash_recovery"  // API restart blanket-fail (RunCrashRecovery)
+	FailReasonCrashRecovery  = "crash_recovery"  // stamped by the removed API-startup blanket-fail; such tasks still reconcile
 	FailReasonHeartbeatStale = "heartbeat_stale" // no heartbeat within the sweep window
 	FailReasonGatewayRestart = "gateway_restart" // gateway (re)start ReportRecovered
 )

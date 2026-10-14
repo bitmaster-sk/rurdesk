@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -382,4 +383,102 @@ func waitForFile(t *testing.T, path string) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("stub never started (%s missing)", path)
+}
+
+func TestRunSkipsOutputLinesOverTheLimit(t *testing.T) {
+	const completeStage = `{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage"}}}]}}`
+	stub := filepath.Join(t.TempDir(), "goose-stub.sh")
+	script := "#!/bin/sh\n" +
+		"head -c 300000 /dev/zero | tr '\\0' 'x'; echo\n" +
+		"head -c 300000 /dev/zero | tr '\\0' 'y' >&2; echo >&2\n" +
+		"echo '" + completeStage + "'\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	t.Setenv("GOOSE_BINARY", stub)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := &common.Config{
+		TrackerMCPUrl:      "http://issue.proxy/mcp/sse",
+		AgentApiKey:        "deadbeef",
+		MaxOutputLineBytes: 1024,
+		Goose:              &common.GooseConfig{Provider: "anthropic", MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+	}
+	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
+	var isReportedSubmitted atomic.Bool
+	task := common.Task{IdRun: 7, IdTask: 1, Stage: common.StageImplementation, WorktreePath: t.TempDir()}
+	task.OnStageSubmitted = func() { isReportedSubmitted.Store(true) }
+
+	result := make(chan error, 1)
+	go func() {
+		_, err := adapter.Run(context.Background(), task)
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatalf("Run error = %v, want the stage to finish", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Run hung on an output line over the limit")
+	}
+	if !isReportedSubmitted.Load() {
+		t.Error("complete_stage after the long line was not reported as submitted")
+	}
+}
+
+func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
+	const marker = "vite-scaffold-marker"
+	const completeStage = `{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage"}}}]}}`
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args.txt")
+	stdinFile := filepath.Join(dir, "stdin.txt")
+	stub := filepath.Join(dir, "goose-stub.sh")
+	script := "#!/bin/sh\n" +
+		`printf '%s\n' "$@" > ` + argsFile + "\n" +
+		"cat > " + stdinFile + "\n" +
+		"echo '" + completeStage + "'\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	t.Setenv("GOOSE_BINARY", stub)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := &common.Config{
+		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
+		AgentApiKey:   "deadbeef",
+		Goose:         &common.GooseConfig{Provider: "anthropic", MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+	}
+	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
+	task := common.Task{
+		IdRun:        7,
+		IdTask:       1,
+		Stage:        common.StageImplementation,
+		WorktreePath: t.TempDir(),
+		IssueTitle:   "Scaffold",
+		IssueDesc:    "Run " + marker + " then stop it",
+	}
+
+	if _, err := adapter.Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatalf("reading args: %v", err)
+	}
+	if strings.Contains(string(args), marker) {
+		t.Errorf("goose command line contains the prompt\n--- args ---\n%s", args)
+	}
+	stdin, err := os.ReadFile(stdinFile)
+	if err != nil {
+		t.Fatalf("reading stdin: %v", err)
+	}
+	task.MaxTurns = 60
+	task.Vocab = common.ToolVocabGoose
+	wantPrompt, err := common.RenderPrompt(task)
+	if err != nil {
+		t.Fatalf("rendering prompt: %v", err)
+	}
+	if string(stdin) != wantPrompt {
+		t.Errorf("goose stdin is not the full prompt\n--- got ---\n%s\n--- want ---\n%s", stdin, wantPrompt)
+	}
 }
