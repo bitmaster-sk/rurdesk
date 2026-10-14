@@ -73,7 +73,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}()
 
 	args := []string{
-		"-p", prompt,
+		"-p",
 		"--output-format", "stream-json",
 		// stream-json on stdout requires --verbose in print mode, or the CLI
 		// buffers one result object instead of emitting per-event lines.
@@ -96,6 +96,8 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
 	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken)
+	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
+	cmd.Stdin = strings.NewReader(prompt)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {

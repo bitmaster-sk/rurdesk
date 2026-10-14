@@ -84,7 +84,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
 		// Provider override (also set via env; the flag wins and is explicit).
 		"--provider", a.cfg.Goose.Provider,
-		"-t", prompt,
+		"-i", "-",
 	}
 	// Unset model omits --model so the provider default applies; a set value
 	// passes through verbatim and an unrecognised name fails fast (mirrors the
@@ -97,6 +97,8 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
 	cmd.Env = childEnv(a.cfg.Goose)
+	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
+	cmd.Stdin = strings.NewReader(prompt)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
