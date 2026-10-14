@@ -124,7 +124,7 @@ describe('DiffParser.expand', () => {
             count: 4
         });
         const patch = DiffParser.serialize(hunks);
-        expect(patch.startsWith('@@ -1,7 +1,7 @@ func a\n line 1\n line 2')).toBe(true);
+        expect(patch.startsWith('@@ -1,7 +1,7 @@\n line 1\n line 2')).toBe(true);
         expect(visibleNewLines(patch).slice(0, 5)).toEqual([1, 2, 3, 4, 5]);
     });
 
@@ -137,6 +137,7 @@ describe('DiffParser.expand', () => {
         expect(hunks).toHaveLength(2);
         expect(hunks[0]).toMatchObject({ newStart: 5, newLines: 23, oldLines: 23 });
         expect(hunks[0].lines.at(-1)?.text).toBe('line 27');
+        expect(hunks[0].section).toBe(' func a');
     });
 
     it('merges two hunks once the gap between them is filled', () => {
@@ -190,6 +191,11 @@ describe('DiffParser.expandAll', () => {
         const hunks = DiffParser.expandAll(DiffParser.parse(TWO_HUNKS), FILE);
         expect(hunks).toHaveLength(1);
         expect(hunks[0]).toMatchObject({ newStart: 1, newLines: 60, oldLines: 60 });
+    });
+
+    it('drops the section heading that no longer matches the hunk start', () => {
+        const hunks = DiffParser.expandAll(DiffParser.parse(TWO_HUNKS), FILE);
+        expect(DiffParser.serialize(hunks).split('\n')[0]).toBe('@@ -1,60 +1,60 @@');
     });
 
     it('returns the original hunks unchanged for added or deleted files', () => {

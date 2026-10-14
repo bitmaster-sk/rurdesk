@@ -195,6 +195,7 @@ export abstract class DiffParser {
             hunk.lines.unshift(...added);
             hunk.newStart = first - added.length;
             hunk.oldStart = oldFirst - added.length;
+            hunk.section = '';
         } else {
             const next = result[action.hunkIndex + 1];
             const ceiling = next ? this.firstNewLine(next) : fileLines.length + 1;
