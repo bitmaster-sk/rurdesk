@@ -1465,6 +1465,8 @@
         "EXPAND_UP": "Show more lines above",
         "EXPAND_DOWN": "Show more lines below",
         "EXPAND_ALL": "Show all hidden lines",
+        "EXPAND_FILE": "Show full file",
+        "COLLAPSE_FILE": "Show changes only",
         "EXPAND_FAILED": "Could not load more lines of this file",
         "EXPAND_STALE": "The change request was updated. Reload the diff to show more lines."
     },
