@@ -3,7 +3,9 @@ package githost
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -12,6 +14,10 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 )
+
+const MaxDiffBytes = 20 << 20
+
+var ErrDiffTooLarge = errors.New("diff exceeds maximum allowed size")
 
 // GiteaHost implements GitHost for Gitea instances.
 type GiteaHost struct {
@@ -53,49 +59,115 @@ func (h *GiteaHost) GetMergeRequestChanges(ctx context.Context, idMr string) (*D
 		return nil, fmt.Errorf("decoding PR metadata: %w", err)
 	}
 
-	var files []DiffFile
-	page := 1
-	for page <= 20 {
-		filesURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s/files?limit=50&page=%d", h.baseUrl, h.repoPath, idMr, page)
-		req, err := h.newRequest(ctx, filesURL)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := doWithRetry(ctx, h.client, req)
-		if err != nil {
-			return nil, fmt.Errorf("fetching PR files page %d: %w", page, err)
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("PR files page %d: unexpected status %d", page, resp.StatusCode)
-		}
-
-		var pageFiles []struct {
-			Filename         string `json:"filename"`
-			PreviousFilename string `json:"previous_filename"`
-			Patch            string `json:"patch"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&pageFiles); err != nil {
-			return nil, fmt.Errorf("decoding PR files page %d: %w", page, err)
-		}
-		for _, f := range pageFiles {
-			oldPath := f.PreviousFilename
-			if oldPath == "" {
-				oldPath = f.Filename
-			}
-			files = append(files, DiffFile{
-				OldPath: oldPath,
-				NewPath: f.Filename,
-				Patch:   f.Patch,
-			})
-		}
-		if len(pageFiles) < 50 {
-			break
-		}
-		page++
+	diffURL := fmt.Sprintf("%s/api/v1/repos/%s/pulls/%s.diff", h.baseUrl, h.repoPath, idMr)
+	req, err := h.newRequest(ctx, diffURL)
+	if err != nil {
+		return nil, err
 	}
+	resp, err := doWithRetry(ctx, h.client, req)
+	if err != nil {
+		return nil, fmt.Errorf("fetching PR diff: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("PR diff: unexpected status %d: %s", resp.StatusCode, readBody(resp))
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, MaxDiffBytes+1))
+	if err != nil {
+		return nil, fmt.Errorf("reading PR diff: %w", err)
+	}
+	if len(raw) > MaxDiffBytes {
+		return nil, ErrDiffTooLarge
+	}
+	files := parseGiteaDiff(string(raw))
 
 	return &Diff{HeadSHA: prData.Head.SHA, Files: files}, nil
+}
+
+const giteaDiffHeader = "diff --git "
+
+func parseGiteaDiff(raw string) []DiffFile {
+	var files []DiffFile
+	var section []string
+	for _, line := range strings.Split(raw, "\n") {
+		if strings.HasPrefix(line, giteaDiffHeader) {
+			if section != nil {
+				files = append(files, parseGiteaDiffFile(section))
+			}
+			section = []string{}
+		}
+		if section != nil {
+			section = append(section, line)
+		}
+	}
+	if section != nil {
+		files = append(files, parseGiteaDiffFile(section))
+	}
+	return files
+}
+
+func parseGiteaDiffFile(lines []string) DiffFile {
+	var oldPath, newPath, renameFrom, renameTo string
+	hunkStart := len(lines)
+	for i, line := range lines[1:] {
+		if strings.HasPrefix(line, "@@") {
+			hunkStart = i + 1
+			break
+		}
+		switch {
+		case strings.HasPrefix(line, "--- "):
+			oldPath = giteaMarkerPath(strings.TrimPrefix(line, "--- "), "a/")
+		case strings.HasPrefix(line, "+++ "):
+			newPath = giteaMarkerPath(strings.TrimPrefix(line, "+++ "), "b/")
+		case strings.HasPrefix(line, "rename from "), strings.HasPrefix(line, "copy from "):
+			renameFrom = unquoteGitPath(line[strings.Index(line, " from ")+len(" from "):])
+		case strings.HasPrefix(line, "rename to "), strings.HasPrefix(line, "copy to "):
+			renameTo = unquoteGitPath(line[strings.Index(line, " to ")+len(" to "):])
+		}
+	}
+
+	if renameFrom != "" && renameTo != "" {
+		oldPath, newPath = renameFrom, renameTo
+	}
+	if oldPath == "" {
+		oldPath = newPath
+	}
+	if newPath == "" {
+		newPath = oldPath
+	}
+	if oldPath == "" {
+		oldPath = giteaHeaderPath(strings.TrimPrefix(lines[0], giteaDiffHeader))
+		newPath = oldPath
+	}
+
+	patch := strings.TrimRight(strings.Join(lines[hunkStart:], "\n"), "\n")
+	return DiffFile{OldPath: oldPath, NewPath: newPath, Patch: patch}
+}
+
+func giteaMarkerPath(s, prefix string) string {
+	s = strings.TrimSuffix(s, "\t")
+	if s == "/dev/null" {
+		return ""
+	}
+	return strings.TrimPrefix(unquoteGitPath(s), prefix)
+}
+
+// Only reached when the header names the same file twice, so either half is the path.
+func giteaHeaderPath(header string) string {
+	if quoted, err := strconv.QuotedPrefix(header); err == nil && strings.HasPrefix(header, `"`) {
+		return strings.TrimPrefix(unquoteGitPath(quoted), "a/")
+	}
+	return strings.TrimPrefix(header[:(len(header)-1)/2], "a/")
+}
+
+func unquoteGitPath(s string) string {
+	if !strings.HasPrefix(s, `"`) {
+		return s
+	}
+	if unquoted, err := strconv.Unquote(s); err == nil {
+		return unquoted
+	}
+	return s
 }
 
 func (h *GiteaHost) GetMergeRequestStatus(ctx context.Context, idMr string) (*Status, error) {
