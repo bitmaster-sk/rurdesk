@@ -177,3 +177,37 @@ describe('DiffParser.expand', () => {
         expect(result).toBe(hunks);
     });
 });
+
+describe('DiffParser.expandAll', () => {
+    it('fills leading, inter-hunk and trailing gaps in one call', () => {
+        const hunks = DiffParser.expandAll(DiffParser.parse(TWO_HUNKS), FILE);
+        expect(visibleNewLines(DiffParser.serialize(hunks))).toEqual(
+            Array.from({ length: 60 }, (_, idx) => idx + 1)
+        );
+    });
+
+    it('merges every hunk into a single continuous hunk', () => {
+        const hunks = DiffParser.expandAll(DiffParser.parse(TWO_HUNKS), FILE);
+        expect(hunks).toHaveLength(1);
+        expect(hunks[0]).toMatchObject({ newStart: 1, newLines: 60, oldLines: 60 });
+    });
+
+    it('returns the original hunks unchanged for added or deleted files', () => {
+        const added = DiffParser.parse('@@ -0,0 +1,2 @@\n+a\n+b');
+        expect(DiffParser.expandAll(added, [])).toBe(added);
+        const deleted = DiffParser.parse('@@ -1,2 +0,0 @@\n-a\n-b');
+        expect(DiffParser.expandAll(deleted, [])).toBe(deleted);
+    });
+
+    it('returns the original hunks unchanged when nothing is hidden', () => {
+        const fullyExpanded = DiffParser.parse('@@ -1,60 +1,60 @@\n' + FILE.join('\n'));
+        expect(DiffParser.expandAll(fullyExpanded, FILE)).toBe(fullyExpanded);
+    });
+
+    it('does not reveal lines beyond the end of the file', () => {
+        const hunks = DiffParser.expandAll(DiffParser.parse(TWO_HUNKS), FILE.slice(0, 41));
+        expect(visibleNewLines(DiffParser.serialize(hunks))).toEqual(
+            Array.from({ length: 41 }, (_, idx) => idx + 1)
+        );
+    });
+});

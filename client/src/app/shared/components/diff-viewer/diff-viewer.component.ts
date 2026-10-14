@@ -57,6 +57,13 @@ const ICON_FOLD =
     '<path d="M12 9v-6l3 3m-6 0l3 -3"/>' +
     '<path d="M4 12h16"/>' +
     '</svg>';
+const ICON_FOLD_OUT =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 16v5l3 -3m-6 0l3 3"/>' +
+    '<path d="M12 8v-6l3 3m-6 0l3 -3"/>' +
+    '<path d="M4 12h16"/>' +
+    '</svg>';
 
 const DIFF2HTML_CONFIG: Diff2HtmlConfig = {
     drawFileList: false,
@@ -232,12 +239,76 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
 
         this.prependChevron(nameWrapper);
         nameWrapper.appendChild(this.buildExtras(added, removed, url));
+        this.addWholeFileExpander(nameWrapper, idx);
         this.wireCollapse(header, body);
         this.addExpanders(wrapper, idx);
     }
 
     private canExpand(): boolean {
         return !this.rawPatch() && !!this.fileContentLoader() && !!this.diff()?.headSha;
+    }
+
+    private addWholeFileExpander(nameWrapper: HTMLElement, idx: number): void {
+        if (!this.canExpand()) return;
+
+        const patch = this.patches?.[idx];
+        if (patch === undefined) return;
+
+        const hunks = DiffParser.parse(patch);
+        const slots = DiffParser.slots(hunks, this.fileLines.get(idx)?.length ?? null);
+        if (slots.length === 0) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'diff-viewer__expand diff-viewer__expand--file';
+        button.innerHTML = ICON_FOLD_OUT;
+        const label = this.i18n.instant('DIFF.EXPAND_FILE');
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.addEventListener('click', () => this.onExpandWholeFile(idx, button));
+        nameWrapper.appendChild(button);
+    }
+
+    private onExpandWholeFile(idx: number, button: HTMLButtonElement): void {
+        if (this.pendingFiles.has(idx)) return;
+        const cached = this.fileLines.get(idx);
+        if (cached) {
+            this.applyWholeFileExpand(idx, cached);
+            return;
+        }
+
+        const diff = this.diff();
+        const loader = this.fileContentLoader();
+        if (!diff || !loader) return;
+
+        this.pendingFiles.add(idx);
+        this.showLoading(idx, button);
+        loader(diff.files[idx].newPath, diff.headSha)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: lines => {
+                    if (this.diff() !== diff) return;
+                    this.pendingFiles.delete(idx);
+                    const normalized = lines.map(line => line.replace(/\r$/, ''));
+                    this.fileLines.set(idx, normalized);
+                    this.applyWholeFileExpand(idx, normalized);
+                },
+                error: (error: { status?: number }) => {
+                    if (this.diff() !== diff) return;
+                    this.pendingFiles.delete(idx);
+                    this.rerenderFile(idx);
+                    this.toast.showError(
+                        error.status === 409 ? 'DIFF.EXPAND_STALE' : 'DIFF.EXPAND_FAILED'
+                    );
+                }
+            });
+    }
+
+    private applyWholeFileExpand(idx: number, lines: string[]): void {
+        if (!this.patches) return;
+        const hunks = DiffParser.expandAll(DiffParser.parse(this.patches[idx]), lines);
+        this.patches[idx] = DiffParser.serialize(hunks);
+        this.rerenderFile(idx);
     }
 
     private addExpanders(wrapper: HTMLElement, idx: number): void {
@@ -377,16 +448,16 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         };
 
         header.addEventListener('click', event => {
-            // Let the host-link icon (and any future header buttons) keep
-            // their own click semantics instead of also toggling collapse.
+            // Let the host-link icon and the whole-file expander keep their
+            // own click semantics instead of also toggling collapse.
             const target = event.target as HTMLElement | null;
-            if (target?.closest('.diff-viewer__file-link')) return;
+            if (target?.closest('.diff-viewer__file-link, .diff-viewer__expand--file')) return;
             toggle();
         });
         header.addEventListener('keydown', event => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             const target = event.target as HTMLElement | null;
-            if (target?.closest('.diff-viewer__file-link')) return;
+            if (target?.closest('.diff-viewer__file-link, .diff-viewer__expand--file')) return;
             event.preventDefault();
             toggle();
         });

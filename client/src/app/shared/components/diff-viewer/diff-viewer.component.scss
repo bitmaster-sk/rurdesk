@@ -101,6 +101,34 @@
     }
 }
 
+.diff-viewer__expand--file {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border: 0;
+    border-radius: var(--ui-radius-s, 0.25rem);
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    transition:
+        color 0.15s,
+        background 0.15s;
+
+    &:hover:enabled {
+        color: var(--ui-color-primary);
+        background: var(--ui-color-surface-hover);
+    }
+
+    &:disabled {
+        cursor: progress;
+    }
+
+    svg {
+        display: block;
+    }
+}
+
 .diff-viewer .d2h-code-linenumber {
     width: 6em;
     border-left: 0;

@@ -147,6 +147,38 @@ export abstract class DiffParser {
         return slots;
     }
 
+    public static expandAll(hunks: DiffHunk[], fileLines: string[]): DiffHunk[] {
+        if (!this.isExpandable(hunks)) return hunks;
+
+        const slots = this.slots(hunks, fileLines.length);
+        if (slots.every(slot => slot.gap === null || slot.gap <= 0)) return hunks;
+
+        let result = hunks.map(hunk => ({ ...hunk, lines: [...hunk.lines] }));
+
+        // Expand from the bottom up so indices stay stable while we mutate.
+        for (const slot of [...slots].reverse()) {
+            if (slot.gap === null || slot.gap <= 0) continue;
+
+            // For the trailing slot, expand down from the last hunk; otherwise
+            // expand up into the hunk that follows the gap.
+            if (slot.beforeHunk >= result.length) {
+                result = this.expand(result, fileLines, {
+                    direction: ExpandDirection.Down,
+                    hunkIndex: result.length - 1,
+                    count: slot.gap
+                });
+            } else {
+                result = this.expand(result, fileLines, {
+                    direction: ExpandDirection.Up,
+                    hunkIndex: slot.beforeHunk,
+                    count: slot.gap
+                });
+            }
+        }
+
+        return result;
+    }
+
     public static expand(hunks: DiffHunk[], fileLines: string[], action: ExpandAction): DiffHunk[] {
         const result = hunks.map(hunk => ({ ...hunk, lines: [...hunk.lines] }));
         const hunk = result[action.hunkIndex];
