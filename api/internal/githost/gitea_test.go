@@ -163,8 +163,8 @@ func TestGiteaHost_GetMergeRequestStatus_Open(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{
 				"state": "success",
 				"statuses": []map[string]any{
-					{"context": "build", "status": "success", "state": "success"},
-					{"context": "test", "status": "success", "state": "success"},
+					{"context": "CI / build (push)", "status": "success"},
+					{"context": "CI / build (pull_request)", "status": "success"},
 				},
 			})
 		case "/api/v1/repos/owner/repo/pulls/1/reviews":
@@ -194,7 +194,7 @@ func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 			json.NewEncoder(w).Encode(map[string]any{
 				"state": "success",
 				"statuses": []map[string]any{
-					{"context": "build", "state": "success"},
+					{"context": "build", "status": "success"},
 				},
 			})
 		case "/api/v1/repos/owner/repo/pulls/1/reviews":
@@ -209,6 +209,47 @@ func TestGiteaHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	assert.Equal(t, constants.MrStateMerged, status.State)
 	assert.True(t, status.Approved)
 	assert.Equal(t, srv.URL+"/owner/repo/pulls/1", status.WebUrl)
+}
+
+func TestGiteaHost_GetMergeRequestStatus_CiFromStatusField(t *testing.T) {
+	cases := []struct {
+		name     string
+		statuses []string
+		want     string
+	}{
+		{"success", []string{"success", "success"}, constants.CiStatusSuccess},
+		{"failure", []string{"success", "failure"}, constants.CiStatusFailed},
+		{"error", []string{"error"}, constants.CiStatusFailed},
+		{"pending", []string{"success", "pending"}, constants.CiStatusPending},
+		{"warning", []string{"warning"}, constants.CiStatusSuccess},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/api/v1/repos/owner/repo/pulls/1":
+					json.NewEncoder(w).Encode(map[string]any{
+						"state": "open", "merged": false,
+						"head": map[string]any{"sha": "cafebabe"},
+					})
+				case "/api/v1/repos/owner/repo/commits/cafebabe/status":
+					statuses := make([]map[string]any, 0, len(tc.statuses))
+					for i, state := range tc.statuses {
+						statuses = append(statuses, map[string]any{"context": fmt.Sprintf("job %d", i), "status": state})
+					}
+					json.NewEncoder(w).Encode(map[string]any{"state": tc.statuses[0], "statuses": statuses})
+				case "/api/v1/repos/owner/repo/pulls/1/reviews":
+					json.NewEncoder(w).Encode([]map[string]any{})
+				}
+			}))
+			defer srv.Close()
+
+			host := githost.NewGiteaHost(srv.URL, "owner/repo", "token")
+			status, err := host.GetMergeRequestStatus(t.Context(), "1")
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, status.CiStatus)
+		})
+	}
 }
 
 func TestGiteaHost_GetMergeRequestStatus_NoCi(t *testing.T) {

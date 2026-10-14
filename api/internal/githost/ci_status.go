@@ -39,19 +39,19 @@ func aggregateCiStatus(jobs []string) string {
 }
 
 // Reads statuses[], not the top-level state, which is "pending" even with no CI.
-func fetchCommitStatusJobs(ctx context.Context, client *http.Client, url string, setAuth func(*http.Request)) []string {
+func fetchCommitStatusJobs(
+	ctx context.Context, client *http.Client, url string, setAuth func(*http.Request), stateOf func(CiCommitStatus) string,
+) []string {
 	var payload struct {
-		Statuses []struct {
-			State string `json:"state"`
-		} `json:"statuses"`
+		Statuses []CiCommitStatus `json:"statuses"`
 	}
 	if err := getJSON(ctx, client, url, setAuth, &payload); err != nil {
 		return nil
 	}
 	jobs := make([]string, 0, len(payload.Statuses))
 	for _, status := range payload.Statuses {
-		switch status.State {
-		case "success":
+		switch stateOf(status) {
+		case "success", "warning":
 			jobs = append(jobs, constants.CiStatusSuccess)
 		case "failure", "error":
 			jobs = append(jobs, constants.CiStatusFailed)

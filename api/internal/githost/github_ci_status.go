@@ -17,7 +17,7 @@ func (h *GitHubHost) getCiStatus(ctx context.Context, _, sha string) string {
 	jobs := h.fetchCheckRunJobs(ctx, sha)
 	if len(jobs) == 0 {
 		jobs = fetchCommitStatusJobs(ctx, h.client,
-			fmt.Sprintf("%s/repos/%s/commits/%s/status", h.apiBase, h.repoPath, sha), h.setAuth)
+			fmt.Sprintf("%s/repos/%s/commits/%s/status", h.apiBase, h.repoPath, sha), h.setAuth, CiCommitStatus.githubState)
 	}
 	return aggregateCiStatus(jobs)
 }

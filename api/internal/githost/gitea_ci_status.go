@@ -7,7 +7,7 @@ import (
 
 func (h *GiteaHost) getCiStatus(ctx context.Context, _, sha string) string {
 	return aggregateCiStatus(fetchCommitStatusJobs(ctx, h.client,
-		fmt.Sprintf("%s/api/v1/repos/%s/commits/%s/status", h.baseUrl, h.repoPath, sha), h.setAuth))
+		fmt.Sprintf("%s/api/v1/repos/%s/commits/%s/status", h.baseUrl, h.repoPath, sha), h.setAuth, CiCommitStatus.giteaState))
 }
 
 func (h *GiteaHost) hasApproval(ctx context.Context, idMr string) bool {
