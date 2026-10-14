@@ -113,11 +113,7 @@ describe('DiffViewerComponent context expansion (browser)', () => {
         const root = fixture.nativeElement as HTMLElement;
         const firstFile = () => root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
         const buttons = () =>
-            Array.from(
-                firstFile().querySelectorAll<HTMLButtonElement>(
-                    '.diff-viewer__expand:not(.diff-viewer__expand--file)'
-                )
-            );
+            Array.from(firstFile().querySelectorAll<HTMLButtonElement>('.diff-viewer__expand'));
         const visibleLines = () =>
             Array.from(firstFile().querySelectorAll('.d2h-code-line-ctn')).map(
                 el => el.textContent?.trim() ?? ''
@@ -294,7 +290,7 @@ describe('DiffViewerComponent context expansion (browser)', () => {
     it('renders a whole-file expander in the header for structured diffs', () => {
         const { root } = setup();
         const firstFile = root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
-        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__expand--file');
+        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
         expect(button).toBeTruthy();
         expect(button?.getAttribute('aria-label')).toBe('DIFF.EXPAND_FILE');
     });
@@ -317,13 +313,13 @@ describe('DiffViewerComponent context expansion (browser)', () => {
         );
         fixture.detectChanges();
         const firstFile = fixture.nativeElement.querySelector('.d2h-file-wrapper') as HTMLElement;
-        expect(firstFile.querySelector('.diff-viewer__expand--file')).toBeFalsy();
+        expect(firstFile.querySelector('.diff-viewer__file-expand')).toBeFalsy();
     });
 
     it('expands every hidden gap after a single click', () => {
         const { root, fixture, loader } = setup();
         const firstFile = () => root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
-        const button = firstFile().querySelector<HTMLButtonElement>('.diff-viewer__expand--file');
+        const button = firstFile().querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
         button?.click();
         fixture.detectChanges();
 
@@ -336,11 +332,53 @@ describe('DiffViewerComponent context expansion (browser)', () => {
         expect(firstFile().textContent).toContain('line 20');
     });
 
+    it('turns the whole-file expander into a toggle that restores the original diff', () => {
+        const { root, fixture, buttons } = setup();
+        const firstFile = () => root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
+        const toggle = () =>
+            firstFile().querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
+        const hunkHeaders = () =>
+            Array.from(firstFile().querySelectorAll('td.d2h-info .d2h-code-line'))
+                .map(el => el.textContent?.trim() ?? '')
+                .filter(text => text.startsWith('@@'));
+        const originalHeaders = hunkHeaders();
+
+        toggle()?.click();
+        fixture.detectChanges();
+        expect(toggle()?.getAttribute('aria-label')).toBe('DIFF.COLLAPSE_FILE');
+
+        toggle()?.click();
+        fixture.detectChanges();
+        expect(hunkHeaders()).toEqual(originalHeaders);
+        expect(toggle()?.getAttribute('aria-label')).toBe('DIFF.EXPAND_FILE');
+        expect(buttons().length).toBeGreaterThan(0);
+    });
+
+    it('places the whole-file expander before the host link', () => {
+        const fixture = TestBed.createComponent(DiffViewerComponent);
+        fixture.componentRef.setInput('diff', STRUCTURED_DIFF);
+        fixture.componentRef.setInput(
+            'fileContentLoader',
+            vi.fn(() => of(FILE_LINES))
+        );
+        fixture.componentRef.setInput('fileLinkBuilder', () => 'https://example.test/blob');
+        fixture.detectChanges();
+        const extras = (fixture.nativeElement as HTMLElement).querySelector(
+            '.diff-viewer__file-extras'
+        );
+        const order = Array.from(extras?.children ?? []).map(el => el.className);
+        expect(order).toEqual([
+            'diff-viewer__stats',
+            'diff-viewer__file-expand',
+            'diff-viewer__file-link'
+        ]);
+    });
+
     it('clicking the whole-file expander does not collapse the file header', () => {
         const { root, fixture } = setup();
         const firstFile = root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
         const body = firstFile.querySelector('.d2h-file-diff') as HTMLElement;
-        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__expand--file');
+        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
 
         button?.click();
         fixture.detectChanges();
@@ -352,7 +390,7 @@ describe('DiffViewerComponent context expansion (browser)', () => {
         const response = new Subject<string[]>();
         const { root } = setup(() => response);
         const firstFile = root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
-        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__expand--file');
+        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
 
         button?.click();
         expect(button?.disabled).toBe(true);
@@ -362,7 +400,7 @@ describe('DiffViewerComponent context expansion (browser)', () => {
     it('shows a stale diff toast when the whole-file expand fails with 409', () => {
         const { root } = setup(() => throwError(() => ({ status: 409 })));
         const firstFile = root.querySelectorAll<HTMLElement>('.d2h-file-wrapper')[0];
-        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__expand--file');
+        const button = firstFile.querySelector<HTMLButtonElement>('.diff-viewer__file-expand');
         button?.click();
         expect(toast.showError).toHaveBeenCalledWith('DIFF.EXPAND_STALE');
     });

@@ -57,6 +57,16 @@ const ICON_FOLD =
     '<path d="M12 9v-6l3 3m-6 0l3 -3"/>' +
     '<path d="M4 12h16"/>' +
     '</svg>';
+const ICON_FOLD_IN =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
+    'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M12 3v6l3 -3m-6 0l3 3"/>' +
+    '<path d="M12 21v-6l3 3m-6 0l3 -3"/>' +
+    '<path d="M4 12l1 0"/>' +
+    '<path d="M9 12l1 0"/>' +
+    '<path d="M14 12l1 0"/>' +
+    '<path d="M19 12l1 0"/>' +
+    '</svg>';
 const ICON_FOLD_OUT =
     '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" ' +
     'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -238,8 +248,7 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         const url = file && builder ? builder(file) : null;
 
         this.prependChevron(nameWrapper);
-        nameWrapper.appendChild(this.buildExtras(added, removed, url));
-        this.addWholeFileExpander(nameWrapper, idx);
+        nameWrapper.appendChild(this.buildExtras(idx, added, removed, url));
         this.wireCollapse(header, body);
         this.addExpanders(wrapper, idx);
     }
@@ -248,25 +257,36 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         return !this.rawPatch() && !!this.fileContentLoader() && !!this.diff()?.headSha;
     }
 
-    private addWholeFileExpander(nameWrapper: HTMLElement, idx: number): void {
-        if (!this.canExpand()) return;
+    private buildWholeFileToggle(idx: number): HTMLButtonElement | null {
+        if (!this.canExpand()) return null;
 
         const patch = this.patches?.[idx];
-        if (patch === undefined) return;
+        const original = this.diff()?.files[idx]?.patch;
+        if (patch === undefined || original === undefined) return null;
 
         const hunks = DiffParser.parse(patch);
-        const slots = DiffParser.slots(hunks, this.fileLines.get(idx)?.length ?? null);
-        if (slots.length === 0) return;
+        const isFullyShown =
+            DiffParser.slots(hunks, this.fileLines.get(idx)?.length ?? null).length === 0;
+        if (isFullyShown && patch === original) return null;
 
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'diff-viewer__expand diff-viewer__expand--file';
-        button.innerHTML = ICON_FOLD_OUT;
-        const label = this.i18n.instant('DIFF.EXPAND_FILE');
+        button.className = 'diff-viewer__file-expand';
+        button.innerHTML = isFullyShown ? ICON_FOLD_IN : ICON_FOLD_OUT;
+        const label = this.i18n.instant(isFullyShown ? 'DIFF.COLLAPSE_FILE' : 'DIFF.EXPAND_FILE');
         button.title = label;
         button.setAttribute('aria-label', label);
-        button.addEventListener('click', () => this.onExpandWholeFile(idx, button));
-        nameWrapper.appendChild(button);
+        button.addEventListener('click', () =>
+            isFullyShown ? this.onCollapseWholeFile(idx) : this.onExpandWholeFile(idx, button)
+        );
+        return button;
+    }
+
+    private onCollapseWholeFile(idx: number): void {
+        const original = this.diff()?.files[idx]?.patch;
+        if (!this.patches || original === undefined || this.pendingFiles.has(idx)) return;
+        this.patches[idx] = original;
+        this.rerenderFile(idx);
     }
 
     private onExpandWholeFile(idx: number, button: HTMLButtonElement): void {
@@ -403,9 +423,11 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
 
     private showLoading(idx: number, button: HTMLButtonElement): void {
         const wrapper = this.findFileWrapper(idx);
-        wrapper?.querySelectorAll<HTMLButtonElement>('.diff-viewer__expand').forEach(other => {
-            other.disabled = true;
-        });
+        wrapper
+            ?.querySelectorAll<HTMLButtonElement>('.diff-viewer__expand, .diff-viewer__file-expand')
+            .forEach(other => {
+                other.disabled = true;
+            });
         button.classList.add('diff-viewer__expand--loading');
         button.setAttribute('aria-busy', 'true');
         button.innerHTML = ICON_LOADER;
@@ -451,13 +473,13 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
             // Let the host-link icon and the whole-file expander keep their
             // own click semantics instead of also toggling collapse.
             const target = event.target as HTMLElement | null;
-            if (target?.closest('.diff-viewer__file-link, .diff-viewer__expand--file')) return;
+            if (target?.closest('.diff-viewer__file-link, .diff-viewer__file-expand')) return;
             toggle();
         });
         header.addEventListener('keydown', event => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             const target = event.target as HTMLElement | null;
-            if (target?.closest('.diff-viewer__file-link, .diff-viewer__expand--file')) return;
+            if (target?.closest('.diff-viewer__file-link, .diff-viewer__file-expand')) return;
             event.preventDefault();
             toggle();
         });
@@ -469,7 +491,12 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
         return [];
     }
 
-    private buildExtras(added: number, removed: number, url: string | null): HTMLElement {
+    private buildExtras(
+        idx: number,
+        added: number,
+        removed: number,
+        url: string | null
+    ): HTMLElement {
         const extras = document.createElement('span');
         extras.className = 'diff-viewer__file-extras';
 
@@ -479,6 +506,9 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
             `<span class="diff-viewer__added">+${added}</span>` +
             `<span class="diff-viewer__removed">-${removed}</span>`;
         extras.appendChild(stats);
+
+        const wholeFileToggle = this.buildWholeFileToggle(idx);
+        if (wholeFileToggle) extras.appendChild(wholeFileToggle);
 
         if (url) {
             const a = document.createElement('a');

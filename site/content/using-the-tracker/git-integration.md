@@ -103,6 +103,9 @@ stored token.
   hunk) show the unchanged lines around a change: 20 at a time, or the whole gap
   when it is short. The file is read from the host once per commit, so further
   clicks are instant. Added and deleted files are already shown in full.
+- **Show full file** — the icon next to a file's +/- counts shows every
+  unchanged line of that file at once. Click it again to go back to the
+  changes only.
 - **MR/PR status** — open / merged / closed state next to the link. It updates
   on the open task by itself — CI result, approval and the final merge — so you
   don't have to reload the page.
