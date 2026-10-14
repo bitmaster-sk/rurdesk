@@ -40,6 +40,27 @@ export interface CreateGitIntegrationReq {
     accessToken: string;
 }
 
+export enum GitAccessResult {
+    Ok = 'ok',
+    Unreachable = 'unreachable',
+    InvalidToken = 'invalid_token',
+    RepoNotFound = 'repo_not_found',
+    ReadOnly = 'read_only'
+}
+
+export interface CheckGitIntegrationReq {
+    idGitIntegration?: number;
+    hostType: HostType;
+    baseUrl: string;
+    repoPath: string;
+    accessToken?: string;
+}
+
+export interface GitAccessCheckRes {
+    result: GitAccessResult;
+    defaultBranch?: string;
+}
+
 export interface UpdateGitIntegrationReq {
     name: string;
     hostType: HostType;

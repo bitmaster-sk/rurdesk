@@ -29,13 +29,16 @@ tracker.
 
 <!-- stack-table -->
 
-| Field            | Meaning                                                | Example                                                                 |
-| ---------------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
-| **Name**         | Display label                                          | `backend repo`                                                          |
-| **Host type**    | `github` · `gitlab` · `gitea`                          | `github`                                                                |
-| **Base URL**     | API root of the host                                   | `https://api.github.com`, `https://gitlab.com`, or your self-hosted URL |
-| **Repo path**    | `owner/repo` path on the host                          | `your-org/your-repo`                                                    |
-| **Access token** | Token used to open PRs/MRs and read their diffs/status | see scopes below                                                        |
+| Field            | Meaning                                                | Example                                                             |
+| ---------------- | ------------------------------------------------------ | ------------------------------------------------------------------- |
+| **Name**         | Display label                                          | `backend repo`                                                      |
+| **Host type**    | `github` · `gitlab` · `gitea`                          | `github`                                                            |
+| **Base URL**     | Web URL of the host, prefilled for the cloud hosts     | `https://github.com`, `https://gitlab.com`, or your self-hosted URL |
+| **Repo path**    | `owner/repo` path on the host                          | `your-org/your-repo`                                                |
+| **Access token** | Token used to open PRs/MRs and read their diffs/status | see scopes below                                                    |
+
+Picking a host type fills in its cloud URL (`https://github.com`,
+`https://gitlab.com`, `https://gitea.com`). A URL you typed yourself is kept.
 
 Fill the form and save:
 
@@ -60,6 +63,30 @@ and **opens** the PR/MR for agent runs, so it needs **write** access:
 > Read-only tokens (`read_api`, _Pull requests: read_, `read:repository`) are
 > not enough: diffs and status will load, but opening a PR/MR fails and the
 > agent run is marked failed with the host's error message.
+
+### Check the connection
+
+**Check connection** in the form asks the host whether the integration works,
+without saving it. **Save** runs the same check first. If the check fails, the
+form shows why and the button changes to **Save anyway**, so you can still
+store an integration the tracker cannot reach right now.
+
+| Result               | Meaning                                                                        |
+| -------------------- | ------------------------------------------------------------------------------ |
+| Connected            | The token works and can open PRs/MRs. The repository's default branch is shown |
+| Read-only            | The token works but cannot write; opening PRs/MRs for agent runs will fail     |
+| Token rejected       | The host refused the token: wrong, expired or revoked                          |
+| Repository not found | Wrong repo path, or the token has no access to that repository                 |
+| Host unreachable     | No usable answer from the host API; usually a wrong base URL                   |
+
+When you edit an integration and leave the token blank, the check uses the
+stored token.
+
+> The check reads what the host reports: write access on the repository
+> (GitLab: _Developer_ or higher), plus the `repo` scope for classic GitHub
+> tokens and the `api` scope for GitLab tokens. A GitHub **fine-grained** PAT
+> does not expose its permissions, so the check cannot tell whether it has
+> _Pull requests: write_.
 
 ### Token security
 
