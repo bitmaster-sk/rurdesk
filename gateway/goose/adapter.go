@@ -130,14 +130,15 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		logStreamEvent(ev, task.IdRun)
 		queueThinkingEvent(ev, thinking)
 	})
+	agg.onCompleteStage = task.ReportStageSubmitted
 	done := make(chan struct{})
 	go func() {
-		scanGooseStream(stdoutPipe, agg)
+		scanGooseStream(stdoutPipe, a.cfg.MaxOutputLineBytes, task.IdRun, agg)
 		close(done)
 	}()
 	stderrDone := make(chan struct{})
 	go func() {
-		common.DrainStderr(stderrPipe, task.IdRun, "goose")
+		common.DrainStderr(stderrPipe, a.cfg.MaxOutputLineBytes, task.IdRun, "goose")
 		close(stderrDone)
 	}()
 

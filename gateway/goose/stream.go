@@ -1,7 +1,6 @@
 package goose
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"io"
@@ -13,14 +12,10 @@ import (
 )
 
 // scanGooseStream reads goose's stream-json stdout line-by-line and feeds each
-// line to the aggregator. The buffer cap matches common.DrainStderr so a long single
-// event line doesn't overflow the default scanner limit.
-func scanGooseStream(r io.Reader, agg *streamAggregator) {
-	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 64*1024), 4*1024*1024)
-	for scanner.Scan() {
-		agg.line(scanner.Bytes())
-	}
+// line to the aggregator.
+func scanGooseStream(r io.Reader, maxLineBytes int, idRun int64, agg *streamAggregator) {
+	skipped, err := common.ReadLines(r, maxLineBytes, agg.line)
+	common.LogReadOutcome(idRun, "goose stdout", skipped, err)
 }
 
 // logStreamEvent writes one grouped stream event to the gateway log. Thinking
@@ -101,6 +96,8 @@ type streamAggregator struct {
 	// turnLimitHit is set when the agent's answer text contains goose's
 	// turn-limit sentinel ("reached the maximum number of actions").
 	turnLimitHit bool
+
+	onCompleteStage func()
 }
 
 func newStreamAggregator(idRun int64, emit func(streamEvent)) *streamAggregator {
@@ -168,6 +165,9 @@ func (a *streamAggregator) handleMessage(sl streamLine) {
 			// so match on the suffix rather than an exact name.
 			if strings.Contains(call.Name, "complete_stage") {
 				a.sawCompleteStage = true
+				if a.onCompleteStage != nil {
+					a.onCompleteStage()
+				}
 			}
 			a.emit(streamEvent{Kind: "tool", Tool: call.Name, ToolDetail: call.Detail})
 		}

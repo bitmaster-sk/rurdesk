@@ -33,25 +33,6 @@ func NewSweep(
 	}
 }
 
-// RunCrashRecovery fails every active task on startup and its parent run
-// (FailRun, reason "crash_recovery"), freeing the agent's scheduler gate after
-// an API restart. A still-live gateway later reporting complete_stage for
-// such a task is reconciled, not rejected — the controller accepts a late
-// completion whose error_reason is in the recoverable allowlist.
-// Keep the blanket-fail: reconcile depends on the run being `failed` with a
-// recoverable reason.
-func (s *Sweep) RunCrashRecovery(ctx context.Context) error {
-	runIds, err := s.agentTaskRepo.FailStaleHeartbeats(ctx, 0)
-	if err != nil {
-		return err
-	}
-	for _, idRun := range runIds {
-		log.Info().Int64("idRun", idRun).Msg("crash recovery: failing orphaned run")
-		FailRun(ctx, s.notifier, s.projectRepo, s.agentRunRepo, s.agentTaskRepo, idRun, "crash_recovery")
-	}
-	return nil
-}
-
 // StartHeartbeatSweep runs every 2 minutes and fails tasks with no heartbeat for 10+ minutes.
 func (s *Sweep) StartHeartbeatSweep(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)

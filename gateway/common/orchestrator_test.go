@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -109,6 +113,160 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Fatalf("expected all %d stages to run, saw %d", taskCount, len(seen))
 		}
+	}
+}
+
+type cancellableAgent struct {
+	entered chan int64
+	release chan struct{}
+}
+
+func (a *cancellableAgent) Run(ctx context.Context, task Task) (RunStats, error) {
+	a.entered <- task.IdTask
+	select {
+	case <-a.release:
+		return RunStats{}, nil
+	case <-ctx.Done():
+		return RunStats{}, errors.New("agent cancelled")
+	}
+}
+
+func (a *cancellableAgent) Cancel(_ context.Context, _ RunID) error { return nil }
+
+func TestRunStage_ReleasesTheSlotWhenTheTrackerNoLongerRunsTheTask(t *testing.T) {
+	const goneTask, queuedTask = int64(100), int64(101)
+	var completedTasks sync.Map
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case fmt.Sprintf("/agent/task/%d/heartbeat", goneTask):
+			writer.WriteHeader(http.StatusConflict)
+			_, _ = writer.Write([]byte(`{"code":"TASK_NOT_RUNNING_BY_AGENT"}`))
+			return
+		case fmt.Sprintf("/agent/task/%d/complete", goneTask):
+			completedTasks.Store(goneTask, true)
+		}
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	workspaceBase := t.TempDir()
+	repoURL := "https://example.com/acme/myrepo.git"
+	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+	cfg := &Config{
+		TrackerAPIUrl:  server.URL,
+		WebhookSecret:  []byte("secret"),
+		WorkspaceBase:  workspaceBase,
+		RepoUrl:        repoURL,
+		RepoBranchBase: "main",
+		MaxConcurrent:  1,
+	}
+	agent := &cancellableAgent{entered: make(chan int64, 2), release: make(chan struct{})}
+	t.Cleanup(func() { close(agent.release) })
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+	orchestrator.heartbeatLoop.interval = 20 * time.Millisecond
+
+	go orchestrator.runStage(Task{IdTask: goneTask, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+	select {
+	case id := <-agent.entered:
+		if id != goneTask {
+			t.Fatalf("first Run was task %d, want %d", id, goneTask)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("no agent.Run started within timeout")
+	}
+	go orchestrator.runStage(Task{IdTask: queuedTask, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
+
+	select {
+	case id := <-agent.entered:
+		if id != queuedTask {
+			t.Fatalf("second Run was task %d, want %d", id, queuedTask)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("the queued task never got the slot after the tracker dropped the running one")
+	}
+	if _, ok := completedTasks.Load(goneTask); ok {
+		t.Error("gateway posted complete_stage for a task the tracker already dropped")
+	}
+}
+
+type submittingAgent struct {
+	entered   chan struct{}
+	release   chan struct{}
+	cancelled chan struct{}
+}
+
+func (a *submittingAgent) Run(ctx context.Context, task Task) (RunStats, error) {
+	task.ReportStageSubmitted()
+	close(a.entered)
+	select {
+	case <-a.release:
+		return RunStats{TokensUsed: 10}, nil
+	case <-ctx.Done():
+		close(a.cancelled)
+		return RunStats{}, errors.New("agent cancelled")
+	}
+}
+
+func (a *submittingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
+
+func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
+	var isStatsSent atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.URL.Path {
+		case "/agent/task/100/heartbeat":
+			writer.WriteHeader(http.StatusConflict)
+			_, _ = writer.Write([]byte(`{"code":"TASK_NOT_RUNNING_BY_AGENT"}`))
+			return
+		case "/agent/task/100/stats":
+			isStatsSent.Store(true)
+		}
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	workspaceBase := t.TempDir()
+	repoURL := "https://example.com/acme/myrepo.git"
+	repoPath := RepoPathFromURL(workspaceBase, repoURL)
+	initGitRepo(t, repoPath)
+	cfg := &Config{
+		TrackerAPIUrl:  server.URL,
+		WebhookSecret:  []byte("secret"),
+		WorkspaceBase:  workspaceBase,
+		RepoUrl:        repoURL,
+		RepoBranchBase: "main",
+		MaxConcurrent:  1,
+	}
+	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+	orchestrator.heartbeatLoop.interval = 20 * time.Millisecond
+
+	stageDone := make(chan struct{})
+	go func() {
+		orchestrator.runStage(Task{IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+		close(stageDone)
+	}()
+	select {
+	case <-agent.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("no agent.Run started within timeout")
+	}
+
+	select {
+	case <-agent.cancelled:
+		t.Fatal("agent was stopped although it had already called complete_stage")
+	case <-time.After(200 * time.Millisecond):
+	}
+	close(agent.release)
+	select {
+	case <-stageDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("stage did not finish after the agent returned")
+	}
+	if !WorktreeExists(repoPath, 200) {
+		t.Error("worktree of a submitted stage was removed")
+	}
+	if !isStatsSent.Load() {
+		t.Error("stats of a submitted stage were not sent")
 	}
 }
 

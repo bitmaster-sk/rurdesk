@@ -256,11 +256,14 @@ branch and PR are opened only once the previous PR was merged or closed.
 ### Surviving a restart
 
 Agent work runs in the gateway, a separate process from the tracker. If the
-**tracker restarts** (upgrade, outage) while a run is in progress, the run is
-briefly marked `failed` — but the gateway keeps working, and when it reports the
-finished stage the tracker **reconciles it automatically**: the stage output and
-the pull request are recorded and the run resumes its normal phase. No work is
-lost and no duplicate PR is opened — you don't need to do anything.
+**tracker restarts** (upgrade, outage) while a run is in progress, the run stays
+in progress and the gateway keeps working. Its heartbeats resume as soon as the
+tracker is back, and the stage output and pull request are recorded as usual. No
+work is lost — you don't need to do anything.
+
+If a gateway sends no heartbeat for 10 minutes, the tracker fails the stage. A
+gateway that is still alive then stops the agent and frees its slot, so the next
+stage is not stuck waiting behind work nobody will accept.
 
 If the **gateway** itself restarts (its subprocess dies with it), the affected run
 is failed and you resume it with **Continue** or **Restart**.

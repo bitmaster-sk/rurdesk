@@ -46,7 +46,7 @@ func TestDrainStderrLogsNonEmptyLinesWithSourceAndLevel(t *testing.T) {
 	log.Logger = zerolog.New(&buffer).Level(zerolog.DebugLevel)
 	t.Cleanup(func() { log.Logger = previous })
 
-	DrainStderr(strings.NewReader("Error: boom\r\n\nloading\n"), 42, "goose")
+	DrainStderr(strings.NewReader("Error: boom\r\n\nloading\n"), DefaultMaxOutputLineBytes, 42, "goose")
 
 	var entries []map[string]any
 	for _, raw := range strings.Split(strings.TrimSpace(buffer.String()), "\n") {

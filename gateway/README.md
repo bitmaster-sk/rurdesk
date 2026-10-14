@@ -123,6 +123,7 @@ start without all five. The other adapters share this exact contract.
 | -------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `LISTEN_PORT`                          | `9090`           | HTTP port for the webhook receiver (`POST /event`) and healthcheck (`GET /health`). Match the `ports:` mapping in your compose file. |
 | `MAX_CONCURRENT`                       | `1`              | Soft cap on in-flight runs per gateway instance. The shared MCP config path assumes `1` — keep it there.                             |
+| `MAX_OUTPUT_LINE_MB`                   | `4`              | Longest line of agent output read, in MB. A longer line is skipped and logged; the stage keeps running.                              |
 | `LOG_LEVEL`                            | `info`           | `debug` \| `info` \| `warn` \| `error`. JSON via `zerolog`.                                                                          |
 | `WORKSPACE_BASE`                       | `/worktrees`     | Root for per-run git worktrees. Must match the `gateway-workspace` volume mount.                                                     |
 | `REPO_BRANCH_BASE`                     | `main`           | Branch each per-run worktree starts from.                                                                                            |

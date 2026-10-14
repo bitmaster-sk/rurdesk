@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
@@ -149,7 +150,7 @@ func (s *AgentReconcileSuite) SetupTest() {
 
 // insertRun inserts a run for the suite issue in the given phase, no PR set.
 // When failed=true it also stamps finished_at + error_message='crash_recovery',
-// mirroring what RunCrashRecovery/FailRun leave behind.
+// mirroring what the former API-startup crash recovery left behind.
 func (s *AgentReconcileSuite) insertRun(phase string, failed bool) int64 {
 	var idRun int64
 	err := s.App.Pool.QueryRow(context.Background(), `
@@ -537,6 +538,32 @@ func (s *AgentReconcileSuite) Test_09d_ErroredWithoutBranchStillRecorded() {
 
 	s.Equal("failed", s.loadRun(idRun).Phase)
 	s.Equal("failed", s.loadTask(idTask).Status)
+}
+
+func (s *AgentReconcileSuite) Test_10_StaleSweepKeepsATaskWhoseGatewaySendsHeartbeats() {
+	ctx := context.Background()
+	idRun := s.insertRun("in_progress", false)
+	liveTask := s.insertTask(idRun, "implementation", "active", nil)
+	staleTask := s.insertTask(idRun, "design", "active", nil)
+	_, err := s.App.Pool.Exec(ctx,
+		"UPDATE agent.task SET last_heartbeat_at = now() - interval '15 minutes' WHERE id_task IN ($1, $2)",
+		liveTask, staleTask)
+	s.Require().NoError(err)
+
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/agent/task/%d/heartbeat", liveTask), "", s.AgentToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	_, err = injector.GetAgentTaskRepository().FailStaleHeartbeats(ctx, 10*time.Minute)
+	s.Require().NoError(err)
+
+	s.Equal("active", s.loadTask(liveTask).Status)
+	var staleStatus, staleReason string
+	s.Require().NoError(s.App.Pool.QueryRow(ctx,
+		"SELECT status, error_reason FROM agent.task WHERE id_task = $1", staleTask,
+	).Scan(&staleStatus, &staleReason))
+	s.Equal("failed", staleStatus)
+	s.Equal("heartbeat_stale", staleReason)
 }
 
 func Test_RunAgentReconcileSuite(t *testing.T) {
