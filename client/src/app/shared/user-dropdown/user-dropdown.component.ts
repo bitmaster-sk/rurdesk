@@ -17,7 +17,9 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 import { AgentRunApi } from '../../agent/api/agent-run.api.service';
 import { AgentRun } from '../../agent/model/agent-run.model';
 import { UiSelectComponent } from '../../ui/components/select/select.component';
+import { UiSelectOptionPicked } from '../../ui/components/select/option-picked.event';
 import { AgentOverview } from '../../agent/model/agent-overview.model';
+import { AgentDockComponent, AgentDockKind } from '../components/agent-dock/agent-dock.component';
 
 // `optionValue="idUser"`, so the bound value is an id (multi: a list of ids).
 type UserDropdownValue = number | number[] | null;
@@ -50,6 +52,7 @@ export class UserDropdownComponent implements ControlValueAccessor {
     private readonly agentRunApi = inject(AgentRunApi);
     private readonly destroyRef = inject(DestroyRef);
     private readonly select = viewChild(UiSelectComponent);
+    private readonly agentDock = viewChild(AgentDockComponent);
 
     protected readonly overviewByAgent = signal<Map<number, AgentOverview>>(new Map());
 
@@ -91,6 +94,19 @@ export class UserDropdownComponent implements ControlValueAccessor {
 
     public registerOnTouched(fn: (value: UserDropdownValue) => void): void {
         this.onTouch = fn;
+    }
+
+    protected onOptionPicked(event: UiSelectOptionPicked<User>): void {
+        const dock = this.agentDock();
+        if (
+            !event.isDockedOption ||
+            (event.dock?.kind as AgentDockKind) !== AgentDockKind.Skills ||
+            !dock
+        ) {
+            return;
+        }
+        event.preventDefault();
+        dock.onAssign();
     }
 
     protected overviewOf(idUser: number): AgentOverview | null {

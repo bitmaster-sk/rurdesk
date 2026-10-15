@@ -4,6 +4,7 @@ import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiModule } from '../../ui.module';
+import { UiSelectOptionPicked } from './option-picked.event';
 
 interface Opt {
     label: string;
@@ -20,6 +21,7 @@ interface Opt {
                 optionValue="value"
                 placeholder="Pick one"
                 [formControl]="ctrl"
+                (optionPicked)="onPicked($event)"
                 (opened)="openedCount = openedCount + 1"
                 (valueChanged)="changeCount = changeCount + 1"
             >
@@ -47,6 +49,15 @@ class HostComponent {
     public readonly ctrl = new FormControl<string | null>(null);
     public openedCount = 0;
     public changeCount = 0;
+    public readonly picked: UiSelectOptionPicked<Opt>[] = [];
+    public isPreventing = false;
+
+    public onPicked(event: UiSelectOptionPicked<Opt>): void {
+        this.picked.push(event);
+        if (this.isPreventing) {
+            event.preventDefault();
+        }
+    }
 }
 
 abstract class Dom {
@@ -150,5 +161,57 @@ describe('UiSelectComponent docks (browser)', () => {
         fixture.detectChanges();
 
         expect(Dom.panel()?.classList.contains('ui-select-panel--dock-below')).toBe(true);
+    });
+
+    it('reports a pick on the docked option together with its dock', () => {
+        const fixture = setup();
+        Dom.actions()[1].click();
+        fixture.detectChanges();
+
+        Dom.panelOptions()[1].click();
+        fixture.detectChanges();
+
+        const [picked] = fixture.componentInstance.picked;
+        expect(picked.value).toBe('b');
+        expect(picked.isDockedOption).toBe(true);
+        expect(picked.dock).toEqual({ option: { label: 'Beta', value: 'b' }, kind: 'info' });
+        expect(fixture.componentInstance.ctrl.value).toBe('b');
+    });
+
+    it('a prevented pick keeps the value, the panel and the dock', () => {
+        const fixture = setup();
+        fixture.componentInstance.isPreventing = true;
+        Dom.actions()[1].click();
+        fixture.detectChanges();
+
+        Dom.panelOptions()[1].click();
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.ctrl.value).toBeNull();
+        expect(fixture.componentInstance.changeCount).toBe(0);
+        expect(Dom.dock()).not.toBeNull();
+    });
+
+    it('picking another option than the docked one says so and closes the dock', () => {
+        const fixture = setup();
+        Dom.actions()[1].click();
+        fixture.detectChanges();
+
+        Dom.panelOptions()[0].click();
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.picked[0].isDockedOption).toBe(false);
+        expect(fixture.componentInstance.ctrl.value).toBe('a');
+        expect(Dom.dock()).toBeNull();
+    });
+
+    it('a pick with no dock open reports no dock', () => {
+        const fixture = setup();
+
+        Dom.panelOptions()[0].click();
+        fixture.detectChanges();
+
+        expect(fixture.componentInstance.picked[0].dock).toBeNull();
+        expect(fixture.componentInstance.ctrl.value).toBe('a');
     });
 });

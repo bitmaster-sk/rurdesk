@@ -103,7 +103,10 @@ export class AgentDockComponent implements OnInit {
         this.close()();
     }
 
-    protected onAssign(): void {
+    public onAssign(): void {
+        if (this.isLoading() || this.isAssigning()) {
+            return;
+        }
         const body: CreateAgentRunReq = {
             idUserAgent: this.agent().idUser,
             idsSkillByStage: this.idsSkillByStage(),
