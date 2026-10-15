@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/stretchr/testify/suite"
@@ -131,40 +132,162 @@ func (s *AssignAgentSuite) TestAssignCreatesExactlyOneRunWithRequestedSkills() {
 	s.Equal(s.AgentUserID, *reloaded.AssignedTo)
 }
 
-func (s *AssignAgentSuite) TestSecondAssignWhileActiveConflicts() {
-	iss := s.createIssue("assign-twice")
-
-	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
-	s.Require().Equal(http.StatusOK, first.StatusCode)
-
-	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
-	s.Equal(http.StatusConflict, second.StatusCode)
-	s.Equal(1, s.runCount(iss.IdIssuePublic))
+func (s *AssignAgentSuite) assignFromDialog(idIssuePublic, idUserAgent int64, idsSkillByStage string, isShortWorkflow bool) *http.Response {
+	return s.assignAgent(idIssuePublic,
+		fmt.Sprintf(`{"idUserAgent":%d,"idsSkillByStage":%s,"isShortWorkflow":%t}`, idUserAgent, idsSkillByStage, isShortWorkflow),
+		s.Token)
 }
 
-// The active-run conflict is refused before the transaction opens, so this pins
-// the guard, not the 23505 rollback behind it — that needs a real race.
-func (s *AssignAgentSuite) TestRefusedAssignLeavesTheAssigneeUntouched() {
-	iss := s.createIssue("assign-conflict-rollback")
+func (s *AssignAgentSuite) startRun(idIssuePublic int64, completedStages ...string) model.AgentRun {
+	res := s.assignAgent(idIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var run model.AgentRun
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&run))
 
-	first := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
-	s.Require().Equal(http.StatusOK, first.StatusCode)
+	ctx := context.Background()
+	for _, stage := range completedStages {
+		task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, s.AgentUserID, stage, 1)
+		s.Require().NoError(err)
+		_, err = s.App.Pool.Exec(ctx, "UPDATE agent.task SET status = 'completed' WHERE id_task = $1", task.IdTask)
+		s.Require().NoError(err)
+	}
+	_, err := s.App.Pool.Exec(ctx, "UPDATE agent.run SET phase = 'in_progress' WHERE id_run = $1", run.IdRun)
+	s.Require().NoError(err)
+	return run
+}
 
-	edit := Request(s.T(), s.App, "PATCH",
-		fmt.Sprintf("/api/private/project/%d/issue/%d", s.IdProject, iss.IdIssuePublic),
+func (s *AssignAgentSuite) assignHuman(idIssuePublic int64) {
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/issue/%d", s.IdProject, idIssuePublic),
 		fmt.Sprintf(`{"idProject":%d,"assignedTo":%d}`, s.IdProject, s.HumanID), s.Token)
-	s.Require().Equal(http.StatusOK, edit.StatusCode)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+}
 
-	second := s.assignAgent(iss.IdIssuePublic, fmt.Sprintf(`{"idUserAgent":%d}`, s.AgentUserID), s.Token)
-	s.Require().Equal(http.StatusConflict, second.StatusCode)
+func (s *AssignAgentSuite) snapshot(idIssuePublic int64) model.AgentRunWithEvents {
+	res := Request(s.T(), s.App, "GET",
+		fmt.Sprintf("/api/private/project/%d/issue/%d/agent/run", s.IdProject, idIssuePublic), "", s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var snapshot model.AgentRunWithEvents
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&snapshot))
+	return snapshot
+}
 
-	issRes := Request(s.T(), s.App, "GET",
-		fmt.Sprintf("/api/private/project/%d/issue/%d", s.IdProject, iss.IdIssuePublic), "", s.Token)
-	s.Require().Equal(http.StatusOK, issRes.StatusCode)
+func (s *AssignAgentSuite) assignee(idIssuePublic int64) *int64 {
+	res := Request(s.T(), s.App, "GET",
+		fmt.Sprintf("/api/private/project/%d/issue/%d", s.IdProject, idIssuePublic), "", s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
 	var reloaded model.Issue
-	s.Require().NoError(json.NewDecoder(issRes.Body).Decode(&reloaded))
-	s.Require().NotNil(reloaded.AssignedTo)
-	s.Equal(s.HumanID, *reloaded.AssignedTo, "a refused assign must not change the assignee")
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&reloaded))
+	return reloaded.AssignedTo
+}
+
+func stagePlanOf(s *suite.Suite, stagePlan json.RawMessage) map[string]model.StagePlanEntry {
+	var plan model.StagePlan
+	s.Require().NoError(json.Unmarshal(stagePlan, &plan))
+	byName := map[string]model.StagePlanEntry{}
+	for _, entry := range plan.Stages {
+		byName[entry.Name] = entry
+	}
+	return byName
+}
+
+func (s *AssignAgentSuite) TestUnassignedAgentLeavesTheRunParked() {
+	iss := s.createIssue("assign-parked")
+	s.startRun(iss.IdIssuePublic)
+	s.False(s.snapshot(iss.IdIssuePublic).IsParked)
+
+	s.assignHuman(iss.IdIssuePublic)
+
+	s.True(s.snapshot(iss.IdIssuePublic).IsParked, "the run's agent no longer holds the issue, so nothing dispatches")
+}
+
+func (s *AssignAgentSuite) TestAssignAgainResumesTheParkedRunWithTheDialogChoices() {
+	iss := s.createIssue("assign-resume")
+	original := s.startRun(iss.IdIssuePublic, "pickup", "brainstorming")
+	s.assignHuman(iss.IdIssuePublic)
+
+	res := s.assignFromDialog(iss.IdIssuePublic, s.AgentUserID,
+		fmt.Sprintf(`{"brainstorming":[%d],"design":[%d]}`, s.IdSkill, s.IdSkill), true)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var run model.AgentRun
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&run))
+
+	s.Equal(original.IdRun, run.IdRun, "the parked run continues instead of a new one")
+	s.Equal(1, s.runCount(iss.IdIssuePublic))
+	plan := stagePlanOf(&s.Suite, run.StagePlan)
+	s.Empty(plan["brainstorming"].IdsSkill, "brainstorming already ran, so its skills are settled")
+	s.Equal([]int64{s.IdSkill}, plan["design"].IdsSkill)
+	s.True(plan["design"].Skip, "the short workflow is applied while design has not started")
+
+	s.False(s.snapshot(iss.IdIssuePublic).IsParked)
+	s.Require().NotNil(s.assignee(iss.IdIssuePublic))
+	s.Equal(s.AgentUserID, *s.assignee(iss.IdIssuePublic))
+}
+
+func (s *AssignAgentSuite) TestAssignAgainRefusesALockedWorkflowChange() {
+	iss := s.createIssue("assign-locked")
+	s.startRun(iss.IdIssuePublic, "pickup", "brainstorming", "design")
+	s.assignHuman(iss.IdIssuePublic)
+
+	res := s.assignFromDialog(iss.IdIssuePublic, s.AgentUserID, `{}`, true)
+
+	s.Require().Equal(http.StatusConflict, res.StatusCode)
+	s.Equal("WORKFLOW_LOCKED", errorCode(s.T(), res))
+	s.Require().NotNil(s.assignee(iss.IdIssuePublic))
+	s.Equal(s.HumanID, *s.assignee(iss.IdIssuePublic), "a refused assign must not change the assignee")
+	s.True(s.snapshot(iss.IdIssuePublic).IsParked)
+}
+
+func (s *AssignAgentSuite) TestAssignAnotherAgentHandsTheParkedRunOver() {
+	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+		`{"name":"assignsecondbot","isAgent":true}`, s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var second struct {
+		IdUser int64 `json:"idUser"`
+	}
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&second))
+	defer func() {
+		ctx := context.Background()
+		s.App.Pool.Exec(ctx,
+			"DELETE FROM agent.task WHERE id_run IN (SELECT id_run FROM agent.run WHERE id_project = $1)", s.IdProject)
+		s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
+		s.App.Pool.Exec(ctx, "DELETE FROM users.user WHERE id_user = $1", second.IdUser)
+	}()
+	member := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, second.IdUser), s.Token)
+	s.Require().Equal(http.StatusOK, member.StatusCode)
+	gw := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", second.IdUser),
+		`{"gatewayUrl":"http://gw:9092"}`, s.Token)
+	s.Require().Equal(http.StatusOK, gw.StatusCode)
+
+	iss := s.createIssue("assign-hand-over")
+	original := s.startRun(iss.IdIssuePublic, "pickup")
+	s.assignHuman(iss.IdIssuePublic)
+
+	assign := s.assignFromDialog(iss.IdIssuePublic, second.IdUser, `{}`, false)
+	s.Require().Equal(http.StatusOK, assign.StatusCode)
+	var run model.AgentRun
+	s.Require().NoError(json.NewDecoder(assign.Body).Decode(&run))
+
+	s.Equal(original.IdRun, run.IdRun)
+	s.Equal(second.IdUser, run.IdUserAgent)
+	s.Equal(1, s.runCount(iss.IdIssuePublic))
+	s.False(s.snapshot(iss.IdIssuePublic).IsParked)
+}
+
+func (s *AssignAgentSuite) TestAssignWhileTheRunIsWorkingConflicts() {
+	iss := s.createIssue("assign-working")
+	original := s.startRun(iss.IdIssuePublic, "pickup")
+
+	res := s.assignFromDialog(iss.IdIssuePublic, s.AgentUserID,
+		fmt.Sprintf(`{"implementation":[%d]}`, s.IdSkill), true)
+
+	s.Require().Equal(http.StatusConflict, res.StatusCode)
+	s.Equal("ISSUE_HAS_ACTIVE_RUN", errorCode(s.T(), res))
+	run := s.snapshot(iss.IdIssuePublic)
+	s.Equal(original.StagePlan, run.StagePlan, "a working run's plan is not rewritten from the dialog")
 }
 
 func (s *AssignAgentSuite) TestAssignAgentFromAnotherProjectRejected() {

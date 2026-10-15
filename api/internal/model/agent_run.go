@@ -27,8 +27,9 @@ type AgentRun struct {
 
 type AgentRunWithEvents struct {
 	AgentRun
-	Events []*AgentRunEvent     `json:"events"`
-	Stages []AgentStageProgress `json:"stages"`
+	Events   []*AgentRunEvent     `json:"events"`
+	Stages   []AgentStageProgress `json:"stages"`
+	IsParked bool                 `json:"isParked"`
 }
 
 // AgentStageProgress is one row of the run timeline, derived server-side from

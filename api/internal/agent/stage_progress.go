@@ -20,12 +20,21 @@ const (
 // BuildRunSnapshot assembles the payload the client renders — run, events,
 // and derived stage timeline. Shared by GET endpoints and the websocket
 // broadcast so they never diverge.
-func BuildRunSnapshot(run *model.AgentRun, events []*model.AgentRunEvent, tasks []*model.AgentTask) *model.AgentRunWithEvents {
+func BuildRunSnapshot(run *model.AgentRun, events []*model.AgentRunEvent, tasks []*model.AgentTask, idAssignee *int64) *model.AgentRunWithEvents {
 	return &model.AgentRunWithEvents{
 		AgentRun: *run,
 		Events:   events,
 		Stages:   BuildStageProgress(run, tasks, events),
+		IsParked: IsParked(run, idAssignee),
 	}
+}
+
+// An open PR waits for a merge, not for the agent, so it never counts as parked.
+func IsParked(run *model.AgentRun, idAssignee *int64) bool {
+	if constants.TerminalPhases[run.Phase] || run.Phase == constants.PhasePrOpen {
+		return false
+	}
+	return idAssignee == nil || *idAssignee != run.IdUserAgent
 }
 
 // BuildStageProgress derives the timeline stepper rows from the run's stage

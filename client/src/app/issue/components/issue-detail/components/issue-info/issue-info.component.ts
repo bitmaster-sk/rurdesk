@@ -578,6 +578,10 @@ export class IssueInfoComponent implements OnInit {
         }
     }
 
+    protected onAssignBackRun(run: AgentRun): void {
+        this.assignedToControl.setValue(run.idUserAgent);
+    }
+
     protected onMrLinkCancelled(): void {
         this.isMrLinkPickerOpen.set(false);
     }

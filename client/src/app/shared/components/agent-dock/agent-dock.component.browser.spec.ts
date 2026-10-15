@@ -54,14 +54,20 @@ abstract class Dom {
 describe('AgentDockComponent (browser)', () => {
     let skillApi: { load$: ReturnType<typeof vi.fn> };
     let projectSkillApi: { load$: ReturnType<typeof vi.fn> };
-    let agentRunApi: { assignAgent$: ReturnType<typeof vi.fn> };
+    let agentRunApi: {
+        assignAgent$: ReturnType<typeof vi.fn>;
+        loadByIssue$: ReturnType<typeof vi.fn>;
+    };
     let toast: { showError: ReturnType<typeof vi.fn> };
     let closeSpy: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         skillApi = { load$: vi.fn().mockReturnValue(of(SKILLS)) };
         projectSkillApi = { load$: vi.fn().mockReturnValue(of(DEFAULTS)) };
-        agentRunApi = { assignAgent$: vi.fn().mockReturnValue(of(RUN)) };
+        agentRunApi = {
+            assignAgent$: vi.fn().mockReturnValue(of(RUN)),
+            loadByIssue$: vi.fn().mockReturnValue(of(null))
+        };
         toast = { showError: vi.fn() };
         closeSpy = vi.fn();
     });
@@ -123,6 +129,64 @@ describe('AgentDockComponent (browser)', () => {
         expect(closeSpy).toHaveBeenCalled();
     });
 
+    it('a paused run prefills its own skills and workflow, not the project defaults', async () => {
+        agentRunApi.loadByIssue$ = vi.fn().mockReturnValue(
+            of({
+                ...RUN,
+                isParked: true,
+                stagePlan: {
+                    stages: [
+                        { name: AgentStage.Design, skippable: true, skip: true, idsSkill: [] },
+                        {
+                            name: AgentStage.ImplementationPlan,
+                            skippable: false,
+                            skip: true,
+                            idsSkill: []
+                        },
+                        {
+                            name: AgentStage.Implementation,
+                            skippable: false,
+                            skip: false,
+                            idsSkill: [2]
+                        }
+                    ]
+                }
+            })
+        );
+        const fixture = await setup(AgentDockKind.Skills);
+        const root = fixture.nativeElement as HTMLElement;
+
+        expect(Dom.chip(root, 2, AgentStage.Implementation).getAttribute('aria-pressed')).toBe(
+            'true'
+        );
+        expect(Dom.chip(root, 1, AgentStage.Implementation).getAttribute('aria-pressed')).toBe(
+            'false'
+        );
+        expect(projectSkillApi.load$).not.toHaveBeenCalled();
+        expect(Dom.text(root, 'agent-dock-prefilled')).toBe('AGENT_DOCK.PREFILLED_FROM_RUN');
+
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(7, 42, {
+            idUserAgent: 8,
+            idsSkillByStage: { implementation: [2] },
+            isShortWorkflow: true
+        });
+    });
+
+    it('a run that is not paused keeps the project defaults', async () => {
+        agentRunApi.loadByIssue$ = vi.fn().mockReturnValue(of({ ...RUN, isParked: false }));
+        const fixture = await setup(AgentDockKind.Skills);
+        const root = fixture.nativeElement as HTMLElement;
+
+        expect(Dom.text(root, 'agent-dock-prefilled')).toBe('AGENT_DOCK.PREFILLED');
+
+        expect(Dom.chip(root, 1, AgentStage.Implementation).getAttribute('aria-pressed')).toBe(
+            'true'
+        );
+    });
+
     it('assigns with the short workflow when the user turns it on', async () => {
         const fixture = await setup(AgentDockKind.Skills);
         const root = fixture.nativeElement as HTMLElement;
@@ -149,6 +213,25 @@ describe('AgentDockComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(toast.showError).toHaveBeenCalledWith('AGENT_DOCK.ASSIGN_ERROR');
+        expect(assigned).not.toHaveBeenCalled();
+        expect(closeSpy).not.toHaveBeenCalled();
+    });
+
+    it('a refused assign leaves the specific server error to the interceptor toast', async () => {
+        agentRunApi.assignAgent$ = vi.fn().mockReturnValue(
+            throwError(() => ({
+                status: 409,
+                error: { code: 'WORKFLOW_LOCKED', translateKey: 'error.workflow_locked' }
+            }))
+        );
+        const fixture = await setup(AgentDockKind.Skills);
+        const assigned = vi.fn();
+        fixture.componentInstance.assigned.subscribe(assigned);
+
+        Dom.byTestId(fixture.nativeElement, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(toast.showError).not.toHaveBeenCalledWith('AGENT_DOCK.ASSIGN_ERROR');
         expect(assigned).not.toHaveBeenCalled();
         expect(closeSpy).not.toHaveBeenCalled();
     });

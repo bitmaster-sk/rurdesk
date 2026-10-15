@@ -20,6 +20,7 @@ export interface AgentRun {
     createdAt: string;
     events?: AgentRunEvent[];
     stages?: AgentStageProgress[];
+    isParked?: boolean;
 }
 
 export type AgentStageStatus =

@@ -16,10 +16,15 @@ import (
 // without a refetch. Events/tasks loads are best-effort — on error the notice
 // still goes out with an empty slice, so a DB hiccup doesn't swallow the phase
 // update. Scoped to project members only.
+type assigneeLoader interface {
+	LoadAssignee(ctx context.Context, idIssue int64) (*int64, error)
+}
+
 func BroadcastRunUpdate(
 	ctx context.Context,
 	notifier *notify.Notifier,
 	projectRepo *repository.ProjectRepository,
+	issueRepo assigneeLoader,
 	runRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	run *model.AgentRun,
@@ -37,6 +42,11 @@ func BroadcastRunUpdate(
 		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: tasks load failed, sending without")
 		tasks = nil
 	}
+	idAssignee, err := issueRepo.LoadAssignee(ctx, run.IdIssue)
+	if err != nil {
+		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: assignee load failed, sending as not parked")
+		idAssignee = &run.IdUserAgent
+	}
 
 	var idsUser []int64
 	if projectRepo != nil {
@@ -53,7 +63,7 @@ func BroadcastRunUpdate(
 		IdsUser: idsUser,
 		Subject: notify.SubjectAgentRun,
 		Action:  notify.ActionUpdate,
-		Payload: BuildRunSnapshot(run, events, tasks),
+		Payload: BuildRunSnapshot(run, events, tasks, idAssignee),
 	}
 }
 
@@ -197,6 +207,7 @@ func FailRun(
 	ctx context.Context,
 	notifier *notify.Notifier,
 	projectRepo *repository.ProjectRepository,
+	issueRepo assigneeLoader,
 	runRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	idRun int64,
@@ -215,5 +226,5 @@ func FailRun(
 		_ = runRepo.SetErrorMessage(ctx, idRun, msg)
 		updated.ErrorMessage = &msg
 	}
-	BroadcastRunUpdate(ctx, notifier, projectRepo, runRepo, taskRepo, updated)
+	BroadcastRunUpdate(ctx, notifier, projectRepo, issueRepo, runRepo, taskRepo, updated)
 }

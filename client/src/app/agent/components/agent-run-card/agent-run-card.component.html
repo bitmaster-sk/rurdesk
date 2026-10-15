@@ -10,8 +10,13 @@
             <span class="avatar"><tabler-icon icon="robot" [size]="14" /></span>
             <span class="title">{{ 'AGENT.SIDEBAR.TITLE' | translate }} #{{ run.idRun }}</span>
             <ui-tag
+                data-testid="run-phase-tag"
                 [value]="phaseLabelForRun | translate"
                 [severity]="phaseSeverityForRun"
+                [uiTooltip]="
+                    isParked() ? (parkedReasonKey() | translate: { name: assigneeName() }) : ''
+                "
+                uiTooltipPosition="top"
             ></ui-tag>
             @if (run.startedAt) {
                 <span class="meta-inline">
@@ -35,6 +40,24 @@
                         variant="outlined"
                         [label]="'AGENT.ACTIONS.RESTART' | translate"
                         (click)="onRestartClick($event)"
+                    ></ui-button>
+                } @else if (isParked()) {
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        data-testid="run-assign-back"
+                        [label]="'AGENT.ACTIONS.ASSIGN_BACK' | translate"
+                        (click)="onAssignBackClick($event)"
+                    ></ui-button>
+                    <ui-button
+                        type="button"
+                        size="small"
+                        severity="secondary"
+                        variant="outlined"
+                        [label]="'AGENT.SIDEBAR.CANCEL_RUN' | translate"
+                        (click)="onCancelClick($event)"
                     ></ui-button>
                 } @else if (isAwaitingInput()) {
                     <span class="awaiting-input-hint">

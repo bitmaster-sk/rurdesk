@@ -26,6 +26,7 @@ type Scheduler struct {
 	runRepo     *repository.AgentRunRepository
 	taskRepo    *repository.AgentTaskRepository
 	projectRepo *repository.ProjectRepository
+	issueRepo   *repository.IssueRepository
 	dispatcher  StageDispatcher
 	notifier    *notify.Notifier
 
@@ -37,6 +38,7 @@ func NewScheduler(
 	runRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	projectRepo *repository.ProjectRepository,
+	issueRepo *repository.IssueRepository,
 	dispatcher StageDispatcher,
 	notifier *notify.Notifier,
 ) *Scheduler {
@@ -45,6 +47,7 @@ func NewScheduler(
 		runRepo:     runRepo,
 		taskRepo:    taskRepo,
 		projectRepo: projectRepo,
+		issueRepo:   issueRepo,
 		dispatcher:  dispatcher,
 		notifier:    notifier,
 	}
@@ -149,7 +152,7 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 			updated, terr := s.runRepo.TransitionPhase(ctx, run.IdRun, constants.PhaseQueued, constants.PhaseDone, constants.ActorTypeSystem, nil, "no stage to dispatch")
 			if terr == nil {
 				log.Warn().Int64("idRun", run.IdRun).Msg("scheduler: queued run had no stage to dispatch — marked done")
-				BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.runRepo, s.taskRepo, updated)
+				BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.issueRepo, s.runRepo, s.taskRepo, updated)
 			}
 		}
 		return nil
@@ -177,7 +180,7 @@ func (s *Scheduler) activateAndDispatch(ctx context.Context, run *model.AgentRun
 	// Must fire even when the run was already in_progress (e.g. dispatching
 	// the next stage right after a user approval) — otherwise the timeline
 	// shows the prior stage as pending until it completes.
-	BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.runRepo, s.taskRepo, broadcastRun)
+	BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.issueRepo, s.runRepo, s.taskRepo, broadcastRun)
 	s.dispatcher.DispatchStageExecute(ctx, run, task)
 	return nil
 }

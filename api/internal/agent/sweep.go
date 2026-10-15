@@ -13,6 +13,7 @@ type Sweep struct {
 	agentTaskRepo *repository.AgentTaskRepository
 	agentRunRepo  *repository.AgentRunRepository
 	projectRepo   *repository.ProjectRepository
+	issueRepo     *repository.IssueRepository
 	dedupRepo     *repository.WebhookDedupRepository
 	notifier      *notify.Notifier
 }
@@ -21,6 +22,7 @@ func NewSweep(
 	taskRepo *repository.AgentTaskRepository,
 	runRepo *repository.AgentRunRepository,
 	projectRepo *repository.ProjectRepository,
+	issueRepo *repository.IssueRepository,
 	dedupRepo *repository.WebhookDedupRepository,
 	notifier *notify.Notifier,
 ) *Sweep {
@@ -28,6 +30,7 @@ func NewSweep(
 		agentTaskRepo: taskRepo,
 		agentRunRepo:  runRepo,
 		projectRepo:   projectRepo,
+		issueRepo:     issueRepo,
 		dedupRepo:     dedupRepo,
 		notifier:      notifier,
 	}
@@ -63,6 +66,6 @@ func (s *Sweep) runHeartbeatSweep(ctx context.Context) {
 	}
 	for _, idRun := range runIds {
 		log.Warn().Int64("idRun", idRun).Msg("heartbeat sweep: failing run with stale heartbeat")
-		FailRun(ctx, s.notifier, s.projectRepo, s.agentRunRepo, s.agentTaskRepo, idRun, "heartbeat_stale")
+		FailRun(ctx, s.notifier, s.projectRepo, s.issueRepo, s.agentRunRepo, s.agentTaskRepo, idRun, "heartbeat_stale")
 	}
 }

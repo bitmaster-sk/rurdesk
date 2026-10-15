@@ -147,7 +147,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 	s.Require().NoError(err)
 
 	dispatcher := &stubStageDispatcher{}
-	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, dispatcher, injector.GetNotifier())
+	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, injector.GetIssueRepository(), dispatcher, injector.GetNotifier())
 
 	s.Require().NoError(sched.TickOnce(ctx))
 

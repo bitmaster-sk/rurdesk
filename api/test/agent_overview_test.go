@@ -74,6 +74,9 @@ func (s *AgentOverviewSuite) SetupSuite() {
 	}
 	s.IssueA = s.createIssueIn(s.IdProjectA, "overview-a")
 	s.IssueB = s.createIssueIn(s.IdProjectB, "overview-b")
+	_, err := s.App.Pool.Exec(ctx, "UPDATE issues.issue SET assigned_to = $1 WHERE id_issue IN ($2, $3)",
+		s.BusyAgentID, s.IssueA.IdIssue, s.IssueB.IdIssue)
+	s.Require().NoError(err)
 
 	runA, err := injector.GetAgentRunRepository().Insert(ctx, s.IssueA.IdIssue, s.BusyAgentID, s.IdProjectA, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
@@ -136,6 +139,20 @@ func (s *AgentOverviewSuite) TestOtherProjectSeesQueueButNotForeignCurrent() {
 
 	s.True(busy.IsBusy, "busy is a property of the bot, not of the project")
 	s.Nil(busy.Current, "the active run belongs to project A — its issue must not leak")
+	s.Equal([]int64{s.IssueB.IdIssuePublic}, busy.QueuedIdsIssuePublic)
+}
+
+func (s *AgentOverviewSuite) TestParkedQueuedRunIsNotInTheQueue() {
+	ctx := context.Background()
+	parked := s.createIssueIn(s.IdProjectB, "overview-parked")
+	run, err := injector.GetAgentRunRepository().Insert(ctx, parked.IdIssue, s.BusyAgentID, s.IdProjectB, emptyStagePlan(s.T()))
+	s.Require().NoError(err)
+	defer s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_run = $1", run.IdRun)
+
+	all, _ := s.overview(s.IdProjectB, s.Token)
+	busy := s.agentRow(all, s.BusyAgentID)
+
+	s.Equal(1, busy.QueueCount, "the issue is not assigned to the agent, so the scheduler will not pick the run")
 	s.Equal([]int64{s.IssueB.IdIssuePublic}, busy.QueuedIdsIssuePublic)
 }
 

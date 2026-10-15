@@ -26,6 +26,7 @@
     "AGENT_DOCK": {
         "SKILLS_TITLE": "{{name}} — this run",
         "PREFILLED": "Skills · prefilled from project",
+        "PREFILLED_FROM_RUN": "Skills · prefilled from the paused run",
         "ASSIGN": "Assign",
         "CANCEL": "Cancel",
         "INFO_TITLE": "{{name}} — workload",
@@ -99,6 +100,7 @@
             "IN_PROGRESS": "In progress",
             "AWAITING_INPUT": "Awaiting input",
             "AWAITING_APPROVAL": "Awaiting approval",
+            "PAUSED": "Paused",
             "PR_OPEN": "Waiting for merge",
             "DONE": "Done",
             "FAILED": "Failed",
@@ -129,7 +131,8 @@
             "SELECTED": "Selected",
             "REJECTED": "Not chosen",
             "CONTINUE": "Continue",
-            "RESTART": "Restart"
+            "RESTART": "Restart",
+            "ASSIGN_BACK": "Assign back"
         },
         "RESTART_HAS_PR": "This run already has a pull request. Use Continue instead — restarting would open a duplicate.",
         "RESTART_FAILED": "Could not restart the run. Please try again.",
@@ -188,7 +191,9 @@
             "CONTINUE_HINT": "Click Continue to redo the current stage"
         },
         "CARD": {
-            "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below."
+            "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below.",
+            "PARKED_UNASSIGNED": "The task has no agent assigned. Assign the agent back to continue.",
+            "PARKED_REASSIGNED": "The task is assigned to {{name}}. Assign the agent back to continue."
         },
         "TIMELINE": {
             "STATUS": {
@@ -1137,11 +1142,12 @@
         "run_not_awaiting_approval": "The run is not awaiting approval.",
         "phase_mismatch": "The run phase changed unexpectedly. Please refresh and try again.",
         "run_terminal": "This run is already finished.",
+        "workflow_locked": "Design, plan or implementation already started, so the workflow length can no longer be changed.",
         "run_continue_invalid": "Continue is only valid on failed or cancelled runs.",
         "no_stage_to_continue": "There is no next stage to continue to.",
         "run_has_pr": "This run already has a pull request. Continue or close it instead.",
         "task_not_found": "Task not found.",
-        "issue_has_active_run": "This issue already has an active run. Change the assignee to hand it over.",
+        "issue_has_active_run": "This issue already has an active run.",
         "agent_post_while_run_paused": "The agent cannot post while the run is paused.",
         "attachment_too_large": "The file is larger than the allowed upload size.",
         "attachment_type_not_allowed": "This file type cannot be attached.",

@@ -119,6 +119,7 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 		FROM agent.run r
 		JOIN issues.issue i ON i.id_issue = r.id_issue
 		WHERE r.phase = $1
+		  AND i.assigned_to = r.id_user_agent
 		ORDER BY r.created_at
 	`, constants.PhaseQueued)
 	if err != nil {

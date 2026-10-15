@@ -6,6 +6,7 @@ import { AgentRunCardComponent } from './agent-run-card.component';
 import { AgentPhase } from '../../model/agent-phase.enum';
 import { UiModule } from '../../../ui/ui.module';
 import { TablerIconStub } from 'src/testing/stubs';
+import { vi } from 'vitest';
 
 @Component({ selector: 'app-run-recovery-banner', template: '', standalone: true })
 class RunRecoveryBannerStub {
@@ -74,5 +75,62 @@ describe('AgentRunCardComponent', () => {
     it('offers a cancel action while the run is still in progress', () => {
         const el = renderWithPhase(AgentPhase.InProgress);
         expect(el.querySelectorAll('.summary-actions button').length).toBe(1);
+    });
+
+    describe('parked run', () => {
+        function renderParked(idAssignee: number | null): HTMLElement {
+            fixture.componentRef.setInput('usersMap', new Map([[5, { idUser: 5, name: 'Jana' }]]));
+            fixture.componentRef.setInput('idAssignee', idAssignee);
+            fixture.componentRef.setInput('run', {
+                idRun: 1,
+                phase: AgentPhase.InProgress,
+                isParked: true,
+                stages: []
+            });
+            fixture.detectChanges();
+            return fixture.nativeElement as HTMLElement;
+        }
+
+        it('does not pulse or look like it is working', () => {
+            const el = renderParked(null);
+            expect(el.querySelector('.agent-run-card.is-active')).toBeNull();
+            expect(el.querySelector('.agent-run-card.is-working')).toBeNull();
+            expect(el.querySelector('.card-summary')?.textContent).toContain('AGENT.PHASE.PAUSED');
+        });
+
+        async function hoverPhaseTag(el: HTMLElement): Promise<string> {
+            el.querySelector('[data-testid="run-phase-tag"]')!.dispatchEvent(
+                new MouseEvent('mouseenter')
+            );
+            await new Promise(resolve => setTimeout(resolve, 220));
+            return document.querySelector('.ui-tooltip')?.textContent ?? '';
+        }
+
+        it('explains in the tag tooltip that the task has no agent', async () => {
+            const el = renderParked(null);
+            expect(await hoverPhaseTag(el)).toContain('AGENT.CARD.PARKED_UNASSIGNED');
+        });
+
+        it('explains in the tag tooltip that the task went to someone else', async () => {
+            const el = renderParked(5);
+            expect(await hoverPhaseTag(el)).toContain('AGENT.CARD.PARKED_REASSIGNED');
+        });
+
+        it('keeps the panel free of a parked notice', () => {
+            const el = renderParked(null);
+            expect(el.querySelector('.card-body')).toBeNull();
+        });
+
+        it('offers to assign the agent back', () => {
+            const el = renderParked(null);
+            const assignBack = vi.fn();
+            fixture.componentInstance.assignBackRun.subscribe(assignBack);
+
+            (
+                el.querySelector('[data-testid="run-assign-back"] button') as HTMLButtonElement
+            ).click();
+
+            expect(assignBack).toHaveBeenCalled();
+        });
     });
 });
