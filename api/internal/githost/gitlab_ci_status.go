@@ -31,14 +31,14 @@ func (h *GitLabHost) getCiStatus(ctx context.Context, idMr, _ string) string {
 }
 
 // The merge request object has no `approved_by` key on any tier — only this endpoint.
+// `approved` only means the approval rules are met, which is true from the start when 0 approvals are required.
 func (h *GitLabHost) hasApproval(ctx context.Context, idMr string) bool {
 	apiURL := fmt.Sprintf("%s/api/v4/projects/%s/merge_requests/%s/approvals", h.baseUrl, h.encodedPath, idMr)
 	var payload struct {
-		Approved   bool  `json:"approved"`
 		ApprovedBy []any `json:"approved_by"`
 	}
 	if err := getJSON(ctx, h.client, apiURL, h.setAuth, &payload); err != nil {
 		return false
 	}
-	return payload.Approved || len(payload.ApprovedBy) > 0
+	return len(payload.ApprovedBy) > 0
 }
