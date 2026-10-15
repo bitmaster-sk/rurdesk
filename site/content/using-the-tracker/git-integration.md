@@ -129,14 +129,14 @@ of the change request. All the jobs of that commit are reduced to one label:
 
 <!-- stack-table -->
 
-| Label           | When                                                                 |
-| --------------- | -------------------------------------------------------------------- |
-| **CI failed**   | at least one job failed, timed out, errored, or needs manual action  |
-| **CI pending**  | nothing failed and at least one job is still running or queued       |
-| **CI canceled** | nothing failed or running, and at least one job was canceled         |
-| **CI passed**   | nothing failed, running, or canceled, and at least one job succeeded |
-| **CI skipped**  | every job was skipped                                                |
-| _no label_      | the host reported no CI for this commit                              |
+| Label           | When                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| **CI failed**   | at least one job failed, timed out, errored, or needs manual action                        |
+| **CI pending**  | nothing failed and at least one job is still running or queued                             |
+| **CI canceled** | nothing failed or running, and at least one job was canceled                               |
+| **CI passed**   | nothing failed, running, or canceled, and at least one job succeeded or reported a warning |
+| **CI skipped**  | every job was skipped                                                                      |
+| _no label_      | the host reported no CI for this commit                                                    |
 
 A failure always wins, so a long-running matrix can never hide a job that has
 already failed. If the repository has no CI at all, **no label is shown** — the
