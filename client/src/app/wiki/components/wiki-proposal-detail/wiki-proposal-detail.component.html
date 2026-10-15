@@ -53,10 +53,7 @@
         </header>
 
         <div class="wiki-proposal__meta">
-            <a [routerLink]="['/project', idProject(), 'issue', proposal.idIssuePublic]">
-                #{{ proposal.idIssuePublic }} {{ proposal.issueTitle }}
-            </a>
-            · {{ agentName() }} · {{ 'WIKI.PROPOSAL.RUN' | translate: { id: proposal.idRun } }}
+            <app-wiki-proposal-origin [proposal]="proposal" [linkIssue]="true" />
             @if (pageLink(); as link) {
                 ·
                 <a data-testid="wiki-proposal-page" [routerLink]="link">
@@ -66,7 +63,7 @@
         </div>
 
         <div class="wiki-proposal__reason" data-testid="wiki-proposal-reason">
-            <b>{{ 'WIKI.PROPOSAL.REASON' | translate }}</b>
+            <b>{{ reasonKey() | translate }}</b>
             {{ proposal.reason }}
         </div>
 
@@ -132,11 +129,15 @@
                 </p>
             }
             @case (State.Ready) {
-                <p class="wiki-proposal__hint">
-                    {{
-                        'WIKI.PROPOSAL.ACCEPT_HINT'
-                            | translate: { issue: proposal.idIssuePublic, run: proposal.idRun }
-                    }}
+                <p class="wiki-proposal__hint" data-testid="wiki-proposal-accept-hint">
+                    @if (proposal.idRun !== null) {
+                        {{
+                            'WIKI.PROPOSAL.ACCEPT_HINT'
+                                | translate: { issue: proposal.idIssuePublic, run: proposal.idRun }
+                        }}
+                    } @else {
+                        {{ 'WIKI.PROPOSAL.ACCEPT_HINT_PERSON' | translate }}
+                    }
                 </p>
             }
             @case (State.Approved) {
@@ -219,7 +220,9 @@
             [value]="rejectReason()"
             (input)="onReasonInput($event)"
         ></textarea>
-        <small class="ui-color-text-muted">{{ 'WIKI.PROPOSAL.REJECT_HINT' | translate }}</small>
+        @if (rejectHintKey(); as hintKey) {
+            <small class="ui-color-text-muted">{{ hintKey | translate }}</small>
+        }
     </div>
     <div class="flex justify-end gap-2 mt-3">
         <ui-button variant="text" severity="secondary" (click)="isRejectOpen.set(false)">

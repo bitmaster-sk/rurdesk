@@ -93,8 +93,7 @@
             />
         </span>
         <span class="wiki-proposals__item-meta">
-            #{{ proposal.idIssuePublic }} · {{ agentName(proposal) }} · {{ 'WIKI.PROPOSAL.RUN' |
-            translate: { id: proposal.idRun } }}
+            <app-wiki-proposal-origin [proposal]="proposal" />
         </span>
     </a>
 </ng-template>

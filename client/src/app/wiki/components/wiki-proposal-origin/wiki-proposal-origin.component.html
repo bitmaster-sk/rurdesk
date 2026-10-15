@@ -1,0 +1,14 @@
+@if (proposal().idIssuePublic !== null) {
+    @if (linkIssue()) {
+        <a data-testid="wiki-proposal-origin-issue" [routerLink]="issueLink()">
+            #{{ proposal().idIssuePublic }} {{ proposal().issueTitle }}
+        </a>
+    } @else {
+        #{{ proposal().idIssuePublic }}
+    }
+    ·
+}
+{{ authorName() }}
+@if (proposal().idRun !== null) {
+    · {{ 'WIKI.PROPOSAL.RUN' | translate: { id: proposal().idRun } }}
+}

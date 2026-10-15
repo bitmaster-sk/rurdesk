@@ -69,6 +69,7 @@ import { WikiShellPage } from './pages/wiki-shell/wiki-shell.page';
 import { WikiTrashPage } from './pages/wiki-trash/wiki-trash.page';
 import { WikiProposalsPage } from './pages/wiki-proposals/wiki-proposals.page';
 import { WikiProposalDetailComponent } from './components/wiki-proposal-detail/wiki-proposal-detail.component';
+import { WikiProposalOriginComponent } from './components/wiki-proposal-origin/wiki-proposal-origin.component';
 import { WikiPageAsideComponent } from './components/wiki-page-aside/wiki-page-aside.component';
 import { WikiTreeShowComponent } from './components/wiki-tree-show/wiki-tree-show.component';
 import { WikiTablePickerComponent } from './components/wiki-table-picker/wiki-table-picker.component';
@@ -86,6 +87,7 @@ import { WikiRoutingModule } from './wiki-routing.module';
         WikiTrashPage,
         WikiProposalsPage,
         WikiProposalDetailComponent,
+        WikiProposalOriginComponent,
         WikiTreeComponent,
         WikiEditorComponent,
         WikiConflictComponent,

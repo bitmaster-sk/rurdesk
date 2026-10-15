@@ -288,7 +288,7 @@ branch.
 | **discarded** | the run ended without a merged pull request, even if the proposal was approved |
 
 Each proposal shows up as a **Wiki proposal** card in the task's activity.
-Proposals of the whole project are under **Agent proposals** below the wiki tree,
+Proposals of the whole project are under **Wiki proposals** below the wiki tree,
 with the number of proposals that need a person after the merge (ready to publish
 or needs resolving) next to it, and can be filtered by space.
 
@@ -313,6 +313,26 @@ page says whether the edits merge cleanly. Someone who may edit the space can:
 - **Reject**: with an optional reason. The reason is posted as a comment in the
   task, so the agent sees it the next time it works on the task.
 
+### Proposals without an agent run
+
+An MCP client that uses your own API key, for example Claude Code on your
+machine, can propose a change with `suggest_wiki_change` too, instead of writing
+the page. This is useful when you want to read the change before it lands in the
+wiki.
+
+Such a proposal has no run and no pull request to wait for, so it is **ready to
+publish** as soon as it is made, and nobody gets a notification. It is listed
+under **Wiki proposals** with you as its author. Pass `issue_id` to attach it to a
+task: it then shows up as a card in the task's activity, and a rejection reason
+is posted there as a comment. Calling the tool again for the same page updates
+your open proposal; once it is published or rejected, the next call starts a new
+one. Publishing works as described above, with the note *Proposal by name* or
+*Proposal by name from #task*.
+
+Anyone who may read the project wiki can propose this way; publishing still
+needs someone who may edit the space. An agent's API key can only propose from
+inside a run.
+
 ## Permissions
 
 | Action | Project space | Shared space |
@@ -320,4 +340,5 @@ page says whether the edits merge cleanly. Someone who may edit the space can:
 | Read and search | viewer and up | everyone |
 | Create, edit, move, delete to trash, restore | member and up | member and up in any project |
 | Set **Always reads**, change the token budget, delete for good | owner | admin |
-| Approve, publish or reject an agent proposal | member and up | member and up in any project |
+| Propose a change with a personal API key | viewer and up | viewer and up in the project |
+| Approve, publish or reject a proposal | member and up | member and up in any project |

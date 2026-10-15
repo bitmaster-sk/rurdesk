@@ -91,7 +91,7 @@ const (
 	WikiProposalStateRejected       WikiProposalState = "rejected"
 )
 
-func WikiProposalStateOf(decision WikiProposalDecision, runPhase string) WikiProposalState {
+func WikiProposalStateOf(decision WikiProposalDecision, runPhase *string) WikiProposalState {
 	switch {
 	case decision == WikiProposalAccepted:
 		return WikiProposalStateAccepted
@@ -99,11 +99,13 @@ func WikiProposalStateOf(decision WikiProposalDecision, runPhase string) WikiPro
 		return WikiProposalStateRejected
 	case decision == WikiProposalNeedsResolving:
 		return WikiProposalStateNeedsResolving
-	case runPhase == PhaseFailed || runPhase == PhaseCancelled:
+	case runPhase == nil:
+		return WikiProposalReady
+	case *runPhase == PhaseFailed || *runPhase == PhaseCancelled:
 		return WikiProposalDiscarded
 	case decision == WikiProposalApproved:
 		return WikiProposalStateApproved
-	case runPhase == PhaseDone:
+	case *runPhase == PhaseDone:
 		return WikiProposalReady
 	default:
 		return WikiProposalStateOpen

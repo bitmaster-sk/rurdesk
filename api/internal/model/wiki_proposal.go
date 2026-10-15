@@ -8,12 +8,14 @@ import (
 
 type WikiProposal struct {
 	IdProposal      int64                          `json:"idProposal"      db:"id_proposal"`
-	IdRun           int64                          `json:"idRun"           db:"id_run"`
-	IdUserAgent     int64                          `json:"idUserAgent"     db:"id_user_agent"`
-	RunPhase        string                         `json:"-"               db:"run_phase"`
-	IdIssue         int64                          `json:"idIssue"         db:"id_issue"`
-	IdIssuePublic   int64                          `json:"idIssuePublic"   db:"id_issue_public"`
-	IssueTitle      string                         `json:"issueTitle"      db:"issue_title"`
+	IdRun           *int64                         `json:"idRun"           db:"id_run"`
+	IdUserAgent     *int64                         `json:"idUserAgent"     db:"id_user_agent"`
+	RunPhase        *string                        `json:"-"               db:"run_phase"`
+	IdIssue         *int64                         `json:"idIssue"         db:"id_issue"`
+	IdIssuePublic   *int64                         `json:"idIssuePublic"   db:"id_issue_public"`
+	IssueTitle      *string                        `json:"issueTitle"      db:"issue_title"`
+	CreateBy        *int64                         `json:"createBy"        db:"create_by"`
+	AuthorName      *string                        `json:"authorName"      db:"author_name"`
 	IdProject       int64                          `json:"idProject"       db:"id_project"`
 	IdSpace         int64                          `json:"idSpace"         db:"id_space"`
 	SpaceKind       constants.WikiSpaceKind        `json:"spaceKind"       db:"space_kind"`
@@ -44,8 +46,9 @@ type WikiProposal struct {
 }
 
 type WikiProposalDraft struct {
-	IdRun       int64
-	IdIssue     int64
+	IdRun       *int64
+	IdIssue     *int64
+	CreateBy    int64
 	IdProject   int64
 	IdSpace     int64
 	Kind        constants.WikiProposalKind
@@ -80,16 +83,17 @@ type WikiProposalApproval struct {
 }
 
 type WikiProposalSuggestReq struct {
-	IdRun       int64                      `json:"idRun"`
-	Kind        constants.WikiProposalKind `json:"kind"        binding:"required"`
-	Slug        string                     `json:"slug"`
-	Space       constants.WikiSpaceKind    `json:"space"`
-	Title       string                     `json:"title"       binding:"max=200"`
-	Summary     *string                    `json:"summary"     binding:"omitempty,max=500"`
-	Body        *string                    `json:"body"`
-	Parent      *string                    `json:"parent"`
-	Reason      string                     `json:"reason"      binding:"required"`
-	BaseVersion int                        `json:"baseVersion" binding:"min=0"`
+	IdRun         int64                      `json:"idRun"`
+	IdIssuePublic int64                      `json:"idIssuePublic" binding:"min=0"`
+	Kind          constants.WikiProposalKind `json:"kind"          binding:"required"`
+	Slug          string                     `json:"slug"`
+	Space         constants.WikiSpaceKind    `json:"space"`
+	Title         string                     `json:"title"         binding:"max=200"`
+	Summary       *string                    `json:"summary"       binding:"omitempty,max=500"`
+	Body          *string                    `json:"body"`
+	Parent        *string                    `json:"parent"`
+	Reason        string                     `json:"reason"        binding:"required"`
+	BaseVersion   int                        `json:"baseVersion"   binding:"min=0"`
 }
 
 type WikiProposalAgentView struct {
@@ -118,6 +122,6 @@ type WikiProposalRejectReq struct {
 }
 
 type WikiProposalNotice struct {
-	IdProject int64 `json:"idProject"`
-	IdIssue   int64 `json:"idIssue"`
+	IdProject int64  `json:"idProject"`
+	IdIssue   *int64 `json:"idIssue"`
 }

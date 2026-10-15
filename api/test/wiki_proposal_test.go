@@ -67,7 +67,6 @@ func TestWikiProposal_OnlyTheImplementationStageOfTheAgentsOwnRunMayPropose(t *t
 	header := fmt.Sprint(run.IdRun)
 
 	require.True(t, f.callTool(t, f.agentToken, "", "suggest_wiki_change", withProject(f, update)).IsError, "outside a run there is nothing to attach the proposal to")
-	require.True(t, f.callTool(t, f.adminToken, header, "suggest_wiki_change", withProject(f, update)).IsError, "a person edits the wiki instead")
 
 	noBase := f.callTool(t, f.agentToken, header, "suggest_wiki_change", withProject(f, map[string]any{"kind": "update", "slug": page.Slug, "body": "x", "reason": "r"}))
 	require.True(t, noBase.IsError)
@@ -369,6 +368,110 @@ func TestWikiProposal_TheNextImplementationAttemptSeesItsOpenProposals(t *testin
 	require.Nil(t, design.WikiProposals, "only the implementation stage gets proposals")
 }
 
+func TestWikiProposal_APersonProposesWithoutARunAndPublishesAtOnce(t *testing.T) {
+	f := newWikiAgentFixture(t, "wiki-proposal-person")
+	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Local work"), Body: "old"})
+	iss := createIssue(t, f.app, f.adminToken, f.idProject, "wiki proposal person")
+	idAdmin := idOfUser(t, f.app, f.adminToken, "test@test.sk")
+	update := map[string]any{"kind": "update", "slug": page.Slug, "body": "new", "base_version": 1, "reason": "the flag was renamed", "issue_id": iss.IdIssuePublic}
+
+	first := f.suggestAs(t, f.adminToken, update)
+	require.Equal(t, constants.WikiProposalReady, first.State, "without a pull request to wait for it is ready at once")
+	update["body"] = "newer"
+	again := f.suggestAs(t, f.adminToken, update)
+	require.Equal(t, first.Id, again.Id, "a retry updates the proposal instead of adding another")
+	require.True(t, again.Updated)
+
+	proposals := f.issueProposals(t, iss.IdIssue)
+	require.Len(t, proposals, 1, "the proposal shows up in the task")
+	require.Nil(t, proposals[0].IdRun)
+	require.Equal(t, idAdmin, *proposals[0].CreateBy)
+	require.Equal(t, "newer", *proposals[0].Body)
+	require.Len(t, f.openProposals(t), 1)
+	require.Equal(t, 1, f.tree(t, f.adminToken).ProposalCount, "it is counted as ready in the wiki")
+	require.Equal(t, "old", f.view(t, f.adminToken, "project", page.Slug).Page.Body, "a proposal never writes the wiki")
+
+	res := f.accept(t, f.adminToken, first.Id, model.WikiProposalAcceptReq{Note: "checked"})
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+	require.Equal(t, "newer", f.view(t, f.adminToken, "project", page.Slug).Page.Body, "publishing does not wait for a merge")
+	require.Equal(t, fmt.Sprintf("Proposal by %s from #%d: checked", f.userName(t, idAdmin), iss.IdIssuePublic), f.versions(t, page.IdPage)[0].Note)
+	require.Equal(t, constants.WikiProposalStateAccepted, f.issueProposals(t, iss.IdIssue)[0].State)
+	require.Empty(t, f.openProposals(t))
+
+	update["base_version"] = 2
+	update["body"] = "newest"
+	next := f.suggestAs(t, f.adminToken, update)
+	require.NotEqual(t, first.Id, next.Id, "a published proposal is not reopened; the next one is new")
+	require.False(t, next.Updated)
+}
+
+func TestWikiProposal_APersonsProposalNeedsNoTask(t *testing.T) {
+	f := newWikiAgentFixture(t, "wiki-proposal-person-alone")
+	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Lonely"), Body: "text"})
+	title := uniqueWikiTitle("Standalone")
+	created := f.suggestAs(t, f.adminToken, map[string]any{"kind": "create", "title": title, "body": "body", "reason": "r"})
+	deleted := f.suggestAs(t, f.adminToken, map[string]any{"kind": "delete", "slug": page.Slug, "reason": "r"})
+
+	open := f.openProposals(t)
+	require.Len(t, open, 2)
+	require.Nil(t, open[0].IdIssue)
+	require.Nil(t, open[0].IdIssuePublic)
+
+	res := f.reject(t, f.adminToken, deleted.Id, "keep it")
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+	res = f.accept(t, f.adminToken, created.Id, model.WikiProposalAcceptReq{})
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+
+	view := f.view(t, f.adminToken, "project", created.Slug)
+	require.Equal(t, "body", view.Page.Body)
+	require.Equal(t, fmt.Sprintf("Proposal by %s", f.userName(t, idOfUser(t, f.app, f.adminToken, "test@test.sk"))), f.versions(t, view.Page.IdPage)[0].Note)
+	require.Equal(t, "text", f.view(t, f.adminToken, "project", page.Slug).Page.Body)
+	require.Empty(t, f.openProposals(t))
+}
+
+func TestWikiProposal_APersonsRetryCanAttachTheProposalToATask(t *testing.T) {
+	f := newWikiAgentFixture(t, "wiki-proposal-person-attach")
+	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Attached later"), Body: "text"})
+	iss := createIssue(t, f.app, f.adminToken, f.idProject, "wiki proposal person attach")
+	update := map[string]any{"kind": "update", "slug": page.Slug, "body": "x", "base_version": 1, "reason": "r"}
+
+	first := f.suggestAs(t, f.adminToken, update)
+	require.Empty(t, f.issueProposals(t, iss.IdIssue))
+
+	update["issue_id"] = iss.IdIssuePublic
+	attached := f.suggestAs(t, f.adminToken, update)
+	require.Equal(t, first.Id, attached.Id)
+	require.Len(t, f.issueProposals(t, iss.IdIssue), 1, "a retry with issue_id shows the proposal in that task")
+
+	delete(update, "issue_id")
+	update["body"] = "y"
+	f.suggestAs(t, f.adminToken, update)
+	proposals := f.issueProposals(t, iss.IdIssue)
+	require.Len(t, proposals, 1, "a retry without issue_id keeps the task")
+	require.Equal(t, "y", *proposals[0].Body)
+}
+
+func TestWikiProposal_WithoutARunOnlyAPersonProposesAndOnlyAnEditorPublishes(t *testing.T) {
+	f := newWikiAgentFixture(t, "wiki-proposal-person-guard")
+	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Guarded person"), Body: "text"})
+	update := map[string]any{"kind": "update", "slug": page.Slug, "body": "x", "base_version": 1, "reason": "r"}
+
+	agent := f.callTool(t, f.agentToken, "", "suggest_wiki_change", withProject(f, update))
+	require.True(t, agent.IsError, "an agent still needs a run")
+	require.Contains(t, agent.Text, "agent run")
+
+	unknown := f.callTool(t, f.adminToken, "", "suggest_wiki_change", withProject(f, map[string]any{"kind": "delete", "slug": page.Slug, "reason": "r", "issue_id": 999999}))
+	require.True(t, unknown.IsError)
+	require.Contains(t, unknown.Text, "not found")
+
+	viewer := f.userWithRole(t, "wiki-proposal-person-guard-viewer@test.sk", "viewer")
+	proposal := f.suggestAs(t, viewer, update)
+	require.Equal(t, http.StatusForbidden, f.accept(t, viewer, proposal.Id, model.WikiProposalAcceptReq{}).StatusCode, "a viewer may propose but not publish")
+	res := f.accept(t, f.adminToken, proposal.Id, model.WikiProposalAcceptReq{})
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+	require.Equal(t, "x", f.view(t, f.adminToken, "project", page.Slug).Page.Body)
+}
+
 func withProject(f *wikiAgentFixture, arguments map[string]any) map[string]any {
 	merged := map[string]any{"project_id": f.idProject}
 	for key, value := range arguments {
@@ -383,6 +486,21 @@ func (f *wikiAgentFixture) suggest(t *testing.T, idRunHeader string, arguments m
 	var view model.WikiProposalAgentView
 	require.NoError(t, json.Unmarshal([]byte(result.Text), &view))
 	return view
+}
+
+func (f *wikiAgentFixture) suggestAs(t *testing.T, token string, arguments map[string]any) model.WikiProposalAgentView {
+	result := f.callTool(t, token, "", "suggest_wiki_change", withProject(f, arguments))
+	require.False(t, result.IsError, result.Text)
+	var view model.WikiProposalAgentView
+	require.NoError(t, json.Unmarshal([]byte(result.Text), &view))
+	return view
+}
+
+func (f *wikiAgentFixture) userName(t *testing.T, idUser int64) string {
+	var name string
+	err := f.app.Pool.QueryRow(context.Background(), `SELECT name FROM users.user WHERE id_user = $1`, idUser).Scan(&name)
+	require.NoError(t, err)
+	return name
 }
 
 func (f *wikiAgentFixture) setRunPhase(t *testing.T, idRun int64, phase string) *model.AgentRun {
@@ -463,9 +581,7 @@ func (f *wikiAgentFixture) notificationActor(t *testing.T, notificationType stri
 }
 
 func (f *wikiAgentFixture) agentName(t *testing.T) string {
-	var name string
-	err := f.app.Pool.QueryRow(context.Background(), `SELECT name FROM users.user WHERE id_user = $1`, f.idAgent).Scan(&name)
-	require.NoError(t, err)
+	name := f.userName(t, f.idAgent)
 	require.NotEmpty(t, name)
 	return name
 }

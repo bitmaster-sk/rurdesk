@@ -62,7 +62,7 @@ func registerWikiTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 	}
 	server.AddTool(
 		mcpgo.NewTool("suggest_wiki_change",
-			mcpgo.WithDescription("Propose a change to the wiki during the implementation stage. Nothing is written: a person reviews the proposal after the pull request is merged. Calling it again for the same page, or the same new slug, updates your proposal instead of adding another. kind=create needs title and body; update needs slug, body and base_version (the version you read); move needs slug and parent; delete needs slug."),
+			mcpgo.WithDescription("Propose a change to the wiki instead of writing it. Nothing is written until a person who may edit the wiki publishes the proposal. From an agent run it is allowed in the implementation stage only, belongs to the run and its task, and can be published after the pull request is merged. With a personal API key it is ready to publish at once; pass issue_id to show it in that task. Calling it again for the same page, or the same new slug, updates your proposal instead of adding another. kind=create needs title and body; update needs slug, body and base_version (the version you read); move needs slug and parent; delete needs slug."),
 			mcpgo.WithNumber("project_id", mcpgo.Required(), mcpgo.Description("Project ID")),
 			mcpgo.WithString("kind", mcpgo.Required(), mcpgo.Description("create, update, move or delete")),
 			mcpgo.WithString("reason", mcpgo.Required(), mcpgo.Description("Why the wiki must change: what in the code makes the page wrong or missing")),
@@ -73,6 +73,7 @@ func registerWikiTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 			mcpgo.WithString("parent", mcpgo.Description("Slug of the parent page: where to create the page, or where to move it (empty string for the top level)")),
 			mcpgo.WithString("space", mcpgo.Description("project (default) or instance for the shared wiki, for create")),
 			mcpgo.WithNumber("base_version", mcpgo.Description("For update: the version of the page you based the change on")),
+			mcpgo.WithNumber("issue_id", mcpgo.Description("Public issue ID (idIssuePublic) of the task the proposal belongs to; personal API keys only, an agent run uses its own task")),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 			return handleSuggestWikiChange(ctx, req, dispatcher)
@@ -201,12 +202,13 @@ func handleSuggestWikiChange(ctx context.Context, req mcpgo.CallToolRequest, dis
 		return mcpgo.NewToolResultError("kind is required"), nil
 	}
 	body := map[string]any{
-		"kind":        kind,
-		"reason":      req.GetString("reason", ""),
-		"slug":        req.GetString("slug", ""),
-		"title":       req.GetString("title", ""),
-		"space":       req.GetString("space", ""),
-		"baseVersion": req.GetInt("base_version", 0),
+		"kind":          kind,
+		"reason":        req.GetString("reason", ""),
+		"slug":          req.GetString("slug", ""),
+		"title":         req.GetString("title", ""),
+		"space":         req.GetString("space", ""),
+		"baseVersion":   req.GetInt("base_version", 0),
+		"idIssuePublic": req.GetInt("issue_id", 0),
 	}
 	arguments := req.GetArguments()
 	for _, name := range []string{"body", "summary", "parent"} {

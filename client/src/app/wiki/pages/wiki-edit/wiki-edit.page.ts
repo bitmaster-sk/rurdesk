@@ -103,6 +103,10 @@ export class WikiEditPage implements OnDestroy {
     protected readonly idProposal =
         Number(this.route.snapshot.queryParamMap.get('proposal')) || null;
     protected readonly proposal = signal<WikiProposal | null>(null);
+    protected readonly proposalBanner = computed(() => {
+        const proposal = this.proposal();
+        return proposal ? WikiProposalConverter.toEditingBanner(proposal) : null;
+    });
 
     protected readonly view = signal<WikiPageView | null>(null);
     protected readonly isReady = signal(false);

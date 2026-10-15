@@ -11,6 +11,8 @@ function proposal(overrides: Partial<WikiProposal>): WikiProposal {
         idProposal: 5,
         idRun: 19,
         idUserAgent: 3,
+        createBy: 3,
+        authorName: 'Kimi',
         idIssue: 175,
         idIssuePublic: 175,
         issueTitle: 'Reuse the branch',
@@ -121,5 +123,36 @@ describe('WikiProposalConverter', () => {
         ).toBeNull();
         expect(WikiProposalConverter.toEditLink(proposal({ isPageLive: false }), 7)).toBeNull();
         expect(WikiProposalConverter.toPageLink(proposal({ isPageLive: false }), 7)).toBeNull();
+    });
+
+    it('says where a rejection reason goes: to the agent, to the task, or nowhere', () => {
+        expect(WikiProposalConverter.toRejectHintKey(proposal({}))).toBe(
+            'WIKI.PROPOSAL.REJECT_HINT'
+        );
+        expect(WikiProposalConverter.toRejectHintKey(proposal({ idRun: null }))).toBe(
+            'WIKI.PROPOSAL.REJECT_HINT_TASK'
+        );
+        expect(
+            WikiProposalConverter.toRejectHintKey(proposal({ idRun: null, idIssue: null }))
+        ).toBeNull();
+    });
+
+    it('names the run of an agent proposal and the author of any other in the editor', () => {
+        expect(WikiProposalConverter.toEditingBanner(proposal({ idIssuePublic: 42 }))).toEqual({
+            key: 'WIKI.PROPOSAL.EDITING',
+            params: { issue: 42, run: 19 }
+        });
+        expect(
+            WikiProposalConverter.toEditingBanner(proposal({ idRun: null, authorName: 'Tomas' }))
+        ).toEqual({ key: 'WIKI.PROPOSAL.EDITING_PERSON', params: { name: 'Tomas' } });
+    });
+
+    it('names the author and words the reason for an agent or a person', () => {
+        expect(WikiProposalConverter.toAuthorName(proposal({}))).toBe('Kimi');
+        expect(WikiProposalConverter.toAuthorName(proposal({ authorName: null }))).toBe('—');
+        expect(WikiProposalConverter.toReasonKey(proposal({}))).toBe('WIKI.PROPOSAL.REASON');
+        expect(WikiProposalConverter.toReasonKey(proposal({ idRun: null }))).toBe(
+            'WIKI.PROPOSAL.REASON_PERSON'
+        );
     });
 });

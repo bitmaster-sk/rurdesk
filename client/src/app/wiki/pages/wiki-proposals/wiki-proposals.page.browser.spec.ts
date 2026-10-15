@@ -12,7 +12,8 @@ import { WikiApi } from '../../api/wiki.api.service';
 import { WikiProposalKind } from '../../constants/wiki-proposal-kind.enum';
 import { WikiProposalState } from '../../constants/wiki-proposal-state.enum';
 import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
-import { WikiProposal } from '../../model/wiki-proposal.model';
+import { WikiProposal, WikiProposalNotice } from '../../model/wiki-proposal.model';
+import { WikiProposalOriginComponent } from '../../components/wiki-proposal-origin/wiki-proposal-origin.component';
 import { WikiProposalsPage } from './wiki-proposals.page';
 
 @Component({ selector: 'app-wiki-proposal-detail', template: '', standalone: true })
@@ -63,6 +64,8 @@ function proposal(
         idProposal,
         idRun: 19,
         idUserAgent: 3,
+        createBy: 3,
+        authorName: 'Kimi',
         idIssue: 175,
         idIssuePublic: 175,
         issueTitle: 'Reuse the branch',
@@ -97,7 +100,7 @@ function proposal(
 
 describe('WikiProposalsPage', () => {
     let fixture: ComponentFixture<WikiProposalsPage>;
-    let notices: Subject<{ payload: { idProject: number; idIssue: number } }>;
+    let notices: Subject<{ payload: WikiProposalNotice }>;
     let loadOpen: ReturnType<typeof vi.fn>;
 
     beforeEach(async () => {
@@ -111,7 +114,7 @@ describe('WikiProposalsPage', () => {
         );
         const params = convertToParamMap({ idProject: '7' });
         await TestBed.configureTestingModule({
-            declarations: [WikiProposalsPage],
+            declarations: [WikiProposalsPage, WikiProposalOriginComponent],
             imports: [
                 TranslateModule.forRoot(),
                 RouterModule,

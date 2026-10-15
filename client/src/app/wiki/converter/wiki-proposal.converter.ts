@@ -3,6 +3,7 @@ import { WikiProposalKind } from '../constants/wiki-proposal-kind.enum';
 import { WikiProposalState } from '../constants/wiki-proposal-state.enum';
 import { WikiSpaceKind } from '../constants/wiki-space-kind.enum';
 import {
+    WikiProposalBanner,
     WikiProposalEditLink,
     WikiProposalGroups,
     WikiProposalTag
@@ -112,6 +113,34 @@ export abstract class WikiProposalConverter {
             return null;
         }
         return ['/project', idProject, 'wiki', proposal.spaceKind, proposal.slug];
+    }
+
+    public static toEditingBanner(proposal: WikiProposal): WikiProposalBanner {
+        if (proposal.idRun !== null) {
+            return {
+                key: 'WIKI.PROPOSAL.EDITING',
+                params: { issue: proposal.idIssuePublic, run: proposal.idRun }
+            };
+        }
+        return {
+            key: 'WIKI.PROPOSAL.EDITING_PERSON',
+            params: { name: WikiProposalConverter.toAuthorName(proposal) }
+        };
+    }
+
+    public static toAuthorName(proposal: WikiProposal): string {
+        return proposal.authorName ?? '—';
+    }
+
+    public static toReasonKey(proposal: WikiProposal): string {
+        return proposal.idRun !== null ? 'WIKI.PROPOSAL.REASON' : 'WIKI.PROPOSAL.REASON_PERSON';
+    }
+
+    public static toRejectHintKey(proposal: WikiProposal): string | null {
+        if (proposal.idRun !== null) {
+            return 'WIKI.PROPOSAL.REJECT_HINT';
+        }
+        return proposal.idIssue !== null ? 'WIKI.PROPOSAL.REJECT_HINT_TASK' : null;
     }
 
     public static toProposalLink(proposal: WikiProposal): (string | number)[] {

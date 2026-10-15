@@ -22,9 +22,11 @@ import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
 import {
     WikiProposal,
     WikiProposalAcceptResult,
-    WikiProposalDetail
+    WikiProposalDetail,
+    WikiProposalNotice
 } from '../../model/wiki-proposal.model';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
+import { WikiProposalOriginComponent } from '../wiki-proposal-origin/wiki-proposal-origin.component';
 import { WikiProposalDetailComponent } from './wiki-proposal-detail.component';
 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
@@ -37,6 +39,8 @@ function proposal(overrides: Partial<WikiProposal> = {}): WikiProposal {
         idProposal: 5,
         idRun: 19,
         idUserAgent: 3,
+        createBy: 3,
+        authorName: 'Kimi',
         idIssue: 175,
         idIssuePublic: 175,
         issueTitle: 'Reuse the branch',
@@ -82,7 +86,7 @@ describe('WikiProposalDetailComponent', () => {
     };
     let canEdit: ReturnType<typeof signal<boolean>>;
     let reload: ReturnType<typeof vi.fn>;
-    let notices: Subject<{ payload: { idProject: number; idIssue: number } }>;
+    let notices: Subject<{ payload: WikiProposalNotice }>;
 
     beforeEach(async () => {
         detail = { proposal: proposal(), diff: '--- a\n+++ b\n', conflicts: 0 };
@@ -102,7 +106,7 @@ describe('WikiProposalDetailComponent', () => {
         notices = new Subject();
 
         await TestBed.configureTestingModule({
-            declarations: [WikiProposalDetailComponent],
+            declarations: [WikiProposalDetailComponent, WikiProposalOriginComponent],
             imports: [
                 TranslateModule.forRoot(),
                 RouterModule,
@@ -209,6 +213,35 @@ describe('WikiProposalDetailComponent', () => {
         );
     });
 
+    it('shows a proposal made without a run or a task by its author alone', () => {
+        detail = {
+            ...detail,
+            proposal: proposal({
+                idRun: null,
+                idUserAgent: null,
+                idIssue: null,
+                idIssuePublic: null,
+                issueTitle: null,
+                createBy: 1,
+                authorName: 'Tomas'
+            })
+        };
+        const el = render();
+
+        expect(el.textContent).toContain('Tomas');
+        expect(el.textContent).not.toContain('WIKI.PROPOSAL.RUN');
+        expect(el.querySelector('a[href*="/issue/"]')).toBeNull();
+        expect(byTestId(el, 'wiki-proposal-reason')?.textContent).toContain(
+            'WIKI.PROPOSAL.REASON_PERSON'
+        );
+        expect(byTestId(el, 'wiki-proposal-accept-hint')?.textContent).toContain(
+            'WIKI.PROPOSAL.ACCEPT_HINT_PERSON'
+        );
+        expect(byTestId(el, 'wiki-proposal-accept')?.textContent).toContain(
+            'WIKI.PROPOSAL.PUBLISH'
+        );
+    });
+
     it('sends a change that no longer merges to the editor to resolve', () => {
         detail = { ...detail, proposal: proposal({ state: WikiProposalState.NeedsResolving }) };
         const el = render();
@@ -303,6 +336,27 @@ describe('WikiProposalDetailComponent', () => {
         await new Promise(resolve => setTimeout(resolve, 350));
         fixture.detectChanges();
 
+        expect(byTestId(el, 'wiki-proposal-accept')).not.toBeNull();
+    });
+
+    it('refreshes a proposal without a task only on notices of its own project', async () => {
+        const runless = { idRun: null, idIssue: null, idIssuePublic: null, issueTitle: null };
+        detail = {
+            ...detail,
+            proposal: proposal({ ...runless, state: WikiProposalState.Rejected, decidedBy: 1 })
+        };
+        const el = render();
+        expect(byTestId(el, 'wiki-proposal-accept')).toBeNull();
+
+        detail = { ...detail, proposal: proposal({ ...runless, state: WikiProposalState.Ready }) };
+        notices.next({ payload: { idProject: 8, idIssue: null } });
+        await new Promise(resolve => setTimeout(resolve, 350));
+        fixture.detectChanges();
+        expect(byTestId(el, 'wiki-proposal-accept')).toBeNull();
+
+        notices.next({ payload: { idProject: 7, idIssue: null } });
+        await new Promise(resolve => setTimeout(resolve, 350));
+        fixture.detectChanges();
         expect(byTestId(el, 'wiki-proposal-accept')).not.toBeNull();
     });
 });
