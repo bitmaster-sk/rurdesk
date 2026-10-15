@@ -53,7 +53,7 @@ func gitlabStatusServer(t *testing.T, mrState string, pipelines []map[string]any
 func TestGitLabHost_GetMergeRequestStatus_Open(t *testing.T) {
 	srv := gitlabStatusServer(t, "opened",
 		[]map[string]any{{"id": 9, "status": "success"}},
-		map[string]any{"approved": false, "approvals_required": 0, "approved_by": []any{}})
+		map[string]any{"approved": true, "approvals_required": 0, "approved_by": []any{}})
 	defer srv.Close()
 
 	host := NewGitLabHost(srv.URL, "group/project", "token")
@@ -92,6 +92,24 @@ func TestGitLabHost_GetMergeRequestStatus_Merged(t *testing.T) {
 	assert.True(t, status.Approved)
 	assert.Equal(t, "/api/v4/projects/group/project/merge_requests/1/approvals", approvalsPath)
 	assert.Equal(t, srv.URL+"/group/project/-/merge_requests/1", status.WebUrl)
+}
+
+func TestGitLabHost_GetMergeRequestStatus_ApprovedByAPerson(t *testing.T) {
+	srv := gitlabStatusServer(t, "opened",
+		[]map[string]any{{"status": "success"}},
+		map[string]any{
+			"approved":           true,
+			"approvals_required": 0,
+			"approved_by": []any{
+				map[string]any{"user": map[string]any{"id": 1, "username": "reviewer"}},
+			},
+		})
+	defer srv.Close()
+
+	host := NewGitLabHost(srv.URL, "group/project", "token")
+	status, err := host.GetMergeRequestStatus(t.Context(), "1")
+	require.NoError(t, err)
+	assert.True(t, status.Approved)
 }
 
 func TestGitLabHost_GetMergeRequestStatus_PipelineStates(t *testing.T) {

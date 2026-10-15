@@ -152,10 +152,11 @@ Where the result is read from:
 
 ### Approvals
 
-The **Approved** tag appears when a review has approved the change request. It
-is read per host: GitHub and Gitea from the PR's reviews, GitLab from the merge
-request's approvals endpoint (available on **all GitLab tiers including Free** —
-only approval _rules_ are Premium).
+The **Approved** tag appears when at least one person has approved the change
+request. It is read per host: GitHub and Gitea from the PR's reviews, GitLab from
+the people listed on the merge request's approvals endpoint (available on **all
+GitLab tiers including Free** — only approval _rules_ are Premium). A GitLab merge
+request that meets its approval rules but that nobody approved shows no tag.
 
 ## Permissions
 
