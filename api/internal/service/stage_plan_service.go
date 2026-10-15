@@ -54,6 +54,10 @@ func (s *StagePlanService) IsShortWorkflow(stagePlan json.RawMessage) bool {
 	if err != nil {
 		return false
 	}
+	return isShortPlan(plan)
+}
+
+func isShortPlan(plan model.StagePlan) bool {
 	skipped := 0
 	for _, entry := range plan.Stages {
 		if entry.Skip && slices.Contains(constants.ShortWorkflowSkippedStages, entry.Name) {
@@ -97,9 +101,42 @@ func (s *StagePlanService) IdsSkillForStage(stagePlan json.RawMessage, stage str
 // Runs on a locked row: two stages of one run changed at once would otherwise
 // lose a write. The already-dispatched guard lives in the controller.
 func (s *StagePlanService) SetStageSkills(ctx context.Context, idRun int64, stage string, idsSkill []int64) (*model.AgentRun, error) {
+	return s.rewriteLocked(ctx, idRun, func(plan *model.StagePlan, _ []*model.AgentTask) error {
+		for i := range plan.Stages {
+			if plan.Stages[i].Name == stage {
+				plan.Stages[i].IdsSkill = idsSkill
+				return nil
+			}
+		}
+		return errs.ErrStageNotInPlan
+	})
+}
+
+// Takes the same run row lock as the scheduler, so no stage is dispatched under a stale plan.
+func (s *StagePlanService) SetShortWorkflow(ctx context.Context, idRun int64, isShortWorkflow bool) (*model.AgentRun, error) {
+	return s.rewriteLocked(ctx, idRun, func(plan *model.StagePlan, tasks []*model.AgentTask) error {
+		if isWorkflowLocked(tasks) {
+			return errs.ErrWorkflowLocked
+		}
+		applyShortWorkflow(plan, isShortWorkflow)
+		return nil
+	})
+}
+
+func (s *StagePlanService) ApplyChoices(ctx context.Context, idRun int64, idsSkillByStage map[string][]int64, isShortWorkflow bool) (*model.AgentRun, error) {
+	return s.rewriteLocked(ctx, idRun, func(plan *model.StagePlan, tasks []*model.AgentTask) error {
+		return applyChoices(plan, tasks, idsSkillByStage, isShortWorkflow)
+	})
+}
+
+func (s *StagePlanService) rewriteLocked(ctx context.Context, idRun int64, rewrite func(*model.StagePlan, []*model.AgentTask) error) (*model.AgentRun, error) {
 	var updated *model.AgentRun
-	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
+	err := extctx.JoinTx(ctx, s.pool, func(ctx context.Context) error {
 		run, err := s.agentRunRepo.LoadByIdForUpdate(ctx, idRun)
+		if err != nil {
+			return err
+		}
+		tasks, err := s.agentTaskRepo.LoadByRun(ctx, idRun)
 		if err != nil {
 			return err
 		}
@@ -107,16 +144,8 @@ func (s *StagePlanService) SetStageSkills(ctx context.Context, idRun int64, stag
 		if err != nil {
 			return err
 		}
-
-		found := false
-		for i := range plan.Stages {
-			if plan.Stages[i].Name == stage {
-				plan.Stages[i].IdsSkill = idsSkill
-				found = true
-			}
-		}
-		if !found {
-			return errs.ErrStageNotInPlan
+		if err := rewrite(&plan, tasks); err != nil {
+			return err
 		}
 
 		planJSON, err := json.Marshal(plan)
@@ -132,43 +161,47 @@ func (s *StagePlanService) SetStageSkills(ctx context.Context, idRun int64, stag
 	return updated, nil
 }
 
-// Takes the same run row lock as the scheduler, so no stage is dispatched under a stale plan.
-func (s *StagePlanService) SetShortWorkflow(ctx context.Context, idRun int64, isShortWorkflow bool) (*model.AgentRun, error) {
-	var updated *model.AgentRun
-	err := extctx.RunInTx(ctx, s.pool, func(ctx context.Context) error {
-		run, err := s.agentRunRepo.LoadByIdForUpdate(ctx, idRun)
-		if err != nil {
-			return err
+// A cancelled stage is dispatched again with a prompt built from the current plan.
+func DispatchedStages(tasks []*model.AgentTask) map[string]bool {
+	dispatched := make(map[string]bool, len(tasks))
+	for _, task := range tasks {
+		if task.Status != constants.TaskStatusCancelled {
+			dispatched[task.Stage] = true
 		}
-		tasks, err := s.agentTaskRepo.LoadByRun(ctx, idRun)
-		if err != nil {
-			return err
-		}
-		for _, task := range tasks {
-			if task.Status != constants.TaskStatusCancelled && slices.Contains(constants.ShortWorkflowLockingStages, task.Stage) {
-				return errs.ErrWorkflowLocked
-			}
-		}
-
-		plan, err := s.Parse(run.StagePlan)
-		if err != nil {
-			return err
-		}
-		for i := range plan.Stages {
-			if slices.Contains(constants.ShortWorkflowSkippedStages, plan.Stages[i].Name) {
-				plan.Stages[i].Skip = isShortWorkflow
-			}
-		}
-
-		planJSON, err := json.Marshal(plan)
-		if err != nil {
-			return fmt.Errorf("marshalling stage plan: %w", err)
-		}
-		updated, err = s.agentRunRepo.UpdateStagePlan(ctx, idRun, planJSON)
-		return err
-	})
-	if err != nil {
-		return nil, err
 	}
-	return updated, nil
+	return dispatched
+}
+
+func applyChoices(plan *model.StagePlan, tasks []*model.AgentTask, idsSkillByStage map[string][]int64, isShortWorkflow bool) error {
+	if isShortWorkflow != isShortPlan(*plan) {
+		if isWorkflowLocked(tasks) {
+			return errs.ErrWorkflowLocked
+		}
+		applyShortWorkflow(plan, isShortWorkflow)
+	}
+	dispatched := DispatchedStages(tasks)
+	for i := range plan.Stages {
+		name := plan.Stages[i].Name
+		if constants.IsSkillStage(name) && !dispatched[name] {
+			plan.Stages[i].IdsSkill = idsSkillByStage[name]
+		}
+	}
+	return nil
+}
+
+func isWorkflowLocked(tasks []*model.AgentTask) bool {
+	for _, task := range tasks {
+		if task.Status != constants.TaskStatusCancelled && slices.Contains(constants.ShortWorkflowLockingStages, task.Stage) {
+			return true
+		}
+	}
+	return false
+}
+
+func applyShortWorkflow(plan *model.StagePlan, isShortWorkflow bool) {
+	for i := range plan.Stages {
+		if slices.Contains(constants.ShortWorkflowSkippedStages, plan.Stages[i].Name) {
+			plan.Stages[i].Skip = isShortWorkflow
+		}
+	}
 }

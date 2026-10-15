@@ -61,12 +61,14 @@ describe('UserDropdownComponent with the agent dock open (browser)', () => {
     let agentRunApi: {
         loadAgentsOverview$: ReturnType<typeof vi.fn>;
         assignAgent$: ReturnType<typeof vi.fn>;
+        loadByIssue$: ReturnType<typeof vi.fn>;
     };
 
     beforeEach(async () => {
         agentRunApi = {
             loadAgentsOverview$: vi.fn().mockReturnValue(of([])),
-            assignAgent$: vi.fn().mockReturnValue(of(RUN))
+            assignAgent$: vi.fn().mockReturnValue(of(RUN)),
+            loadByIssue$: vi.fn().mockReturnValue(of(null))
         };
 
         await TestBed.configureTestingModule({

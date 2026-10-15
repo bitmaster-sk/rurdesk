@@ -619,6 +619,6 @@ func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *mod
 		constants.ActorTypeUser, &idUser, "comment_triggered_revision",
 	)
 	if transErr == nil {
-		agent.BroadcastRunUpdate(ctx, mc.notifier, mc.projectRepo, mc.agentRunRepo, mc.agentTaskRepo, updated)
+		agent.BroadcastRunUpdate(ctx, mc.notifier, mc.projectRepo, mc.issueRepo, mc.agentRunRepo, mc.agentTaskRepo, updated)
 	}
 }

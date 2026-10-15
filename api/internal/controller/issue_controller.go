@@ -545,27 +545,23 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 func (ic *IssueController) AssignAgent(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 	idIssuePublic, err := strconv.ParseInt(c.Param("idIssuePublic"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 
 	var dto model.CreateAgentRunReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 	for stage := range dto.IdsSkillByStage {
 		if !constants.IsSkillStage(stage) {
-			_ = c.Error(errs.ErrBadRequest.WithMessage("unknown stage: " + stage))
-			c.Status(http.StatusBadRequest)
+			ResponseErr(c, errs.ErrBadRequest.WithMessage("unknown stage: "+stage))
 			return
 		}
 	}
@@ -573,64 +569,51 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
 	issue, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	if issue == nil {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, err)
 		return
 	}
 
 	agentUser, err := ic.userRepo.LoadUser(ctx, dto.IdUserAgent)
 	if err != nil || agentUser == nil {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrNotFound)
 		return
 	}
 	if !agentUser.IsAgent {
-		_ = c.Error(errs.ErrNotAnAgent)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage("the user is not an agent"))
 		return
 	}
 	// Same gate as the EditIssue assignee path: without it this endpoint could
 	// hand a project's issue to an agent that cannot even read the project.
 	if !ic.acl.CanReadProject(ctx, agentUser.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 	gateway, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, agentUser.IdUser)
 	if gwErr != nil || gateway == nil {
-		_ = c.Error(errs.ErrAgentNoGateway)
-		c.Status(http.StatusUnprocessableEntity)
+		ResponseErr(c, errs.ErrAgentNoGateway)
 		return
 	}
 
 	existing, err := ic.agentRunRepo.LoadActiveByIssue(ctx, issue.IdIssue)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-	if existing != nil {
-		_ = c.Error(errs.ErrIssueHasActiveRun)
-		c.Status(http.StatusConflict)
+	if existing != nil && !agent.IsParked(existing, issue.AssignedTo) {
+		ResponseErr(c, errs.ErrIssueHasActiveRun)
 		return
 	}
 
 	oldIssue := *issue
 
-	// The assignee write and the run insert must commit together: on the 23505 race
-	// the endpoint answers 409 and the issue must not stay re-pointed.
+	// The assignee write and the run write must commit together: a refused
+	// workflow change or the 23505 race must not leave the issue re-pointed.
 	var updated *model.Issue
 	var run *model.AgentRun
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
@@ -645,6 +628,10 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, agentUser.IdUser, "assignee", &user.IdUser); txErr != nil {
 			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
 		}
+		if existing != nil {
+			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.IdsSkillByStage, dto.IsShortWorkflow)
+			return txErr
+		}
 		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage, dto.IsShortWorkflow)
 		if txErr != nil {
 			return txErr
@@ -656,24 +643,30 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		// The partial unique index backstops a race with the EditIssue path.
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			_ = c.Error(errs.ErrIssueHasActiveRun.WithMessage("issue already has an active run"))
-			c.Status(http.StatusConflict)
+			ResponseErr(c, errs.ErrIssueHasActiveRun)
 			return
 		}
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
+	}
+
+	if existing != nil {
+		ic.handleAgentAssignment(ctx, &oldIssue, updated)
+		if run, err = ic.agentRunRepo.LoadById(ctx, existing.IdRun); err != nil {
+			ResponseErr(c, err)
+			return
+		}
 	}
 
 	if project, projErr := ic.projectRepo.LoadProject(ctx, idProject); projErr == nil {
 		ic.sendIssueNotifications(ctx, user, &oldIssue, updated, project)
 	}
 
-	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
+	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
 	broadcastParticipants(ctx, ic.notifier, ic.projectRepo, ic.participantRepo, idProject, updated.IdIssue)
 	agent.BroadcastIssueUpdate(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, updated.IdIssue)
 
-	c.JSON(http.StatusOK, run)
+	ResponseOk(c, run)
 }
 
 func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, newIssue *model.Issue) {
@@ -704,14 +697,14 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	// New assignee isn't an agentUser — nothing to route; the gate parks the run.
 	if newIssue.AssignedTo == nil {
 		if existing != nil {
-			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
+			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
 		return
 	}
 	newUser, err := ic.userRepo.LoadUser(ctx, *newIssue.AssignedTo)
 	if err != nil || !newUser.IsAgent {
 		if existing != nil {
-			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
+			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
 		return
 	}
@@ -720,7 +713,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 		// Agent has no gateway — can't route; broadcast so the client sees the
 		// run parked instead of silently dropping the update.
 		if existing != nil {
-			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
+			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
 		return
 	}
@@ -734,7 +727,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 				updated = reassigned
 			}
 		}
-		agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, updated)
+		agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, updated)
 		return
 	}
 
@@ -754,7 +747,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	if err != nil {
 		return
 	}
-	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
+	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
 }
 
 func (ic *IssueController) DeleteIssue(c *gin.Context) {

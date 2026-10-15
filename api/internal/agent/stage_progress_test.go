@@ -238,3 +238,31 @@ func TestBuildStageProgress_ImplementationWithoutPrIsNotLabelledPrOpened(t *test
 		t.Errorf("implementation note = %q, want empty when the run has no PR", impl.Note)
 	}
 }
+
+func TestIsParked(t *testing.T) {
+	idAgent := int64(7)
+	idOther := int64(8)
+
+	tests := []struct {
+		name       string
+		phase      string
+		idAssignee *int64
+		expected   bool
+	}{
+		{"assigned to the run's agent", constants.PhaseInProgress, &idAgent, false},
+		{"no assignee", constants.PhaseInProgress, nil, true},
+		{"assigned to someone else", constants.PhaseQueued, &idOther, true},
+		{"waiting for approval without the agent", constants.PhaseAwaitingApproval, nil, true},
+		{"an open PR waits for the merge, not the agent", constants.PhasePrOpen, &idOther, false},
+		{"a finished run is never parked", constants.PhaseDone, nil, false},
+		{"a cancelled run is never parked", constants.PhaseCancelled, &idOther, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			run := &model.AgentRun{Phase: tc.phase, IdUserAgent: idAgent}
+			if got := IsParked(run, tc.idAssignee); got != tc.expected {
+				t.Errorf("IsParked = %v, expected %v", got, tc.expected)
+			}
+		})
+	}
+}

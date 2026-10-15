@@ -159,7 +159,7 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 }
 
 func (p *MergePoller) notifyRunUpdate(run *model.AgentRun) {
-	BroadcastRunUpdate(context.Background(), p.notifier, p.projectRepo, p.agentRunRepo, p.agentTaskRepo, run)
+	BroadcastRunUpdate(context.Background(), p.notifier, p.projectRepo, p.issueRepo, p.agentRunRepo, p.agentTaskRepo, run)
 }
 
 // broadcastRunMrStatus sends the final MR status of a run whose PR merged or

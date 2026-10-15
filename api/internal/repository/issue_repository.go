@@ -537,6 +537,18 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 	return out, nil
 }
 
+func (r *IssueRepository) LoadAssignee(ctx context.Context, idIssue int64) (*int64, error) {
+	var idAssignee *int64
+	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
+		SELECT assigned_to FROM issues.issue WHERE id_issue = $1`,
+		idIssue,
+	).Scan(&idAssignee)
+	if err != nil {
+		return nil, fmt.Errorf("loading assignee of issue %d: %w", idIssue, err)
+	}
+	return idAssignee, nil
+}
+
 func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter) (*model.Issue, error) {
 	if !filter.IsValid() {
 		return nil, fmt.Errorf("invalid load issue filter")

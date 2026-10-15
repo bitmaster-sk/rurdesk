@@ -361,7 +361,7 @@ func (d *Dispatcher) failTaskAndRun(ctx context.Context, run *model.AgentRun, ta
 	_ = d.taskRepo.SetError(ctx, task.IdTask, "dispatch_failed", reason)
 	updated, err := d.agentRunRepo.TransitionPhase(ctx, run.IdRun, run.Phase, constants.PhaseFailed, constants.ActorTypeSystem, nil, reason)
 	if err == nil {
-		BroadcastRunUpdate(ctx, d.notifier, d.projectRepo, d.agentRunRepo, d.taskRepo, updated)
+		BroadcastRunUpdate(ctx, d.notifier, d.projectRepo, d.issueRepo, d.agentRunRepo, d.taskRepo, updated)
 	}
 }
 

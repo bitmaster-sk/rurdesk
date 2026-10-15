@@ -69,14 +69,18 @@ The project matrix is the default, not a straitjacket.
 **When you assign an agent**, open the skills dock from the agent's row in the
 assignee dropdown (the sliders icon). It shows the per-stage chips pre-filled
 from the project matrix; adjust them and press **Assign**. The run is created
-with exactly those skills. Clicking the agent's name instead assigns it straight
+with exactly those skills. If the task still has a paused run, the dock shows
+that run's skills instead, and **Assign** continues the run, changing only the
+stages that have not started. Clicking the agent's name instead assigns it straight
 away with the project defaults — one click, no detour.
 
 ![The skills dock open next to an agent's row in the assignee dropdown, its per-stage chips prefilled from the project](../../site/assets/img/assignee-skills-dock.png)
 
 **While a run is going**, the **Skills** chip on the run card opens the same
 per-stage list. Stages that have already started are locked — their prompt was
-already built and sent — and the rest can still be changed.
+already built and sent — and the rest can still be changed. A stage stopped
+because the task was taken away from the agent runs again, so it can be changed
+too.
 
 ## Agent workload
 

@@ -98,4 +98,17 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
         const changes = issueApi.update$.mock.calls.at(-1)?.[2] as UpdateIssueReq | undefined;
         expect(changes?.assignedTo).toBe(8);
     });
+
+    it('assigning a parked run back saves its agent as the assignee', () => {
+        const fixture = setup();
+        const component = fixture.componentInstance as unknown as {
+            onAssignBackRun: (run: AgentRun) => void;
+        };
+
+        component.onAssignBackRun(RUN);
+        fixture.detectChanges();
+
+        const changes = issueApi.update$.mock.calls.at(-1)?.[2] as UpdateIssueReq | undefined;
+        expect(changes?.assignedTo).toBe(8);
+    });
 });

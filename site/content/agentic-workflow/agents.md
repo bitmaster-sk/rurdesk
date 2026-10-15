@@ -85,6 +85,20 @@ you set. Picking someone else closes the dialog and drops those settings.
 Selecting the agent in the assignee field without opening the dialog starts the
 full workflow with the project's default skills.
 
+### Taking the task away from the agent
+
+Assigning the task to someone else, or clearing the assignee, does not cancel
+the run. The stage in progress stops and runs again later; finished stages are
+kept. The run card shows **Paused**; hover over it to see who has the task now.
+The run no longer counts in the agent's queue.
+
+To continue, press **Assign back** on the card, pick the agent in the assignee
+field, or assign it through its dialog. The dialog opens with the paused run's
+own skills and workflow, and applies them to the stages that have not started
+yet. If the workflow switch is already
+locked, the dialog says so and nothing changes. Assigning a different agent
+hands the run over to it.
+
 ### Custom fields in a run
 
 If the project defines [custom fields](../using-the-tracker/custom-fields.html),

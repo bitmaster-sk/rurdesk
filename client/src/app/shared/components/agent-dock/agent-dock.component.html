@@ -19,7 +19,12 @@
             </span>
         </label>
 
-        <div class="ui-color-text-muted">{{ 'AGENT_DOCK.PREFILLED' | translate }}</div>
+        <div class="ui-color-text-muted" data-testid="agent-dock-prefilled">
+            {{
+                (isPrefilledFromRun() ? 'AGENT_DOCK.PREFILLED_FROM_RUN' : 'AGENT_DOCK.PREFILLED')
+                    | translate
+            }}
+        </div>
 
         @if (isLoading()) {
             <ui-loader [size]="28" [ariaLabel]="'UI.LOADING' | translate" />

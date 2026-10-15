@@ -80,8 +80,7 @@ func NewAgentRunController(
 func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 
@@ -90,48 +89,31 @@ func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err == repository.ErrRunNotFound {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrNotFound)
 		return
 	}
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, run.IdProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
-	events, err := ctrl.agentRunRepo.LoadEvents(ctx, idRun)
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, idRun)
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	c.JSON(http.StatusOK, agent.BuildRunSnapshot(run, events, tasks))
+	ctrl.respondRunSnapshot(ctx, c, run)
 }
 
 func (ctrl *AgentRunController) GetRunByIssue(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 	idIssuePublic, err := strconv.ParseInt(c.Param("idIssuePublic"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 
@@ -139,29 +121,25 @@ func (ctrl *AgentRunController) GetRunByIssue(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
 	issue, err := ctrl.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
 	run, err := ctrl.agentRunRepo.LoadActiveByIssue(ctx, issue.IdIssue)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	if run == nil {
 		run, err = ctrl.agentRunRepo.LoadLatestByIssue(ctx, issue.IdIssue)
 		if err != nil {
-			_ = c.Error(err)
-			c.Status(http.StatusInternalServerError)
+			ResponseErr(c, err)
 			return
 		}
 	}
@@ -170,17 +148,7 @@ func (ctrl *AgentRunController) GetRunByIssue(c *gin.Context) {
 		return
 	}
 
-	events, err := ctrl.agentRunRepo.LoadEvents(ctx, run.IdRun)
-	if err != nil {
-		ResponseErr(c, err)
-		return
-	}
-	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, run.IdRun)
-	if err != nil {
-		ResponseErr(c, err)
-		return
-	}
-	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks))
+	ctrl.respondRunSnapshot(ctx, c, run)
 }
 
 func (ctrl *AgentRunController) GetRunsByProject(c *gin.Context) {
@@ -598,11 +566,7 @@ func (ctrl *AgentRunController) dispatchedStages(ctx context.Context, idRun int6
 	if err != nil {
 		return nil, fmt.Errorf("loading run tasks: %w", err)
 	}
-	dispatched := make(map[string]bool, len(tasks))
-	for _, task := range tasks {
-		dispatched[task.Stage] = true
-	}
-	return dispatched, nil
+	return service.DispatchedStages(tasks), nil
 }
 
 // Stats returns aggregate counters across all agent_task rows for the run.
@@ -943,7 +907,7 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 		return
 	}
 	for _, idRun := range runIds {
-		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, "gateway_restart")
+		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, "gateway_restart")
 	}
 	c.JSON(http.StatusOK, gin.H{"failedRuns": len(runIds)})
 }
@@ -1363,7 +1327,7 @@ func isAllDigits(s string) bool {
 }
 
 func (ctrl *AgentRunController) notifyRunUpdate(run *model.AgentRun) {
-	agent.BroadcastRunUpdate(context.Background(), ctrl.notifier, ctrl.projectRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, run)
+	agent.BroadcastRunUpdate(context.Background(), ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, run)
 }
 
 // respondRunSnapshot returns the same snapshot shape as the GET endpoints and
@@ -1380,5 +1344,10 @@ func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.C
 		ResponseErr(c, err)
 		return
 	}
-	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks))
+	idAssignee, err := ctrl.issueRepo.LoadAssignee(ctx, run.IdIssue)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks, idAssignee))
 }

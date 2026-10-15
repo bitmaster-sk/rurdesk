@@ -168,7 +168,7 @@ var (
 
 	// ── Issue / message conflicts ──────────────────────────────────────────
 
-	ErrIssueHasActiveRun       = newErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run; hand it over by changing the assignee instead", "error.issue_has_active_run", http.StatusUnprocessableEntity)
+	ErrIssueHasActiveRun       = newErr("ISSUE_HAS_ACTIVE_RUN", "issue already has an active run", "error.issue_has_active_run", http.StatusConflict)
 	ErrAgentPostWhileRunPaused = newErr("AGENT_POST_WHILE_RUN_PAUSED", "agent cannot post while run is paused", "error.agent_post_while_run_paused", http.StatusUnprocessableEntity)
 
 	// ── Attachments ────────────────────────────────────────────────────────

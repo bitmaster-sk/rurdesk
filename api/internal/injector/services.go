@@ -623,6 +623,7 @@ func GetSweep() *agent.Sweep {
 			GetAgentTaskRepository(),
 			GetAgentRunRepository(),
 			GetProjectRepository(),
+			GetIssueRepository(),
 			GetWebhookDedupRepository(),
 			GetNotifier(),
 		), nil
@@ -637,6 +638,7 @@ func GetScheduler() *agent.Scheduler {
 			GetAgentRunRepository(),
 			GetAgentTaskRepository(),
 			GetProjectRepository(),
+			GetIssueRepository(),
 			GetDispatcher(),
 			GetNotifier(),
 		), nil

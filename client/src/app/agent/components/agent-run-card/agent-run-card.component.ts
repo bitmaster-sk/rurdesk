@@ -80,10 +80,12 @@ const STAGE_NOTE_KEY: Record<string, string> = {
 export class AgentRunCardComponent {
     public readonly run = input<AgentRun | null>(null);
     public readonly usersMap = input<Map<number, User>>(new Map());
+    public readonly idAssignee = input<number | null>(null);
 
     public readonly cancelRun = output<void>();
     public readonly continueRun = output<void>();
     public readonly restartRun = output<void>();
+    public readonly assignBackRun = output<void>();
 
     private readonly agentRunApi = inject(AgentRunApi);
     private readonly skillApi = inject(SkillApi);
@@ -140,7 +142,7 @@ export class AgentRunCardComponent {
     // settled (no pulse), like the terminal phases.
     protected readonly isActive = computed(() => {
         const run = this.run();
-        if (!run) return false;
+        if (!run || run.isParked) return false;
         return (
             run.phase !== AgentPhase.Done &&
             run.phase !== AgentPhase.Failed &&
@@ -150,9 +152,20 @@ export class AgentRunCardComponent {
     });
 
     protected readonly isWorking = computed(() => {
-        const phase = this.run()?.phase;
-        return phase === AgentPhase.InProgress;
+        const run = this.run();
+        return !!run && !run.isParked && run.phase === AgentPhase.InProgress;
     });
+
+    protected readonly isParked = computed(() => !!this.run()?.isParked);
+
+    protected readonly assigneeName = computed(() => {
+        const idAssignee = this.idAssignee();
+        return idAssignee === null ? null : (this.usersMap().get(idAssignee)?.name ?? null);
+    });
+
+    protected readonly parkedReasonKey = computed(() =>
+        this.assigneeName() ? 'AGENT.CARD.PARKED_REASSIGNED' : 'AGENT.CARD.PARKED_UNASSIGNED'
+    );
 
     // Drives the PR / MR section title so the card calls the linked change a
     // "Pull request" for github/gitea and "Merge request" for gitlab —
@@ -203,11 +216,17 @@ export class AgentRunCardComponent {
 
     protected get phaseSeverityForRun(): PhaseBadgeSeverity {
         const run = this.run();
+        if (run?.isParked) {
+            return 'warn';
+        }
         return run ? (this.phaseSeverity[run.phase] ?? 'secondary') : 'secondary';
     }
 
     protected get phaseLabelForRun(): string {
         const run = this.run();
+        if (run?.isParked) {
+            return 'AGENT.PHASE.PAUSED';
+        }
         return run ? (this.phaseLabels[run.phase] ?? run.phase) : '';
     }
 
@@ -229,6 +248,11 @@ export class AgentRunCardComponent {
     protected onRestartClick(event: Event): void {
         event.stopPropagation();
         this.restartRun.emit();
+    }
+
+    protected onAssignBackClick(event: Event): void {
+        event.stopPropagation();
+        this.assignBackRun.emit();
     }
 
     protected onSkillsPopoverClosed(): void {

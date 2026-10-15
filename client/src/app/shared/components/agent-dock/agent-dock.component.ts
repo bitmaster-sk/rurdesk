@@ -14,11 +14,13 @@ import { AgentRunApi } from '../../../agent/api/agent-run.api.service';
 import { SKILL_STAGES } from '../../../agent/constants/skill-stages.enum';
 import { AgentStage, STAGE_LABELS } from '../../../agent/model/agent-stage.enum';
 import { AgentRun } from '../../../agent/model/agent-run.model';
+import { ShortWorkflow } from '../../../agent/util/short-workflow';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { ProjectSkillApi } from '../../../project/api/project-skill.api.service';
 import { SkillApi } from '../../api/skill.api.service';
 import { CreateAgentRunReq } from '../../../agent/model/agent-run.model';
 import { AgentOverview } from '../../../agent/model/agent-overview.model';
+import { ApiError } from '../../model/api-error.model';
 import { Skill } from '../../model/skill.model';
 
 export enum AgentDockKind {
@@ -54,6 +56,7 @@ export class AgentDockComponent implements OnInit {
     protected readonly isLoading = signal(false);
     protected readonly isAssigning = signal(false);
     protected readonly isShortWorkflow = signal(false);
+    protected readonly isPrefilledFromRun = signal(false);
     private readonly chosen = signal<Set<string>>(new Set());
 
     public ngOnInit(): void {
@@ -67,7 +70,7 @@ export class AgentDockComponent implements OnInit {
             .subscribe({
                 next: all => {
                     this.skills.set(all);
-                    this.loadDefaults();
+                    this.loadPrefill();
                 },
                 error: () => {
                     this.isLoading.set(false);
@@ -81,11 +84,11 @@ export class AgentDockComponent implements OnInit {
     }
 
     protected isChosen(idSkill: number, stage: AgentStage): boolean {
-        return this.chosen().has(`${idSkill}:${stage}`);
+        return this.chosen().has(this.chipKey(idSkill, stage));
     }
 
     protected onToggle(idSkill: number, stage: AgentStage): void {
-        const key = `${idSkill}:${stage}`;
+        const key = this.chipKey(idSkill, stage);
         const next = new Set(this.chosen());
         if (next.has(key)) {
             next.delete(key);
@@ -119,9 +122,11 @@ export class AgentDockComponent implements OnInit {
                 this.assigned.emit(run);
                 this.close()();
             },
-            error: () => {
+            error: (err: unknown) => {
                 this.isAssigning.set(false);
-                this.toast.showError('AGENT_DOCK.ASSIGN_ERROR');
+                if (!ApiError.translateKeyOf(err)) {
+                    this.toast.showError('AGENT_DOCK.ASSIGN_ERROR');
+                }
             }
         });
     }
@@ -144,6 +149,10 @@ export class AgentDockComponent implements OnInit {
         return minutes < 1 ? '< 1 min' : `${minutes} min`;
     }
 
+    private chipKey(idSkill: number, stage: string): string {
+        return `${idSkill}:${stage}`;
+    }
+
     private idsSkillByStage(): Record<string, number[]> {
         const byStage: Record<string, number[]> = {};
         this.chosen().forEach(key => {
@@ -153,6 +162,27 @@ export class AgentDockComponent implements OnInit {
         return byStage;
     }
 
+    private loadPrefill(): void {
+        this.agentRunApi
+            .loadByIssue$(this.idProject(), this.idIssuePublic())
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: run => (run?.isParked ? this.prefillFromRun(run) : this.loadDefaults()),
+                error: () => this.loadDefaults()
+            });
+    }
+
+    private prefillFromRun(run: AgentRun): void {
+        const chosen = new Set<string>();
+        (run.stagePlan?.stages ?? []).forEach(entry =>
+            (entry.idsSkill ?? []).forEach(idSkill => chosen.add(this.chipKey(idSkill, entry.name)))
+        );
+        this.chosen.set(chosen);
+        this.isShortWorkflow.set(ShortWorkflow.isShort(run.stagePlan));
+        this.isPrefilledFromRun.set(true);
+        this.isLoading.set(false);
+    }
+
     private loadDefaults(): void {
         this.projectSkillApi
             .load$(this.idProject())
@@ -160,7 +190,7 @@ export class AgentDockComponent implements OnInit {
             .subscribe({
                 next: entries => {
                     this.chosen.set(
-                        new Set(entries.map(entry => `${entry.idSkill}:${entry.stage}`))
+                        new Set(entries.map(entry => this.chipKey(entry.idSkill, entry.stage)))
                     );
                     this.isLoading.set(false);
                 },

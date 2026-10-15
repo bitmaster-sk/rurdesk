@@ -217,9 +217,11 @@
                 <app-agent-run-card
                     [run]="run"
                     [usersMap]="usersMapValue"
+                    [idAssignee]="currentIssue()?.assignedTo ?? null"
                     (cancelRun)="cancelAgentRun.emit()"
                     (continueRun)="continueAgentRun.emit()"
                     (restartRun)="restartAgentRun.emit()"
+                    (assignBackRun)="onAssignBackRun(run)"
                 ></app-agent-run-card>
             </div>
         }
