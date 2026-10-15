@@ -1,5 +1,6 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { TestUser } from './user';
+import { authHeaders } from './auth';
 
 export async function tokenOf(
     request: APIRequestContext,
@@ -20,7 +21,7 @@ export async function createSprint(
     body: Record<string, unknown>
 ): Promise<number> {
     const res = await request.post(`${baseURL}/api/private/project/${idProject}/sprint`, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: body
     });
     expect(res.status(), 'sprint creation').toBe(201);
@@ -37,7 +38,7 @@ export async function assignToSprint(
 ): Promise<void> {
     const res = await request.patch(
         `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}/sprint`,
-        { headers: { Authorization: token }, data: { idSprint } }
+        { headers: authHeaders(token), data: { idSprint } }
     );
     expect(res.status(), 'sprint assignment').toBe(204);
 }
@@ -51,12 +52,12 @@ export async function editIssue(
     changes: Record<string, unknown>
 ): Promise<void> {
     const url = `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}`;
-    const current = await request.get(url, { headers: { Authorization: token } });
+    const current = await request.get(url, { headers: authHeaders(token) });
     expect(current.status(), 'reading the issue').toBe(200);
     const issue = (await current.json()) as Record<string, unknown>;
 
     const res = await request.patch(url, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: {
             idState: issue['idState'],
             idSeverity: issue['idSeverity'],
@@ -78,7 +79,7 @@ export async function stateIdOf(
     name: string
 ): Promise<number> {
     const res = await request.get(`${baseURL}/api/private/state`, {
-        headers: { Authorization: token }
+        headers: authHeaders(token)
     });
     expect(res.status(), 'reading project states').toBe(200);
     const states = (await res.json()) as { idState: number; idProject: number; name: string }[];

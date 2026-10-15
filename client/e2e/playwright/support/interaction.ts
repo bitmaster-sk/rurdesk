@@ -1,5 +1,6 @@
 import { APIRequestContext, expect, Locator, Page } from '@playwright/test';
 import { TestUser } from './user';
+import { authHeaders } from './auth';
 
 export interface IssueDraft {
     title: string;
@@ -129,7 +130,7 @@ export abstract class Interaction {
     ): Promise<void> {
         for (const title of titles) {
             const res = await request.post(`${baseURL}/api/private/project/${idProject}/issue`, {
-                headers: { Authorization: token },
+                headers: authHeaders(token),
                 data: { title, idState, description: 'Created by an e2e test.' }
             });
             expect(res.status(), await res.text()).toBe(200);
@@ -146,7 +147,7 @@ export abstract class Interaction {
     ): Promise<void> {
         const res = await request.patch(
             `${baseURL}/api/private/project/${idProject}/issue/${idIssue}`,
-            { headers: { Authorization: token }, data: { customFields } }
+            { headers: authHeaders(token), data: { customFields } }
         );
         expect(res.status(), await res.text()).toBe(200);
     }

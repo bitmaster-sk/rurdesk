@@ -60,7 +60,7 @@ export class AuthInterceptor implements HttpInterceptor {
         if (token && this.isAllowedOrigin(request.url)) {
             request = request.clone({
                 setHeaders: {
-                    Authorization: token
+                    Authorization: `Bearer ${token}`
                 }
             });
         }

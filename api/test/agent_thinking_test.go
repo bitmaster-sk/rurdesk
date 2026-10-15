@@ -292,7 +292,7 @@ func (s *AgentThinkingSuite) Test_BatchIsBroadcastAsDelta() {
 	server := httptest.NewServer(s.App)
 	defer server.Close()
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/private/ws"
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {s.Token}})
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, http.Header{"Authorization": {"Bearer " + s.Token}})
 	s.Require().NoError(err, "websocket connect")
 	defer conn.Close()
 

@@ -5,6 +5,7 @@ import { Interaction } from './support/interaction';
 import { tokenOf } from './support/sprint';
 import { createUser } from './support/user';
 import { WorkflowEventMap } from './support/workflow-event-map';
+import { authHeaders } from './support/auth';
 
 const RUN_TIMEOUT_MS = 90_000;
 
@@ -41,7 +42,7 @@ test.describe('agent proposes wiki changes', () => {
         const created = await request.post(
             `${baseURL}/api/private/project/${idProject}/wiki/page`,
             {
-                headers: { Authorization: token },
+                headers: authHeaders(token),
                 data: {
                     space: 'project',
                     title: 'Deploy runbook',

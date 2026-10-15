@@ -62,14 +62,7 @@ func (d *Dispatcher) Request(ctx context.Context, opts RequestOpts) (*Response, 
 		return nil, fmt.Errorf("building request: %w", err)
 	}
 
-	// MCP clients send "Authorization: Bearer <key>", but auth middleware reads
-	// the header raw and matches keys by shape (64 hex chars). Strip the prefix.
-	authValue := opts.Bearer
-	if len(authValue) > 7 && strings.EqualFold(authValue[:7], "Bearer ") {
-		authValue = authValue[7:]
-	}
-
-	req.Header.Set("Authorization", authValue)
+	req.Header.Set("Authorization", opts.Bearer)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-MCP-Tool", opts.ToolName)
 	req.Header.Set("X-MCP-Origin", "mcp")

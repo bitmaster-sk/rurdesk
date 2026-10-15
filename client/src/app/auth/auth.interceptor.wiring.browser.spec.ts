@@ -45,7 +45,7 @@ describe('AuthInterceptor wiring (browser)', () => {
 
         const req = ctrl.expectOne('/api/private/user');
         // Header present ⇒ the interceptor ran ⇒ withInterceptorsFromDi is active.
-        expect(req.request.headers.get('Authorization')).toBe('my-token');
+        expect(req.request.headers.get('Authorization')).toBe('Bearer my-token');
 
         req.flush('unauthorized', { status: 401, statusText: 'Unauthorized' });
 

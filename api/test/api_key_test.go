@@ -137,6 +137,14 @@ func (s *ApiKeySuite) Test_RawKeyAuthenticates() {
 	s.Equal(id, u.IdUser)
 }
 
+func (s *ApiKeySuite) Test_BareAuthorizationHeader_IsRejected() {
+	_, raw := s.newAgent("barebot")
+	for name, token := range map[string]string{"api key": raw, "session token": s.AdminToken} {
+		res := RequestWithHeaders(s.T(), s.App, "GET", "/api/private/user", "", map[string]string{"Authorization": token})
+		s.Equal(http.StatusUnauthorized, res.StatusCode, name)
+	}
+}
+
 func (s *ApiKeySuite) Test_RateLimit_Override() {
 	id, _ := s.newAgent("ratelimitbot")
 	s.Require().Equal(http.StatusOK,

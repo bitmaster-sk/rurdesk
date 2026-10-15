@@ -2,6 +2,7 @@ import { test, expect, APIRequestContext, Page } from '@playwright/test';
 import { createUser } from './support/user';
 import { Interaction } from './support/interaction';
 import { assignToSprint, createSprint, isoDay, tokenOf } from './support/sprint';
+import { authHeaders } from './support/auth';
 
 const STRIP = '[data-testid="sprint-health-strip"]';
 const PROGRESS = '[data-testid="sprint-health-progress"]';
@@ -17,7 +18,7 @@ async function setPoints(
     points: number
 ): Promise<void> {
     const url = `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}`;
-    const current = await request.get(url, { headers: { Authorization: token } });
+    const current = await request.get(url, { headers: authHeaders(token) });
     expect(current.status(), 'reading the issue').toBe(200);
     const issue = (await current.json()) as {
         idState: number;
@@ -28,7 +29,7 @@ async function setPoints(
     };
 
     const res = await request.patch(url, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: {
             idState: issue.idState,
             idSeverity: issue.idSeverity,

@@ -39,7 +39,7 @@ func (uc *UserController) Login(c *gin.Context) {
 }
 
 func (uc *UserController) Logout(c *gin.Context) {
-	token := c.GetHeader("Authorization")
+	token := extctx.BearerToken(c.GetHeader("Authorization"))
 	if err := uc.userService.Logout(c.Request.Context(), token); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
@@ -102,7 +102,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	token := c.GetHeader("Authorization")
+	token := extctx.BearerToken(c.GetHeader("Authorization"))
 	if token == "" {
 		token, _ = c.Cookie("Authorization")
 	}
@@ -136,7 +136,7 @@ func (uc *UserController) ChangePassword(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	token := c.GetHeader("Authorization")
+	token := extctx.BearerToken(c.GetHeader("Authorization"))
 	if token == "" {
 		token, _ = c.Cookie("Authorization")
 	}

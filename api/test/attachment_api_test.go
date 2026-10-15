@@ -52,7 +52,7 @@ func uploadAttachmentForm(t *testing.T, app *issue.Application, token string, fi
 
 	req := httptest.NewRequest(http.MethodPost, "/api/private/attachment", &body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", "Bearer "+token)
 	recorder := httptest.NewRecorder()
 	app.ServeHTTP(recorder, req)
 	return recorder.Result()
