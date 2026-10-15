@@ -79,8 +79,11 @@ clearly described tasks.
 
 You can also flip the switch on the run card until the design (or, in a short
 run, the implementation) starts. After that it is locked. A restarted run keeps
-the workflow it had. Assigning the agent through the assignee field always
-starts the full workflow.
+the workflow it had. While the dialog is open, clicking the agent's name in the
+list does the same as **Assign**: the run starts with the skills and workflow
+you set. Picking someone else closes the dialog and drops those settings.
+Selecting the agent in the assignee field without opening the dialog starts the
+full workflow with the project's default skills.
 
 ### Custom fields in a run
 

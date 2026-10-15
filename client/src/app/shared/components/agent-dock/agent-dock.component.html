@@ -54,7 +54,7 @@
             </ui-button>
             <ui-button
                 size="small"
-                [disabled]="isAssigning()"
+                [disabled]="isAssigning() || isLoading()"
                 data-testid="agent-dock-assign"
                 (click)="onAssign()"
             >

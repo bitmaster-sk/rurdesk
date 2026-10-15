@@ -10,6 +10,7 @@
         [uiSaveStatus]="saveStatus()"
         [filterPlaceholder]="'UI.SEARCH' | translate"
         (opened)="onOpened()"
+        (optionPicked)="onOptionPicked($event)"
     >
         <ng-template #selectedItem let-user>
             <div class="dropdown-item selected flex flex-row items-center">

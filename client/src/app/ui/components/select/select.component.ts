@@ -20,6 +20,7 @@ import {
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import isEqual from 'lodash-es/isEqual';
 import { UiOptionNav } from './option-nav';
+import { UiSelectDock, UiSelectOptionPicked } from './option-picked.event';
 
 import { OptionConverter } from '../../converter/option.converter';
 
@@ -78,6 +79,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     public readonly valueChanged = output<{ originalEvent?: Event; value: unknown }>();
 
     public readonly opened = output<void>();
+    public readonly optionPicked = output<UiSelectOptionPicked<T>>();
 
     private readonly overlay = inject(Overlay);
     private readonly vcr = inject(ViewContainerRef);
@@ -99,8 +101,9 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     private readonly disabledFromForm = signal(false);
     protected readonly isDisabled = computed(() => this.disabled() || this.disabledFromForm());
     protected readonly isOpen = signal(false);
-    protected readonly dockState = signal<{ option: T; kind: string } | null>(null);
+    protected readonly dockState = signal<UiSelectDock<T> | null>(null);
     protected readonly isDockBelow = signal(false);
+    protected readonly dockedMainWidth = signal<number | null>(null);
 
     /** Stable per-instance id base for ARIA wiring across the overlay boundary. */
     protected readonly baseId = `ui-select-${nextId()}`;
@@ -173,6 +176,8 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
         if (pane) {
             const room = document.documentElement.clientWidth - pane.getBoundingClientRect().right;
             this.isDockBelow.set(room < DOCK_MIN_SIDE_WIDTH);
+            const main = pane.querySelector<HTMLElement>('.ui-select-panel__main');
+            this.dockedMainWidth.set(main?.offsetWidth ?? null);
         }
         this.dockState.set({ option, kind });
     }
@@ -180,6 +185,7 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
     protected closeDock(): void {
         this.dockState.set(null);
         this.isDockBelow.set(false);
+        this.dockedMainWidth.set(null);
     }
 
     public closePanel(): void {
@@ -188,6 +194,18 @@ export class UiSelectComponent<T> implements ControlValueAccessor, OnDestroy {
 
     protected selectOption(option: T, originalEvent?: Event): void {
         const value = this.getOptionValue(option);
+        const dock = this.dockState();
+        const picked = new UiSelectOptionPicked(
+            option,
+            value,
+            dock,
+            dock !== null && isEqual(this.getOptionValue(dock.option), value),
+            originalEvent
+        );
+        this.optionPicked.emit(picked);
+        if (picked.isDefaultPrevented) {
+            return;
+        }
         this.value.set(value);
         this.onChangeFn(value);
         this.valueChanged.emit({ originalEvent, value });

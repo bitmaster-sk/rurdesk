@@ -56,7 +56,7 @@
         (pointerdown)="$event.stopPropagation()"
         (keydown)="onPanelKeydown($event)"
     >
-        <div class="ui-select-panel__main">
+        <div class="ui-select-panel__main" [style.min-width.px]="dockedMainWidth()">
             @if (filter()) {
                 <div class="ui-select-panel__filter-wrap">
                     <input
