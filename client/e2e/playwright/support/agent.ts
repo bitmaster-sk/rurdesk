@@ -1,4 +1,5 @@
 import { APIRequestContext, expect, request as playwrightRequest } from '@playwright/test';
+import { authHeaders } from './auth';
 
 // Where each side reaches the stub gateway: the tracker calls it over the
 // compose network, the test over the published port.
@@ -40,7 +41,7 @@ export async function createStubGatewayAgent(
     script?: GatewayScript
 ): Promise<TestAgent> {
     const created = await request.post(`${baseURL}/api/private/admin/user`, {
-        headers: { Authorization: adminToken },
+        headers: authHeaders(adminToken),
         data: { name: `E2E Agent ${label}`, isAgent: true, idProject, role: 'member' }
     });
     expect(created.status(), 'creating the agent user').toBe(200);
@@ -49,7 +50,7 @@ export async function createStubGatewayAgent(
     const gateway = await request.post(
         `${baseURL}/api/private/admin/user/${agent.idUser}/gateway`,
         {
-            headers: { Authorization: adminToken },
+            headers: authHeaders(adminToken),
             data: { gatewayUrl: STUB_GATEWAY_URL_FOR_TRACKER }
         }
     );
@@ -83,7 +84,7 @@ export async function assignAgent(
 ): Promise<number> {
     const res = await request.post(
         `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}/assign-agent`,
-        { headers: { Authorization: token }, data: { idUserAgent } }
+        { headers: authHeaders(token), data: { idUserAgent } }
     );
     expect(res.status(), 'assigning the agent').toBe(200);
     return ((await res.json()) as { idRun: number }).idRun;

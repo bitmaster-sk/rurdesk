@@ -41,7 +41,15 @@ func (f *fakeApiKeyAuth) CheckRateLimit(_ context.Context, _ int64, _ int) error
 	return f.rateLimitErr
 }
 
-func performAuthRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKeyAuthenticator, bearer string) *httptest.ResponseRecorder {
+func performAuthRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKeyAuthenticator, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	if token == "" {
+		return performAuthHeaderRequest(t, cache, apiKeyAuth, "")
+	}
+	return performAuthHeaderRequest(t, cache, apiKeyAuth, "Bearer "+token)
+}
+
+func performAuthHeaderRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKeyAuthenticator, header string) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -50,8 +58,8 @@ func performAuthRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKeyAuthe
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	if bearer != "" {
-		req.Header.Set("Authorization", bearer)
+	if header != "" {
+		req.Header.Set("Authorization", header)
 	}
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, req)
@@ -88,6 +96,36 @@ func TestAuthUnknownTokenIsUnauthorized(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
 	assert.True(t, apiKeyAuth.lookupCalled)
+}
+
+func TestAuthBareSessionTokenIsUnauthorized(t *testing.T) {
+	cache := &fakeSessionCache{value: sessionJSON(t)}
+	recorder := performAuthHeaderRequest(t, cache, &fakeApiKeyAuth{}, "some-session-token")
+
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
+func TestAuthBareApiKeyIsUnauthorized(t *testing.T) {
+	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{IdApiKey: 7, User: model.User{IdUser: 2}}}
+	recorder := performAuthHeaderRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
+
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+	assert.False(t, apiKeyAuth.lookupCalled)
+}
+
+func TestAuthBearerSchemeIsCaseInsensitive(t *testing.T) {
+	cache := &fakeSessionCache{value: sessionJSON(t)}
+	recorder := performAuthHeaderRequest(t, cache, &fakeApiKeyAuth{}, "bearer some-session-token")
+
+	assert.Equal(t, http.StatusOK, recorder.Code)
+}
+
+func TestAuthBearerWithoutTokenIsUnauthorized(t *testing.T) {
+	apiKeyAuth := &fakeApiKeyAuth{}
+	recorder := performAuthHeaderRequest(t, &fakeSessionCache{value: sessionJSON(t)}, apiKeyAuth, "Bearer ")
+
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+	assert.False(t, apiKeyAuth.lookupCalled)
 }
 
 func TestAuthCacheInfraErrorIsServiceUnavailable(t *testing.T) {

@@ -66,7 +66,7 @@ export async function api(page, method, urlPath, body) {
   return await page.evaluate(async ([m, u, b]) => {
     const res = await fetch(u, {
       method: m,
-      headers: { Authorization: localStorage.getItem('Authorization'), 'Content-Type': 'application/json' },
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('Authorization'), 'Content-Type': 'application/json' },
       body: b ? JSON.stringify(b) : undefined,
     });
     let data = null; try { data = await res.json(); } catch { /* no body */ }

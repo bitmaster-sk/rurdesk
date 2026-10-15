@@ -49,9 +49,7 @@ func TestDispatcher_Success200(t *testing.T) {
 	assert.JSONEq(t, `{"id":1}`, string(resp.Body))
 }
 
-// Strips the optional "Bearer " prefix: auth middleware matches keys by their
-// 64-hex shape, not "Bearer <key>", so the forwarded header must carry the raw key.
-func TestDispatcher_BearerPrefixStripped(t *testing.T) {
+func TestDispatcher_ForwardsBearerHeaderUnchanged(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	engine := gin.New()
 	var capturedBearer string
@@ -69,7 +67,7 @@ func TestDispatcher_BearerPrefixStripped(t *testing.T) {
 	})
 
 	require.NoError(t, err)
-	assert.Equal(t, "my-api-key", capturedBearer)
+	assert.Equal(t, "Bearer my-api-key", capturedBearer)
 }
 
 func TestDispatcher_MCPHeaders(t *testing.T) {
@@ -251,7 +249,7 @@ func TestDispatcher_ForwardsExtraHeadersAndSkipsEmptyOnes(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "42", received.Get("X-Rurdesk-Run"))
-	assert.Equal(t, "key", received.Get("Authorization"))
+	assert.Equal(t, "Bearer key", received.Get("Authorization"))
 	_, present := received["X-Empty"]
 	assert.False(t, present)
 }

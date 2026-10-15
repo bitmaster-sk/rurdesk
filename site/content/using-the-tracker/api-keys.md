@@ -46,6 +46,9 @@ Authorization: Bearer <key>
 SSE. The plan-stage variants live under `/mcp/plan/http` and `/mcp/plan/sse` and expose
 read-only tools plus `submit_plan` / `request_clarification`.
 
+The REST API under `/api/private` takes the key the same way. The `Bearer ` prefix is
+required: a request that sends the bare key in `Authorization` is rejected with `401`.
+
 ## Rotating and revoking
 
 **Regenerate** replaces a key's value in place, keeping its name and its row. The old

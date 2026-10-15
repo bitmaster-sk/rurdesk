@@ -1,6 +1,7 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import { BOOTSTRAP_USER } from './bootstrap-user';
 import { Attempt } from './attempt';
+import { authHeaders } from './auth';
 
 export interface TestUser {
     name: string;
@@ -26,7 +27,7 @@ export async function createUser(
     };
 
     const created = await request.post(`${baseURL}/api/private/admin/user`, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: user
     });
     expect(

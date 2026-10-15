@@ -1,5 +1,6 @@
 import { APIRequestContext, expect, request as playwrightRequest } from '@playwright/test';
 import { STUB_GATEWAY_URL_FOR_TEST, STUB_GATEWAY_URL_FOR_TRACKER } from './agent';
+import { authHeaders } from './auth';
 
 export interface EventMapping {
     event: string;
@@ -15,7 +16,7 @@ export abstract class WorkflowEventMap {
         name: string
     ): Promise<number> {
         const res = await request.post(`${baseURL}/api/private/state`, {
-            headers: { Authorization: token },
+            headers: authHeaders(token),
             data: { idProject, name, start: false, final: false }
         });
         expect(res.status(), `creating state ${name}`).toBe(200);
@@ -32,7 +33,7 @@ export abstract class WorkflowEventMap {
     ): Promise<void> {
         const res = await request.put(
             `${baseURL}/api/private/project/${idProject}/workflow-event-state-map`,
-            { headers: { Authorization: token }, data: { mappings } }
+            { headers: authHeaders(token), data: { mappings } }
         );
         expect(res.status(), `mapping ${mappings.map(m => m.event).join(', ')}`).toBe(200);
     }
@@ -63,7 +64,7 @@ export abstract class WorkflowEventMap {
         const res = await request.post(
             `${baseURL}/api/private/project/${idProject}/git-integration`,
             {
-                headers: { Authorization: token },
+                headers: authHeaders(token),
                 data: {
                     name: `e2e-${label}`,
                     hostType: 'github',
@@ -103,7 +104,7 @@ export abstract class WorkflowEventMap {
     ): Promise<number | null> {
         const res = await request.get(
             `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}`,
-            { headers: { Authorization: token } }
+            { headers: authHeaders(token) }
         );
         expect(res.status(), 'loading the issue').toBe(200);
         return ((await res.json()) as { idState: number | null }).idState;
@@ -116,7 +117,7 @@ export abstract class WorkflowEventMap {
         idRun: number
     ): Promise<string> {
         const res = await request.get(`${baseURL}/api/private/agent/run/${idRun}`, {
-            headers: { Authorization: token }
+            headers: authHeaders(token)
         });
         expect(res.status(), 'loading the run').toBe(200);
         return ((await res.json()) as { phase: string }).phase;
@@ -145,7 +146,7 @@ export abstract class WorkflowEventMap {
         idRun: number
     ): Promise<void> {
         const res = await request.post(`${baseURL}/api/private/agent/run/${idRun}/approve`, {
-            headers: { Authorization: token },
+            headers: authHeaders(token),
             data: {}
         });
         expect(res.status(), 'approving the run').toBe(200);
@@ -158,7 +159,7 @@ export abstract class WorkflowEventMap {
         idRun: number
     ): Promise<number> {
         const res = await request.post(`${baseURL}/api/private/agent/run/${idRun}/restart`, {
-            headers: { Authorization: token },
+            headers: authHeaders(token),
             data: {}
         });
         expect(res.status(), 'restarting the run').toBe(200);
@@ -172,7 +173,7 @@ export abstract class WorkflowEventMap {
         idRun: number
     ): Promise<void> {
         const res = await request.post(`${baseURL}/api/private/agent/run/${idRun}/cancel`, {
-            headers: { Authorization: token },
+            headers: authHeaders(token),
             data: {}
         });
         expect(res.status(), 'cancelling the run').toBe(200);

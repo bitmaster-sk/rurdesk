@@ -117,7 +117,7 @@ func (s *AgentAuditSuite) signedHeaders(body string) map[string]string {
 	ts := time.Now().Unix()
 	sig := agent.SignPayload(s.GatewaySecret, ts, []byte(body))
 	return map[string]string{
-		"Authorization":       s.AgentApiKey,
+		"Authorization":       "Bearer " + s.AgentApiKey,
 		"X-Tracker-Signature": sig,
 		"X-Tracker-Event-Id":  uuid.New().String(),
 		"X-Tracker-Sequence":  "1",

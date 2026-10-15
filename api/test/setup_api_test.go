@@ -276,7 +276,9 @@ func Setup(t *testing.T) *issue.Application {
 func Request(_ *testing.T, app *issue.Application, method, url, body, token string) *http.Response {
 	req := httptest.NewRequest(method, url, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", token)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 	w := httptest.NewRecorder()
 	app.ServeHTTP(w, req)
 	return w.Result()

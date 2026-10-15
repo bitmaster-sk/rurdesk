@@ -46,7 +46,7 @@ func sendToTrackerInRun(ctx context.Context, target *configuredAgent, idRun int6
 		req.Header.Set(constants.AgentRunHeader, strconv.FormatInt(idRun, 10))
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", target.apiKey)
+	req.Header.Set("Authorization", "Bearer "+target.apiKey)
 	timestamp := time.Now().Unix()
 	req.Header.Set("X-Tracker-Signature", agent.SignPayload(target.secret, timestamp, []byte(body)))
 	req.Header.Set("X-Tracker-Event-Id", strconv.FormatInt(time.Now().UnixNano(), 36))

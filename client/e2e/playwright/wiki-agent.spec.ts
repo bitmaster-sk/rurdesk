@@ -3,6 +3,7 @@ import { assignAgent, createStubGatewayAgent } from './support/agent';
 import { Interaction } from './support/interaction';
 import { tokenOf } from './support/sprint';
 import { createUser } from './support/user';
+import { authHeaders } from './support/auth';
 
 const RUN_TIMEOUT_MS = 60_000;
 
@@ -14,7 +15,7 @@ async function createWikiPageViaApi(
     page: { title: string; summary: string; body: string; agentAccess: string }
 ): Promise<void> {
     const res = await request.post(`${baseURL}/api/private/project/${idProject}/wiki/page`, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: { space: 'project', ...page }
     });
     expect(res.status(), await res.text()).toBe(200);

@@ -1,6 +1,7 @@
 import { APIRequestContext, expect, test } from '@playwright/test';
 import { Interaction } from './support/interaction';
 import { createUser } from './support/user';
+import { authHeaders } from './support/auth';
 
 interface WikiPageResponse {
     page: { idPage: number; versionNo: number; body: string };
@@ -16,7 +17,7 @@ async function loadWikiPage(
     const res = await request.get(
         `${baseURL}/api/private/project/${idProject}/wiki/page/project/${slug}`,
         {
-            headers: { Authorization: token }
+            headers: authHeaders(token)
         }
     );
     expect(res.status(), await res.text()).toBe(200);
@@ -33,7 +34,7 @@ async function saveWikiPageViaApi(
     body: string
 ): Promise<void> {
     const res = await request.put(`${baseURL}/api/private/wiki/page/${idPage}`, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: { baseVersion, title, body, summary: '', agentAccess: 'on_demand', note: 'from api' }
     });
     expect(res.status(), await res.text()).toBe(200);
@@ -172,7 +173,7 @@ test('a page moved to the trash comes back with its subpages', async ({
     await Interaction.createWikiPage(page, idProject, 'Operations', 'parent');
     const parent = await loadWikiPage(request, baseURL!, token, idProject, 'operations');
     const child = await request.post(`${baseURL}/api/private/project/${idProject}/wiki/page`, {
-        headers: { Authorization: token },
+        headers: authHeaders(token),
         data: { space: 'project', idParent: parent.page.idPage, title: 'Deployment', body: 'child' }
     });
     expect(child.status(), await child.text()).toBe(200);

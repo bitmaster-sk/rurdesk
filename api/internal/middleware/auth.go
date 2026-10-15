@@ -64,7 +64,7 @@ func bearerFromWebsocketProtocol(header string) string {
 
 func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		bearer := c.GetHeader("Authorization")
+		bearer := extctx.BearerToken(c.GetHeader("Authorization"))
 		if bearer == "" {
 			bearer = bearerFromWebsocketProtocol(c.GetHeader("Sec-WebSocket-Protocol"))
 		}

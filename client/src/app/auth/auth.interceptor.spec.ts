@@ -51,7 +51,7 @@ describe('AuthInterceptor', () => {
 
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
-        expect(passed.headers.get('Authorization')).toBe('my-token');
+        expect(passed.headers.get('Authorization')).toBe('Bearer my-token');
     });
 
     // ── Origin-allowlist tests ──────────────────────────────────────────
@@ -73,7 +73,7 @@ describe('AuthInterceptor', () => {
 
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
-        expect(passed.headers.get('Authorization')).toBe('my-token');
+        expect(passed.headers.get('Authorization')).toBe('Bearer my-token');
     });
 
     it('attaches the token for an absolute same-origin URL', () => {
@@ -94,7 +94,7 @@ describe('AuthInterceptor', () => {
 
         const passed = (next.handle as unknown as { mock: { calls: HttpRequest<unknown>[][] } })
             .mock.calls[0][0];
-        expect(passed.headers.get('Authorization')).toBe('my-token');
+        expect(passed.headers.get('Authorization')).toBe('Bearer my-token');
     });
 
     it('does NOT attach the token for a foreign-origin absolute URL', () => {
