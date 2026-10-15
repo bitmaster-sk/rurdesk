@@ -13,7 +13,11 @@ import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 })
 export class WikiProposalCardComponent {
     public readonly proposal = input.required<WikiProposal>();
-    public readonly agent = input<User | undefined>(undefined);
+    public readonly author = input<User | undefined>(undefined);
+
+    protected readonly authorName = computed(
+        () => this.author()?.name ?? WikiProposalConverter.toAuthorName(this.proposal())
+    );
 
     protected readonly kindTag = computed<WikiProposalTag>(() =>
         WikiProposalConverter.toKindTag(this.proposal().kind)

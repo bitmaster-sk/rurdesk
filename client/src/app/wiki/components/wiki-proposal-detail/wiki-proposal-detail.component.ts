@@ -142,9 +142,14 @@ export class WikiProposalDetailComponent {
         };
     });
 
-    protected readonly agentName = computed(() => {
+    protected readonly reasonKey = computed(() => {
         const proposal = this.proposal();
-        return proposal ? (this.usersMap().get(proposal.idUserAgent)?.name ?? '—') : '';
+        return proposal ? WikiProposalConverter.toReasonKey(proposal) : '';
+    });
+
+    protected readonly rejectHintKey = computed(() => {
+        const proposal = this.proposal();
+        return proposal ? WikiProposalConverter.toRejectHintKey(proposal) : null;
     });
 
     protected readonly deciderName = computed(() => {
@@ -160,7 +165,11 @@ export class WikiProposalDetailComponent {
         });
         inject(NoticeService)
             .wikiProposal$.pipe(
-                filter(notice => notice.payload.idIssue === this.proposal()?.idIssue),
+                filter(
+                    notice =>
+                        notice.payload.idProject === this.proposal()?.idProject &&
+                        notice.payload.idIssue === this.proposal()?.idIssue
+                ),
                 debounceTime(300),
                 takeUntilDestroyed()
             )

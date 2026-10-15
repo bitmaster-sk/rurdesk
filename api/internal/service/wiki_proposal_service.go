@@ -60,9 +60,6 @@ func NewWikiProposalService(
 }
 
 func (s *WikiProposalService) Suggest(ctx context.Context, user model.User, idProject, idRun int64, req model.WikiProposalSuggestReq) (*model.WikiProposalAgentView, error) {
-	if !user.IsAgent {
-		return nil, errs.ErrForbidden.WithMessage("only an agent run can suggest wiki changes; edit the wiki directly instead")
-	}
 	if !constants.IsValidWikiProposalKind(req.Kind) {
 		return nil, errs.ErrBadRequest.WithMessage("kind must be create, update, move or delete")
 	}
@@ -70,15 +67,23 @@ func (s *WikiProposalService) Suggest(ctx context.Context, user model.User, idPr
 	if reason == "" {
 		return nil, errs.ErrBadRequest.WithMessage("reason is required: say what in the code makes the wiki change necessary")
 	}
-	run, err := s.implementationRun(ctx, user, idRun, idProject)
-	if err != nil {
-		return nil, err
+	draft := &model.WikiProposalDraft{IdProject: idProject, CreateBy: user.IdUser, Kind: req.Kind, Reason: reason}
+	if user.IsAgent {
+		run, err := s.implementationRun(ctx, user, idRun, idProject)
+		if err != nil {
+			return nil, err
+		}
+		draft.IdRun, draft.IdIssue = &run.IdRun, &run.IdIssue
 	}
 	instance, project, err := s.wiki.projectSpaces(ctx, user, idProject)
 	if err != nil {
 		return nil, err
 	}
-	draft := &model.WikiProposalDraft{IdRun: run.IdRun, IdIssue: run.IdIssue, IdProject: idProject, Kind: req.Kind, Reason: reason}
+	if !user.IsAgent && req.IdIssuePublic > 0 {
+		if draft.IdIssue, err = s.issueOf(ctx, idProject, req.IdIssuePublic); err != nil {
+			return nil, err
+		}
+	}
 	if req.Kind == constants.WikiProposalCreate {
 		err = s.draftCreate(ctx, draft, instance, project, req)
 	} else {
@@ -252,15 +257,17 @@ func (s *WikiProposalService) Reject(ctx context.Context, user model.User, idPro
 		if err := s.proposalRepo.Decide(ctx, proposal.IdProposal, constants.WikiProposalRejected, constants.WikiProposalUndecided, user.IdUser, note, nil, nil); err != nil {
 			return s.decideErr(err)
 		}
-		message, err := s.messageRepo.InsertIssueMessage(ctx, rejectionComment(proposal, reason), &user, proposal.IdIssue, nil)
-		if err != nil {
-			return err
+		if proposal.IdIssue != nil {
+			message, err := s.messageRepo.InsertIssueMessage(ctx, rejectionComment(proposal, reason), &user, *proposal.IdIssue, nil)
+			if err != nil {
+				return err
+			}
+			s.broadcastMessage(ctx, proposal.IdProject, user.IdUser, message)
 		}
 		rejected, err = s.proposalRepo.LoadOne(ctx, proposal.IdProposal, false)
 		if err != nil {
 			return err
 		}
-		s.broadcastMessage(ctx, proposal.IdProject, user.IdUser, message)
 		s.broadcast(ctx, proposal.IdProject, proposal.IdIssue)
 		return nil
 	})
@@ -295,7 +302,18 @@ func (s *WikiProposalService) RunFinished(ctx context.Context, run *model.AgentR
 		s.notifyReady(ctx, run, ready)
 		s.notifyUnresolved(ctx, run, unresolved)
 	}
-	s.broadcast(ctx, run.IdProject, run.IdIssue)
+	s.broadcast(ctx, run.IdProject, &run.IdIssue)
+}
+
+func (s *WikiProposalService) issueOf(ctx context.Context, idProject, idIssuePublic int64) (*int64, error) {
+	issue, err := s.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &idProject, IdIssuePublic: &idIssuePublic})
+	if isNoRows(err) {
+		return nil, errs.ErrNotFound.WithMessage(fmt.Sprintf("task #%d not found in this project", idIssuePublic))
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &issue.IdIssue, nil
 }
 
 func (s *WikiProposalService) implementationRun(ctx context.Context, user model.User, idRun, idProject int64) (*model.AgentRun, error) {
@@ -792,7 +810,7 @@ func (s *WikiProposalService) notify(ctx context.Context, run *model.AgentRun, n
 	}
 }
 
-func (s *WikiProposalService) broadcast(ctx context.Context, idProject, idIssue int64) {
+func (s *WikiProposalService) broadcast(ctx context.Context, idProject int64, idIssue *int64) {
 	if s.wiki.notifier == nil {
 		return
 	}
@@ -892,9 +910,23 @@ func approvedRequest(proposal *model.WikiProposal) model.WikiProposalAcceptReq {
 }
 
 func proposalNote(proposal *model.WikiProposal, note string) string {
-	text := fmt.Sprintf("Agent proposal from #%d (run #%d)", proposal.IdIssuePublic, proposal.IdRun)
+	text := proposalOrigin(proposal)
 	if note = strings.TrimSpace(note); note != "" {
 		text += ": " + note
+	}
+	return text
+}
+
+func proposalOrigin(proposal *model.WikiProposal) string {
+	if proposal.IdRun != nil && proposal.IdIssuePublic != nil {
+		return fmt.Sprintf("Agent proposal from #%d (run #%d)", *proposal.IdIssuePublic, *proposal.IdRun)
+	}
+	text := "Proposal"
+	if proposal.AuthorName != nil {
+		text += " by " + *proposal.AuthorName
+	}
+	if proposal.IdIssuePublic != nil {
+		text += fmt.Sprintf(" from #%d", *proposal.IdIssuePublic)
 	}
 	return text
 }

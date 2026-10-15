@@ -29,19 +29,28 @@ const wikiProposalSelect = `
 	       p.agent_access, p.decision, p.decided_by, p.decided_at, p.decision_note, p.result_version,
 	       page.version_no AS page_version, page.title AS page_title, page_parent.title AS page_parent_title,
 	       (page.id_page IS NOT NULL AND page.deleted_at IS NULL) AS is_page_live,
-	       p.create_at, p.update_at
+	       p.create_by, author.name AS author_name, p.create_at, p.update_at
 	FROM wiki.change_proposal p
-	JOIN agent.run r ON r.id_run = p.id_run
-	JOIN issues.issue i ON i.id_issue = p.id_issue
+	LEFT JOIN agent.run r ON r.id_run = p.id_run
+	LEFT JOIN issues.issue i ON i.id_issue = p.id_issue
+	LEFT JOIN users.user author ON author.id_user = p.create_by
 	JOIN wiki.space s ON s.id_space = p.id_space
 	LEFT JOIN wiki.page page ON page.id_page = p.id_page
 	LEFT JOIN wiki.page parent ON parent.id_page = p.id_parent
 	LEFT JOIN wiki.page page_parent ON page_parent.id_page = page.id_parent`
 
 func (r *WikiProposalRepository) Upsert(ctx context.Context, draft *model.WikiProposalDraft) (int64, bool, error) {
-	target := fmt.Sprintf("(id_run, id_page) WHERE kind <> '%s'", constants.WikiProposalCreate)
-	if draft.Kind == constants.WikiProposalCreate {
+	isCreate := draft.Kind == constants.WikiProposalCreate
+	var target string
+	switch {
+	case draft.IdRun != nil && isCreate:
 		target = fmt.Sprintf("(id_run, id_space, slug) WHERE kind = '%s'", constants.WikiProposalCreate)
+	case draft.IdRun != nil:
+		target = fmt.Sprintf("(id_run, id_page) WHERE kind <> '%s'", constants.WikiProposalCreate)
+	case isCreate:
+		target = fmt.Sprintf("(create_by, id_space, slug) WHERE id_run IS NULL AND kind = '%s' AND decision = '%s'", constants.WikiProposalCreate, constants.WikiProposalOpen)
+	default:
+		target = fmt.Sprintf("(create_by, id_page) WHERE id_run IS NULL AND kind <> '%s' AND decision = '%s'", constants.WikiProposalCreate, constants.WikiProposalOpen)
 	}
 	db := extctx.GetDb(ctx, r.pool)
 	var idProposal int64
@@ -49,19 +58,20 @@ func (r *WikiProposalRepository) Upsert(ctx context.Context, draft *model.WikiPr
 	err := db.QueryRow(ctx, `
 		INSERT INTO wiki.change_proposal
 			(id_run, id_issue, id_project, id_space, kind, id_page, slug, title, summary, body,
-			 id_parent, parent_slug, reason, base_version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+			 id_parent, parent_slug, reason, base_version, create_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $17)
 		ON CONFLICT `+target+` DO UPDATE SET
 			kind = EXCLUDED.kind, slug = EXCLUDED.slug, title = EXCLUDED.title, summary = EXCLUDED.summary,
 			body = EXCLUDED.body, id_parent = EXCLUDED.id_parent, parent_slug = EXCLUDED.parent_slug,
 			reason = EXCLUDED.reason, base_version = EXCLUDED.base_version,
+			id_issue = COALESCE(EXCLUDED.id_issue, wiki.change_proposal.id_issue),
 			decision = $15, decided_by = NULL, decided_at = NULL, decision_note = NULL, agent_access = NULL,
 			update_at = (now() at time zone 'utc')
 		WHERE wiki.change_proposal.decision = ANY($16)
 		RETURNING id_proposal, (xmax = 0)
 	`, draft.IdRun, draft.IdIssue, draft.IdProject, draft.IdSpace, draft.Kind, draft.IdPage, draft.Slug,
 		draft.Title, draft.Summary, draft.Body, draft.IdParent, draft.ParentSlug, draft.Reason, draft.BaseVersion,
-		constants.WikiProposalOpen, constants.WikiProposalRevisable,
+		constants.WikiProposalOpen, constants.WikiProposalRevisable, draft.CreateBy,
 	).Scan(&idProposal, &inserted)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return 0, false, ErrWikiProposalDecided
@@ -95,7 +105,7 @@ func (r *WikiProposalRepository) Load(ctx context.Context, filter model.WikiProp
 		add("p.decision = ANY($%d)", filter.Decisions)
 	}
 	if filter.OnlyLive {
-		add("r.phase <> ALL($%d)", []string{constants.PhaseFailed, constants.PhaseCancelled})
+		add("(p.id_run IS NULL OR r.phase <> ALL($%d))", []string{constants.PhaseFailed, constants.PhaseCancelled})
 	}
 	query := wikiProposalSelect
 	if len(where) > 0 {
@@ -116,8 +126,8 @@ func (r *WikiProposalRepository) CountReady(ctx context.Context, idProject int64
 	err := db.QueryRow(ctx, `
 		SELECT count(*)::int
 		FROM wiki.change_proposal p
-		JOIN agent.run r ON r.id_run = p.id_run
-		WHERE p.id_project = $1 AND ((p.decision = $2 AND r.phase = $3) OR p.decision = $4)
+		LEFT JOIN agent.run r ON r.id_run = p.id_run
+		WHERE p.id_project = $1 AND ((p.decision = $2 AND (p.id_run IS NULL OR r.phase = $3)) OR p.decision = $4)
 	`, idProject, constants.WikiProposalOpen, constants.PhaseDone, constants.WikiProposalNeedsResolving).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("counting ready wiki proposals: %w", err)

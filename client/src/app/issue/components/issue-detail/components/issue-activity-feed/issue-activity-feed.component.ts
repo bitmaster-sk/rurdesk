@@ -41,6 +41,7 @@ import { ThinkingRowConverter } from './converter/thinking-row.converter';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
+import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -401,6 +402,11 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     public getUserForTrack(track: Track): User | undefined {
         if (track.idUser == null) return undefined;
         return this.usersMap().get(track.idUser);
+    }
+
+    public proposalAuthor(proposal: WikiProposal): User | undefined {
+        if (proposal.createBy == null) return undefined;
+        return this.usersMap().get(proposal.createBy);
     }
 
     private scrollToBottom(): void {

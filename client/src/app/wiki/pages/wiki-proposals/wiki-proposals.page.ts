@@ -2,8 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { debounceTime, filter, map } from 'rxjs';
-import { User } from 'src/app/auth/model/user.model';
-import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { WikiApi } from '../../api/wiki.api.service';
@@ -29,10 +27,6 @@ export class WikiProposalsPage {
     protected readonly idProject = Number(this.route.snapshot.paramMap.get('idProject'));
     protected readonly proposals = signal<WikiProposal[] | null>(null);
     protected readonly space = signal<string>(ALL_SPACES);
-
-    private readonly usersMap = toSignal(inject(ProjectMemberStore).usersMap$, {
-        initialValue: new Map<number, User>()
-    });
 
     private readonly idSelectedParam = toSignal(
         this.route.paramMap.pipe(map(params => Number(params.get('idProposal')) || null)),
@@ -74,10 +68,6 @@ export class WikiProposalsPage {
 
     protected stateTag(proposal: WikiProposal): WikiProposalTag {
         return WikiProposalConverter.toStateTag(proposal.state);
-    }
-
-    protected agentName(proposal: WikiProposal): string {
-        return this.usersMap().get(proposal.idUserAgent)?.name ?? '—';
     }
 
     protected onSpaceChange(space: string): void {

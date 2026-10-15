@@ -1,8 +1,8 @@
 <div class="activity-item" data-testid="wiki-proposal-card">
     <div class="activity-marker">
         <app-avatar
-            [name]="agent()?.name ?? '?'"
-            [bgColor]="agent()?.colorAvatarBg ?? ''"
+            [name]="authorName()"
+            [bgColor]="author()?.colorAvatarBg ?? ''"
             [height]="1.875"
             [width]="1.875"
             [radius]="0.9375"
@@ -15,7 +15,7 @@
             <span>{{ 'WIKI.PROPOSAL.CARD' | translate }}</span>
         </div>
         <div class="proposal-header">
-            <span class="author">{{ agent()?.name ?? '—' }}</span>
+            <span class="author">{{ authorName() }}</span>
             <span class="timestamp">{{ proposal().updateAt | date: 'medium' }}</span>
         </div>
         <div class="flex flex-wrap items-center gap-2">

@@ -6,11 +6,13 @@ import { WikiPage } from './wiki-page.model';
 
 export interface WikiProposal {
     idProposal: number;
-    idRun: number;
-    idUserAgent: number;
-    idIssue: number;
-    idIssuePublic: number;
-    issueTitle: string;
+    idRun: number | null;
+    idUserAgent: number | null;
+    idIssue: number | null;
+    idIssuePublic: number | null;
+    issueTitle: string | null;
+    createBy: number | null;
+    authorName: string | null;
     idProject: number;
     idSpace: number;
     spaceKind: WikiSpaceKind;
@@ -62,5 +64,5 @@ export interface WikiProposalAcceptResult {
 
 export interface WikiProposalNotice {
     idProject: number;
-    idIssue: number;
+    idIssue: number | null;
 }

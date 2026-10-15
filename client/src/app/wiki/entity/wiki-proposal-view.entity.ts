@@ -12,6 +12,11 @@ export interface WikiProposalGroups {
     approved: WikiProposal[];
 }
 
+export interface WikiProposalBanner {
+    key: string;
+    params: Record<string, string | number | null>;
+}
+
 export interface WikiProposalEditLink {
     commands: (string | number)[];
     queryParams: Params;

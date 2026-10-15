@@ -38,11 +38,10 @@
         </div>
     </div>
 
-    @if (proposal(); as proposal) {
+    @if (proposalBanner(); as banner) {
     <div class="wiki-edit__banner wiki-edit__banner--info" data-testid="wiki-edit-proposal">
         <tabler-icon icon="bulb" [size]="16" />
-        {{ 'WIKI.PROPOSAL.EDITING' | translate: { issue: proposal.idIssuePublic, run: proposal.idRun
-        } }}
+        {{ banner.key | translate: banner.params }}
     </div>
     } @if (editors().length > 0) {
     <div class="wiki-edit__banner wiki-edit__banner--info" data-testid="wiki-presence">

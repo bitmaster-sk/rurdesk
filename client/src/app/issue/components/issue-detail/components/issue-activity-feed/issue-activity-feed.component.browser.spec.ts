@@ -16,7 +16,7 @@ import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 import { WikiProposalKind } from 'src/app/wiki/constants/wiki-proposal-kind.enum';
 import { WikiProposalState } from 'src/app/wiki/constants/wiki-proposal-state.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
-import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
+import { WikiProposal, WikiProposalNotice } from 'src/app/wiki/model/wiki-proposal.model';
 
 @Pipe({ name: 'translate', standalone: false })
 class StubTranslatePipe implements PipeTransform {
@@ -71,7 +71,7 @@ class ActivityTimeItemStub {
 @Component({ selector: 'app-wiki-proposal-card', template: '', standalone: true })
 class WikiProposalCardStub {
     public readonly proposal = input<unknown>(undefined);
-    public readonly agent = input<unknown>(undefined);
+    public readonly author = input<unknown>(undefined);
 }
 
 function makeUser(id: number, name: string): User {
@@ -494,11 +494,13 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
 
 describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
     it('shows the proposals of the task and reloads them when one of them changes', async () => {
-        const proposalNotices = new Subject<{ payload: { idProject: number; idIssue: number } }>();
+        const proposalNotices = new Subject<{ payload: WikiProposalNotice }>();
         const proposal = (idProposal: number): WikiProposal => ({
             idProposal,
             idRun: 19,
             idUserAgent: 3,
+            createBy: 3,
+            authorName: 'Kimi',
             idIssue: 1,
             idIssuePublic: 1,
             issueTitle: 'Task',

@@ -15,6 +15,8 @@ function proposal(overrides: Partial<WikiProposal> = {}): WikiProposal {
         idProposal: 5,
         idRun: 19,
         idUserAgent: 3,
+        createBy: 3,
+        authorName: 'Kimi',
         idIssue: 175,
         idIssuePublic: 175,
         issueTitle: 'Reuse the branch',
@@ -70,7 +72,7 @@ describe('WikiProposalCardComponent', () => {
 
     function render(value: WikiProposal): HTMLElement {
         fixture.componentRef.setInput('proposal', value);
-        fixture.componentRef.setInput('agent', {
+        fixture.componentRef.setInput('author', {
             idUser: 3,
             name: 'Kimi',
             email: '',
@@ -113,6 +115,17 @@ describe('WikiProposalCardComponent', () => {
         expect(el.querySelector('span.page')?.textContent).toContain('Retention');
         expect(el.querySelector('[data-testid="wiki-proposal-card-state"]')?.textContent).toContain(
             'WIKI.PROPOSAL.STATE.READY'
+        );
+    });
+
+    it('names the author stored with the proposal when they are not a project member', () => {
+        fixture.componentRef.setInput('proposal', proposal({ idRun: null, authorName: 'Tomas' }));
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+
+        expect(el.querySelector('.author')?.textContent).toContain('Tomas');
+        expect(fixture.debugElement.query(By.directive(AvatarStub)).componentInstance.name()).toBe(
+            'Tomas'
         );
     });
 });

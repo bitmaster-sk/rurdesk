@@ -131,7 +131,7 @@
             } @else if (group.item.type === 'wikiProposal') {
                 <app-wiki-proposal-card
                     [proposal]="group.item.data"
-                    [agent]="usersMap().get(group.item.data.idUserAgent)"
+                    [author]="proposalAuthor(group.item.data)"
                 ></app-wiki-proposal-card>
             }
         }
