@@ -52,8 +52,8 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 
 	// Writes config.yaml with the stage URL + bearer token per run (not via
 	// ${ENV} substitution, which goose doesn't apply to the extension uri).
-	// Assumes MAX_CONCURRENT=1 (config path is shared); concurrent runs would
-	// need per-run config dirs.
+	// The config path is shared, which is safe only because the orchestrator
+	// runs one stage at a time.
 	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.AgentApiKey, task.IdRun); err != nil {
 		return stats, fmt.Errorf("writing goose config: %w", err)
 	}

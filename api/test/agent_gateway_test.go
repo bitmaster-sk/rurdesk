@@ -119,7 +119,7 @@ func (s *AgentGatewaySuite) TestGatewayForNonAgentRejected() {
 	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
 }
 
-// Full lifecycle: create (one-time token, default concurrency), read, duplicate
+// Full lifecycle: create (one-time token), read, duplicate
 // rejection, token regeneration, delete, and 404s on the empty state.
 func (s *AgentGatewaySuite) TestGatewayLifecycle() {
 	path := s.gatewayPath(s.AgentUserID)
@@ -130,7 +130,6 @@ func (s *AgentGatewaySuite) TestGatewayLifecycle() {
 	var created model.CreateAgentGatewayRes
 	s.Require().NoError(json.NewDecoder(createRes.Body).Decode(&created))
 	s.Len(created.TrackerToGatewayToken, 64, "one-time token must be 32 hex-encoded bytes")
-	s.Equal(1, created.MaxConcurrent, "concurrency must default to the safe single-run value")
 	s.Equal(s.AgentUserID, created.IdUserAgent)
 
 	getRes := Request(s.T(), s.App, "GET", path, "", s.Token)

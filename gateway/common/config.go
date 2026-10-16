@@ -26,7 +26,6 @@ type Config struct {
 	RepoUrl            string
 	RepoBranchBase     string
 	GitAccessToken     string
-	MaxConcurrent      int
 	MaxOutputLineBytes int
 	AdapterType        string
 	LogLevel           string
@@ -104,7 +103,6 @@ func LoadConfig(adapterType string) (*Config, error) {
 	}
 
 	listenPort := envInt("LISTEN_PORT", 9090)
-	maxConcurrent := envInt("MAX_CONCURRENT", 1)
 	repoBranchBase := strings.TrimSpace(os.Getenv("REPO_BRANCH_BASE"))
 	logLevel := envOrDefault("LOG_LEVEL", "info")
 	workspaceBase := envOrDefault("WORKSPACE_BASE", "/worktrees")
@@ -118,7 +116,6 @@ func LoadConfig(adapterType string) (*Config, error) {
 		RepoUrl:            repoUrl,
 		RepoBranchBase:     repoBranchBase,
 		GitAccessToken:     gitAccessToken,
-		MaxConcurrent:      maxConcurrent,
 		MaxOutputLineBytes: maxOutputLineBytes,
 		AdapterType:        adapterType,
 		LogLevel:           logLevel,

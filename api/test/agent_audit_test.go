@@ -72,8 +72,8 @@ func (s *AgentAuditSuite) SetupSuite() {
 
 	var secret []byte
 	err = s.App.Pool.QueryRow(context.Background(), `
-		INSERT INTO agent.gateway(id_user_agent, gateway_url, max_concurrent, webhook_secret)
-		VALUES ($1, 'http://stub:9090', 1, decode(md5(random()::text), 'hex'))
+		INSERT INTO agent.gateway(id_user_agent, gateway_url, webhook_secret)
+		VALUES ($1, 'http://stub:9090', decode(md5(random()::text), 'hex'))
 		RETURNING webhook_secret`,
 		s.AgentUserID,
 	).Scan(&secret)

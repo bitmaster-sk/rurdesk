@@ -60,10 +60,10 @@ func initGitRepo(t *testing.T, dir string) {
 	}
 }
 
-// TestRunStage_SerializesToMaxConcurrent verifies the gateway runs at most
-// MaxConcurrent stage attempts at once, queueing the rest — the property
+// TestRunStage_RunsOneStageAtATime verifies the gateway runs one stage
+// attempt at a time, queueing the rest — the property
 // that keeps concurrent CLI processes off the shared OAuth credential.
-func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
+func TestRunStage_RunsOneStageAtATime(t *testing.T) {
 	workspaceBase := t.TempDir()
 	repoURL := "https://example.com/acme/myrepo.git"
 	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
@@ -72,7 +72,6 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 		WorkspaceBase:  workspaceBase,
 		RepoUrl:        repoURL,
 		RepoBranchBase: "main",
-		MaxConcurrent:  1,
 	}
 	agent := &blockingAgent{entered: make(chan int64, 3), release: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
@@ -90,7 +89,7 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 		go orchestrator.runStage(task)
 	}
 
-	// Exactly one Run is allowed in flight with MaxConcurrent=1.
+	// Exactly one Run is allowed in flight.
 	var first int64
 	select {
 	case first = <-agent.entered:
@@ -113,6 +112,62 @@ func TestRunStage_SerializesToMaxConcurrent(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Fatalf("expected all %d stages to run, saw %d", taskCount, len(seen))
 		}
+	}
+}
+
+func TestRunStage_CancelledQueuedStageNeverRunsTheAgent(t *testing.T) {
+	workspaceBase := t.TempDir()
+	repoURL := "https://example.com/acme/myrepo.git"
+	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+
+	cfg := &Config{
+		WorkspaceBase:  workspaceBase,
+		RepoUrl:        repoURL,
+		RepoBranchBase: "main",
+	}
+	agent := &blockingAgent{entered: make(chan int64, 2), release: make(chan struct{})}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+
+	go orchestrator.runStage(Task{IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+	select {
+	case <-agent.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first stage did not start")
+	}
+
+	queuedDone := make(chan struct{})
+	go func() {
+		orchestrator.runStage(Task{IdTask: 101, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
+		close(queuedDone)
+	}()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		orchestrator.mu.Lock()
+		_, queued := orchestrator.activeTasks[101]
+		orchestrator.mu.Unlock()
+		if queued {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("second stage was never queued")
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	if err := orchestrator.HandleEvent(WebhookEvent{Type: "cancelled", Payload: map[string]any{"idRun": float64(201)}}); err != nil {
+		t.Fatalf("HandleEvent(cancelled): %v", err)
+	}
+	select {
+	case <-queuedDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("cancelled stage stayed in the queue")
+	}
+
+	close(agent.release)
+	select {
+	case id := <-agent.entered:
+		t.Fatalf("agent ran the cancelled stage (id=%d)", id)
+	case <-time.After(200 * time.Millisecond):
 	}
 }
 
@@ -158,7 +213,6 @@ func TestRunStage_ReleasesTheSlotWhenTheTrackerNoLongerRunsTheTask(t *testing.T)
 		WorkspaceBase:  workspaceBase,
 		RepoUrl:        repoURL,
 		RepoBranchBase: "main",
-		MaxConcurrent:  1,
 	}
 	agent := &cancellableAgent{entered: make(chan int64, 2), release: make(chan struct{})}
 	t.Cleanup(func() { close(agent.release) })
@@ -234,7 +288,6 @@ func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 		WorkspaceBase:  workspaceBase,
 		RepoUrl:        repoURL,
 		RepoBranchBase: "main",
-		MaxConcurrent:  1,
 	}
 	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())

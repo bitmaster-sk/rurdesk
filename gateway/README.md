@@ -73,8 +73,8 @@ stage-scoped URL + bearer token — goose does _not_ substitute `${ENV}` in an
 extension `uri` (an unsubstituted value fails with a reqwest "builder error"),
 and the URL differs by stage anyway: `/mcp/plan/http` for plan stages,
 `/mcp/http` for implementation (converted from the `/sse` base by
-`toStreamableHTTP`). The config path is shared, so this assumes
-`MAX_CONCURRENT=1`. The API serves both transports: SSE (`/mcp/sse`) for the
+`toStreamableHTTP`). The config path is shared, which is safe because the
+gateway runs one stage at a time. The API serves both transports: SSE (`/mcp/sse`) for the
 claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
 
 > **Output mode:** the adapter runs goose with `--output-format stream-json`, so
@@ -122,7 +122,6 @@ start without all five. The other adapters share this exact contract.
 | Var                                    | Default          | Notes                                                                                                                                |
 | -------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `LISTEN_PORT`                          | `9090`           | HTTP port for the webhook receiver (`POST /event`) and healthcheck (`GET /health`). Match the `ports:` mapping in your compose file. |
-| `MAX_CONCURRENT`                       | `1`              | Soft cap on in-flight runs per gateway instance. The shared MCP config path assumes `1` — keep it there.                             |
 | `MAX_OUTPUT_LINE_MB`                   | `4`              | Longest line of agent output read, in MB. A longer line is skipped and logged; the stage keeps running.                              |
 | `LOG_LEVEL`                            | `info`           | `debug` \| `info` \| `warn` \| `error`. JSON via `zerolog`.                                                                          |
 | `WORKSPACE_BASE`                       | `/worktrees`     | Root for per-run git worktrees. Must match the `gateway-workspace` volume mount.                                                     |
