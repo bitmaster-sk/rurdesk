@@ -174,9 +174,7 @@ func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, eve
 	}
 	event.Sequence = seq + 1
 
-	return retryWithBackoff(ctx, func() error {
-		return d.gwClient.SendEvent(ctx, gateway, event)
-	}, retryBackoffs)
+	return d.gwClient.DeliverEvent(ctx, gateway, event, retryBackoffs)
 }
 
 // buildContextBundle assembles the per-stage context for a stage attempt.

@@ -33,7 +33,14 @@ func NewGatewayClient() *GatewayClient {
 	}
 }
 
-func (c *GatewayClient) SendEvent(ctx context.Context, gateway *model.AgentGateway, event WebhookEvent) error {
+func (c *GatewayClient) DeliverEvent(ctx context.Context, gateway *model.AgentGateway, event WebhookEvent, backoffs []time.Duration) error {
+	eventId := uuid.New().String()
+	return retryWithBackoff(ctx, func() error {
+		return c.sendEvent(ctx, gateway, eventId, event)
+	}, backoffs)
+}
+
+func (c *GatewayClient) sendEvent(ctx context.Context, gateway *model.AgentGateway, eventId string, event WebhookEvent) error {
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("marshalling event: %w", err)
@@ -41,7 +48,6 @@ func (c *GatewayClient) SendEvent(ctx context.Context, gateway *model.AgentGatew
 
 	ts := time.Now().Unix()
 	signature := SignPayload(gateway.WebhookSecret, ts, body)
-	eventId := uuid.New().String()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, gateway.GatewayUrl+"/event", bytes.NewReader(body))
 	if err != nil {
