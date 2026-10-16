@@ -109,16 +109,16 @@ carries reaches the run.
 
 A run advances through **phases**:
 
-| Phase               | Meaning                                       |
-| ------------------- | --------------------------------------------- |
-| `queued`            | Waiting for a free slot (`MAX_CONCURRENT`)    |
-| `in_progress`       | Agent is actively working a stage             |
-| `awaiting_input`    | Agent needs clarification from a human        |
-| `awaiting_approval` | A stage finished and waits for human sign-off |
-| `pr_open`           | A pull/merge request has been opened          |
-| `done`              | Run completed                                 |
-| `failed`            | Run failed (see `errorMessage`)               |
-| `cancelled`         | Run was cancelled                             |
+| Phase               | Meaning                                          |
+| ------------------- | ------------------------------------------------ |
+| `queued`            | Waiting for the agent to finish its current task |
+| `in_progress`       | Agent is actively working a stage                |
+| `awaiting_input`    | Agent needs clarification from a human           |
+| `awaiting_approval` | A stage finished and waits for human sign-off    |
+| `pr_open`           | A pull/merge request has been opened             |
+| `done`              | Run completed                                    |
+| `failed`            | Run failed (see `errorMessage`)                  |
+| `cancelled`         | Run was cancelled                                |
 
 Each **stage** carries its own status: `pending`, `active`, `done`,
 `awaiting_approval`, `failed`, or `skipped`. The run card shows stage progress,

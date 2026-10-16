@@ -23,7 +23,7 @@ type activeTask struct {
 // Orchestrator dispatches stage_execute webhook events to the agent and
 // reports failures back to the tracker. The API owns scheduling and marks
 // stale tasks failed via its sweep; the gateway accepts every webhook but
-// runs at most MaxConcurrent stage attempts at once (sem), queueing the rest
+// runs one stage attempt at a time (sem), queueing the rest
 // in memory. Serialization matters because the CLI adapters share a single
 // OAuth credential — concurrent processes would race on that one session.
 type Orchestrator struct {
@@ -33,7 +33,7 @@ type Orchestrator struct {
 	state         *State
 	heartbeatLoop *HeartbeatLoop
 
-	sem chan struct{} // bounds concurrent runStage execution to MaxConcurrent
+	sem chan struct{} // bounds runStage execution to one at a time
 
 	mu          sync.Mutex
 	activeTasks map[int64]*activeTask // idTask -> active
@@ -45,17 +45,13 @@ func NewOrchestrator(
 	trackerClient *TrackerClient,
 	state *State,
 ) *Orchestrator {
-	maxConcurrent := cfg.MaxConcurrent
-	if maxConcurrent < 1 {
-		maxConcurrent = 1
-	}
 	return &Orchestrator{
 		cfg:           cfg,
 		agent:         agent,
 		trackerClient: trackerClient,
 		state:         state,
 		heartbeatLoop: NewHeartbeatLoop(trackerClient),
-		sem:           make(chan struct{}, maxConcurrent),
+		sem:           make(chan struct{}, 1),
 		activeTasks:   make(map[int64]*activeTask),
 	}
 }
@@ -158,7 +154,7 @@ func (o *Orchestrator) runStage(task Task) {
 		cancel(errTaskGone)
 	})
 
-	// At most MaxConcurrent stage attempts run the agent at once; respects
+	// One stage attempt runs the agent at a time; respects
 	// cancellation so a `cancelled` event releases a queued task.
 	select {
 	case o.sem <- struct{}{}:

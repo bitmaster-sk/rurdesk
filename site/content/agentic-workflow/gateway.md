@@ -11,6 +11,10 @@ worktree**, pushes a branch, and reports back. The **API** opens the PR/MR (via
 the project's git integration) — the gateway only pushes. The API owns
 scheduling and crash recovery; the gateway is a thin per-stage runner.
 
+Each gateway runs **one stage at a time**. Further tasks for the same agent wait
+in the tracker's queue. To work on more tasks in parallel, add another agent
+with its own gateway.
+
 You only need a gateway if you want the **AI Agent workflow** (tasks that agents
 implement end-to-end). The in-API AI features (quality, kickstart, split) do
 **not** use it.
@@ -158,7 +162,6 @@ git-integration token, not this one.
 | `GOOSE_MAX_TURNS_PLAN`      | `50`             | Hard `--max-turns` for brainstorm/design/plan stages (enforced by goose).                                                                                                                      |
 | `GOOSE_MAX_TURNS_IMPLEMENT` | `100`            | Hard `--max-turns` for implementation. Exhausting the cap ends the stage **before** the agent reports completion, so the run is lost — raise it rather than trimming it.                       |
 | `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                              |
-| `MAX_CONCURRENT`            | `1`              | Soft cap on in-flight runs per instance. Keep at `1` on free/limited quota.                                                                                                                    |
 | `MAX_OUTPUT_LINE_MB`        | `4`              | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                   |
 | `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                          |
 | `WORKSPACE_BASE`            | `/worktrees`     | Root for per-run worktrees; must match the workspace volume mount.                                                                                                                             |
@@ -192,7 +195,6 @@ services:
             REPO_URL: https://github.com/your-org/your-repo.git
             GIT_ACCESS_TOKEN: "" # CHANGE ME (GitHub/GitLab PAT)
             LISTEN_PORT: "9090"
-            MAX_CONCURRENT: "1"
             LOG_LEVEL: info
             GOOSE_MAX_TURNS_PLAN: "50"
             GOOSE_MAX_TURNS_IMPLEMENT: "100"
