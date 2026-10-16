@@ -14,7 +14,6 @@ type Sweep struct {
 	agentRunRepo  *repository.AgentRunRepository
 	projectRepo   *repository.ProjectRepository
 	issueRepo     *repository.IssueRepository
-	dedupRepo     *repository.WebhookDedupRepository
 	notifier      *notify.Notifier
 }
 
@@ -23,7 +22,6 @@ func NewSweep(
 	runRepo *repository.AgentRunRepository,
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
-	dedupRepo *repository.WebhookDedupRepository,
 	notifier *notify.Notifier,
 ) *Sweep {
 	return &Sweep{
@@ -31,7 +29,6 @@ func NewSweep(
 		agentRunRepo:  runRepo,
 		projectRepo:   projectRepo,
 		issueRepo:     issueRepo,
-		dedupRepo:     dedupRepo,
 		notifier:      notifier,
 	}
 }
@@ -41,19 +38,12 @@ func (s *Sweep) StartHeartbeatSweep(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
 
-	cleanupTicker := time.NewTicker(1 * time.Hour)
-	defer cleanupTicker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 			s.runHeartbeatSweep(ctx)
-		case <-cleanupTicker.C:
-			if _, err := s.dedupRepo.Cleanup(ctx, 24*time.Hour); err != nil {
-				log.Error().Err(err).Msg("dedup cleanup error")
-			}
 		}
 	}
 }
