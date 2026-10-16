@@ -19,13 +19,13 @@ func NewAgentGatewayRepository(pool *pgxpool.Pool) *AgentGatewayRepository {
 	return &AgentGatewayRepository{pool: pool}
 }
 
-const agentGatewayColumns = `id_gateway, id_user_agent, gateway_url, max_concurrent, webhook_secret, config_json, created_at`
+const agentGatewayColumns = `id_gateway, id_user_agent, gateway_url, webhook_secret, created_at`
 
 func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
 	gw := &model.AgentGateway{}
 	err := row.Scan(
 		&gw.IdGateway, &gw.IdUserAgent, &gw.GatewayUrl,
-		&gw.MaxConcurrent, &gw.WebhookSecret, &gw.ConfigJson, &gw.CreatedAt,
+		&gw.WebhookSecret, &gw.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent gateway: %w", err)

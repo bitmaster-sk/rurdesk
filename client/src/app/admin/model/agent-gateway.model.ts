@@ -2,7 +2,6 @@ export interface AgentGateway {
     idGateway: number;
     idUserAgent: number;
     gatewayUrl: string;
-    configJson: string;
     createdAt: string;
 }
 
