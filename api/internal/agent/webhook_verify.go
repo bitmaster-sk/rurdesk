@@ -10,15 +10,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 var (
 	ErrSignatureMissing  = errors.New("missing X-Tracker-Signature header")
 	ErrSignatureInvalid  = errors.New("signature verification failed")
 	ErrSignatureReplayed = errors.New("request timestamp outside allowed window")
-	ErrEventIdInvalid    = errors.New("invalid X-Tracker-Event-Id header")
 )
 
 // VerifySignature checks the X-Tracker-Signature header against the body.
@@ -76,16 +73,4 @@ func SignPayload(secret []byte, timestamp int64, body []byte) string {
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(payload))
 	return fmt.Sprintf("t=%d,v1=%s", timestamp, hex.EncodeToString(mac.Sum(nil)))
-}
-
-// ExtractEventId parses the X-Tracker-Event-Id header.
-func ExtractEventId(header string) (uuid.UUID, error) {
-	if header == "" {
-		return uuid.Nil, ErrEventIdInvalid
-	}
-	id, err := uuid.Parse(header)
-	if err != nil {
-		return uuid.Nil, ErrEventIdInvalid
-	}
-	return id, nil
 }

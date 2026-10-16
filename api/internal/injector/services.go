@@ -580,14 +580,6 @@ func GetAgentGatewayRepository() *repository.AgentGatewayRepository {
 	return instance.(*repository.AgentGatewayRepository)
 }
 
-func GetWebhookDedupRepository() *repository.WebhookDedupRepository {
-	instance, _ := di.GetWithNew("webhook-dedup-repository", func() (any, error) {
-		pool := mustDb()
-		return repository.NewWebhookDedupRepository(pool), nil
-	})
-	return instance.(*repository.WebhookDedupRepository)
-}
-
 func GetGatewayClient() *agent.GatewayClient {
 	instance, _ := di.GetWithNew("gateway-client", func() (any, error) {
 		return agent.NewGatewayClient(), nil
@@ -624,7 +616,6 @@ func GetSweep() *agent.Sweep {
 			GetAgentRunRepository(),
 			GetProjectRepository(),
 			GetIssueRepository(),
-			GetWebhookDedupRepository(),
 			GetNotifier(),
 		), nil
 	})
