@@ -51,7 +51,11 @@ export class AdminSettingsComponent {
                 1024,
                 [Validators.required, Validators.min(64), Validators.max(10240)]
             ],
-            attachmentMaxSizeMb: [25, [Validators.required, Validators.min(1), Validators.max(100)]]
+            attachmentMaxSizeMb: [
+                25,
+                [Validators.required, Validators.min(1), Validators.max(100)]
+            ],
+            plantUmlServerUrl: ['', [Validators.maxLength(500)]]
         },
         { updateOn: 'blur' }
     );

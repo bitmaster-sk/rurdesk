@@ -80,5 +80,12 @@ services:
         networks:
             e2e_network:
 
+    plantuml:
+        image: plantuml/plantuml-server:jetty-v1.2026.8
+        container_name: e2e_plantuml
+        restart: "no"
+        networks:
+            e2e_network:
+
 networks:
     e2e_network:

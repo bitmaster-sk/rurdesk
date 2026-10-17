@@ -180,6 +180,12 @@ var (
 	// ── Project builder ────────────────────────────────────────────────────
 
 	ErrInvalidProjectBuilderRefs = newErr("INVALID_PROJECT_BUILDER_REFS", "invalid cross-references in project builder payload", "error.invalid_project_builder_refs", http.StatusUnprocessableEntity)
+
+	// ── PlantUML ─────────────────────────────────────────────────────────────
+
+	ErrPlantUmlDisabled    = newErr("PLANTUML_DISABLED", "no plantuml server configured", "error.plantuml_disabled", http.StatusNotFound)
+	ErrPlantUmlSyntax      = newErr("PLANTUML_SYNTAX", "the plantuml diagram source is invalid", "error.plantuml_syntax", http.StatusUnprocessableEntity)
+	ErrPlantUmlUnavailable = newErr("PLANTUML_UNAVAILABLE", "plantuml server is unavailable", "error.plantuml_unavailable", http.StatusBadGateway)
 )
 
 // As reports whether err is (or wraps) an *Error, storing it in target. It

@@ -166,20 +166,50 @@ describe('MessageSegmentParser.parse', () => {
         expect(out[2].content).toContain('tail text');
     });
 
-    it('keeps non-mermaid fences as text when only mermaid fences are asked for', () => {
+    it('keeps non-mermaid fences as text when only diagram fences are asked for', () => {
         const body =
             '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```\n' +
             '```mermaid\nflowchart TD\n A --> B\n```';
-        const out = MessageSegmentParser.parse(body, 'mermaid');
+        const out = MessageSegmentParser.parse(body, 'diagrams');
         expect(out.length).toBe(2);
         expect(out[0].type).toBe('text');
         expect(out[0].content).toContain('```diff');
         expect(out[1]).toEqual({ type: 'mermaid', content: 'flowchart TD\n A --> B' });
     });
 
+    it('extracts a plantuml fence as a segment with the all filter', () => {
+        const body = 'Diagram:\n```plantuml\nAlice -> Bob: hi\n```';
+        const out = MessageSegmentParser.parse(body, 'all');
+        expect(out.length).toBe(2);
+        expect(out[0]).toEqual({ type: 'text', content: 'Diagram:\n' });
+        expect(out[1]).toEqual({ type: 'plantuml', content: 'Alice -> Bob: hi' });
+    });
+
+    it('extracts a plantuml fence as a segment with the diagrams filter', () => {
+        const body = 'Diagram:\n```plantuml\nAlice -> Bob: hi\n```';
+        const out = MessageSegmentParser.parse(body, 'diagrams');
+        expect(out.length).toBe(2);
+        expect(out[0]).toEqual({ type: 'text', content: 'Diagram:\n' });
+        expect(out[1]).toEqual({ type: 'plantuml', content: 'Alice -> Bob: hi' });
+    });
+
+    it('keeps diff and mockup fences as text when only diagram fences are asked for', () => {
+        const body =
+            '```diff\n--- a/f\n+++ b/f\n@@ @@\n+x\n```\n' +
+            '```mockup\n<p>m</p>\n```\n' +
+            '```plantuml\nAlice -> Bob: hi\n```';
+        const out = MessageSegmentParser.parse(body, 'diagrams');
+        expect(out.map(s => s.type)).toEqual(['text', 'plantuml']);
+        expect(out[0].content).toContain('```diff');
+        expect(out[0].content).toContain('+x');
+        expect(out[0].content).toContain('```mockup');
+        expect(out[0].content).toContain('<p>m</p>');
+        expect(out[1]).toEqual({ type: 'plantuml', content: 'Alice -> Bob: hi' });
+    });
+
     it('splits a CRLF body without leaking a fence into the following text', () => {
         const body = 'Plan:\r\n\r\n```mermaid\r\nflowchart TD\r\nA --> B\r\n```\r\nNext steps.';
-        const out = MessageSegmentParser.parse(body, 'mermaid');
+        const out = MessageSegmentParser.parse(body, 'diagrams');
         expect(out.map(s => s.type)).toEqual(['text', 'mermaid', 'text']);
         expect(out[1].content).toBe('flowchart TD\nA --> B');
         expect(out[2].content).not.toContain('```');

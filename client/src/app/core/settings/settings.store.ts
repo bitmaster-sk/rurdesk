@@ -11,7 +11,8 @@ const FALLBACK: AppSettings = {
     userApiKeyLimit: 10,
     isAgentThinkingPersisted: true,
     agentThinkingMaxKb: 1024,
-    attachmentMaxSizeMb: 25
+    attachmentMaxSizeMb: 25,
+    plantUmlServerUrl: ''
 };
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +26,7 @@ export class SettingsStore {
     public readonly kanbanPageSize = (): number => this.settings().kanbanPageSize;
     public readonly ganttBacklogPageSize = (): number => this.settings().ganttBacklogPageSize;
     public readonly userApiKeyLimit = (): number => this.settings().userApiKeyLimit;
+    public readonly isPlantUmlEnabled = (): boolean => this.settings().plantUmlServerUrl !== '';
 
     public load(): void {
         this.api.load$().subscribe(settings => this.settings.set(settings));

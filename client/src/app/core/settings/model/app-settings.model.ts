@@ -7,6 +7,7 @@ export interface AppSettings {
     isAgentThinkingPersisted: boolean;
     agentThinkingMaxKb: number;
     attachmentMaxSizeMb: number;
+    plantUmlServerUrl: string;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;

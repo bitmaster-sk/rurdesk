@@ -12,6 +12,8 @@
         />
     } @else if (seg.type === 'mermaid') {
         <app-mermaid-diagram [source]="seg.content" />
+    } @else if (seg.type === 'plantuml') {
+        <app-plantuml-diagram [source]="seg.content" />
     } @else {
         <div
             class="text-run"

@@ -57,6 +57,7 @@ func New(
 	projectSkillCtrl *controller.ProjectSkillController,
 	agentOverviewCtrl *controller.AgentOverviewController,
 	appSettingsCtrl *controller.AppSettingsController,
+	plantUmlCtrl *controller.PlantUmlController,
 	licenseCtrl *controller.LicenseController,
 	apiKeyCtrl *controller.ApiKeyController,
 	healthCtrl *controller.HealthController,
@@ -99,6 +100,9 @@ func New(
 
 	// App settings — readable by any authenticated user (clients need page sizes)
 	pri.GET("/settings", appSettingsCtrl.Get)
+
+	// PlantUML rendering — any authenticated user, proxying to the configured server.
+	pri.POST("/plantuml/svg", plantUmlCtrl.Render)
 
 	pri.GET("/license", licenseCtrl.Get)
 
