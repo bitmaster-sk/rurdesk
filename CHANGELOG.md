@@ -5,6 +5,111 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-10-17
+
+Agents that keep running when something goes wrong, a short workflow for small tasks,
+and working Gitea and GitLab pull requests.
+
+### Highlights
+
+- **Short workflow** — a switch in the agent dialog and on the run card skips the design
+  and implementation plan stages. The agent brainstorms and goes straight to the pull
+  request.
+- **Paused runs** — taking a task away from its agent now shows the run as Paused, with
+  the reason in a tooltip and an Assign back action. Assigning the agent again resumes
+  the run with the dialog's skills and workflow for the stages not yet started.
+- **Agents survive restarts and long output** — an API restart no longer fails running
+  tasks, a very long output line no longer blocks the gateway, and a `pkill -f` in a task
+  no longer kills the agent itself.
+- **Gitea and GitLab** — Gitea pull requests show their diff and CI status, and a GitLab
+  merge request counts as approved only when a person approved it.
+
+### Breaking changes
+
+- **The `Authorization` header must use the `Bearer` scheme.** The API, MCP, the web app
+  and the gateway all send and expect `Authorization: Bearer <token>`. A bare token is
+  rejected with 401. Update scripts and MCP clients that send the token without the
+  prefix, and deploy the gateway and the API together.
+- **`MAX_CONCURRENT` is gone.** Every gateway runs one stage at a time and other tasks
+  wait in the tracker's queue. The tracker already sent an agent one task at a time, and
+  a value above 1 let goose runs overwrite each other's config. For more throughput, add
+  another agent with its own gateway.
+
+### Added
+
+- A short workflow switch in the agent dialog and on the run card.
+- Paused agent runs with an Assign back action, resumed from the agent dialog, which is
+  prefilled from the run. Paused runs no longer count in the agent's queue.
+- A personal API key can suggest wiki changes outside an agent run. The proposal goes
+  through the same review and `issue_id` attaches it to a task. Agents still propose only
+  from their own implementation run.
+- A button in the diff viewer that expands the whole file and collapses back to the
+  changes.
+- The git integration form fills in the cloud URL for the chosen host and checks that the
+  token can reach the repository and open pull requests. Save runs the same check and
+  offers Save anyway when it fails.
+- `MAX_OUTPUT_LINE_MB` gateway setting (default 4). A longer line of agent output is
+  skipped and logged, and the stage keeps running.
+
+### Changed
+
+- The agent prompt is passed on stdin instead of the command line.
+- A heartbeat answered with 409 stops the agent, unless it already called
+  `complete_stage`.
+- Retries of one gateway delivery keep the same `X-Tracker-Event-Id`, so the gateway
+  drops repeated deliveries.
+- The docs give `https://github.com` as the GitHub base URL.
+
+### Removed
+
+- The `MAX_CONCURRENT` gateway setting.
+- The unused `max_concurrent` and `config_json` gateway columns and the unused
+  `agent.webhook_event_dedup` table.
+
+### Fixed
+
+- An API restart failed every active agent task. A gateway that still sends heartbeats
+  now keeps its task, and the heartbeat sweep still fails tasks whose gateway went quiet.
+- An agent output line over the read limit blocked the agent on a full pipe and held the
+  gateway slot forever.
+- Cancelling an agent could block forever and hold the gateway slot.
+- A `pkill -f` with any word from the task also killed the agent.
+- An edit to the stage plan could race the scheduler picking the next stage.
+- Gitea pull requests showed every file without changes and had no CI label. A warning
+  now counts as passed.
+- A GitLab merge request showed as approved from the start when no approvals were
+  required.
+- Picking the agent's name while its run dock was open dropped the chosen skills and
+  short workflow.
+- The select list shrank when a dock opened.
+- The save button on a new task stayed disabled until the title field lost focus.
+- The hunk heading in a diff stayed after lines above it were revealed.
+
+### Database
+
+Three migrations, applied automatically on startup:
+
+| Migration                                                    | Purpose                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| `20261015120000_wiki_proposal_without_run.sql`               | wiki change proposals without an agent run                          |
+| `20261015130000_drop_webhook_event_dedup.sql`                | drops the unused `agent.webhook_event_dedup` table                  |
+| `20261016120000_drop_gateway_max_concurrent_config_json.sql` | drops the unused gateway `max_concurrent` and `config_json` columns |
+
+Rolling back to 1.4.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. Upgrade the API and every gateway together, because older
+gateways send a bare token. Remove `MAX_CONCURRENT` from the gateway environment, and
+make sure every script or MCP client sends `Authorization: Bearer <token>`.
+
+[1.5.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.4.0...v1.5.0
+
 ## [1.4.0] - 2026-10-11
 
 A wiki your agents read and help keep up to date, your own fields on every task, and
