@@ -26,7 +26,7 @@ approving stages.
 
 In **Administration → Users** click **Create user**, toggle **Agent**, give it a
 name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
-`http://gateway-goose-qwen-cloud:9090`. Each agent has exactly **one** gateway
+`http://gateway-goose-qwen-local:9090`. Each agent has exactly **one** gateway
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
 
@@ -75,15 +75,64 @@ switch. With it on, the run skips the design and implementation plan stages:
 the agent still brainstorms (and asks if something is unclear), then goes
 straight to implementation and opens the pull request. There is nothing to
 approve along the way; the pull request is your review point. Use it for small,
-clearly described tasks.
+clearly described tasks. In the dialog the skipped stages are greyed out and
+marked **skipped**.
 
 You can also flip the switch on the run card until the design (or, in a short
-run, the implementation) starts. After that it is locked. A restarted run keeps
+run, the implementation) starts. After that it is locked: the card shows the
+workflow as **Full** or **Short** with a lock icon. A restarted run keeps
 the workflow it had. While the dialog is open, clicking the agent's name in the
 list does the same as **Assign**: the run starts with the skills and workflow
 you set. Picking someone else closes the dialog and drops those settings.
 Selecting the agent in the assignee field without opening the dialog starts the
 full workflow with the project's default skills.
+
+### Choosing the model
+
+One agent can run tasks on different models, so you do not need a second agent
+for a cheaper or a stronger model. The dialog lists the models the agent's
+gateway offers (its `MODELS`, see [Models](./gateway.md#models)) with the
+gateway's default picked. Pick another one for the whole run, for example a
+cheap local model for a trivial task and a strong one for an architecture change.
+
+The dialog lists the stages in the order they run. A closed stage shows a summary
+of its skills, model and turn limit; open it to change them. Each stage can
+override the run's model, so the design can run on a stronger model than the
+brainstorming. A stage without its own choice runs the run's model, and a run
+without a choice runs the gateway's default.
+
+While the run is going, **Edit** in the run card's **Stages** cell opens the
+same stage list as the dialog. You can change the skills, model and turn limit
+of any stage that has not started yet; a stage that is running or done is marked
+**started** and keeps what it ran with. The run's own model is set only when you assign the agent.
+
+The dialog offers only the models the gateway reported when it last started. A
+gateway that has never reported (an older version, or one that has not started
+since the upgrade) shows no model choice and runs its own default. If the
+gateway stops offering a model between assigning and running a stage, the stage
+runs the gateway's default and the run timeline shows a warning naming both
+models.
+
+The timeline shows the model each stage ran with, and the run's stats split the
+tokens by model.
+
+### Turn limits
+
+Each stage runs with a turn limit, the most tool calls and replies the agent
+may spend before the stage ends. A stage that runs out ends before the agent
+reports completion; press **Continue** to retry it with a fresh budget. The
+limit comes from the first of these that is set:
+
+1. the stage's own limit, set on the stage in the dialog or later on the run card;
+2. the agent's limit for planning stages or for implementation, set when you
+   create the agent or later in its edit dialog in **Admin → Users**;
+3. the app settings in **Admin → Settings**, 250 for planning stages and 500 for
+   implementation by default.
+
+A weaker model often needs a higher limit to finish. The gateway can cap the
+limit with `MAX_TURNS_LIMIT`. It reports the cap to the tracker together with
+its models, and a stage never runs with more turns than the cap, whichever
+setting asked for them.
 
 ### Taking the task away from the agent
 
@@ -94,8 +143,8 @@ The run no longer counts in the agent's queue.
 
 To continue, press **Assign back** on the card, pick the agent in the assignee
 field, or assign it through its dialog. The dialog opens with the paused run's
-own skills and workflow, and applies them to the stages that have not started
-yet. If the workflow switch is already
+own skills, workflow, models and turn limits, and applies them to the stages
+that have not started yet. If the workflow switch is already
 locked, the dialog says so and nothing changes. Assigning a different agent
 hands the run over to it.
 
@@ -290,15 +339,15 @@ a run that has a PR** — use **Continue** instead.
 
 ## Troubleshooting
 
-| Symptom                                                           | Likely cause                                                                                                                                |
-| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| Webhook returns `401`                                             | `TRACKER_TO_GATEWAY_TOKEN` mismatch between tracker and gateway                                                                             |
-| Tracker calls rejected                                            | Wrong/expired `GATEWAY_TO_TRACKER_TOKEN`                                                                                                    |
-| Run fails immediately with auth error                             | Wrong/missing provider credential — check `GOOSE_PROVIDER` matches the keys you set ([connection options](./gateway.md#connection-options)) |
-| Agent can't push                                                  | `GIT_ACCESS_TOKEN` lacks write on the repo, or `REPO_URL` wrong                                                                             |
-| Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                           |
-| Run briefly shows `failed` after a tracker restart, then recovers | Expected — the tracker reconciles the live gateway's completion automatically                                                               |
-| **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue**                                                                                           |
+| Symptom                                                           | Likely cause                                                                                                                                                   |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Webhook returns `401`                                             | `TRACKER_TO_GATEWAY_TOKEN` mismatch between tracker and gateway                                                                                                |
+| Tracker calls rejected                                            | Wrong/expired `GATEWAY_TO_TRACKER_TOKEN`                                                                                                                       |
+| Run fails immediately with auth error                             | Wrong/missing provider credential — check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)) |
+| Agent can't push                                                  | `GIT_ACCESS_TOKEN` lacks write on the repo, or `REPO_URL` wrong                                                                                                |
+| Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                                              |
+| Run briefly shows `failed` after a tracker restart, then recovers | Expected — the tracker reconciles the live gateway's completion automatically                                                                                  |
+| **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue**                                                                                                              |
 
 See the [gateway verifying-a-deploy steps](./gateway.md#healthcheck--verifying-a-deploy)
 to confirm the gateway side is healthy.

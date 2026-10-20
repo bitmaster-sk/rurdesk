@@ -14,15 +14,16 @@ func setBaseEnv(t *testing.T) {
 	t.Setenv("TRACKER_TO_GATEWAY_TOKEN", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
 	t.Setenv("REPO_URL", "https://github.com/org/repo.git")
 	t.Setenv("GIT_ACCESS_TOKEN", "gat")
+	t.Setenv("MODELS", "openai/kimi")
+	t.Setenv("MODEL_DEFAULT", "")
+	t.Setenv("MAX_TURNS_LIMIT", "")
 }
 
 func TestLoadConfigClaudeCodeNoAPIKeyRequired(t *testing.T) {
 	setBaseEnv(t)
 	// Explicitly ensure no claude-specific vars leak in from the host.
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "")
-	t.Setenv("CLAUDE_MODEL", "")
-	t.Setenv("CLAUDE_MAX_TURNS_PLAN", "")
-	t.Setenv("CLAUDE_MAX_TURNS_IMPLEMENT", "")
+	t.Setenv("MODELS", "sonnet")
 
 	cfg, err := LoadConfig("claude-code")
 	if err != nil {
@@ -31,17 +32,8 @@ func TestLoadConfigClaudeCodeNoAPIKeyRequired(t *testing.T) {
 	if cfg.ClaudeCode == nil {
 		t.Fatal("ClaudeCode config is nil")
 	}
-	if cfg.ClaudeCode.Model != "" {
-		t.Errorf("Model = %q, want empty (CLI default)", cfg.ClaudeCode.Model)
-	}
 	if cfg.ClaudeCode.OAuthToken != "" {
 		t.Errorf("OAuthToken = %q, want empty", cfg.ClaudeCode.OAuthToken)
-	}
-	if cfg.ClaudeCode.MaxTurnsPlan != 250 {
-		t.Errorf("MaxTurnsPlan = %d, want 250", cfg.ClaudeCode.MaxTurnsPlan)
-	}
-	if cfg.ClaudeCode.MaxTurnsImplement != 500 {
-		t.Errorf("MaxTurnsImplement = %d, want 500", cfg.ClaudeCode.MaxTurnsImplement)
 	}
 }
 
@@ -73,12 +65,9 @@ func TestLoadConfigMissingTrackerURL(t *testing.T) {
 	}
 }
 
-func TestLoadConfigClaudeCodeOptionalVarsFlowThrough(t *testing.T) {
+func TestLoadConfigClaudeCodeOAuthTokenFlowsThrough(t *testing.T) {
 	setBaseEnv(t)
 	t.Setenv("CLAUDE_CODE_OAUTH_TOKEN", "sk-oauth-token")
-	t.Setenv("CLAUDE_MODEL", "claude-opus-4-20250101")
-	t.Setenv("CLAUDE_MAX_TURNS_PLAN", "10")
-	t.Setenv("CLAUDE_MAX_TURNS_IMPLEMENT", "90")
 
 	cfg, err := LoadConfig("claude-code")
 	if err != nil {
@@ -87,14 +76,61 @@ func TestLoadConfigClaudeCodeOptionalVarsFlowThrough(t *testing.T) {
 	if cfg.ClaudeCode.OAuthToken != "sk-oauth-token" {
 		t.Errorf("OAuthToken = %q, want sk-oauth-token", cfg.ClaudeCode.OAuthToken)
 	}
-	if cfg.ClaudeCode.Model != "claude-opus-4-20250101" {
-		t.Errorf("Model = %q", cfg.ClaudeCode.Model)
+}
+
+func TestLoadConfigReadsTheModelCatalog(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("MODELS", "openai/kimi-k2.7-code,ollama/qwen3:8b")
+	t.Setenv("MODEL_DEFAULT", "ollama/qwen3:8b")
+
+	cfg, err := LoadConfig("goose")
+	if err != nil {
+		t.Fatalf("LoadConfig(goose) returned error: %v", err)
 	}
-	if cfg.ClaudeCode.MaxTurnsPlan != 10 {
-		t.Errorf("MaxTurnsPlan = %d, want 10", cfg.ClaudeCode.MaxTurnsPlan)
+	if got := cfg.Models.Ids(); len(got) != 2 || got[0] != "openai/kimi-k2.7-code" || got[1] != "ollama/qwen3:8b" {
+		t.Errorf("Models = %v", got)
 	}
-	if cfg.ClaudeCode.MaxTurnsImplement != 90 {
-		t.Errorf("MaxTurnsImplement = %d, want 90", cfg.ClaudeCode.MaxTurnsImplement)
+	if cfg.Models.Default != (Model{Provider: "ollama", Name: "qwen3:8b"}) {
+		t.Errorf("Default = %+v", cfg.Models.Default)
+	}
+}
+
+func TestLoadConfigRefusesToStartWithoutModels(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("MODELS", "")
+
+	if _, err := LoadConfig("goose"); err == nil || !strings.Contains(err.Error(), "MODELS") {
+		t.Fatalf("expected a MODELS error, got %v", err)
+	}
+}
+
+func TestLoadConfigRefusesADefaultOutsideTheList(t *testing.T) {
+	setBaseEnv(t)
+	t.Setenv("MODEL_DEFAULT", "openai/opus")
+
+	if _, err := LoadConfig("goose"); err == nil || !strings.Contains(err.Error(), "MODEL_DEFAULT") {
+		t.Fatalf("expected a MODEL_DEFAULT error, got %v", err)
+	}
+}
+
+func TestLoadConfigMaxTurnsLimit(t *testing.T) {
+	setBaseEnv(t)
+
+	cfg, err := LoadConfig("goose")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.MaxTurnsLimit != 0 {
+		t.Errorf("MaxTurnsLimit = %d, want 0 (no limit) when unset", cfg.MaxTurnsLimit)
+	}
+
+	t.Setenv("MAX_TURNS_LIMIT", "600")
+	cfg, err = LoadConfig("goose")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if cfg.MaxTurnsLimit != 600 {
+		t.Errorf("MaxTurnsLimit = %d, want 600", cfg.MaxTurnsLimit)
 	}
 }
 
@@ -111,58 +147,17 @@ func TestLoadConfigUnknownAdapterErrorListsAll(t *testing.T) {
 	}
 }
 
-func TestLoadConfigGooseDefaults(t *testing.T) {
+func TestLoadConfigGooseCredentialsFlowThrough(t *testing.T) {
 	setBaseEnv(t)
-	// Ensure no goose-specific vars leak in from the host.
-	for _, k := range []string{
-		"GOOSE_PROVIDER", "GOOSE_MODEL", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY",
-		"OLLAMA_HOST", "GOOSE_MAX_TURNS_PLAN", "GOOSE_MAX_TURNS_IMPLEMENT",
-	} {
-		t.Setenv(k, "")
-	}
-
-	cfg, err := LoadConfig("goose")
-	if err != nil {
-		t.Fatalf("LoadConfig(goose) returned error: %v", err)
-	}
-	if cfg.Goose == nil {
-		t.Fatal("Goose config is nil")
-	}
-	if cfg.Goose.Provider != "anthropic" {
-		t.Errorf("Provider = %q, want anthropic (default)", cfg.Goose.Provider)
-	}
-	if cfg.Goose.Model != "" {
-		t.Errorf("Model = %q, want empty (provider default)", cfg.Goose.Model)
-	}
-	if cfg.Goose.MaxTurnsPlan != 250 {
-		t.Errorf("MaxTurnsPlan = %d, want 250", cfg.Goose.MaxTurnsPlan)
-	}
-	if cfg.Goose.MaxTurnsImplement != 500 {
-		t.Errorf("MaxTurnsImplement = %d, want 500", cfg.Goose.MaxTurnsImplement)
-	}
-}
-
-func TestLoadConfigGooseOptionalVarsFlowThrough(t *testing.T) {
-	setBaseEnv(t)
-	t.Setenv("GOOSE_PROVIDER", "ollama")
-	t.Setenv("GOOSE_MODEL", "qwen3-coder")
 	t.Setenv("ANTHROPIC_API_KEY", "sk-ant-xyz")
 	t.Setenv("GOOGLE_API_KEY", "g-key")
 	t.Setenv("OLLAMA_HOST", "http://gpu-box:11434")
-	t.Setenv("GOOSE_MAX_TURNS_PLAN", "12")
-	t.Setenv("GOOSE_MAX_TURNS_IMPLEMENT", "80")
 
 	cfg, err := LoadConfig("goose")
 	if err != nil {
 		t.Fatalf("LoadConfig(goose) returned error: %v", err)
 	}
 	g := cfg.Goose
-	if g.Provider != "ollama" {
-		t.Errorf("Provider = %q, want ollama", g.Provider)
-	}
-	if g.Model != "qwen3-coder" {
-		t.Errorf("Model = %q, want qwen3-coder", g.Model)
-	}
 	if g.AnthropicAPIKey != "sk-ant-xyz" {
 		t.Errorf("AnthropicAPIKey = %q", g.AnthropicAPIKey)
 	}
@@ -171,11 +166,5 @@ func TestLoadConfigGooseOptionalVarsFlowThrough(t *testing.T) {
 	}
 	if g.OllamaHost != "http://gpu-box:11434" {
 		t.Errorf("OllamaHost = %q", g.OllamaHost)
-	}
-	if g.MaxTurnsPlan != 12 {
-		t.Errorf("MaxTurnsPlan = %d, want 12", g.MaxTurnsPlan)
-	}
-	if g.MaxTurnsImplement != 80 {
-		t.Errorf("MaxTurnsImplement = %d, want 80", g.MaxTurnsImplement)
 	}
 }

@@ -128,6 +128,13 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 }
 
 func (o *Orchestrator) runStage(task Task) {
+	if err := o.applyModelAndTurns(&task); err != nil {
+		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
+		reason, detail := agentErrorReason(err)
+		o.failTask(task, reason, detail)
+		return
+	}
+
 	ctx, cancel := context.WithCancelCause(context.Background())
 	o.mu.Lock()
 	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
@@ -217,6 +224,42 @@ func (o *Orchestrator) runStage(task Task) {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}
 	}
+}
+
+func (o *Orchestrator) applyModelAndTurns(task *Task) error {
+	model, err := o.cfg.Models.Resolve(task.RequestedModel)
+	if err != nil {
+		return err
+	}
+	task.Model = model
+
+	limit := o.cfg.MaxTurnsLimit
+	if task.MaxTurns == 0 {
+		task.MaxTurns = defaultMaxTurns(task.Stage)
+		if limit > 0 && task.MaxTurns > limit {
+			task.MaxTurns = limit
+		}
+		return nil
+	}
+	if limit > 0 && task.MaxTurns > limit {
+		return &AgentError{
+			Code:   ErrCodeMaxTurnsOverLimit,
+			Detail: fmt.Sprintf("%d turns requested, this gateway allows at most %d", task.MaxTurns, limit),
+		}
+	}
+	return nil
+}
+
+const (
+	defaultMaxTurnsPlan      = 250
+	defaultMaxTurnsImplement = 500
+)
+
+func defaultMaxTurns(stage string) int {
+	if stage == StageImplementation {
+		return defaultMaxTurnsImplement
+	}
+	return defaultMaxTurnsPlan
 }
 
 func (o *Orchestrator) createRunWorktree(repoPath string, task Task) (path, branch string, err error) {
@@ -332,6 +375,8 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		task.Stage, _ = inner["stage"].(string)
 		task.AttemptNo = int(int64Field(inner, "attemptNo"))
 		task.PrBranch = stringField(inner, "prBranch")
+		task.RequestedModel = stringField(inner, "model")
+		task.MaxTurns = int(int64Field(inner, "maxTurns"))
 
 		if ctx, ok := inner["contextBundle"].(map[string]any); ok {
 			if issue, ok := ctx["issue"].(map[string]any); ok {

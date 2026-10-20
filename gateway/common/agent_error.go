@@ -27,6 +27,8 @@ const (
 	// without this distinction it would be misclassified as stage_not_submitted.
 	// Recoverable — press Continue to retry with a fresh turn budget.
 	ErrCodeTurnLimitExhausted = "turn_limit_exhausted"
+	ErrCodeModelNotAllowed    = "model_not_allowed"
+	ErrCodeMaxTurnsOverLimit  = "max_turns_over_limit"
 )
 
 // AgentError is an adapter-level failure carrying a stable Code (used

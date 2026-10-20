@@ -10,6 +10,8 @@ type AppSettingsRes struct {
 	IsAgentThinkingPersisted bool `json:"isAgentThinkingPersisted"`
 	AgentThinkingMaxKb       int  `json:"agentThinkingMaxKb"`
 	AttachmentMaxSizeMb      int  `json:"attachmentMaxSizeMb"`
+	AgentMaxTurnsPlan        int  `json:"agentMaxTurnsPlan"`
+	AgentMaxTurnsImplement   int  `json:"agentMaxTurnsImplement"`
 }
 
 // UpdateAppSettingsReq is a partial update — nil fields are left unchanged.
@@ -22,4 +24,6 @@ type UpdateAppSettingsReq struct {
 	IsAgentThinkingPersisted *bool `json:"isAgentThinkingPersisted"`
 	AgentThinkingMaxKb       *int  `json:"agentThinkingMaxKb"`
 	AttachmentMaxSizeMb      *int  `json:"attachmentMaxSizeMb"`
+	AgentMaxTurnsPlan        *int  `json:"agentMaxTurnsPlan"`
+	AgentMaxTurnsImplement   *int  `json:"agentMaxTurnsImplement"`
 }

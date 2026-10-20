@@ -12,7 +12,7 @@ import (
 // non-skipped stage is completed, or the most recent task's stage if it
 // failed (Continue redoes it).
 func ResolveNextStage(run *model.AgentRun, tasks []*model.AgentTask) (string, error) {
-	var plan model.StagePlan
+	var plan model.AgentStagePlan
 	if err := json.Unmarshal(run.StagePlan, &plan); err != nil {
 		return "", fmt.Errorf("unmarshalling stage_plan: %w", err)
 	}

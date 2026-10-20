@@ -269,10 +269,7 @@ func TestRunWithStubBinary(t *testing.T) {
 			cfg := &common.Config{
 				TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 				AgentApiKey:   "deadbeef",
-				ClaudeCode: &common.ClaudeCodeConfig{
-					MaxTurnsPlan:      25,
-					MaxTurnsImplement: 60,
-				},
+				ClaudeCode:    &common.ClaudeCodeConfig{},
 			}
 			adapter := NewClaudeCodeAdapter(cfg)
 			task := common.Task{
@@ -360,7 +357,7 @@ func TestCancelAlwaysEndsARunningStage(t *testing.T) {
 	cfg := &common.Config{
 		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 		AgentApiKey:   "deadbeef",
-		ClaudeCode:    &common.ClaudeCodeConfig{MaxTurnsImplement: 60},
+		ClaudeCode:    &common.ClaudeCodeConfig{},
 	}
 	adapter := NewClaudeCodeAdapter(cfg)
 
@@ -446,7 +443,7 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 	cfg := &common.Config{
 		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 		AgentApiKey:   "deadbeef",
-		ClaudeCode:    &common.ClaudeCodeConfig{MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+		ClaudeCode:    &common.ClaudeCodeConfig{},
 	}
 	adapter := NewClaudeCodeAdapter(cfg)
 	task := common.Task{
@@ -456,6 +453,8 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 		WorktreePath: t.TempDir(),
 		IssueTitle:   "Scaffold",
 		IssueDesc:    "Run " + marker + " then stop it",
+		Model:        common.Model{Name: "opus"},
+		MaxTurns:     60,
 	}
 
 	if _, err := adapter.Run(context.Background(), task); err != nil {
@@ -468,6 +467,11 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 	}
 	if strings.Contains(string(args), marker) {
 		t.Errorf("claude command line contains the prompt\n--- args ---\n%s", args)
+	}
+	for _, want := range []string{"--model\nopus\n", "--max-turns\n60\n"} {
+		if !strings.Contains(string(args), want) {
+			t.Errorf("claude args missing %q\n--- args ---\n%s", want, args)
+		}
 	}
 	stdin, err := os.ReadFile(stdinFile)
 	if err != nil {

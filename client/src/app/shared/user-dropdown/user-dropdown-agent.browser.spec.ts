@@ -26,7 +26,12 @@ const OVERVIEW: AgentOverview[] = [
         completedToday: 0,
         tokens7d: 0,
         avgRunDurationMs7d: null,
-        failedAttempts7d: 0
+        failedAttempts7d: 0,
+        models: [],
+        modelDefault: null,
+        maxTurnsPlan: 250,
+        maxTurnsImplement: 500,
+        maxTurnsLimit: null
     }
 ];
 

@@ -1,0 +1,108 @@
+:host {
+    display: block;
+}
+
+.stage-plan {
+    --stage-plan-indent: 1.25rem;
+    --stage-plan-rail: 0.5rem;
+
+    margin: 0;
+    padding: 0 0 0 var(--stage-plan-indent);
+    list-style: none;
+}
+
+.stage-plan__stage {
+    position: relative;
+    border: 1px solid var(--ui-surface-200);
+    border-radius: 0.5rem;
+    background: var(--ui-surface-0);
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 1.2rem;
+        left: calc(var(--stage-plan-rail) - var(--stage-plan-indent) - 1px);
+        z-index: 1;
+        box-sizing: border-box;
+        width: 0.75rem;
+        height: 0.75rem;
+        border: 2px solid var(--ui-brand-500);
+        border-radius: 50%;
+        background: var(--ui-surface-0);
+        transform: translate(-50%, -50%);
+    }
+
+    &:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 1.2rem;
+        left: calc(var(--stage-plan-rail) - var(--stage-plan-indent) - 1px);
+        width: 2px;
+        height: calc(100% + 0.5rem + 2px);
+        background: var(--ui-surface-200);
+        transform: translateX(-50%);
+    }
+}
+
+.stage-plan__stage--skipped {
+    opacity: 0.55;
+
+    &::before {
+        border-color: var(--ui-surface-400);
+    }
+}
+
+.stage-plan__head {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+div.stage-plan__head {
+    cursor: default;
+}
+
+.stage-plan__edit {
+    border-top: 1px solid var(--ui-surface-200);
+    border-radius: 0 0 0.5rem 0.5rem;
+    background: var(--ui-surface-50);
+}
+
+.stage-plan__chip {
+    padding: 0.05rem 0.5rem;
+    border: 1px solid var(--ui-surface-300);
+    border-radius: 999px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-s);
+    cursor: pointer;
+}
+
+.stage-plan__chip--on {
+    border-color: var(--ui-brand-500);
+    background: var(--ui-select-option-selected-bg);
+    color: var(--ui-select-option-selected-fg);
+}
+
+.stage-plan__turns {
+    flex: none;
+    width: 5.5rem;
+}
+
+.stage-plan__summary dd {
+    margin: 0;
+}
+
+.stage-plan__summary-label {
+    flex: none;
+    width: 3.5rem;
+}

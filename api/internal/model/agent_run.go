@@ -46,22 +46,32 @@ type AgentStageProgress struct {
 	ApprovedAt  *time.Time `json:"approvedAt,omitempty"`  // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
 	// i18n; ErrorDetail is the raw provider/agent message. Set only on failure.
-	ErrorReason     *string `json:"errorReason,omitempty"`
-	ErrorDetail     *string `json:"errorDetail,omitempty"`
-	IdResultMessage *int64  `json:"idResultMessage,omitempty"`
-	ThinkingTail    *string `json:"thinkingTail,omitempty"`
-	HasThinking     bool    `json:"hasThinking,omitempty"`
+	ErrorReason       *string `json:"errorReason,omitempty"`
+	ErrorDetail       *string `json:"errorDetail,omitempty"`
+	IdResultMessage   *int64  `json:"idResultMessage,omitempty"`
+	ThinkingTail      *string `json:"thinkingTail,omitempty"`
+	HasThinking       bool    `json:"hasThinking,omitempty"`
+	Model             *string `json:"model,omitempty"`
+	MaxTurns          *int    `json:"maxTurns,omitempty"`
+	ModelFallbackFrom *string `json:"modelFallbackFrom,omitempty"`
 }
 
 type AgentRunEvent struct {
-	IdEvent   int64     `json:"idEvent"   db:"id_event"`
-	IdRun     int64     `json:"idRun"     db:"id_run"`
-	FromPhase *string   `json:"fromPhase" db:"from_phase"`
-	ToPhase   *string   `json:"toPhase"   db:"to_phase"`
-	ActorType string    `json:"actorType" db:"actor_type"`
-	IdUser    *int64    `json:"idUser"    db:"id_user"`
-	Reason    *string   `json:"reason"    db:"reason"`
-	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	IdEvent   int64           `json:"idEvent"   db:"id_event"`
+	IdRun     int64           `json:"idRun"     db:"id_run"`
+	FromPhase *string         `json:"fromPhase" db:"from_phase"`
+	ToPhase   *string         `json:"toPhase"   db:"to_phase"`
+	ActorType string          `json:"actorType" db:"actor_type"`
+	IdUser    *int64          `json:"idUser"    db:"id_user"`
+	Reason    *string         `json:"reason"    db:"reason"`
+	Payload   json.RawMessage `json:"payload"   db:"payload"`
+	CreatedAt time.Time       `json:"createdAt" db:"created_at"`
+}
+
+type ModelFallbackPayload struct {
+	IdTask    int64  `json:"idTask"`
+	Requested string `json:"requested"`
+	Used      string `json:"used"`
 }
 
 type AgentTask struct {
@@ -83,17 +93,22 @@ type AgentTask struct {
 	CreatedAt       time.Time  `json:"createdAt"       db:"created_at"`
 	ThinkingTail    *string    `json:"thinkingTail"  db:"thinking_tail"`
 	HasThinking     bool       `json:"hasThinking"     db:"-"`
+	Model           *string    `json:"model"           db:"model"`
+	MaxTurns        *int       `json:"maxTurns"        db:"max_turns"`
 }
 
-type StagePlan struct {
-	Stages []StagePlanEntry `json:"stages"`
+type AgentStagePlan struct {
+	Model  string                `json:"model,omitempty"`
+	Stages []AgentStagePlanEntry `json:"stages"`
 }
 
-type StagePlanEntry struct {
+type AgentStagePlanEntry struct {
 	Name      string  `json:"name"`
 	Skippable bool    `json:"skippable"`
 	Skip      bool    `json:"skip"`
 	IdsSkill  []int64 `json:"idsSkill,omitempty"`
+	Model     string  `json:"model,omitempty"`
+	MaxTurns  int     `json:"maxTurns,omitempty"`
 }
 
 // CompleteStageReq is the body of POST /private/agent/task/:idTask/complete,
@@ -132,6 +147,7 @@ type RunStatsRes struct {
 	TotalToolCallsCount int            `json:"totalToolCallsCount"`
 	AttemptsPerStage    map[string]int `json:"attemptsPerStage"`
 	FailedAttempts      int            `json:"failedAttempts"`
+	TokensByModel       map[string]int `json:"tokensByModel"`
 }
 
 // AgentStatsNotice is the SubjectAgentStats broadcast payload: pushes
@@ -141,10 +157,17 @@ type AgentStatsNotice struct {
 	Stats *RunStatsRes `json:"stats"`
 }
 
-type CreateAgentRunReq struct {
-	IdUserAgent     int64              `json:"idUserAgent"       binding:"required"`
+type RunChoices struct {
 	IdsSkillByStage map[string][]int64 `json:"idsSkillByStage"`
 	IsShortWorkflow bool               `json:"isShortWorkflow"`
+	Model           string             `json:"model"`
+	ModelByStage    map[string]string  `json:"modelByStage"`
+	MaxTurnsByStage map[string]int     `json:"maxTurnsByStage"`
+}
+
+type CreateAgentRunReq struct {
+	IdUserAgent int64 `json:"idUserAgent" binding:"required"`
+	RunChoices
 }
 
 type UpdateAgentRunWorkflowReq struct {

@@ -67,7 +67,9 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         userApiKeyLimit: 10,
         isAgentThinkingPersisted: false,
         agentThinkingMaxKb: 1024,
-        attachmentMaxSizeMb: 25
+        attachmentMaxSizeMb: 25,
+        agentMaxTurnsPlan: 250,
+        agentMaxTurnsImplement: 500
     };
 
     async function setup() {
@@ -118,5 +120,53 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         expect(update$.mock.calls[0][0]).toMatchObject({
             isAgentThinkingPersisted: true
         });
+    });
+});
+
+describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
+    const loaded = {
+        tablePageSize: 50,
+        kanbanPageSize: 20,
+        ganttBacklogPageSize: 30,
+        sprintVelocityLimit: 10,
+        userApiKeyLimit: 10,
+        isAgentThinkingPersisted: true,
+        agentThinkingMaxKb: 1024,
+        attachmentMaxSizeMb: 25,
+        agentMaxTurnsPlan: 250,
+        agentMaxTurnsImplement: 500
+    };
+
+    it('saves a changed turn default on blur', async () => {
+        const update$ = vi.fn().mockReturnValue(of({ ...loaded, agentMaxTurnsImplement: 900 }));
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [AdminSettingsComponent],
+            providers: [
+                { provide: SettingsApi, useValue: { load$: () => of(loaded), update$ } },
+                {
+                    provide: VersionApi,
+                    useValue: { load$: () => of({ version: 'dev', commit: 'unknown' }) }
+                }
+            ]
+        })
+            .overrideComponent(AdminSettingsComponent, {
+                set: {
+                    template: `<form [formGroup]="form"><input type="number" class="turns" formControlName="agentMaxTurnsImplement" /></form>`
+                }
+            })
+            .compileComponents();
+        const fixture = TestBed.createComponent(AdminSettingsComponent);
+        fixture.detectChanges();
+        const input = fixture.nativeElement.querySelector('.turns') as HTMLInputElement;
+
+        expect(input.value).toBe('500');
+        input.value = '900';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+
+        expect(update$).toHaveBeenCalledTimes(1);
+        expect(update$.mock.calls[0][0]).toMatchObject({ agentMaxTurnsImplement: 900 });
     });
 });

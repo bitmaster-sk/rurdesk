@@ -46,6 +46,10 @@ const (
 	ActorTypeSystem  = "system"
 )
 
+const RunEventModelFallback = "model_fallback"
+
+const MaxAgentTurns = 10000
+
 type StageDef struct {
 	Name      string
 	Skippable bool

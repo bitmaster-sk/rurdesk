@@ -7,4 +7,7 @@
     box-shadow: var(--ui-popover-shadow);
     padding: var(--ui-popover-padding);
     color: var(--ui-input-fg);
+    box-sizing: border-box;
+    max-height: inherit;
+    overflow-y: auto;
 }

@@ -108,11 +108,10 @@ func TestWriteGooseConfig(t *testing.T) {
 
 func TestChildEnvWiresProvider(t *testing.T) {
 	cfg := &common.GooseConfig{
-		Provider:        "anthropic",
 		AnthropicAPIKey: "sk-ant-123",
 		// GoogleAPIKey and OllamaHost intentionally empty → must be omitted.
 	}
-	env := childEnv(cfg)
+	env := childEnv(cfg, "anthropic")
 
 	mustHave := []string{
 		"GIT_PAGER=cat",
@@ -142,7 +141,7 @@ func TestChildEnvInheritsProcessEnv(t *testing.T) {
 	t.Setenv("OPENAI_HOST", "https://ollama.com")
 	t.Setenv("OPENAI_API_KEY", "sk-passthrough")
 
-	env := childEnv(&common.GooseConfig{Provider: "openai"})
+	env := childEnv(&common.GooseConfig{}, "openai")
 	for _, want := range []string{"OPENAI_HOST=https://ollama.com", "OPENAI_API_KEY=sk-passthrough"} {
 		if !hasEnv(env, want) {
 			t.Errorf("childEnv did not inherit %q from the process env", want)
@@ -243,10 +242,7 @@ func TestRunWithStubBinary(t *testing.T) {
 				TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 				AgentApiKey:   "deadbeef",
 				Goose: &common.GooseConfig{
-					Provider:          "anthropic",
-					AnthropicAPIKey:   "sk-ant",
-					MaxTurnsPlan:      25,
-					MaxTurnsImplement: 60,
+					AnthropicAPIKey: "sk-ant",
 				},
 			}
 			adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
@@ -260,6 +256,8 @@ func TestRunWithStubBinary(t *testing.T) {
 				WorktreePath: worktree,
 				IssueTitle:   "Test",
 				IssueDesc:    "Body",
+				Model:        common.Model{Provider: "anthropic", Name: "claude-sonnet"},
+				MaxTurns:     60,
 			}
 
 			stats, err := adapter.Run(context.Background(), task)
@@ -292,7 +290,7 @@ func TestRunWithStubBinary(t *testing.T) {
 			got := string(recorded)
 			for _, want := range []string{
 				"run", "--no-session", "--output-format", "stream-json",
-				"--provider", "anthropic",
+				"--provider\nanthropic\n", "--model\nclaude-sonnet\n", "--max-turns\n60\n",
 			} {
 				if !strings.Contains(got, want) {
 					t.Errorf("stub args missing %q\n--- got ---\n%s", want, got)
@@ -331,7 +329,7 @@ func TestCancelAlwaysEndsARunningStage(t *testing.T) {
 	cfg := &common.Config{
 		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 		AgentApiKey:   "deadbeef",
-		Goose:         &common.GooseConfig{Provider: "anthropic", MaxTurnsImplement: 60},
+		Goose:         &common.GooseConfig{},
 	}
 	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
 
@@ -401,7 +399,7 @@ func TestRunSkipsOutputLinesOverTheLimit(t *testing.T) {
 		TrackerMCPUrl:      "http://issue.proxy/mcp/sse",
 		AgentApiKey:        "deadbeef",
 		MaxOutputLineBytes: 1024,
-		Goose:              &common.GooseConfig{Provider: "anthropic", MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+		Goose:              &common.GooseConfig{},
 	}
 	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
 	var isReportedSubmitted atomic.Bool
@@ -445,7 +443,7 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 	cfg := &common.Config{
 		TrackerMCPUrl: "http://issue.proxy/mcp/sse",
 		AgentApiKey:   "deadbeef",
-		Goose:         &common.GooseConfig{Provider: "anthropic", MaxTurnsPlan: 25, MaxTurnsImplement: 60},
+		Goose:         &common.GooseConfig{},
 	}
 	adapter := NewGooseAdapter(cfg, common.NewTrackerClient(cfg))
 	task := common.Task{
@@ -455,6 +453,7 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 		WorktreePath: t.TempDir(),
 		IssueTitle:   "Scaffold",
 		IssueDesc:    "Run " + marker + " then stop it",
+		MaxTurns:     60,
 	}
 
 	if _, err := adapter.Run(context.Background(), task); err != nil {

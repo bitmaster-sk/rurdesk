@@ -7,6 +7,8 @@ export interface AppSettings {
     isAgentThinkingPersisted: boolean;
     agentThinkingMaxKb: number;
     attachmentMaxSizeMb: number;
+    agentMaxTurnsPlan: number;
+    agentMaxTurnsImplement: number;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;

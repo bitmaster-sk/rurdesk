@@ -96,8 +96,8 @@
                     ></app-run-recovery-banner>
                 }
 
-                <div class="meta-grid">
-                    <div class="meta-cell">
+                <div class="run-strip" data-testid="run-strip">
+                    <div class="run-strip__cell">
                         <div class="meta-label">{{ 'AGENT.SIDEBAR.STARTED' | translate }}</div>
                         <div class="meta-value">
                             @if (run.startedAt) {
@@ -107,6 +107,92 @@
                             }
                         </div>
                     </div>
+                    <div class="run-strip__cell">
+                        <div class="meta-label">{{ 'AGENT.SIDEBAR.MODEL' | translate }}</div>
+                        <div class="meta-value break-all" data-testid="run-model">
+                            {{ runModel() ?? ('AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT' | translate) }}
+                        </div>
+                    </div>
+                    <div class="run-strip__cell">
+                        <div class="meta-label">{{ 'AGENT.WORKFLOW.LABEL' | translate }}</div>
+                        <div class="meta-value flex items-center gap-2">
+                            @if (isEditable() && !isWorkflowLocked()) {
+                                <label
+                                    class="flex items-center gap-2"
+                                    [uiTooltip]="'AGENT.WORKFLOW.HINT' | translate"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        uiToggle
+                                        data-testid="run-short-workflow"
+                                        [checked]="isShortWorkflow()"
+                                        [disabled]="isSavingWorkflow()"
+                                        (click)="onToggleShortWorkflow($event)"
+                                    />
+                                    <span>{{ 'AGENT.WORKFLOW.SHORT' | translate }}</span>
+                                </label>
+                            } @else {
+                                <span data-testid="run-workflow">
+                                    {{
+                                        (isShortWorkflow()
+                                            ? 'AGENT.WORKFLOW.SHORT_VALUE'
+                                            : 'AGENT.WORKFLOW.FULL_VALUE'
+                                        ) | translate
+                                    }}
+                                </span>
+                                @if (isEditable()) {
+                                    <tabler-icon
+                                        class="ui-color-text-muted"
+                                        icon="lock"
+                                        [size]="14"
+                                        data-testid="run-workflow-locked"
+                                        [uiTooltip]="'AGENT.WORKFLOW.LOCKED' | translate"
+                                        [attr.aria-label]="'AGENT.WORKFLOW.LOCKED' | translate"
+                                    />
+                                }
+                            }
+                        </div>
+                    </div>
+                    @if (isEditable()) {
+                        <div class="run-strip__cell">
+                            <div class="meta-label">
+                                {{ 'AGENT.RUN_STAGE_PLAN.LABEL' | translate }}
+                            </div>
+                            <div class="meta-value flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    class="run-strip__pill"
+                                    data-testid="run-stage-plan-edit"
+                                    (click)="onToggleStagePlanPopover(stagePlanPopover, $event)"
+                                >
+                                    {{ 'AGENT.RUN_STAGE_PLAN.EDIT' | translate }}
+                                </button>
+                                <ui-popover
+                                    #stagePlanPopover
+                                    panelClass="run-stage-plan-panel"
+                                    maxHeight="60vh"
+                                    [growAfterOpen]="true"
+                                    (closed)="onStagePlanPopoverClosed()"
+                                >
+                                    <div class="run-stage-plan flex flex-col gap-3 p-3">
+                                        <div class="font-semibold">
+                                            {{ 'AGENT.RUN_STAGE_PLAN.TITLE' | translate }}
+                                        </div>
+                                        <app-agent-stage-plan-editor
+                                            [rows]="stagePlanRows()"
+                                            [skills]="skillCatalog()"
+                                            [models]="runStagePlan()?.models ?? []"
+                                            [maxTurnsLimit]="runStagePlan()?.maxTurnsLimit ?? null"
+                                            [saveStatusByStage]="stageStatus()"
+                                            (skillToggled)="onToggleSkill($event)"
+                                            (modelPicked)="onPickStageModel($event)"
+                                            (maxTurnsChanged)="onStageMaxTurns($event)"
+                                        />
+                                    </div>
+                                </ui-popover>
+                            </div>
+                        </div>
+                    }
                 </div>
 
                 @if (run.phase === AgentPhase.Queued && run.queuePosition !== null) {
@@ -118,93 +204,6 @@
                                     | translate: { position: run.queuePosition }
                             }}
                         </div>
-                    </div>
-                }
-
-                @if (canEditSkills()) {
-                    <div class="section">
-                        <label class="flex items-start gap-2">
-                            <input
-                                type="checkbox"
-                                uiToggle
-                                data-testid="run-short-workflow"
-                                [checked]="isShortWorkflow()"
-                                [disabled]="isWorkflowLocked() || isSavingWorkflow()"
-                                (click)="onToggleShortWorkflow($event)"
-                            />
-                            <span class="flex flex-col">
-                                <span>{{ 'AGENT.WORKFLOW.SHORT' | translate }}</span>
-                                <span class="ui-color-text-muted text-xs">
-                                    {{
-                                        (isWorkflowLocked()
-                                            ? 'AGENT.WORKFLOW.LOCKED'
-                                            : 'AGENT.WORKFLOW.HINT'
-                                        ) | translate
-                                    }}
-                                </span>
-                            </span>
-                        </label>
-                    </div>
-                    <div class="section">
-                        <button
-                            type="button"
-                            class="skills-chip"
-                            data-testid="run-skills-chip"
-                            (click)="onToggleSkillsPopover(skillsPopover, $event)"
-                        >
-                            <tabler-icon icon="sparkles" [size]="14" />
-                            {{ 'AGENT.RUN_SKILLS.CHIP' | translate }}
-                        </button>
-                        <ui-popover
-                            #skillsPopover
-                            panelClass="run-skills-panel"
-                            maxHeight="60vh"
-                            [growAfterOpen]="true"
-                            (closed)="onSkillsPopoverClosed()"
-                        >
-                            <div class="run-skills flex flex-col gap-3 p-3">
-                                <div class="font-semibold">
-                                    {{ 'AGENT.RUN_SKILLS.TITLE' | translate }}
-                                </div>
-                                @for (stage of runSkills(); track stage.name) {
-                                    <div
-                                        class="flex flex-col gap-1"
-                                        [uiSaveStatus]="stageSaveStatus(stage.name)"
-                                    >
-                                        <div class="ui-color-text-muted">
-                                            {{ skillStageLabel(stage.name) | translate }}
-                                            @if (stage.dispatched) {
-                                                · {{ 'AGENT.RUN_SKILLS.DISPATCHED' | translate }}
-                                            }
-                                        </div>
-                                        <div class="flex flex-wrap gap-1">
-                                            @for (skill of skillCatalog(); track skill.idSkill) {
-                                                <button
-                                                    type="button"
-                                                    class="skills-chip"
-                                                    [class.skills-chip--on]="
-                                                        isSkillOn(stage, skill.idSkill)
-                                                    "
-                                                    [disabled]="stage.dispatched"
-                                                    [attr.aria-pressed]="
-                                                        isSkillOn(stage, skill.idSkill)
-                                                    "
-                                                    [attr.data-testid]="
-                                                        'run-chip-' +
-                                                        skill.idSkill +
-                                                        '-' +
-                                                        stage.name
-                                                    "
-                                                    (click)="onToggleSkill(stage, skill.idSkill)"
-                                                >
-                                                    {{ skill.name }}
-                                                </button>
-                                            }
-                                        </div>
-                                    </div>
-                                }
-                            </div>
-                        </ui-popover>
                     </div>
                 }
 
@@ -231,7 +230,7 @@
                     <div class="section">
                         <div class="section-title">{{ 'AGENT.SIDEBAR.TIMELINE' | translate }}</div>
                         <ul class="timeline">
-                            @for (row of timeline(); track row.label) {
+                            @for (row of timeline(); track row.stage) {
                                 <li class="timeline-item" [class]="'timeline-item--' + row.status">
                                     <span class="timeline-glyph">
                                         <tabler-icon [icon]="row.glyph" [size]="14" />
@@ -270,7 +269,40 @@
                                                     · {{ row.agentName }}
                                                 </span>
                                             }
+                                            @if (row.model) {
+                                                <span
+                                                    class="ui-color-text-muted"
+                                                    [attr.data-testid]="
+                                                        'timeline-model-' + row.stage
+                                                    "
+                                                >
+                                                    · {{ row.model }}
+                                                    @if (row.isModelPlanned) {
+                                                        ({{
+                                                            'AGENT.TIMELINE.MODEL_PLANNED'
+                                                                | translate
+                                                        }})
+                                                    }
+                                                </span>
+                                            }
                                         </div>
+                                        @if (row.modelFallbackFrom) {
+                                            <div
+                                                class="ui-color-orange text-xs"
+                                                [attr.data-testid]="
+                                                    'timeline-model-fallback-' + row.stage
+                                                "
+                                            >
+                                                {{
+                                                    'AGENT.TIMELINE.MODEL_FALLBACK'
+                                                        | translate
+                                                            : {
+                                                                  requested: row.modelFallbackFrom,
+                                                                  used: row.model
+                                                              }
+                                                }}
+                                            </div>
+                                        }
                                         @if (row.approvedAt) {
                                             <div class="timeline-approval ui-color-text-muted">
                                                 └

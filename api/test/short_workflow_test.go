@@ -125,7 +125,7 @@ func (s *ShortWorkflowSuite) TestAssignWithShortWorkflowSkipsDesignAndPlan() {
 func (s *ShortWorkflowSuite) TestAssignWithoutFlagKeepsFullWorkflow() {
 	run := s.assignAgent("full-assign", false)
 
-	var plan model.StagePlan
+	var plan model.AgentStagePlan
 	s.Require().NoError(json.Unmarshal(run.StagePlan, &plan))
 	for _, entry := range plan.Stages {
 		s.False(entry.Skip, "stage %s must run in the full workflow", entry.Name)

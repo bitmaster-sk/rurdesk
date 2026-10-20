@@ -110,7 +110,7 @@ func (s *AssignAgentSuite) TestAssignCreatesExactlyOneRunWithRequestedSkills() {
 	var run model.AgentRun
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&run))
 
-	var plan model.StagePlan
+	var plan model.AgentStagePlan
 	s.Require().NoError(json.Unmarshal(run.StagePlan, &plan))
 	for _, entry := range plan.Stages {
 		if entry.Name == "implementation" {
@@ -181,10 +181,10 @@ func (s *AssignAgentSuite) assignee(idIssuePublic int64) *int64 {
 	return reloaded.AssignedTo
 }
 
-func stagePlanOf(s *suite.Suite, stagePlan json.RawMessage) map[string]model.StagePlanEntry {
-	var plan model.StagePlan
+func stagePlanOf(s *suite.Suite, stagePlan json.RawMessage) map[string]model.AgentStagePlanEntry {
+	var plan model.AgentStagePlan
 	s.Require().NoError(json.Unmarshal(stagePlan, &plan))
-	byName := map[string]model.StagePlanEntry{}
+	byName := map[string]model.AgentStagePlanEntry{}
 	for _, entry := range plan.Stages {
 		byName[entry.Name] = entry
 	}

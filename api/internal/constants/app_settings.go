@@ -11,6 +11,8 @@ const (
 
 	SettingIsAgentThinkingPersisted = "agent.is_thinking_persisted"
 	SettingAgentThinkingMaxKb       = "agent.thinking_max_kb"
+	SettingAgentMaxTurnsPlan        = "agent.max_turns_plan"
+	SettingAgentMaxTurnsImplement   = "agent.max_turns_implement"
 )
 
 // AppNumericSettingsSpec describes a known numeric setting: its default and inclusive bounds.
@@ -22,13 +24,15 @@ type AppNumericSettingsSpec struct {
 
 // KnownAppNumericSettings is the source of truth for validation and defaults.
 var KnownAppNumericSettings = map[string]AppNumericSettingsSpec{
-	SettingTablePageSize:        {Default: 50, Min: 1, Max: 200},
-	SettingKanbanPageSize:       {Default: 20, Min: 1, Max: 200},
-	SettingGanttBacklogPageSize: {Default: 30, Min: 1, Max: 200},
-	SettingSprintVelocityLimit:  {Default: 10, Min: 1, Max: 50},
-	SettingUserApiKeyLimit:      {Default: 10, Min: 1, Max: 100},
-	SettingAgentThinkingMaxKb:   {Default: 1024, Min: 64, Max: 10240},
-	SettingAttachmentMaxSizeMb:  {Default: 25, Min: 1, Max: 100},
+	SettingTablePageSize:          {Default: 50, Min: 1, Max: 200},
+	SettingKanbanPageSize:         {Default: 20, Min: 1, Max: 200},
+	SettingGanttBacklogPageSize:   {Default: 30, Min: 1, Max: 200},
+	SettingSprintVelocityLimit:    {Default: 10, Min: 1, Max: 50},
+	SettingUserApiKeyLimit:        {Default: 10, Min: 1, Max: 100},
+	SettingAgentThinkingMaxKb:     {Default: 1024, Min: 64, Max: 10240},
+	SettingAttachmentMaxSizeMb:    {Default: 25, Min: 1, Max: 100},
+	SettingAgentMaxTurnsPlan:      {Default: 250, Min: 1, Max: MaxAgentTurns},
+	SettingAgentMaxTurnsImplement: {Default: 500, Min: 1, Max: MaxAgentTurns},
 }
 
 // KnownAppBoolSettings maps each known boolean setting to its default.

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { AgentStageProgress, AgentStageStatus, StagePlan } from '../model/agent-run.model';
+import { AgentStageProgress, AgentStageStatus, AgentStagePlan } from '../model/agent-run.model';
 import { ShortWorkflow } from './short-workflow';
 
-function plan(skipped: string[]): StagePlan {
+function plan(skipped: string[]): AgentStagePlan {
     return {
         stages: ['pickup', 'brainstorming', 'design', 'implementation_plan', 'implementation'].map(
             name => ({ name, skippable: true, skip: skipped.includes(name) })

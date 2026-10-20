@@ -16,7 +16,8 @@ import { Color } from 'src/app/shared/color/color';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
-import { AgentGateway } from '../../model/agent-gateway.model';
+import { MAX_TURNS_VALIDATORS } from '../../constants/max-agent-turns';
+import { AgentGateway, CreateAgentGatewayReq } from '../../model/agent-gateway.model';
 
 /**
  * EditUserDialogComponent edits an existing user — same shape as create but the
@@ -44,6 +45,13 @@ export class EditUserDialogComponent {
     // The agent's existing gateway, loaded on open. null = agent has none yet
     // (URL is then managed in the keys window, not here).
     protected readonly gateway = signal<AgentGateway | null>(null);
+    protected readonly gatewayModels = computed(() => {
+        const gateway = this.gateway();
+        return (gateway?.models ?? []).map(model => ({
+            model,
+            isDefault: model === gateway?.modelDefault
+        }));
+    });
 
     protected readonly form = this.fb.group({
         name: ['', [Validators.required, Validators.maxLength(250)]],
@@ -52,6 +60,8 @@ export class EditUserDialogComponent {
         email: ['', [Validators.email, Validators.maxLength(250)]],
         isAdmin: [false],
         gatewayUrl: ['', [Validators.maxLength(2000)]],
+        maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
+        maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         colorAvatarBg: ['']
     });
 
@@ -68,6 +78,8 @@ export class EditUserDialogComponent {
                 email: user.email,
                 isAdmin: user.isAdmin,
                 gatewayUrl: '',
+                maxTurnsPlan: null,
+                maxTurnsImplement: null,
                 colorAvatarBg: user.colorAvatarBg
             });
             const email = this.form.controls.email;
@@ -80,6 +92,10 @@ export class EditUserDialogComponent {
                     this.gateway.set(gw);
                     if (gw) {
                         gatewayUrl.setValue(gw.gatewayUrl);
+                        this.form.patchValue({
+                            maxTurnsPlan: gw.maxTurnsPlan,
+                            maxTurnsImplement: gw.maxTurnsImplement
+                        });
                         gatewayUrl.setValidators([Validators.required, Validators.maxLength(2000)]);
                     } else {
                         gatewayUrl.clearValidators();
@@ -117,15 +133,17 @@ export class EditUserDialogComponent {
 
         // For an agent with an existing gateway, save a changed URL alongside the name.
         const gw = this.gateway();
-        const newUrl = value.gatewayUrl!.trim();
+        const gatewayReq: CreateAgentGatewayReq = {
+            gatewayUrl: value.gatewayUrl!.trim(),
+            maxTurnsPlan: value.maxTurnsPlan || null,
+            maxTurnsImplement: value.maxTurnsImplement || null
+        };
         const calls: ReturnType<AdminUserApi['update$']>[] = [
             this.adminUserApi.update$(user.idUser, req)
         ];
-        if (user.isAgent && gw && newUrl && newUrl !== gw.gatewayUrl) {
+        if (user.isAgent && gw && gatewayReq.gatewayUrl && this.isGatewayChanged(gw, gatewayReq)) {
             calls.push(
-                this.agentGatewayApi
-                    .update$(user.idUser, { gatewayUrl: newUrl })
-                    .pipe(map(() => void 0))
+                this.agentGatewayApi.update$(user.idUser, gatewayReq).pipe(map(() => void 0))
             );
         }
 
@@ -141,6 +159,14 @@ export class EditUserDialogComponent {
                 this.sToast.showError('ADMIN.ACTION_FAILED');
             }
         });
+    }
+
+    private isGatewayChanged(gw: AgentGateway, req: CreateAgentGatewayReq): boolean {
+        return (
+            req.gatewayUrl !== gw.gatewayUrl ||
+            req.maxTurnsPlan !== gw.maxTurnsPlan ||
+            req.maxTurnsImplement !== gw.maxTurnsImplement
+        );
     }
 
     protected onShuffleColor(): void {

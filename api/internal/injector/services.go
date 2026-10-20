@@ -130,6 +130,21 @@ func mustCache() *redis.Client {
 	return client
 }
 
+func mustAppSettings() *service.AppSettingsService {
+	settings, err := GetAppSettingsService()
+	if err != nil {
+		panic(fmt.Sprintf("injector: app settings unavailable: %v", err))
+	}
+	return settings
+}
+
+func GetAgentTaskConfigService() *service.AgentTaskConfigService {
+	instance, _ := di.GetWithNew("agent-dispatch-service", func() (any, error) {
+		return service.NewAgentTaskConfigService(mustAppSettings(), GetAgentGatewayRepository()), nil
+	})
+	return instance.(*service.AgentTaskConfigService)
+}
+
 func GetNotifier() *notify.Notifier {
 	instance, _ := di.GetWithNew("notifier", func() (any, error) {
 		return notify.NewNotifier(), nil
@@ -599,9 +614,10 @@ func GetDispatcher() *agent.Dispatcher {
 			GetProjectRepository(),
 			GetUserRepository(),
 			GetSkillService(),
-			GetStagePlanService(),
+			GetAgentStagePlanService(),
 			GetWikiAgentService(),
 			GetWikiProposalService(),
+			GetAgentTaskConfigService(),
 			GetGatewayClient(),
 			GetNotifier(),
 		), nil
@@ -717,7 +733,8 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAttachmentLinkService(),
 			GetGitIntegrationRepository(),
 			GetAclService(),
-			GetStagePlanService(),
+			GetAgentStagePlanService(),
+			GetAgentTaskConfigService(),
 			GetDispatcher(),
 			GetNotifier(),
 			pool,
@@ -831,7 +848,7 @@ func GetIssueController() *controller.IssueController {
 		).WithGitIntRepo(GetGitIntegrationRepository()).WithWiki(GetWikiService()).
 			WithAttachments(GetAttachmentLinkService()).
 			WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(),
-				GetProjectSkillService(), GetStagePlanService(), GetDispatcher(), GetNotifier()), nil
+				GetProjectSkillService(), GetAgentStagePlanService(), GetAgentTaskConfigService(), GetDispatcher(), GetNotifier()), nil
 	})
 	return instance.(*controller.IssueController)
 }
@@ -1130,12 +1147,12 @@ func GetProjectSkillService() *service.ProjectSkillService {
 	return instance.(*service.ProjectSkillService)
 }
 
-func GetStagePlanService() *service.StagePlanService {
+func GetAgentStagePlanService() *service.AgentStagePlanService {
 	instance, _ := di.GetWithNew("stage-plan-service", func() (any, error) {
 		pool := mustDb()
-		return service.NewStagePlanService(pool, GetAgentRunRepository(), GetAgentTaskRepository()), nil
+		return service.NewAgentStagePlanService(pool, GetAgentRunRepository(), GetAgentTaskRepository()), nil
 	})
-	return instance.(*service.StagePlanService)
+	return instance.(*service.AgentStagePlanService)
 }
 
 func GetProjectSkillController() *controller.ProjectSkillController {
@@ -1180,6 +1197,7 @@ func GetAgentOverviewController() *controller.AgentOverviewController {
 	instance, _ := di.GetWithNew("agent-overview-controller", func() (any, error) {
 		return controller.NewAgentOverviewController(
 			GetAgentOverviewRepository(),
+			GetAgentTaskConfigService(),
 			GetAclService(),
 		), nil
 	})

@@ -121,23 +121,20 @@ func (ctrl *AgentGatewayController) UpdateAgentGateway(c *gin.Context) {
 
 	var req model.CreateAgentGatewayReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
 
-	gw, err := ctrl.agentGwRepo.UpdateUrl(c.Request.Context(), idUser, req.GatewayUrl)
+	gw, err := ctrl.agentGwRepo.Update(c.Request.Context(), idUser, req)
 	if errors.Is(err, repository.ErrAgentGatewayNotFound) {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrNotFound)
 		return
 	} else if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gw)
+	ResponseOk(c, gw)
 }
 
 // RegenerateGatewayToken replaces the gateway's webhook signing secret and

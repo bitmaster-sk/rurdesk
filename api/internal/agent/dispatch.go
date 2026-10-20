@@ -18,20 +18,21 @@ import (
 var retryBackoffs = []time.Duration{5 * time.Second, 15 * time.Second, 45 * time.Second}
 
 type Dispatcher struct {
-	agentRunRepo *repository.AgentRunRepository
-	taskRepo     *repository.AgentTaskRepository
-	agentGwRepo  *repository.AgentGatewayRepository
-	gitIntRepo   *repository.GitIntegrationRepository
-	issueRepo    *repository.IssueRepository
-	messageRepo  *repository.MessageRepository
-	projectRepo  *repository.ProjectRepository
-	userRepo     *repository.UserRepository
-	skillService *service.SkillService
-	stagePlan    *service.StagePlanService
-	wikiAgent    *service.WikiAgentService
-	proposals    *service.WikiProposalService
-	gwClient     *GatewayClient
-	notifier     *notify.Notifier
+	agentRunRepo    *repository.AgentRunRepository
+	taskRepo        *repository.AgentTaskRepository
+	agentGwRepo     *repository.AgentGatewayRepository
+	gitIntRepo      *repository.GitIntegrationRepository
+	issueRepo       *repository.IssueRepository
+	messageRepo     *repository.MessageRepository
+	projectRepo     *repository.ProjectRepository
+	userRepo        *repository.UserRepository
+	skillService    *service.SkillService
+	stagePlan       *service.AgentStagePlanService
+	wikiAgent       *service.WikiAgentService
+	proposals       *service.WikiProposalService
+	agentTaskConfig *service.AgentTaskConfigService
+	gwClient        *GatewayClient
+	notifier        *notify.Notifier
 }
 
 func NewDispatcher(
@@ -44,27 +45,29 @@ func NewDispatcher(
 	projectRepo *repository.ProjectRepository,
 	userRepo *repository.UserRepository,
 	skillService *service.SkillService,
-	stagePlan *service.StagePlanService,
+	stagePlan *service.AgentStagePlanService,
 	wikiAgent *service.WikiAgentService,
 	proposals *service.WikiProposalService,
+	agentTaskConfig *service.AgentTaskConfigService,
 	gwClient *GatewayClient,
 	notifier *notify.Notifier,
 ) *Dispatcher {
 	return &Dispatcher{
-		agentRunRepo: agentRunRepo,
-		taskRepo:     taskRepo,
-		agentGwRepo:  agentGwRepo,
-		gitIntRepo:   gitIntRepo,
-		issueRepo:    issueRepo,
-		messageRepo:  messageRepo,
-		projectRepo:  projectRepo,
-		userRepo:     userRepo,
-		skillService: skillService,
-		stagePlan:    stagePlan,
-		wikiAgent:    wikiAgent,
-		proposals:    proposals,
-		gwClient:     gwClient,
-		notifier:     notifier,
+		agentRunRepo:    agentRunRepo,
+		taskRepo:        taskRepo,
+		agentGwRepo:     agentGwRepo,
+		gitIntRepo:      gitIntRepo,
+		issueRepo:       issueRepo,
+		messageRepo:     messageRepo,
+		projectRepo:     projectRepo,
+		userRepo:        userRepo,
+		skillService:    skillService,
+		stagePlan:       stagePlan,
+		wikiAgent:       wikiAgent,
+		proposals:       proposals,
+		agentTaskConfig: agentTaskConfig,
+		gwClient:        gwClient,
+		notifier:        notifier,
 	}
 }
 
@@ -86,20 +89,34 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
 		}
 
+		payload := map[string]any{
+			"idTask":        task.IdTask,
+			"stage":         task.Stage,
+			"attemptNo":     task.AttemptNo,
+			"stagePlan":     run.StagePlan,
+			"contextBundle": bundle,
+			"prBranch":      prBranch,
+		}
+		if constants.IsSkillStage(task.Stage) {
+			taskConfig, err := d.resolveAgentTaskConfig(bgCtx, run, task)
+			if err != nil {
+				log.Error().Err(err).Int64("idTask", task.IdTask).Msg("resolving the stage model")
+				d.failTaskAndRun(bgCtx, run, task, fmt.Sprintf("model resolution error: %v", err))
+				return
+			}
+			payload["maxTurns"] = taskConfig.MaxTurns
+			if taskConfig.Model != nil {
+				payload["model"] = *taskConfig.Model
+			}
+		}
+
 		event := WebhookEvent{
 			IdRun:       run.IdRun,
 			IdProject:   run.IdProject,
 			IdIssue:     run.IdIssue,
 			IdUserAgent: run.IdUserAgent,
 			Event:       "stage_execute",
-			Payload: map[string]any{
-				"idTask":        task.IdTask,
-				"stage":         task.Stage,
-				"attemptNo":     task.AttemptNo,
-				"stagePlan":     run.StagePlan,
-				"contextBundle": bundle,
-				"prBranch":      prBranch,
-			},
+			Payload:     payload,
 		}
 		if err := d.DispatchEvent(bgCtx, run, event); err != nil {
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("dispatching stage_execute event")
@@ -110,6 +127,38 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("recording wiki reads of the prompt")
 		}
 	}()
+}
+
+func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (service.AgentTaskConfig, error) {
+	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+	if err != nil {
+		return service.AgentTaskConfig{}, fmt.Errorf("loading gateway: %w", err)
+	}
+	if gateway == nil {
+		return service.AgentTaskConfig{}, fmt.Errorf("no gateway configured for agent %d", run.IdUserAgent)
+	}
+	plan, err := d.stagePlan.Parse(run.StagePlan)
+	if err != nil {
+		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("unparseable stage plan, dispatching with defaults")
+	}
+
+	taskConfig := d.agentTaskConfig.BuildAgentTaskConfig(plan, task.Stage, gateway)
+	if taskConfig.FallbackFrom != nil {
+		used := ""
+		if taskConfig.Model != nil {
+			used = *taskConfig.Model
+		}
+		log.Warn().Int64("idTask", task.IdTask).Str("requested", *taskConfig.FallbackFrom).Str("used", used).Msg("model no longer offered by the gateway, falling back to its default")
+		fallback := model.ModelFallbackPayload{IdTask: task.IdTask, Requested: *taskConfig.FallbackFrom, Used: used}
+		if err := d.agentRunRepo.InsertEvent(ctx, run.IdRun, run.Phase, run.Phase, constants.ActorTypeSystem, nil, constants.RunEventModelFallback, fallback); err != nil {
+			return service.AgentTaskConfig{}, err
+		}
+	}
+	if err := d.taskRepo.SetModelAndTurns(ctx, task.IdTask, taskConfig.Model, taskConfig.MaxTurns); err != nil {
+		return service.AgentTaskConfig{}, err
+	}
+	task.Model, task.MaxTurns = taskConfig.Model, &taskConfig.MaxTurns
+	return taskConfig, nil
 }
 
 func (d *Dispatcher) openPrBranch(ctx context.Context, run *model.AgentRun) (string, error) {

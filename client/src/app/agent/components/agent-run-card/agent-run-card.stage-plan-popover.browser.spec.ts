@@ -8,7 +8,9 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { AgentRunCardComponent } from './agent-run-card.component';
 import { AgentPhase } from '../../model/agent-phase.enum';
 import { AgentStage } from '../../model/agent-stage.enum';
-import { AgentRunStageSkills } from '../../model/agent-run-skills.model';
+import { AgentRunStagePlanRes } from '../../model/agent-run-stage-plan.model';
+import { AgentStagePlanEditorComponent } from '../agent-stage-plan-editor/agent-stage-plan-editor.component';
+import { FormsModule } from '@angular/forms';
 import { AgentRunApi } from '../../api/agent-run.api.service';
 import { SkillApi } from 'src/app/shared/api/skill.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
@@ -36,26 +38,60 @@ class RunStatsPanelStub {
     public readonly idRun = input<number>(0);
 }
 
-const STAGE_SKILLS: AgentRunStageSkills[] = [
-    { name: AgentStage.Pickup, idsSkill: [1, 2], dispatched: false },
-    { name: AgentStage.Brainstorming, idsSkill: [1], dispatched: false },
-    { name: AgentStage.Design, idsSkill: [2, 3], dispatched: false },
-    { name: AgentStage.ImplementationPlan, idsSkill: [1, 2, 3], dispatched: false },
-    { name: AgentStage.Implementation, idsSkill: [1], dispatched: false }
-];
+const RUN_STAGE_PLAN: AgentRunStagePlanRes = {
+    stages: [
+        {
+            name: AgentStage.Brainstorming,
+            idsSkill: [1],
+            model: null,
+            maxTurns: null,
+            skip: false,
+            dispatched: false
+        },
+        {
+            name: AgentStage.Design,
+            idsSkill: [2, 3],
+            model: null,
+            maxTurns: null,
+            skip: false,
+            dispatched: false
+        },
+        {
+            name: AgentStage.ImplementationPlan,
+            idsSkill: [1, 2, 3],
+            model: null,
+            maxTurns: null,
+            skip: false,
+            dispatched: false
+        },
+        {
+            name: AgentStage.Implementation,
+            idsSkill: [1],
+            model: null,
+            maxTurns: null,
+            skip: false,
+            dispatched: false
+        }
+    ],
+    models: [],
+    modelDefault: null,
+    maxTurnsPlan: 250,
+    maxTurnsImplement: 500,
+    maxTurnsLimit: null
+};
 
-describe('AgentRunCardComponent — skills popover positioning (browser)', () => {
+describe('AgentRunCardComponent — stage plan popover positioning (browser)', () => {
     let fixture: ComponentFixture<AgentRunCardComponent>;
-    let skillsSubject: Subject<AgentRunStageSkills[]>;
+    let stagePlanSubject: Subject<AgentRunStagePlanRes>;
     let catalogSubject: Subject<Skill[]>;
 
     beforeEach(async () => {
-        skillsSubject = new Subject();
+        stagePlanSubject = new Subject();
         catalogSubject = new Subject();
 
         const agentRunApiStub = {
-            loadSkills$: vi.fn(() => skillsSubject.asObservable()),
-            updateSkills$: vi.fn(() => of(STAGE_SKILLS))
+            loadStagePlan$: vi.fn(() => stagePlanSubject.asObservable()),
+            updateStagePlanEntry$: vi.fn(() => of(RUN_STAGE_PLAN))
         };
 
         const skillApiStub = {
@@ -67,13 +103,14 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
         await TestBed.configureTestingModule({
             imports: [
                 TranslateModule.forRoot(),
+                FormsModule,
                 UiModule,
                 TablerIconStub,
                 RunRecoveryBannerStub,
                 RunStatsPanelStub,
                 RunWikiContextStub
             ],
-            declarations: [AgentRunCardComponent],
+            declarations: [AgentRunCardComponent, AgentStagePlanEditorComponent],
             providers: [
                 { provide: AgentRunApi, useValue: agentRunApiStub },
                 { provide: SkillApi, useValue: skillApiStub },
@@ -90,9 +127,9 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
         fixture.detectChanges();
     });
 
-    function openSkillsPopover(): HTMLElement {
+    function openStagePlanPopover(): HTMLElement {
         const chip = fixture.nativeElement.querySelector(
-            '[data-testid="run-skills-chip"]'
+            '[data-testid="run-stage-plan-edit"]'
         ) as HTMLElement;
         chip.click();
         fixture.detectChanges();
@@ -105,7 +142,7 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
 
     it('repositions above the trigger after async content loads when trigger is near viewport bottom', async () => {
         const chip = fixture.nativeElement.querySelector(
-            '[data-testid="run-skills-chip"]'
+            '[data-testid="run-stage-plan-edit"]'
         ) as HTMLElement;
         expect(chip).not.toBeNull();
 
@@ -134,7 +171,7 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
             Fixtures.skill({ idSkill: 2, name: 'Code review' }),
             Fixtures.skill({ idSkill: 3, name: 'Testing' })
         ]);
-        skillsSubject.next(STAGE_SKILLS);
+        stagePlanSubject.next(RUN_STAGE_PLAN);
         fixture.detectChanges();
         await fixture.whenStable();
         fixture.detectChanges();
@@ -156,7 +193,7 @@ describe('AgentRunCardComponent — skills popover positioning (browser)', () =>
         document.body.appendChild(scrollContainer);
 
         try {
-            const chip = openSkillsPopover();
+            const chip = openStagePlanPopover();
             const pane = getPane();
             expect(pane).not.toBeNull();
 

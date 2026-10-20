@@ -40,10 +40,11 @@ wiring, healthcheck) is documented here and the other adapters refer back to it.
 The adapter shells out to Block's [Goose](https://github.com/block/goose) agent
 (`goose run`, a pinned Rust binary — [`adapter.go`](goose/adapter.go)). Goose
 authenticates with a **per-token API key (BYOK)**, not a subscription OAuth
-volume. `GOOSE_PROVIDER` selects the provider and the adapter passes the matching
-credential through to the child:
+volume. The provider of the run's model (the part of its `MODELS` entry before
+the first `/`) is passed as `GOOSE_PROVIDER` and `--provider`, and the matching
+credential goes through to the child:
 
-| `GOOSE_PROVIDER` | Credential                                                                   |
+| Provider         | Credential                                                                   |
 | ---------------- | ---------------------------------------------------------------------------- |
 | `anthropic`      | `ANTHROPIC_API_KEY`                                                          |
 | `google`         | `GOOGLE_API_KEY`                                                             |
@@ -51,8 +52,8 @@ credential through to the child:
 | `openai`         | `OPENAI_API_KEY` + `OPENAI_HOST` / `OPENAI_BASE_PATH` for OpenAI-compatible endpoints |
 
 The shipped examples cover two of these: `gateway-goose-qwen-local` runs
-`ollama` against a local host, while `gateway-goose-qwen-cloud` and
-`gateway-goose-kimi-cloud` use `openai` pointed at Ollama Cloud. Note the
+`ollama` against a local host, while the `gateway-goose-kimi-*` gateways use
+`openai` pointed at Ollama Cloud. Note the
 `openai` variables are not modelled in `GooseConfig` — they work because the
 adapter passes the whole parent environment to the child (`childEnv`), so any
 provider variable Goose itself understands gets through.
@@ -99,8 +100,9 @@ claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
 
 ### Required environment variables
 
-These come from the tracker API and your git provider; the gateway refuses to
-start without all five. The other adapters share this exact contract.
+These come from the tracker API, your git provider and the models you allow; the
+gateway refuses to start without all six. The other adapters share this exact
+contract.
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -109,6 +111,7 @@ start without all five. The other adapters share this exact contract.
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
 | `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup; per-run worktrees are checked out from that clone. One repo per gateway — see the note below.                                                                                                                                                  |
 | `GIT_ACCESS_TOKEN`         | Personal access token / app token with contents read+write on `REPO_URL`. Injected into the remote URL so the per-run agent can push branches back. Only **push** is needed — the tracker (API) opens the PR/MR via the project's git-integration token, not this one.                                                          |
+| `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the subscription. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |
 
 > **One repo per gateway.** A project in the tracker may hold several git
 > integrations, and the tracker resolves which one a run used by matching the
@@ -126,18 +129,16 @@ start without all five. The other adapters share this exact contract.
 | `LOG_LEVEL`                            | `info`           | `debug` \| `info` \| `warn` \| `error`. JSON via `zerolog`.                                                                          |
 | `WORKSPACE_BASE`                       | `/worktrees`     | Root for per-run git worktrees. Must match the `gateway-workspace` volume mount.                                                     |
 | `REPO_BRANCH_BASE`                     | `main`           | Branch each per-run worktree starts from.                                                                                            |
-| `GOOSE_PROVIDER`                       | `anthropic`      | `anthropic` \| `google` \| `ollama`.                                                                                                 |
-| `GOOSE_MODEL`                          | provider default | Model id; unrecognised name fails on first call.                                                                                     |
-| `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the chosen provider.                                                                                             |
-| `OLLAMA_HOST`                          | unset            | For `GOOSE_PROVIDER=ollama` (keyless).                                                                                               |
-| `GOOSE_MAX_TURNS_PLAN`                 | `250`            | Hard `--max-turns` for non-implementation stages.                                                                                    |
-| `GOOSE_MAX_TURNS_IMPLEMENT`            | `500`            | Hard `--max-turns` for implementation.                                                                                               |
+| `MODEL_DEFAULT`                        | first of `MODELS` | Model run when `stage_execute` names none. Must be in `MODELS`, or the gateway refuses to start.                                     |
+| `MAX_TURNS_LIMIT`                      | no limit         | Ceiling on the `maxTurns` the tracker sends. Reported in `ReportRecovered` so the tracker caps at it; a higher value still fails with `max_turns_over_limit`. Without `maxTurns` the gateway uses 250 / 500 (implementation), capped by this limit. |
+| `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the `anthropic` / `google` provider.                                                                             |
+| `OLLAMA_HOST`                          | unset            | For the `ollama` provider (keyless).                                                                                                 |
 
 ### docker-compose snippet
 
-The dev compose ships three of these, one per agent: `gateway-goose-qwen-local`,
-`gateway-goose-qwen-cloud` and `gateway-goose-kimi-cloud`. They all run the same
-image and differ only in their env file. One of them, verbatim:
+The dev compose ships one per agent: `gateway-goose-qwen-local`,
+`gateway-goose-kimi-cloud`, `gateway-goose-kimi-gitea` and `gateway-goose-kimi-gitlab`.
+They all run the same image and differ only in their env file. One of them, verbatim:
 
 ```yaml
 gateway-goose-qwen-local:
@@ -161,7 +162,7 @@ volumes:
     gateway-goose-qwen-local-state:
 ```
 
-The required env (provider key + the five tracker/git vars) lives in that
+The required env (provider key, `MODELS` + the five tracker/git vars) lives in that
 folder's `.env` — see
 [`.env.example`](../docker/gateway-goose-qwen-local/.env.example). The tracker
 also needs the webhook target configured
@@ -184,5 +185,5 @@ The image has a built-in Docker `HEALTHCHECK` that curls this every 30s.
 3. Trigger a `stage_execute` event. Logs should show `starting goose` followed
    by structured `goose stream` records (the claude adapter logs `agent event`
    instead).
-4. A provider/auth error means the wrong or missing key for `GOOSE_PROVIDER`
+4. A provider/auth error means the wrong or missing key for the model's provider
    (or, for ollama, the model isn't pulled on `OLLAMA_HOST`).

@@ -106,6 +106,14 @@ func (s *AppSettingsService) AgentThinkingMaxKb() int {
 	return s.getNumeric(constants.SettingAgentThinkingMaxKb)
 }
 
+func (s *AppSettingsService) AgentMaxTurnsPlan() int {
+	return s.getNumeric(constants.SettingAgentMaxTurnsPlan)
+}
+
+func (s *AppSettingsService) AgentMaxTurnsImplement() int {
+	return s.getNumeric(constants.SettingAgentMaxTurnsImplement)
+}
+
 // Update validates every key, persists, then reloads the snapshot.
 func (s *AppSettingsService) Update(ctx context.Context, numericChanges map[string]int, boolChanges map[string]bool) error {
 	persist := make(map[string]string, len(numericChanges)+len(boolChanges))

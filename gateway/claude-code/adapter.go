@@ -41,7 +41,6 @@ func NewClaudeCodeAdapter(cfg *common.Config) *ClaudeCodeAdapter {
 
 func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.RunStats, error) {
 	stats := common.RunStats{}
-	task.MaxTurns = maxTurnsForStage(task.Stage, a.cfg.ClaudeCode)
 	task.Vocab = common.ToolVocabClaudeCode
 	prompt, err := common.RenderPrompt(task)
 	if err != nil {
@@ -84,12 +83,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
 		"--session-id", common.SessionUUID(task.IdRun, task.Stage, task.AttemptNo),
 		"--mcp-config", mcpConfigPath,
-	}
-	// Unset model omits --model so the account default applies; a set value
-	// passes through verbatim and an unrecognised name fails fast rather than
-	// degrading silently.
-	if m := a.cfg.ClaudeCode.Model; m != "" {
-		args = append(args, "--model", m)
+		"--model", task.Model.Name,
 	}
 
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
@@ -111,7 +105,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	log.Info().
 		Int64("idRun", task.IdRun).
 		Str("stage", task.Stage).
-		Str("model", a.cfg.ClaudeCode.Model).
+		Str("model", task.Model.Name).
 		Str("mcpURL", mcpURL).
 		Int("maxTurns", task.MaxTurns).
 		Msg("starting claude code")
@@ -420,13 +414,6 @@ func writeMCPSettings(dir, mcpURL, agentKey string, idRun int64) (string, error)
 		return "", err
 	}
 	return path, nil
-}
-
-func maxTurnsForStage(stage string, cfg *common.ClaudeCodeConfig) int {
-	if stage == common.StageImplementation {
-		return cfg.MaxTurnsImplement
-	}
-	return cfg.MaxTurnsPlan
 }
 
 // claudeBinary returns the path to the claude CLI. The CLAUDE_CODE_BINARY env

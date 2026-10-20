@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
@@ -13,41 +12,44 @@ import (
 )
 
 type AgentOverviewController struct {
-	overviewRepo *repository.AgentOverviewRepository
-	acl          *service.AclService
+	overviewRepo    *repository.AgentOverviewRepository
+	agentTaskConfig *service.AgentTaskConfigService
+	acl             *service.AclService
 }
 
 func NewAgentOverviewController(
 	overviewRepo *repository.AgentOverviewRepository,
+	agentTaskConfig *service.AgentTaskConfigService,
 	acl *service.AclService,
 ) *AgentOverviewController {
-	return &AgentOverviewController{overviewRepo: overviewRepo, acl: acl}
+	return &AgentOverviewController{overviewRepo: overviewRepo, agentTaskConfig: agentTaskConfig, acl: acl}
 }
 
 func (ctrl *AgentOverviewController) Get(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
-		_ = c.Error(errs.ErrBadRequest)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrBadRequest)
 		return
 	}
 
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 	if !ctrl.acl.CanReadProject(ctx, user.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
 	overview, err := ctrl.overviewRepo.Load(ctx, idProject)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	if overview == nil {
 		overview = []*model.AgentOverview{}
 	}
-	c.JSON(http.StatusOK, overview)
+	if err := ctrl.agentTaskConfig.ApplyToOverviews(ctx, overview); err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, overview)
 }

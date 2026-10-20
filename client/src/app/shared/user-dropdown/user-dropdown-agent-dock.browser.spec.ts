@@ -16,6 +16,7 @@ import { ProjectSkillApi } from '../../project/api/project-skill.api.service';
 import { ProjectSkill } from '../../project/model/project-skill.model';
 import { UiModule } from '../../ui/ui.module';
 import { SkillApi } from '../api/skill.api.service';
+import { AgentStagePlanEditorComponent } from '../../agent/components/agent-stage-plan-editor/agent-stage-plan-editor.component';
 import { AgentDockComponent } from '../components/agent-dock/agent-dock.component';
 import { Skill } from '../model/skill.model';
 import { UserDropdownComponent } from './user-dropdown.component';
@@ -80,7 +81,12 @@ describe('UserDropdownComponent with the agent dock open (browser)', () => {
                 TablerIconStub,
                 AvatarStub
             ],
-            declarations: [HostComponent, UserDropdownComponent, AgentDockComponent],
+            declarations: [
+                HostComponent,
+                UserDropdownComponent,
+                AgentDockComponent,
+                AgentStagePlanEditorComponent
+            ],
             providers: [
                 provideNoopAnimations(),
                 { provide: AgentRunApi, useValue: agentRunApi },

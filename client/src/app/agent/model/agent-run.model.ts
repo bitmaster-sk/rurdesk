@@ -7,7 +7,7 @@ export interface AgentRun {
     idUserAgent: number;
     idGitIntegration: number | null;
     phase: AgentPhase;
-    stagePlan: StagePlan;
+    stagePlan: AgentStagePlan;
     queuePosition: number | null;
     prUrl: string | null;
     prHostType: string | null;
@@ -39,17 +39,23 @@ export interface AgentStageProgress {
     idResultMessage?: number | null; // the message this stage produced
     thinkingTail?: string | null; // the last thoughts of the stage
     hasThinking?: boolean; // full thinking is stored and readable
+    model?: string | null;
+    maxTurns?: number | null;
+    modelFallbackFrom?: string | null;
 }
 
-export interface StagePlan {
-    stages: StagePlanEntry[];
+export interface AgentStagePlan {
+    model?: string;
+    stages: AgentStagePlanEntry[];
 }
 
-export interface StagePlanEntry {
+export interface AgentStagePlanEntry {
     name: string;
     skippable: boolean;
     skip: boolean;
     idsSkill?: number[];
+    model?: string;
+    maxTurns?: number;
 }
 
 export interface AgentRunEvent {
@@ -60,6 +66,7 @@ export interface AgentRunEvent {
     actorType: 'user' | 'agent' | 'gateway' | 'system';
     idUser: number | null;
     reason: string | null;
+    payload: unknown;
     createdAt: string;
 }
 
@@ -69,12 +76,19 @@ export interface RunStats {
     totalToolCallsCount: number;
     attemptsPerStage: Record<string, number>;
     failedAttempts: number;
+    tokensByModel: Record<string, number>;
 }
 
-export interface CreateAgentRunReq {
-    idUserAgent: number;
+export interface RunChoices {
     idsSkillByStage: Record<string, number[]>;
     isShortWorkflow: boolean;
+    model?: string;
+    modelByStage?: Record<string, string>;
+    maxTurnsByStage?: Record<string, number>;
+}
+
+export interface CreateAgentRunReq extends RunChoices {
+    idUserAgent: number;
 }
 
 export interface UpdateAgentRunWorkflowReq {

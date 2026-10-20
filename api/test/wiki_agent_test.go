@@ -323,7 +323,7 @@ type dispatchedBundle struct {
 
 func (f *wikiAgentFixture) startRun(t *testing.T, idIssue int64, stage string) (*model.AgentRun, *model.AgentTask) {
 	ctx := context.Background()
-	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{}, false)
+	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{})
 	require.NoError(t, err)
 	run, err := injector.GetAgentRunRepository().Insert(ctx, idIssue, f.idAgent, f.idProject, stagePlan)
 	require.NoError(t, err)

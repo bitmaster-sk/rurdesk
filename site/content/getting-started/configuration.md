@@ -193,8 +193,8 @@ small dense model.
 > raise the proxy timeout to match.
 
 > The **agent gateway** is independent of this provider — it runs the Goose agent
-> against its own `GOOSE_PROVIDER` (local Ollama, Ollama Cloud, Anthropic, or
-> Gemini), not `AI_API_KEY`. See [Agent Gateway](./gateway.md).
+> against the providers named in its own `MODELS` list (local Ollama, Ollama
+> Cloud, Anthropic, or Gemini), not `AI_API_KEY`. See [Agent Gateway](./gateway.md).
 
 ## Attachments
 

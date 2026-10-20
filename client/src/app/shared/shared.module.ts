@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { AgentModule } from '../agent/agent.module';
 import { WindowModule } from './window/window.module';
 import { AvatarComponent } from './avatar/avatar.component';
 import { UserDropdownComponent } from './user-dropdown/user-dropdown.component';
@@ -86,6 +87,7 @@ import {
         IssueCustomFieldsComponent
     ],
     imports: [
+        AgentModule,
         CoreModule,
         RouterModule,
         FormsModule,
