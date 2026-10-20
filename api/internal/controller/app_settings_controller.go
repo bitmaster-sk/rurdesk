@@ -34,6 +34,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		AttachmentMaxSizeMb:      sc.settings.AttachmentMaxSizeMb(),
 		AgentMaxTurnsPlan:        sc.settings.AgentMaxTurnsPlan(),
 		AgentMaxTurnsImplement:   sc.settings.AgentMaxTurnsImplement(),
+		PlantUmlServerUrl:        sc.settings.PlantUmlServerUrl(),
 	})
 }
 
@@ -77,9 +78,13 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	if req.IsAgentThinkingPersisted != nil {
 		boolChanges[constants.SettingIsAgentThinkingPersisted] = *req.IsAgentThinkingPersisted
 	}
+	stringChanges := map[string]string{}
+	if req.PlantUmlServerUrl != nil {
+		stringChanges[constants.SettingPlantUmlServerUrl] = *req.PlantUmlServerUrl
+	}
 	ctx := c.Request.Context()
 	if err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {
-		return sc.settings.Update(ctx, numericChanges, boolChanges)
+		return sc.settings.Update(ctx, numericChanges, boolChanges, stringChanges)
 	}); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusUnprocessableEntity)

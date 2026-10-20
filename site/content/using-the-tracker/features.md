@@ -475,6 +475,9 @@ The mockup card renders alongside the agent's design write-up, next to the same
 the task explicitly asks for one.
 
 A fenced ` ```mermaid ` block in a comment renders as a diagram, with the same
-syntax as in the [wiki](wiki.md).
+syntax as in the [wiki](wiki.md). A fenced ` ```plantuml ` block works the same
+way — rendered through the configured PlantUML server in comments, chat
+messages and task descriptions alike. While no PlantUML server is configured,
+the block stays a plain code block.
 
 ![UI mockup cards in a design comment — one chosen](../../site/assets/img/message-mockup.png)

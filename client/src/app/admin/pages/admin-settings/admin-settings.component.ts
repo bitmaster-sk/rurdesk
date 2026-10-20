@@ -63,7 +63,8 @@ export class AdminSettingsComponent {
             agentMaxTurnsImplement: [
                 500,
                 [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
-            ]
+            ],
+            plantUmlServerUrl: ['', [Validators.maxLength(500)]]
         },
         { updateOn: 'blur' }
     );

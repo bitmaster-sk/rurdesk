@@ -336,6 +336,11 @@
         "MERMAID": {
             "ERROR": "Diagram could not be rendered",
             "LOADING": "Loading diagram…"
+        },
+        "PLANTUML": {
+            "LOADING": "Loading diagram…",
+            "SYNTAX_ERROR": "Diagram has an error",
+            "UNAVAILABLE": "Diagram server is unavailable"
         }
     },
     "LOGIN": "Login",
@@ -373,7 +378,9 @@
         "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)",
         "AGENT_MAX_TURNS_PLAN": "Agent turn limit for planning stages",
         "AGENT_MAX_TURNS_IMPLEMENT": "Agent turn limit for implementation",
-        "ATTACHMENT_MAX_SIZE_MB": "Maximum attachment size (MB)"
+        "ATTACHMENT_MAX_SIZE_MB": "Maximum attachment size (MB)",
+        "PLANTUML_SERVER_URL": "PlantUML server URL",
+        "PLANTUML_SERVER_URL_HINT": "Leave empty to disable PlantUML diagrams. Diagram source is sent to this server."
     },
     "CANCEL": "Cancel",
     "BACK": "Back",

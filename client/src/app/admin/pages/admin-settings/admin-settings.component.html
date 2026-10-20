@@ -114,6 +114,21 @@
                     data-testid="settings-attachment-max-size-mb"
                 />
             </div>
+            <div class="flex flex-col gap-1">
+                <label for="plantUmlServerUrl">
+                    {{ 'SETTINGS.PLANTUML_SERVER_URL' | translate }}
+                </label>
+                <input
+                    id="plantUmlServerUrl"
+                    uiInput
+                    type="url"
+                    formControlName="plantUmlServerUrl"
+                    data-testid="settings-plantuml-server-url"
+                />
+                <small class="ui-color-text-muted text-xs">
+                    {{ 'SETTINGS.PLANTUML_SERVER_URL_HINT' | translate }}
+                </small>
+            </div>
         </div>
         @if (versionLabel()) {
             <footer class="panel-body flex items-center justify-between pt-0">

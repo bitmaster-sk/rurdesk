@@ -53,6 +53,13 @@ services:
                 aliases:
                     - rurdesk-cache
 
+    plantuml:
+        image: plantuml/plantuml-server:jetty-v1.2026.8
+        container_name: rurdesk_plantuml
+        restart: unless-stopped
+        networks:
+            rurdesk_network:
+
     rurdesk.api:
         build:
             context: .
