@@ -336,6 +336,23 @@ async function openSplitDialog(page, idIssue, hint) {
 }
 
 // open a run issue and element-screenshot the first element matching `sel`
+async function openRunCard(page, idIssue) {
+    await gotoApp(page, `${BASE}/project/${PROJECT}/issue/${idIssue}`);
+    await settle(page);
+    const card = page.locator(".agent-run-card").first();
+    await card.waitFor({ state: "visible", timeout: 12000 });
+    const isOpen = await card
+        .evaluate((el) => el.classList.contains("is-open"))
+        .catch(() => true);
+    if (!isOpen) {
+        await card.locator(".card-summary").first().click();
+        await page.waitForTimeout(600);
+    }
+    await card.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    return card;
+}
+
 async function shootSel(page, file, sel, idIssue, timeout = 12000) {
     await gotoApp(page, `${BASE}/project/${PROJECT}/issue/${idIssue}`);
     await settle(page);
@@ -911,30 +928,73 @@ const SHOTS = [
         needsIssue: true,
         envIssue: "CAPTURE_RUN_ISSUE",
         promptLabel: "run issue",
-        desc: "Agent run card with stage timeline + phase badge",
+        desc: "Agent run card: run strip (model, workflow, stages), stage timeline + phase badge",
+        run: async (page, _c, shot) => {
+            const card = await openRunCard(page, shot._issueId);
+            await card.screenshot({ path: path.join(IMG, "run-card.png") });
+        },
+    },
+    {
+        id: "run-card-stage-plan",
+        file: "run-card-stage-plan.png",
+        kind: "png",
+        needsIssue: true,
+        envIssue: "CAPTURE_RUN_ISSUE",
+        promptLabel: "run issue",
+        desc: "Run card Stages → Edit popover, first editable stage opened (nothing saved)",
+        run: async (page, _c, shot) => {
+            const card = await openRunCard(page, shot._issueId);
+            await card.locator('[data-testid="run-stage-plan-edit"]').click();
+            const popover = page.locator(".cdk-overlay-pane .ui-popover").last();
+            await popover.waitFor({ state: "visible", timeout: 8000 });
+            await page.waitForTimeout(1200);
+            const toggle = popover
+                .locator('[data-testid^="stage-plan-toggle-"]')
+                .first();
+            if (await toggle.count()) {
+                await toggle.click();
+                await page.waitForTimeout(600);
+            }
+            await popover.screenshot({
+                path: path.join(IMG, "run-card-stage-plan.png"),
+            });
+            await page.keyboard.press("Escape");
+        },
+    },
+    {
+        id: "assignee-skills-dock",
+        file: "assignee-skills-dock.png",
+        kind: "png",
+        needsIssue: true,
+        envIssue: "CAPTURE_RUN_ISSUE",
+        promptLabel: "issue with an agent in the assignee list",
+        desc: "Assignee dropdown with the agent dock open (run model, short workflow, stage cards; not assigned)",
         run: async (page, _c, shot) => {
             await gotoApp(
                 page,
                 `${BASE}/project/${PROJECT}/issue/${shot._issueId}`,
             );
             await settle(page);
-            const card = page.locator(".agent-run-card").first();
-            await card.waitFor({ state: "visible", timeout: 12000 });
-            if (
-                !(await card
-                    .evaluate((el) => el.classList.contains("is-open"))
-                    .catch(() => true))
-            ) {
-                await card
-                    .locator(".card-summary")
-                    .first()
-                    .click()
-                    .catch(() => {});
-                await page.waitForTimeout(600);
-            }
-            await card.scrollIntoViewIfNeeded();
-            await page.waitForTimeout(400);
-            await card.screenshot({ path: path.join(IMG, "run-card.png") });
+            await page
+                .locator("app-user-dropdown .ui-select-trigger")
+                .first()
+                .click();
+            const action = page
+                .locator('[data-testid="agent-skills-action"]')
+                .first();
+            await action.waitFor({ state: "attached", timeout: 8000 });
+            await action.locator("xpath=ancestor::li[1]").hover();
+            await page.waitForTimeout(300);
+            await action.click();
+            const dock = page.locator(".ui-select-panel__dock").first();
+            await dock.waitFor({ state: "visible", timeout: 8000 });
+            await page.waitForTimeout(1500);
+            await dock.evaluate((el) => el.scrollTo(0, 0));
+            await page.waitForTimeout(300);
+            await page.screenshot({
+                path: path.join(IMG, "assignee-skills-dock.png"),
+            });
+            await page.keyboard.press("Escape");
         },
     },
 
@@ -952,6 +1012,19 @@ const SHOTS = [
 
     // Teams live on the /admin/users page as a second panel (<app-admin-teams>),
     // there is no /admin/teams route. Element-screenshot just the teams panel.
+    {
+        id: "admin-settings",
+        file: "admin-settings.png",
+        kind: "png",
+        desc: "Admin → application settings (thinking retention, agent turn limits)",
+        run: async (page) => {
+            await gotoApp(page, `${BASE}/admin/settings`);
+            await settle(page);
+            await page.screenshot({
+                path: path.join(IMG, "admin-settings.png"),
+            });
+        },
+    },
     {
         id: "admin-teams",
         file: "admin-teams.png",
@@ -1005,13 +1078,13 @@ const SHOTS = [
         },
     },
 
-    // Same dialog with the Bot toggle on → shows the Gateway URL field; pointed at
-    // the qwen goose gateway. Cancelled — no bot is created.
+    // Same dialog with the Agent toggle on → shows the Gateway URL and turn-limit
+    // fields; pointed at the kimi goose gateway. Cancelled — no agent is created.
     {
         id: "bot-create",
         file: "agent-create.png",
         kind: "png",
-        desc: "New user dialog, Bot toggle on, qwen gateway (not saved)",
+        desc: "New user dialog, Agent toggle on, kimi gateway, turn limits (not saved)",
         run: async (page) => {
             await gotoApp(page, `${BASE}/admin/users`);
             await settle(page);
@@ -1021,15 +1094,15 @@ const SHOTS = [
                 .click();
             const dialog = page.locator(".ui-dialog").first();
             await dialog.waitFor({ state: "visible", timeout: 8000 });
-            await page.locator("#cu-isbot").check();
-            await page.waitForTimeout(400); // reveal bot fields
-            await page.fill("#cu-name", "Qwen");
+            await page.locator("#cu-isagent").check();
+            await page.waitForTimeout(400); // reveal agent fields
+            await page.fill("#cu-name", "Kimi");
             await page.fill(
                 "#cu-gateway-url",
-                "http://gateway-goose-qwen-cloud:9090",
+                "http://gateway-goose-kimi-cloud:9090",
             );
             await page.waitForTimeout(400);
-            await dialog.screenshot({
+            await page.screenshot({
                 path: path.join(IMG, "agent-create.png"),
             });
             await page
