@@ -52,8 +52,8 @@ credential goes through to the child:
 | `openai`         | `OPENAI_API_KEY` + `OPENAI_HOST` / `OPENAI_BASE_PATH` for OpenAI-compatible endpoints |
 
 The shipped examples cover two of these: `gateway-goose-qwen-local` runs
-`ollama` against a local host, while `gateway-goose-qwen-cloud` and
-`gateway-goose-kimi-cloud` use `openai` pointed at Ollama Cloud. Note the
+`ollama` against a local host, while the `gateway-goose-kimi-*` gateways use
+`openai` pointed at Ollama Cloud. Note the
 `openai` variables are not modelled in `GooseConfig` — they work because the
 adapter passes the whole parent environment to the child (`childEnv`), so any
 provider variable Goose itself understands gets through.
@@ -136,9 +136,9 @@ contract.
 
 ### docker-compose snippet
 
-The dev compose ships three of these, one per agent: `gateway-goose-qwen-local`,
-`gateway-goose-qwen-cloud` and `gateway-goose-kimi-cloud`. They all run the same
-image and differ only in their env file. One of them, verbatim:
+The dev compose ships one per agent: `gateway-goose-qwen-local`,
+`gateway-goose-kimi-cloud`, `gateway-goose-kimi-gitea` and `gateway-goose-kimi-gitlab`.
+They all run the same image and differ only in their env file. One of them, verbatim:
 
 ```yaml
 gateway-goose-qwen-local:

@@ -26,7 +26,7 @@ approving stages.
 
 In **Administration → Users** click **Create user**, toggle **Agent**, give it a
 name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
-`http://gateway-goose-qwen-cloud:9090`. Each agent has exactly **one** gateway
+`http://gateway-goose-qwen-local:9090`. Each agent has exactly **one** gateway
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
 

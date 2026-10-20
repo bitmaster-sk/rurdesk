@@ -1130,12 +1130,12 @@ const SHOTS = [
                 .click();
             const create = page.locator(".ui-dialog").first();
             await create.waitFor({ state: "visible", timeout: 8000 });
-            await page.locator("#cu-isbot").check();
+            await page.locator("#cu-isagent").check();
             await page.waitForTimeout(400);
             await page.fill("#cu-name", BOT_NAME);
             await page.fill(
                 "#cu-gateway-url",
-                "http://gateway-goose-qwen-cloud:9090",
+                "http://gateway-goose-qwen-local:9090",
             );
             await page
                 .getByRole("button", { name: "Create", exact: true })
