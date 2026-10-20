@@ -44,7 +44,7 @@ const PEOPLE = [
 const BOTS = [
     {
         name: "Qwen",
-        gateway: "http://gateway-goose-qwen-cloud:9090",
+        gateway: "http://gateway-goose-qwen-local:9090",
         color: "#d8b4fe",
     }, // purple (pastel)
     {
