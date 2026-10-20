@@ -52,10 +52,8 @@
                     formControlName="gatewayUrl"
                     [placeholder]="'AGENT_API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
                 />
-                <small class="ui-color-text-muted">
-                    {{ 'AGENT_API_KEY.GATEWAY_URL_HINT' | translate }}
-                </small>
             </div>
+            <app-agent-turn-limits-fields idPrefix="cu" />
         }
     </form>
 

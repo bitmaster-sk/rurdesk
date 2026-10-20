@@ -3,22 +3,29 @@ import {
     Component,
     DestroyRef,
     OnInit,
+    computed,
     inject,
     input,
     output
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import omit from 'lodash-es/omit';
 import { signal } from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
 import { AgentRunApi } from '../../../agent/api/agent-run.api.service';
+import { SHORT_WORKFLOW_SKIPPED_STAGES } from '../../../agent/constants/short-workflow-stages.constants';
 import { SKILL_STAGES } from '../../../agent/constants/skill-stages.enum';
-import { AgentStage, STAGE_LABELS } from '../../../agent/model/agent-stage.enum';
+import {
+    AgentStagePlanEditorLock,
+    AgentStagePlanEditorRow
+} from '../../../agent/entity/agent-stage-plan-editor.entity';
+import { AgentStage } from '../../../agent/model/agent-stage.enum';
 import { AgentRun } from '../../../agent/model/agent-run.model';
 import { ShortWorkflow } from '../../../agent/util/short-workflow';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { ProjectSkillApi } from '../../../project/api/project-skill.api.service';
 import { SkillApi } from '../../api/skill.api.service';
-import { CreateAgentRunReq } from '../../../agent/model/agent-run.model';
+import { CreateAgentRunReq, RunChoices } from '../../../agent/model/agent-run.model';
 import { AgentOverview } from '../../../agent/model/agent-overview.model';
 import { ApiError } from '../../model/api-error.model';
 import { Skill } from '../../model/skill.model';
@@ -57,7 +64,25 @@ export class AgentDockComponent implements OnInit {
     protected readonly isAssigning = signal(false);
     protected readonly isShortWorkflow = signal(false);
     protected readonly isPrefilledFromRun = signal(false);
+    protected readonly models = computed(() => this.overview()?.models ?? []);
+    protected readonly modelDefault = computed(() => this.overview()?.modelDefault ?? null);
+    protected readonly runModelValue = computed(() => this.runModel() ?? this.modelDefault());
     private readonly chosen = signal<Set<string>>(new Set());
+    private readonly runModel = signal<string | null>(null);
+    private readonly modelByStage = signal<Record<string, string>>({});
+    private readonly maxTurnsByStage = signal<Record<string, number>>({});
+    protected readonly stageRows = computed<AgentStagePlanEditorRow[]>(() =>
+        this.stages.map(stage => ({
+            stage,
+            idsSkill: this.skills()
+                .filter(skill => this.isChosen(skill.idSkill, stage))
+                .map(skill => skill.idSkill),
+            model: this.stageModel(stage),
+            maxTurns: this.stageTurns(stage),
+            defaultMaxTurns: this.defaultTurns(stage),
+            lock: this.isSkipped(stage) ? AgentStagePlanEditorLock.Skipped : null
+        }))
+    );
 
     public ngOnInit(): void {
         if (this.kind() !== AgentDockKind.Skills) {
@@ -79,11 +104,7 @@ export class AgentDockComponent implements OnInit {
             });
     }
 
-    protected stageLabel(stage: AgentStage): string {
-        return STAGE_LABELS[stage];
-    }
-
-    protected isChosen(idSkill: number, stage: AgentStage): boolean {
+    private isChosen(idSkill: number, stage: AgentStage): boolean {
         return this.chosen().has(this.chipKey(idSkill, stage));
     }
 
@@ -96,6 +117,42 @@ export class AgentDockComponent implements OnInit {
             next.add(key);
         }
         this.chosen.set(next);
+    }
+
+    private isSkipped(stage: AgentStage): boolean {
+        return this.isShortWorkflow() && SHORT_WORKFLOW_SKIPPED_STAGES.includes(stage);
+    }
+
+    protected onPickRunModel(model: string | null): void {
+        this.runModel.set(model);
+    }
+
+    private stageModel(stage: AgentStage): string | null {
+        return this.modelByStage()[stage] ?? null;
+    }
+
+    protected onPickStageModel(stage: AgentStage, model: string | null): void {
+        const rest = omit(this.modelByStage(), stage);
+        this.modelByStage.set(model === null ? rest : { ...rest, [stage]: model });
+    }
+
+    private stageTurns(stage: AgentStage): number | null {
+        return this.maxTurnsByStage()[stage] ?? null;
+    }
+
+    private defaultTurns(stage: AgentStage): number | null {
+        const overview = this.overview();
+        if (!overview) {
+            return null;
+        }
+        return stage === AgentStage.Implementation
+            ? overview.maxTurnsImplement
+            : overview.maxTurnsPlan;
+    }
+
+    protected onStageTurns(stage: AgentStage, maxTurns: number | null): void {
+        const rest = omit(this.maxTurnsByStage(), stage);
+        this.maxTurnsByStage.set(maxTurns === null ? rest : { ...rest, [stage]: maxTurns });
     }
 
     protected onToggleShortWorkflow(event: Event): void {
@@ -113,7 +170,8 @@ export class AgentDockComponent implements OnInit {
         const body: CreateAgentRunReq = {
             idUserAgent: this.agent().idUser,
             idsSkillByStage: this.idsSkillByStage(),
-            isShortWorkflow: this.isShortWorkflow()
+            isShortWorkflow: this.isShortWorkflow(),
+            ...this.modelChoices()
         };
         this.isAssigning.set(true);
         this.agentRunApi.assignAgent$(this.idProject(), this.idIssuePublic(), body).subscribe({
@@ -162,6 +220,21 @@ export class AgentDockComponent implements OnInit {
         return byStage;
     }
 
+    private modelChoices(): Partial<RunChoices> {
+        const choices: Partial<RunChoices> = {};
+        const runModel = this.runModel();
+        if (runModel !== null) {
+            choices.model = runModel;
+        }
+        if (Object.keys(this.modelByStage()).length > 0) {
+            choices.modelByStage = this.modelByStage();
+        }
+        if (Object.keys(this.maxTurnsByStage()).length > 0) {
+            choices.maxTurnsByStage = this.maxTurnsByStage();
+        }
+        return choices;
+    }
+
     private loadPrefill(): void {
         this.agentRunApi
             .loadByIssue$(this.idProject(), this.idIssuePublic())
@@ -178,9 +251,28 @@ export class AgentDockComponent implements OnInit {
             (entry.idsSkill ?? []).forEach(idSkill => chosen.add(this.chipKey(idSkill, entry.name)))
         );
         this.chosen.set(chosen);
+        this.prefillModelChoices(run);
         this.isShortWorkflow.set(ShortWorkflow.isShort(run.stagePlan));
         this.isPrefilledFromRun.set(true);
         this.isLoading.set(false);
+    }
+
+    private prefillModelChoices(run: AgentRun): void {
+        const modelByStage: Record<string, string> = {};
+        const maxTurnsByStage: Record<string, number> = {};
+        const isOffered = (model: string | undefined): model is string =>
+            !!model && this.models().includes(model);
+        (run.stagePlan?.stages ?? []).forEach(entry => {
+            if (isOffered(entry.model)) {
+                modelByStage[entry.name] = entry.model;
+            }
+            if (entry.maxTurns) {
+                maxTurnsByStage[entry.name] = entry.maxTurns;
+            }
+        });
+        this.runModel.set(isOffered(run.stagePlan?.model) ? run.stagePlan.model : null);
+        this.modelByStage.set(modelByStage);
+        this.maxTurnsByStage.set(maxTurnsByStage);
     }
 
     private loadDefaults(): void {

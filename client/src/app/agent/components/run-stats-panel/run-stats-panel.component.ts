@@ -43,6 +43,12 @@ export class RunStatsPanelComponent implements OnInit {
         }));
     });
 
+    protected readonly modelRows = computed(() =>
+        Object.entries(this.stats()?.tokensByModel ?? {})
+            .map(([model, tokens]) => ({ model, tokens }))
+            .sort((left, right) => right.tokens - left.tokens)
+    );
+
     public ngOnInit(): void {
         this.api.loadStats$(this.idRun()).subscribe(s => this.stats.set(s));
         this.noticeService.agentStats$

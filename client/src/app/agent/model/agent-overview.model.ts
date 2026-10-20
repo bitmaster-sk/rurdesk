@@ -15,4 +15,9 @@ export interface AgentOverview {
     tokens7d: number;
     avgRunDurationMs7d: number | null;
     failedAttempts7d: number;
+    models: string[];
+    modelDefault: string | null;
+    maxTurnsPlan: number;
+    maxTurnsImplement: number;
+    maxTurnsLimit: number | null;
 }

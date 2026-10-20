@@ -103,8 +103,8 @@ services:
     #         TRACKER_TO_GATEWAY_TOKEN: ""  # CHANGE ME (… → Register gateway)
     #         REPO_URL: https://github.com/your-org/your-repo.git
     #         GIT_ACCESS_TOKEN: ""          # CHANGE ME (GitHub/GitLab PAT)
-    #         GOOSE_PROVIDER: anthropic     # anthropic | google | ollama | openai
-    #         ANTHROPIC_API_KEY: ""         # CHANGE ME (key for the chosen provider)
+    #         MODELS: anthropic/claude-sonnet-4-6  # provider/model, comma-separated
+    #         ANTHROPIC_API_KEY: ""         # CHANGE ME (key for each provider in MODELS)
     #     volumes:
     #         - gateway-goose-workspace:/worktrees
     #         - gateway-goose-state:/var/lib/gateway

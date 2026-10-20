@@ -5,6 +5,7 @@ import { filter } from 'rxjs/operators';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
 import { SettingsApi } from 'src/app/core/settings/settings.api.service';
 import { VersionApi } from '../../api/version.api.service';
+import { MAX_AGENT_TURNS } from '../../constants/max-agent-turns';
 import { BuildInfo } from '../../model/build-info.model';
 
 @Component({
@@ -51,7 +52,18 @@ export class AdminSettingsComponent {
                 1024,
                 [Validators.required, Validators.min(64), Validators.max(10240)]
             ],
-            attachmentMaxSizeMb: [25, [Validators.required, Validators.min(1), Validators.max(100)]]
+            attachmentMaxSizeMb: [
+                25,
+                [Validators.required, Validators.min(1), Validators.max(100)]
+            ],
+            agentMaxTurnsPlan: [
+                250,
+                [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
+            ],
+            agentMaxTurnsImplement: [
+                500,
+                [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
+            ]
         },
         { updateOn: 'blur' }
     );

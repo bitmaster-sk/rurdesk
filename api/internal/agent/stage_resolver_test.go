@@ -11,8 +11,8 @@ import (
 
 func planJSON(t *testing.T, skipBrainstorming, skipDesign bool) json.RawMessage {
 	t.Helper()
-	plan := model.StagePlan{
-		Stages: []model.StagePlanEntry{
+	plan := model.AgentStagePlan{
+		Stages: []model.AgentStagePlanEntry{
 			{Name: constants.StagePickup, Skip: false},
 			{Name: constants.StageBrainstorming, Skip: skipBrainstorming},
 			{Name: constants.StageDesign, Skip: skipDesign},
@@ -53,7 +53,7 @@ func TestResolveNextStage_SkipsSkippedStages(t *testing.T) {
 }
 
 func TestResolveNextStage_ShortWorkflowGoesFromBrainstormingToImplementation(t *testing.T) {
-	plan, err := json.Marshal(model.StagePlan{Stages: []model.StagePlanEntry{
+	plan, err := json.Marshal(model.AgentStagePlan{Stages: []model.AgentStagePlanEntry{
 		{Name: constants.StagePickup},
 		{Name: constants.StageBrainstorming},
 		{Name: constants.StageDesign, Skip: true},

@@ -3,55 +3,87 @@
         <div class="font-semibold">
             {{ 'AGENT_DOCK.SKILLS_TITLE' | translate: { name: agent().name } }}
         </div>
-        <label class="flex items-start gap-2">
-            <input
-                type="checkbox"
-                uiToggle
-                data-testid="agent-dock-short-workflow"
-                [checked]="isShortWorkflow()"
-                (change)="onToggleShortWorkflow($event)"
-            />
-            <span class="flex flex-col">
-                <span>{{ 'AGENT_DOCK.SHORT_WORKFLOW' | translate }}</span>
-                <span class="ui-color-text-muted text-xs">
-                    {{ 'AGENT_DOCK.SHORT_WORKFLOW_HINT' | translate }}
+        @if (isPrefilledFromRun()) {
+            <div class="ui-color-text-muted text-xs" data-testid="agent-dock-prefilled">
+                {{ 'AGENT_DOCK.PREFILLED_FROM_RUN' | translate }}
+            </div>
+        }
+        <div
+            class="flex flex-col gap-2 rounded-lg border border-[var(--ui-surface-200)] bg-[var(--ui-surface-50)] p-2"
+        >
+            @if (models().length > 0) {
+                <div class="flex flex-col gap-1" data-testid="agent-dock-model">
+                    <span class="ui-color-text-muted text-xs">
+                        {{ 'AGENT_DOCK.RUN_MODEL' | translate }}
+                    </span>
+                    <ui-select
+                        size="small"
+                        data-testid="agent-dock-run-model"
+                        [options]="models()"
+                        [ngModel]="runModelValue()"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="onPickRunModel($event)"
+                    >
+                        <ng-template #item let-model>
+                            <ng-container
+                                [ngTemplateOutlet]="modelLabel"
+                                [ngTemplateOutletContext]="{ $implicit: model }"
+                            />
+                        </ng-template>
+                        <ng-template #selectedItem let-model>
+                            <ng-container
+                                [ngTemplateOutlet]="modelLabel"
+                                [ngTemplateOutletContext]="{ $implicit: model }"
+                            />
+                        </ng-template>
+                    </ui-select>
+                </div>
+            }
+            <label class="flex items-start gap-2">
+                <input
+                    type="checkbox"
+                    uiToggle
+                    data-testid="agent-dock-short-workflow"
+                    [checked]="isShortWorkflow()"
+                    (change)="onToggleShortWorkflow($event)"
+                />
+                <span class="flex flex-col">
+                    <span>{{ 'AGENT_DOCK.SHORT_WORKFLOW' | translate }}</span>
+                    <span class="ui-color-text-muted text-xs">
+                        {{ 'AGENT_DOCK.SHORT_WORKFLOW_HINT' | translate }}
+                    </span>
                 </span>
-            </span>
-        </label>
-
-        <div class="ui-color-text-muted" data-testid="agent-dock-prefilled">
-            {{
-                (isPrefilledFromRun() ? 'AGENT_DOCK.PREFILLED_FROM_RUN' : 'AGENT_DOCK.PREFILLED')
-                    | translate
-            }}
+            </label>
         </div>
 
         @if (isLoading()) {
             <ui-loader [size]="28" [ariaLabel]="'UI.LOADING' | translate" />
         } @else {
-            @for (stage of stages; track stage) {
-                <div class="flex flex-col gap-1">
-                    <div class="ui-color-text-muted">{{ stageLabel(stage) | translate }}</div>
-                    <div class="flex flex-wrap gap-1">
-                        @for (skill of skills(); track skill.idSkill) {
-                            <button
-                                type="button"
-                                class="agent-dock__chip"
-                                [class.agent-dock__chip--on]="isChosen(skill.idSkill, stage)"
-                                [attr.aria-pressed]="isChosen(skill.idSkill, stage)"
-                                [attr.data-testid]="'chip-' + skill.idSkill + '-' + stage"
-                                (click)="onToggle(skill.idSkill, stage)"
-                            >
-                                {{ skill.name }}
-                            </button>
-                        }
-                    </div>
-                </div>
-            }
+            <app-agent-stage-plan-editor
+                [rows]="stageRows()"
+                [skills]="skills()"
+                [models]="models()"
+                [maxTurnsLimit]="overview()?.maxTurnsLimit ?? null"
+                (skillToggled)="onToggle($event.idSkill, $event.stage)"
+                (modelPicked)="onPickStageModel($event.stage, $event.model)"
+                (maxTurnsChanged)="onStageTurns($event.stage, $event.maxTurns)"
+            />
         }
 
+        <ng-template #modelLabel let-model>
+            <span class="flex items-center gap-2">
+                <span class="truncate">{{ model }}</span>
+                @if (model === modelDefault()) {
+                    <ui-badge
+                        [value]="'AGENT_DOCK.MODEL_DEFAULT' | translate"
+                        severity="secondary"
+                    />
+                }
+            </span>
+        </ng-template>
+
         <div
-            class="sticky bottom-0 -mx-3 -mb-3 flex justify-end gap-2 border-t border-[var(--ui-select-panel-border)] bg-[var(--ui-select-panel-bg)] px-3 py-2"
+            class="sticky bottom-0 z-10 -mx-3 -mb-3 flex justify-end gap-2 border-t border-[var(--ui-select-panel-border)] bg-[var(--ui-select-panel-bg)] px-3 py-2"
             data-testid="agent-dock-footer"
         >
             <ui-button variant="text" size="small" (click)="onCancel()">

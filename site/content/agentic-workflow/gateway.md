@@ -22,9 +22,10 @@ implement end-to-end). The in-API AI features (quality, kickstart, split) do
 ## The Goose agent
 
 The gateway drives [Goose](https://github.com/block/goose) — an open-source
-coding agent. It is **provider-agnostic**: a single `GOOSE_PROVIDER` setting
-picks where the model runs. The same gateway image serves all four connection
-options below; you only change environment variables.
+coding agent. It is **provider-agnostic**: each entry of the `MODELS` list
+names the provider it runs on. The same gateway image serves all four connection
+options below, and one gateway can offer models from several of them at once;
+you only change environment variables.
 
 > **Local-first.** Point the gateway at a local **Ollama** and the whole agent
 > workflow runs on your own hardware — no cloud, no API keys, nothing leaves the
@@ -33,10 +34,38 @@ options below; you only change environment variables.
 > Either way there is no silent fallback — bad or missing credentials fail the
 > run rather than degrading.
 
+## Models
+
+`MODELS` lists the models this gateway allows, as `provider/model` entries
+separated by commas. The provider is the part before the first `/`; everything
+after it is the model id, so `ollama/qwen3-coder:30b` keeps its tag.
+
+```bash
+MODELS=openai/kimi-k2.7-code,ollama/qwen3-coder:30b
+MODEL_DEFAULT=openai/kimi-k2.7-code   # optional; the first entry otherwise
+```
+
+At startup the gateway reports this list to the tracker, which offers exactly
+these models when a task is assigned to the agent (see
+[Choosing the model](./agents.md#choosing-the-model)). Every `stage_execute`
+names the model to run, and the gateway **refuses a model outside the list**: the
+stage fails with `model_not_allowed` and the agent never starts. A tampered or
+stale choice can therefore never run a model the gateway's operator did not
+allow, such as an expensive one. When the tracker names no model, the gateway
+runs `MODEL_DEFAULT`.
+
+The provider keys stay in the gateway's environment, so the tracker never sees
+them. Changing `MODELS` takes effect on the next gateway restart, which also
+reports the new list. A task assigned to a model that is no longer listed runs
+on the default instead, and its timeline says so.
+
+The gateway refuses to start when `MODELS` is empty, an entry has no provider,
+or `MODEL_DEFAULT` is not in the list.
+
 ## Connection options
 
-Set **`GOOSE_PROVIDER`** plus the matching variables. Only one provider is active
-per gateway instance.
+Each `MODELS` entry starts with its provider. Set the variables of every
+provider you list.
 
 ### Ollama (local) — zero cloud keys
 
@@ -44,9 +73,8 @@ Run Ollama on your own host, pull a model, and the agent never touches a cloud
 service. No API key at all.
 
 ```bash
-GOOSE_PROVIDER=ollama
+MODELS=ollama/qwen3-coder:30b                    # must be pulled on the host
 OLLAMA_HOST=http://host.docker.internal:11434   # or http://gpu-box:11434
-GOOSE_MODEL=qwen3-coder:30b                      # must be pulled on the host
 ```
 
 Pull the model first: `ollama pull qwen3-coder:30b`. This is the recommended
@@ -58,18 +86,18 @@ model — ~30B total but only a few billion active per token, so it answers fast
 while staying far sharper than a dense 7B. It is the recommended starting point;
 scale up if the machine allows.
 
-| Machine                                   | Suggested `GOOSE_MODEL` | Rough footprint |
-| ----------------------------------------- | ----------------------- | --------------- |
-| 32 GB RAM / Mac with 32 GB unified memory | `qwen3-coder:30b`       | ~20 GB          |
-| Mac Studio / workstation, 96–128 GB       | `gpt-oss:120b`          | ~65 GB          |
-| Mac Studio 512 GB, big GPU box            | `qwen3-coder:480b`      | ~270 GB         |
+| Machine                                   | Suggested model    | Rough footprint |
+| ----------------------------------------- | ------------------ | --------------- |
+| 32 GB RAM / Mac with 32 GB unified memory | `qwen3-coder:30b`  | ~20 GB          |
+| Mac Studio / workstation, 96–128 GB       | `gpt-oss:120b`     | ~65 GB          |
+| Mac Studio 512 GB, big GPU box            | `qwen3-coder:480b` | ~270 GB         |
 
 Footprints are the default 4-bit quantisations and are approximate — check
 `ollama list` after pulling. Leave headroom above the model size for context.
 
 > The gateway is a **harder** workload than the in-API AI features: the agent
 > runs a long tool-calling loop (read files, edit, run commands) and a model that
-> drops or malforms tool calls burns its whole `--max-turns` budget without
+> drops or malforms tool calls burns its whole turn budget without
 > finishing. Anything below the 30B row is unlikely to complete an
 > implementation stage — prefer stepping up a row, or use a cloud provider.
 
@@ -81,25 +109,23 @@ sends no auth header and the host returns `401`), so Ollama Cloud is driven
 through Goose's **OpenAI-compatible** provider instead:
 
 ```bash
-GOOSE_PROVIDER=openai
+MODELS=openai/kimi-k2.7-code
 OPENAI_HOST=https://ollama.com
 OPENAI_BASE_PATH=v1/chat/completions
 OPENAI_API_KEY=<your-ollama-cloud-key>
-GOOSE_MODEL=kimi-k2.7-code
 ```
 
 > `kimi-k2.7-code` is the recommended model here — it handles the agent's
 > tool-calling loop reliably. Model availability depends on your Ollama Cloud
 > plan; other options include `qwen3-coder:480b`, `gpt-oss:120b`, and
 > `gpt-oss:20b`. A `403 … requires a subscription` at run time means the chosen
-> `GOOSE_MODEL` is not on your plan.
+> model is not on your plan.
 
 ### Anthropic — Claude models, your key
 
 ```bash
-GOOSE_PROVIDER=anthropic
+MODELS=anthropic/claude-sonnet-4-6
 ANTHROPIC_API_KEY=sk-ant-...
-GOOSE_MODEL=claude-sonnet-4-6      # optional; omit for the provider default
 ```
 
 Billing is per-token against your Anthropic API key (Console pay-per-token, not a
@@ -110,16 +136,15 @@ Pro/Max subscription).
 Goose reaches Gemini through its **`google`** provider:
 
 ```bash
-GOOSE_PROVIDER=google
+MODELS=google/gemini-2.0-flash
 GOOGLE_API_KEY=...
-GOOSE_MODEL=gemini-2.0-flash       # optional; omit for the provider default
 ```
 
 Billing is per-token against your Google AI API key.
 
 ## Required environment variables
 
-The gateway refuses to start without all five:
+The gateway refuses to start without all six:
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -128,6 +153,7 @@ The gateway refuses to start without all five:
 | `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the agent's gateway** (see [Agents](./agents.md)).                                                                                |
 | `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another agent for a second repo.                                                                                                                     |
 | `GIT_ACCESS_TOKEN`         | PAT/app token with read+write on `REPO_URL`; injected into the remote URL so the agent can **push branches**. See [token scopes](#gitaccesstoken-scopes).                                                                                                                              |
+| `MODELS`                   | The models this gateway allows, as `provider/model` entries separated by commas. See [Models](#models).                                                                                                                                                                                |
 
 ### `GIT_ACCESS_TOKEN` scopes
 
@@ -157,10 +183,8 @@ git-integration token, not this one.
 
 | Var                         | Default          | Notes                                                                                                                                                                                          |
 | --------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GOOSE_PROVIDER`            | `anthropic`      | Which provider Goose drives: `ollama` \| `openai` (Ollama Cloud) \| `anthropic` \| `google`. Set the matching credentials from [Connection options](#connection-options).                      |
-| `GOOSE_MODEL`               | provider default | Model id (e.g. `qwen3-coder:30b`, `kimi-k2.7-code`, `claude-sonnet-4-6`, `gemini-2.0-flash`). An unrecognised name fails on the first call rather than degrading silently.                     |
-| `GOOSE_MAX_TURNS_PLAN`      | `50`             | Hard `--max-turns` for brainstorm/design/plan stages (enforced by goose).                                                                                                                      |
-| `GOOSE_MAX_TURNS_IMPLEMENT` | `100`            | Hard `--max-turns` for implementation. Exhausting the cap ends the stage **before** the agent reports completion, so the run is lost — raise it rather than trimming it.                       |
+| `MODEL_DEFAULT`             | first of `MODELS` | The model a stage runs when the tracker names none. Must be listed in `MODELS`.                                                                                                                |
+| `MAX_TURNS_LIMIT`           | _no limit_       | Highest turn limit a stage may run with. The gateway reports it to the tracker, which caps every limit it sends at this value; a stage that still asks for more fails with `max_turns_over_limit` and the agent never starts. The limits themselves are set in the tracker, see [Turn limits](./agents.md#turn-limits). |
 | `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                              |
 | `MAX_OUTPUT_LINE_MB`        | `4`              | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                   |
 | `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                          |
@@ -170,7 +194,7 @@ git-integration token, not this one.
 ## Authentication
 
 Goose needs **no interactive auth and no credentials volume** — it is
-bring-your-own-key. Set `GOOSE_PROVIDER` and the matching variables from
+bring-your-own-key. List the models in `MODELS` and set the matching variables from
 [Connection options](#connection-options) in the gateway's environment and the
 key authenticates every run. For local Ollama there is no key at all.
 
@@ -196,27 +220,21 @@ services:
             GIT_ACCESS_TOKEN: "" # CHANGE ME (GitHub/GitLab PAT)
             LISTEN_PORT: "9090"
             LOG_LEVEL: info
-            GOOSE_MAX_TURNS_PLAN: "50"
-            GOOSE_MAX_TURNS_IMPLEMENT: "100"
-            # --- provider: pick ONE block, see "Connection options" ---
+            # --- models: list the ones this gateway allows, see "Models" ---
+            MODELS: ollama/qwen3-coder:30b
+            # MODELS: ollama/qwen3-coder:30b,openai/kimi-k2.7-code,anthropic/claude-sonnet-4-6
+            # MAX_TURNS_LIMIT: "1000"
+            # --- provider credentials: set those of every provider in MODELS ---
             # Ollama local (zero cloud keys):
-            GOOSE_PROVIDER: ollama
             OLLAMA_HOST: http://host.docker.internal:11434
-            GOOSE_MODEL: qwen3-coder:30b
             # Ollama Cloud:
-            # GOOSE_PROVIDER: openai
             # OPENAI_HOST: https://ollama.com
             # OPENAI_BASE_PATH: v1/chat/completions
             # OPENAI_API_KEY: ""
-            # GOOSE_MODEL: kimi-k2.7-code
             # Anthropic:
-            # GOOSE_PROVIDER: anthropic
             # ANTHROPIC_API_KEY: ""
-            # GOOSE_MODEL: claude-sonnet-4-6
             # Gemini:
-            # GOOSE_PROVIDER: google
             # GOOGLE_API_KEY: ""
-            # GOOSE_MODEL: gemini-2.0-flash
         volumes:
             - gateway-goose-workspace:/worktrees
             - gateway-goose-state:/var/lib/gateway
@@ -275,6 +293,6 @@ GET /health → {"ok":true}
    structured `goose stream` records (the claude adapter logs `agent event`
    instead).
 4. An authentication error means the provider credential is missing or wrong —
-   confirm `GOOSE_PROVIDER` matches the variables you set (`OLLAMA_HOST` for
+   confirm the provider of the model matches the variables you set (`OLLAMA_HOST` for
    local Ollama; `OPENAI_*` for Ollama Cloud; `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY`
    for Anthropic / Gemini).

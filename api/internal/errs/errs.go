@@ -103,14 +103,14 @@ var (
 
 	// ── Skill ──────────────────────────────────────────────────────────────
 
-	ErrSkillNotFound        = newErr("SKILL_NOT_FOUND", "skill not found", "error.skill_not_found", http.StatusNotFound)
-	ErrSkillNameTaken       = newErr("SKILL_NAME_TAKEN", "a skill with this name already exists", "error.skill_name_taken", http.StatusConflict)
-	ErrSkillBuiltin         = newErr("SKILL_BUILTIN", "builtin skills cannot be deleted", "error.skill_builtin", http.StatusConflict)
-	ErrSkillNotBuiltin      = newErr("SKILL_NOT_BUILTIN", "custom skills have no shipped original to restore", "error.skill_not_builtin", http.StatusConflict)
-	ErrSkillStageDispatched = newErr("SKILL_STAGE_DISPATCHED", "stage already started; its skills can no longer be changed", "error.skill_stage_dispatched", http.StatusConflict)
-	ErrUnknownSkill         = newErr("UNKNOWN_SKILL", "the request references a skill that does not exist", "error.unknown_skill", http.StatusBadRequest)
-	ErrStageNotInPlan       = newErr("STAGE_NOT_IN_PLAN", "stage is not in the run's stage plan", "error.stage_not_in_plan", http.StatusBadRequest)
-	ErrWorkflowLocked       = newErr("WORKFLOW_LOCKED", "design, plan or implementation already started; the workflow length can no longer be changed", "error.workflow_locked", http.StatusConflict)
+	ErrSkillNotFound   = newErr("SKILL_NOT_FOUND", "skill not found", "error.skill_not_found", http.StatusNotFound)
+	ErrSkillNameTaken  = newErr("SKILL_NAME_TAKEN", "a skill with this name already exists", "error.skill_name_taken", http.StatusConflict)
+	ErrSkillBuiltin    = newErr("SKILL_BUILTIN", "builtin skills cannot be deleted", "error.skill_builtin", http.StatusConflict)
+	ErrSkillNotBuiltin = newErr("SKILL_NOT_BUILTIN", "custom skills have no shipped original to restore", "error.skill_not_builtin", http.StatusConflict)
+	ErrStageDispatched = newErr("STAGE_DISPATCHED", "stage already started; its settings can no longer be changed", "error.stage_dispatched", http.StatusConflict)
+	ErrUnknownSkill    = newErr("UNKNOWN_SKILL", "the request references a skill that does not exist", "error.unknown_skill", http.StatusBadRequest)
+	ErrStageNotInPlan  = newErr("STAGE_NOT_IN_PLAN", "stage is not in the run's stage plan", "error.stage_not_in_plan", http.StatusBadRequest)
+	ErrWorkflowLocked  = newErr("WORKFLOW_LOCKED", "design, plan or implementation already started; the workflow length can no longer be changed", "error.workflow_locked", http.StatusConflict)
 
 	// ── Roles / users ──────────────────────────────────────────────────────
 
@@ -139,6 +139,7 @@ var (
 	ErrGitHostUnavailable      = newErr("GIT_HOST_UNAVAILABLE", "git host API is unavailable", "error.git_host_unavailable", http.StatusServiceUnavailable)
 	ErrInvalidMrLink           = newErr("INVALID_MR_LINK", "idGitIntegration and mrId must both be set or both be null", "error.invalid_mr_link", http.StatusUnprocessableEntity)
 	ErrAgentNoGateway          = newErr("AGENT_NO_GATEWAY", "agent user has no configured gateway", "error.agent_no_gateway", http.StatusUnprocessableEntity)
+	ErrAgentModelNotOffered    = newErr("AGENT_MODEL_NOT_OFFERED", "the agent's gateway does not offer this model", "error.agent_model_not_offered", http.StatusBadRequest)
 	ErrGatewayExists           = newErr("GATEWAY_EXISTS", "agent already has a gateway", "error.gateway_exists", http.StatusConflict)
 
 	// ── Project scoping ────────────────────────────────────────────────────

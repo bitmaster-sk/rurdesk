@@ -28,7 +28,7 @@ type AgentOverviewSuite struct {
 
 func emptyStagePlan(t *testing.T) json.RawMessage {
 	t.Helper()
-	plan, err := injector.GetStagePlanService().Build(nil, false)
+	plan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{})
 	require.NoError(t, err)
 	return plan
 }

@@ -10,6 +10,8 @@ import {
     AdminCreateUserRes,
     UserCreatedEvent
 } from '../../model/admin-user.model';
+import { MAX_TURNS_VALIDATORS } from '../../constants/max-agent-turns';
+import { CreateAgentGatewayReq } from '../../model/agent-gateway.model';
 
 /**
  * CreateUserDialogComponent creates a human user or an agent. When "Is agent" is on, email and
@@ -42,6 +44,8 @@ export class CreateUserDialogComponent {
         password: ['', [Validators.minLength(5), Validators.maxLength(100)]],
         // Optional: when set on an agent, its gateway is created in the same step.
         gatewayUrl: ['', [Validators.maxLength(2000)]],
+        maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
+        maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         colorAvatarBg: [Color.randomAvatarBg()]
     });
 
@@ -97,13 +101,17 @@ export class CreateUserDialogComponent {
                   colorAvatarBg: value.colorAvatarBg!
               };
 
-        const gatewayUrl = value.isAgent ? (value.gatewayUrl ?? '').trim() : '';
+        const gatewayReq: CreateAgentGatewayReq = {
+            gatewayUrl: value.isAgent ? (value.gatewayUrl ?? '').trim() : '',
+            maxTurnsPlan: value.maxTurnsPlan || null,
+            maxTurnsImplement: value.maxTurnsImplement || null
+        };
 
         this.isSaving.set(true);
         this.adminUserApi.insert$(req).subscribe({
             next: res => {
-                if (gatewayUrl) {
-                    this.createGatewayThenFinish(res, gatewayUrl);
+                if (gatewayReq.gatewayUrl) {
+                    this.createGatewayThenFinish(res, gatewayReq);
                 } else {
                     this.finish({ user: res, gatewayToken: null });
                 }
@@ -115,8 +123,11 @@ export class CreateUserDialogComponent {
     // One-shot: the agent exists, now register its gateway so the keys window can
     // reveal both tokens at once. A gateway failure is non-fatal — the bot is
     // already created, so we still open the keys window (token can be added there).
-    private createGatewayThenFinish(user: AdminCreateUserRes, gatewayUrl: string): void {
-        this.agentGatewayApi.insert$(user.idUser, { gatewayUrl }).subscribe({
+    private createGatewayThenFinish(
+        user: AdminCreateUserRes,
+        gatewayReq: CreateAgentGatewayReq
+    ): void {
+        this.agentGatewayApi.insert$(user.idUser, gatewayReq).subscribe({
             next: gw => this.finish({ user, gatewayToken: gw.trackerToGatewayToken }),
             error: () => {
                 this.sToast.showError('AGENT_API_KEY.GATEWAY_CREATE_FAILED');

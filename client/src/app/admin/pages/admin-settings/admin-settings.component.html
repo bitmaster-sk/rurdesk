@@ -79,6 +79,30 @@
                 />
             </div>
             <div class="flex flex-col gap-1">
+                <label for="agentMaxTurnsPlan">
+                    {{ 'SETTINGS.AGENT_MAX_TURNS_PLAN' | translate }}
+                </label>
+                <input
+                    id="agentMaxTurnsPlan"
+                    uiInput
+                    type="number"
+                    formControlName="agentMaxTurnsPlan"
+                    data-testid="settings-agent-max-turns-plan"
+                />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="agentMaxTurnsImplement">
+                    {{ 'SETTINGS.AGENT_MAX_TURNS_IMPLEMENT' | translate }}
+                </label>
+                <input
+                    id="agentMaxTurnsImplement"
+                    uiInput
+                    type="number"
+                    formControlName="agentMaxTurnsImplement"
+                    data-testid="settings-agent-max-turns-implement"
+                />
+            </div>
+            <div class="flex flex-col gap-1">
                 <label for="attachmentMaxSizeMb">
                     {{ 'SETTINGS.ATTACHMENT_MAX_SIZE_MB' | translate }}
                 </label>

@@ -94,6 +94,10 @@ type Task struct {
 	// by the underlying runtime. Zero means "not set".
 	MaxTurns int
 
+	RequestedModel string
+
+	Model Model
+
 	// Vocab is the per-adapter tool dictionary for the prompt's ALLOWED /
 	// FORBIDDEN lists. Tool names belong to the harness, not the model —
 	// goose driving Claude still calls goose's tools — so each adapter sets

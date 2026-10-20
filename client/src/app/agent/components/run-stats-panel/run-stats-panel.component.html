@@ -19,6 +19,17 @@
                 <span>{{ s.failedAttempts }}</span>
             </div>
         }
+        @if (modelRows().length > 0) {
+            <h5>{{ 'AGENT.STATS.TOKENS_PER_MODEL' | translate }}</h5>
+            <ul class="stats-panel__attempts" data-testid="stats-models">
+                @for (row of modelRows(); track row.model) {
+                    <li class="flex justify-between" data-testid="stats-model-row">
+                        <span>{{ row.model }}</span>
+                        <span>{{ row.tokens | number }}</span>
+                    </li>
+                }
+            </ul>
+        }
         @if (stageRows().length > 0) {
             <h5>{{ 'AGENT.STATS.ATTEMPTS_PER_STAGE' | translate }}</h5>
             <ul class="stats-panel__attempts">

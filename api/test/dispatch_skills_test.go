@@ -58,7 +58,7 @@ func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	require.NoError(t, json.NewDecoder(issRes.Body).Decode(&iss))
 
 	skill := skillByName(t, listSkills(t, app, token), "Verification rules")
-	stagePlan, err := injector.GetStagePlanService().Build(map[string][]int64{"implementation": {skill.IdSkill}}, true)
+	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{IdsSkillByStage: map[string][]int64{"implementation": {skill.IdSkill}}, IsShortWorkflow: true})
 	require.NoError(t, err)
 	run, err := injector.GetAgentRunRepository().Insert(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
 	require.NoError(t, err)

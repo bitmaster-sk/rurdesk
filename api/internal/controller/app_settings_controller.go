@@ -32,6 +32,8 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		IsAgentThinkingPersisted: sc.settings.IsAgentThinkingPersisted(),
 		AgentThinkingMaxKb:       sc.settings.AgentThinkingMaxKb(),
 		AttachmentMaxSizeMb:      sc.settings.AttachmentMaxSizeMb(),
+		AgentMaxTurnsPlan:        sc.settings.AgentMaxTurnsPlan(),
+		AgentMaxTurnsImplement:   sc.settings.AgentMaxTurnsImplement(),
 	})
 }
 
@@ -64,6 +66,12 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.AttachmentMaxSizeMb != nil {
 		numericChanges[constants.SettingAttachmentMaxSizeMb] = *req.AttachmentMaxSizeMb
+	}
+	if req.AgentMaxTurnsPlan != nil {
+		numericChanges[constants.SettingAgentMaxTurnsPlan] = *req.AgentMaxTurnsPlan
+	}
+	if req.AgentMaxTurnsImplement != nil {
+		numericChanges[constants.SettingAgentMaxTurnsImplement] = *req.AgentMaxTurnsImplement
 	}
 	boolChanges := map[string]bool{}
 	if req.IsAgentThinkingPersisted != nil {

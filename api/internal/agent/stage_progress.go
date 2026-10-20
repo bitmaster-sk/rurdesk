@@ -55,6 +55,7 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 	}
 
 	approvals := userApprovalsChronological(events)
+	fallbackFromByTask := modelFallbacksByTask(events)
 
 	out := make([]model.AgentStageProgress, 0, len(stages))
 	approvalIdx := 0
@@ -79,6 +80,9 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		prog.IdResultMessage = task.IdResultMessage
 		prog.ThinkingTail = task.ThinkingTail
 		prog.HasThinking = task.HasThinking
+		prog.Model = task.Model
+		prog.MaxTurns = task.MaxTurns
+		prog.ModelFallbackFrom = fallbackFromByTask[task.IdTask]
 		switch task.Status {
 		case constants.TaskStatusActive, constants.TaskStatusPending:
 			prog.Status = "active"
@@ -117,17 +121,17 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 
 // stagePlanEntries reads the run's stage plan, falling back to the canonical
 // definition order when the column is empty or unparseable.
-func stagePlanEntries(run *model.AgentRun) []model.StagePlanEntry {
-	var plan model.StagePlan
+func stagePlanEntries(run *model.AgentRun) []model.AgentStagePlanEntry {
+	var plan model.AgentStagePlan
 	if len(run.StagePlan) > 0 {
 		_ = json.Unmarshal(run.StagePlan, &plan)
 	}
 	if len(plan.Stages) > 0 {
 		return plan.Stages
 	}
-	entries := make([]model.StagePlanEntry, 0, len(constants.StageDefinitions))
+	entries := make([]model.AgentStagePlanEntry, 0, len(constants.StageDefinitions))
 	for _, d := range constants.StageDefinitions {
-		entries = append(entries, model.StagePlanEntry{Name: d.Name, Skippable: d.Skippable})
+		entries = append(entries, model.AgentStagePlanEntry{Name: d.Name, Skippable: d.Skippable})
 	}
 	return entries
 }
@@ -141,6 +145,21 @@ func userApprovalsChronological(events []*model.AgentRunEvent) []time.Time {
 	}
 	sort.Slice(approvals, func(i, j int) bool { return approvals[i].Before(approvals[j]) })
 	return approvals
+}
+
+func modelFallbacksByTask(events []*model.AgentRunEvent) map[int64]*string {
+	byTask := map[int64]*string{}
+	for _, event := range events {
+		if event.Reason == nil || *event.Reason != constants.RunEventModelFallback {
+			continue
+		}
+		var fallback model.ModelFallbackPayload
+		if err := json.Unmarshal(event.Payload, &fallback); err != nil {
+			continue
+		}
+		byTask[fallback.IdTask] = &fallback.Requested
+	}
+	return byTask
 }
 
 func isApprovable(stage string) bool {

@@ -1,0 +1,162 @@
+<ol class="stage-plan flex flex-col gap-2">
+    @for (row of rows(); track row.stage) {
+        <li
+            class="stage-plan__stage"
+            [class.stage-plan__stage--skipped]="row.lock === AgentStagePlanEditorLock.Skipped"
+            [uiSaveStatus]="saveStatus(row.stage)"
+            [attr.data-testid]="'stage-plan-' + row.stage"
+        >
+            @if (row.lock) {
+                <div class="stage-plan__head">
+                    <span class="flex-1 font-semibold">
+                        {{ stageLabel(row.stage) | translate }}
+                    </span>
+                    <ui-badge
+                        [value]="
+                            (row.lock === AgentStagePlanEditorLock.Skipped
+                                ? 'AGENT_STAGE_PLAN_EDITOR.SKIPPED'
+                                : 'AGENT_STAGE_PLAN_EDITOR.STARTED'
+                            ) | translate
+                        "
+                        severity="secondary"
+                        [attr.data-testid]="'stage-plan-locked-' + row.stage"
+                    />
+                </div>
+            } @else {
+                <button
+                    type="button"
+                    class="stage-plan__head"
+                    [attr.aria-expanded]="isOpen(row.stage)"
+                    [attr.data-testid]="'stage-plan-toggle-' + row.stage"
+                    (click)="onToggleOpen(row.stage)"
+                >
+                    <span class="flex-1 font-semibold">
+                        {{ stageLabel(row.stage) | translate }}
+                    </span>
+                    <tabler-icon
+                        class="ui-color-text-muted transition-transform"
+                        [class.rotate-180]="isOpen(row.stage)"
+                        icon="chevron-down"
+                        [size]="14"
+                    />
+                </button>
+            }
+
+            @if (!row.lock && isOpen(row.stage)) {
+                <div class="stage-plan__edit flex flex-col gap-2 p-2">
+                    <div class="flex flex-col gap-1">
+                        <span class="ui-color-text-muted text-xs">
+                            {{ 'AGENT_STAGE_PLAN_EDITOR.SKILLS' | translate }}
+                        </span>
+                        <div class="flex flex-wrap gap-1">
+                            @for (skill of skills(); track skill.idSkill) {
+                                <button
+                                    type="button"
+                                    class="stage-plan__chip"
+                                    [class.stage-plan__chip--on]="isChosen(row, skill.idSkill)"
+                                    [attr.aria-pressed]="isChosen(row, skill.idSkill)"
+                                    [attr.data-testid]="'chip-' + skill.idSkill + '-' + row.stage"
+                                    (click)="onToggleSkill(row, skill.idSkill)"
+                                >
+                                    {{ skill.name }}
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="ui-color-text-muted text-xs">
+                            {{
+                                (models().length > 0
+                                    ? 'AGENT_STAGE_PLAN_EDITOR.MODEL_AND_TURNS'
+                                    : 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS'
+                                ) | translate
+                            }}
+                        </span>
+                        <div class="flex items-center gap-2">
+                            @if (models().length > 0) {
+                                <ui-select
+                                    class="min-w-0 flex-1"
+                                    size="small"
+                                    [showClear]="true"
+                                    [placeholder]="
+                                        'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT' | translate
+                                    "
+                                    [options]="models()"
+                                    [attr.data-testid]="'stage-model-' + row.stage"
+                                    [ngModel]="row.model"
+                                    [ngModelOptions]="{ standalone: true }"
+                                    (ngModelChange)="onPickModel(row, $event)"
+                                />
+                            }
+                            <input
+                                uiInput
+                                type="number"
+                                min="1"
+                                size="small"
+                                class="stage-plan__turns"
+                                [attr.max]="maxTurnsLimit()"
+                                [attr.aria-label]="'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS' | translate"
+                                [attr.data-testid]="'stage-turns-' + row.stage"
+                                [placeholder]="row.defaultMaxTurns ?? ''"
+                                [value]="row.maxTurns ?? ''"
+                                (change)="onMaxTurns(row, $event)"
+                            />
+                        </div>
+                    </div>
+                </div>
+            } @else if (row.lock !== AgentStagePlanEditorLock.Skipped) {
+                <dl
+                    class="stage-plan__summary flex flex-col gap-1 px-2 pb-2 text-sm"
+                    [attr.data-testid]="'stage-plan-summary-' + row.stage"
+                >
+                    <div class="flex gap-2">
+                        <dt class="stage-plan__summary-label ui-color-text-muted">
+                            {{ 'AGENT_STAGE_PLAN_EDITOR.SKILLS' | translate }}
+                        </dt>
+                        <dd [attr.data-testid]="'stage-plan-summary-skills-' + row.stage">
+                            {{
+                                chosenSkillNames(row) ||
+                                    ('AGENT_STAGE_PLAN_EDITOR.NONE' | translate)
+                            }}
+                        </dd>
+                    </div>
+                    <div class="flex gap-2">
+                        <dt class="stage-plan__summary-label ui-color-text-muted">
+                            {{
+                                (models().length > 0
+                                    ? 'AGENT_STAGE_PLAN_EDITOR.MODEL'
+                                    : 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS'
+                                ) | translate
+                            }}
+                        </dt>
+                        <dd
+                            class="min-w-0 break-all"
+                            [attr.data-testid]="'stage-plan-summary-model-' + row.stage"
+                        >
+                            @if (models().length > 0) {
+                                @if (row.model; as model) {
+                                    <span class="font-semibold">{{ model }}</span>
+                                } @else {
+                                    <span class="ui-color-text-muted">
+                                        {{ 'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT' | translate }}
+                                    </span>
+                                }
+                                ·
+                            }
+                            <span
+                                [class.font-semibold]="row.maxTurns !== null"
+                                [class.ui-color-text-muted]="row.maxTurns === null"
+                            >
+                                {{
+                                    'AGENT_STAGE_PLAN_EDITOR.TURNS'
+                                        | translate
+                                            : { count: row.maxTurns ?? row.defaultMaxTurns ?? '—' }
+                                }}
+                            </span>
+                        </dd>
+                    </div>
+                </dl>
+            }
+        </li>
+    }
+</ol>

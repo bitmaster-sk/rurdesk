@@ -49,6 +49,26 @@
                     [placeholder]="'AGENT_API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
                 />
             </div>
+            <app-agent-turn-limits-fields idPrefix="eu" />
+            <div class="flex flex-col gap-1" data-testid="eu-gateway-models">
+                <span>{{ 'AGENT_API_KEY.MODELS' | translate }}</span>
+                @if (gatewayModels().length > 0) {
+                    <ul class="ui-color-text-muted text-sm">
+                        @for (entry of gatewayModels(); track entry.model) {
+                            <li>
+                                {{ entry.model }}
+                                @if (entry.isDefault) {
+                                    ({{ 'AGENT_API_KEY.MODEL_DEFAULT' | translate }})
+                                }
+                            </li>
+                        }
+                    </ul>
+                } @else {
+                    <small class="ui-color-text-muted">
+                        {{ 'AGENT_API_KEY.MODELS_NOT_REPORTED' | translate }}
+                    </small>
+                }
+            </div>
         } @else {
             <small class="ui-color-text-muted">
                 {{ 'AGENT_API_KEY.GATEWAY_NONE' | translate }}

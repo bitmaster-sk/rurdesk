@@ -1,10 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AgentRunStageSkills, UpdateAgentRunStageSkillsReq } from '../model/agent-run-skills.model';
+import {
+    AgentRunStagePlanEntry,
+    AgentRunStagePlanRes,
+    UpdateAgentRunStagePlanEntryReq
+} from '../model/agent-run-stage-plan.model';
 import { CreateAgentRunReq } from '../model/agent-run.model';
 import { AgentOverview } from '../model/agent-overview.model';
-import { AgentStage } from '../model/agent-stage.enum';
 import { AgentRun, RunStats, UpdateAgentRunWorkflowReq } from '../model/agent-run.model';
 import { AgentRunWikiRead } from '../model/agent-run-wiki-read.model';
 
@@ -53,18 +56,26 @@ export class AgentRunApi {
         return this.http.get<AgentRunWikiRead[]>(`/api/private/agent/run/${idRun}/wiki-read`);
     }
 
-    public loadSkills$(idRun: number): Observable<AgentRunStageSkills[]> {
-        return this.http.get<AgentRunStageSkills[]>(`/api/private/agent/run/${idRun}/skills`);
+    public loadStagePlan$(idRun: number): Observable<AgentRunStagePlanRes> {
+        return this.http.get<AgentRunStagePlanRes>(`/api/private/agent/run/${idRun}/stage-plan`);
     }
 
-    public updateSkills$(
+    public updateStagePlanEntry$(
         idRun: number,
-        stage: AgentStage,
-        idsSkill: number[]
-    ): Observable<AgentRunStageSkills[]> {
-        const body: UpdateAgentRunStageSkillsReq = { stage, idsSkill };
-        return this.http.patch<AgentRunStageSkills[]>(
-            `/api/private/agent/run/${idRun}/skills`,
+        entry: AgentRunStagePlanEntry
+    ): Observable<AgentRunStagePlanRes> {
+        const body: UpdateAgentRunStagePlanEntryReq = {
+            stage: entry.name,
+            idsSkill: entry.idsSkill
+        };
+        if (entry.model !== null) {
+            body.model = entry.model;
+        }
+        if (entry.maxTurns !== null) {
+            body.maxTurns = entry.maxTurns;
+        }
+        return this.http.patch<AgentRunStagePlanRes>(
+            `/api/private/agent/run/${idRun}/stage-plan`,
             body
         );
     }

@@ -17,8 +17,8 @@ const defaultGooseBinary = "goose"
 
 // GooseAdapter implements common.Agent by driving Block's Goose agent
 // (`goose run`, a pinned Rust binary) headlessly. Unlike the claude adapter it
-// authenticates with a per-token API key (BYOK): GOOSE_PROVIDER
-// selects the provider, and the matching ANTHROPIC_API_KEY / GOOGLE_API_KEY /
+// authenticates with a per-token API key (BYOK): the provider of the run's
+// model is passed as GOOSE_PROVIDER, and the matching ANTHROPIC_API_KEY / GOOGLE_API_KEY /
 // OLLAMA_HOST passes through to the child. The tracker MCP server can't be
 // configured per-run on the command line (goose flags can't carry an auth
 // header), so writeGooseConfig writes the stage-scoped URL and bearer token
@@ -39,7 +39,6 @@ func NewGooseAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) *
 
 func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunStats, error) {
 	stats := common.RunStats{}
-	task.MaxTurns = maxTurnsForStage(task.Stage, a.cfg.Goose)
 	task.Vocab = common.ToolVocabGoose
 	prompt, err := common.RenderPrompt(task)
 	if err != nil {
@@ -83,20 +82,15 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		// ceiling.
 		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
 		// Provider override (also set via env; the flag wins and is explicit).
-		"--provider", a.cfg.Goose.Provider,
+		"--provider", task.Model.Provider,
+		"--model", task.Model.Name,
 		"-i", "-",
-	}
-	// Unset model omits --model so the provider default applies; a set value
-	// passes through verbatim and an unrecognised name fails fast (mirrors the
-	// claude adapter) rather than degrading silently.
-	if m := a.cfg.Goose.Model; m != "" {
-		args = append(args, "--model", m)
 	}
 
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -112,8 +106,8 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	log.Info().
 		Int64("idRun", task.IdRun).
 		Str("stage", task.Stage).
-		Str("provider", a.cfg.Goose.Provider).
-		Str("model", a.cfg.Goose.Model).
+		Str("provider", task.Model.Provider).
+		Str("model", task.Model.Name).
 		Str("mcpURL", mcpURL).
 		Int("maxTurns", task.MaxTurns).
 		Msg("starting goose")
@@ -323,12 +317,12 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // The tracker MCP URL + bearer are NOT set here — writeGooseConfig writes
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
-func childEnv(cfg *common.GooseConfig) []string {
+func childEnv(cfg *common.GooseConfig, provider string) []string {
 	out := append([]string{}, os.Environ()...)
 	out = append(out,
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",
-		"GOOSE_PROVIDER="+cfg.Provider,
+		"GOOSE_PROVIDER="+provider,
 	)
 	if cfg.AnthropicAPIKey != "" {
 		out = append(out, "ANTHROPIC_API_KEY="+cfg.AnthropicAPIKey)
@@ -340,13 +334,6 @@ func childEnv(cfg *common.GooseConfig) []string {
 		out = append(out, "OLLAMA_HOST="+cfg.OllamaHost)
 	}
 	return out
-}
-
-func maxTurnsForStage(stage string, cfg *common.GooseConfig) int {
-	if stage == common.StageImplementation {
-		return cfg.MaxTurnsImplement
-	}
-	return cfg.MaxTurnsPlan
 }
 
 // gooseBinary returns the path to the goose CLI. The GOOSE_BINARY env var

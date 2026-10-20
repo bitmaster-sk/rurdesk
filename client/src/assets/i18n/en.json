@@ -25,8 +25,7 @@
     },
     "AGENT_DOCK": {
         "SKILLS_TITLE": "{{name}} — this run",
-        "PREFILLED": "Skills · prefilled from project",
-        "PREFILLED_FROM_RUN": "Skills · prefilled from the paused run",
+        "PREFILLED_FROM_RUN": "Settings come from the paused run",
         "ASSIGN": "Assign",
         "CANCEL": "Cancel",
         "INFO_TITLE": "{{name}} — workload",
@@ -39,7 +38,20 @@
         "ASSIGN_ERROR": "Failed to assign the agent",
         "NONE": "none",
         "SHORT_WORKFLOW": "Short workflow",
-        "SHORT_WORKFLOW_HINT": "Skips design and implementation plan; the agent brainstorms, then goes straight to the pull request"
+        "SHORT_WORKFLOW_HINT": "Skips design and implementation plan; the agent brainstorms, then goes straight to the pull request",
+        "MODEL_DEFAULT": "default",
+        "RUN_MODEL": "Model for all stages"
+    },
+    "AGENT_STAGE_PLAN_EDITOR": {
+        "SKILLS": "Skills",
+        "MODEL": "Model",
+        "MAX_TURNS": "Max turns",
+        "MODEL_AND_TURNS": "Model and max turns",
+        "MODEL_INHERIT": "Same as the run",
+        "TURNS": "{{count}} turns",
+        "NONE": "none",
+        "SKIPPED": "skipped",
+        "STARTED": "started"
     },
     "ONBOARDING": {
         "WELCOME": "Welcome",
@@ -117,6 +129,8 @@
             "TITLE": "Agent Run",
             "QUEUE_POSITION": "Queue position: #{{position}}",
             "STARTED": "Started",
+            "MODEL": "Model",
+            "MODEL_GATEWAY_DEFAULT": "Gateway default",
             "ELAPSED": "{{time}} elapsed",
             "CANCEL_RUN": "Cancel run",
             "VIEW_HISTORY": "View history",
@@ -147,6 +161,8 @@
             "AGENT_REPORTED_ERROR": "The agent reported an error it could not recover from. Press Continue to retry or Restart.",
             "STAGE_NOT_SUBMITTED": "The agent finished without submitting its result for this stage. Press Continue to retry.",
             "TURN_LIMIT_EXHAUSTED": "The agent reached its turn limit before finishing. Press Continue to retry with a fresh budget.",
+            "MODEL_NOT_ALLOWED": "The gateway refused the chosen model. Restart the gateway so it reports the models it allows, then press Continue.",
+            "MAX_TURNS_OVER_LIMIT": "The turn limit is higher than the gateway allows. Lower it and press Continue.",
             "WORKTREE_ERROR": "The workspace could not be prepared. Press Restart to begin a fresh run.",
             "CRASH_RECOVERY": "The agent process crashed mid-stage. Press Continue to retry.",
             "HEARTBEAT_STALE": "The agent stopped reporting progress and was timed out. Press Continue to retry.",
@@ -158,7 +174,8 @@
             "DURATION": "Duration",
             "TOOL_CALLS": "Tool calls",
             "FAILED_ATTEMPTS": "Failed attempts",
-            "ATTEMPTS_PER_STAGE": "Attempts per stage"
+            "ATTEMPTS_PER_STAGE": "Attempts per stage",
+            "TOKENS_PER_MODEL": "Tokens per model"
         },
         "WIKI": {
             "TITLE": "Wiki context",
@@ -210,7 +227,9 @@
                 "PR_OPENED": "pull request opened"
             },
             "APPROVED_BY_YOU": "approved by you",
-            "ATTEMPT": "attempt {{n}}"
+            "ATTEMPT": "attempt {{n}}",
+            "MODEL_FALLBACK": "Model {{requested}} is no longer offered by the gateway, so {{used}} ran instead.",
+            "MODEL_PLANNED": "planned"
         },
         "CLARIFICATION": {
             "BADGE": "Question from agent"
@@ -222,20 +241,23 @@
             "LOAD_ERROR": "Failed to load skills",
             "SAVE_ERROR": "Failed to save skills"
         },
-        "RUN_SKILLS": {
-            "CHIP": "Skills",
-            "TITLE": "Skills for this run",
-            "DISPATCHED": "Stage already started — skills locked",
-            "RACE_ERROR": "This stage just started; skills were not changed",
-            "LOAD_ERROR": "Failed to load run skills",
-            "SAVE_ERROR": "Failed to save run skills"
+        "RUN_STAGE_PLAN": {
+            "LABEL": "Stages",
+            "EDIT": "Edit",
+            "TITLE": "Stages of this run",
+            "RACE_ERROR": "This stage just started; its settings were not changed",
+            "LOAD_ERROR": "Failed to load the run's stage plan",
+            "SAVE_ERROR": "Failed to save the stage"
         },
         "WORKFLOW": {
+            "LABEL": "Workflow",
             "SHORT": "Short workflow",
             "HINT": "Skips design and implementation plan",
             "LOCKED": "Design or implementation already started — workflow locked",
             "RACE_ERROR": "The next stage just started; the workflow was not changed",
-            "SAVE_ERROR": "Failed to change the workflow"
+            "SAVE_ERROR": "Failed to change the workflow",
+            "SHORT_VALUE": "Short",
+            "FULL_VALUE": "Full"
         },
         "THINKING": {
             "WORKING": "Agent is working",
@@ -349,6 +371,8 @@
         "USER_API_KEY_LIMIT": "API keys per user",
         "IS_AGENT_THINKING_PERSISTED": "Keep the full agent thinking",
         "AGENT_THINKING_MAX_KB": "Agent thinking kept per stage (KB)",
+        "AGENT_MAX_TURNS_PLAN": "Agent turn limit for planning stages",
+        "AGENT_MAX_TURNS_IMPLEMENT": "Agent turn limit for implementation",
         "ATTACHMENT_MAX_SIZE_MB": "Maximum attachment size (MB)"
     },
     "CANCEL": "Cancel",
@@ -1127,6 +1151,7 @@
         "user_has_agent_activity": "This user has agent history and cannot be deleted.",
         "user_has_authored_content": "This user created or edited issues and cannot be deleted.",
         "not_an_agent": "API keys can only be managed for agents.",
+        "agent_model_not_offered": "The agent's gateway does not offer this model.",
         "registration_closed": "Registration is closed. Ask an admin to create your account.",
         "conflict": "Conflict",
         "state_in_use": "This state is still in use — choose where to move its references",
@@ -1232,7 +1257,12 @@
         "GATEWAY_SECTION": "Tracker → Gateway token",
         "GATEWAY_URL": "Gateway URL",
         "GATEWAY_URL_PLACEHOLDER": "https://gateway.internal:8080",
-        "GATEWAY_URL_HINT": "Where the tracker sends stage webhooks. The Tracker → Gateway token is created with the agent.",
+        "MAX_TURNS_PLAN": "Turn limit, planning stages",
+        "MAX_TURNS_IMPLEMENT": "Turn limit, implementation",
+        "MAX_TURNS_INHERIT": "From app settings",
+        "MODELS": "Models offered by the gateway",
+        "MODEL_DEFAULT": "default",
+        "MODELS_NOT_REPORTED": "The gateway has not reported its models yet. Restart it to report them.",
         "GATEWAY_CREATE": "Register gateway",
         "GATEWAY_REGENERATE": "Regenerate token",
         "GATEWAY_DELETE": "Delete",

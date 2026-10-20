@@ -12,6 +12,11 @@ type AgentOverview struct {
 	Tokens7d             int64            `json:"tokens7d"`
 	AvgRunDurationMs7d   *int64           `json:"avgRunDurationMs7d"`
 	FailedAttempts7d     int              `json:"failedAttempts7d"`
+	Models               []string         `json:"models"`
+	ModelDefault         *string          `json:"modelDefault"`
+	MaxTurnsPlan         int              `json:"maxTurnsPlan"`
+	MaxTurnsImplement    int              `json:"maxTurnsImplement"`
+	MaxTurnsLimit        *int             `json:"maxTurnsLimit"`
 }
 
 type AgentCurrentRun struct {

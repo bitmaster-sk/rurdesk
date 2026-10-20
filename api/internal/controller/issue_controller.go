@@ -40,7 +40,8 @@ type IssueController struct {
 	dispatcher          *agent.Dispatcher
 	notifier            *notify.Notifier
 	acl                 *service.AclService
-	stagePlan           *service.StagePlanService
+	stagePlan           *service.AgentStagePlanService
+	agentTaskConfig     *service.AgentTaskConfigService
 	notifSvc            *service.NotificationService
 	customFieldValueSvc *service.CustomFieldValueService
 	wikiSvc             *service.WikiService
@@ -96,7 +97,8 @@ func (ic *IssueController) WithAgentRun(
 	agentTaskRepo *repository.AgentTaskRepository,
 	agentGwRepo *repository.AgentGatewayRepository,
 	projectSkillService *service.ProjectSkillService,
-	stagePlan *service.StagePlanService,
+	stagePlan *service.AgentStagePlanService,
+	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
 ) *IssueController {
@@ -105,6 +107,7 @@ func (ic *IssueController) WithAgentRun(
 	ic.agentGwRepo = agentGwRepo
 	ic.projectSkillService = projectSkillService
 	ic.stagePlan = stagePlan
+	ic.agentTaskConfig = agentTaskConfig
 	ic.dispatcher = dispatcher
 	ic.notifier = notifier
 	return ic
@@ -559,12 +562,6 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
 		return
 	}
-	for stage := range dto.IdsSkillByStage {
-		if !constants.IsSkillStage(stage) {
-			ResponseErr(c, errs.ErrBadRequest.WithMessage("unknown stage: "+stage))
-			return
-		}
-	}
 
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
@@ -599,6 +596,10 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		ResponseErr(c, errs.ErrAgentNoGateway)
 		return
 	}
+	if err := ic.agentTaskConfig.ValidateChoices(gateway, dto.RunChoices); err != nil {
+		ResponseErr(c, err)
+		return
+	}
 
 	existing, err := ic.agentRunRepo.LoadActiveByIssue(ctx, issue.IdIssue)
 	if err != nil {
@@ -629,10 +630,10 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
 		}
 		if existing != nil {
-			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.IdsSkillByStage, dto.IsShortWorkflow)
+			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.RunChoices)
 			return txErr
 		}
-		stagePlan, txErr := ic.stagePlan.Build(dto.IdsSkillByStage, dto.IsShortWorkflow)
+		stagePlan, txErr := ic.stagePlan.BuildFromChoices(dto.RunChoices)
 		if txErr != nil {
 			return txErr
 		}
@@ -738,7 +739,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 			Msg("loading project skill defaults — creating run without skills")
 		idsSkillByStage = nil
 	}
-	stagePlan, err := ic.stagePlan.Build(idsSkillByStage, false)
+	stagePlan, err := ic.stagePlan.BuildFromChoices(model.RunChoices{IdsSkillByStage: idsSkillByStage})
 	if err != nil {
 		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("building stage plan — run not created")
 		return

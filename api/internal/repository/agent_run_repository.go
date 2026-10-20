@@ -619,7 +619,7 @@ func (r *AgentRunRepository) SetApprovedMockupRef(ctx context.Context, idRun int
 func (r *AgentRunRepository) LoadEvents(ctx context.Context, idRun int64) ([]*model.AgentRunEvent, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_event, id_run, from_phase, to_phase, actor_type, id_user, reason, created_at
+		SELECT id_event, id_run, from_phase, to_phase, actor_type, id_user, reason, payload, created_at
 		FROM agent.run_event
 		WHERE id_run = $1
 		ORDER BY created_at ASC`,
@@ -635,7 +635,7 @@ func (r *AgentRunRepository) LoadEvents(ctx context.Context, idRun int64) ([]*mo
 		ev := &model.AgentRunEvent{}
 		if scanErr := rows.Scan(
 			&ev.IdEvent, &ev.IdRun, &ev.FromPhase, &ev.ToPhase,
-			&ev.ActorType, &ev.IdUser, &ev.Reason, &ev.CreatedAt,
+			&ev.ActorType, &ev.IdUser, &ev.Reason, &ev.Payload, &ev.CreatedAt,
 		); scanErr != nil {
 			return nil, fmt.Errorf("scanning run event: %w", scanErr)
 		}
@@ -653,7 +653,12 @@ func (r *AgentRunRepository) InsertEvent(
 	fromPhase, toPhase, actorType string,
 	idUser *int64,
 	reason string,
+	payload any,
 ) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshalling run event payload: %w", err)
+	}
 	db := extctx.GetDb(ctx, r.pool)
 	var fromPtr, toPtr, reasonPtr *string
 	if fromPhase != "" {
@@ -665,10 +670,10 @@ func (r *AgentRunRepository) InsertEvent(
 	if reason != "" {
 		reasonPtr = &reason
 	}
-	_, err := db.Exec(ctx, `
-		INSERT INTO agent.run_event (id_run, from_phase, to_phase, actor_type, id_user, reason)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		idRun, fromPtr, toPtr, actorType, idUser, reasonPtr,
+	_, err = db.Exec(ctx, `
+		INSERT INTO agent.run_event (id_run, from_phase, to_phase, actor_type, id_user, reason, payload)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		idRun, fromPtr, toPtr, actorType, idUser, reasonPtr, payloadJSON,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting run event: %w", err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -35,7 +36,8 @@ type AgentRunController struct {
 	attachmentLinkSvc *service.AttachmentLinkService
 	gitIntRepo        *repository.GitIntegrationRepository
 	acl               *service.AclService
-	stagePlan         *service.StagePlanService
+	stagePlan         *service.AgentStagePlanService
+	agentTaskConfig   *service.AgentTaskConfigService
 	dispatcher        *agent.Dispatcher
 	notifier          *notify.Notifier
 	pool              *pgxpool.Pool
@@ -53,7 +55,8 @@ func NewAgentRunController(
 	attachmentLinkSvc *service.AttachmentLinkService,
 	gitIntRepo *repository.GitIntegrationRepository,
 	acl *service.AclService,
-	stagePlan *service.StagePlanService,
+	stagePlan *service.AgentStagePlanService,
+	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
 	pool *pgxpool.Pool,
@@ -71,6 +74,7 @@ func NewAgentRunController(
 		gitIntRepo:        gitIntRepo,
 		acl:               acl,
 		stagePlan:         stagePlan,
+		agentTaskConfig:   agentTaskConfig,
 		dispatcher:        dispatcher,
 		notifier:          notifier,
 		pool:              pool,
@@ -408,10 +412,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
-	stagePlan, err := ctrl.stagePlan.Build(
-		ctrl.stagePlan.IdsSkillByStage(oldRun.StagePlan),
-		ctrl.stagePlan.IsShortWorkflow(oldRun.StagePlan),
-	)
+	stagePlan, err := ctrl.stagePlan.BuildFromChoices(ctrl.stagePlan.Choices(oldRun.StagePlan))
 	if err != nil {
 		ResponseErr(c, err)
 		return
@@ -425,58 +426,90 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	ResponseOk(c, gin.H{"oldIdRun": idRun, "newIdRun": newRun.IdRun})
 }
 
-func (ctrl *AgentRunController) GetSkills(c *gin.Context) {
-	run, ok := ctrl.loadRunForSkills(c, false)
+func (ctrl *AgentRunController) GetStagePlan(c *gin.Context) {
+	run, ok := ctrl.loadRunForStagePlan(c, false)
 	if !ok {
 		return
 	}
-	ctrl.respondRunSkills(c, run)
+	ctrl.respondRunStagePlan(c, run)
 }
 
-func (ctrl *AgentRunController) PatchSkills(c *gin.Context) {
+func (ctrl *AgentRunController) PatchStagePlanEntry(c *gin.Context) {
 	ctx := c.Request.Context()
-	run, ok := ctrl.loadRunForSkills(c, true)
+	run, ok := ctrl.loadRunForStagePlan(c, true)
 	if !ok {
 		return
 	}
 
-	var dto model.UpdateAgentRunStageSkillsReq
+	var dto model.UpdateAgentRunStagePlanEntryReq
 	if err := c.ShouldBindJSON(&dto); err != nil {
-		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
+		return
+	}
+
+	gateway, err := ctrl.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if gateway == nil {
+		gateway = &model.AgentGateway{}
+	}
+	plan, err := ctrl.stagePlan.Parse(run.StagePlan)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if err := ctrl.agentTaskConfig.ValidateChoices(gateway, stagePlanEntryChoices(dto, plan)); err != nil {
+		ResponseErr(c, err)
 		return
 	}
 
 	dispatched, err := ctrl.dispatchedStages(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-	// The stage's prompt was already built and sent, so its skills are settled.
+	// The stage's prompt was already built and sent, so its settings are final.
 	if dispatched[dto.Stage] {
-		_ = c.Error(errs.ErrSkillStageDispatched)
-		c.Status(http.StatusConflict)
+		ResponseErr(c, errs.ErrStageDispatched)
 		return
 	}
 
-	updated, err := ctrl.stagePlan.SetStageSkills(ctx, run.IdRun, dto.Stage, dto.IdsSkill)
-	if errors.Is(err, errs.ErrStageNotInPlan) {
-		_ = c.Error(errs.ErrStageNotInPlan)
-		c.Status(errs.ErrStageNotInPlan.HttpStatus())
-		return
-	}
+	updated, err := ctrl.stagePlan.SetStagePlanEntry(ctx, run.IdRun, dto)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-	ctrl.respondRunSkills(c, updated)
+	ctrl.notifyRunUpdate(updated)
+	ctrl.respondRunStagePlan(c, updated)
+}
+
+// A model saved before the gateway stopped offering it is not re-checked: dispatch
+// already falls back to the default, and rejecting it would block every other edit.
+func stagePlanEntryChoices(dto model.UpdateAgentRunStagePlanEntryReq, plan model.AgentStagePlan) model.RunChoices {
+	choices := model.RunChoices{IdsSkillByStage: map[string][]int64{dto.Stage: dto.IdsSkill}}
+	if dto.Model != "" && dto.Model != savedStageModel(plan, dto.Stage) {
+		choices.ModelByStage = map[string]string{dto.Stage: dto.Model}
+	}
+	if dto.MaxTurns != 0 {
+		choices.MaxTurnsByStage = map[string]int{dto.Stage: dto.MaxTurns}
+	}
+	return choices
+}
+
+func savedStageModel(plan model.AgentStagePlan, stage string) string {
+	for _, entry := range plan.Stages {
+		if entry.Name == stage {
+			return entry.Model
+		}
+	}
+	return ""
 }
 
 func (ctrl *AgentRunController) PatchWorkflow(c *gin.Context) {
 	ctx := c.Request.Context()
-	run, ok := ctrl.loadRunForSkills(c, true)
+	run, ok := ctrl.loadRunForStagePlan(c, true)
 	if !ok {
 		return
 	}
@@ -497,40 +530,59 @@ func (ctrl *AgentRunController) PatchWorkflow(c *gin.Context) {
 	ctrl.respondRunSnapshot(ctx, c, updated)
 }
 
-func (ctrl *AgentRunController) respondRunSkills(c *gin.Context, run *model.AgentRun) {
-	dispatched, err := ctrl.dispatchedStages(c.Request.Context(), run.IdRun)
+func (ctrl *AgentRunController) respondRunStagePlan(c *gin.Context, run *model.AgentRun) {
+	ctx := c.Request.Context()
+	dispatched, err := ctrl.dispatchedStages(ctx, run.IdRun)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
-
 	plan, err := ctrl.stagePlan.Parse(run.StagePlan)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
+	gateway, err := ctrl.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if gateway == nil {
+		gateway = &model.AgentGateway{Models: []string{}}
+	}
 
-	stages := make([]model.AgentRunStageSkills, 0, len(plan.Stages))
+	res := model.AgentRunStagePlanRes{
+		Stages:        make([]model.AgentRunStagePlanEntry, 0, len(plan.Stages)),
+		Models:        gateway.Models,
+		ModelDefault:  gateway.ModelDefault,
+		MaxTurnsLimit: gateway.MaxTurnsLimit,
+	}
+	res.MaxTurnsPlan, res.MaxTurnsImplement = ctrl.agentTaskConfig.GetDefaultMaxTurns(gateway)
 	for _, entry := range plan.Stages {
 		if !constants.IsSkillStage(entry.Name) {
 			continue
 		}
-		idsSkill := entry.IdsSkill
-		if idsSkill == nil {
-			idsSkill = []int64{}
-		}
-		stages = append(stages, model.AgentRunStageSkills{
+		stage := model.AgentRunStagePlanEntry{
 			Name:       entry.Name,
-			IdsSkill:   idsSkill,
+			IdsSkill:   entry.IdsSkill,
+			Skip:       entry.Skip,
 			Dispatched: dispatched[entry.Name],
-		})
+		}
+		if stage.IdsSkill == nil {
+			stage.IdsSkill = []int64{}
+		}
+		if entry.Model != "" {
+			stage.Model = &entry.Model
+		}
+		if entry.MaxTurns != 0 {
+			stage.MaxTurns = &entry.MaxTurns
+		}
+		res.Stages = append(res.Stages, stage)
 	}
-	c.JSON(http.StatusOK, stages)
+	ResponseOk(c, res)
 }
 
-func (ctrl *AgentRunController) loadRunForSkills(c *gin.Context, isWrite bool) (*model.AgentRun, bool) {
+func (ctrl *AgentRunController) loadRunForStagePlan(c *gin.Context, isWrite bool) (*model.AgentRun, bool) {
 	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
 	if err != nil {
 		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
@@ -896,20 +948,30 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 	ctx := c.Request.Context()
 	agentUser, ok := extctx.GetUser(ctx)
 	if !ok {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusUnauthorized)
+		ResponseErr(c, errs.ErrUnauthorized)
 		return
 	}
+	var report model.GatewayRecoveredReq
+	if err := c.ShouldBindJSON(&report); err != nil && !errors.Is(err, io.EOF) {
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
+		return
+	}
+	if report.Models != nil {
+		if err := ctrl.agentGwRepo.SetModels(ctx, agentUser.IdUser, report); err != nil {
+			ResponseErr(c, err)
+			return
+		}
+	}
+
 	runIds, err := ctrl.agentTaskRepo.FailActiveForAgent(ctx, agentUser.IdUser)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	for _, idRun := range runIds {
 		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, "gateway_restart")
 	}
-	c.JSON(http.StatusOK, gin.H{"failedRuns": len(runIds)})
+	ResponseOk(c, gin.H{"failedRuns": len(runIds)})
 }
 
 // TaskStats accepts a stats backfill from the gateway adapter and broadcasts

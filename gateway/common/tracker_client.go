@@ -72,9 +72,19 @@ func (tc *TrackerClient) SendTaskHeartbeat(ctx context.Context, idTask int64) er
 
 // ReportRecovered tells the tracker this gateway just (re)started, so any
 // tasks it was running are orphaned; the API fails them and their runs (the
-// user sees Continue/Restart). Called once on startup; best-effort.
+// user sees Continue/Restart). It also carries the models this gateway allows,
+// which are the only ones the tracker offers. Called once on startup; best-effort.
 func (tc *TrackerClient) ReportRecovered(ctx context.Context) error {
-	return tc.post(ctx, "/agent/gateway/recovered", nil)
+	type body struct {
+		Models        []string `json:"models"`
+		ModelDefault  string   `json:"modelDefault"`
+		MaxTurnsLimit int      `json:"maxTurnsLimit"`
+	}
+	return tc.post(ctx, "/agent/gateway/recovered", body{
+		Models:        tc.cfg.Models.Ids(),
+		ModelDefault:  tc.cfg.Models.Default.Id(),
+		MaxTurnsLimit: tc.cfg.MaxTurnsLimit,
+	})
 }
 
 // UpdateTaskStats overwrites tokens / duration / tool-call counters on the

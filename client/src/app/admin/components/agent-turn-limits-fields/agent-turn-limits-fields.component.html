@@ -1,0 +1,28 @@
+<div class="flex gap-2">
+    <div class="flex flex-1 flex-col gap-1">
+        <label [for]="idPrefix() + '-max-turns-plan'">
+            {{ 'AGENT_API_KEY.MAX_TURNS_PLAN' | translate }}
+        </label>
+        <input
+            uiInput
+            [id]="idPrefix() + '-max-turns-plan'"
+            type="number"
+            min="1"
+            formControlName="maxTurnsPlan"
+            [placeholder]="'AGENT_API_KEY.MAX_TURNS_INHERIT' | translate"
+        />
+    </div>
+    <div class="flex flex-1 flex-col gap-1">
+        <label [for]="idPrefix() + '-max-turns-implement'">
+            {{ 'AGENT_API_KEY.MAX_TURNS_IMPLEMENT' | translate }}
+        </label>
+        <input
+            uiInput
+            [id]="idPrefix() + '-max-turns-implement'"
+            type="number"
+            min="1"
+            formControlName="maxTurnsImplement"
+            [placeholder]="'AGENT_API_KEY.MAX_TURNS_INHERIT' | translate"
+        />
+    </div>
+</div>

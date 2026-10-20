@@ -26,7 +26,8 @@ const agentTaskColumns = `
 	error_reason, error_detail,
 	tokens_used, duration_ms, tool_calls_count,
 	started_at, finished_at, last_heartbeat_at, created_at,
-	thinking_tail, thinking_blob IS NOT NULL`
+	thinking_tail, thinking_blob IS NOT NULL,
+	model, max_turns`
 
 func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 	task := &model.AgentTask{}
@@ -36,6 +37,7 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 		&task.TokensUsed, &task.DurationMs, &task.ToolCallsCount,
 		&task.StartedAt, &task.FinishedAt, &task.LastHeartbeatAt, &task.CreatedAt,
 		&task.ThinkingTail, &task.HasThinking,
+		&task.Model, &task.MaxTurns,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent task: %w", err)
@@ -54,6 +56,15 @@ func (r *AgentTaskRepository) Insert(ctx context.Context, idRun, idUserAgent int
 		idRun, idUserAgent, stage, attemptNo, constants.TaskStatusPending,
 	)
 	return scanAgentTask(row)
+}
+
+func (r *AgentTaskRepository) SetModelAndTurns(ctx context.Context, idTask int64, model *string, maxTurns int) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `UPDATE agent.task SET model = $2, max_turns = $3 WHERE id_task = $1`, idTask, model, maxTurns)
+	if err != nil {
+		return fmt.Errorf("setting task model and turns: %w", err)
+	}
+	return nil
 }
 
 func (r *AgentTaskRepository) LoadById(ctx context.Context, idTask int64) (*model.AgentTask, error) {
@@ -398,5 +409,35 @@ func (r *AgentTaskRepository) StatsForRun(ctx context.Context, idRun int64) (*mo
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating run stats: %w", err)
 	}
+
+	stats.TokensByModel, err = r.tokensByModel(ctx, idRun)
+	if err != nil {
+		return nil, err
+	}
 	return stats, nil
+}
+
+func (r *AgentTaskRepository) tokensByModel(ctx context.Context, idRun int64) (map[string]int, error) {
+	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
+		SELECT model, SUM(tokens_used)
+		FROM agent.task
+		WHERE id_run = $1 AND model IS NOT NULL AND tokens_used IS NOT NULL
+		GROUP BY model`,
+		idRun,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying tokens by model: %w", err)
+	}
+	defer rows.Close()
+
+	byModel := map[string]int{}
+	for rows.Next() {
+		var model string
+		var tokens int
+		if err := rows.Scan(&model, &tokens); err != nil {
+			return nil, fmt.Errorf("scanning tokens by model: %w", err)
+		}
+		byModel[model] = tokens
+	}
+	return byModel, rows.Err()
 }

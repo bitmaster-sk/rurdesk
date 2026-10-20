@@ -31,7 +31,9 @@ describe('SettingsStore', () => {
             userApiKeyLimit: 25,
             isAgentThinkingPersisted: false,
             agentThinkingMaxKb: 2048,
-            attachmentMaxSizeMb: 40
+            attachmentMaxSizeMb: 40,
+            agentMaxTurnsPlan: 300,
+            agentMaxTurnsImplement: 600
         });
         store.load();
         expect(store.tablePageSize()).toBe(75);

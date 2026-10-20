@@ -10,7 +10,7 @@ import (
 )
 
 func fullStagePlan() json.RawMessage {
-	plan := model.StagePlan{Stages: []model.StagePlanEntry{
+	plan := model.AgentStagePlan{Stages: []model.AgentStagePlanEntry{
 		{Name: constants.StagePickup},
 		{Name: constants.StageBrainstorming, Skippable: true},
 		{Name: constants.StageDesign, Skippable: true},
@@ -150,7 +150,7 @@ func TestBuildStageProgress_AwaitingApprovalWhenNoApprovalYet(t *testing.T) {
 }
 
 func TestBuildStageProgress_SkippedAndFailed(t *testing.T) {
-	plan := model.StagePlan{Stages: []model.StagePlanEntry{
+	plan := model.AgentStagePlan{Stages: []model.AgentStagePlanEntry{
 		{Name: constants.StagePickup},
 		{Name: constants.StageBrainstorming, Skippable: true, Skip: true},
 		{Name: constants.StageDesign, Skippable: true},

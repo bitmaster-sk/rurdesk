@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { AgentStage } from '../model/agent-stage.enum';
 import { AgentRunApi } from './agent-run.api.service';
 
-describe('AgentRunApi skills endpoints', () => {
+describe('AgentRunApi stage plan endpoints', () => {
     let api: AgentRunApi;
     let http: HttpTestingController;
 
@@ -19,20 +19,47 @@ describe('AgentRunApi skills endpoints', () => {
 
     afterEach(() => http.verify());
 
-    it('reads the per-run skills', () => {
-        api.loadSkills$(5).subscribe();
+    it('reads the stage plan of a run', () => {
+        api.loadStagePlan$(5).subscribe();
 
-        const request = http.expectOne('/api/private/agent/run/5/skills');
+        const request = http.expectOne('/api/private/agent/run/5/stage-plan');
         expect(request.request.method).toBe('GET');
         request.flush({ stages: [] });
     });
 
-    it('patches one stage with the ids it should run with', () => {
-        api.updateSkills$(5, AgentStage.Implementation, [1, 2]).subscribe();
+    it('patches one stage with the skills, model and turns it should run with', () => {
+        api.updateStagePlanEntry$(5, {
+            name: AgentStage.Implementation,
+            idsSkill: [1, 2],
+            model: 'openai/b',
+            maxTurns: 90,
+            skip: false,
+            dispatched: false
+        }).subscribe();
 
-        const request = http.expectOne('/api/private/agent/run/5/skills');
+        const request = http.expectOne('/api/private/agent/run/5/stage-plan');
         expect(request.request.method).toBe('PATCH');
-        expect(request.request.body).toEqual({ stage: 'implementation', idsSkill: [1, 2] });
+        expect(request.request.body).toEqual({
+            stage: 'implementation',
+            idsSkill: [1, 2],
+            model: 'openai/b',
+            maxTurns: 90
+        });
+        request.flush({ stages: [] });
+    });
+
+    it('leaves out the model and turns a stage inherits', () => {
+        api.updateStagePlanEntry$(5, {
+            name: AgentStage.Design,
+            idsSkill: [],
+            model: null,
+            maxTurns: null,
+            skip: false,
+            dispatched: false
+        }).subscribe();
+
+        const request = http.expectOne('/api/private/agent/run/5/stage-plan');
+        expect(request.request.body).toEqual({ stage: 'design', idsSkill: [] });
         request.flush({ stages: [] });
     });
 
