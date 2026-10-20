@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
@@ -23,35 +22,21 @@ func NewPlantUmlController(plantUmlSvc *service.PlantUmlService) *PlantUmlContro
 func (c *PlantUmlController) Render(ctx *gin.Context) {
 	var req model.PlantUmlRenderReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		_ = ctx.Error(err)
-		ctx.Status(http.StatusBadRequest)
+		ResponseErr(ctx, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
 	if strings.TrimSpace(req.Source) == "" {
-		_ = ctx.Error(errs.ErrValidation)
-		ctx.Status(http.StatusBadRequest)
+		ResponseErr(ctx, errs.ErrBadRequest.WithMessage("source must not be empty"))
 		return
 	}
 	if len(req.Source) > plantUmlMaxSourceBytes {
-		_ = ctx.Error(errs.ErrValidation)
-		ctx.Status(http.StatusRequestEntityTooLarge)
+		ResponseErr(ctx, errs.ErrPlantUmlSourceTooLarge)
 		return
 	}
 	svg, err := c.plantUmlSvc.Render(ctx.Request.Context(), req.Source)
 	if err != nil {
-		_ = ctx.Error(err)
-		// WithMessage copies the sentinel, so match by code — errors.Is cannot
-		// see through the copy.
-		var appErr *errs.Error
-		switch {
-		case errs.As(err, &appErr) && appErr.Code == errs.ErrPlantUmlSyntax.Code:
-			ctx.JSON(http.StatusUnprocessableEntity, gin.H{"error": appErr.Message})
-		case errs.As(err, &appErr) && appErr.Code == errs.ErrPlantUmlDisabled.Code:
-			ctx.Status(http.StatusNotFound)
-		default:
-			ctx.Status(http.StatusBadGateway)
-		}
+		ResponseErr(ctx, err)
 		return
 	}
-	ctx.JSON(http.StatusOK, model.PlantUmlRenderRes{Svg: svg})
+	ResponseOk(ctx, model.PlantUmlRenderRes{Svg: svg})
 }

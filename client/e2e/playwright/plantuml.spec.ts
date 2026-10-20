@@ -6,6 +6,10 @@ import { BOOTSTRAP_USER } from './support/bootstrap-user';
 
 const BLOCK = '```plantuml\nAlice -> Bob: hi\n```';
 
+// The tests share one global app setting — running them in parallel would have
+// each flip plantuml on while another asserts the disabled state.
+test.describe.configure({ mode: 'serial' });
+
 async function adminToken(request: APIRequestContext, baseURL: string): Promise<string> {
     const login = await request.post(`${baseURL}/api/public/login`, {
         data: { email: BOOTSTRAP_USER.email, password: BOOTSTRAP_USER.password }
@@ -32,8 +36,8 @@ async function commentOnIssue(page: Page, idProject: number, idIssue: number, bo
 
 // Scenario:
 // - fresh stack has no plantuml server configured (setting default is empty)
-// - a wiki page with a ```plantuml block keeps the markdown code fence
-// - the same block in a task comment renders the component's disabled code block
+// - a wiki page with a ```plantuml block degrades to the component's code block
+// - the same block in a task comment renders the same disabled code block
 test('a plantuml block stays a code block while no server is configured', async ({
     page,
     request,
@@ -45,9 +49,12 @@ test('a plantuml block stays a code block while no server is configured', async 
     const idProject = await Interaction.createBlankProject(page, 'PlantUML Off');
 
     await Interaction.createWikiPage(page, idProject, 'Off flow', `Diagram:\n\n${BLOCK}`);
+    const wikiDisabled = page.getByTestId('wiki-page-body').getByTestId('plantuml-disabled');
+    await expect(wikiDisabled).toBeVisible();
+    await expect(wikiDisabled).toContainText('Alice -> Bob: hi');
     await expect(
-        page.getByTestId('wiki-page-body').locator('pre > code.language-plantuml')
-    ).toBeVisible();
+        page.getByTestId('wiki-page-body').getByTestId('plantuml-diagram-img')
+    ).toHaveCount(0);
 
     const idIssue = await Interaction.createIssue(page, idProject, {
         title: 'Off task',

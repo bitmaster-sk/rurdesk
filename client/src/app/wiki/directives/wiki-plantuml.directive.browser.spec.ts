@@ -52,11 +52,17 @@ describe('WikiPlantUmlDirective (browser)', () => {
         expect(fixture.nativeElement.textContent).toContain('Intro');
     });
 
-    it('leaves the markdown code fence untouched and never calls the api when disabled', async () => {
+    it('hands the block to the component in its disabled state and never calls the api', async () => {
         await configure(false);
         const fixture = await render('```plantuml\nAlice -> Bob: hi\n```');
-        expect(fixture.nativeElement.querySelector('pre > code.language-plantuml')).not.toBeNull();
-        expect(fixture.nativeElement.querySelector('app-plantuml-diagram')).toBeNull();
+        await vi.waitFor(() => {
+            const disabled = fixture.nativeElement.querySelector(
+                '[data-testid="plantuml-disabled"]'
+            );
+            expect(disabled).not.toBeNull();
+            expect(disabled.textContent).toContain('Alice -> Bob: hi');
+        });
+        expect(fixture.nativeElement.querySelector('pre > code.language-plantuml')).toBeNull();
         expect(api.render$).not.toHaveBeenCalled();
     });
 

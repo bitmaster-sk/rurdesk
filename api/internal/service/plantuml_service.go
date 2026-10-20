@@ -55,8 +55,11 @@ func (s *PlantUmlService) Render(ctx context.Context, source string) (string, er
 		return "", errs.ErrPlantUmlUnavailable
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, plantUmlMaxSvgBytes))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, plantUmlMaxSvgBytes+1))
 	if err != nil {
+		return "", errs.ErrPlantUmlUnavailable
+	}
+	if len(body) > plantUmlMaxSvgBytes {
 		return "", errs.ErrPlantUmlUnavailable
 	}
 	switch resp.StatusCode {

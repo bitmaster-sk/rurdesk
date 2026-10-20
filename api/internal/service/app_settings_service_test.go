@@ -171,9 +171,6 @@ func TestAppSettings_UpdateRejectsUnknownKey(t *testing.T) {
 	}
 }
 
-// A string setting round-trips as a JSON string: the repository hands raw JSON
-// (value::text) both ways, so the service must unquote on load and quote on
-// save — otherwise the jsonb upsert breaks and the getter returns the quotes.
 func TestAppSettings_PlantUmlServerUrlRoundTrips(t *testing.T) {
 	store := &fakeStore{data: map[string]string{}}
 	svc := NewAppSettingsService(store)

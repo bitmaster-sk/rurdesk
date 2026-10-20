@@ -53,6 +53,8 @@ describe('SettingsStore', () => {
             isAgentThinkingPersisted: true,
             agentThinkingMaxKb: 1024,
             attachmentMaxSizeMb: 25,
+            agentMaxTurnsPlan: 250,
+            agentMaxTurnsImplement: 500,
             plantUmlServerUrl: ''
         };
         const off = build(settings);

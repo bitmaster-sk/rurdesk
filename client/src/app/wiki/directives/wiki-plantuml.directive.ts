@@ -12,7 +12,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject } from 'rxjs';
 import { MarkdownComponent } from 'ngx-markdown';
-import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { PlantUmlDiagramComponent } from 'src/app/shared/plantuml/plantuml-diagram.component';
 
 @Directive({
@@ -20,16 +19,13 @@ import { PlantUmlDiagramComponent } from 'src/app/shared/plantuml/plantuml-diagr
     standalone: false
 })
 export class WikiPlantUmlDirective {
-    /** Render delay in ms passed to every diagram; the editor preview debounces. */
     public readonly plantUmlDebounce = input(0);
 
-    /** Emits when all diagrams created for the latest markdown render have settled. */
     public readonly settled = new Subject<void>();
 
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly appRef = inject(ApplicationRef);
     private readonly envInjector = inject(EnvironmentInjector);
-    private readonly settings = inject(SettingsStore);
     private readonly diagramRefs: ComponentRef<PlantUmlDiagramComponent>[] = [];
     private generation = 0;
 
@@ -47,12 +43,6 @@ export class WikiPlantUmlDirective {
     private decorate(): void {
         this.destroyDiagrams();
         this.generation++;
-        // Disabled plantuml leaves the block exactly as markdown rendered it;
-        // the diagram component also checks, but here it would create one just
-        // to show a code block that is already on the page.
-        if (!this.settings.isPlantUmlEnabled()) {
-            return;
-        }
         const blocks = Array.from(
             this.host.nativeElement.querySelectorAll<HTMLElement>('pre > code.language-plantuml')
         );
@@ -73,8 +63,6 @@ export class WikiPlantUmlDirective {
             });
             ref.setInput('source', code.textContent?.trim() ?? '');
             ref.setInput('debounce', this.plantUmlDebounce());
-            // A render can outlive the markdown pass that created it — only
-            // count settled for the generation that still owns the component.
             ref.instance.settled.subscribe(() => {
                 if (generation !== this.generation || --pending > 0) {
                     return;

@@ -56,7 +56,14 @@ describe('PlantUmlDiagramComponent (browser)', () => {
 
     it('shows the syntax error with the server message and the source', async () => {
         const { fixture } = await setup({
-            response: new HttpErrorResponse({ status: 422, error: { error: 'Bad arrow' } })
+            response: new HttpErrorResponse({
+                status: 422,
+                error: {
+                    code: 'PLANTUML_SYNTAX',
+                    message: 'Bad arrow',
+                    translateKey: 'error.plantuml_syntax'
+                }
+            })
         });
         fixture.autoDetectChanges();
         await vi.waitFor(() => {

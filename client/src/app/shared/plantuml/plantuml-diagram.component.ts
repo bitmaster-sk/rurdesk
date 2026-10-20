@@ -31,10 +31,8 @@ type DiagramState =
 export class PlantUmlDiagramComponent {
     public readonly source = input.required<string>();
 
-    /** Render delay in ms; 0 renders immediately. Only the wiki editor preview debounces. */
     public readonly debounce = input(0);
 
-    /** Emits once the state settles to disabled, svg or error (never for loading). */
     public readonly settled = output<void>();
 
     private readonly renderService = inject(PlantUmlRenderService);
@@ -67,9 +65,7 @@ export class PlantUmlDiagramComponent {
 
     private applySource(source: string): void {
         this.clearTimer();
-        // Disabled plantuml is decided here, once, so wiki directives and the
-        // message body never have to know about it — the block degrades to a
-        // code block without firing a single request.
+        // The disabled state is decided only here — callers stay oblivious, and no request may fire.
         if (!this.settings.isPlantUmlEnabled()) {
             this.settle({ kind: 'disabled' });
             return;

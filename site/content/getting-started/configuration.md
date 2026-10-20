@@ -220,7 +220,7 @@ port is needed, the tracker only has to reach it itself:
 ```yaml
 services:
     plantuml:
-        image: plantuml/plantuml-server:jetty
+        image: plantuml/plantuml-server:jetty-v1.2026.8
         container_name: rurdesk_plantuml
         networks:
             rurdesk_network:

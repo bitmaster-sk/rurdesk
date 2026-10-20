@@ -123,7 +123,6 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
     });
 });
 
-
 describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
     const loaded = {
         tablePageSize: 50,

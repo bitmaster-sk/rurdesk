@@ -54,6 +54,12 @@ func (f *fakePlantUml) fail(status int) {
 	f.failWith = status
 }
 
+func (f *fakePlantUml) setSvg(svg string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.svg = svg
+}
+
 func (f *fakePlantUml) requests() (int, []string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -126,7 +132,13 @@ func TestPlantUml_SyntaxErrorMapsTo422(t *testing.T) {
 	res := renderPlantUml(t, app, adminToken, "@startuml\nBob ->? Alice\n@enduml")
 	body := readBody(t, res)
 	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, body)
-	require.JSONEq(t, `{"error":"syntax fail"}`, body)
+	var syntaxErr struct {
+		Code    string `json:"code"`
+		Message string `json:"message"`
+	}
+	require.Nil(t, json.Unmarshal([]byte(body), &syntaxErr))
+	require.Equal(t, "PLANTUML_SYNTAX", syntaxErr.Code)
+	require.Equal(t, "syntax fail", syntaxErr.Message)
 }
 
 func TestPlantUml_UnavailableMapsTo502(t *testing.T) {
@@ -145,6 +157,24 @@ func TestPlantUml_UnavailableMapsTo502(t *testing.T) {
 	setPlantUmlServerUrl(t, app, adminToken, deadUrl)
 	res = renderPlantUml(t, app, adminToken, "Alice -> Bob: bye")
 	require.Equal(t, http.StatusBadGateway, res.StatusCode, readBody(t, res))
+}
+
+// trap: an svg above the 2 MB cap must 502 on the spot — a silently truncated
+// copy would otherwise sit in Redis for 7 days and render as a broken diagram.
+func TestPlantUml_OversizeSvgIsRejectedAndNotCached(t *testing.T) {
+	app := Setup(t)
+	adminToken := Token(t, app)
+	f := newFakePlantUml(t)
+	f.setSvg("<svg>" + strings.Repeat("x", 2<<20+10) + "</svg>")
+	setPlantUmlServerUrl(t, app, adminToken, f.URL)
+
+	res := renderPlantUml(t, app, adminToken, "Alice -> Bob: big")
+	require.Equal(t, http.StatusBadGateway, res.StatusCode, readBody(t, res))
+
+	res = renderPlantUml(t, app, adminToken, "Alice -> Bob: big")
+	require.Equal(t, http.StatusBadGateway, res.StatusCode, readBody(t, res))
+	hits, _ := f.requests()
+	require.Equal(t, 2, hits, "an oversize svg must not be cached")
 }
 
 func TestPlantUml_RequestValidation(t *testing.T) {
