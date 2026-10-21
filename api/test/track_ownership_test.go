@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -115,6 +116,14 @@ func (s *TrackOwnershipSuite) Test_04_Owner_EditsForeign_OK() {
 
 func (s *TrackOwnershipSuite) Test_05_Owner_DeletesForeign_OK() {
 	s.Equal(http.StatusOK, s.deleteTrack(s.OwnerToken, s.TrackForDel))
+}
+
+func (s *TrackOwnershipSuite) Test_06_OtherMember_EditsForeignWithStartAt_Forbidden() {
+	startAt := time.Now().UTC().AddDate(0, 0, -1).Truncate(24 * time.Hour)
+	body := fmt.Sprintf(`{"startAt":"%s","tracked":1800}`, startAt.Format(time.RFC3339))
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/track/%d", s.TrackForM1), body, s.M2Token)
+	s.Equal(http.StatusForbidden, res.StatusCode)
 }
 
 func Test_RunTrackOwnershipSuite(t *testing.T) {
