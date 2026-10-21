@@ -245,16 +245,17 @@ change for a person to accept.
 
 ### What the agent read
 
-The **Agent run** card on the task shows a **Wiki context** with one line per
-stage. The line sums up the stage: how many pages were in the prompt and in the
-index, how many the agent opened or searched for, and how many tokens it read.
-Open the line to see:
+On the **Agent run** card on the task, every stage that ran shows a **Wiki**
+section in its card:
 
-- **Prompt**: the pages that went into the prompt, with their version and whether
-  they were sent because they are **always** read or **linked** to the task;
-- **Looked up**: what the agent searched for and opened during the stage, with the
-  version and size of each page it read;
-- **Index**: the pages offered by title and summary only.
+- **In prompt**: the pages that went into the prompt, with their version and
+  whether they were sent because they are **always** read or **linked** to the
+  task;
+- **Looked up**: what the agent searched for and opened during the stage, with
+  the version and size of each page it read, and the total tokens next to the
+  heading;
+- **more pages offered by title and summary**: the index, folded until you open
+  it.
 
 Each page opens in the wiki. For a stage that ran more than once, the card shows
 the latest attempt.

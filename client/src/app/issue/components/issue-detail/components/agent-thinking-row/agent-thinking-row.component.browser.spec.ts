@@ -9,6 +9,7 @@ import { AgentThinkingNotice } from 'src/app/agent/model/agent-thinking.model';
 import { AgentThinkingStore } from 'src/app/agent/store/agent-thinking.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { AgentThinkingRowComponent } from './agent-thinking-row.component';
+import { Fixtures } from 'src/testing/fixtures';
 
 describe('AgentThinkingRowComponent (browser)', () => {
     let load$: ReturnType<typeof vi.fn>;
@@ -37,10 +38,10 @@ describe('AgentThinkingRowComponent (browser)', () => {
         store = TestBed.inject(AgentThinkingStore);
     });
 
-    function render(stage: AgentStageProgress, isLive = false) {
+    function render(stage: Partial<AgentStageProgress>, isLive = false) {
         const fixture = TestBed.createComponent(AgentThinkingRowComponent);
         fixture.componentRef.setInput('idRun', 5);
-        fixture.componentRef.setInput('stage', stage);
+        fixture.componentRef.setInput('stage', Fixtures.stageProgress(stage));
         fixture.componentRef.setInput('isLive', isLive);
         fixture.detectChanges();
         return fixture;

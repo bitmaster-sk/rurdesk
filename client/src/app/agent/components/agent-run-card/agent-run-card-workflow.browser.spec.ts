@@ -1,11 +1,12 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { SkillApi } from 'src/app/shared/api/skill.api.service';
 import { Fixtures } from 'src/testing/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentRunApi } from '../../api/agent-run.api.service';
+import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { AgentRun, AgentStageProgress } from '../../model/agent-run.model';
 import { AgentRunCardComponent } from './agent-run-card.component';
 
@@ -19,10 +20,10 @@ const FULL_PLAN = {
 
 function stages(design: AgentStageProgress['status']): AgentStageProgress[] {
     return [
-        { stage: 'brainstorming', status: 'active' },
-        { stage: 'design', status: design },
-        { stage: 'implementation_plan', status: 'pending' },
-        { stage: 'implementation', status: 'pending' }
+        Fixtures.stageProgress({ stage: 'brainstorming', status: 'active', attempts: 1 }),
+        Fixtures.stageProgress({ stage: 'design', status: design }),
+        Fixtures.stageProgress({ stage: 'implementation_plan' }),
+        Fixtures.stageProgress({ stage: 'implementation' })
     ];
 }
 
@@ -42,7 +43,8 @@ describe('AgentRunCardComponent — short workflow (browser)', () => {
             providers: [
                 { provide: AgentRunApi, useValue: agentRunApi },
                 { provide: SkillApi, useValue: { load$: vi.fn() } },
-                { provide: ToastNotificationService, useValue: toast }
+                { provide: ToastNotificationService, useValue: toast },
+                { provide: NoticeService, useValue: { agentStats$: new Subject() } }
             ]
         })
             .overrideComponent(AgentRunCardComponent, {

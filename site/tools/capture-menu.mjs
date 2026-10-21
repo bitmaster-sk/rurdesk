@@ -928,9 +928,23 @@ const SHOTS = [
         needsIssue: true,
         envIssue: "CAPTURE_RUN_ISSUE",
         promptLabel: "run issue",
-        desc: "Agent run card: run strip (model, workflow, stages), stage timeline + phase badge",
+        desc: "Agent run card: run block, stage cards with design and implementation plan open",
         run: async (page, _c, shot) => {
             const card = await openRunCard(page, shot._issueId);
+            const openStages = ["design", "implementation_plan"];
+            const toggles = card.locator('[data-testid^="stage-card-toggle-"]');
+            for (const toggle of await toggles.all()) {
+                const stage = (await toggle.getAttribute("data-testid")).replace(
+                    "stage-card-toggle-",
+                    "",
+                );
+                const isOpen =
+                    (await card.locator(`[data-testid="stage-card-body-${stage}"]`).count()) > 0;
+                if (isOpen !== openStages.includes(stage) && (await toggle.isEnabled())) {
+                    await toggle.click();
+                }
+            }
+            await page.waitForTimeout(600);
             await card.screenshot({ path: path.join(IMG, "run-card.png") });
         },
     },
@@ -941,24 +955,18 @@ const SHOTS = [
         needsIssue: true,
         envIssue: "CAPTURE_RUN_ISSUE",
         promptLabel: "run issue",
-        desc: "Run card Stages → Edit popover, first editable stage opened (nothing saved)",
+        desc: "Run card: first not-started stage card with its plan form (nothing saved)",
         run: async (page, _c, shot) => {
             const card = await openRunCard(page, shot._issueId);
-            await card.locator('[data-testid="run-stage-plan-edit"]').click();
-            const popover = page.locator(".cdk-overlay-pane .ui-popover").last();
-            await popover.waitFor({ state: "visible", timeout: 8000 });
-            await page.waitForTimeout(1200);
-            const toggle = popover
-                .locator('[data-testid^="stage-plan-toggle-"]')
+            const stage = card
+                .locator("app-agent-stage-card")
+                .filter({ has: page.locator('[data-testid^="stage-plan-form-"]') })
                 .first();
-            if (await toggle.count()) {
-                await toggle.click();
-                await page.waitForTimeout(600);
-            }
-            await popover.screenshot({
+            await stage.waitFor({ state: "visible", timeout: 8000 });
+            await page.waitForTimeout(600);
+            await stage.screenshot({
                 path: path.join(IMG, "run-card-stage-plan.png"),
             });
-            await page.keyboard.press("Escape");
         },
     },
     {

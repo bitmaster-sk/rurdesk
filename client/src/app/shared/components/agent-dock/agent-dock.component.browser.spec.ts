@@ -17,6 +17,7 @@ import { AgentOverview } from '../../../agent/model/agent-overview.model';
 import { ProjectSkill } from '../../../project/model/project-skill.model';
 import { Skill } from '../../model/skill.model';
 import { AgentStagePlanEditorComponent } from '../../../agent/components/agent-stage-plan-editor/agent-stage-plan-editor.component';
+import { AgentStagePlanFormComponent } from '../../../agent/components/agent-stage-plan-form/agent-stage-plan-form.component';
 import { AgentDockComponent, AgentDockKind } from './agent-dock.component';
 
 const AGENT: User = Fixtures.agent();
@@ -116,7 +117,11 @@ describe('AgentDockComponent (browser)', () => {
     async function setup(kind: AgentDockKind, overview: AgentOverview | null = null) {
         await TestBed.configureTestingModule({
             imports: [UiModule, FormsModule, TranslateModule.forRoot(), TablerIconStub],
-            declarations: [AgentDockComponent, AgentStagePlanEditorComponent],
+            declarations: [
+                AgentDockComponent,
+                AgentStagePlanEditorComponent,
+                AgentStagePlanFormComponent
+            ],
             providers: [
                 { provide: SkillApi, useValue: skillApi },
                 { provide: ProjectSkillApi, useValue: projectSkillApi },

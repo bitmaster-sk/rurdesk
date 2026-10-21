@@ -51,7 +51,7 @@
         "TURNS": "{{count}} turns",
         "NONE": "none",
         "SKIPPED": "skipped",
-        "STARTED": "started"
+        "DEFAULTS_HINT": "Empty fields use the run defaults."
     },
     "ONBOARDING": {
         "WELCOME": "Welcome",
@@ -135,8 +135,7 @@
             "CANCEL_RUN": "Cancel run",
             "VIEW_HISTORY": "View history",
             "PR_LINK": "View PR",
-            "PULL_REQUEST": "Pull request",
-            "TIMELINE": "Timeline"
+            "PULL_REQUEST": "Pull request"
         },
         "ACTIONS": {
             "APPROVE": "Approve",
@@ -169,25 +168,16 @@
             "GATEWAY_RESTART": "The gateway restarted and dropped this run. Press Continue to retry."
         },
         "STATS": {
-            "TITLE": "Run statistics",
             "TOKENS": "Tokens",
             "DURATION": "Duration",
-            "TOOL_CALLS": "Tool calls",
-            "FAILED_ATTEMPTS": "Failed attempts",
-            "ATTEMPTS_PER_STAGE": "Attempts per stage",
-            "TOKENS_PER_MODEL": "Tokens per model"
+            "TOOL_CALLS": "Tool calls"
         },
         "WIKI": {
-            "TITLE": "Wiki context",
-            "PROMPT": "Prompt",
-            "IN_PROMPT": "{{count}} in prompt",
-            "IN_INDEX": "{{count}} in index",
-            "OPENED": "opened {{count}}",
-            "SEARCHES": "{{count}} searches",
+            "TITLE": "Wiki",
+            "PROMPT": "In prompt",
             "ALWAYS": "always",
             "LINKED": "linked",
             "INDEX": "{{count}} more pages offered by title and summary",
-            "INDEX_LABEL": "Index",
             "INDEX_HINT": "The prompt listed these pages without their text. The agent opens one when it needs it.",
             "MCP_TITLE": "Looked up",
             "SEARCHED": "Searched for “{{query}}”",
@@ -221,15 +211,28 @@
                 "FAILED": "Failed",
                 "SKIPPED": "Skipped"
             },
-            "NOTE": {
-                "NO_CLARIFICATIONS": "no clarifications needed",
-                "SUBMITTED": "submitted for review",
-                "PR_OPENED": "pull request opened"
-            },
             "APPROVED_BY_YOU": "approved by you",
-            "ATTEMPT": "attempt {{n}}",
-            "MODEL_FALLBACK": "Model {{requested}} is no longer offered by the gateway, so {{used}} ran instead.",
-            "MODEL_PLANNED": "planned"
+            "MODEL_FALLBACK": "Model {{requested}} is no longer offered by the gateway, so {{used}} ran instead."
+        },
+        "STAGE_CARD": {
+            "NOT_STARTED": "Not started · you can still change these",
+            "RAN_WITH": "Ran with",
+            "SKILLS_TAG": {
+                "SINGULAR": "{{count}} skill",
+                "PLURAL": "{{count}} skills"
+            },
+            "ATTEMPTS": {
+                "SINGULAR": "attempt",
+                "PLURAL": "attempts"
+            },
+            "TOOL_CALLS": {
+                "SINGULAR": "tool call",
+                "PLURAL": "tool calls"
+            },
+            "TOKENS": {
+                "SINGULAR": "token",
+                "PLURAL": "tokens"
+            }
         },
         "CLARIFICATION": {
             "BADGE": "Question from agent"
@@ -242,9 +245,6 @@
             "SAVE_ERROR": "Failed to save skills"
         },
         "RUN_STAGE_PLAN": {
-            "LABEL": "Stages",
-            "EDIT": "Edit",
-            "TITLE": "Stages of this run",
             "RACE_ERROR": "This stage just started; its settings were not changed",
             "LOAD_ERROR": "Failed to load the run's stage plan",
             "SAVE_ERROR": "Failed to save the stage"

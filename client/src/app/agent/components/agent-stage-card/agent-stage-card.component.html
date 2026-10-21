@@ -1,0 +1,176 @@
+@let card = view();
+<section
+    class="stage-card"
+    [class]="'stage-card--' + card.status"
+    [attr.data-testid]="'stage-card-' + card.stage"
+>
+    <button
+        type="button"
+        class="stage-card__head flex w-full items-center gap-2"
+        [class.stage-card__head--open]="isOpen() && canOpen()"
+        [disabled]="!canOpen()"
+        [attr.aria-expanded]="canOpen() ? isOpen() : null"
+        [attr.data-testid]="'stage-card-toggle-' + card.stage"
+        (click)="onToggle()"
+    >
+        <tabler-icon class="stage-card__glyph" [icon]="card.glyph" [size]="16" />
+        <span class="stage-card__name">{{ card.label | translate }}</span>
+        <span class="stage-card__status">{{ card.statusKey | translate }}</span>
+        <span class="flex-1"></span>
+        @if (card.planTags; as tags) {
+            @if (tags.skillsCount > 0) {
+                <span
+                    class="stage-card__tag"
+                    [attr.data-testid]="'stage-card-skills-' + card.stage"
+                >
+                    {{
+                        pluralKey('AGENT.STAGE_CARD.SKILLS_TAG', tags.skillsCount)
+                            | translate: { count: tags.skillsCount }
+                    }}
+                </span>
+            }
+            @if (tags.model) {
+                <span
+                    class="stage-card__tag stage-card__tag--override stage-card__mono"
+                    [attr.data-testid]="'stage-card-model-' + card.stage"
+                >
+                    {{ tags.model }}
+                </span>
+            }
+            @if (tags.maxTurns) {
+                <span
+                    class="stage-card__tag stage-card__tag--override"
+                    [attr.data-testid]="'stage-card-turns-' + card.stage"
+                >
+                    {{ 'AGENT_STAGE_PLAN_EDITOR.TURNS' | translate: { count: tags.maxTurns } }}
+                </span>
+            }
+        }
+        @if (card.at) {
+            <span class="stage-card__time">
+                {{ card.at | date: 'shortTime' }}
+                @if (duration(); as duration) {
+                    · {{ duration }}
+                }
+            </span>
+        }
+        @if (canOpen()) {
+            <tabler-icon
+                class="stage-card__chevron ui-color-text-muted"
+                [class.rotate-90]="isOpen()"
+                icon="chevron-right"
+                [size]="14"
+            />
+        }
+    </button>
+
+    @if (isOpen() && canOpen()) {
+        <div
+            class="stage-card__body flex flex-col gap-2"
+            [attr.data-testid]="'stage-card-body-' + card.stage"
+        >
+            @switch (card.body) {
+                @case (AgentStageCardBody.Ran) {
+                    <div
+                        class="stage-card__usage"
+                        [attr.data-testid]="'stage-card-usage-' + card.stage"
+                    >
+                        <b>{{ card.attempts }}</b>
+                        {{ pluralKey('AGENT.STAGE_CARD.ATTEMPTS', card.attempts) | translate }}
+                        ·
+                        <b>{{ card.toolCallsCount | number }}</b>
+                        {{
+                            pluralKey('AGENT.STAGE_CARD.TOOL_CALLS', card.toolCallsCount)
+                                | translate
+                        }}
+                        ·
+                        <b>{{ card.tokensUsed | number }}</b>
+                        {{ pluralKey('AGENT.STAGE_CARD.TOKENS', card.tokensUsed) | translate }}
+                    </div>
+                    @if (card.agentName || card.approvedAt) {
+                        <div class="ui-color-text-muted">
+                            @if (card.agentName) {
+                                <span>{{ card.agentName }}</span>
+                            }
+                            @if (card.agentName && card.approvedAt) {
+                                ·
+                            }
+                            @if (card.approvedAt) {
+                                <span [attr.data-testid]="'stage-card-approved-' + card.stage">
+                                    {{ 'AGENT.TIMELINE.APPROVED_BY_YOU' | translate }}
+                                    {{ card.approvedAt | date: 'MMM d, h:mm a' }}
+                                </span>
+                            }
+                        </div>
+                    }
+                    @if (card.model || card.skillNames.length > 0 || card.maxTurns) {
+                        <div
+                            class="stage-card__block"
+                            [attr.data-testid]="'stage-card-ran-with-' + card.stage"
+                        >
+                            <div class="stage-card__section flex items-center gap-1">
+                                <tabler-icon icon="adjustments-horizontal" [size]="14" />
+                                {{ 'AGENT.STAGE_CARD.RAN_WITH' | translate }}
+                            </div>
+                            <dl class="stage-card__facts">
+                                @if (card.model) {
+                                    <dt>{{ 'AGENT_STAGE_PLAN_EDITOR.MODEL' | translate }}</dt>
+                                    <dd class="stage-card__mono" data-testid="stage-card-ran-model">
+                                        {{ card.model }}
+                                    </dd>
+                                }
+                                <dt>{{ 'AGENT_STAGE_PLAN_EDITOR.SKILLS' | translate }}</dt>
+                                <dd
+                                    class="flex flex-wrap gap-1"
+                                    data-testid="stage-card-ran-skills"
+                                >
+                                    @for (name of card.skillNames; track name) {
+                                        <span class="stage-card__pill">{{ name }}</span>
+                                    } @empty {
+                                        <span class="ui-color-text-muted">
+                                            {{ 'AGENT_STAGE_PLAN_EDITOR.NONE' | translate }}
+                                        </span>
+                                    }
+                                </dd>
+                                @if (card.maxTurns) {
+                                    <dt>{{ 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS' | translate }}</dt>
+                                    <dd data-testid="stage-card-ran-turns">{{ card.maxTurns }}</dd>
+                                }
+                            </dl>
+                        </div>
+                    }
+                    @if (card.modelFallbackFrom) {
+                        <div
+                            class="ui-color-orange"
+                            [attr.data-testid]="'stage-card-model-fallback-' + card.stage"
+                        >
+                            {{
+                                'AGENT.TIMELINE.MODEL_FALLBACK'
+                                    | translate
+                                        : { requested: card.modelFallbackFrom, used: card.model }
+                            }}
+                        </div>
+                    }
+                    @if (wikiStage(); as wiki) {
+                        <app-run-wiki-stage class="stage-card__block" [stage]="wiki" />
+                    }
+                }
+                @case (AgentStageCardBody.Plan) {
+                    @if (planRow(); as row) {
+                        <app-agent-stage-plan-form
+                            [row]="row"
+                            [skills]="skills()"
+                            [models]="models()"
+                            [maxTurnsLimit]="maxTurnsLimit()"
+                            [saveState]="saveState()"
+                            [isDefaultsHintShown]="true"
+                            (skillToggled)="skillToggled.emit($event)"
+                            (modelPicked)="modelPicked.emit($event)"
+                            (maxTurnsChanged)="maxTurnsChanged.emit($event)"
+                        />
+                    }
+                }
+            }
+        </div>
+    }
+</section>

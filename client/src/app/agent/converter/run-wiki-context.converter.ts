@@ -75,8 +75,6 @@ export abstract class RunWikiContextConverter {
                 .flatMap(read => read.pages ?? [])
                 .map(page => RunWikiContextConverter.toIndexPage(page, idProject)),
             calls: [...calls.values()],
-            openedCount: opened.length,
-            searchCount: [...calls.values()].filter(call => call.isSearch).length,
             openedTokens: opened.reduce((sum, page) => sum + page.tokens, 0)
         };
     }

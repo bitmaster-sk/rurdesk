@@ -42,6 +42,10 @@ export interface AgentStageProgress {
     model?: string | null;
     maxTurns?: number | null;
     modelFallbackFrom?: string | null;
+    attempts: number;
+    tokensUsed: number;
+    toolCallsCount: number;
+    durationMs: number;
 }
 
 export interface AgentStagePlan {
@@ -77,6 +81,11 @@ export interface RunStats {
     attemptsPerStage: Record<string, number>;
     failedAttempts: number;
     tokensByModel: Record<string, number>;
+}
+
+export interface AgentStatsNotice {
+    idRun: number;
+    stats?: RunStats;
 }
 
 export interface RunChoices {

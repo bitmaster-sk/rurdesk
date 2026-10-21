@@ -1,0 +1,140 @@
+@let wiki = stage();
+<div class="run-wiki-stage" data-testid="run-wiki-stage">
+    <div class="run-wiki-stage__title flex items-center gap-1">
+        <tabler-icon icon="book-2" [size]="14" />
+        {{ 'AGENT.WIKI.TITLE' | translate }}
+    </div>
+    @if (wiki.prompt.length > 0) {
+        <div class="run-wiki-stage__label">
+            {{ 'AGENT.WIKI.PROMPT' | translate }}
+        </div>
+        <ul class="run-wiki-stage__list">
+            @for (page of wiki.prompt; track page.key) {
+                <li class="run-wiki-stage__item" data-testid="run-wiki-prompt-page">
+                    <tabler-icon icon="file-text" [size]="14" class="run-wiki-stage__icon" />
+                    <ng-container
+                        [ngTemplateOutlet]="pageLink"
+                        [ngTemplateOutletContext]="{ $implicit: page }"
+                    />
+                    <span class="run-wiki-stage__meta">
+                        @if (page.versionNo) {
+                            v{{ page.versionNo }}
+                        }
+                    </span>
+                    <ui-tag
+                        [value]="
+                            (page.isAlways ? 'AGENT.WIKI.ALWAYS' : 'AGENT.WIKI.LINKED') | translate
+                        "
+                        [severity]="page.isAlways ? 'info' : 'secondary'"
+                    ></ui-tag>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (wiki.calls.length > 0) {
+        <div class="run-wiki-stage__label" data-testid="run-wiki-looked-up">
+            {{ 'AGENT.WIKI.MCP_TITLE' | translate }}
+            @if (wiki.openedTokens > 0) {
+                · {{ 'AGENT.WIKI.TOKENS' | translate: { count: wiki.openedTokens | number } }}
+            }
+        </div>
+        <ul class="run-wiki-stage__list">
+            @for (call of wiki.calls; track call.idCall) {
+                @if (call.isSearch) {
+                    <li class="run-wiki-stage__search" data-testid="run-wiki-call">
+                        <div class="run-wiki-stage__item">
+                            <tabler-icon icon="search" [size]="14" class="run-wiki-stage__icon" />
+                            <span class="run-wiki-stage__page truncate">
+                                {{ 'AGENT.WIKI.SEARCHED' | translate: { query: call.target } }}
+                            </span>
+                            <span class="run-wiki-stage__meta"></span>
+                            <span class="run-wiki-stage__meta">
+                                {{ 'AGENT.WIKI.RESULTS' | translate: { count: call.pages.length } }}
+                            </span>
+                        </div>
+                        @for (page of call.pages; track page.key) {
+                            <div class="run-wiki-stage__item run-wiki-stage__item--result">
+                                <span></span>
+                                <ng-container
+                                    [ngTemplateOutlet]="pageLink"
+                                    [ngTemplateOutletContext]="{
+                                        $implicit: page
+                                    }"
+                                />
+                            </div>
+                        }
+                    </li>
+                } @else {
+                    @for (page of call.pages; track page.key) {
+                        <li class="run-wiki-stage__item" data-testid="run-wiki-call">
+                            <tabler-icon
+                                icon="file-text"
+                                [size]="14"
+                                class="run-wiki-stage__icon"
+                            />
+                            <ng-container
+                                [ngTemplateOutlet]="pageLink"
+                                [ngTemplateOutletContext]="{ $implicit: page }"
+                            />
+                            <span class="run-wiki-stage__meta">v{{ page.versionNo }}</span>
+                            <span class="run-wiki-stage__meta">
+                                {{
+                                    'AGENT.WIKI.TOKENS' | translate: { count: page.tokens | number }
+                                }}
+                            </span>
+                        </li>
+                    } @empty {
+                        <li class="run-wiki-stage__item" data-testid="run-wiki-call">
+                            <tabler-icon icon="file-off" [size]="14" class="run-wiki-stage__icon" />
+                            <span class="run-wiki-stage__meta truncate">
+                                {{ call.target }}
+                            </span>
+                        </li>
+                    }
+                }
+            }
+        </ul>
+    }
+
+    @if (wiki.index.length > 0) {
+        <button
+            type="button"
+            class="run-wiki-stage__toggle run-wiki-stage__index-toggle flex items-center gap-2 ui-color-text-muted"
+            data-testid="run-wiki-index"
+            [attr.aria-expanded]="isIndexOpen()"
+            (click)="onToggleIndex()"
+        >
+            <tabler-icon
+                [icon]="isIndexOpen() ? 'chevron-down' : 'chevron-right'"
+                [size]="14"
+                class="run-wiki-stage__icon"
+            />
+            {{ 'AGENT.WIKI.INDEX' | translate: { count: wiki.index.length } }}
+        </button>
+        @if (isIndexOpen()) {
+            <div class="run-wiki-stage__hint ui-color-text-muted">
+                {{ 'AGENT.WIKI.INDEX_HINT' | translate }}
+            </div>
+            <ul class="run-wiki-stage__list" data-testid="run-wiki-index-list">
+                @for (page of wiki.index; track page.key) {
+                    <li class="run-wiki-stage__item">
+                        <tabler-icon icon="file-text" [size]="14" class="run-wiki-stage__icon" />
+                        <ng-container
+                            [ngTemplateOutlet]="pageLink"
+                            [ngTemplateOutletContext]="{ $implicit: page }"
+                        />
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
+<ng-template #pageLink let-page>
+    @if (page.link) {
+        <a [routerLink]="page.link" class="run-wiki-stage__page truncate">{{ page.title }}</a>
+    } @else {
+        <span class="run-wiki-stage__page truncate">{{ page.title }}</span>
+    }
+</ng-template>

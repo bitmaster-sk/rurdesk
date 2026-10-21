@@ -10,6 +10,7 @@ import {
     AgentStagePlanEditorRow
 } from '../../entity/agent-stage-plan-editor.entity';
 import { AgentStage } from '../../model/agent-stage.enum';
+import { AgentStagePlanFormComponent } from '../agent-stage-plan-form/agent-stage-plan-form.component';
 import { AgentStagePlanEditorComponent } from './agent-stage-plan-editor.component';
 
 const SKILLS = [
@@ -49,7 +50,7 @@ describe('AgentStagePlanEditorComponent (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [UiModule, FormsModule, TranslateModule.forRoot(), TablerIconStub],
-            declarations: [AgentStagePlanEditorComponent]
+            declarations: [AgentStagePlanEditorComponent, AgentStagePlanFormComponent]
         }).compileComponents();
         fixture = TestBed.createComponent(AgentStagePlanEditorComponent);
         root = fixture.nativeElement as HTMLElement;
@@ -114,17 +115,5 @@ describe('AgentStagePlanEditorComponent (browser)', () => {
         );
         expect(Dom.byTestId(root, `stage-plan-toggle-${AgentStage.Design}`)).toBeNull();
         expect(Dom.byTestId(root, `stage-plan-summary-${AgentStage.Design}`)).toBeNull();
-    });
-
-    it('a started stage keeps its summary but cannot be opened', () => {
-        render([row(AgentStage.Design, { idsSkill: [1], lock: AgentStagePlanEditorLock.Started })]);
-
-        expect(Dom.text(root, `stage-plan-locked-${AgentStage.Design}`)).toBe(
-            'AGENT_STAGE_PLAN_EDITOR.STARTED'
-        );
-        expect(Dom.byTestId(root, `stage-plan-toggle-${AgentStage.Design}`)).toBeNull();
-        expect(Dom.text(root, `stage-plan-summary-skills-${AgentStage.Design}`)).toBe(
-            'Verification rules'
-        );
     });
 });
