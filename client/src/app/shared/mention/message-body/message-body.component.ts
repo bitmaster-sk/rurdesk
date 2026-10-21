@@ -22,6 +22,7 @@ export type RenderSegment =
     | { type: 'diff'; content: string }
     | { type: 'mockup'; content: string; title?: string; ref: string }
     | { type: 'mermaid'; content: string }
+    | { type: 'plantuml'; content: string }
     | { type: 'text'; content: string };
 
 const AGENT_KINDS = new Set<MessageKind>([
@@ -102,11 +103,12 @@ export class MessageBodyComponent {
         const kind = this.messageKind();
         const isAgentKind = kind !== undefined && AGENT_KINDS.has(kind);
 
-        // Agent messages split diff/mockup/mermaid fences; user messages split
-        // mermaid fences only — diff and mockup stay plain code blocks.
+        // Agent messages split diff/mockup/mermaid/plantuml fences; user messages
+        // split diagram fences (mermaid, plantuml) only — diff and mockup stay
+        // plain code blocks.
         const base = isAgentKind
             ? MessageSegmentParser.parse(this.body())
-            : MessageSegmentParser.parse(this.body(), 'mermaid');
+            : MessageSegmentParser.parse(this.body(), 'diagrams');
 
         const out: RenderSegment[] = [];
 
@@ -126,6 +128,10 @@ export class MessageBodyComponent {
             }
             if (seg.type === 'mermaid') {
                 out.push({ type: 'mermaid', content: seg.content });
+                continue;
+            }
+            if (seg.type === 'plantuml') {
+                out.push({ type: 'plantuml', content: seg.content });
                 continue;
             }
 

@@ -4,6 +4,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { filter } from 'rxjs/operators';
 import { UiSaveState } from '../../../ui/components/save-status/save-status-chip.component';
 import { SettingsApi } from 'src/app/core/settings/settings.api.service';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { VersionApi } from '../../api/version.api.service';
 import { MAX_AGENT_TURNS } from '../../constants/max-agent-turns';
 import { BuildInfo } from '../../model/build-info.model';
@@ -16,6 +17,7 @@ import { BuildInfo } from '../../model/build-info.model';
 })
 export class AdminSettingsComponent {
     private readonly settingsApi = inject(SettingsApi);
+    private readonly settingsStore = inject(SettingsStore);
     private readonly versionApi = inject(VersionApi);
     private readonly fb = inject(FormBuilder);
 
@@ -63,7 +65,8 @@ export class AdminSettingsComponent {
             agentMaxTurnsImplement: [
                 500,
                 [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
-            ]
+            ],
+            plantUmlServerUrl: ['', [Validators.maxLength(500)]]
         },
         { updateOn: 'blur' }
     );
@@ -102,6 +105,7 @@ export class AdminSettingsComponent {
         this.saveStatus.set(UiSaveState.Saving);
         this.settingsApi.update$(this.form.getRawValue()).subscribe({
             next: settings => {
+                this.settingsStore.set(settings);
                 this.form.patchValue(settings, { emitEvent: false });
                 this.lastSaved = JSON.stringify(this.form.getRawValue());
                 this.saveStatus.set(UiSaveState.Saved);

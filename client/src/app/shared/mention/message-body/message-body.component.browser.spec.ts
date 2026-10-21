@@ -25,6 +25,15 @@ class MermaidDiagramStub {
     public readonly source = input<string>('');
 }
 
+@Component({
+    selector: 'app-plantuml-diagram',
+    template: '<div data-testid="plantuml-stub">{{ source() }}</div>',
+    standalone: true
+})
+class PlantUmlDiagramStub {
+    public readonly source = input<string>('');
+}
+
 async function setup() {
     await TestBed.configureTestingModule({
         imports: [
@@ -37,7 +46,8 @@ async function setup() {
             TablerIconStub,
             AttachmentLightboxStub,
             DiffViewerStub,
-            MermaidDiagramStub
+            MermaidDiagramStub,
+            PlantUmlDiagramStub
         ],
         declarations: [MessageBodyComponent, MockupCardComponent]
     }).compileComponents();
@@ -111,6 +121,33 @@ describe('MessageBodyComponent (browser)', () => {
         expect(fixture.nativeElement.querySelectorAll('app-mermaid-diagram').length).toBe(1);
         const stub = fixture.nativeElement.querySelector('[data-testid="mermaid-stub"]');
         expect(stub.textContent).toContain('flowchart LR');
+    });
+
+    it('routes a Design message with a ```plantuml block to app-plantuml-diagram', async () => {
+        const body = 'Diagram:\n```plantuml\nAlice -> Bob: hi\n```';
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.componentRef.setInput('messageKind', MessageKind.Design);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelectorAll('app-plantuml-diagram').length).toBe(1);
+        const stub = fixture.nativeElement.querySelector('[data-testid="plantuml-stub"]');
+        expect(stub.textContent).toContain('Alice -> Bob: hi');
+    });
+
+    it('renders a ```plantuml block in a user comment as a diagram, not a code block', async () => {
+        const body = 'Flow:\n```plantuml\nAlice -> Bob: hi\n```\ndone.';
+        const fixture = TestBed.createComponent(MessageBodyComponent);
+        fixture.componentRef.setInput('body', body);
+        fixture.componentRef.setInput('messageKind', MessageKind.Comment);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelectorAll('app-plantuml-diagram').length).toBe(1);
+        expect(fixture.nativeElement.querySelectorAll('app-mermaid-diagram').length).toBe(0);
     });
 
     it('keeps a ```diff block in a user comment as plain text, not a diff viewer', async () => {

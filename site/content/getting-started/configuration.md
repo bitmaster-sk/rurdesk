@@ -207,6 +207,35 @@ The new value applies to the next upload without a restart.
 Your reverse proxy must accept request bodies at least that large — see
 [Installation](./installation.md#attachment-size-and-your-reverse-proxy).
 
+## PlantUML diagrams
+
+A fenced ` ```plantuml ` block in a wiki page, comment, chat message or task
+description renders through a PlantUML server. The tracker never renders
+diagrams itself: the API posts the diagram source to the server and returns
+the SVG, and the client never talks to the PlantUML server directly.
+
+Run the server next to the tracker on the same Docker network — no published
+port is needed, the tracker only has to reach it itself:
+
+```yaml
+services:
+    plantuml:
+        image: plantuml/plantuml-server:jetty-v1.2026.8
+        container_name: rurdesk_plantuml
+        networks:
+            rurdesk_network:
+```
+
+Then an admin sets **PlantUML server URL** in **Admin → Settings** to
+`http://rurdesk_plantuml:8080` — the container's name. Like the attachment limit
+this is an application setting, not an environment variable: the new value
+applies without a restart. Left empty, PlantUML is off — blocks render as
+plain code and nothing is sent anywhere.
+
+> **Warning:** the server receives the full text of every rendered diagram.
+> Pointing it at a public rendering service means diagram text leaves your
+> network — run your own server for anything sensitive.
+
 ## Minimal example `docker/api/.env`
 
 ```env

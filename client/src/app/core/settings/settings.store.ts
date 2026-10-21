@@ -13,7 +13,8 @@ const FALLBACK: AppSettings = {
     agentThinkingMaxKb: 1024,
     attachmentMaxSizeMb: 25,
     agentMaxTurnsPlan: 250,
-    agentMaxTurnsImplement: 500
+    agentMaxTurnsImplement: 500,
+    plantUmlServerUrl: ''
 };
 
 @Injectable({ providedIn: 'root' })
@@ -27,8 +28,13 @@ export class SettingsStore {
     public readonly kanbanPageSize = (): number => this.settings().kanbanPageSize;
     public readonly ganttBacklogPageSize = (): number => this.settings().ganttBacklogPageSize;
     public readonly userApiKeyLimit = (): number => this.settings().userApiKeyLimit;
+    public readonly isPlantUmlEnabled = (): boolean => this.settings().plantUmlServerUrl !== '';
 
     public load(): void {
         this.api.load$().subscribe(settings => this.settings.set(settings));
+    }
+
+    public set(settings: AppSettings): void {
+        this.settings.set(settings);
     }
 }

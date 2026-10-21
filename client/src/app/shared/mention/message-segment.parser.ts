@@ -7,10 +7,11 @@ import { lexer, type Token, type Tokens } from 'marked';
  * diff string (without fences) rendered via `<app-diff-viewer [rawPatch]>`;
  * `mockup` segments carry raw HTML rendered via `<app-mockup-card [html]>`;
  * `mermaid` segments carry the diagram source (without fences) rendered via
- * `<app-mermaid-diagram [source]>`.
+ * `<app-mermaid-diagram [source]>`; `plantuml` segments likewise render via
+ * `<app-plantuml-diagram [source]>`.
  */
 export interface MessageSegment {
-    type: 'text' | 'diff' | 'mockup' | 'mermaid';
+    type: 'text' | 'diff' | 'mockup' | 'mermaid' | 'plantuml';
     content: string;
     /** Optional `title="…"` from a ```mockup fence info string. */
     title?: string;
@@ -20,18 +21,18 @@ export interface MessageSegment {
 }
 
 /** Which fence kinds a parse call recognizes; see `MessageSegmentParser.parse`. */
-export type FenceFilter = 'all' | 'mermaid';
+export type FenceFilter = 'all' | 'diagrams';
 
 export abstract class MessageSegmentParser {
     /**
-     * Split a markdown body into alternating text / diff / mockup / mermaid
-     * segments. Agent messages are markdown that may contain one or more
-     * ```diff, ```mockup or ```mermaid fenced blocks; the activity feed renders
+     * Split a markdown body into alternating text / diff / mockup / mermaid /
+     * plantuml segments. Agent messages are markdown that may contain one or more
+     * ```diff, ```mockup, ```mermaid or ```plantuml fenced blocks; the activity feed renders
      * each segment with the appropriate component (markdown for text, diff
      * viewer for diff, mockup card for mockup, mermaid diagram for mermaid).
      *
-     * `fences: 'mermaid'` recognizes only mermaid fences — used for user
-     * comments and chat messages, where diagrams are a first-class feature but
+     * `fences: 'diagrams'` recognizes only diagram fences (mermaid, plantuml) —
+     * used for user comments and chat messages, where diagrams are a first-class feature but
      * diff/mockup fences must stay plain code blocks.
      *
      * Fences are found with the marked lexer, so only top-level code blocks
@@ -99,17 +100,17 @@ export abstract class MessageSegmentParser {
     private static recognize(
         token: Token,
         fences: FenceFilter
-    ): { kind: 'diff' | 'mockup' | 'mermaid'; info: string; content: string } | null {
+    ): { kind: 'diff' | 'mockup' | 'mermaid' | 'plantuml'; info: string; content: string } | null {
         if (token.type !== 'code') {
             return null;
         }
         const code = token as Tokens.Code;
         const lang = code.lang ?? '';
-        const kind = lang.split(/\s+/)[0] as 'diff' | 'mockup' | 'mermaid';
+        const kind = lang.split(/\s+/)[0] as 'diff' | 'mockup' | 'mermaid' | 'plantuml';
         const allowed =
-            fences === 'mermaid'
-                ? kind === 'mermaid'
-                : kind === 'diff' || kind === 'mockup' || kind === 'mermaid';
+            fences === 'diagrams'
+                ? kind === 'mermaid' || kind === 'plantuml'
+                : kind === 'diff' || kind === 'mockup' || kind === 'mermaid' || kind === 'plantuml';
         if (!allowed) {
             return null;
         }

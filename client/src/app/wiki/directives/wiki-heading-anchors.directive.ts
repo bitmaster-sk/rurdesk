@@ -7,6 +7,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WikiAnchorConverter } from '../converter/wiki-anchor.converter';
 import { WikiMermaidDirective } from './wiki-mermaid.directive';
+import { WikiPlantUmlDirective } from './wiki-plantuml.directive';
 
 @Directive({
     selector: '[appWikiHeadingAnchors]',
@@ -34,6 +35,9 @@ export class WikiHeadingAnchorsDirective {
         // Diagrams settle after `ready` and shift the page layout, so the
         // anchor scroll has to be repeated once they are rendered.
         inject(WikiMermaidDirective, { self: true, optional: true })
+            ?.settled.pipe(takeUntilDestroyed(destroyRef))
+            .subscribe(() => this.scrollTo(this.route.snapshot.fragment));
+        inject(WikiPlantUmlDirective, { self: true, optional: true })
             ?.settled.pipe(takeUntilDestroyed(destroyRef))
             .subscribe(() => this.scrollTo(this.route.snapshot.fragment));
     }

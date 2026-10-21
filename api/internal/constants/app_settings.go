@@ -13,6 +13,8 @@ const (
 	SettingAgentThinkingMaxKb       = "agent.thinking_max_kb"
 	SettingAgentMaxTurnsPlan        = "agent.max_turns_plan"
 	SettingAgentMaxTurnsImplement   = "agent.max_turns_implement"
+
+	SettingPlantUmlServerUrl = "plantuml.server_url"
 )
 
 // AppNumericSettingsSpec describes a known numeric setting: its default and inclusive bounds.
@@ -38,4 +40,9 @@ var KnownAppNumericSettings = map[string]AppNumericSettingsSpec{
 // KnownAppBoolSettings maps each known boolean setting to its default.
 var KnownAppBoolSettings = map[string]bool{
 	SettingIsAgentThinkingPersisted: true,
+}
+
+// KnownAppStringSettings maps each known string setting to its default.
+var KnownAppStringSettings = map[string]string{
+	SettingPlantUmlServerUrl: "",
 }

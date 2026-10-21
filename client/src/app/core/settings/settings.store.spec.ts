@@ -33,12 +33,36 @@ describe('SettingsStore', () => {
             agentThinkingMaxKb: 2048,
             attachmentMaxSizeMb: 40,
             agentMaxTurnsPlan: 300,
-            agentMaxTurnsImplement: 600
+            agentMaxTurnsImplement: 600,
+            plantUmlServerUrl: 'http://puml:8080'
         });
         store.load();
         expect(store.tablePageSize()).toBe(75);
         expect(store.kanbanPageSize()).toBe(30);
         expect(store.ganttBacklogPageSize()).toBe(40);
         expect(store.userApiKeyLimit()).toBe(25);
+    });
+
+    it('enables plantuml only when a server url is configured', () => {
+        const settings: AppSettings = {
+            tablePageSize: 50,
+            kanbanPageSize: 20,
+            ganttBacklogPageSize: 30,
+            sprintVelocityLimit: 10,
+            userApiKeyLimit: 10,
+            isAgentThinkingPersisted: true,
+            agentThinkingMaxKb: 1024,
+            attachmentMaxSizeMb: 25,
+            agentMaxTurnsPlan: 250,
+            agentMaxTurnsImplement: 500,
+            plantUmlServerUrl: ''
+        };
+        const off = build(settings);
+        off.store.load();
+        expect(off.store.isPlantUmlEnabled()).toBe(false);
+
+        const on = build({ ...settings, plantUmlServerUrl: 'http://puml:8080' });
+        on.store.load();
+        expect(on.store.isPlantUmlEnabled()).toBe(true);
     });
 });

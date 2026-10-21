@@ -130,6 +130,27 @@ shows an error box with the source text underneath, so you can see what went
 wrong and fix it. The page keeps the text exactly as you typed it, so the agent
 can still read and edit diagrams as plain text.
 
+### PlantUML
+
+A fenced code block tagged `plantuml` renders as a diagram too, through a
+PlantUML server — teams already writing PlantUML keep their diagrams:
+
+    ```plantuml
+    Alice -> Bob: hi
+    Bob --> Alice: hello
+    ```
+
+PlantUML works everywhere mermaid does: on the page, in the editor preview,
+in comments, chat messages and task descriptions. It needs a server, though:
+an admin sets its URL in **Admin → Settings** (see
+[Configuration](../getting-started/configuration.md#plantuml-diagrams)); while
+no server is configured the block stays a plain code block.
+
+When a PlantUML diagram is broken, the page shows the server's error message
+with the source text underneath, just like mermaid. The rendered diagram is an
+image, so links inside it are not clickable — showing the SVG as an image keeps
+scripts out.
+
 ## History
 
 Every save creates a new version with its author, time and note. Nothing is

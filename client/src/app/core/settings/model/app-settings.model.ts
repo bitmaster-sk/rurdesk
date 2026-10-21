@@ -9,6 +9,7 @@ export interface AppSettings {
     attachmentMaxSizeMb: number;
     agentMaxTurnsPlan: number;
     agentMaxTurnsImplement: number;
+    plantUmlServerUrl: string;
 }
 
 export type UpdateAppSettingsReq = Partial<AppSettings>;

@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { SettingsApi } from 'src/app/core/settings/settings.api.service';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { VersionApi } from '../../api/version.api.service';
 import { AdminSettingsComponent } from './admin-settings.component';
 
@@ -168,5 +169,87 @@ describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
 
         expect(update$).toHaveBeenCalledTimes(1);
         expect(update$.mock.calls[0][0]).toMatchObject({ agentMaxTurnsImplement: 900 });
+    });
+});
+
+describe('AdminSettingsComponent — plantuml server url (browser)', () => {
+    const loaded = {
+        tablePageSize: 50,
+        kanbanPageSize: 20,
+        ganttBacklogPageSize: 30,
+        sprintVelocityLimit: 10,
+        userApiKeyLimit: 10,
+        isAgentThinkingPersisted: true,
+        agentThinkingMaxKb: 1024,
+        attachmentMaxSizeMb: 25,
+        agentMaxTurnsPlan: 250,
+        agentMaxTurnsImplement: 500,
+        plantUmlServerUrl: 'http://puml:8080'
+    };
+
+    async function setup(update$ = vi.fn().mockReturnValue(of(loaded))) {
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [AdminSettingsComponent],
+            providers: [
+                { provide: SettingsApi, useValue: { load$: () => of(loaded), update$ } },
+                {
+                    provide: VersionApi,
+                    useValue: { load$: () => of({ version: 'dev', commit: 'unknown' }) }
+                }
+            ]
+        })
+            .overrideComponent(AdminSettingsComponent, {
+                set: {
+                    template: `<form [formGroup]="form"><input class="url" type="url" formControlName="plantUmlServerUrl" /></form>`
+                }
+            })
+            .compileComponents();
+        const fixture = TestBed.createComponent(AdminSettingsComponent);
+        fixture.detectChanges();
+        return {
+            fixture,
+            update$,
+            input: fixture.nativeElement.querySelector('.url') as HTMLInputElement,
+            store: TestBed.inject(SettingsStore)
+        };
+    }
+
+    it('loads the stored url into the field', async () => {
+        const { input } = await setup();
+        expect(input.value).toBe('http://puml:8080');
+    });
+
+    it('saves the edited url on blur', async () => {
+        const { fixture, update$, input } = await setup();
+
+        input.value = 'http://other:8080';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+
+        expect(update$).toHaveBeenCalledTimes(1);
+        expect(update$.mock.calls[0][0]).toMatchObject({ plantUmlServerUrl: 'http://other:8080' });
+    });
+
+    it('applies every saved url to SettingsStore without a reload', async () => {
+        const update$ = vi
+            .fn()
+            .mockReturnValueOnce(of({ ...loaded, plantUmlServerUrl: 'http://saved:8080' }))
+            .mockReturnValueOnce(of({ ...loaded, plantUmlServerUrl: '' }));
+        const { fixture, input, store } = await setup(update$);
+        expect(store.isPlantUmlEnabled()).toBe(false);
+
+        input.value = 'http://saved:8080';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+        expect(store.isPlantUmlEnabled()).toBe(true);
+
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+        expect(store.isPlantUmlEnabled()).toBe(false);
     });
 });

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -61,10 +62,10 @@ func TestAppSettings_UpdateValidatesAndSwaps(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 9999}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 9999}, nil, nil); err == nil {
 		t.Fatal("expected out-of-range error")
 	}
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 100}, nil); err != nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingTablePageSize: 100}, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if svc.TablePageSize() != 100 {
@@ -81,17 +82,17 @@ func TestAppSettings_UserApiKeyLimit(t *testing.T) {
 		t.Fatalf("want default 10, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 25}, nil); err != nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 25}, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := svc.UserApiKeyLimit(); got != 25 {
 		t.Fatalf("want 25 after update, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 0}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 0}, nil, nil); err == nil {
 		t.Fatal("expected out-of-range error for 0")
 	}
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 101}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingUserApiKeyLimit: 101}, nil, nil); err == nil {
 		t.Fatal("expected out-of-range error for 101")
 	}
 }
@@ -109,7 +110,7 @@ func TestAppSettings_BoolSettingRoundTripsAsBoolean(t *testing.T) {
 	}
 
 	boolChanges := map[string]bool{constants.SettingIsAgentThinkingPersisted: false}
-	if err := svc.Update(context.Background(), nil, boolChanges); err != nil {
+	if err := svc.Update(context.Background(), nil, boolChanges, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -141,31 +142,89 @@ func TestAppSettings_AttachmentMaxSizeMb(t *testing.T) {
 		t.Fatalf("want default 25, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 40}, nil); err != nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 40}, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	if got := svc.AttachmentMaxSizeMb(); got != 40 {
 		t.Fatalf("want 40 after update, got %d", got)
 	}
 
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 0}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 0}, nil, nil); err == nil {
 		t.Fatal("expected out-of-range error for 0")
 	}
-	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 101}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAttachmentMaxSizeMb: 101}, nil, nil); err == nil {
 		t.Fatal("expected out-of-range error for 101")
 	}
 }
 
 func TestAppSettings_UpdateRejectsUnknownBoolSetting(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
-	if err := svc.Update(context.Background(), nil, map[string]bool{"agent.bogus": true}); err == nil {
+	if err := svc.Update(context.Background(), nil, map[string]bool{"agent.bogus": true}, nil); err == nil {
 		t.Fatal("expected unknown-key error")
 	}
 }
 
 func TestAppSettings_UpdateRejectsUnknownKey(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
-	if err := svc.Update(context.Background(), map[string]int{"pagination.bogus": 10}, nil); err == nil {
+	if err := svc.Update(context.Background(), map[string]int{"pagination.bogus": 10}, nil, nil); err == nil {
+		t.Fatal("expected unknown-key error")
+	}
+}
+
+func TestAppSettings_PlantUmlServerUrlRoundTrips(t *testing.T) {
+	store := &fakeStore{data: map[string]string{}}
+	svc := NewAppSettingsService(store)
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.PlantUmlServerUrl(); got != "" {
+		t.Fatalf("want empty default, got %q", got)
+	}
+	changes := map[string]string{constants.SettingPlantUmlServerUrl: " http://render.local:8080/ "}
+	if err := svc.Update(context.Background(), nil, nil, changes); err != nil {
+		t.Fatal(err)
+	}
+	if got := store.upserted[constants.SettingPlantUmlServerUrl]; got != `"http://render.local:8080"` {
+		t.Fatalf("want json-quoted trimmed url persisted, got %q", got)
+	}
+	if got := svc.PlantUmlServerUrl(); got != "http://render.local:8080" {
+		t.Fatalf("want unquoted url after reload, got %q", got)
+	}
+}
+
+func TestAppSettings_PlantUmlServerUrlFallsBackToDefaultWhenStoredValueIsGarbage(t *testing.T) {
+	store := &fakeStore{data: map[string]string{constants.SettingPlantUmlServerUrl: "not-json{"}}
+	svc := NewAppSettingsService(store)
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.PlantUmlServerUrl(); got != "" {
+		t.Fatalf("want default when the stored value does not parse as JSON, got %q", got)
+	}
+}
+
+func TestAppSettings_PlantUmlServerUrlValidation(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"ftp://x", "nieco", "http://", strings.Repeat("https://a", 56)} {
+		changes := map[string]string{constants.SettingPlantUmlServerUrl: bad}
+		if err := svc.Update(context.Background(), nil, nil, changes); err == nil {
+			t.Fatalf("expected error for %q", bad)
+		}
+	}
+	if err := svc.Update(context.Background(), nil, nil, map[string]string{constants.SettingPlantUmlServerUrl: ""}); err != nil {
+		t.Fatalf("empty value must be allowed (plantuml off): %v", err)
+	}
+}
+
+func TestAppSettings_UpdateRejectsUnknownStringSetting(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Update(context.Background(), nil, nil, map[string]string{"plantuml.bogus": "x"}); err == nil {
 		t.Fatal("expected unknown-key error")
 	}
 }

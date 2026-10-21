@@ -1285,6 +1285,11 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		plantUmlController, err := GetPlantUmlController()
+		if err != nil {
+			return nil, err
+		}
+
 		sprintController, err := GetSprintController()
 		if err != nil {
 			return nil, err
@@ -1357,6 +1362,7 @@ func GetRouter() (*router.Router, error) {
 			GetProjectSkillController(),
 			GetAgentOverviewController(),
 			appSettingsController,
+			plantUmlController,
 			GetLicenseController(),
 			apiKeyController,
 			GetHealthController(),
@@ -1493,4 +1499,32 @@ func GetWikiController() *controller.WikiController {
 		return controller.NewWikiController(GetWikiService()), nil
 	})
 	return instance.(*controller.WikiController)
+}
+
+func GetPlantUmlService() (*service.PlantUmlService, error) {
+	instance, err := di.GetWithNew("plantuml-service", func() (any, error) {
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
+		return service.NewPlantUmlService(settings, mustCache()), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*service.PlantUmlService), nil
+}
+
+func GetPlantUmlController() (*controller.PlantUmlController, error) {
+	instance, err := di.GetWithNew("plantuml-controller", func() (any, error) {
+		svc, err := GetPlantUmlService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewPlantUmlController(svc), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.PlantUmlController), nil
 }
