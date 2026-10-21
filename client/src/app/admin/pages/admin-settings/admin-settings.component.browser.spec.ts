@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { SettingsApi } from 'src/app/core/settings/settings.api.service';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { VersionApi } from '../../api/version.api.service';
 import { AdminSettingsComponent } from './admin-settings.component';
 
@@ -186,8 +187,7 @@ describe('AdminSettingsComponent — plantuml server url (browser)', () => {
         plantUmlServerUrl: 'http://puml:8080'
     };
 
-    async function setup() {
-        const update$ = vi.fn().mockReturnValue(of(loaded));
+    async function setup(update$ = vi.fn().mockReturnValue(of(loaded))) {
         await TestBed.configureTestingModule({
             imports: [ReactiveFormsModule],
             declarations: [AdminSettingsComponent],
@@ -210,7 +210,8 @@ describe('AdminSettingsComponent — plantuml server url (browser)', () => {
         return {
             fixture,
             update$,
-            input: fixture.nativeElement.querySelector('.url') as HTMLInputElement
+            input: fixture.nativeElement.querySelector('.url') as HTMLInputElement,
+            store: TestBed.inject(SettingsStore)
         };
     }
 
@@ -229,5 +230,26 @@ describe('AdminSettingsComponent — plantuml server url (browser)', () => {
 
         expect(update$).toHaveBeenCalledTimes(1);
         expect(update$.mock.calls[0][0]).toMatchObject({ plantUmlServerUrl: 'http://other:8080' });
+    });
+
+    it('applies every saved url to SettingsStore without a reload', async () => {
+        const update$ = vi
+            .fn()
+            .mockReturnValueOnce(of({ ...loaded, plantUmlServerUrl: 'http://saved:8080' }))
+            .mockReturnValueOnce(of({ ...loaded, plantUmlServerUrl: '' }));
+        const { fixture, input, store } = await setup(update$);
+        expect(store.isPlantUmlEnabled()).toBe(false);
+
+        input.value = 'http://saved:8080';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+        expect(store.isPlantUmlEnabled()).toBe(true);
+
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+        expect(store.isPlantUmlEnabled()).toBe(false);
     });
 });

@@ -33,4 +33,8 @@ export class SettingsStore {
     public load(): void {
         this.api.load$().subscribe(settings => this.settings.set(settings));
     }
+
+    public set(settings: AppSettings): void {
+        this.settings.set(settings);
+    }
 }

@@ -65,7 +65,6 @@ export class PlantUmlDiagramComponent {
 
     private applySource(source: string): void {
         this.clearTimer();
-        // The disabled state is decided only here — callers stay oblivious, and no request may fire.
         if (!this.settings.isPlantUmlEnabled()) {
             this.settle({ kind: 'disabled' });
             return;

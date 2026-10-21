@@ -33,10 +33,7 @@ export class PlantUmlRenderService {
         });
     }
 
-    // Failure results are not cached: a syntax fix or the server coming back
-    // must be able to produce a different outcome on the next render.
-    // ErrorInterceptor rethrows a spread of HttpErrorResponse (not an instanceof),
-    // so the status and body are read off the raw object instead.
+    // ErrorInterceptor rethrows a plain spread, not an HttpErrorResponse.
     private toError(err: unknown): PlantUmlResult {
         const status = (err as { status?: unknown } | null | undefined)?.status;
         if (typeof status === 'number' && status === 422) {
