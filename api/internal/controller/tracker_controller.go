@@ -20,6 +20,9 @@ import (
 const maxTrackedSeconds int64 = 24 * 3600
 
 func validateTrackTimes(tracked *int64, startAt *time.Time, endAt *time.Time) error {
+	if startAt != nil && startAt.After(time.Now().UTC()) {
+		return errors.New("startAt must not be in the future")
+	}
 	if tracked != nil {
 		if *tracked < 0 {
 			return errors.New("tracked duration must not be negative")
@@ -44,6 +47,29 @@ func validateTrackTimes(tracked *int64, startAt *time.Time, endAt *time.Time) er
 		return errors.New("tracked duration exceeds the maximum of 86400 seconds")
 	}
 	return nil
+}
+
+func resolveTrackTimes(t *model.Track, now time.Time) {
+	if t.Tracked != nil {
+		if t.StartAt != nil {
+			endAt := t.StartAt.Add(time.Duration(*t.Tracked) * time.Second)
+			t.EndAt = &endAt
+			return
+		}
+		endAt := now
+		if t.EndAt != nil {
+			endAt = *t.EndAt
+		}
+		startAt := endAt.Add(-time.Duration(*t.Tracked) * time.Second)
+		t.EndAt = &endAt
+		t.StartAt = &startAt
+		return
+	}
+	if t.EndAt == nil {
+		t.EndAt = &now
+	}
+	tracked := int64(t.EndAt.Sub(*t.StartAt).Seconds())
+	t.Tracked = &tracked
 }
 
 type TrackerController struct {
@@ -399,22 +425,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 			Note:    dto.Note,
 		}
 
-		if t.Tracked != nil {
-			endAt := time.Now().UTC()
-			if t.EndAt != nil {
-				endAt = *t.EndAt
-			}
-			startAt := endAt.Add(-time.Duration(*t.Tracked) * time.Second)
-			t.EndAt = &endAt
-			t.StartAt = &startAt
-		} else {
-			if t.EndAt == nil {
-				endAt := time.Now().UTC()
-				t.EndAt = &endAt
-			}
-			tracked := int64(t.EndAt.Sub(*t.StartAt).Seconds())
-			t.Tracked = &tracked
-		}
+		resolveTrackTimes(t, time.Now().UTC())
 
 		var err error
 		track, err = tc.trackerRepo.InsertTrack(ctx, t)
@@ -483,22 +494,7 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 		t.EndAt = dto.EndAt
 		t.Note = dto.Note
 
-		if t.Tracked != nil {
-			endAt := time.Now().UTC()
-			if t.EndAt != nil {
-				endAt = *t.EndAt
-			}
-			startAt := endAt.Add(-time.Duration(*t.Tracked) * time.Second)
-			t.EndAt = &endAt
-			t.StartAt = &startAt
-		} else {
-			if t.EndAt == nil {
-				endAt := time.Now().UTC()
-				t.EndAt = &endAt
-			}
-			tracked := int64(t.EndAt.Sub(*t.StartAt).Seconds())
-			t.Tracked = &tracked
-		}
+		resolveTrackTimes(t, time.Now().UTC())
 
 		track, err = tc.trackerRepo.UpdateTrack(ctx, t)
 		if err != nil {
