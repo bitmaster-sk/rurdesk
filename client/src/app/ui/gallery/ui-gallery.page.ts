@@ -159,6 +159,7 @@ export class UiGalleryPage {
     protected datetimeValue: Date | null = new Date(2026, 6, 3, 14, 30);
     protected rangeValue: Date[] | null = null;
     protected inlineValue: Date | null = new Date(2026, 6, 3);
+    protected readonly today = new Date();
 
     // date-range-select demo data
     protected readonly dateRangePresets = [

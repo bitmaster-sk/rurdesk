@@ -5,6 +5,7 @@ import {
     NgZone,
     OnDestroy,
     booleanAttribute,
+    effect,
     forwardRef,
     inject,
     input,
@@ -62,6 +63,7 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
     public readonly inline = input(false, { transform: booleanAttribute });
     /** Invalid styling, mirrors `[uiInput]`. */
     public readonly invalid = input(false, { transform: booleanAttribute });
+    public readonly maxDate = input<Date | null>(null);
 
     /** Fires once flatpickr has built its calendar DOM. Lets a host overlay
      *  reposition after the (lazily-imported) calendar actually exists — otherwise
@@ -73,6 +75,15 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
 
     private onChange: (value: UiDatepickerValue) => void = () => {};
     private onTouch: () => void = () => {};
+
+    public constructor() {
+        effect(() => {
+            const value = this.maxDate();
+            if (this.fp) {
+                this.fp.set('maxDate', value ?? undefined);
+            }
+        });
+    }
 
     // Buffered state written before the (lazily-loaded) flatpickr instance exists.
     private pending: UiDatepickerValue | undefined = undefined;
@@ -149,6 +160,7 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
             time_24hr: false, // locale/12h
             mode: isRange ? 'range' : 'single',
             inline: this.inline(),
+            maxDate: this.maxDate() ?? undefined,
             formatDate: (date: Date) => UiDate.format(date, pattern),
             parseDate: (str: string) => UiDate.parse(str, pattern),
             onChange: (selectedDates: Date[]) => this.zone.run(() => this.emit(selectedDates)),
