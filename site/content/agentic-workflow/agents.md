@@ -101,20 +101,21 @@ override the run's model, so the design can run on a stronger model than the
 brainstorming. A stage without its own choice runs the run's model, and a run
 without a choice runs the gateway's default.
 
-While the run is going, **Edit** in the run card's **Stages** cell opens the
-same stage list as the dialog. You can change the skills, model and turn limit
-of any stage that has not started yet; a stage that is running or done is marked
-**started** and keeps what it ran with. The run's own model is set only when you assign the agent.
+While the run is going, each stage that has not started yet shows the same
+form as the dialog in its card on the run card. Changes save as you make them,
+and empty fields use the run's defaults. Once a stage starts, its card shows
+what it ran with and can no longer be changed. The run's own model is set only
+when you assign the agent.
 
 The dialog offers only the models the gateway reported when it last started. A
 gateway that has never reported (an older version, or one that has not started
 since the upgrade) shows no model choice and runs its own default. If the
 gateway stops offering a model between assigning and running a stage, the stage
-runs the gateway's default and the run timeline shows a warning naming both
+runs the gateway's default and its stage card shows a warning naming both
 models.
 
-The timeline shows the model each stage ran with, and the run's stats split the
-tokens by model.
+Each stage card shows the model the stage ran with. When a run used more than
+one model, the run block splits its tokens by model.
 
 ### Turn limits
 
@@ -170,13 +171,19 @@ A run advances through **phases**:
 | `cancelled`         | Run was cancelled                                |
 
 Each **stage** carries its own status: `pending`, `active`, `done`,
-`awaiting_approval`, `failed`, or `skipped`. The run card shows stage progress,
-which agent executed each stage (provenance), and timestamps.
+`awaiting_approval`, `failed`, or `skipped`. The run card starts with a block
+for the whole run: its model, workflow and start time, and its total tokens,
+duration and tool calls. Below it, every stage has its own card. The header of
+the card shows the stage's status, when it finished and how long it took. Open
+a stage that ran to see its attempts, tool calls and tokens, the model, skills
+and turn limit it ran with, and which agent executed it after a hand-off. The
+stage waiting for your review and the next stage to start are open from the
+start. A skipped stage is struck through and has nothing to open.
 
-![Agent run card — stage timeline and phase badge](../../site/assets/img/run-card.png)
+![Agent run card — run block, stage cards and phase badge](../../site/assets/img/run-card.png)
 
-The card also shows which [wiki](../using-the-tracker/wiki.md#what-the-agent-read)
-pages each stage got in its prompt and which ones the agent opened while it
+Each stage card also shows which [wiki](../using-the-tracker/wiki.md#what-the-agent-read)
+pages the stage got in its prompt and which ones the agent opened while it
 worked. Changes the agent proposes to the wiki appear as separate cards in the
 task's activity. You can approve them right away; they are published when the
 pull request is merged. See
@@ -297,8 +304,8 @@ re-posted — the run advances straight to the next stage with your choice.
 After the implement stage the agent pushes a branch, and **the tracker opens the
 PR/MR** for it through the project's [git integration](../using-the-tracker/git-integration.md)
 (works for GitHub, GitLab and Gitea — the agent never runs `gh`). The run exposes
-`prUrl`, `prId`, `prHostType`, and `branchName` — the card links straight to the
-PR for review.
+`prUrl`, `prId`, `prHostType`, and `branchName`. The task's pull request panel
+links to the PR.
 
 ![Run in pr_open with the PR link](../../site/assets/img/run-pr.png)
 

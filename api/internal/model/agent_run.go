@@ -54,6 +54,10 @@ type AgentStageProgress struct {
 	Model             *string `json:"model,omitempty"`
 	MaxTurns          *int    `json:"maxTurns,omitempty"`
 	ModelFallbackFrom *string `json:"modelFallbackFrom,omitempty"`
+	Attempts          int     `json:"attempts"`
+	TokensUsed        int     `json:"tokensUsed"`
+	ToolCallsCount    int     `json:"toolCallsCount"`
+	DurationMs        int     `json:"durationMs"`
 }
 
 type AgentRunEvent struct {

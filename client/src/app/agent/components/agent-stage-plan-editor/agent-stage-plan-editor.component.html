@@ -3,7 +3,6 @@
         <li
             class="stage-plan__stage"
             [class.stage-plan__stage--skipped]="row.lock === AgentStagePlanEditorLock.Skipped"
-            [uiSaveStatus]="saveStatus(row.stage)"
             [attr.data-testid]="'stage-plan-' + row.stage"
         >
             @if (row.lock) {
@@ -12,12 +11,7 @@
                         {{ stageLabel(row.stage) | translate }}
                     </span>
                     <ui-badge
-                        [value]="
-                            (row.lock === AgentStagePlanEditorLock.Skipped
-                                ? 'AGENT_STAGE_PLAN_EDITOR.SKIPPED'
-                                : 'AGENT_STAGE_PLAN_EDITOR.STARTED'
-                            ) | translate
-                        "
+                        [value]="'AGENT_STAGE_PLAN_EDITOR.SKIPPED' | translate"
                         severity="secondary"
                         [attr.data-testid]="'stage-plan-locked-' + row.stage"
                     />
@@ -43,67 +37,17 @@
             }
 
             @if (!row.lock && isOpen(row.stage)) {
-                <div class="stage-plan__edit flex flex-col gap-2 p-2">
-                    <div class="flex flex-col gap-1">
-                        <span class="ui-color-text-muted text-xs">
-                            {{ 'AGENT_STAGE_PLAN_EDITOR.SKILLS' | translate }}
-                        </span>
-                        <div class="flex flex-wrap gap-1">
-                            @for (skill of skills(); track skill.idSkill) {
-                                <button
-                                    type="button"
-                                    class="stage-plan__chip"
-                                    [class.stage-plan__chip--on]="isChosen(row, skill.idSkill)"
-                                    [attr.aria-pressed]="isChosen(row, skill.idSkill)"
-                                    [attr.data-testid]="'chip-' + skill.idSkill + '-' + row.stage"
-                                    (click)="onToggleSkill(row, skill.idSkill)"
-                                >
-                                    {{ skill.name }}
-                                </button>
-                            }
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="ui-color-text-muted text-xs">
-                            {{
-                                (models().length > 0
-                                    ? 'AGENT_STAGE_PLAN_EDITOR.MODEL_AND_TURNS'
-                                    : 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS'
-                                ) | translate
-                            }}
-                        </span>
-                        <div class="flex items-center gap-2">
-                            @if (models().length > 0) {
-                                <ui-select
-                                    class="min-w-0 flex-1"
-                                    size="small"
-                                    [showClear]="true"
-                                    [placeholder]="
-                                        'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT' | translate
-                                    "
-                                    [options]="models()"
-                                    [attr.data-testid]="'stage-model-' + row.stage"
-                                    [ngModel]="row.model"
-                                    [ngModelOptions]="{ standalone: true }"
-                                    (ngModelChange)="onPickModel(row, $event)"
-                                />
-                            }
-                            <input
-                                uiInput
-                                type="number"
-                                min="1"
-                                size="small"
-                                class="stage-plan__turns"
-                                [attr.max]="maxTurnsLimit()"
-                                [attr.aria-label]="'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS' | translate"
-                                [attr.data-testid]="'stage-turns-' + row.stage"
-                                [placeholder]="row.defaultMaxTurns ?? ''"
-                                [value]="row.maxTurns ?? ''"
-                                (change)="onMaxTurns(row, $event)"
-                            />
-                        </div>
-                    </div>
-                </div>
+                <app-agent-stage-plan-form
+                    class="stage-plan__edit p-2"
+                    [row]="row"
+                    [skills]="skills()"
+                    [models]="models()"
+                    [maxTurnsLimit]="maxTurnsLimit()"
+                    [saveState]="saveStatus(row.stage)"
+                    (skillToggled)="skillToggled.emit($event)"
+                    (modelPicked)="modelPicked.emit($event)"
+                    (maxTurnsChanged)="maxTurnsChanged.emit($event)"
+                />
             } @else if (row.lock !== AgentStagePlanEditorLock.Skipped) {
                 <dl
                     class="stage-plan__summary flex flex-col gap-1 px-2 pb-2 text-sm"

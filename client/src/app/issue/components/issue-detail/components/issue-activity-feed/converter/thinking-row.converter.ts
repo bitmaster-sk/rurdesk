@@ -11,7 +11,11 @@ export abstract class ThinkingRowConverter {
             run.stages?.find(stage => stage.status === 'active') ?? {
                 stage: '',
                 status: 'active',
-                at: run.startedAt
+                at: run.startedAt,
+                attempts: 0,
+                tokensUsed: 0,
+                toolCallsCount: 0,
+                durationMs: 0
             }
         );
     }

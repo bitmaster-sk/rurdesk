@@ -1,8 +1,7 @@
 import { AgentStage } from '../model/agent-stage.enum';
 
 export enum AgentStagePlanEditorLock {
-    Skipped = 'skipped',
-    Started = 'started'
+    Skipped = 'skipped'
 }
 
 export interface AgentStagePlanEditorRow {

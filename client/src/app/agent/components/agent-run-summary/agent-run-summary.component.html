@@ -1,0 +1,89 @@
+@let totals = stats();
+<div class="run-summary" data-testid="run-summary">
+    <div class="run-summary__kpis">
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.SIDEBAR.MODEL' | translate }}</span>
+            <span class="run-summary__value" data-testid="run-model">
+                {{ model() ?? ('AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT' | translate) }}
+            </span>
+        </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.WORKFLOW.LABEL' | translate }}</span>
+            <span class="run-summary__value flex items-center gap-2">
+                @if (canChangeWorkflow()) {
+                    <label
+                        class="flex items-center gap-2"
+                        [uiTooltip]="'AGENT.WORKFLOW.HINT' | translate"
+                    >
+                        <input
+                            type="checkbox"
+                            uiToggle
+                            data-testid="run-short-workflow"
+                            [checked]="isShortWorkflow()"
+                            [disabled]="isSavingWorkflow()"
+                            (click)="workflowToggled.emit($event)"
+                        />
+                        <span>{{ 'AGENT.WORKFLOW.SHORT' | translate }}</span>
+                    </label>
+                } @else {
+                    <span data-testid="run-workflow">
+                        {{
+                            (isShortWorkflow()
+                                ? 'AGENT.WORKFLOW.SHORT_VALUE'
+                                : 'AGENT.WORKFLOW.FULL_VALUE'
+                            ) | translate
+                        }}
+                    </span>
+                    @if (isWorkflowLockShown()) {
+                        <tabler-icon
+                            class="ui-color-text-muted"
+                            icon="lock"
+                            [size]="14"
+                            data-testid="run-workflow-locked"
+                            [uiTooltip]="'AGENT.WORKFLOW.LOCKED' | translate"
+                            [attr.aria-label]="'AGENT.WORKFLOW.LOCKED' | translate"
+                        />
+                    }
+                }
+            </span>
+        </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.SIDEBAR.STARTED' | translate }}</span>
+            <span class="run-summary__value">
+                @if (startedAt(); as startedAt) {
+                    {{ startedAt | date: 'MMM d, h:mm a' }}
+                } @else {
+                    —
+                }
+            </span>
+        </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.STATS.TOKENS' | translate }}</span>
+            <span class="run-summary__value" data-testid="run-tokens">
+                {{ totals ? (totals.totalTokensUsed | number) : '—' }}
+            </span>
+        </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.STATS.DURATION' | translate }}</span>
+            <span class="run-summary__value" data-testid="run-duration">
+                {{ duration() ?? '—' }}
+            </span>
+        </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.STATS.TOOL_CALLS' | translate }}</span>
+            <span class="run-summary__value" data-testid="run-tool-calls">
+                {{ totals ? (totals.totalToolCallsCount | number) : '—' }}
+            </span>
+        </div>
+    </div>
+    @if (modelRows().length > 0) {
+        <ul class="run-summary__models" data-testid="run-tokens-by-model">
+            @for (row of modelRows(); track row.model) {
+                <li class="flex justify-between gap-2" data-testid="run-model-tokens">
+                    <span class="run-summary__value--mono truncate">{{ row.model }}</span>
+                    <span>{{ row.tokens | number }}</span>
+                </li>
+            }
+        </ul>
+    }
+</div>

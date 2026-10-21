@@ -1,8 +1,9 @@
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 import { AgentRun, AgentStageProgress } from 'src/app/agent/model/agent-run.model';
 import { ThinkingRowConverter } from './thinking-row.converter';
+import { Fixtures } from 'src/testing/fixtures';
 
-function makeRun(phase: AgentPhase, stages: AgentStageProgress[] = []): AgentRun {
+function makeRun(phase: AgentPhase, stages: Partial<AgentStageProgress>[] = []): AgentRun {
     return {
         idRun: 5,
         idIssue: 1,
@@ -20,7 +21,7 @@ function makeRun(phase: AgentPhase, stages: AgentStageProgress[] = []): AgentRun
         startedAt: '2026-01-01T00:00:00Z',
         finishedAt: null,
         createdAt: '2026-01-01T00:00:00Z',
-        stages
+        stages: stages.map(stage => Fixtures.stageProgress(stage))
     };
 }
 
@@ -48,11 +49,9 @@ describe('ThinkingRowConverter', () => {
         it('stands in for a running run that has no active stage yet', () => {
             const stage = ThinkingRowConverter.toCurrentStage(makeRun(AgentPhase.InProgress));
 
-            expect(stage).toEqual({
-                stage: '',
-                status: 'active',
-                at: '2026-01-01T00:00:00Z'
-            });
+            expect(stage).toEqual(
+                Fixtures.stageProgress({ stage: '', status: 'active', at: '2026-01-01T00:00:00Z' })
+            );
         });
     });
 
@@ -109,7 +108,7 @@ describe('ThinkingRowConverter', () => {
         });
 
         it('puts the current stage last and marks it live', () => {
-            const current: AgentStageProgress = { stage: 'implementation', status: 'active' };
+            const current = Fixtures.stageProgress({ stage: 'implementation', status: 'active' });
             const run = makeRun(AgentPhase.InProgress, [
                 {
                     stage: 'brainstorming',

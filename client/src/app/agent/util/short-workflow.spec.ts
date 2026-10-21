@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AgentStageProgress, AgentStageStatus, AgentStagePlan } from '../model/agent-run.model';
 import { ShortWorkflow } from './short-workflow';
+import { Fixtures } from 'src/testing/fixtures';
 
 function plan(skipped: string[]): AgentStagePlan {
     return {
@@ -11,7 +12,9 @@ function plan(skipped: string[]): AgentStagePlan {
 }
 
 function progress(statuses: Record<string, AgentStageStatus>): AgentStageProgress[] {
-    return Object.entries(statuses).map(([stage, status]) => ({ stage, status }));
+    return Object.entries(statuses).map(([stage, status]) =>
+        Fixtures.stageProgress({ stage, status })
+    );
 }
 
 describe('ShortWorkflow.isShort', () => {

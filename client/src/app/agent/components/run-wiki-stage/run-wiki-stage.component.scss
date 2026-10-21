@@ -1,14 +1,17 @@
-.wiki-context {
-    margin-top: var(--ui-space-m);
+.run-wiki-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     font-size: var(--font-size-s);
     line-height: 1.4;
 
     &__title {
-        font-size: 0.65rem;
+        margin-bottom: 2px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--ui-color-text-muted);
-        margin-bottom: 4px;
+        color: var(--ui-color-text);
     }
 
     &__toggle {
@@ -21,41 +24,14 @@
         font: inherit;
     }
 
-    &__toggle:hover &__stage-name {
-        color: var(--ui-color-primary);
-    }
-
-    &__stage-name {
-        flex-shrink: 0;
-        font-weight: 600;
-        color: var(--ui-color-text);
-    }
-
-    &__summary {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
     &__icon {
         display: inline-flex;
         flex-shrink: 0;
         color: var(--ui-color-text-muted);
     }
 
-    &__body {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        margin: 0 0 8px 22px;
-    }
-
     &__label {
-        margin-top: 6px;
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        margin-top: 4px;
         color: var(--ui-color-text-muted);
     }
 
@@ -102,7 +78,7 @@
         font-weight: 500;
     }
 
-    a.wiki-context__page:hover {
+    a.run-wiki-stage__page:hover {
         text-decoration: underline;
     }
 }

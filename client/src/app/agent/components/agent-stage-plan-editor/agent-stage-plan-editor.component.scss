@@ -76,28 +76,6 @@ div.stage-plan__head {
     background: var(--ui-surface-50);
 }
 
-.stage-plan__chip {
-    padding: 0.05rem 0.5rem;
-    border: 1px solid var(--ui-surface-300);
-    border-radius: 999px;
-    background: none;
-    color: inherit;
-    font: inherit;
-    font-size: var(--font-size-s);
-    cursor: pointer;
-}
-
-.stage-plan__chip--on {
-    border-color: var(--ui-brand-500);
-    background: var(--ui-select-option-selected-bg);
-    color: var(--ui-select-option-selected-fg);
-}
-
-.stage-plan__turns {
-    flex: none;
-    width: 5.5rem;
-}
-
 .stage-plan__summary dd {
     margin: 0;
 }

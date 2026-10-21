@@ -18,6 +18,14 @@ export class DurationFormatter {
         return formatDuration(duration, locale);
     }
 
+    public static millisecondsToString(milliseconds: number): string {
+        const seconds = Math.round(milliseconds / 1000);
+        if (seconds < 60) {
+            return `${seconds}s`;
+        }
+        return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+    }
+
     public static secondsToClock(seconds: number): string {
         const safe = Math.max(0, Math.floor(seconds));
         const parts = [Math.floor(safe / 3600), Math.floor((safe % 3600) / 60), safe % 60];

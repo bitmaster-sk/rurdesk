@@ -1,0 +1,68 @@
+<div
+    class="stage-plan-form flex flex-col gap-2"
+    [uiSaveStatus]="saveState()"
+    [attr.data-testid]="'stage-plan-form-' + row().stage"
+>
+    <div class="flex flex-col gap-1">
+        <span class="ui-color-text-muted text-xs">
+            {{ 'AGENT_STAGE_PLAN_EDITOR.SKILLS' | translate }}
+        </span>
+        <div class="flex flex-wrap gap-1">
+            @for (skill of skills(); track skill.idSkill) {
+                <button
+                    type="button"
+                    class="stage-plan-form__chip"
+                    [class.stage-plan-form__chip--on]="isChosen(skill.idSkill)"
+                    [attr.aria-pressed]="isChosen(skill.idSkill)"
+                    [attr.data-testid]="'chip-' + skill.idSkill + '-' + row().stage"
+                    (click)="onToggleSkill(skill.idSkill)"
+                >
+                    {{ skill.name }}
+                </button>
+            }
+        </div>
+    </div>
+    <div class="flex flex-col gap-1">
+        <span class="ui-color-text-muted text-xs">
+            {{
+                (models().length > 0
+                    ? 'AGENT_STAGE_PLAN_EDITOR.MODEL_AND_TURNS'
+                    : 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS'
+                ) | translate
+            }}
+        </span>
+        <div class="flex items-center gap-2">
+            @if (models().length > 0) {
+                <ui-select
+                    class="min-w-0 flex-1"
+                    size="small"
+                    [showClear]="true"
+                    [placeholder]="'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT' | translate"
+                    [options]="models()"
+                    [attr.data-testid]="'stage-model-' + row().stage"
+                    [ngModel]="row().model"
+                    [ngModelOptions]="{ standalone: true }"
+                    (ngModelChange)="onPickModel($event)"
+                />
+            }
+            <input
+                uiInput
+                type="number"
+                min="1"
+                size="small"
+                class="stage-plan-form__turns"
+                [attr.max]="maxTurnsLimit()"
+                [attr.aria-label]="'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS' | translate"
+                [attr.data-testid]="'stage-turns-' + row().stage"
+                [placeholder]="row().defaultMaxTurns ?? ''"
+                [value]="row().maxTurns ?? ''"
+                (change)="onMaxTurns($event)"
+            />
+        </div>
+    </div>
+    @if (isDefaultsHintShown()) {
+        <div class="stage-plan-form__hint ui-color-text-muted text-xs">
+            {{ 'AGENT_STAGE_PLAN_EDITOR.DEFAULTS_HINT' | translate }}
+        </div>
+    }
+</div>

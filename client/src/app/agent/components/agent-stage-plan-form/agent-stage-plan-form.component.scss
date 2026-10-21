@@ -1,0 +1,30 @@
+:host {
+    display: block;
+}
+
+.stage-plan-form__chip {
+    padding: 0.05rem 0.5rem;
+    border: 1px solid var(--ui-surface-300);
+    border-radius: 999px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-s);
+    cursor: pointer;
+}
+
+.stage-plan-form__chip--on {
+    border-color: var(--ui-brand-500);
+    background: var(--ui-select-option-selected-bg);
+    color: var(--ui-select-option-selected-fg);
+}
+
+.stage-plan-form__turns {
+    flex: none;
+    width: 5.5rem;
+}
+
+.stage-plan-form__hint {
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--ui-surface-200);
+}

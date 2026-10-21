@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FailedStageErrorConverter } from './failed-stage-error.converter';
 import { AgentStageProgress } from '../model/agent-run.model';
+import { Fixtures } from 'src/testing/fixtures';
 
 function stage(partial: Partial<AgentStageProgress>): AgentStageProgress {
-    return { stage: 'brainstorming', status: 'pending', ...partial };
+    return Fixtures.stageProgress(partial);
 }
 
 describe('FailedStageErrorConverter.toError', () => {

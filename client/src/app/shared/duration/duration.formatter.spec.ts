@@ -30,3 +30,10 @@ describe('DurationFormatter.secondsToClock', () => {
         expect(DurationFormatter.secondsToClock(-5)).toBe('00:00:00');
     });
 });
+
+describe('DurationFormatter.millisecondsToString', () => {
+    it('shows seconds under a minute and minutes with seconds above', () => {
+        expect(DurationFormatter.millisecondsToString(4200)).toBe('4s');
+        expect(DurationFormatter.millisecondsToString(99_000)).toBe('1m 39s');
+    });
+});

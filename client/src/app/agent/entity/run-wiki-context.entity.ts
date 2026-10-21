@@ -22,7 +22,5 @@ export interface RunWikiStage {
     prompt: RunWikiPromptPage[];
     index: RunWikiPage[];
     calls: RunWikiCall[];
-    openedCount: number;
-    searchCount: number;
     openedTokens: number;
 }

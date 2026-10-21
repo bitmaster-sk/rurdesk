@@ -1,0 +1,192 @@
+:host {
+    display: block;
+}
+
+.stage-card {
+    border: 1px solid var(--ui-surface-300);
+    border-radius: 0.5rem;
+    background: var(--ui-surface-0);
+}
+
+.stage-card__head {
+    padding: 0.5rem 0.625rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: var(--ui-surface-50);
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+}
+
+.stage-card__head--open {
+    border-bottom: 1px solid var(--ui-surface-200);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.stage-card__glyph {
+    display: inline-flex;
+    flex: none;
+    color: var(--ui-surface-400);
+}
+
+.stage-card--done .stage-card__glyph,
+.stage-card--active .stage-card__glyph {
+    color: var(--ui-brand-500);
+}
+
+.stage-card--awaiting_approval .stage-card__glyph {
+    color: var(--ui-amber-600);
+}
+
+.stage-card--active .stage-card__glyph {
+    animation: stage-card-spin 1.2s linear infinite;
+}
+
+.stage-card--failed .stage-card__glyph {
+    color: var(--ui-red-500);
+}
+
+@keyframes stage-card-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stage-card--active .stage-card__glyph {
+        animation: none;
+    }
+}
+
+.stage-card__name {
+    font-weight: 700;
+    line-height: 1.25rem;
+}
+
+.stage-card__status {
+    padding: 0 0.375rem;
+    border: 1px solid var(--ui-surface-200);
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    line-height: 1.1rem;
+    color: var(--ui-color-text-muted);
+    white-space: nowrap;
+}
+
+.stage-card__time {
+    font-size: var(--font-size-s);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--ui-color-text-muted);
+}
+
+.stage-card--awaiting_approval .stage-card__status {
+    border-color: var(--ui-amber-200);
+    background: var(--ui-amber-50);
+    color: var(--ui-amber-800);
+}
+
+.stage-card--pending .stage-card__name {
+    font-weight: 600;
+}
+
+.stage-card--skipped .stage-card__name {
+    font-weight: 400;
+    color: var(--ui-color-text-muted);
+    text-decoration: line-through;
+}
+
+.stage-card__tag {
+    padding: 0 0.375rem;
+    border-radius: 0.25rem;
+    background: var(--ui-surface-100);
+    font-size: 0.7rem;
+    color: var(--ui-color-text-muted);
+    white-space: nowrap;
+}
+
+.stage-card__tag--override {
+    border: 1px solid var(--ui-brand-100);
+    background: var(--ui-brand-50);
+    color: var(--ui-brand-700);
+}
+
+.stage-card__chevron {
+    display: inline-flex;
+    transition: transform 0.15s;
+
+    @media (prefers-reduced-motion: reduce) {
+        transition: none;
+    }
+}
+
+.stage-card__body {
+    padding: 0.625rem 0.75rem;
+    font-size: var(--font-size-s);
+}
+
+.stage-card__usage {
+    color: var(--ui-color-text-muted);
+    font-variant-numeric: tabular-nums;
+
+    b {
+        color: var(--ui-color-text);
+    }
+}
+
+.stage-card__facts {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    margin: 0;
+
+    dt {
+        color: var(--ui-color-text-muted);
+    }
+
+    dd {
+        margin: 0;
+        min-width: 0;
+    }
+}
+
+.stage-card__block {
+    display: block;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid var(--ui-surface-100);
+    border-radius: 0.375rem;
+    background: var(--ui-surface-50);
+}
+
+.stage-card__section {
+    margin-bottom: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-color-text);
+}
+
+.stage-card__mono {
+    font-family: var(--ui-font-mono);
+    font-size: 0.75rem;
+}
+
+.stage-card__pill {
+    padding: 0 0.5rem;
+    border: 1px solid var(--ui-brand-100);
+    border-radius: 999px;
+    background: var(--ui-brand-50);
+    font-size: 0.7rem;
+    color: var(--ui-brand-700);
+}

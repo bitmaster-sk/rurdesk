@@ -3,11 +3,13 @@ import {
     Component,
     DestroyRef,
     computed,
+    effect,
     inject,
     input,
     linkedSignal,
     output,
-    signal
+    signal,
+    untracked
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
@@ -25,72 +27,38 @@ import {
     AgentStagePlanSkillToggle
 } from '../../entity/agent-stage-plan-editor.entity';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
-import { UiPopoverComponent } from 'src/app/ui/components/popover/popover.component';
 import { AgentRunApi } from '../../api/agent-run.api.service';
-import { AgentRun, AgentStageProgress, AgentStageStatus } from '../../model/agent-run.model';
+import { AgentRun } from '../../model/agent-run.model';
 import {
     AgentPhase,
     PHASE_BADGE_SEVERITY,
     PHASE_LABELS,
     PhaseBadgeSeverity
 } from '../../model/agent-phase.enum';
-import { AgentStage, STAGE_LABELS } from '../../model/agent-stage.enum';
+import { AgentStage } from '../../model/agent-stage.enum';
 import { User } from 'src/app/auth/model/user.model';
-import { HostType } from 'src/app/project/model/git-integration.model';
-import { GitHostTerminology } from 'src/app/issue/util/git-host-terminology';
 import {
     FailedStageError,
     FailedStageErrorConverter
 } from '../../converter/failed-stage-error.converter';
 import { ShortWorkflow } from '../../util/short-workflow';
-import { SKILL_STAGES } from '../../constants/skill-stages.enum';
-
-interface TimelineRow {
-    stage: string;
-    label: string; // i18n key for the stage name
-    status: AgentStageStatus;
-    statusKey: string; // i18n key for the status text
-    glyph: string; // tabler icon name for the status
-    noteKey: string | null; // i18n key for the outcome note
-    attemptNo: number | null;
-    agentName: string | null; // executor agent — only surfaced when a hand-off occurred
-    at: string | null;
-    approvedAt: string | null;
-    model: string | null;
-    isModelPlanned: boolean;
-    modelFallbackFrom: string | null;
-}
-
-const STAGE_STATUS_KEY: Record<AgentStageStatus, string> = {
-    pending: 'AGENT.TIMELINE.STATUS.PENDING',
-    active: 'AGENT.TIMELINE.STATUS.ACTIVE',
-    done: 'AGENT.TIMELINE.STATUS.DONE',
-    awaiting_approval: 'AGENT.TIMELINE.STATUS.AWAITING_APPROVAL',
-    failed: 'AGENT.TIMELINE.STATUS.FAILED',
-    skipped: 'AGENT.TIMELINE.STATUS.SKIPPED'
-};
-
-const STAGE_STATUS_GLYPH: Record<AgentStageStatus, string> = {
-    pending: 'circle',
-    active: 'loader-2',
-    done: 'circle-check',
-    awaiting_approval: 'clock',
-    failed: 'alert-circle',
-    skipped: 'circle-minus'
-};
-
-const STAGE_NOTE_KEY: Record<string, string> = {
-    no_clarifications: 'AGENT.TIMELINE.NOTE.NO_CLARIFICATIONS',
-    submitted: 'AGENT.TIMELINE.NOTE.SUBMITTED',
-    pr_opened: 'AGENT.TIMELINE.NOTE.PR_OPENED'
-};
+import { AgentStageCardConverter } from '../../converter/agent-stage-card.converter';
+import { RunWikiContextConverter } from '../../converter/run-wiki-context.converter';
+import {
+    AgentStageCardBody,
+    AgentStageCardPlanEntry,
+    AgentStageCardView
+} from '../../entity/agent-stage-card.entity';
+import { RunWikiStage } from '../../entity/run-wiki-context.entity';
+import { AgentRunStatsStore } from '../../store/agent-run-stats.store';
 
 @Component({
     selector: 'app-agent-run-card',
     templateUrl: './agent-run-card.component.html',
     styleUrls: ['./agent-run-card.component.scss'],
     standalone: false,
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [AgentRunStatsStore]
 })
 export class AgentRunCardComponent {
     public readonly run = input<AgentRun | null>(null);
@@ -106,12 +74,12 @@ export class AgentRunCardComponent {
     private readonly skillApi = inject(SkillApi);
     private readonly toast = inject(ToastNotificationService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly runStats = inject(AgentRunStatsStore);
 
-    protected readonly isStagePlanPopoverOpen = signal(false);
     protected readonly runStagePlan = signal<AgentRunStagePlanRes | null>(null);
     protected readonly skillCatalog = signal<Skill[]>([]);
-    private stagePlanPopover: UiPopoverComponent | null = null;
     protected readonly stageStatus = signal<Record<string, UiSaveState>>({});
+    protected readonly stats = this.runStats.stats;
 
     protected readonly isEditable = computed(() => {
         const phase = this.run()?.phase;
@@ -182,14 +150,6 @@ export class AgentRunCardComponent {
         this.assigneeName() ? 'AGENT.CARD.PARKED_REASSIGNED' : 'AGENT.CARD.PARKED_UNASSIGNED'
     );
 
-    // Drives the PR / MR section title so the card calls the linked change a
-    // "Pull request" for github/gitea and "Merge request" for gitlab —
-    // matches the terminology each host uses in its own UI. Falls back to
-    // a generic label when prHostType is missing (older runs, edge cases).
-    protected readonly prMrTermKey = computed(() =>
-        GitHostTerminology.termKey((this.run()?.prHostType as HostType | null) ?? null)
-    );
-
     protected readonly isAwaitingInput = computed(
         () => this.run()?.phase === AgentPhase.AwaitingInput
     );
@@ -201,77 +161,105 @@ export class AgentRunCardComponent {
         FailedStageErrorConverter.toError(this.run()?.stages ?? [])
     );
 
-    private readonly stageLabel = STAGE_LABELS as Record<string, string>;
-
-    protected readonly stagePlanRows = computed<AgentStagePlanEditorRow[]>(() => {
-        const stagePlan = this.runStagePlan();
-        if (!stagePlan) {
-            return [];
-        }
-        return stagePlan.stages.map(entry => ({
-            stage: entry.name,
-            idsSkill: entry.idsSkill,
-            model: entry.model,
-            maxTurns: entry.maxTurns,
-            defaultMaxTurns:
-                entry.name === AgentStage.Implementation
-                    ? stagePlan.maxTurnsImplement
-                    : stagePlan.maxTurnsPlan,
-            lock: this.stagePlanLock(entry)
-        }));
-    });
     protected readonly runModel = computed(() => this.run()?.stagePlan?.model || null);
 
-    protected readonly timeline = computed<TimelineRow[]>(() => {
-        const stages = this.run()?.stages ?? [];
-        const plannedModel = this.plannedModelByStage();
-        // Agent provenance is only meaningful after a hand-off — i.e. when more
-        // than one distinct agent executed stages. For single-agent runs the label
-        // would be noise, so we suppress it.
-        const distinctAgents = new Set(
-            stages.map(s => s.idUserAgent).filter((id): id is number => id != null)
+    protected readonly stagePlanRows = computed(() => {
+        const rows = new Map<string, AgentStagePlanEditorRow>();
+        (this.runStagePlan()?.stages ?? []).forEach(entry =>
+            rows.set(entry.name, {
+                stage: entry.name,
+                idsSkill: entry.idsSkill,
+                model: entry.model,
+                maxTurns: entry.maxTurns,
+                defaultMaxTurns: this.defaultMaxTurns(entry.name),
+                lock: entry.skip ? AgentStagePlanEditorLock.Skipped : null
+            })
         );
-        const showAgent = distinctAgents.size > 1;
-        const users = this.usersMap();
-        return stages.map((s: AgentStageProgress) => ({
-            stage: s.stage,
-            label: this.stageLabel[s.stage] ?? s.stage,
-            status: s.status,
-            statusKey: STAGE_STATUS_KEY[s.status] ?? s.status,
-            glyph: STAGE_STATUS_GLYPH[s.status] ?? 'circle',
-            noteKey: s.note ? (STAGE_NOTE_KEY[s.note] ?? null) : null,
-            attemptNo: s.attemptNo && s.attemptNo > 1 ? s.attemptNo : null,
-            agentName:
-                showAgent && s.idUserAgent != null
-                    ? (users.get(s.idUserAgent)?.name ?? null)
-                    : null,
-            at: s.at ?? null,
-            approvedAt: s.approvedAt ?? null,
-            model: s.model ?? (s.status === 'pending' ? (plannedModel.get(s.stage) ?? null) : null),
-            isModelPlanned: !s.model && s.status === 'pending' && plannedModel.has(s.stage),
-            modelFallbackFrom: s.modelFallbackFrom ?? null
-        }));
+        return rows;
     });
 
-    private stagePlanLock(entry: AgentRunStagePlanEntry): AgentStagePlanEditorLock | null {
-        if (entry.skip) {
-            return AgentStagePlanEditorLock.Skipped;
+    protected readonly stageCards = computed<AgentStageCardView[]>(() => {
+        const run = this.run();
+        if (!run) {
+            return [];
         }
-        return entry.dispatched ? AgentStagePlanEditorLock.Started : null;
-    }
+        return AgentStageCardConverter.toViews({
+            stages: run.stages ?? [],
+            plan: this.cardPlan(run),
+            runModel: this.runModel(),
+            defaultMaxTurns: stage => this.defaultMaxTurns(stage),
+            skillNames: new Map(this.skillCatalog().map(skill => [skill.idSkill, skill.name])),
+            agentNames: new Map(
+                [...this.usersMap().values()].map(user => [user.idUser, user.name])
+            ),
+            isEditable: this.isEditable()
+        });
+    });
 
-    private plannedModelByStage(): Map<string, string> {
-        const plan = this.run()?.stagePlan;
-        const planned = new Map<string, string>();
-        (plan?.stages ?? [])
-            .filter(entry => SKILL_STAGES.includes(entry.name as AgentStage))
-            .forEach(entry => {
-                const model = entry.model || plan?.model;
-                if (model) {
-                    planned.set(entry.name, model);
-                }
-            });
-        return planned;
+    protected readonly firstPlanStage = computed(
+        () => this.stageCards().find(card => card.body === AgentStageCardBody.Plan)?.stage ?? null
+    );
+
+    protected readonly wikiByStage = computed(() => {
+        const run = this.run();
+        if (!run) {
+            return new Map<string, RunWikiStage>();
+        }
+        const stages = RunWikiContextConverter.toStages(
+            this.runStats.wikiReads(),
+            run.idProject,
+            (run.stagePlan?.stages ?? []).map(stage => stage.name)
+        );
+        return new Map(stages.map(stage => [stage.stage, stage]));
+    });
+
+    private readonly runStatsKey = computed(() => {
+        const run = this.run();
+        if (!run || !this.isOpen()) {
+            return null;
+        }
+        const stages = (run.stages ?? [])
+            .map(stage => `${stage.stage}:${stage.status}:${stage.attemptNo ?? 0}`)
+            .join(',');
+        return `${run.idRun}|${run.phase}|${stages}`;
+    });
+
+    private readonly openedIdRun = computed(() =>
+        this.isOpen() ? (this.run()?.idRun ?? null) : null
+    );
+    private loadedCatalogIdRun: number | null = null;
+    private loadedPlanIdRun: number | null = null;
+
+    public constructor() {
+        effect(() => {
+            if (this.runStatsKey() === null) {
+                return;
+            }
+            const idRun = untracked(() => this.run()?.idRun);
+            if (idRun !== undefined) {
+                this.runStats.reload(idRun);
+            }
+        });
+
+        effect(() => {
+            const idRun = this.openedIdRun();
+            if (idRun !== null && idRun !== this.loadedCatalogIdRun) {
+                this.loadedCatalogIdRun = idRun;
+                untracked(() => this.loadSkillCatalog());
+            }
+        });
+
+        effect(() => {
+            const idRun = this.openedIdRun();
+            if (!this.isEditable()) {
+                this.loadedPlanIdRun = null;
+                return;
+            }
+            if (idRun !== null && idRun !== this.loadedPlanIdRun) {
+                this.loadedPlanIdRun = idRun;
+                untracked(() => this.loadRunStagePlan(idRun));
+            }
+        });
     }
 
     protected get phaseSeverityForRun(): PhaseBadgeSeverity {
@@ -313,38 +301,6 @@ export class AgentRunCardComponent {
     protected onAssignBackClick(event: Event): void {
         event.stopPropagation();
         this.assignBackRun.emit();
-    }
-
-    protected onStagePlanPopoverClosed(): void {
-        this.isStagePlanPopoverOpen.set(false);
-    }
-
-    protected onToggleStagePlanPopover(popover: UiPopoverComponent, event: Event): void {
-        const willOpen = !this.isStagePlanPopoverOpen();
-        this.isStagePlanPopoverOpen.set(willOpen);
-        this.stagePlanPopover = willOpen ? popover : null;
-        popover.toggle(event);
-        if (willOpen) {
-            this.onOpenStagePlan();
-        }
-    }
-
-    protected onOpenStagePlan(): void {
-        const idRun = this.run()?.idRun;
-        if (idRun === undefined) {
-            return;
-        }
-        this.skillApi
-            .load$()
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-                next: catalog => {
-                    this.skillCatalog.set(catalog);
-                    this.repositionStagePlanPopover();
-                },
-                error: () => this.toast.showError('AGENT.SKILLS.LOAD_ERROR')
-            });
-        this.loadRunStagePlan(idRun);
     }
 
     protected onToggleSkill(change: AgentStagePlanSkillToggle): void {
@@ -434,21 +390,52 @@ export class AgentRunCardComponent {
             });
     }
 
+    protected stageSaveState(stage: string): UiSaveState {
+        return this.stageStatus()[stage] ?? UiSaveState.Idle;
+    }
+
+    private loadSkillCatalog(): void {
+        this.skillApi
+            .load$()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+                next: catalog => this.skillCatalog.set(catalog),
+                error: () => this.toast.showError('AGENT.SKILLS.LOAD_ERROR')
+            });
+    }
+
     private loadRunStagePlan(idRun: number): void {
         this.agentRunApi
             .loadStagePlan$(idRun)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: payload => {
-                    this.runStagePlan.set(payload);
-                    this.repositionStagePlanPopover();
-                },
+                next: payload => this.runStagePlan.set(payload),
                 error: () => this.toast.showError('AGENT.RUN_STAGE_PLAN.LOAD_ERROR')
             });
     }
 
-    private repositionStagePlanPopover(): void {
-        this.stagePlanPopover?.reposition();
+    private cardPlan(run: AgentRun): AgentStageCardPlanEntry[] {
+        const loaded = this.runStagePlan()?.stages;
+        if (loaded) {
+            return loaded;
+        }
+        return (run.stagePlan?.stages ?? []).map(entry => ({
+            name: entry.name,
+            idsSkill: entry.idsSkill ?? [],
+            model: entry.model || null,
+            maxTurns: entry.maxTurns || null,
+            dispatched: false
+        }));
+    }
+
+    private defaultMaxTurns(stage: string): number | null {
+        const stagePlan = this.runStagePlan();
+        if (!stagePlan) {
+            return null;
+        }
+        return stage === String(AgentStage.Implementation)
+            ? stagePlan.maxTurnsImplement
+            : stagePlan.maxTurnsPlan;
     }
 
     private setStageStatus(stage: string, status: UiSaveState): void {

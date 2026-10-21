@@ -1,5 +1,5 @@
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
-import { AgentRun } from 'src/app/agent/model/agent-run.model';
+import { AgentRun, AgentStageProgress } from 'src/app/agent/model/agent-run.model';
 import { User } from 'src/app/auth/model/user.model';
 import { SwimlaneCell } from 'src/app/issue/components/issue-kanban/entity/swimlane-cell.entity';
 import { ExtendedIssue } from 'src/app/issue/model/extended-issue.model';
@@ -99,6 +99,18 @@ export abstract class Fixtures {
             startedAt: null,
             finishedAt: null,
             createdAt: '2026-08-24T10:00:00Z',
+            ...overrides
+        };
+    }
+
+    public static stageProgress(overrides: Partial<AgentStageProgress> = {}): AgentStageProgress {
+        return {
+            stage: 'brainstorming',
+            status: 'pending',
+            attempts: 0,
+            tokensUsed: 0,
+            toolCallsCount: 0,
+            durationMs: 0,
             ...overrides
         };
     }

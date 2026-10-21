@@ -2,7 +2,7 @@ import { Component, input, output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { SkillApi } from 'src/app/shared/api/skill.api.service';
 import { Skill } from 'src/app/shared/model/skill.model';
@@ -10,6 +10,8 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Fixtures } from 'src/testing/fixtures';
 import { AgentRunApi } from '../../api/agent-run.api.service';
+import { NoticeService } from 'src/app/shared/notice/notice.service';
+import { AgentStageCardView } from '../../entity/agent-stage-card.entity';
 import {
     AgentStagePlanEditorLock,
     AgentStagePlanEditorRow,
@@ -17,15 +19,16 @@ import {
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
 } from '../../entity/agent-stage-plan-editor.entity';
+import { AgentPhase } from '../../model/agent-phase.enum';
 import { AgentRunStagePlanRes } from '../../model/agent-run-stage-plan.model';
 import { AgentStage } from '../../model/agent-stage.enum';
 import { AgentRunCardComponent } from './agent-run-card.component';
 
-@Component({ selector: 'app-agent-stage-plan-editor', template: '', standalone: true })
-class AgentStagePlanEditorStub {
-    public readonly rows = input<AgentStagePlanEditorRow[]>([]);
-    public readonly skills = input<Skill[]>([]);
-    public readonly saveStatusByStage = input<Record<string, UiSaveState>>({});
+@Component({ selector: 'app-agent-stage-card', template: '', standalone: true })
+class AgentStageCardStub {
+    public readonly view = input.required<AgentStageCardView>();
+    public readonly planRow = input<AgentStagePlanEditorRow | null>(null);
+    public readonly saveState = input<UiSaveState>(UiSaveState.Idle);
     public readonly skillToggled = output<AgentStagePlanSkillToggle>();
     public readonly modelPicked = output<AgentStagePlanModelPick>();
     public readonly maxTurnsChanged = output<AgentStagePlanMaxTurnsChange>();
@@ -72,11 +75,22 @@ function stagePlan(implementationSkills: number[]): AgentRunStagePlanRes {
     };
 }
 
+const RUN = Fixtures.agentRun({
+    phase: AgentPhase.InProgress,
+    stages: [
+        Fixtures.stageProgress({ stage: AgentStage.Design, status: 'done', attempts: 1 }),
+        Fixtures.stageProgress({ stage: AgentStage.ImplementationPlan, status: 'skipped' }),
+        Fixtures.stageProgress({ stage: AgentStage.Implementation })
+    ]
+});
+
 describe('AgentRunCardComponent — run stage plan (browser)', () => {
     let agentRunApi: {
         loadStagePlan$: ReturnType<typeof vi.fn>;
         updateStagePlanEntry$: ReturnType<typeof vi.fn>;
         updateWorkflow$: ReturnType<typeof vi.fn>;
+        loadStats$: ReturnType<typeof vi.fn>;
+        loadWikiReads$: ReturnType<typeof vi.fn>;
     };
     let toast: { showError: ReturnType<typeof vi.fn> };
 
@@ -84,102 +98,122 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
         agentRunApi = {
             loadStagePlan$: vi.fn().mockReturnValue(of(stagePlan([]))),
             updateStagePlanEntry$: vi.fn().mockReturnValue(of(stagePlan([2]))),
-            updateWorkflow$: vi.fn().mockReturnValue(of(Fixtures.agentRun()))
+            updateWorkflow$: vi.fn().mockReturnValue(of(Fixtures.agentRun())),
+            loadStats$: vi.fn().mockReturnValue(of(null)),
+            loadWikiReads$: vi.fn().mockReturnValue(of([]))
         };
         toast = { showError: vi.fn() };
     });
 
-    async function setup(): Promise<{
+    async function setup(
+        run = RUN,
+        isOpenedByUser = true
+    ): Promise<{
         fixture: ComponentFixture<AgentRunCardComponent>;
-        editor: () => AgentStagePlanEditorStub;
+        card: (stage: string) => AgentStageCardStub;
     }> {
         await TestBed.configureTestingModule({
-            imports: [TranslateModule.forRoot(), AgentStagePlanEditorStub],
+            imports: [TranslateModule.forRoot(), AgentStageCardStub],
             declarations: [AgentRunCardComponent],
             providers: [
                 { provide: AgentRunApi, useValue: agentRunApi },
                 { provide: SkillApi, useValue: { load$: vi.fn().mockReturnValue(of(CATALOG)) } },
-                { provide: ToastNotificationService, useValue: toast }
+                { provide: ToastNotificationService, useValue: toast },
+                { provide: NoticeService, useValue: { agentStats$: new Subject() } }
             ]
         })
             .overrideComponent(AgentRunCardComponent, {
                 set: {
                     template: `
-                        <button class="open" (click)="onOpenStagePlan()"></button>
+                        <button class="open" (click)="onToggle()"></button>
                         <button class="workflow" (click)="onToggleShortWorkflow($event)"></button>
-                        <app-agent-stage-plan-editor
-                            [rows]="stagePlanRows()"
-                            [skills]="skillCatalog()"
-                            [saveStatusByStage]="stageStatus()"
-                            (skillToggled)="onToggleSkill($event)"
-                            (modelPicked)="onPickStageModel($event)"
-                            (maxTurnsChanged)="onStageMaxTurns($event)"
-                        />
+                        @if (isOpen()) {
+                            @for (card of stageCards(); track card.stage) {
+                                <app-agent-stage-card
+                                    [view]="card"
+                                    [planRow]="stagePlanRows().get(card.stage) ?? null"
+                                    [saveState]="stageSaveState(card.stage)"
+                                    (skillToggled)="onToggleSkill($event)"
+                                    (modelPicked)="onPickStageModel($event)"
+                                    (maxTurnsChanged)="onStageMaxTurns($event)"
+                                />
+                            }
+                        }
                     `
                 }
             })
             .compileComponents();
 
         const fixture = TestBed.createComponent(AgentRunCardComponent);
-        fixture.componentRef.setInput('run', Fixtures.agentRun());
+        fixture.componentRef.setInput('run', run);
+        fixture.detectChanges();
+        if (isOpenedByUser) {
+            fixture.nativeElement.querySelector('.open').click();
+            fixture.detectChanges();
+        }
+        const card = (stage: string) =>
+            fixture.debugElement
+                .queryAll(By.directive(AgentStageCardStub))
+                .map(found => found.componentInstance as AgentStageCardStub)
+                .find(found => found.view().stage === stage)!;
+        return { fixture, card };
+    }
+
+    it('loads the plan once the card opens and offers the default turns per stage', async () => {
+        const { card } = await setup();
+
+        expect(agentRunApi.loadStagePlan$).toHaveBeenCalledWith(55);
+        expect(card(AgentStage.Design).planRow()?.defaultMaxTurns).toBe(250);
+        expect(card(AgentStage.ImplementationPlan).planRow()?.lock).toBe(
+            AgentStagePlanEditorLock.Skipped
+        );
+        expect(card(AgentStage.Implementation).planRow()).toEqual({
+            stage: AgentStage.Implementation,
+            idsSkill: [],
+            model: null,
+            maxTurns: null,
+            defaultMaxTurns: 500,
+            lock: null
+        });
+    });
+
+    it('loads the plan once a failed run is continued, so its next stage can be edited', async () => {
+        const { fixture, card } = await setup({ ...RUN, phase: AgentPhase.Failed }, false);
+        expect(agentRunApi.loadStagePlan$).not.toHaveBeenCalled();
+
+        fixture.componentRef.setInput('run', { ...RUN, phase: AgentPhase.Queued });
         fixture.detectChanges();
         fixture.nativeElement.querySelector('.open').click();
         fixture.detectChanges();
-        const editor = () =>
-            fixture.debugElement.query(By.directive(AgentStagePlanEditorStub))
-                .componentInstance as AgentStagePlanEditorStub;
-        return { fixture, editor };
-    }
 
-    it('locks a stage that already started or is skipped, and offers the default turns', async () => {
-        const { editor } = await setup();
-
-        expect(editor().rows()).toEqual([
-            {
-                stage: AgentStage.Design,
-                idsSkill: [1],
-                model: null,
-                maxTurns: null,
-                defaultMaxTurns: 250,
-                lock: AgentStagePlanEditorLock.Started
-            },
-            {
-                stage: AgentStage.ImplementationPlan,
-                idsSkill: [],
-                model: null,
-                maxTurns: null,
-                defaultMaxTurns: 250,
-                lock: AgentStagePlanEditorLock.Skipped
-            },
-            {
-                stage: AgentStage.Implementation,
-                idsSkill: [],
-                model: null,
-                maxTurns: null,
-                defaultMaxTurns: 500,
-                lock: null
-            }
-        ]);
+        expect(agentRunApi.loadStagePlan$).toHaveBeenCalledWith(55);
+        expect(card(AgentStage.Implementation).planRow()?.stage).toBe(AgentStage.Implementation);
     });
 
     it('toggling a skill saves that stage and marks it saved', async () => {
-        const { fixture, editor } = await setup();
+        const { fixture, card } = await setup();
 
-        editor().skillToggled.emit({ stage: AgentStage.Implementation, idSkill: 2 });
+        card(AgentStage.Implementation).skillToggled.emit({
+            stage: AgentStage.Implementation,
+            idSkill: 2
+        });
         fixture.detectChanges();
 
         expect(agentRunApi.updateStagePlanEntry$).toHaveBeenCalledWith(
             55,
             expect.objectContaining({ name: 'implementation', idsSkill: [2] })
         );
-        expect(editor().rows()[2].idsSkill).toEqual([2]);
-        expect(editor().saveStatusByStage()['implementation']).toBe(UiSaveState.Saved);
+        expect(card(AgentStage.Implementation).planRow()?.idsSkill).toEqual([2]);
+        expect(card(AgentStage.Implementation).saveState()).toBe(UiSaveState.Saved);
     });
 
     it('picking a model keeps the stage skills and saves the model', async () => {
-        const { editor } = await setup();
+        const { card } = await setup();
 
-        editor().modelPicked.emit({ stage: AgentStage.Implementation, model: 'openai/b' });
+        card(AgentStage.Implementation).modelPicked.emit({
+            stage: AgentStage.Implementation,
+            model: 'openai/b'
+        });
 
         expect(agentRunApi.updateStagePlanEntry$).toHaveBeenCalledWith(55, {
             name: 'implementation',
@@ -192,9 +226,12 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
     });
 
     it('a turn limit is saved for that stage', async () => {
-        const { editor } = await setup();
+        const { card } = await setup();
 
-        editor().maxTurnsChanged.emit({ stage: AgentStage.Implementation, maxTurns: 90 });
+        card(AgentStage.Implementation).maxTurnsChanged.emit({
+            stage: AgentStage.Implementation,
+            maxTurns: 90
+        });
 
         expect(agentRunApi.updateStagePlanEntry$).toHaveBeenCalledWith(
             55,
@@ -203,9 +240,9 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
     });
 
     it('a stage that already started is never saved', async () => {
-        const { editor } = await setup();
+        const { card } = await setup();
 
-        editor().modelPicked.emit({ stage: AgentStage.Design, model: 'openai/b' });
+        card(AgentStage.Design).modelPicked.emit({ stage: AgentStage.Design, model: 'openai/b' });
 
         expect(agentRunApi.updateStagePlanEntry$).not.toHaveBeenCalled();
     });
@@ -224,10 +261,13 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
         agentRunApi.updateStagePlanEntry$ = vi
             .fn()
             .mockReturnValue(throwError(() => ({ status: 409 })));
-        const { editor } = await setup();
+        const { card } = await setup();
         expect(agentRunApi.loadStagePlan$).toHaveBeenCalledTimes(1);
 
-        editor().skillToggled.emit({ stage: AgentStage.Implementation, idSkill: 2 });
+        card(AgentStage.Implementation).skillToggled.emit({
+            stage: AgentStage.Implementation,
+            idSkill: 2
+        });
 
         expect(agentRunApi.loadStagePlan$).toHaveBeenCalledTimes(2);
         expect(toast.showError).toHaveBeenCalledWith('AGENT.RUN_STAGE_PLAN.RACE_ERROR');
@@ -237,9 +277,12 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
         agentRunApi.updateStagePlanEntry$ = vi
             .fn()
             .mockReturnValue(throwError(() => ({ status: 500 })));
-        const { editor } = await setup();
+        const { card } = await setup();
 
-        editor().skillToggled.emit({ stage: AgentStage.Implementation, idSkill: 2 });
+        card(AgentStage.Implementation).skillToggled.emit({
+            stage: AgentStage.Implementation,
+            idSkill: 2
+        });
 
         expect(toast.showError).toHaveBeenCalledWith('AGENT.RUN_STAGE_PLAN.SAVE_ERROR');
     });

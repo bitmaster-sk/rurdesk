@@ -49,10 +49,6 @@ export class AgentStagePlanEditorComponent {
         this.openStages.set(next);
     }
 
-    protected isChosen(row: AgentStagePlanEditorRow, idSkill: number): boolean {
-        return row.idsSkill.includes(idSkill);
-    }
-
     protected chosenSkillNames(row: AgentStagePlanEditorRow): string {
         return this.skills()
             .filter(skill => row.idsSkill.includes(skill.idSkill))
@@ -62,23 +58,5 @@ export class AgentStagePlanEditorComponent {
 
     protected saveStatus(stage: AgentStage): UiSaveState {
         return this.saveStatusByStage()[stage] ?? UiSaveState.Idle;
-    }
-
-    protected onToggleSkill(row: AgentStagePlanEditorRow, idSkill: number): void {
-        this.skillToggled.emit({ stage: row.stage, idSkill });
-    }
-
-    protected onPickModel(row: AgentStagePlanEditorRow, model: string | null): void {
-        if (model !== row.model) {
-            this.modelPicked.emit({ stage: row.stage, model });
-        }
-    }
-
-    protected onMaxTurns(row: AgentStagePlanEditorRow, event: Event): void {
-        const value = Number((event.target as HTMLInputElement).value);
-        const maxTurns = value > 0 ? value : null;
-        if (maxTurns !== row.maxTurns) {
-            this.maxTurnsChanged.emit({ stage: row.stage, maxTurns });
-        }
     }
 }

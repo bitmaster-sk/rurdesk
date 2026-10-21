@@ -266,3 +266,51 @@ func TestIsParked(t *testing.T) {
 		})
 	}
 }
+
+func withUsage(task *model.AgentTask, tokens, toolCalls, durationMs int) *model.AgentTask {
+	task.TokensUsed = &tokens
+	task.ToolCallsCount = &toolCalls
+	task.DurationMs = &durationMs
+	return task
+}
+
+func TestBuildStageProgress_SumsUsageAcrossAttempts(t *testing.T) {
+	run := &model.AgentRun{Phase: constants.PhaseInProgress, StagePlan: fullStagePlan()}
+	retry := completedTask(constants.StageBrainstorming, at(25), nil)
+	retry.AttemptNo = 2
+	tasks := []*model.AgentTask{
+		withUsage(completedTask(constants.StagePickup, at(19), nil), 100, 2, 4000),
+		withUsage(&model.AgentTask{
+			Stage: constants.StageBrainstorming, AttemptNo: 1,
+			Status: constants.TaskStatusFailed, FinishedAt: at(20), CreatedAt: *at(20),
+		}, 300, 5, 10000),
+		withUsage(retry, 700, 6, 30000),
+		{
+			Stage: constants.StageDesign, AttemptNo: 1,
+			Status: constants.TaskStatusActive, StartedAt: at(26), CreatedAt: *at(26),
+		},
+	}
+
+	rows := BuildStageProgress(run, tasks, nil)
+
+	pickup := stageByName(rows, constants.StagePickup)
+	if pickup.Attempts != 1 || pickup.TokensUsed != 100 || pickup.ToolCallsCount != 2 || pickup.DurationMs != 4000 {
+		t.Errorf("pickup usage = %+v, want 1 attempt, 100 tokens, 2 tool calls, 4000 ms", pickup)
+	}
+	brainstorming := stageByName(rows, constants.StageBrainstorming)
+	if brainstorming.Status != "done" {
+		t.Fatalf("brainstorming status = %q, want done", brainstorming.Status)
+	}
+	if brainstorming.Attempts != 2 || brainstorming.TokensUsed != 1000 ||
+		brainstorming.ToolCallsCount != 11 || brainstorming.DurationMs != 40000 {
+		t.Errorf("brainstorming usage = %+v, want sums of both attempts", brainstorming)
+	}
+	design := stageByName(rows, constants.StageDesign)
+	if design.Status != "active" || design.Attempts != 1 || design.TokensUsed != 0 {
+		t.Errorf("design = %+v, want active with 1 attempt and no usage yet", design)
+	}
+	plan := stageByName(rows, constants.StageImplementationPlan)
+	if plan.Attempts != 0 || plan.TokensUsed != 0 || plan.ToolCallsCount != 0 || plan.DurationMs != 0 {
+		t.Errorf("pending stage usage = %+v, want zeros", plan)
+	}
+}
