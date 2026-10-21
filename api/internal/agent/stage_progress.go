@@ -54,6 +54,7 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		}
 	}
 
+	usageByStage := stageUsage(tasks)
 	approvals := userApprovalsChronological(events)
 	fallbackFromByTask := modelFallbacksByTask(events)
 
@@ -67,6 +68,12 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 			out = append(out, prog)
 			continue
 		}
+
+		usage := usageByStage[entry.Name]
+		prog.Attempts = usage.Attempts
+		prog.TokensUsed = usage.TokensUsed
+		prog.ToolCallsCount = usage.ToolCallsCount
+		prog.DurationMs = usage.DurationMs
 
 		task := latestByStage[entry.Name]
 		if task == nil {
@@ -134,6 +141,26 @@ func stagePlanEntries(run *model.AgentRun) []model.AgentStagePlanEntry {
 		entries = append(entries, model.AgentStagePlanEntry{Name: d.Name, Skippable: d.Skippable})
 	}
 	return entries
+}
+
+func stageUsage(tasks []*model.AgentTask) map[string]model.AgentStageProgress {
+	byStage := map[string]model.AgentStageProgress{}
+	for _, task := range tasks {
+		usage := byStage[task.Stage]
+		usage.Attempts++
+		usage.TokensUsed += intOrZero(task.TokensUsed)
+		usage.ToolCallsCount += intOrZero(task.ToolCallsCount)
+		usage.DurationMs += intOrZero(task.DurationMs)
+		byStage[task.Stage] = usage
+	}
+	return byStage
+}
+
+func intOrZero(value *int) int {
+	if value == nil {
+		return 0
+	}
+	return *value
 }
 
 func userApprovalsChronological(events []*model.AgentRunEvent) []time.Time {
