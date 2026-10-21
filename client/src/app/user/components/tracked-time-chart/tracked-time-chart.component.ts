@@ -1,14 +1,21 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { ChartData, ChartOptions } from 'chart.js';
+import { ChartData, ChartDataset, ChartOptions } from 'chart.js';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { addDays, subDays } from 'date-fns';
+import { TrackedTimeChartPlugins } from './tracked-time-chart-plugins';
+import { TrackedTimeChartText } from './tracked-time-chart-text';
 
 interface IssueAggregate {
     idIssue: number;
     idIssuePublic: number;
     issueTitle: string;
     hoursPerDay: Map<string, number>;
+}
+
+interface TrackedTimeChartDataset extends ChartDataset<'bar'> {
+    idIssuePublic: number;
+    issueTitle: string;
 }
 
 @Component({
@@ -26,6 +33,11 @@ export class TrackedTimeChartComponent {
     public days = input<number>(7);
     public from = input<Date | null>(null);
     public yAxisLabel = input<string>('');
+
+    public readonly chartPlugins = [
+        TrackedTimeChartPlugins.segmentLabels,
+        TrackedTimeChartPlugins.dayTotals
+    ];
 
     private dayLabels = computed(() => {
         const labels: string[] = [];
@@ -75,27 +87,33 @@ export class TrackedTimeChartComponent {
         const labels = this.dayLabels();
         const aggregates = this.issueAggregates();
 
-        const datasets = aggregates.map(agg => ({
+        const datasets: TrackedTimeChartDataset[] = aggregates.map(agg => ({
             label: `#${agg.idIssuePublic} ${agg.issueTitle}`,
             data: labels.map(day => agg.hoursPerDay.get(day) ?? 0),
             borderWidth: 0,
-            borderRadius: 2
+            borderRadius: 2,
+            barThickness: 26,
+            idIssuePublic: agg.idIssuePublic,
+            issueTitle: agg.issueTitle
         }));
 
         return { labels, datasets };
     });
 
     public chartOptions = computed<ChartOptions<'bar'>>(() => ({
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { right: 48 } },
         scales: {
-            x: { stacked: true, grid: { display: false } },
-            y: {
+            x: {
                 stacked: true,
                 beginAtZero: true,
                 suggestedMax: 8,
+                ticks: { callback: value => `${value}h` },
                 title: { display: !!this.yAxisLabel(), text: this.yAxisLabel() }
-            }
+            },
+            y: { stacked: true, grid: { display: false } }
         },
         plugins: {
             legend: { display: false },
@@ -103,22 +121,15 @@ export class TrackedTimeChartComponent {
                 callbacks: {
                     title: items => items[0]?.label ?? '',
                     label: ctx => {
-                        const hours = ctx.parsed.y ?? 0;
-                        const h = Math.floor(hours);
-                        const m = Math.round((hours - h) * 60);
-                        return ` ${ctx.dataset.label}: ${h}h ${m}m`;
+                        const hours = ctx.parsed.x ?? 0;
+                        return ` ${ctx.dataset.label}: ${TrackedTimeChartText.hours(hours)}`;
                     }
                 }
             }
         }
     }));
 
-    public heightPx = computed(() => {
-        const issueCount = this.issueAggregates().length;
-        const minHeight = 195;
-        const perIssue = 26;
-        return Math.max(minHeight, issueCount * perIssue);
-    });
+    public heightPx = computed(() => this.days() * 36 + 48);
 
     public isEmpty = computed(() => this.issueAggregates().length === 0);
 }
