@@ -427,7 +427,7 @@ func (r *AgentRunRepository) transitionPhase(
 		UPDATE agent.run
 		SET phase = $3,
 		    started_at  = COALESCE(started_at, $4),
-		    finished_at = COALESCE(finished_at, $5)
+		    finished_at = CASE WHEN $5::timestamptz IS NULL THEN NULL ELSE COALESCE(finished_at, $5) END
 		WHERE id_run = $1 AND phase = $2
 		RETURNING %s`, agentRunColumns),
 		idRun, fromPhase, toPhase, startedAt, finishedAt,

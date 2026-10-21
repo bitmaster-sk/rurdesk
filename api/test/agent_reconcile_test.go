@@ -599,6 +599,33 @@ func (s *AgentReconcileSuite) Test_12_UnknownMessageKindIsRejected() {
 	s.Equal(0, int(s.createPRCalls.Load()))
 }
 
+func (s *AgentReconcileSuite) Test_13_ContinueClearsTheFinishedStamp() {
+	idRun := s.insertRun("failed", true)
+	s.insertTask(idRun, "implementation", "failed", strptr("agent_reported_error"))
+
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/agent/run/%d/continue", idRun), "", s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	run := s.loadRun(idRun)
+	s.Equal("queued", run.Phase)
+	s.Nil(run.FinishedAt, "a continued run is unfinished again")
+}
+
+func (s *AgentReconcileSuite) Test_14_ASecondTerminalPhaseKeepsTheFirstFinishedStamp() {
+	ctx := context.Background()
+	idRun := s.insertRun("failed", true)
+	before := s.loadRun(idRun).FinishedAt
+	s.Require().NotNil(before)
+
+	_, err := injector.GetAgentRunRepository().TransitionPhase(ctx, idRun, "failed", "cancelled", "user", nil, "cancel")
+	s.Require().NoError(err)
+
+	after := s.loadRun(idRun).FinishedAt
+	s.Require().NotNil(after)
+	s.True(before.Equal(*after), "the first finish time is kept")
+}
+
 func (s *AgentReconcileSuite) Test_15_CompletionWithoutMessageNeedsNoKind() {
 	idRun := s.insertRun("in_progress", false)
 	idTask := s.insertTask(idRun, "pickup", "active", nil)
