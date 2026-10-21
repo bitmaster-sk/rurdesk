@@ -594,3 +594,41 @@ func (f *wikiAgentFixture) notificationCount(t *testing.T, notificationType stri
 	require.NoError(t, err)
 	return count
 }
+
+func TestWikiProposal_ARunContinuedAfterItEndedMayProposeAndLogsReads(t *testing.T) {
+	for _, endPhase := range []string{constants.PhaseFailed, constants.PhaseCancelled} {
+		t.Run(endPhase, func(t *testing.T) {
+			f := newWikiAgentFixture(t, "wiki-proposal-continue-"+endPhase)
+			ctx := context.Background()
+			runRepo := injector.GetAgentRunRepository()
+			page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Continued"), Body: "text"})
+			iss := createIssue(t, f.app, f.adminToken, f.idProject, "wiki proposal continue "+endPhase)
+			run, task := f.startRun(t, iss.IdIssue, constants.StageImplementation)
+
+			_, err := runRepo.TransitionPhase(ctx, run.IdRun, constants.PhaseQueued, constants.PhaseInProgress, constants.ActorTypeAgent, nil, "dispatch")
+			require.NoError(t, err)
+			_, err = runRepo.TransitionPhase(ctx, run.IdRun, constants.PhaseInProgress, endPhase, constants.ActorTypeAgent, nil, "ended")
+			require.NoError(t, err)
+			_, err = f.app.Pool.Exec(ctx, `UPDATE agent.task SET status = 'failed', error_reason = 'agent_reported_error' WHERE id_task = $1`, task.IdTask)
+			require.NoError(t, err)
+
+			res := Request(t, f.app, "POST", fmt.Sprintf("/api/private/agent/run/%d/continue", run.IdRun), "", f.adminToken)
+			require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+			_, err = runRepo.TransitionPhase(ctx, run.IdRun, constants.PhaseQueued, constants.PhaseInProgress, constants.ActorTypeAgent, nil, "dispatch")
+			require.NoError(t, err)
+			_, err = injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, f.idAgent, constants.StageImplementation, 2)
+			require.NoError(t, err)
+
+			resumed, err := runRepo.LoadById(ctx, run.IdRun)
+			require.NoError(t, err)
+			require.Nil(t, resumed.FinishedAt, "a continued run is unfinished again")
+
+			header := fmt.Sprint(run.IdRun)
+			f.suggest(t, header, map[string]any{"kind": "update", "slug": page.Slug, "body": "new text", "base_version": 1, "reason": "code changed"})
+
+			got := f.callTool(t, f.agentToken, header, "get_wiki_page", map[string]any{"project_id": f.idProject, "slug": page.Slug})
+			require.False(t, got.IsError, got.Text)
+			require.Len(t, f.reads(t, run.IdRun), 1)
+		})
+	}
+}
