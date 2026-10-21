@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -726,6 +727,10 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
+	if err := validateMessageKind(body.Message, body.MessageKind); err != nil {
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
+		return
+	}
 
 	agentUser, _ := extctx.GetUser(ctx)
 
@@ -1147,6 +1152,21 @@ func validateOutcomeForStage(outcome, stage string) error {
 		return fmt.Errorf("unknown outcome %q", outcome)
 	}
 	return nil
+}
+
+func validateMessageKind(message, kind string) error {
+	if message == "" {
+		return nil
+	}
+	allowed := strings.Join(constants.AgentMessageKinds, ", ")
+	switch {
+	case slices.Contains(constants.AgentMessageKinds, kind):
+		return nil
+	case kind == "":
+		return fmt.Errorf("messageKind is required when message is set, use one of: %s", allowed)
+	default:
+		return fmt.Errorf("unknown messageKind %q, use one of: %s", kind, allowed)
+	}
 }
 
 func decideNextRunPhase(stage, outcome string) string {

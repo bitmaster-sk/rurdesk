@@ -14,3 +14,13 @@ const (
 	MessageKindImplementationDone    MessageKind = "implementation_done"
 	MessageKindReviewReply           MessageKind = "review_reply"
 )
+
+var AgentMessageKinds = []string{
+	string(MessageKindBrainstormingQuestion),
+	string(MessageKindBrainstormingComplete),
+	string(MessageKindDesign),
+	string(MessageKindImplementationPlan),
+	string(MessageKindPullRequestPushed),
+	string(MessageKindImplementationDone),
+	string(MessageKindReviewReply),
+}

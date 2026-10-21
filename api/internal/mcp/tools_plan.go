@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	mcpsdk "github.com/mark3labs/mcp-go/server"
 )
@@ -20,7 +21,16 @@ func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 			mcpgo.WithNumber("id_task", mcpgo.Required(), mcpgo.Description("The id_task from the stage_execute event payload.")),
 			mcpgo.WithString("outcome", mcpgo.Required(), mcpgo.Description("One of: output_submitted, question_asked, no_action_needed, errored.")),
 			mcpgo.WithString("message", mcpgo.Description("Output message body, plain markdown. Required when outcome=output_submitted or question_asked.")),
-			mcpgo.WithString("message_kind", mcpgo.Description("Required when message is set. One of: brainstorming_question, brainstorming_complete, design, implementation_plan, pull_request_pushed, implementation_done, review_reply. Use review_reply to answer a review comment without changing code — submit it with no branch_name and no PR is opened. Only valid once the PR exists.")),
+			mcpgo.WithString("message_kind",
+				mcpgo.Enum(constants.AgentMessageKinds...),
+				mcpgo.Description("What the message is. Required when message is set, a missing or unknown value is rejected with 400. "+
+					"brainstorming_question: a question to the user (brainstorming, outcome=question_asked). "+
+					"brainstorming_complete: the brainstorming summary (brainstorming, outcome=output_submitted). "+
+					"design: the design (design stage). "+
+					"implementation_plan: the plan (implementation_plan stage). "+
+					"pull_request_pushed: the implementation summary sent together with branch_name, the tracker opens the PR from it. "+
+					"implementation_done: an implementation summary when the run already has its PR, e.g. after pushing review fixes. "+
+					"review_reply: an answer to a review comment without changing code, sent with no branch_name; only valid once the PR exists.")),
 			mcpgo.WithString("pr_url", mcpgo.Description("DEPRECATED — do not set. The tracker opens the PR/MR itself from branch_name. Kept only for backward compatibility.")),
 			mcpgo.WithString("branch_name", mcpgo.Description("Branch you pushed to. Set only on implementation outcome=output_submitted — the tracker opens the PR/MR from it. Required until the run has a PR: an implementation output_submitted without it is rejected with 409.")),
 			mcpgo.WithString("pr_title", mcpgo.Description("Title for the PR/MR the tracker will open. Set on implementation outcome=output_submitted; falls back to the issue title if empty.")),

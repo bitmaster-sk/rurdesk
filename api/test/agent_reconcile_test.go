@@ -566,6 +566,49 @@ func (s *AgentReconcileSuite) Test_10_StaleSweepKeepsATaskWhoseGatewaySendsHeart
 	s.Equal("heartbeat_stale", staleReason)
 }
 
+func (s *AgentReconcileSuite) Test_11_MessageWithoutKindIsRejectedBeforeThePrOpens() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	res := s.complete(idTask, "implementation", "output_submitted", "", "agent/b1/i1/211")
+	s.Equal(http.StatusBadRequest, res.StatusCode)
+	s.Contains(readBody(s.T(), res), "pull_request_pushed", "the error lists the allowed kinds")
+
+	s.Equal(0, int(s.createPRCalls.Load()), "a rejected completion must not open a PR")
+	s.Equal("in_progress", s.loadRun(idRun).Phase)
+	s.Equal("active", s.loadTask(idTask).Status, "the agent can fix the call and retry")
+
+	retry := s.complete(idTask, "implementation", "output_submitted", "pull_request_pushed", "agent/b1/i1/211")
+	s.Require().Equal(http.StatusOK, retry.StatusCode)
+	s.Equal("pr_open", s.loadRun(idRun).Phase)
+	s.Equal(1, int(s.createPRCalls.Load()))
+	task := s.loadTask(idTask)
+	s.Equal("completed", task.Status)
+	s.NotNil(task.IdResultMessage)
+}
+
+func (s *AgentReconcileSuite) Test_12_UnknownMessageKindIsRejected() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "implementation", "active", nil)
+
+	res := s.complete(idTask, "implementation", "output_submitted", "comment", "agent/b1/i1/212")
+	s.Equal(http.StatusBadRequest, res.StatusCode)
+	body := readBody(s.T(), res)
+	s.Contains(body, `unknown messageKind \"comment\"`)
+	s.Contains(body, "review_reply", "the error lists the allowed kinds")
+	s.Equal(0, int(s.createPRCalls.Load()))
+}
+
+func (s *AgentReconcileSuite) Test_15_CompletionWithoutMessageNeedsNoKind() {
+	idRun := s.insertRun("in_progress", false)
+	idTask := s.insertTask(idRun, "pickup", "active", nil)
+
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/agent/task/%d/complete", idTask), `{"outcome":"no_action_needed"}`, s.AgentToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	s.Equal("completed", s.loadTask(idTask).Status)
+}
+
 func Test_RunAgentReconcileSuite(t *testing.T) {
 	suite.Run(t, new(AgentReconcileSuite))
 }
