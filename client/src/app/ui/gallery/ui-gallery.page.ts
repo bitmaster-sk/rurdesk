@@ -7,6 +7,7 @@ import { UiBadgeSeverity } from '../components/badge/badge.component';
 import { UiMenuItem } from '../components/menu/menu-item.model';
 import { UiMessageSeverity } from '../components/message/message.component';
 import { UiTagSeverity } from '../components/tag/tag.component';
+import { UiDaySelectFormat } from '../components/day-select/day-select-label';
 
 type ButtonSeverity = 'primary' | 'secondary' | 'danger' | 'success' | 'info' | 'warn';
 type ButtonVariant = 'filled' | 'outlined' | 'text';
@@ -168,6 +169,11 @@ export class UiGalleryPage {
         { label: 'Last 90 days', value: '90d' }
     ];
     protected dateRangeValue: UiDateRangeValue | null = null;
+
+    // day-select demo data
+    protected readonly UiDaySelectFormat = UiDaySelectFormat;
+    protected daySelectShortValue: Date | null = new Date();
+    protected daySelectLongValue: Date | null = new Date();
 
     // dialog demo state
     protected dialogBasicOpen = false;
