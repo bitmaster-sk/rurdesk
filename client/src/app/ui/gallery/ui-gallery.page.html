@@ -720,6 +720,14 @@
             <input uiDatepicker inline [(ngModel)]="inlineValue" />
         </div>
 
+        <h3>Max date</h3>
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <input uiDatepicker mode="date" [maxDate]="today" [(ngModel)]="dateValue" />
+                <code>max date = today</code>
+            </div>
+        </div>
+
         <p class="ui-gallery__note">
             Open a popup to see the Today / Clear footer. Focus is themed via
             <code>--ui-datepicker-*</code>
