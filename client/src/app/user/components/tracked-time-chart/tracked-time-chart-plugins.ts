@@ -1,10 +1,6 @@
-import { Chart, ChartDataset, Plugin } from 'chart.js';
+import { Chart, Plugin } from 'chart.js';
+import { TrackedTimeChartDataset } from 'src/app/user/entity/tracked-time-chart-dataset.entity';
 import { TrackedTimeChartText } from './tracked-time-chart-text';
-
-interface SegmentDataset {
-    idIssuePublic: number;
-    issueTitle: string;
-}
 
 export abstract class TrackedTimeChartPlugins {
     public static readonly segmentLabels: Plugin<'bar'> = {
@@ -19,14 +15,12 @@ export abstract class TrackedTimeChartPlugins {
             ctx.textAlign = 'left';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = color;
-            ctx.font = `700 11px ${fontFamily}`;
             const measure = (t: string): number => ctx.measureText(t).width;
             chart.data.datasets.forEach((dataset, datasetIndex) => {
                 if (!chart.isDatasetVisible(datasetIndex)) {
                     return;
                 }
-                const { idIssuePublic, issueTitle } = dataset as ChartDataset<'bar'> &
-                    Partial<SegmentDataset>;
+                const { idIssuePublic, issueTitle } = dataset as TrackedTimeChartDataset;
                 if (idIssuePublic === undefined || issueTitle === undefined) {
                     return;
                 }
@@ -40,6 +34,7 @@ export abstract class TrackedTimeChartPlugins {
                     };
                     const left = Math.min(props.base, props.x);
                     const width = Math.abs(props.x - props.base);
+                    ctx.font = `700 11px ${fontFamily}`;
                     const text = TrackedTimeChartText.segment(
                         width,
                         props.height,
@@ -50,7 +45,6 @@ export abstract class TrackedTimeChartPlugins {
                     if (text === null) {
                         return;
                     }
-                    ctx.font = `700 11px ${fontFamily}`;
                     ctx.fillText(num, left + 6, props.y);
                     if (text !== num) {
                         const numWidth = ctx.measureText(num).width;
@@ -100,7 +94,7 @@ export abstract class TrackedTimeChartPlugins {
                 }
                 const x = chart.scales['x'].getPixelForValue(total) + 6;
                 const y = chart.scales['y'].getPixelForValue(day);
-                ctx.fillText(TrackedTimeChartText.hours(total), x, y);
+                ctx.fillText(TrackedTimeChartText.formatHours(total), x, y);
             });
             ctx.restore();
         }

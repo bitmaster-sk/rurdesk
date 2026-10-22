@@ -1,3 +1,6 @@
+import { DurationConverter } from 'src/app/shared/duration/duration.converter';
+import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
+
 export abstract class TrackedTimeChartText {
     public static fit(text: string, maxWidth: number, measure: (t: string) => number): string {
         if (measure(text) <= maxWidth) {
@@ -34,9 +37,9 @@ export abstract class TrackedTimeChartText {
         return fitted ? `${num} ${fitted}` : num;
     }
 
-    public static hours(hours: number): string {
-        const h = Math.floor(hours);
-        const m = Math.round((hours - h) * 60);
-        return m === 0 ? `${h}h` : `${h}h ${m}m`;
+    public static formatHours(hours: number): string {
+        return DurationFormatter.durationToString(
+            DurationConverter.secondsToDuration(Math.round(hours * 60) * 60)
+        );
     }
 }

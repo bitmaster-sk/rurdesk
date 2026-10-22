@@ -39,13 +39,20 @@ describe('TrackedTimeChartText.segment', () => {
     });
 });
 
-describe('TrackedTimeChartText.hours', () => {
-    it('formats a whole hour without minutes', () => {
-        expect(TrackedTimeChartText.hours(7)).toBe('7h');
+describe('TrackedTimeChartText.formatHours', () => {
+    it('formats whole hours without minutes', () => {
+        expect(TrackedTimeChartText.formatHours(7)).toBe('7h');
     });
 
-    it('formats a fractional hour with minutes', () => {
-        expect(TrackedTimeChartText.hours(6.5)).toBe('6h 30m');
-        expect(TrackedTimeChartText.hours(0.25)).toBe('0h 15m');
+    it('formats fractional hours with minutes', () => {
+        expect(TrackedTimeChartText.formatHours(6.5)).toBe('6h 30m');
+    });
+
+    it('formats under an hour as minutes only', () => {
+        expect(TrackedTimeChartText.formatHours(0.25)).toBe('15m');
+    });
+
+    it('rounds to whole minutes and carries an almost full hour over', () => {
+        expect(TrackedTimeChartText.formatHours(7199 / 3600)).toBe('2h');
     });
 });

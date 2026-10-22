@@ -1,7 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { ChartData, ChartDataset, ChartOptions } from 'chart.js';
+import { ChartData, ChartOptions } from 'chart.js';
 import { Track } from 'src/app/shared/tracker/model/track.model';
+import { TrackedTimeChartDataset } from 'src/app/user/entity/tracked-time-chart-dataset.entity';
 import { addDays, subDays } from 'date-fns';
 import { TrackedTimeChartPlugins } from './tracked-time-chart-plugins';
 import { TrackedTimeChartText } from './tracked-time-chart-text';
@@ -11,11 +12,6 @@ interface IssueAggregate {
     idIssuePublic: number;
     issueTitle: string;
     hoursPerDay: Map<string, number>;
-}
-
-interface TrackedTimeChartDataset extends ChartDataset<'bar'> {
-    idIssuePublic: number;
-    issueTitle: string;
 }
 
 @Component({
@@ -122,7 +118,7 @@ export class TrackedTimeChartComponent {
                     title: items => items[0]?.label ?? '',
                     label: ctx => {
                         const hours = ctx.parsed.x ?? 0;
-                        return ` ${ctx.dataset.label}: ${TrackedTimeChartText.hours(hours)}`;
+                        return ` ${ctx.dataset.label}: ${TrackedTimeChartText.formatHours(hours)}`;
                     }
                 }
             }

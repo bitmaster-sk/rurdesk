@@ -1,13 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Track } from 'src/app/shared/tracker/model/track.model';
+import { TrackedTimeChartDataset } from 'src/app/user/entity/tracked-time-chart-dataset.entity';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TrackedTimeChartComponent } from './tracked-time-chart.component';
-
-interface SpecDataset {
-    data: unknown[];
-    idIssuePublic?: number;
-    issueTitle?: string;
-}
 
 describe('TrackedTimeChartComponent (browser)', () => {
     let fixture: ComponentFixture<TrackedTimeChartComponent>;
@@ -26,7 +21,8 @@ describe('TrackedTimeChartComponent (browser)', () => {
         ...over
     });
 
-    const datasets = (): SpecDataset[] => fixture.componentInstance.chartData().datasets;
+    const datasets = (): TrackedTimeChartDataset[] =>
+        fixture.componentInstance.chartData().datasets as TrackedTimeChartDataset[];
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({ declarations: [TrackedTimeChartComponent] })
