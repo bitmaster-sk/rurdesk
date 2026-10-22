@@ -63,6 +63,9 @@ describe('AgentRunSummaryComponent (browser)', () => {
                     .join(' ')
         );
         expect(rows).toEqual(['anthropic/sonnet 100', 'openai/kimi 30']);
+        expect(root.querySelector('[data-testid="run-tokens-by-model"]')?.textContent).toContain(
+            'AGENT.STATS.TOKENS_BY_MODEL'
+        );
     });
 
     it('offers the short workflow switch while it can change', () => {

@@ -111,13 +111,14 @@ func TestChildEnvWiresProvider(t *testing.T) {
 		AnthropicAPIKey: "sk-ant-123",
 		// GoogleAPIKey and OllamaHost intentionally empty → must be omitted.
 	}
-	env := childEnv(cfg, "anthropic")
+	env := childEnv(cfg, "anthropic", "git-token-of-the-run")
 
 	mustHave := []string{
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",
 		"GOOSE_PROVIDER=anthropic",
 		"ANTHROPIC_API_KEY=sk-ant-123",
+		"RURDESK_GIT_TOKEN=git-token-of-the-run",
 	}
 	for _, want := range mustHave {
 		if !hasEnv(env, want) {
@@ -141,7 +142,7 @@ func TestChildEnvInheritsProcessEnv(t *testing.T) {
 	t.Setenv("OPENAI_HOST", "https://ollama.com")
 	t.Setenv("OPENAI_API_KEY", "sk-passthrough")
 
-	env := childEnv(&common.GooseConfig{}, "openai")
+	env := childEnv(&common.GooseConfig{}, "openai", "")
 	for _, want := range []string{"OPENAI_HOST=https://ollama.com", "OPENAI_API_KEY=sk-passthrough"} {
 		if !hasEnv(env, want) {
 			t.Errorf("childEnv did not inherit %q from the process env", want)

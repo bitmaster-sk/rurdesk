@@ -346,7 +346,6 @@ func New(
 	// middleware.Auth accepts user session tokens and agent API keys alike — so each handler
 	// authorizes itself against the run's own agent (agent.TaskService).
 	// Do not add a callback here without that check.
-	pri.POST("/agent/run/:idRun/repo", agentRunCtrl.ReportRunRepo)
 	pri.POST("/agent/task/:idTask/complete", agentRunCtrl.CompleteStage)
 	pri.POST("/agent/task/:idTask/heartbeat", agentRunCtrl.TaskHeartbeat)
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)

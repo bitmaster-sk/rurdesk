@@ -1,15 +1,32 @@
 :host {
+    --stage-card-rail-x: calc(0.25rem + 7px);
+    --stage-card-dot-y: 1.125rem;
+
+    position: relative;
     display: block;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: var(--stage-card-rail-x);
+        z-index: 1;
+        width: 2px;
+        background: var(--ui-surface-200);
+    }
 }
 
-.stage-card {
-    border: 1px solid var(--ui-surface-300);
-    border-radius: 0.5rem;
-    background: var(--ui-surface-0);
+:host(:first-of-type)::before {
+    top: var(--stage-card-dot-y);
+}
+
+:host(:last-of-type)::before {
+    bottom: calc(100% - var(--stage-card-dot-y));
 }
 
 .stage-card__head {
-    padding: 0.5rem 0.625rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.25rem;
     border: 0;
     border-radius: 0.5rem;
     background: none;
@@ -20,6 +37,10 @@
 
     &:hover:not(:disabled) {
         background: var(--ui-surface-50);
+
+        .stage-card__glyph {
+            background: var(--ui-surface-50);
+        }
     }
 
     &:disabled {
@@ -27,14 +48,13 @@
     }
 }
 
-.stage-card__head--open {
-    border-bottom: 1px solid var(--ui-surface-200);
-    border-radius: 0.5rem 0.5rem 0 0;
-}
-
 .stage-card__glyph {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     flex: none;
+    border-radius: 999px;
+    background: var(--ui-color-surface);
     color: var(--ui-surface-400);
 }
 
@@ -73,13 +93,14 @@
 }
 
 .stage-card__status {
-    padding: 0 0.375rem;
-    border: 1px solid var(--ui-surface-200);
-    border-radius: 0.25rem;
-    font-size: 0.7rem;
-    line-height: 1.1rem;
+    font-size: 0.75rem;
+    line-height: 1.25rem;
     color: var(--ui-color-text-muted);
     white-space: nowrap;
+}
+
+.stage-card--failed .stage-card__status {
+    color: var(--ui-red-700);
 }
 
 .stage-card__time {
@@ -90,8 +111,6 @@
 }
 
 .stage-card--awaiting_approval .stage-card__status {
-    border-color: var(--ui-amber-200);
-    background: var(--ui-amber-50);
     color: var(--ui-amber-800);
 }
 
@@ -102,7 +121,6 @@
 .stage-card--skipped .stage-card__name {
     font-weight: 400;
     color: var(--ui-color-text-muted);
-    text-decoration: line-through;
 }
 
 .stage-card__tag {
@@ -130,7 +148,7 @@
 }
 
 .stage-card__body {
-    padding: 0.625rem 0.75rem;
+    padding: 0 0.5rem 0.75rem 1.75rem;
     font-size: var(--font-size-s);
 }
 
@@ -163,7 +181,6 @@
 .stage-card__block {
     display: block;
     padding: 0.5rem 0.625rem;
-    border: 1px solid var(--ui-surface-100);
     border-radius: 0.375rem;
     background: var(--ui-surface-50);
 }

@@ -74,6 +74,34 @@ export async function createStubGatewayAgent(
     return { idUser: agent.idUser, name: agent.name };
 }
 
+export abstract class StubGitIntegration {
+    public static async ensure(
+        request: APIRequestContext,
+        baseURL: string,
+        token: string,
+        idProject: number
+    ): Promise<void> {
+        const url = `${baseURL}/api/private/project/${idProject}/git-integration`;
+        const existing = await request.get(url, { headers: authHeaders(token) });
+        expect(existing.status(), 'listing the git integrations').toBe(200);
+        if (((await existing.json()) as unknown[]).length > 0) {
+            return;
+        }
+        const created = await request.post(url, {
+            headers: authHeaders(token),
+            data: {
+                name: `e2e-${idProject}`,
+                hostType: 'github',
+                baseUrl: STUB_GATEWAY_URL_FOR_TRACKER,
+                repoPath: `org/project-${idProject}`,
+                baseBranch: 'main',
+                accessToken: 'ghp_e2e_stub_token'
+            }
+        });
+        expect(created.status(), 'creating the git integration').toBe(201);
+    }
+}
+
 export async function assignAgent(
     request: APIRequestContext,
     baseURL: string,
@@ -82,6 +110,7 @@ export async function assignAgent(
     idIssuePublic: number,
     idUserAgent: number
 ): Promise<number> {
+    await StubGitIntegration.ensure(request, baseURL, token, idProject);
     const res = await request.post(
         `${baseURL}/api/private/project/${idProject}/issue/${idIssuePublic}/assign-agent`,
         { headers: authHeaders(token), data: { idUserAgent } }

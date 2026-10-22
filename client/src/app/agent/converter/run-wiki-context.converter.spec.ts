@@ -81,6 +81,8 @@ describe('RunWikiContextConverter', () => {
             ['Retention', ['/project', 7, 'wiki', 'instance', 'retention']]
         ]);
         expect(stages[0].calls).toEqual([]);
+        expect(stages[0].promptTokens).toBe(200);
+        expect(stages[0].indexTokens).toBe(100);
         expect(stages[0].openedTokens).toBe(0);
     });
 

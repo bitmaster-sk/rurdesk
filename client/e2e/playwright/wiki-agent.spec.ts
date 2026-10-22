@@ -89,7 +89,7 @@ test.describe('agent reads the wiki', () => {
         await expect(always).toContainText('How we work');
         await expect(always).toContainText('v1');
         await expect(always).toContainText('always');
-        await expect(design.getByTestId('run-wiki-index')).toContainText('more pages');
+        await expect(design.getByTestId('run-wiki-index')).toContainText('offered by title');
         await expect(design).not.toContainText('Deploy runbook');
 
         await always.getByRole('link', { name: 'How we work' }).click();

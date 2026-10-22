@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
-	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 )
 
 // fakeGitHost implements githost.GitHost for controller-level orchestration tests.
@@ -51,7 +50,7 @@ func (f *fakeGitHost) CreatePullRequest(_ context.Context, _, base, _, _ string)
 func TestOpenOrReusePr(t *testing.T) {
 	t.Run("reuses existing PR without creating", func(t *testing.T) {
 		h := &fakeGitHost{found: true, findId: "42", findUrl: "u/42"}
-		id, url, err := openOrReusePr(context.Background(), h, "feature", "t", "b")
+		id, url, err := openOrReusePr(context.Background(), h, nil, "feature", "t", "b")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -65,7 +64,7 @@ func TestOpenOrReusePr(t *testing.T) {
 
 	t.Run("creates against default branch when none found", func(t *testing.T) {
 		h := &fakeGitHost{found: false, defaultBranch: "main", createId: "7", createUrl: "u/7"}
-		id, url, err := openOrReusePr(context.Background(), h, "feature", "t", "b")
+		id, url, err := openOrReusePr(context.Background(), h, nil, "feature", "t", "b")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -80,9 +79,21 @@ func TestOpenOrReusePr(t *testing.T) {
 		}
 	})
 
+	t.Run("creates against the run base branch without asking the host", func(t *testing.T) {
+		h := &fakeGitHost{found: false, defaultBranch: "main", defaultBranchErr: errors.New("must not be called"), createId: "8", createUrl: "u/8"}
+		runBase := "develop"
+		_, _, err := openOrReusePr(context.Background(), h, &runBase, "feature", "t", "b")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if h.createdBase != "develop" {
+			t.Errorf("expected base develop, got %q", h.createdBase)
+		}
+	})
+
 	t.Run("find error propagates, no create", func(t *testing.T) {
 		h := &fakeGitHost{findErr: errors.New("boom")}
-		_, _, err := openOrReusePr(context.Background(), h, "feature", "t", "b")
+		_, _, err := openOrReusePr(context.Background(), h, nil, "feature", "t", "b")
 		if err == nil || !strings.Contains(err.Error(), "looking up existing PR") {
 			t.Fatalf("expected lookup error, got %v", err)
 		}
@@ -93,7 +104,7 @@ func TestOpenOrReusePr(t *testing.T) {
 
 	t.Run("default-branch error propagates", func(t *testing.T) {
 		h := &fakeGitHost{found: false, defaultBranchErr: errors.New("no repo")}
-		_, _, err := openOrReusePr(context.Background(), h, "feature", "t", "b")
+		_, _, err := openOrReusePr(context.Background(), h, nil, "feature", "t", "b")
 		if err == nil || !strings.Contains(err.Error(), "resolving base branch") {
 			t.Fatalf("expected base branch error, got %v", err)
 		}
@@ -104,50 +115,11 @@ func TestOpenOrReusePr(t *testing.T) {
 
 	t.Run("create error propagates", func(t *testing.T) {
 		h := &fakeGitHost{found: false, defaultBranch: "main", createErr: errors.New("422 no commits")}
-		_, _, err := openOrReusePr(context.Background(), h, "feature", "t", "b")
+		_, _, err := openOrReusePr(context.Background(), h, nil, "feature", "t", "b")
 		if err == nil || !strings.Contains(err.Error(), "opening PR") {
 			t.Fatalf("expected open PR error, got %v", err)
 		}
 	})
-}
-
-func TestUniqueIntegrationForRepo(t *testing.T) {
-	gh := &model.GitIntegration{IdGitIntegration: 1, RepoPath: "org/backend"}
-	fe := &model.GitIntegration{IdGitIntegration: 2, RepoPath: "org/frontend"}
-	dupA := &model.GitIntegration{IdGitIntegration: 3, RepoPath: "org/dup"}
-	dupB := &model.GitIntegration{IdGitIntegration: 4, RepoPath: "org/dup"}
-
-	cases := []struct {
-		name     string
-		ints     []*model.GitIntegration
-		repoPath string
-		wantId   int64 // 0 means nil expected
-	}{
-		{"unique match", []*model.GitIntegration{gh, fe}, "org/backend", 1},
-		{"case insensitive", []*model.GitIntegration{gh, fe}, "ORG/Frontend", 2},
-		{"slash trimmed", []*model.GitIntegration{gh}, "/org/backend/", 1},
-		{"dot-git tolerated on input", []*model.GitIntegration{gh}, "org/backend.git", 1},
-		{"no match", []*model.GitIntegration{gh, fe}, "org/other", 0},
-		{"ambiguous", []*model.GitIntegration{dupA, dupB}, "org/dup", 0},
-		{"empty list", nil, "org/backend", 0},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := uniqueIntegrationForRepo(tc.ints, tc.repoPath)
-			if tc.wantId == 0 {
-				if got != nil {
-					t.Fatalf("expected nil, got integration %d", got.IdGitIntegration)
-				}
-				return
-			}
-			if got == nil {
-				t.Fatalf("expected integration %d, got nil", tc.wantId)
-			}
-			if got.IdGitIntegration != tc.wantId {
-				t.Errorf("got %d, want %d", got.IdGitIntegration, tc.wantId)
-			}
-		})
-	}
 }
 
 func TestDerivePrHostAndId(t *testing.T) {

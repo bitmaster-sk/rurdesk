@@ -12,8 +12,9 @@ var (
 	ErrTaskNotFound       = errors.New("agent task not found")
 	ErrTaskStatusMismatch = errors.New("agent task status does not match expected")
 
-	ErrAgentGatewayNotFound    = errors.New("agent gateway not found")
-	ErrGitIntegrationDuplicate = errors.New("git integration duplicate")
+	ErrAgentGatewayNotFound       = errors.New("agent gateway not found")
+	ErrGitIntegrationDuplicate    = errors.New("git integration duplicate")
+	ErrGitIntegrationLimitReached = errors.New("git integration limit reached")
 
 	ErrAnchorWrongThread = errors.New("anchor parent message belongs to a different thread")
 

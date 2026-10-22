@@ -817,12 +817,6 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 			Source:  "agent",
 		}
 	}
-	ctrl.notifier.Send <- &notify.Notice{
-		IdsUser: idsUser,
-		Subject: notify.SubjectAgentTask,
-		Action:  notify.ActionUpdate,
-		Payload: map[string]any{"idTask": idTask, "idRun": run.IdRun, "status": res.targetStatus},
-	}
 	// The local `run` is the pre-transition snapshot; reload so the broadcast
 	// carries the phase applyCompleteStage set.
 	if updated, loadErr := ctrl.agentRunRepo.LoadById(ctx, run.IdRun); loadErr == nil {
@@ -1033,83 +1027,6 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// ReportRunRepo records the repo a run pushes to (gateway-supplied, non-LLM) and
-// resolves the matching git_integration onto the run, so PR creation later knows
-// which credentials/repo to use. A zero or ambiguous match is left null — the
-// complete path then fails clearly rather than guessing.
-func (ctrl *AgentRunController) ReportRunRepo(c *gin.Context) {
-	ctx := c.Request.Context()
-	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
-	if err != nil {
-		_ = c.Error(errs.ErrBadRequest)
-		c.Status(http.StatusBadRequest)
-		return
-	}
-	var body model.ReportRunRepoReq
-	if err := c.ShouldBindJSON(&body); err != nil {
-		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
-		c.Status(http.StatusBadRequest)
-		return
-	}
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
-	if err != nil {
-		_ = c.Error(errs.ErrNotFound)
-		c.Status(http.StatusNotFound)
-		return
-	}
-	user, _ := extctx.GetUser(ctx)
-	if user.IdUser != run.IdUserAgent {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
-		return
-	}
-
-	gitInts, err := ctrl.gitIntRepo.ListByProject(ctx, run.IdProject)
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	match := uniqueIntegrationForRepo(gitInts, body.RepoPath)
-	if match == nil {
-		log.Warn().Int64("idRun", idRun).Str("repoPath", body.RepoPath).Int("candidates", len(gitInts)).
-			Msg("no unique git_integration matched the pushed repo; leaving run.id_git_integration null")
-		c.JSON(http.StatusOK, gin.H{"matched": false})
-		return
-	}
-	if err := ctrl.agentRunRepo.SetGitIntegration(ctx, idRun, match.IdGitIntegration); err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"matched": true})
-}
-
-// uniqueIntegrationForRepo returns the single integration whose repo_path matches
-// repoPath (case-insensitive, slash-trimmed), or nil if zero or more than one
-// match.
-func uniqueIntegrationForRepo(gitInts []*model.GitIntegration, repoPath string) *model.GitIntegration {
-	want := normalizeRepoPath(repoPath)
-	var found *model.GitIntegration
-	for _, gi := range gitInts {
-		if normalizeRepoPath(gi.RepoPath) == want {
-			if found != nil {
-				return nil // ambiguous
-			}
-			found = gi
-		}
-	}
-	return found
-}
-
-// normalizeRepoPath canonicalizes a repo slug for comparison — lower-cased,
-// slash-trimmed, trailing ".git" removed — so "org/repo.git" and "org/repo"
-// compare equal.
-func normalizeRepoPath(p string) string {
-	p = strings.TrimSuffix(strings.Trim(strings.ToLower(strings.TrimSpace(p)), "/"), ".git")
-	return strings.Trim(p, "/")
-}
-
 // TaskHeartbeat records that the active task is still alive.
 func (ctrl *AgentRunController) TaskHeartbeat(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -1272,7 +1189,7 @@ func (ctrl *AgentRunController) createOrFindPr(ctx context.Context, run *model.A
 	if title == "" {
 		title = ctrl.fallbackPrTitle(ctx, run.IdIssue, body.BranchName)
 	}
-	prId, prUrl, err := openOrReusePr(ctx, host, body.BranchName, title, body.PrBody)
+	prId, prUrl, err := openOrReusePr(ctx, host, run.BaseBranch, body.BranchName, title, body.PrBody)
 	if err != nil {
 		return nil, err
 	}
@@ -1280,8 +1197,9 @@ func (ctrl *AgentRunController) createOrFindPr(ctx context.Context, run *model.A
 }
 
 // openOrReusePr reuses an open PR/MR for branch if one exists, otherwise opens a
-// new one against the repo's default branch.
-func openOrReusePr(ctx context.Context, host githost.GitHost, branch, title, body string) (string, string, error) {
+// new one against baseBranch, or the repo's default branch for a run dispatched
+// before base branches were stamped on runs.
+func openOrReusePr(ctx context.Context, host githost.GitHost, baseBranch *string, branch, title, body string) (string, string, error) {
 	prId, prUrl, found, err := host.FindOpenPullRequest(ctx, branch)
 	if err != nil {
 		return "", "", fmt.Errorf("looking up existing PR: %w", err)
@@ -1289,9 +1207,9 @@ func openOrReusePr(ctx context.Context, host githost.GitHost, branch, title, bod
 	if found {
 		return prId, prUrl, nil
 	}
-	base, err := host.DefaultBranch(ctx)
+	base, err := prTargetBranch(ctx, host, baseBranch)
 	if err != nil {
-		return "", "", fmt.Errorf("resolving base branch: %w", err)
+		return "", "", err
 	}
 	prId, prUrl, err = host.CreatePullRequest(ctx, branch, base, title, body)
 	if err != nil {
@@ -1301,8 +1219,8 @@ func openOrReusePr(ctx context.Context, host githost.GitHost, branch, title, bod
 }
 
 // resolveIntegrationId returns the git_integration to use for PR creation: the
-// one stamped on the run by ReportRunRepo, or, as a fallback for single-repo
-// projects, the project's only integration.
+// one stamped on the run at dispatch, or the project's only integration for a run
+// dispatched before that.
 func (ctrl *AgentRunController) resolveIntegrationId(ctx context.Context, run *model.AgentRun) (int64, error) {
 	if run.IdGitIntegration != nil {
 		return *run.IdGitIntegration, nil
@@ -1315,6 +1233,17 @@ func (ctrl *AgentRunController) resolveIntegrationId(ctx context.Context, run *m
 		return gitInts[0].IdGitIntegration, nil
 	}
 	return 0, fmt.Errorf("no git_integration resolved for the pushed repo (run %d, project has %d integrations)", run.IdRun, len(gitInts))
+}
+
+func prTargetBranch(ctx context.Context, host githost.GitHost, baseBranch *string) (string, error) {
+	if baseBranch != nil && *baseBranch != "" {
+		return *baseBranch, nil
+	}
+	base, err := host.DefaultBranch(ctx)
+	if err != nil {
+		return "", fmt.Errorf("resolving base branch: %w", err)
+	}
+	return base, nil
 }
 
 // fallbackPrTitle is used only when the agent did not supply a pr_title.

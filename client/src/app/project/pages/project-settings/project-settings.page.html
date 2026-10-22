@@ -168,13 +168,17 @@
                     </div>
                     @if (aclStore.canManageGitIntegration()) {
                     <div class="panel-head-r">
-                        <ui-button
-                            size="small"
-                            [label]="'GIT_INTEGRATION.NEW' | translate"
-                            (click)="gitIntegrations.onAdd()"
-                        >
-                            <tabler-icon icon="plus" [size]="14" />
-                        </ui-button>
+                        <span [uiTooltip]="gitIntegrations.addTooltipKey() | translate">
+                            <ui-button
+                                size="small"
+                                data-testid="git-integration-add"
+                                [label]="'GIT_INTEGRATION.NEW' | translate"
+                                [disabled]="!gitIntegrations.canAdd()"
+                                (click)="gitIntegrations.onAdd()"
+                            >
+                                <tabler-icon icon="plus" [size]="14" />
+                            </ui-button>
+                        </span>
                     </div>
                     }
                 </header>

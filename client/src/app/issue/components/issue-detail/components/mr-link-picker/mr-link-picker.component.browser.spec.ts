@@ -25,6 +25,7 @@ function makeIntegration(id: number, name = `git-${id}`): GitIntegrationRes {
         hostType: HostType.GitHub,
         baseUrl: '',
         repoPath: '',
+        baseBranch: null,
         createdAt: '',
         updatedAt: ''
     };

@@ -186,7 +186,7 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-should-be-removed")
 	t.Setenv("ANTHROPIC_AUTH_TOKEN", "tok-should-be-removed")
 
-	env := childEnv("my-oauth-token")
+	env := childEnv("my-oauth-token", "git-token-of-the-run")
 
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") {
@@ -202,10 +202,13 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 	if !hasEnv(env, "CLAUDE_CODE_OAUTH_TOKEN=my-oauth-token") {
 		t.Error("CLAUDE_CODE_OAUTH_TOKEN not set")
 	}
+	if !hasEnv(env, "RURDESK_GIT_TOKEN=git-token-of-the-run") {
+		t.Error("the git token of the run is not in the agent env")
+	}
 }
 
 func TestChildEnvOmitsTokenWhenEmpty(t *testing.T) {
-	env := childEnv("")
+	env := childEnv("", "")
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "CLAUDE_CODE_OAUTH_TOKEN=") {
 			t.Errorf("CLAUDE_CODE_OAUTH_TOKEN should be absent, got %q", kv)

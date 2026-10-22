@@ -134,13 +134,14 @@ var (
 
 	// ── Git integration ────────────────────────────────────────────────────
 
-	ErrGitIntegrationNotFound  = newErr("GIT_INTEGRATION_NOT_FOUND", "git integration not found", "error.git_integration_not_found", http.StatusNotFound)
-	ErrGitIntegrationDuplicate = newErr("GIT_INTEGRATION_DUPLICATE", "an integration for this repository already exists", "error.git_integration_duplicate", http.StatusConflict)
-	ErrGitHostUnavailable      = newErr("GIT_HOST_UNAVAILABLE", "git host API is unavailable", "error.git_host_unavailable", http.StatusServiceUnavailable)
-	ErrInvalidMrLink           = newErr("INVALID_MR_LINK", "idGitIntegration and mrId must both be set or both be null", "error.invalid_mr_link", http.StatusUnprocessableEntity)
-	ErrAgentNoGateway          = newErr("AGENT_NO_GATEWAY", "agent user has no configured gateway", "error.agent_no_gateway", http.StatusUnprocessableEntity)
-	ErrAgentModelNotOffered    = newErr("AGENT_MODEL_NOT_OFFERED", "the agent's gateway does not offer this model", "error.agent_model_not_offered", http.StatusBadRequest)
-	ErrGatewayExists           = newErr("GATEWAY_EXISTS", "agent already has a gateway", "error.gateway_exists", http.StatusConflict)
+	ErrGitIntegrationNotFound     = newErr("GIT_INTEGRATION_NOT_FOUND", "git integration not found", "error.git_integration_not_found", http.StatusNotFound)
+	ErrGitIntegrationDuplicate    = newErr("GIT_INTEGRATION_DUPLICATE", "an integration for this repository already exists", "error.git_integration_duplicate", http.StatusConflict)
+	ErrGitIntegrationLimitReached = newErr("GIT_INTEGRATION_LIMIT_REACHED", "a project can have only one git integration", "error.git_integration_limit_reached", http.StatusConflict)
+	ErrGitHostUnavailable         = newErr("GIT_HOST_UNAVAILABLE", "git host API is unavailable", "error.git_host_unavailable", http.StatusServiceUnavailable)
+	ErrInvalidMrLink              = newErr("INVALID_MR_LINK", "idGitIntegration and mrId must both be set or both be null", "error.invalid_mr_link", http.StatusUnprocessableEntity)
+	ErrAgentNoGateway             = newErr("AGENT_NO_GATEWAY", "agent user has no configured gateway", "error.agent_no_gateway", http.StatusUnprocessableEntity)
+	ErrAgentModelNotOffered       = newErr("AGENT_MODEL_NOT_OFFERED", "the agent's gateway does not offer this model", "error.agent_model_not_offered", http.StatusBadRequest)
+	ErrGatewayExists              = newErr("GATEWAY_EXISTS", "agent already has a gateway", "error.gateway_exists", http.StatusConflict)
 
 	// ── Project scoping ────────────────────────────────────────────────────
 

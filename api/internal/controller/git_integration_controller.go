@@ -102,15 +102,13 @@ func (gc *GitIntegrationController) Get(c *gin.Context) {
 func (gc *GitIntegrationController) Create(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
 
 	var req model.CreateGitIntegrationReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
 
@@ -118,34 +116,32 @@ func (gc *GitIntegrationController) Create(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
 	key, err := githost.LoadEncryptionKey()
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
 	tokenEnc, nonce, err := githost.Encrypt(key, []byte(req.AccessToken))
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 
-	integration, err := gc.gitIntRepo.Create(ctx, idProject, req.Name, req.HostType, req.BaseUrl, req.RepoPath, tokenEnc, nonce)
-	if errors.Is(err, repository.ErrGitIntegrationDuplicate) {
-		_ = c.Error(errs.ErrGitIntegrationDuplicate)
-		c.Status(http.StatusConflict)
+	integration, err := gc.gitIntRepo.Create(ctx, idProject, req.Name, req.HostType, req.BaseUrl, req.RepoPath, req.NormalizedBaseBranch(), tokenEnc, nonce)
+	switch {
+	case errors.Is(err, repository.ErrGitIntegrationLimitReached):
+		ResponseErr(c, errs.ErrGitIntegrationLimitReached)
 		return
-	}
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+	case errors.Is(err, repository.ErrGitIntegrationDuplicate):
+		ResponseErr(c, errs.ErrGitIntegrationDuplicate)
+		return
+	case err != nil:
+		ResponseErr(c, err)
 		return
 	}
 	c.JSON(http.StatusCreated, integration.ToRes())
@@ -159,8 +155,7 @@ func (gc *GitIntegrationController) Update(c *gin.Context) {
 
 	var req model.UpdateGitIntegrationReq
 	if err := c.ShouldBindJSON(&req); err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusBadRequest)
+		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
 
@@ -168,8 +163,7 @@ func (gc *GitIntegrationController) Update(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	if !gc.acl.CanManageGitIntegration(ctx, user.IdUser, idProject) {
-		_ = c.Error(errs.ErrForbidden)
-		c.Status(http.StatusForbidden)
+		ResponseErr(c, errs.ErrForbidden)
 		return
 	}
 
@@ -177,33 +171,28 @@ func (gc *GitIntegrationController) Update(c *gin.Context) {
 	if req.AccessToken != "" {
 		key, err := githost.LoadEncryptionKey()
 		if err != nil {
-			_ = c.Error(err)
-			c.Status(http.StatusInternalServerError)
+			ResponseErr(c, err)
 			return
 		}
-		var encErr error
-		tokenEnc, nonce, encErr = githost.Encrypt(key, []byte(req.AccessToken))
-		if encErr != nil {
-			_ = c.Error(encErr)
-			c.Status(http.StatusInternalServerError)
+		tokenEnc, nonce, err = githost.Encrypt(key, []byte(req.AccessToken))
+		if err != nil {
+			ResponseErr(c, err)
 			return
 		}
 	}
 
-	integration, err := gc.gitIntRepo.Update(ctx, idGitIntegration, idProject, req.Name, req.HostType, req.BaseUrl, req.RepoPath, tokenEnc, nonce)
+	integration, err := gc.gitIntRepo.Update(ctx, idGitIntegration, idProject, req.Name, req.HostType, req.BaseUrl, req.RepoPath, req.NormalizedBaseBranch(), tokenEnc, nonce)
 	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 		return
 	}
 	if integration == nil {
-		_ = c.Error(errs.ErrGitIntegrationNotFound)
-		c.Status(http.StatusNotFound)
+		ResponseErr(c, errs.ErrGitIntegrationNotFound)
 		return
 	}
 
 	gc.diffCache.PurgeIntegration(idGitIntegration)
-	c.JSON(http.StatusOK, integration.ToRes())
+	ResponseOk(c, integration.ToRes())
 }
 
 func (gc *GitIntegrationController) Delete(c *gin.Context) {

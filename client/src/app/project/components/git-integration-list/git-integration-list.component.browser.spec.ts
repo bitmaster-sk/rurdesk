@@ -18,6 +18,7 @@ const makeIntegration = (idGitIntegration: number, hostType: HostType): GitInteg
     hostType,
     baseUrl: 'https://example.com',
     repoPath: 'owner/repo',
+    baseBranch: null,
     createdAt: '',
     updatedAt: ''
 });
@@ -74,6 +75,16 @@ describe('GitIntegrationListComponent', () => {
             .nativeElement.textContent.trim();
 
         expect(cellText).toBe('Gitea');
+    });
+
+    it('allows adding an integration only while the project has none', () => {
+        setup([]);
+        expect(fixture.componentInstance.canAdd()).toBe(true);
+        expect(fixture.componentInstance.addTooltipKey()).toBe('');
+
+        setup([makeIntegration(1, HostType.GitHub)]);
+        expect(fixture.componentInstance.canAdd()).toBe(false);
+        expect(fixture.componentInstance.addTooltipKey()).toBe('GIT_INTEGRATION.LIMIT_REACHED');
     });
 });
 

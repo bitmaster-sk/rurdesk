@@ -931,8 +931,19 @@ const SHOTS = [
         desc: "Agent run card: run block, stage cards with design and implementation plan open",
         run: async (page, _c, shot) => {
             const card = await openRunCard(page, shot._issueId);
-            const openStages = ["design", "implementation_plan"];
             const toggles = card.locator('[data-testid^="stage-card-toggle-"]');
+            const ranStages = [];
+            for (const toggle of await toggles.all()) {
+                if (await toggle.isEnabled()) {
+                    ranStages.push(
+                        (await toggle.getAttribute("data-testid")).replace("stage-card-toggle-", ""),
+                    );
+                }
+            }
+            const preferred = ["design", "implementation_plan"].filter((stage) =>
+                ranStages.includes(stage),
+            );
+            const openStages = preferred.length > 0 ? preferred : ["brainstorming"];
             for (const toggle of await toggles.all()) {
                 const stage = (await toggle.getAttribute("data-testid")).replace(
                     "stage-card-toggle-",
@@ -944,8 +955,17 @@ const SHOTS = [
                     await toggle.click();
                 }
             }
+            await page.setViewportSize({ width: VW, height: 2600 });
+            await page.waitForTimeout(600);
+            const designWiki = card.locator(
+                '[data-testid="stage-card-design"] .run-wiki-stage__segment[aria-expanded="false"]',
+            );
+            for (const segment of await designWiki.all()) {
+                await segment.click();
+            }
             await page.waitForTimeout(600);
             await card.screenshot({ path: path.join(IMG, "run-card.png") });
+            await page.setViewportSize({ width: VW, height: VH });
         },
     },
     {

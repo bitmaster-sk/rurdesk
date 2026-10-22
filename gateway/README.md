@@ -51,9 +51,8 @@ credential goes through to the child:
 | `ollama`         | `OLLAMA_HOST` (keyless; the model must be pulled on that host)               |
 | `openai`         | `OPENAI_API_KEY` + `OPENAI_HOST` / `OPENAI_BASE_PATH` for OpenAI-compatible endpoints |
 
-The shipped examples cover two of these: `gateway-goose-qwen-local` runs
-`ollama` against a local host, while the `gateway-goose-kimi-*` gateways use
-`openai` pointed at Ollama Cloud. Note the
+The shipped examples (`gateway-agent-007`, `gateway-agent-003`) use `openai`
+pointed at Ollama Cloud. Note the
 `openai` variables are not modelled in `GooseConfig` — they work because the
 adapter passes the whole parent environment to the child (`childEnv`), so any
 provider variable Goose itself understands gets through.
@@ -100,8 +99,8 @@ claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
 
 ### Required environment variables
 
-These come from the tracker API, your git provider and the models you allow; the
-gateway refuses to start without all six. The other adapters share this exact
+These come from the tracker API and the models you allow; the gateway refuses to
+start without all four. The other adapters share this exact
 contract.
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                                                          |
@@ -109,16 +108,17 @@ contract.
 | `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (agent credentials).                                                                                                                      |
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
-| `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup; per-run worktrees are checked out from that clone. One repo per gateway — see the note below.                                                                                                                                                  |
-| `GIT_ACCESS_TOKEN`         | Personal access token / app token with contents read+write on `REPO_URL`. Injected into the remote URL so the per-run agent can push branches back. Only **push** is needed — the tracker (API) opens the PR/MR via the project's git-integration token, not this one.                                                          |
 | `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the subscription. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |
 
-> **One repo per gateway.** A project in the tracker may hold several git
-> integrations, and the tracker resolves which one a run used by matching the
-> repo the gateway reports back (`ReportRunRepo`). Nothing today records which
-> repo a given *issue* belongs to, so the gateway cannot choose per task — it
-> always works in `REPO_URL`. To cover a second repo, run a second gateway with
-> its own agent.
+> **Repositories come from the tracker.** Every `stage_execute` carries `repo`
+> (`cloneUrl`, `host`, `repoPath`, `baseBranch`, `token`) from the project's git
+> integration, so one gateway serves every project. `EnsureRepo` clones it on
+> first use into `<WORKSPACE_BASE>/<host>/<repoPath>`. The clone's config holds a
+> credential helper that reads `RURDESK_GIT_TOKEN` from the git process env, so
+> the token never reaches disk; the agent process gets the token of its run in
+> the same variable. The `TrackerClient` replaces the tokens of running stages
+> with `***` in every body it posts. A `stage_execute` without `repo` fails with
+> `tracker_missing_repo`.
 
 ### Optional environment variables
 
@@ -127,8 +127,7 @@ contract.
 | `LISTEN_PORT`                          | `9090`           | HTTP port for the webhook receiver (`POST /event`) and healthcheck (`GET /health`). Match the `ports:` mapping in your compose file. |
 | `MAX_OUTPUT_LINE_MB`                   | `4`              | Longest line of agent output read, in MB. A longer line is skipped and logged; the stage keeps running.                              |
 | `LOG_LEVEL`                            | `info`           | `debug` \| `info` \| `warn` \| `error`. JSON via `zerolog`.                                                                          |
-| `WORKSPACE_BASE`                       | `/worktrees`     | Root for per-run git worktrees. Must match the `gateway-workspace` volume mount.                                                     |
-| `REPO_BRANCH_BASE`                     | `main`           | Branch each per-run worktree starts from.                                                                                            |
+| `WORKSPACE_BASE`                       | `/worktrees`     | Root for the clones and their per-run worktrees. Must match the `gateway-workspace` volume mount.                                    |
 | `MODEL_DEFAULT`                        | first of `MODELS` | Model run when `stage_execute` names none. Must be in `MODELS`, or the gateway refuses to start.                                     |
 | `MAX_TURNS_LIMIT`                      | no limit         | Ceiling on the `maxTurns` the tracker sends. Reported in `ReportRecovered` so the tracker caps at it; a higher value still fails with `max_turns_over_limit`. Without `maxTurns` the gateway uses 250 / 500 (implementation), capped by this limit. |
 | `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the `anthropic` / `google` provider.                                                                             |
@@ -136,20 +135,19 @@ contract.
 
 ### docker-compose snippet
 
-The dev compose ships one per agent: `gateway-goose-qwen-local`,
-`gateway-goose-kimi-cloud`, `gateway-goose-kimi-gitea` and `gateway-goose-kimi-gitlab`.
-They all run the same image and differ only in their env file. One of them, verbatim:
+The dev compose ships one per agent: `gateway-agent-007` and `gateway-agent-003`.
+They run the same image and differ only in their env file. One of them, verbatim:
 
 ```yaml
-gateway-goose-qwen-local:
+gateway-agent-007:
     # Built locally by ./script/build-gateway.sh — this tag is not on a registry.
     image: rurdesk-gateway-goose:latest
-    container_name: gateway_goose_qwen_local
+    container_name: gateway_agent_007
     env_file:
-        - ./docker/gateway-goose-qwen-local/.env # copy from .env.example
+        - ./docker/gateway-agent-007/.env # copy from .env.example
     volumes:
-        - gateway-goose-qwen-local-workspace:/worktrees
-        - gateway-goose-qwen-local-state:/var/lib/gateway
+        - gateway-agent-007-workspace:/worktrees
+        - gateway-agent-007-state:/var/lib/gateway
         # NO creds volume — auth is API-key BYOK via env
     depends_on:
         - rurdesk.api
@@ -158,16 +156,24 @@ gateway-goose-qwen-local:
         rurdesk_network:
 
 volumes:
-    gateway-goose-qwen-local-workspace:
-    gateway-goose-qwen-local-state:
+    gateway-agent-007-workspace:
+    gateway-agent-007-state:
 ```
 
-The required env (provider key, `MODELS` + the five tracker/git vars) lives in that
+The required env (provider key, `MODELS` and the three tracker vars) lives in that
 folder's `.env` — see
-[`.env.example`](../docker/gateway-goose-qwen-local/.env.example). The tracker
+[`.env.example`](../docker/gateway-agent-007/.env.example). The tracker
 also needs the webhook target configured
-(`http://gateway_goose_qwen_local:9090/event`) and the matching
+(`http://gateway_agent_007:9090/event`) and the matching
 `TRACKER_TO_GATEWAY_TOKEN` and `GATEWAY_TO_TRACKER_TOKEN`.
+
+### Upgrading from a gateway with its own repository settings
+
+`REPO_URL`, `GIT_ACCESS_TOKEN` and `REPO_BRANCH_BASE` are ignored; `IgnoredRepoEnv`
+logs a warning while they are set. On start `RemoveLegacyClones` deletes clones of
+the old `<WORKSPACE_BASE>/<repo>` layout, whose `.git/config` held the token in the
+remote URL. See [Upgrading to 1.6.0](../site/content/getting-started/upgrading.md#upgrading-to-160)
+for the steps.
 
 ### Healthcheck
 

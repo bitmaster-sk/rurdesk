@@ -160,7 +160,7 @@ func (h *GitLabHost) DefaultBranch(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("decoding project: %w", err)
 	}
 	if data.DefaultBranch == "" {
-		return "", fmt.Errorf("project %s has no default_branch", h.repoPath)
+		return "", fmt.Errorf("project %s: %w", h.repoPath, ErrNoDefaultBranch)
 	}
 	return data.DefaultBranch, nil
 }

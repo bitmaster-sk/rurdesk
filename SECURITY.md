@@ -50,9 +50,12 @@ report a concrete exploit that builds on one.
 
 ## Operating Rurdesk safely
 
-- Give `GIT_ACCESS_TOKEN` the narrowest scope that works — contents read/write on
-  the one repository the gateway serves. It reaches the agent's environment.
+- Give each git integration token the narrowest scope that works: pull requests
+  and contents read/write on that one repository. The tracker sends it to the
+  gateway with every stage and it reaches the agent's environment for that run.
+- Run the tracker → gateway webhook over HTTPS or a private network. The git
+  token in it is encrypted with a key derived from `TRACKER_TO_GATEWAY_TOKEN`,
+  but the task, comments and wiki pages it carries are not.
 - Keep `GIT_INTEGRATION_ENCRYPTION_KEY` out of version control and rotate it with
   `admin rotate-git-key`.
-- Agents execute code. Run each gateway in its own container with only the
-  repository it needs.
+- Agents execute code. Run each gateway in its own container.

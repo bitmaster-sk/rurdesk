@@ -23,9 +23,6 @@ type Config struct {
 	AgentApiKey        string
 	WebhookSecret      []byte
 	ListenPort         int
-	RepoUrl            string
-	RepoBranchBase     string
-	GitAccessToken     string
 	MaxOutputLineBytes int
 	AdapterType        string
 	LogLevel           string
@@ -65,20 +62,28 @@ type GooseConfig struct {
 	OllamaHost      string
 }
 
+var ignoredRepoEnv = []string{"REPO_URL", "GIT_ACCESS_TOKEN", "REPO_BRANCH_BASE"}
+
+func IgnoredRepoEnv() []string {
+	var set []string
+	for _, name := range ignoredRepoEnv {
+		if os.Getenv(name) != "" {
+			set = append(set, name)
+		}
+	}
+	return set
+}
+
 func LoadConfig(adapterType string) (*Config, error) {
 	trackerURL := strings.TrimRight(os.Getenv("TRACKER_URL"), "/")
 	agentApiKey := os.Getenv("GATEWAY_TO_TRACKER_TOKEN")
 	webhookSecretHex := os.Getenv("TRACKER_TO_GATEWAY_TOKEN")
-	repoUrl := strings.TrimSpace(os.Getenv("REPO_URL"))
-	gitAccessToken := os.Getenv("GIT_ACCESS_TOKEN")
 
 	var missing []string
 	for _, v := range []struct{ name, val string }{
 		{"TRACKER_URL", trackerURL},
 		{"GATEWAY_TO_TRACKER_TOKEN", agentApiKey},
 		{"TRACKER_TO_GATEWAY_TOKEN", webhookSecretHex},
-		{"REPO_URL", repoUrl},
-		{"GIT_ACCESS_TOKEN", gitAccessToken},
 	} {
 		if v.val == "" {
 			missing = append(missing, v.name)
@@ -94,7 +99,6 @@ func LoadConfig(adapterType string) (*Config, error) {
 	}
 
 	listenPort := envInt("LISTEN_PORT", 9090)
-	repoBranchBase := strings.TrimSpace(os.Getenv("REPO_BRANCH_BASE"))
 	logLevel := envOrDefault("LOG_LEVEL", "info")
 	workspaceBase := envOrDefault("WORKSPACE_BASE", "/worktrees")
 	maxOutputLineBytes := envInt("MAX_OUTPUT_LINE_MB", 0) * 1024 * 1024
@@ -108,9 +112,6 @@ func LoadConfig(adapterType string) (*Config, error) {
 		AgentApiKey:        agentApiKey,
 		WebhookSecret:      webhookSecret,
 		ListenPort:         listenPort,
-		RepoUrl:            repoUrl,
-		RepoBranchBase:     repoBranchBase,
-		GitAccessToken:     gitAccessToken,
 		MaxOutputLineBytes: maxOutputLineBytes,
 		AdapterType:        adapterType,
 		LogLevel:           logLevel,

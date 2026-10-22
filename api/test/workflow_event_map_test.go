@@ -25,6 +25,7 @@ type WorkflowEventMapSuite struct {
 	IdStateToDo   int64
 	IdStateInProg int64
 	IdStateDone   int64
+	IdGitInt      int64
 }
 
 func (s *WorkflowEventMapSuite) SetupSuite() {
@@ -90,7 +91,11 @@ func (s *WorkflowEventMapSuite) createState(name string, start, final bool) int6
 	return st.IdState
 }
 
-func (s *WorkflowEventMapSuite) createGitIntegration() int64 {
+// The project holds one integration, so tests share it.
+func (s *WorkflowEventMapSuite) gitIntegration() int64 {
+	if s.IdGitInt != 0 {
+		return s.IdGitInt
+	}
 	body := fmt.Sprintf(
 		`{"name":"mock-git-%d","hostType":"github","baseUrl":%q,"repoPath":"org/repo-%d","accessToken":"ghp_mock_token"}`,
 		rand.Int63(), "https://api.github.test", rand.Int63(),
@@ -101,7 +106,8 @@ func (s *WorkflowEventMapSuite) createGitIntegration() int64 {
 	s.Require().Equal(http.StatusCreated, res.StatusCode)
 	var gitInt model.GitIntegrationRes
 	json.NewDecoder(res.Body).Decode(&gitInt)
-	return gitInt.IdGitIntegration
+	s.IdGitInt = gitInt.IdGitIntegration
+	return s.IdGitInt
 }
 
 func (s *WorkflowEventMapSuite) url() string {
@@ -299,14 +305,14 @@ func (s *WorkflowEventMapSuite) Test_Mirror_AppliesOnSetPrInfoFrom() {
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
-	gitIntID1 := s.createGitIntegration()
+	idGitIntegration := s.gitIntegration()
 	agentRunRepo := injector.GetAgentRunRepository()
 	dto := model.SetRunPrReq{
 		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/1",
 		PrId:             "1",
 		PrHostType:       "github",
 		BranchName:       "agent/test-branch",
-		IdGitIntegration: gitIntID1,
+		IdGitIntegration: idGitIntegration,
 	}
 	run, err := agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
 	s.Require().NoError(err)
@@ -343,14 +349,14 @@ func (s *WorkflowEventMapSuite) Test_Mirror_SetPrInfoFrom_NoMapping_NoStateChang
 	`, iss.IdIssue, s.AgentUserID, s.IdProject).Scan(&idRun)
 	s.Require().NoError(err)
 
-	gitIntID2 := s.createGitIntegration()
+	idGitIntegration := s.gitIntegration()
 	agentRunRepo := injector.GetAgentRunRepository()
 	dto := model.SetRunPrReq{
 		PrUrl:            "https://github.com/bitmaster-sk/rurdesk/pull/2",
 		PrId:             "2",
 		PrHostType:       "github",
 		BranchName:       "agent/test-branch-2",
-		IdGitIntegration: gitIntID2,
+		IdGitIntegration: idGitIntegration,
 	}
 	_, err = agentRunRepo.SetPrInfoFrom(ctx, idRun, dto, "in_progress")
 	s.Require().NoError(err)

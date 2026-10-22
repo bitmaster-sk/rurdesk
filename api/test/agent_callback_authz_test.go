@@ -136,7 +136,7 @@ func (s *AgentCallbackAuthzSuite) insertRunWithActiveTask() (idRun int64, idTask
 // run's agent. The user here is the project's own admin — proving that project
 // membership, and even ownership, is not sufficient.
 func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
-	idRun, idTask := s.insertRunWithActiveTask()
+	_, idTask := s.insertRunWithActiveTask()
 
 	tests := []struct {
 		name   string
@@ -167,12 +167,6 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotDriveRun() {
 			method: "POST",
 			url:    fmt.Sprintf("/api/private/agent/task/%d/thinking", idTask),
 			body:   `{"seq":1,"events":[{"kind":"thinking","text":"injected","at":1}]}`,
-		},
-		{
-			name:   "report run repo",
-			method: "POST",
-			url:    fmt.Sprintf("/api/private/agent/run/%d/repo", idRun),
-			body:   `{"repoPath":"attacker/repo"}`,
 		},
 	}
 
@@ -221,7 +215,7 @@ func (s *AgentCallbackAuthzSuite) Test_ForeignUserCannotCompleteStage_LeavesRunU
 // Test_OwningAgentStillWorks guards the other direction: the ownership check must
 // not lock out the gateway it exists to protect.
 func (s *AgentCallbackAuthzSuite) Test_OwningAgentStillWorks() {
-	idRun, idTask := s.insertRunWithActiveTask()
+	_, idTask := s.insertRunWithActiveTask()
 
 	beat := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/agent/task/%d/heartbeat", idTask), "", s.AgentApiKey)
@@ -230,10 +224,6 @@ func (s *AgentCallbackAuthzSuite) Test_OwningAgentStillWorks() {
 	stats := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/agent/task/%d/stats", idTask), `{"tokensUsed":42}`, s.AgentApiKey)
 	s.Equal(http.StatusOK, stats.StatusCode, "the run's own bot must be able to report stats")
-
-	repo := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/agent/run/%d/repo", idRun), `{"repoPath":"owner/repo"}`, s.AgentApiKey)
-	s.Equal(http.StatusOK, repo.StatusCode, "the run's own bot must be able to report its repo")
 }
 
 func TestAgentCallbackAuthzSuite(t *testing.T) {

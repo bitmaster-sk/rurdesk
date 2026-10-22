@@ -181,7 +181,8 @@ func (s *Scheduler) activateAndDispatch(ctx context.Context, run *model.AgentRun
 	// the next stage right after a user approval) — otherwise the timeline
 	// shows the prior stage as pending until it completes.
 	BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.issueRepo, s.runRepo, s.taskRepo, broadcastRun)
-	s.dispatcher.DispatchStageExecute(ctx, run, task)
+	// The dispatcher fails the run from this phase, so it must be the current one.
+	s.dispatcher.DispatchStageExecute(ctx, broadcastRun, task)
 	return nil
 }
 

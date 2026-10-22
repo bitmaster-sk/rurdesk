@@ -161,7 +161,16 @@ export class AgentRunCardComponent {
         FailedStageErrorConverter.toError(this.run()?.stages ?? [])
     );
 
-    protected readonly runModel = computed(() => this.run()?.stagePlan?.model || null);
+    protected readonly runModel = computed(() => {
+        const run = this.run();
+        if (run?.stagePlan?.model) {
+            return run.stagePlan.model;
+        }
+        const usedModels = new Set(
+            (run?.stages ?? []).map(stage => stage.model).filter(model => !!model)
+        );
+        return usedModels.size > 0 ? [...usedModels].join(', ') : null;
+    });
 
     protected readonly stagePlanRows = computed(() => {
         const rows = new Map<string, AgentStagePlanEditorRow>();

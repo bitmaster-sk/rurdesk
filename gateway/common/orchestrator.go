@@ -128,12 +128,26 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 }
 
 func (o *Orchestrator) runStage(task Task) {
+	if !task.Repo.IsSet() {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
+		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
+		return
+	}
 	if err := o.applyModelAndTurns(&task); err != nil {
 		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
 		return
 	}
+	token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
+	if err != nil {
+		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
+		o.failTask(task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
+		return
+	}
+	task.Repo.Token = token
+	o.trackerClient.RedactSecret(task.Repo.Token)
+	defer o.trackerClient.ForgetSecret(task.Repo.Token)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 	o.mu.Lock()
@@ -170,8 +184,14 @@ func (o *Orchestrator) runStage(task Task) {
 	}
 	defer func() { <-o.sem }()
 
+	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
+	if err != nil {
+		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to prepare the repo")
+		o.failTask(task, "worktree_error", err.Error())
+		return
+	}
+
 	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
-	repoPath := RepoPathFromURL(o.cfg.WorkspaceBase, o.cfg.RepoUrl)
 	if WorktreeExists(repoPath, task.IdRun) {
 		task.WorktreePath = WorktreePath(repoPath, task.IdRun)
 		if branch, err := branchOfWorktree(task.WorktreePath); err == nil {
@@ -186,14 +206,6 @@ func (o *Orchestrator) runStage(task Task) {
 		}
 		task.WorktreePath = path
 		task.Branch = branch
-	}
-
-	// Tells the tracker which repo this run pushes to, so it can resolve the
-	// matching git_integration before complete_stage (the API opens the
-	// PR/MR). Best-effort — a failure just leaves the run unresolved and the
-	// complete path errors clearly.
-	if err := o.trackerClient.ReportRunRepo(ctx, task.IdRun, RepoSlugFromURL(o.cfg.RepoUrl)); err != nil {
-		log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("failed to report run repo to tracker")
 	}
 
 	log.Info().
@@ -264,11 +276,11 @@ func defaultMaxTurns(stage string) int {
 
 func (o *Orchestrator) createRunWorktree(repoPath string, task Task) (path, branch string, err error) {
 	if o.canResumePrBranch(repoPath, task) {
-		path, err = ResumeWorktree(repoPath, task.PrBranch, task.IdRun)
+		path, err = ResumeWorktree(repoPath, task.Repo.Token, task.PrBranch, task.IdRun)
 		return path, task.PrBranch, err
 	}
 	branch = GenerateBranchName(task.IdUserAgent, task.IdIssue)
-	path, err = CreateWorktree(repoPath, o.cfg.RepoBranchBase, branch, task.IdRun)
+	path, err = CreateWorktree(repoPath, task.Repo.Token, task.Repo.BaseBranch, branch, task.IdRun)
 	return path, branch, err
 }
 
@@ -280,7 +292,7 @@ func (o *Orchestrator) canResumePrBranch(repoPath string, task Task) bool {
 		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Msg("PR branch is not an agent branch — starting a new one")
 		return false
 	}
-	hasBranch, err := remoteHasBranch(repoPath, task.PrBranch)
+	hasBranch, err := remoteHasBranch(repoPath, task.Repo.Token, task.PrBranch)
 	if err != nil {
 		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Err(err).Msg("checking PR branch on origin failed — starting a new one")
 		return false
@@ -377,6 +389,15 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		task.PrBranch = stringField(inner, "prBranch")
 		task.RequestedModel = stringField(inner, "model")
 		task.MaxTurns = int(int64Field(inner, "maxTurns"))
+		if repo, ok := inner["repo"].(map[string]any); ok {
+			task.Repo = AgentRunGitRepo{
+				CloneUrl:       stringField(repo, "cloneUrl"),
+				Host:           stringField(repo, "host"),
+				RepoPath:       stringField(repo, "repoPath"),
+				BaseBranch:     stringField(repo, "baseBranch"),
+				EncryptedToken: stringField(repo, "encryptedToken"),
+			}
+		}
 
 		if ctx, ok := inner["contextBundle"].(map[string]any); ok {
 			if issue, ok := ctx["issue"].(map[string]any); ok {

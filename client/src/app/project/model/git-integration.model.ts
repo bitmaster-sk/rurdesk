@@ -28,6 +28,7 @@ export interface GitIntegrationRes {
     hostType: HostType;
     baseUrl: string;
     repoPath: string;
+    baseBranch: string | null;
     createdAt: string;
     updatedAt: string;
 }
@@ -37,6 +38,7 @@ export interface CreateGitIntegrationReq {
     hostType: HostType;
     baseUrl: string;
     repoPath: string;
+    baseBranch: string | null;
     accessToken: string;
 }
 
@@ -66,6 +68,7 @@ export interface UpdateGitIntegrationReq {
     hostType: HostType;
     baseUrl: string;
     repoPath: string;
+    baseBranch: string | null;
     accessToken?: string;
 }
 

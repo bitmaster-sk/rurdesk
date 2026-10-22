@@ -62,20 +62,21 @@ export abstract class RunWikiContextConverter {
         const opened = [...calls.values()]
             .filter(call => !call.isSearch)
             .flatMap(call => call.pages);
+        const promptReads = reads.filter(read => PROMPT_PAGE_SOURCES.has(read.source));
+        const indexReads = reads.filter(read => read.source === AgentWikiReadSource.PromptIndex);
         return {
             stage,
-            prompt: reads
-                .filter(read => PROMPT_PAGE_SOURCES.has(read.source))
-                .map(read => ({
-                    ...RunWikiContextConverter.toPage(read, idProject),
-                    isAlways: read.source === AgentWikiReadSource.PromptAlways
-                })),
-            index: reads
-                .filter(read => read.source === AgentWikiReadSource.PromptIndex)
+            prompt: promptReads.map(read => ({
+                ...RunWikiContextConverter.toPage(read, idProject),
+                isAlways: read.source === AgentWikiReadSource.PromptAlways
+            })),
+            index: indexReads
                 .flatMap(read => read.pages ?? [])
                 .map(page => RunWikiContextConverter.toIndexPage(page, idProject)),
             calls: [...calls.values()],
-            openedTokens: opened.reduce((sum, page) => sum + page.tokens, 0)
+            promptTokens: RunWikiContextConverter.sumTokens(promptReads),
+            indexTokens: RunWikiContextConverter.sumTokens(indexReads),
+            openedTokens: RunWikiContextConverter.sumTokens(opened)
         };
     }
 
@@ -100,6 +101,10 @@ export abstract class RunWikiContextConverter {
             tokens: 0,
             link: ['/project', idProject, 'wiki', page.spaceKind, page.slug]
         };
+    }
+
+    private static sumTokens(items: { tokens: number }[]): number {
+        return items.reduce((sum, item) => sum + item.tokens, 0);
     }
 
     private static latestAttempt(reads: AgentRunWikiRead[]): AgentRunWikiRead[] {

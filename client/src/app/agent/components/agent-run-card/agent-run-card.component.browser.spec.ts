@@ -293,8 +293,30 @@ describe('AgentRunCardComponent', () => {
             expect(byTestId(el, 'run-tool-calls')?.textContent).toContain('26');
         });
 
-        it('says the run uses the gateway default when no model was chosen', () => {
-            const el = renderOpen(RAN, { stagePlan: { stages: [] } });
+        it('shows the models the stages ran with when no model was chosen', () => {
+            const el = renderOpen(
+                [
+                    Fixtures.stageProgress({
+                        stage: AgentStage.Brainstorming,
+                        status: 'done',
+                        attempts: 1,
+                        model: 'openai/kimi'
+                    }),
+                    Fixtures.stageProgress({
+                        stage: AgentStage.Implementation,
+                        status: 'done',
+                        attempts: 1,
+                        model: 'openai/kimi'
+                    })
+                ],
+                { stagePlan: { stages: [] } }
+            );
+
+            expect(byTestId(el, 'run-model')?.textContent?.trim()).toBe('openai/kimi');
+        });
+
+        it('says the run uses the gateway default before any stage ran', () => {
+            const el = renderOpen([], { stagePlan: { stages: [] } });
 
             expect(byTestId(el, 'run-model')?.textContent).toContain(
                 'AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT'

@@ -96,17 +96,13 @@ func (s *MergePollerManualSuite) createState(name string, start, final bool) int
 }
 
 func (s *MergePollerManualSuite) insertGitIntegration() (int64, error) {
-	return s.insertGitIntegrationNamed("manual-merge-test", "org/repo")
-}
-
-func (s *MergePollerManualSuite) insertGitIntegrationNamed(name, repoPath string) (int64, error) {
 	var idGitIntegration int64
 	err := s.App.Pool.QueryRow(context.Background(), `
 		INSERT INTO projects.git_integration
 			(id_project, name, host_type, base_url, repo_path, access_token_enc, token_nonce)
-		VALUES ($1, $2, 'github', 'https://example.test', $3, $4, $5)
+		VALUES ($1, 'manual-merge-test', 'github', 'https://example.test', 'org/repo', $2, $3)
 		RETURNING id_git_integration
-	`, s.IdProject, name, repoPath, []byte("dummy-token-cipher"), []byte("dummy-nonce")).Scan(&idGitIntegration)
+	`, s.IdProject, []byte("dummy-token-cipher"), []byte("dummy-nonce")).Scan(&idGitIntegration)
 	return idGitIntegration, err
 }
 
@@ -322,17 +318,19 @@ func (s *MergePollerManualSuite) Test_LinkMr_ResetsMrState() {
 func (s *MergePollerManualSuite) Test_UnlinkViaIntegrationDelete_ResetsMrState() {
 	ctx := context.Background()
 
-	idGitIntegration, err := s.insertGitIntegrationNamed("manual-merge-unlink-test", "org/repo-unlink")
-	s.Require().NoError(err)
-
 	iss := s.createIssue()
-	_, err = s.App.Pool.Exec(ctx,
+	_, err := s.App.Pool.Exec(ctx,
 		`UPDATE issues.issue SET id_git_integration = $1, mr_id = $2, mr_state = $3 WHERE id_issue = $4`,
-		idGitIntegration, "601", "merged", iss.IdIssue)
+		s.IdGitIntegration, "601", "merged", iss.IdIssue)
 	s.Require().NoError(err)
 
-	_, err = injector.GetGitIntegrationRepository().Delete(ctx, idGitIntegration, s.IdProject)
+	_, err = injector.GetGitIntegrationRepository().Delete(ctx, s.IdGitIntegration, s.IdProject)
 	s.Require().NoError(err)
+	// The project holds one integration, so the other tests need it back.
+	defer func() {
+		s.IdGitIntegration, err = s.insertGitIntegration()
+		s.Require().NoError(err)
+	}()
 
 	_, mrState := s.loadStateAndMrState(iss.IdIssue)
 	s.Nil(mrState)

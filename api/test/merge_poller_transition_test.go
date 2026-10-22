@@ -74,7 +74,7 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 	s.gitHub = httptest.NewServer(http.HandlerFunc(s.serveGitHub))
 
 	intBody := fmt.Sprintf(
-		`{"name":"merge-transition","hostType":"github","baseUrl":%q,"repoPath":"org/repo","accessToken":"ghp_mock_token"}`,
+		`{"name":"merge-transition","hostType":"github","baseUrl":%q,"repoPath":"org/repo","baseBranch":"main","accessToken":"ghp_mock_token"}`,
 		s.gitHub.URL)
 	intRes := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/git-integration", s.IdProject), intBody, s.OwnerToken)

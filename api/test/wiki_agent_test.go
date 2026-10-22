@@ -354,6 +354,7 @@ func (f *wikiAgentFixture) dispatchTask(t *testing.T, run *model.AgentRun, task 
 		f.received = received
 	}
 
+	ensureGitIntegration(t, f.app, f.adminToken, run.IdProject)
 	injector.GetDispatcher().DispatchStageExecute(context.Background(), run, task)
 
 	var raw []byte

@@ -168,6 +168,16 @@ func TestGitLabHost_DefaultBranch(t *testing.T) {
 	assert.Equal(t, "develop", branch)
 }
 
+func TestGitLabHost_DefaultBranch_EmptyProject(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Write([]byte(`{"default_branch":null}`))
+	}))
+	defer srv.Close()
+
+	_, err := NewGitLabHost(srv.URL, "group/project", "token").DefaultBranch(t.Context())
+	assert.ErrorIs(t, err, ErrNoDefaultBranch)
+}
+
 func TestGitLabHost_FindOpenPullRequest(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.True(t, strings.HasSuffix(r.URL.Path, "/merge_requests"))
