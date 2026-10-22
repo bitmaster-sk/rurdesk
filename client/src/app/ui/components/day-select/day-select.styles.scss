@@ -104,3 +104,8 @@ ui-day-select {
     opacity: 0;
     pointer-events: none;
 }
+
+.ui-day-select-panel .flatpickr-calendar {
+    border: 0;
+    box-shadow: none;
+}
