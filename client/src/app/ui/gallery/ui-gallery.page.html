@@ -766,6 +766,51 @@
     </section>
 
     <section class="ui-gallery__section">
+        <h2>ui-day-select</h2>
+        <p>
+            A compact day picker. The trigger reads "Today" — or "Yesterday" / the picked day — and
+            opens a popover with quick presets and an inline calendar capped by
+            <code>maxDate</code>
+            . A day other than today colours the trigger so a wrong-day entry is obvious before it
+            is saved.
+        </p>
+        <div class="ui-gallery__grid">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <div class="ui-input-group">
+                    <ui-day-select [maxDate]="today" [(ngModel)]="daySelectShortValue" />
+                    <input uiInput type="text" placeholder="2h 30m" />
+                    <div class="ui-input-group-addon">
+                        <ui-button
+                            severity="secondary"
+                            variant="text"
+                            [isIconOnly]="true"
+                            ariaLabel="Log"
+                        >
+                            <tabler-icon icon="check" [size]="16" />
+                        </ui-button>
+                    </div>
+                </div>
+                <code>short, in an input group</code>
+            </div>
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <ui-day-select
+                    [format]="UiDaySelectFormat.Long"
+                    [maxDate]="today"
+                    [(ngModel)]="daySelectLongValue"
+                />
+                <code>format="long"</code>
+            </div>
+        </div>
+        <p class="ui-gallery__note">
+            Selected:
+            <code>{{ daySelectShortValue | date: 'medium' }}</code>
+            ,
+            <code>{{ daySelectLongValue | date: 'medium' }}</code>
+            .
+        </p>
+    </section>
+
+    <section class="ui-gallery__section">
         <h2>ui-toast</h2>
         <p>
             Click to enqueue a toast (top-right). Hover/focus pauses auto-dismiss; the bar shows

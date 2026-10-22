@@ -98,6 +98,10 @@
         "DATE_RANGE": {
             "CUSTOM": "Custom range"
         },
+        "DAY_SELECT": {
+            "TODAY": "Today",
+            "YESTERDAY": "Yesterday"
+        },
         "LIGHTBOX": {
             "PREVIOUS": "Previous image",
             "NEXT": "Next image",

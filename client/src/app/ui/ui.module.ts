@@ -69,6 +69,7 @@ import { UiListboxComponent } from './components/select/listbox.component';
 import { UiMultiSelectComponent } from './components/select/multiselect.component';
 import { UiOptionPanelComponent } from './components/select/option-panel.component';
 import { UiDateRangeSelectComponent } from './components/date-range-select/date-range-select.component';
+import { UiDaySelectComponent } from './components/day-select/day-select.component';
 import { UiSelectComponent } from './components/select/select.component';
 import { UiTagComponent } from './components/tag/tag.component';
 import { UiToggleButtonComponent } from './components/toggle-button/toggle-button.component';
@@ -100,6 +101,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiOptionPanelComponent,
         UiSelectComponent,
         UiDateRangeSelectComponent,
+        UiDaySelectComponent,
         UiMultiSelectComponent,
         UiListboxComponent,
         UiChoiceComponent,
@@ -146,6 +148,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiOdometerComponent,
         UiSelectComponent,
         UiDateRangeSelectComponent,
+        UiDaySelectComponent,
         UiMultiSelectComponent,
         UiListboxComponent,
         UiChoiceComponent,

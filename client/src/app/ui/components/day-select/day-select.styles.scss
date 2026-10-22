@@ -1,0 +1,111 @@
+ui-day-select {
+    display: block;
+}
+
+.ui-day-select__trigger {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    min-height: var(--ui-input-min-height);
+    padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
+    font-family: inherit;
+    font-size: var(--ui-input-font-size);
+    line-height: var(--ui-input-line-height);
+    color: var(--ui-input-fg);
+    background: var(--ui-input-bg);
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.ui-day-select__trigger:hover:not(:disabled) {
+    border-color: var(--ui-input-border-hover);
+}
+
+.ui-day-select__trigger:focus-visible {
+    outline: none;
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}
+
+.ui-day-select__trigger:disabled {
+    background: var(--ui-input-disabled-bg);
+    color: var(--ui-input-disabled-fg);
+    cursor: not-allowed;
+}
+
+.ui-day-select--past {
+    background: var(--ui-brand-50);
+    color: var(--ui-brand-700);
+    font-weight: bold;
+}
+
+.ui-day-select-panel .ui-popover {
+    padding: var(--ui-space-s);
+}
+
+.ui-day-select__presets {
+    display: flex;
+    gap: var(--ui-space-s);
+    margin-bottom: var(--ui-space-s);
+}
+
+.ui-day-select__preset {
+    flex: 1;
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 0;
+    border-radius: var(--ui-menu-item-radius);
+    background: transparent;
+    color: var(--ui-menu-fg);
+    font: inherit;
+    white-space: nowrap;
+    transition:
+        background-color 0.2s,
+        color 0.2s;
+}
+
+.ui-day-select__preset:hover {
+    background-color: var(--ui-menu-item-hover-bg);
+    color: var(--ui-menu-item-hover-fg);
+}
+
+.ui-day-select__preset:focus-visible {
+    outline: 1px solid var(--ui-color-primary);
+    outline-offset: -1px;
+}
+
+.ui-day-select__preset--active {
+    background-color: var(--ui-color-highlight);
+    color: var(--ui-color-primary-strong);
+    font-weight: bold;
+}
+
+.ui-input-group > ui-day-select {
+    box-sizing: border-box;
+    display: flex;
+    border: 1px solid var(--ui-input-border);
+    border-radius: var(--ui-input-radius);
+    background: var(--ui-input-bg);
+}
+
+.ui-input-group > ui-day-select .ui-day-select__trigger {
+    flex: 1;
+    border: 0;
+}
+
+.ui-day-select__calendar-host {
+    position: absolute;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.ui-day-select-panel .flatpickr-calendar {
+    border: 0;
+    box-shadow: none;
+}
