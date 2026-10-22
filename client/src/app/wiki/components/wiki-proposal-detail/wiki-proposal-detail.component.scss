@@ -42,6 +42,10 @@
         font-size: var(--font-size-s);
     }
 
+    &__diff-body {
+        padding: var(--ui-space-s);
+    }
+
     &__hint {
         margin: 0;
         font-size: var(--font-size-s);

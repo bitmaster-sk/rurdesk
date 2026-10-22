@@ -117,7 +117,9 @@
                                 </span>
                             }
                         </div>
-                        <app-diff-viewer [rawPatch]="detail.diff" />
+                        <div class="wiki-proposal__diff-body">
+                            <app-diff-viewer [rawPatch]="detail.diff" />
+                        </div>
                     </div>
                 }
             }
