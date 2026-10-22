@@ -1,6 +1,6 @@
-<div class="flex gap-4 p-4 items-start">
-    <section class="panel shrink-0 w-80" data-testid="skill-list">
-        <header class="panel-head">
+<div class="h-full flex gap-4 p-4 items-start">
+    <section class="panel shrink-0 w-80 max-h-full flex flex-col" data-testid="skill-list">
+        <header class="panel-head shrink-0">
             <div class="panel-head-l">
                 <tabler-icon icon="sparkles" [size]="16" class="panel-icon" />
                 <div class="panel-title">{{ 'SKILL.TITLE' | translate }}</div>
@@ -10,7 +10,7 @@
                 {{ 'SKILL.NEW' | translate }}
             </ui-button>
         </header>
-        <div class="panel-body flex flex-col gap-1 p-2">
+        <div class="panel-body flex flex-col gap-1 p-2 min-h-0 overflow-y-auto">
             @if (isLoading()) {
                 <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />
             } @else {
@@ -38,8 +38,12 @@
     </section>
 
     @if (selected(); as skill) {
-        <section class="panel grow" [formGroup]="form" data-testid="skill-editor">
-            <header class="panel-head">
+        <section
+            class="panel grow max-h-full flex flex-col"
+            [formGroup]="form"
+            data-testid="skill-editor"
+        >
+            <header class="panel-head shrink-0">
                 <div class="panel-head-l">
                     <div class="panel-title">{{ skill.name }}</div>
                 </div>
@@ -72,7 +76,7 @@
                     }
                 </div>
             </header>
-            <div class="panel-body flex flex-col gap-4">
+            <div class="panel-body flex flex-col gap-4 min-h-0 overflow-y-auto">
                 <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('name')">
                     <label for="skillName">{{ 'SKILL.NAME' | translate }}</label>
                     <input id="skillName" uiInput type="text" formControlName="name" />
