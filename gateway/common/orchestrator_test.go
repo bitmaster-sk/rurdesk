@@ -235,12 +235,17 @@ func (a *submittingAgent) Cancel(_ context.Context, _ RunID) error { return nil 
 
 func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 	var isStatsSent atomic.Bool
+	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		switch request.URL.Path {
 		case "/agent/task/100/heartbeat":
-			writer.WriteHeader(http.StatusConflict)
-			_, _ = writer.Write([]byte(`{"code":"TASK_NOT_RUNNING_BY_AGENT"}`))
-			return
+			select {
+			case <-agent.entered:
+				writer.WriteHeader(http.StatusConflict)
+				_, _ = writer.Write([]byte(`{"code":"TASK_NOT_RUNNING_BY_AGENT"}`))
+				return
+			default:
+			}
 		case "/agent/task/100/stats":
 			isStatsSent.Store(true)
 		}
@@ -258,7 +263,6 @@ func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 		WebhookSecret: testWebhookSecret,
 		WorkspaceBase: workspaceBase,
 	}
-	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
 	orchestrator.heartbeatLoop.interval = 20 * time.Millisecond
 
