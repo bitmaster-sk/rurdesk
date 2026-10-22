@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -23,7 +23,7 @@ class HostComponent {
     `
 })
 class MaxDateHostComponent {
-    public maxDate: Date | null = null;
+    @Input() public maxDate: Date | null = null;
     public readonly control = new FormControl<Date | null>(null);
 }
 
@@ -40,7 +40,6 @@ function fpInstance(input: HTMLInputElement): {
     setDate: (d: Date | Date[], trigger?: boolean) => void;
     clear: () => void;
     open: () => void;
-    close: () => void;
     calendarContainer: HTMLElement;
 } {
     return (input as unknown as { _flatpickr: never })._flatpickr;
@@ -147,6 +146,45 @@ describe('UiDatepickerDirective (flatpickr)', () => {
         maxHost.control.setValue(today);
         maxFixture.detectChanges();
         await openCalendar(maxFixture.nativeElement.querySelector('input'));
+        const cell = dayCell(
+            fpInstance(maxFixture.nativeElement.querySelector('input')).calendarContainer,
+            tomorrow.getDate()
+        );
+        expect(cell).not.toBeNull();
+        expect(cell!.classList.contains('flatpickr-disabled')).toBe(false);
+        maxFixture.destroy();
+    });
+
+    it('disables future days when maxDate is set after the calendar is open', async () => {
+        const maxFixture = TestBed.createComponent(MaxDateHostComponent);
+        const maxHost = maxFixture.componentInstance;
+        const today = new Date(2026, 6, 3);
+        const tomorrow = new Date(2026, 6, 4);
+        maxHost.control.setValue(today);
+        maxFixture.detectChanges();
+        await openCalendar(maxFixture.nativeElement.querySelector('input'));
+        maxFixture.componentRef.setInput('maxDate', today);
+        maxFixture.detectChanges();
+        const cell = dayCell(
+            fpInstance(maxFixture.nativeElement.querySelector('input')).calendarContainer,
+            tomorrow.getDate()
+        );
+        expect(cell).not.toBeNull();
+        expect(cell!.classList.contains('flatpickr-disabled')).toBe(true);
+        maxFixture.destroy();
+    });
+
+    it('re-enables future days when maxDate is cleared after the calendar is open', async () => {
+        const maxFixture = TestBed.createComponent(MaxDateHostComponent);
+        const maxHost = maxFixture.componentInstance;
+        const today = new Date(2026, 6, 3);
+        const tomorrow = new Date(2026, 6, 4);
+        maxHost.maxDate = today;
+        maxHost.control.setValue(today);
+        maxFixture.detectChanges();
+        await openCalendar(maxFixture.nativeElement.querySelector('input'));
+        maxFixture.componentRef.setInput('maxDate', null);
+        maxFixture.detectChanges();
         const cell = dayCell(
             fpInstance(maxFixture.nativeElement.querySelector('input')).calendarContainer,
             tomorrow.getDate()

@@ -76,6 +76,12 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
     private onChange: (value: UiDatepickerValue) => void = () => {};
     private onTouch: () => void = () => {};
 
+    // Buffered state written before the (lazily-loaded) flatpickr instance exists.
+    private pending: UiDatepickerValue | undefined = undefined;
+    private pendingDisabled = false;
+    // Last value we propagated outward — used to revert a half-finished range on close.
+    private lastValue: UiDatepickerValue = null;
+
     public constructor() {
         effect(() => {
             const value = this.maxDate();
@@ -84,12 +90,6 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
             }
         });
     }
-
-    // Buffered state written before the (lazily-loaded) flatpickr instance exists.
-    private pending: UiDatepickerValue | undefined = undefined;
-    private pendingDisabled = false;
-    // Last value we propagated outward — used to revert a half-finished range on close.
-    private lastValue: UiDatepickerValue = null;
 
     public ngAfterViewInit(): void {
         void this.initFlatpickr();
