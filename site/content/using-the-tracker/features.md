@@ -313,6 +313,10 @@ the feed to the **🕐 Time** chip to see just the tracked time, per contributor
 
 ![Tracked time in the task activity feed, filtered to the Time chip](../../site/assets/img/tracker.png)
 
+Time can also be entered by hand in the task's **Tracker** field: type the
+length and use the field's **day button** to log it to **Today**, **Yesterday**
+or an earlier day picked from its calendar. Future days cannot be logged.
+
 ### The running timer
 
 Start a timer from a task's detail, from the **Time** section of the quick

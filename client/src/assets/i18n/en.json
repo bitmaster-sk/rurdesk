@@ -1109,6 +1109,8 @@
         "STOP": "Stop tracking",
         "START": "Start tracking",
         "SAVE": "Save tracked time",
+        "DAY": "Day",
+        "LOGS_TO": "Logs to {{ day }}",
         "EDIT": "Edit track record",
         "DELETE": "Delete track record",
         "PAUSE": "Pause",
