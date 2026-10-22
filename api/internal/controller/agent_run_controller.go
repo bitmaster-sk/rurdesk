@@ -817,12 +817,6 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 			Source:  "agent",
 		}
 	}
-	ctrl.notifier.Send <- &notify.Notice{
-		IdsUser: idsUser,
-		Subject: notify.SubjectAgentTask,
-		Action:  notify.ActionUpdate,
-		Payload: map[string]any{"idTask": idTask, "idRun": run.IdRun, "status": res.targetStatus},
-	}
 	// The local `run` is the pre-transition snapshot; reload so the broadcast
 	// carries the phase applyCompleteStage set.
 	if updated, loadErr := ctrl.agentRunRepo.LoadById(ctx, run.IdRun); loadErr == nil {

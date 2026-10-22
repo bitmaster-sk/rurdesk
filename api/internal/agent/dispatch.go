@@ -134,6 +134,7 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 		if err := d.wikiAgent.RecordReads(bgCtx, wikiReads); err != nil {
 			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("recording wiki reads of the prompt")
 		}
+		BroadcastRunUpdate(bgCtx, d.notifier, d.projectRepo, d.issueRepo, d.agentRunRepo, d.taskRepo, run)
 	}()
 }
 

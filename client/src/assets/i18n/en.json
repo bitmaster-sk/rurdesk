@@ -172,20 +172,34 @@
         },
         "STATS": {
             "TOKENS": "Tokens",
+            "TOKENS_BY_MODEL": "Tokens by model",
             "DURATION": "Duration",
             "TOOL_CALLS": "Tool calls"
         },
         "WIKI": {
             "TITLE": "Wiki",
             "PROMPT": "In prompt",
+            "PROMPT_SEGMENT": "in prompt",
+            "PROMPT_HINT": "Full text was part of the prompt",
             "ALWAYS": "always",
             "LINKED": "linked",
-            "INDEX": "{{count}} more pages offered by title and summary",
-            "INDEX_HINT": "The prompt listed these pages without their text. The agent opens one when it needs it.",
+            "INDEX": "Offered by title",
+            "INDEX_SEGMENT": "offered by title",
+            "INDEX_HINT": "Listed without their text; the agent opens one when it needs it",
             "MCP_TITLE": "Looked up",
+            "MCP_SEGMENT": "looked up",
+            "MCP_HINT": "Opened or searched by the agent during the stage",
             "SEARCHED": "Searched for “{{query}}”",
             "RESULTS": "{{count}} results",
-            "TOKENS": "{{count}} tokens"
+            "TOKENS": "{{count}} tokens",
+            "PAGES": {
+                "SINGULAR": "{{count}} page",
+                "PLURAL": "{{count}} pages"
+            },
+            "LOOKUPS": {
+                "SINGULAR": "{{count}} lookup",
+                "PLURAL": "{{count}} lookups"
+            }
         },
         "KIND": {
             "BRAINSTORMING_QUESTION": "Question from agent",

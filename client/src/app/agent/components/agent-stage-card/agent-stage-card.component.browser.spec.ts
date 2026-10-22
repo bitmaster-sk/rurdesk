@@ -37,6 +37,8 @@ const WIKI: RunWikiStage = {
     ],
     index: [],
     calls: [],
+    promptTokens: 0,
+    indexTokens: 0,
     openedTokens: 0
 };
 

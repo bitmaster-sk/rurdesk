@@ -77,13 +77,16 @@
         </div>
     </div>
     @if (modelRows().length > 0) {
-        <ul class="run-summary__models" data-testid="run-tokens-by-model">
-            @for (row of modelRows(); track row.model) {
-                <li class="flex justify-between gap-2" data-testid="run-model-tokens">
-                    <span class="run-summary__value--mono truncate">{{ row.model }}</span>
-                    <span>{{ row.tokens | number }}</span>
-                </li>
-            }
-        </ul>
+        <div class="run-summary__models" data-testid="run-tokens-by-model">
+            <span class="run-summary__label">{{ 'AGENT.STATS.TOKENS_BY_MODEL' | translate }}</span>
+            <ul class="mt-1 flex flex-col">
+                @for (row of modelRows(); track row.model) {
+                    <li class="flex justify-between gap-2" data-testid="run-model-tokens">
+                        <span class="run-summary__value--mono truncate">{{ row.model }}</span>
+                        <span>{{ row.tokens | number }}</span>
+                    </li>
+                }
+            </ul>
+        </div>
     }
 </div>

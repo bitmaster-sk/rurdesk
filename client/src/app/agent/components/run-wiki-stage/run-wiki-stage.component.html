@@ -4,121 +4,182 @@
         <tabler-icon icon="book-2" [size]="14" />
         {{ 'AGENT.WIKI.TITLE' | translate }}
     </div>
-    @if (wiki.prompt.length > 0) {
-        <div class="run-wiki-stage__label">
-            {{ 'AGENT.WIKI.PROMPT' | translate }}
+
+    <div class="flex flex-wrap gap-2">
+        @if (wiki.prompt.length > 0) {
+            <button
+                type="button"
+                class="run-wiki-stage__segment"
+                data-testid="run-wiki-prompt-toggle"
+                [attr.aria-expanded]="isOpen(RunWikiSection.Prompt)"
+                (click)="onToggle(RunWikiSection.Prompt)"
+            >
+                <b>{{ wiki.prompt.length }}</b>
+                {{ 'AGENT.WIKI.PROMPT_SEGMENT' | translate }}
+            </button>
+        }
+        @if (wiki.calls.length > 0) {
+            <button
+                type="button"
+                class="run-wiki-stage__segment"
+                data-testid="run-wiki-calls-toggle"
+                [attr.aria-expanded]="isOpen(RunWikiSection.Calls)"
+                (click)="onToggle(RunWikiSection.Calls)"
+            >
+                <b>{{ wiki.calls.length }}</b>
+                {{ 'AGENT.WIKI.MCP_SEGMENT' | translate }}
+            </button>
+        }
+        @if (wiki.index.length > 0) {
+            <button
+                type="button"
+                class="run-wiki-stage__segment"
+                data-testid="run-wiki-index"
+                [attr.aria-expanded]="isOpen(RunWikiSection.Index)"
+                (click)="onToggle(RunWikiSection.Index)"
+            >
+                <b>{{ wiki.index.length }}</b>
+                {{ 'AGENT.WIKI.INDEX_SEGMENT' | translate }}
+            </button>
+        }
+    </div>
+
+    @if (wiki.prompt.length > 0 && isOpen(RunWikiSection.Prompt)) {
+        <div class="run-wiki-stage__panel">
+            <ng-container
+                [ngTemplateOutlet]="panelHeader"
+                [ngTemplateOutletContext]="{
+                    title: 'AGENT.WIKI.PROMPT',
+                    hint: 'AGENT.WIKI.PROMPT_HINT',
+                    count: pluralKey('AGENT.WIKI.PAGES', wiki.prompt.length),
+                    countValue: wiki.prompt.length,
+                    tokens: wiki.promptTokens
+                }"
+            />
+            <ul class="run-wiki-stage__list">
+                @for (page of wiki.prompt; track page.key) {
+                    <li class="run-wiki-stage__item" data-testid="run-wiki-prompt-page">
+                        <tabler-icon icon="file-text" [size]="14" class="run-wiki-stage__icon" />
+                        <ng-container
+                            [ngTemplateOutlet]="pageLink"
+                            [ngTemplateOutletContext]="{ $implicit: page }"
+                        />
+                        <span class="run-wiki-stage__meta">
+                            @if (page.versionNo) {
+                                v{{ page.versionNo }}
+                            }
+                        </span>
+                        <ui-tag
+                            [value]="
+                                (page.isAlways ? 'AGENT.WIKI.ALWAYS' : 'AGENT.WIKI.LINKED')
+                                    | translate
+                            "
+                            [severity]="page.isAlways ? 'info' : 'secondary'"
+                        ></ui-tag>
+                    </li>
+                }
+            </ul>
         </div>
-        <ul class="run-wiki-stage__list">
-            @for (page of wiki.prompt; track page.key) {
-                <li class="run-wiki-stage__item" data-testid="run-wiki-prompt-page">
-                    <tabler-icon icon="file-text" [size]="14" class="run-wiki-stage__icon" />
-                    <ng-container
-                        [ngTemplateOutlet]="pageLink"
-                        [ngTemplateOutletContext]="{ $implicit: page }"
-                    />
-                    <span class="run-wiki-stage__meta">
-                        @if (page.versionNo) {
-                            v{{ page.versionNo }}
-                        }
-                    </span>
-                    <ui-tag
-                        [value]="
-                            (page.isAlways ? 'AGENT.WIKI.ALWAYS' : 'AGENT.WIKI.LINKED') | translate
-                        "
-                        [severity]="page.isAlways ? 'info' : 'secondary'"
-                    ></ui-tag>
-                </li>
-            }
-        </ul>
     }
 
-    @if (wiki.calls.length > 0) {
-        <div class="run-wiki-stage__label" data-testid="run-wiki-looked-up">
-            {{ 'AGENT.WIKI.MCP_TITLE' | translate }}
-            @if (wiki.openedTokens > 0) {
-                · {{ 'AGENT.WIKI.TOKENS' | translate: { count: wiki.openedTokens | number } }}
-            }
-        </div>
-        <ul class="run-wiki-stage__list">
-            @for (call of wiki.calls; track call.idCall) {
-                @if (call.isSearch) {
-                    <li class="run-wiki-stage__search" data-testid="run-wiki-call">
-                        <div class="run-wiki-stage__item">
-                            <tabler-icon icon="search" [size]="14" class="run-wiki-stage__icon" />
-                            <span class="run-wiki-stage__page truncate">
-                                {{ 'AGENT.WIKI.SEARCHED' | translate: { query: call.target } }}
-                            </span>
-                            <span class="run-wiki-stage__meta"></span>
-                            <span class="run-wiki-stage__meta">
-                                {{ 'AGENT.WIKI.RESULTS' | translate: { count: call.pages.length } }}
-                            </span>
-                        </div>
+    @if (wiki.calls.length > 0 && isOpen(RunWikiSection.Calls)) {
+        <div class="run-wiki-stage__panel" data-testid="run-wiki-looked-up">
+            <ng-container
+                [ngTemplateOutlet]="panelHeader"
+                [ngTemplateOutletContext]="{
+                    title: 'AGENT.WIKI.MCP_TITLE',
+                    hint: 'AGENT.WIKI.MCP_HINT',
+                    count: pluralKey('AGENT.WIKI.LOOKUPS', wiki.calls.length),
+                    countValue: wiki.calls.length,
+                    tokens: wiki.openedTokens
+                }"
+            />
+            <ul class="run-wiki-stage__list">
+                @for (call of wiki.calls; track call.idCall) {
+                    @if (call.isSearch) {
+                        <li class="run-wiki-stage__search" data-testid="run-wiki-call">
+                            <div class="run-wiki-stage__item">
+                                <tabler-icon
+                                    icon="search"
+                                    [size]="14"
+                                    class="run-wiki-stage__icon"
+                                />
+                                <span class="run-wiki-stage__page truncate">
+                                    {{ 'AGENT.WIKI.SEARCHED' | translate: { query: call.target } }}
+                                </span>
+                                <span class="run-wiki-stage__meta"></span>
+                                <span class="run-wiki-stage__meta">
+                                    {{
+                                        'AGENT.WIKI.RESULTS'
+                                            | translate: { count: call.pages.length }
+                                    }}
+                                </span>
+                            </div>
+                            @for (page of call.pages; track page.key) {
+                                <div class="run-wiki-stage__item run-wiki-stage__item--result">
+                                    <span></span>
+                                    <ng-container
+                                        [ngTemplateOutlet]="pageLink"
+                                        [ngTemplateOutletContext]="{
+                                            $implicit: page
+                                        }"
+                                    />
+                                </div>
+                            }
+                        </li>
+                    } @else {
                         @for (page of call.pages; track page.key) {
-                            <div class="run-wiki-stage__item run-wiki-stage__item--result">
-                                <span></span>
+                            <li class="run-wiki-stage__item" data-testid="run-wiki-call">
+                                <tabler-icon
+                                    icon="file-text"
+                                    [size]="14"
+                                    class="run-wiki-stage__icon"
+                                />
                                 <ng-container
                                     [ngTemplateOutlet]="pageLink"
-                                    [ngTemplateOutletContext]="{
-                                        $implicit: page
-                                    }"
+                                    [ngTemplateOutletContext]="{ $implicit: page }"
                                 />
-                            </div>
+                                <span class="run-wiki-stage__meta">v{{ page.versionNo }}</span>
+                                <span class="run-wiki-stage__meta">
+                                    {{
+                                        'AGENT.WIKI.TOKENS'
+                                            | translate: { count: page.tokens | number }
+                                    }}
+                                </span>
+                            </li>
+                        } @empty {
+                            <li class="run-wiki-stage__item" data-testid="run-wiki-call">
+                                <tabler-icon
+                                    icon="file-off"
+                                    [size]="14"
+                                    class="run-wiki-stage__icon"
+                                />
+                                <span class="run-wiki-stage__meta truncate">
+                                    {{ call.target }}
+                                </span>
+                            </li>
                         }
-                    </li>
-                } @else {
-                    @for (page of call.pages; track page.key) {
-                        <li class="run-wiki-stage__item" data-testid="run-wiki-call">
-                            <tabler-icon
-                                icon="file-text"
-                                [size]="14"
-                                class="run-wiki-stage__icon"
-                            />
-                            <ng-container
-                                [ngTemplateOutlet]="pageLink"
-                                [ngTemplateOutletContext]="{ $implicit: page }"
-                            />
-                            <span class="run-wiki-stage__meta">v{{ page.versionNo }}</span>
-                            <span class="run-wiki-stage__meta">
-                                {{
-                                    'AGENT.WIKI.TOKENS' | translate: { count: page.tokens | number }
-                                }}
-                            </span>
-                        </li>
-                    } @empty {
-                        <li class="run-wiki-stage__item" data-testid="run-wiki-call">
-                            <tabler-icon icon="file-off" [size]="14" class="run-wiki-stage__icon" />
-                            <span class="run-wiki-stage__meta truncate">
-                                {{ call.target }}
-                            </span>
-                        </li>
                     }
                 }
-            }
-        </ul>
+            </ul>
+        </div>
     }
 
-    @if (wiki.index.length > 0) {
-        <button
-            type="button"
-            class="run-wiki-stage__toggle run-wiki-stage__index-toggle flex items-center gap-2 ui-color-text-muted"
-            data-testid="run-wiki-index"
-            [attr.aria-expanded]="isIndexOpen()"
-            (click)="onToggleIndex()"
-        >
-            <tabler-icon
-                [icon]="isIndexOpen() ? 'chevron-down' : 'chevron-right'"
-                [size]="14"
-                class="run-wiki-stage__icon"
+    @if (wiki.index.length > 0 && isOpen(RunWikiSection.Index)) {
+        <div class="run-wiki-stage__panel">
+            <ng-container
+                [ngTemplateOutlet]="panelHeader"
+                [ngTemplateOutletContext]="{
+                    title: 'AGENT.WIKI.INDEX',
+                    hint: 'AGENT.WIKI.INDEX_HINT',
+                    count: pluralKey('AGENT.WIKI.PAGES', wiki.index.length),
+                    countValue: wiki.index.length,
+                    tokens: wiki.indexTokens
+                }"
             />
-            {{ 'AGENT.WIKI.INDEX' | translate: { count: wiki.index.length } }}
-        </button>
-        @if (isIndexOpen()) {
-            <div class="run-wiki-stage__hint ui-color-text-muted">
-                {{ 'AGENT.WIKI.INDEX_HINT' | translate }}
-            </div>
-            <ul class="run-wiki-stage__list" data-testid="run-wiki-index-list">
+            <ul class="run-wiki-stage__index" data-testid="run-wiki-index-list">
                 @for (page of wiki.index; track page.key) {
-                    <li class="run-wiki-stage__item">
+                    <li class="flex min-w-0 items-center gap-2">
                         <tabler-icon icon="file-text" [size]="14" class="run-wiki-stage__icon" />
                         <ng-container
                             [ngTemplateOutlet]="pageLink"
@@ -127,9 +188,29 @@
                     </li>
                 }
             </ul>
-        }
+        </div>
     }
 </div>
+
+<ng-template
+    #panelHeader
+    let-title="title"
+    let-hint="hint"
+    let-count="count"
+    let-countValue="countValue"
+    let-tokens="tokens"
+>
+    <div class="run-wiki-stage__panel-head flex items-baseline gap-2">
+        <span class="run-wiki-stage__panel-title">{{ title | translate }}</span>
+        <span class="run-wiki-stage__hint min-w-0 truncate">{{ hint | translate }}</span>
+        <span class="run-wiki-stage__meta ml-auto" data-testid="run-wiki-section-stats">
+            {{ count | translate: { count: countValue } }}
+            @if (tokens > 0) {
+                · {{ 'AGENT.WIKI.TOKENS' | translate: { count: tokens | number } }}
+            }
+        </span>
+    </div>
+</ng-template>
 
 <ng-template #pageLink let-page>
     @if (page.link) {

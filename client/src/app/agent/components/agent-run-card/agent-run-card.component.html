@@ -125,11 +125,11 @@
                     (workflowToggled)="onToggleShortWorkflow($event)"
                 />
 
-                <div class="flex flex-col gap-2" data-testid="run-stages">
+                <div class="flex flex-col" data-testid="run-stages">
                     @for (card of stageCards(); track card.stage) {
                         @if (card.stage === firstPlanStage()) {
                             <div
-                                class="stages-divider mt-1 flex items-center gap-2"
+                                class="stages-divider my-1 flex items-center gap-2"
                                 data-testid="run-stages-not-started"
                             >
                                 {{ 'AGENT.STAGE_CARD.NOT_STARTED' | translate }}

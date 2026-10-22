@@ -105,7 +105,20 @@ describe('RunWikiStageComponent', () => {
         );
     }
 
-    it('shows the pages sent in the prompt and what the agent looked up', () => {
+    function toggle(el: HTMLElement, testId: string): void {
+        (el.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement).click();
+        fixture.detectChanges();
+    }
+
+    it('sums up the wiki of the stage in one line of sections', () => {
+        const el = render();
+
+        expect(texts(el, 'run-wiki-prompt-toggle')).toEqual(['2 AGENT.WIKI.PROMPT_SEGMENT']);
+        expect(texts(el, 'run-wiki-calls-toggle')).toEqual(['2 AGENT.WIKI.MCP_SEGMENT']);
+        expect(texts(el, 'run-wiki-index')).toEqual(['1 AGENT.WIKI.INDEX_SEGMENT']);
+    });
+
+    it('opens the pages sent in the prompt by default', () => {
         const el = render();
 
         const pages = texts(el, 'run-wiki-prompt-page');
@@ -116,40 +129,65 @@ describe('RunWikiStageComponent', () => {
         expect(pages[1]).toContain('Gateway');
         expect(pages[1]).toContain('v4');
         expect(pages[1]).toContain('AGENT.WIKI.LINKED');
+        expect(el.textContent).toContain('AGENT.WIKI.PROMPT_HINT');
+        expect(texts(el, 'run-wiki-call')).toEqual([]);
+    });
+
+    it('shows what the agent looked up once the reader opens that section', () => {
+        const el = render();
+
+        toggle(el, 'run-wiki-calls-toggle');
+
         const calls = texts(el, 'run-wiki-call');
         expect(calls[0]).toContain('AGENT.WIKI.SEARCHED');
         expect(calls[0]).toContain('Worktree retention');
         expect(calls[1]).toContain('Security');
         expect(calls[1]).toContain('v1');
+        expect(texts(el, 'run-wiki-looked-up')[0]).toContain('AGENT.WIKI.MCP_HINT');
     });
 
-    it('puts the tokens the agent looked up next to the heading', () => {
+    it('heads every open section with its count and the tokens it cost', () => {
         const el = render();
+        toggle(el, 'run-wiki-calls-toggle');
+        toggle(el, 'run-wiki-index');
 
-        expect(texts(el, 'run-wiki-looked-up')[0]).toContain('AGENT.WIKI.TOKENS');
+        expect(texts(el, 'run-wiki-section-stats')).toEqual([
+            'AGENT.WIKI.PAGES.PLURAL · AGENT.WIKI.TOKENS',
+            'AGENT.WIKI.LOOKUPS.PLURAL · AGENT.WIKI.TOKENS',
+            'AGENT.WIKI.PAGES.SINGULAR · AGENT.WIKI.TOKENS'
+        ]);
     });
 
     it('lists the pages offered by title only after the reader opens them', () => {
         const el = render();
-        expect(texts(el, 'run-wiki-index')).toEqual(['AGENT.WIKI.INDEX']);
         expect(el.textContent).not.toContain('Deploy runbook');
 
-        (el.querySelector('[data-testid="run-wiki-index"]') as HTMLButtonElement).click();
-        fixture.detectChanges();
+        toggle(el, 'run-wiki-index');
 
         expect(texts(el, 'run-wiki-index-list')[0]).toContain('Deploy runbook');
         expect(el.textContent).toContain('AGENT.WIKI.INDEX_HINT');
     });
 
+    it('closes a section the reader opened', () => {
+        const el = render();
+
+        toggle(el, 'run-wiki-prompt-toggle');
+
+        expect(texts(el, 'run-wiki-prompt-page')).toEqual([]);
+    });
+
     it('links every page into the wiki of the run project', () => {
         const el = render();
+        toggle(el, 'run-wiki-calls-toggle');
+        toggle(el, 'run-wiki-index');
         const hrefs = Array.from(el.querySelectorAll('a')).map(link => link.getAttribute('href'));
 
         expect(hrefs).toEqual([
             '/project/7/wiki/project/how-we-work',
             '/project/7/wiki/project/gateway',
             '/project/7/wiki/project/retention',
-            '/project/7/wiki/instance/security'
+            '/project/7/wiki/instance/security',
+            '/project/7/wiki/project/runbook'
         ]);
     });
 });

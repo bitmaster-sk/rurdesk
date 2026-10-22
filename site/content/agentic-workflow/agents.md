@@ -114,8 +114,9 @@ gateway stops offering a model between assigning and running a stage, the stage
 runs the gateway's default and its stage card shows a warning naming both
 models.
 
-Each stage card shows the model the stage ran with. When a run used more than
-one model, the run block splits its tokens by model.
+Each stage card shows the model the stage ran with. The run block shows the model
+picked for the run, or the models its stages ran with when none was picked. When
+a run used more than one model, the run block lists its **Tokens by model**.
 
 ### Turn limits
 

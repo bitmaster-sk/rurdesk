@@ -267,16 +267,18 @@ change for a person to accept.
 ### What the agent read
 
 On the **Agent run** card on the task, every stage that ran shows a **Wiki**
-section in its card:
+section in its card. One line sums it up, for example `3 in prompt`,
+`4 looked up`, `15 offered by title`. Click a part to open it; the prompt pages
+are open from the start. Each open part shows how many pages or lookups it holds
+and how many tokens they cost:
 
 - **In prompt**: the pages that went into the prompt, with their version and
   whether they were sent because they are **always** read or **linked** to the
   task;
 - **Looked up**: what the agent searched for and opened during the stage, with
-  the version and size of each page it read, and the total tokens next to the
-  heading;
-- **more pages offered by title and summary**: the index, folded until you open
-  it.
+  the version and size of each page it read;
+- **Offered by title**: the pages the prompt listed by title and summary only.
+  The agent opens one when it needs it.
 
 Each page opens in the wiki. For a stage that ran more than once, the card shows
 the latest attempt.
