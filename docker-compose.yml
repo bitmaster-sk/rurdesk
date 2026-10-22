@@ -99,56 +99,28 @@ services:
                 aliases:
                     - rurdesk-client
 
-    gateway-goose-qwen-local:
+    gateway-agent-007:
         image: rurdesk-gateway-goose:latest
-        container_name: gateway_goose_qwen_local
+        container_name: gateway_agent_007
         env_file:
-            - ./docker/gateway-goose-qwen-local/.env
+            - ./docker/gateway-agent-007/.env
         volumes:
-            - gateway-goose-qwen-local-workspace:/worktrees
-            - gateway-goose-qwen-local-state:/var/lib/gateway
+            - gateway-agent-007-workspace:/worktrees
+            - gateway-agent-007-state:/var/lib/gateway
         depends_on:
             - rurdesk.api
             - rurdesk.proxy
         networks:
             rurdesk_network:
 
-    gateway-goose-kimi-cloud:
+    gateway-agent-003:
         image: rurdesk-gateway-goose:latest
-        container_name: gateway_goose_kimi_cloud
+        container_name: gateway_agent_003
         env_file:
-            - ./docker/gateway-goose-kimi-cloud/.env
+            - ./docker/gateway-agent-003/.env
         volumes:
-            - gateway-goose-kimi-cloud-workspace:/worktrees
-            - gateway-goose-kimi-cloud-state:/var/lib/gateway
-        depends_on:
-            - rurdesk.api
-            - rurdesk.proxy
-        networks:
-            rurdesk_network:
-
-    gateway-goose-kimi-gitea:
-        image: rurdesk-gateway-goose:latest
-        container_name: gateway_goose_kimi_gitea
-        env_file:
-            - ./docker/gateway-goose-kimi-gitea/.env
-        volumes:
-            - gateway-goose-kimi-gitea-workspace:/worktrees
-            - gateway-goose-kimi-gitea-state:/var/lib/gateway
-        depends_on:
-            - rurdesk.api
-            - rurdesk.proxy
-        networks:
-            rurdesk_network:
-
-    gateway-goose-kimi-gitlab:
-        image: rurdesk-gateway-goose:latest
-        container_name: gateway_goose_kimi_gitlab
-        env_file:
-            - ./docker/gateway-goose-kimi-gitlab/.env
-        volumes:
-            - gateway-goose-kimi-gitlab-workspace:/worktrees
-            - gateway-goose-kimi-gitlab-state:/var/lib/gateway
+            - gateway-agent-003-workspace:/worktrees
+            - gateway-agent-003-state:/var/lib/gateway
         depends_on:
             - rurdesk.api
             - rurdesk.proxy
@@ -158,14 +130,10 @@ services:
 volumes:
     rurdesk_data:
     cache_data:
-    gateway-goose-qwen-local-workspace:
-    gateway-goose-qwen-local-state:
-    gateway-goose-kimi-cloud-workspace:
-    gateway-goose-kimi-cloud-state:
-    gateway-goose-kimi-gitea-workspace:
-    gateway-goose-kimi-gitea-state:
-    gateway-goose-kimi-gitlab-workspace:
-    gateway-goose-kimi-gitlab-state:
+    gateway-agent-007-workspace:
+    gateway-agent-007-state:
+    gateway-agent-003-workspace:
+    gateway-agent-003-state:
 
 networks:
     rurdesk_network:

@@ -70,6 +70,7 @@ export abstract class WorkflowEventMap {
                     hostType: 'github',
                     baseUrl: STUB_GATEWAY_URL_FOR_TRACKER,
                     repoPath: WorkflowEventMap.repoPathFor(label),
+                    baseBranch: 'main',
                     accessToken: 'ghp_e2e_stub_token'
                 }
             }

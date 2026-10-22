@@ -30,6 +30,9 @@ func main() {
 	}
 
 	setupLogger(cfg.LogLevel)
+	if ignored := common.IgnoredRepoEnv(); len(ignored) > 0 {
+		log.Warn().Strs("vars", ignored).Msg("these env vars are ignored: the repo, base branch and git token come from the project's git integration in the tracker")
+	}
 
 	trackerClient := common.NewTrackerClient(cfg)
 	agentAdapter := selectAdapter(cfg, trackerClient)
@@ -38,8 +41,8 @@ func main() {
 	state := common.NewState()
 	orchestrator := common.NewOrchestrator(cfg, agentAdapter, trackerClient, state)
 
-	if err := common.CloneRepo(cfg); err != nil {
-		log.Fatal().Err(err).Msg("failed to clone repo")
+	if err := common.RemoveLegacyClones(cfg.WorkspaceBase); err != nil {
+		log.Fatal().Err(err).Msg("failed to remove clones of the old single-repo layout")
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

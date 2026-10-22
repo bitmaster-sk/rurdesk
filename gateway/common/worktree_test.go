@@ -19,205 +19,6 @@ func git(t *testing.T, dir string, args ...string) {
 	}
 }
 
-// TestCloneRepo_ForcesDirtyBaseBackToOrigin reproduces the startup crash
-// where a persistent /worktrees volume carried leftover edits + untracked
-// files colliding with a merged PR's new files, aborting `pull --ff-only`.
-// The refresh must force the base checkout back to origin instead.
-func TestCloneRepo_ForcesDirtyBaseBackToOrigin(t *testing.T) {
-	// Isolate from the host git config and give commits a stable identity.
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
-	t.Setenv("GIT_AUTHOR_NAME", "test")
-	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "test")
-	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
-
-	tmp := t.TempDir()
-
-	// Point the hook fixture somewhere real so InstallHooks doesn't hit the
-	// container path.
-	hookFixture := filepath.Join(tmp, "pre-push")
-	if err := os.WriteFile(hookFixture, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	orig := hookSourcePath
-	hookSourcePath = hookFixture
-	t.Cleanup(func() { hookSourcePath = orig })
-
-	// Bare origin seeded with an initial commit on main.
-	originPath := filepath.Join(tmp, "origin.git")
-	git(t, tmp, "init", "--bare", "-b", "main", originPath)
-	seed := filepath.Join(tmp, "seed")
-	git(t, tmp, "init", "-b", "main", seed)
-	if err := os.WriteFile(filepath.Join(seed, "README.md"), []byte("v1\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	git(t, seed, "add", ".")
-	git(t, seed, "commit", "-m", "init")
-	git(t, seed, "remote", "add", "origin", originPath)
-	git(t, seed, "push", "origin", "main")
-
-	cfg := &Config{
-		WorkspaceBase:  filepath.Join(tmp, "ws"),
-		RepoUrl:        originPath,
-		RepoBranchBase: "main",
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
-
-	// First run clones fresh.
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("initial CloneRepo: %v", err)
-	}
-
-	// A merged PR advances origin: it adds url-codec.html and rewrites README.
-	if err := os.WriteFile(filepath.Join(seed, "url-codec.html"), []byte("<html>origin</html>\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(seed, "README.md"), []byte("v2\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	git(t, seed, "add", ".")
-	git(t, seed, "commit", "-m", "add url-codec")
-	git(t, seed, "push", "origin", "main")
-
-	// The persistent base checkout is dirty: README locally edited, and the
-	// same url-codec.html present but UNTRACKED — the state that made
-	// `pull --ff-only` abort. Also seed a per-run worktree dir that must survive.
-	if err := os.WriteFile(filepath.Join(repoPath, "README.md"), []byte("local scribble\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(repoPath, "url-codec.html"), []byte("<html>local</html>\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	keep := filepath.Join(repoPath, agentRunsDir, "123")
-	if err := os.MkdirAll(keep, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(keep, "run.txt"), []byte("in-flight\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	// Second run must NOT fail, and must force the base back to origin.
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("refresh CloneRepo on dirty base: %v", err)
-	}
-
-	assertFile(t, filepath.Join(repoPath, "README.md"), "v2\n")
-	assertFile(t, filepath.Join(repoPath, "url-codec.html"), "<html>origin</html>\n")
-	assertFile(t, filepath.Join(keep, "run.txt"), "in-flight\n") // worktree tree preserved
-}
-
-// TestCloneRepo_SeedsEmptyRemote reproduces the startup crash on a brand-new,
-// empty repo: `fetch origin main` fataled with "couldn't find remote ref
-// main". CloneRepo must instead seed the empty origin with an initial commit
-// on the base branch.
-func TestCloneRepo_SeedsEmptyRemote(t *testing.T) {
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
-
-	tmp := t.TempDir()
-
-	hookFixture := filepath.Join(tmp, "pre-push")
-	if err := os.WriteFile(hookFixture, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	orig := hookSourcePath
-	hookSourcePath = hookFixture
-	t.Cleanup(func() { hookSourcePath = orig })
-
-	// A completely empty bare origin — no branches, no commits.
-	originPath := filepath.Join(tmp, "origin.git")
-	git(t, tmp, "init", "--bare", "-b", "main", originPath)
-
-	cfg := &Config{
-		WorkspaceBase:  filepath.Join(tmp, "ws"),
-		RepoUrl:        originPath,
-		RepoBranchBase: "main",
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
-
-	// First run: clones the empty repo, then seeds main. Must not fatal.
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("initial CloneRepo on empty remote: %v", err)
-	}
-
-	// Origin now has main at exactly one commit.
-	if out, err := runGitOutput(originPath, "rev-list", "--count", "main"); err != nil {
-		t.Fatalf("origin has no main after seeding: %v", err)
-	} else if strings.TrimSpace(out) != "1" {
-		t.Errorf("origin main commit count = %q, want 1", strings.TrimSpace(out))
-	}
-
-	// Local base checkout is on main.
-	branch, err := runGitOutput(repoPath, "rev-parse", "--abbrev-ref", "HEAD")
-	if err != nil {
-		t.Fatalf("reading local HEAD: %v", err)
-	}
-	if strings.TrimSpace(branch) != "main" {
-		t.Errorf("local branch = %q, want main", strings.TrimSpace(branch))
-	}
-
-	// Second run must be idempotent: main now exists on origin, so it takes the
-	// normal sync path and does not re-seed or fatal.
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("second CloneRepo after seeding: %v", err)
-	}
-	if out, err := runGitOutput(originPath, "rev-list", "--count", "main"); err != nil {
-		t.Fatalf("origin main missing on second run: %v", err)
-	} else if strings.TrimSpace(out) != "1" {
-		t.Errorf("origin main commit count after second run = %q, want 1 (no re-seed)", strings.TrimSpace(out))
-	}
-}
-
-// TestCloneRepo_MismatchedBaseBranch: a non-empty remote lacking the
-// configured base branch is a misconfiguration, not an empty repo —
-// CloneRepo must fail with a clear error rather than seed or crash cryptically.
-func TestCloneRepo_MismatchedBaseBranch(t *testing.T) {
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
-	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
-	t.Setenv("GIT_AUTHOR_NAME", "test")
-	t.Setenv("GIT_AUTHOR_EMAIL", "test@example.com")
-	t.Setenv("GIT_COMMITTER_NAME", "test")
-	t.Setenv("GIT_COMMITTER_EMAIL", "test@example.com")
-
-	tmp := t.TempDir()
-
-	hookFixture := filepath.Join(tmp, "pre-push")
-	if err := os.WriteFile(hookFixture, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	orig := hookSourcePath
-	hookSourcePath = hookFixture
-	t.Cleanup(func() { hookSourcePath = orig })
-
-	// Origin has a `master` branch but no `main`.
-	originPath := filepath.Join(tmp, "origin.git")
-	git(t, tmp, "init", "--bare", "-b", "master", originPath)
-	seed := filepath.Join(tmp, "seed")
-	git(t, tmp, "init", "-b", "master", seed)
-	if err := os.WriteFile(filepath.Join(seed, "README.md"), []byte("v1\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	git(t, seed, "add", ".")
-	git(t, seed, "commit", "-m", "init")
-	git(t, seed, "remote", "add", "origin", originPath)
-	git(t, seed, "push", "origin", "master")
-
-	cfg := &Config{
-		WorkspaceBase:  filepath.Join(tmp, "ws"),
-		RepoUrl:        originPath,
-		RepoBranchBase: "main",
-	}
-
-	err := CloneRepo(cfg)
-	if err == nil {
-		t.Fatal("expected an error for a remote missing the base branch, got nil")
-	}
-	if !strings.Contains(err.Error(), "REPO_BRANCH_BASE") {
-		t.Errorf("error = %v, want it to mention REPO_BRANCH_BASE", err)
-	}
-}
-
 func newGitEnv(t *testing.T) string {
 	t.Helper()
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
@@ -240,11 +41,16 @@ func newGitEnv(t *testing.T) string {
 
 func seedOrigin(t *testing.T, tmp, defaultBranch string) (originPath, seedPath string) {
 	t.Helper()
-	originPath = filepath.Join(tmp, "origin.git")
+	return seedNamedOrigin(t, tmp, "origin", defaultBranch)
+}
+
+func seedNamedOrigin(t *testing.T, tmp, name, defaultBranch string) (originPath, seedPath string) {
+	t.Helper()
+	originPath = filepath.Join(tmp, name+".git")
 	git(t, tmp, "init", "--bare", "-b", defaultBranch, originPath)
-	seedPath = filepath.Join(tmp, "seed")
+	seedPath = filepath.Join(tmp, name+"-seed")
 	git(t, tmp, "init", "-b", defaultBranch, seedPath)
-	if err := os.WriteFile(filepath.Join(seedPath, "README.md"), []byte("v1\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(seedPath, "README.md"), []byte(name+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	git(t, seedPath, "add", ".")
@@ -252,6 +58,28 @@ func seedOrigin(t *testing.T, tmp, defaultBranch string) (originPath, seedPath s
 	git(t, seedPath, "remote", "add", "origin", originPath)
 	git(t, seedPath, "push", "origin", defaultBranch)
 	return originPath, seedPath
+}
+
+const testGitToken = "test-git-token-1234567890"
+
+func testRepo(originPath, host, baseBranch string) AgentRunGitRepo {
+	return AgentRunGitRepo{
+		CloneUrl:       originPath,
+		Host:           host,
+		RepoPath:       "acme/myrepo",
+		BaseBranch:     baseBranch,
+		EncryptedToken: encryptGitTokenForTest(testWebhookSecret, testGitToken),
+		Token:          testGitToken,
+	}
+}
+
+func ensureRepo(t *testing.T, workspaceBase string, repo AgentRunGitRepo) string {
+	t.Helper()
+	repoPath, err := EnsureRepo(workspaceBase, repo)
+	if err != nil {
+		t.Fatalf("EnsureRepo: %v", err)
+	}
+	return repoPath
 }
 
 func headSha(t *testing.T, dir string) string {
@@ -263,60 +91,210 @@ func headSha(t *testing.T, dir string) string {
 	return strings.TrimSpace(out)
 }
 
-func TestCreateWorktree_BranchesFromCurrentOriginNotStartupSnapshot(t *testing.T) {
+func TestEnsureRepo_SeedsEmptyRemote(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath := filepath.Join(tmp, "origin.git")
+	git(t, tmp, "init", "--bare", "-b", "main", originPath)
+	workspaceBase := filepath.Join(tmp, "ws")
+
+	ensureRepo(t, workspaceBase, testRepo(originPath, "example.com", "main"))
+	ensureRepo(t, workspaceBase, testRepo(originPath, "example.com", "main"))
+
+	out, err := runGitOutput(originPath, "rev-list", "--count", "main")
+	if err != nil {
+		t.Fatalf("origin has no main after seeding: %v", err)
+	}
+	if strings.TrimSpace(out) != "1" {
+		t.Errorf("origin main commit count = %q, want 1 (seeded once)", strings.TrimSpace(out))
+	}
+}
+
+func TestEnsureRepo_FailsWhenOriginLacksTheBaseBranch(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "master")
+
+	_, err := EnsureRepo(filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
+	if err == nil {
+		t.Fatal("expected an error for a remote missing the base branch, got nil")
+	}
+	if !strings.Contains(err.Error(), "Base branch") {
+		t.Errorf("error = %v, want it to point at the Base branch of the git integration", err)
+	}
+}
+
+func TestEnsureRepo_ClonesEachRepoUnderItsHost(t *testing.T) {
+	tmp := newGitEnv(t)
+	giteaOrigin, _ := seedNamedOrigin(t, tmp, "gitea", "main")
+	gitlabOrigin, _ := seedNamedOrigin(t, tmp, "gitlab", "trunk")
+	workspaceBase := filepath.Join(tmp, "ws")
+
+	giteaPath := ensureRepo(t, workspaceBase, testRepo(giteaOrigin, "gitea.example.com", "main"))
+	gitlabPath := ensureRepo(t, workspaceBase, testRepo(gitlabOrigin, "gitlab.example.com:8443", "trunk"))
+
+	if want := filepath.Join(workspaceBase, "gitea.example.com", "acme", "myrepo"); giteaPath != want {
+		t.Errorf("gitea clone at %s, want %s", giteaPath, want)
+	}
+	if want := filepath.Join(workspaceBase, "gitlab.example.com:8443", "acme", "myrepo"); gitlabPath != want {
+		t.Errorf("gitlab clone at %s, want %s", gitlabPath, want)
+	}
+	giteaWorktree, err := CreateWorktree(giteaPath, testGitToken, "main", "agent/a1/i1/1", 1)
+	if err != nil {
+		t.Fatalf("CreateWorktree in the gitea clone: %v", err)
+	}
+	gitlabWorktree, err := CreateWorktree(gitlabPath, testGitToken, "trunk", "agent/a1/i2/2", 2)
+	if err != nil {
+		t.Fatalf("CreateWorktree in the gitlab clone: %v", err)
+	}
+	assertFile(t, filepath.Join(giteaWorktree, "README.md"), "gitea\n")
+	assertFile(t, filepath.Join(gitlabWorktree, "README.md"), "gitlab\n")
+}
+
+func TestEnsureRepo_ConcurrentFirstUseClonesOnce(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	workspaceBase := filepath.Join(tmp, "ws")
+	repo := testRepo(originPath, "example.com", "main")
+
+	errs := make(chan error, 2)
+	for i := 0; i < 2; i++ {
+		go func() {
+			_, err := EnsureRepo(workspaceBase, repo)
+			errs <- err
+		}()
+	}
+	for i := 0; i < 2; i++ {
+		if err := <-errs; err != nil {
+			t.Fatalf("concurrent EnsureRepo: %v", err)
+		}
+	}
+	clones, err := ListClones(workspaceBase)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(clones) != 1 {
+		t.Errorf("clones = %v, want exactly one", clones)
+	}
+}
+
+func TestEnsureRepo_LeavesNoTokenOnDisk(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	workspaceBase := filepath.Join(tmp, "ws")
+	repo := testRepo(originPath, "example.com", "main")
+
+	repoPath := ensureRepo(t, workspaceBase, repo)
+	if _, err := CreateWorktree(repoPath, repo.Token, "main", "agent/a1/i1/1", 1); err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	ensureRepo(t, workspaceBase, repo)
+
+	err := filepath.WalkDir(workspaceBase, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return err
+		}
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		if strings.Contains(string(content), repo.Token) {
+			t.Errorf("the git token is written to %s", path)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestEnsureRepo_CredentialHelperAnswersWithTheTokenFromEnv(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
+	worktreePath, err := CreateWorktree(repoPath, testGitToken, "main", "agent/a1/i1/1", 1)
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+
+	cmd := exec.Command("git", "credential", "fill")
+	cmd.Dir = worktreePath
+	cmd.Env = append(os.Environ(), GitTokenEnv("token-from-the-agent-env"), "GIT_TERMINAL_PROMPT=0")
+	cmd.Stdin = strings.NewReader("protocol=https\nhost=git.example.com\n\n")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatalf("git credential fill: %v", err)
+	}
+	if !strings.Contains(string(out), "username=x-token\n") || !strings.Contains(string(out), "password=token-from-the-agent-env\n") {
+		t.Errorf("credential fill = %q, want the token from the env of the git process", out)
+	}
+}
+
+func TestRepoLocalPath_RejectsPathsOutsideTheWorkspace(t *testing.T) {
+	cases := []AgentRunGitRepo{
+		{Host: "..", RepoPath: "acme/repo"},
+		{Host: "example.com", RepoPath: "acme/../../etc"},
+		{Host: "example.com", RepoPath: ""},
+		{Host: "", RepoPath: "acme/repo"},
+		{Host: "a/b", RepoPath: "acme/repo"},
+	}
+	for _, repo := range cases {
+		if path, err := repo.LocalPath("/worktrees"); err == nil {
+			t.Errorf("LocalPath(%+v) = %s, want an error", repo, path)
+		}
+	}
+	path, err := AgentRunGitRepo{Host: "gitlab.com", RepoPath: "group/sub/repo"}.LocalPath("/worktrees")
+	if err != nil || path != filepath.Join("/worktrees", "gitlab.com", "group", "sub", "repo") {
+		t.Errorf("LocalPath of a subgroup repo = %s, %v", path, err)
+	}
+}
+
+func TestRemoveLegacyClones_KeepsTheHostLayout(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	workspaceBase := filepath.Join(tmp, "ws")
+	repoPath := ensureRepo(t, workspaceBase, testRepo(originPath, "example.com", "main"))
+	legacyClone := filepath.Join(workspaceBase, "myrepo")
+	git(t, tmp, "init", "-b", "main", legacyClone)
+	git(t, legacyClone, "remote", "add", "origin", "https://x-token:old-pat@example.invalid/acme/myrepo.git")
+
+	if err := RemoveLegacyClones(workspaceBase); err != nil {
+		t.Fatalf("RemoveLegacyClones: %v", err)
+	}
+
+	if _, err := os.Stat(legacyClone); !os.IsNotExist(err) {
+		t.Errorf("the old single-repo clone %s is still there", legacyClone)
+	}
+	if _, err := os.Stat(filepath.Join(repoPath, ".git")); err != nil {
+		t.Errorf("the clone in the host layout was removed: %v", err)
+	}
+}
+
+func TestCreateWorktree_BranchesFromCurrentOriginNotTheCloneSnapshot(t *testing.T) {
 	tmp := newGitEnv(t)
 	originPath, seed := seedOrigin(t, tmp, "main")
-
-	cfg := &Config{
-		WorkspaceBase:  filepath.Join(tmp, "ws"),
-		RepoUrl:        originPath,
-		RepoBranchBase: "main",
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("CloneRepo: %v", err)
-	}
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
 
 	if err := os.WriteFile(filepath.Join(seed, "merged.txt"), []byte("merged PR\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	git(t, seed, "add", ".")
-	git(t, seed, "commit", "-m", "advance main after gateway start")
+	git(t, seed, "commit", "-m", "advance main after the clone")
 	git(t, seed, "push", "origin", "main")
 	want := headSha(t, seed)
 
-	worktreePath, err := CreateWorktree(repoPath, cfg.RepoBranchBase, "agent/a1/i1/1", 1)
+	worktreePath, err := CreateWorktree(repoPath, testGitToken, "main", "agent/a1/i1/1", 1)
 	if err != nil {
 		t.Fatalf("CreateWorktree: %v", err)
 	}
 
 	if got := headSha(t, worktreePath); got != want {
-		t.Errorf("worktree HEAD = %s, want %s (origin/main as it is now, not at gateway start)", got, want)
+		t.Errorf("worktree HEAD = %s, want %s (origin/main as it is now, not at clone time)", got, want)
 	}
 	assertFile(t, filepath.Join(worktreePath, "merged.txt"), "merged PR\n")
 }
 
-func TestCloneRepo_DetectsDefaultBranchWhenBaseUnset(t *testing.T) {
-	tmp := newGitEnv(t)
-	originPath, _ := seedOrigin(t, tmp, "master")
-
-	cfg := &Config{
-		WorkspaceBase: filepath.Join(tmp, "ws"),
-		RepoUrl:       originPath,
-	}
-
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("CloneRepo on a repo whose default branch is master: %v", err)
-	}
-	if cfg.RepoBranchBase != "master" {
-		t.Errorf("cfg.RepoBranchBase = %q, want master (detected from origin HEAD)", cfg.RepoBranchBase)
-	}
-}
-
-func TestCloneRepo_ExplicitBaseBranchWinsOverDetection(t *testing.T) {
+func TestCreateWorktree_StartsFromTheBaseBranchOfTheRun(t *testing.T) {
 	tmp := newGitEnv(t)
 	originPath, seed := seedOrigin(t, tmp, "main")
-
 	git(t, seed, "checkout", "-b", "develop")
 	if err := os.WriteFile(filepath.Join(seed, "only-on-develop.txt"), []byte("dev\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -325,20 +303,8 @@ func TestCloneRepo_ExplicitBaseBranchWinsOverDetection(t *testing.T) {
 	git(t, seed, "commit", "-m", "develop only")
 	git(t, seed, "push", "origin", "develop")
 
-	cfg := &Config{
-		WorkspaceBase:  filepath.Join(tmp, "ws"),
-		RepoUrl:        originPath,
-		RepoBranchBase: "develop",
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("CloneRepo: %v", err)
-	}
-	if cfg.RepoBranchBase != "develop" {
-		t.Errorf("cfg.RepoBranchBase = %q, want develop (explicit override kept)", cfg.RepoBranchBase)
-	}
-
-	worktreePath, err := CreateWorktree(repoPath, cfg.RepoBranchBase, "agent/a1/i2/2", 2)
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "develop"))
+	worktreePath, err := CreateWorktree(repoPath, testGitToken, "develop", "agent/a1/i2/2", 2)
 	if err != nil {
 		t.Fatalf("CreateWorktree: %v", err)
 	}
@@ -353,29 +319,6 @@ func assertFile(t *testing.T, path, want string) {
 	}
 	if string(got) != want {
 		t.Errorf("%s = %q, want %q", path, got, want)
-	}
-}
-
-func TestRepoSlugFromURL(t *testing.T) {
-	cases := []struct {
-		name string
-		url  string
-		want string
-	}{
-		{"https with .git", "https://github.com/org/repo.git", "org/repo"},
-		{"https without .git", "https://github.com/org/repo", "org/repo"},
-		{"https trailing slash", "https://github.com/org/repo/", "org/repo"},
-		{"gitlab subgroup", "https://gitlab.com/group/sub/repo.git", "group/sub/repo"},
-		{"self-hosted gitea", "https://gitea.example.com/team/proj.git", "team/proj"},
-		{"ssh form", "git@github.com:org/repo.git", "org/repo"},
-		{"with credentials in url", "https://x-token:pat@github.com/org/repo.git", "org/repo"},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := RepoSlugFromURL(tc.url); got != tc.want {
-				t.Errorf("RepoSlugFromURL(%q) = %q, want %q", tc.url, got, tc.want)
-			}
-		})
 	}
 }
 
@@ -449,13 +392,9 @@ func TestResumeWorktree_ContinuesOnExistingBranch(t *testing.T) {
 	const branch = "agent/a1/i48/1790053695"
 	want := pushAgentBranch(t, seed, branch)
 
-	cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("CloneRepo: %v", err)
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
 
-	worktreePath, err := ResumeWorktree(repoPath, branch, 5)
+	worktreePath, err := ResumeWorktree(repoPath, testGitToken, branch, 5)
 	if err != nil {
 		t.Fatalf("ResumeWorktree: %v", err)
 	}
@@ -489,16 +428,12 @@ func TestResumeWorktree_TakesBranchFromStaleWorktree(t *testing.T) {
 	const branch = "agent/a1/i48/1790053695"
 	want := pushAgentBranch(t, seed, branch)
 
-	cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
-	if err := CloneRepo(cfg); err != nil {
-		t.Fatalf("CloneRepo: %v", err)
-	}
-	repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
 
-	if _, err := ResumeWorktree(repoPath, branch, 1); err != nil {
+	if _, err := ResumeWorktree(repoPath, testGitToken, branch, 1); err != nil {
 		t.Fatalf("ResumeWorktree for the old run: %v", err)
 	}
-	worktreePath, err := ResumeWorktree(repoPath, branch, 2)
+	worktreePath, err := ResumeWorktree(repoPath, testGitToken, branch, 2)
 	if err != nil {
 		t.Fatalf("ResumeWorktree for the new run while the old worktree holds the branch: %v", err)
 	}

@@ -260,7 +260,7 @@ func (h *GiteaHost) DefaultBranch(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("decoding repo: %w", err)
 	}
 	if data.DefaultBranch == "" {
-		return "", fmt.Errorf("repo %s has no default_branch", h.repoPath)
+		return "", fmt.Errorf("repo %s: %w", h.repoPath, ErrNoDefaultBranch)
 	}
 	return data.DefaultBranch, nil
 }

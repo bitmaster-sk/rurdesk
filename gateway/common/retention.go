@@ -47,10 +47,19 @@ func (r *Retention) Start(ctx context.Context) {
 }
 
 func (r *Retention) runOnce() {
+	clones, err := ListClones(r.cfg.WorkspaceBase)
+	if err != nil {
+		log.Warn().Str("path", r.cfg.WorkspaceBase).Err(err).Msg("retention: cannot list clones")
+		return
+	}
 	activeRuns := r.orchestrator.activeRunIDs()
-	cutoff := time.Now().Add(-r.maxAge)
+	for _, repoPath := range clones {
+		r.pruneClone(repoPath, activeRuns)
+	}
+}
 
-	repoPath := RepoPathFromURL(r.cfg.WorkspaceBase, r.cfg.RepoUrl)
+func (r *Retention) pruneClone(repoPath string, activeRuns map[int64]bool) {
+	cutoff := time.Now().Add(-r.maxAge)
 	agentRunsPath := filepath.Join(repoPath, agentRunsDir)
 	entries, err := os.ReadDir(agentRunsPath)
 	if err != nil {
@@ -80,6 +89,7 @@ func (r *Retention) runOnce() {
 		}
 		log.Info().
 			Int64("idRun", idRun).
+			Str("repo", repoPath).
 			Int("ageHours", int(time.Since(info.ModTime()).Hours())).
 			Msg("retention: pruning idle worktree")
 		if err := RemoveWorktree(repoPath, idRun); err != nil {

@@ -15,6 +15,7 @@ const INTEGRATION: GitIntegrationRes = {
     hostType: HostType.GitLab,
     baseUrl: 'https://gitlab.com',
     repoPath: 'team/repo',
+    baseBranch: null,
     createdAt: '',
     updatedAt: ''
 };
@@ -73,6 +74,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitHub,
             baseUrl: 'https://github.com',
             repoPath: 'owner/repo',
+            baseBranch: '',
             accessToken: 'tok123'
         });
 
@@ -83,6 +85,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitHub,
             baseUrl: 'https://github.com',
             repoPath: 'owner/repo',
+            baseBranch: null,
             accessToken: 'tok123'
         });
     });
@@ -94,6 +97,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
             repoPath: 'team/repo',
+            baseBranch: '',
             accessToken: ''
         });
 
@@ -103,7 +107,8 @@ describe('GitIntegrationSettingsComponent', () => {
             name: 'Updated',
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
-            repoPath: 'team/repo'
+            repoPath: 'team/repo',
+            baseBranch: null
         });
         // accessToken key must NOT be present on the request object.
         const callArg = gitIntegrationApi.update$.mock.calls[0][2];
@@ -117,6 +122,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
             repoPath: 'team/repo',
+            baseBranch: '',
             accessToken: 'newtoken'
         });
 
@@ -127,8 +133,38 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitLab,
             baseUrl: 'https://gitlab.com',
             repoPath: 'team/repo',
+            baseBranch: null,
             accessToken: 'newtoken'
         });
+    });
+
+    it('create mode: sends a trimmed base branch', () => {
+        const component = createComponent({ gitIntegrationApi });
+        component['form'].setValue({
+            name: 'New',
+            hostType: HostType.GitHub,
+            baseUrl: 'https://github.com',
+            repoPath: 'owner/repo',
+            baseBranch: ' develop ',
+            accessToken: 'tok123'
+        });
+
+        component['onSave']();
+
+        expect(gitIntegrationApi.insert$.mock.calls[0][1].baseBranch).toBe('develop');
+    });
+
+    it('update mode: prefills the stored base branch and clears it when emptied', () => {
+        const component = createComponent({
+            gitIntegrationApi,
+            integration: { ...INTEGRATION, baseBranch: 'develop' }
+        });
+        expect(component['form'].controls.baseBranch.value).toBe('develop');
+
+        component['form'].controls.baseBranch.setValue('   ');
+        component['onSave']();
+
+        expect(gitIntegrationApi.update$.mock.calls[0][2].baseBranch).toBeNull();
     });
 
     it('invalid form: does not call the API', () => {
@@ -139,6 +175,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitHub,
             baseUrl: '',
             repoPath: '',
+            baseBranch: '',
             accessToken: ''
         });
 
@@ -187,6 +224,7 @@ describe('GitIntegrationSettingsComponent', () => {
             hostType: HostType.GitHub,
             baseUrl: 'https://github.com',
             repoPath: 'owner/repo',
+            baseBranch: '',
             accessToken: 'tok123'
         });
 

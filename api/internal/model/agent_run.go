@@ -11,6 +11,7 @@ type AgentRun struct {
 	IdUserAgent       int64           `json:"idUserAgent"        db:"id_user_agent"`
 	IdProject         int64           `json:"idProject"        db:"id_project"`
 	IdGitIntegration  *int64          `json:"idGitIntegration" db:"id_git_integration"`
+	BaseBranch        *string         `json:"baseBranch"       db:"base_branch"`
 	Phase             string          `json:"phase"            db:"phase"`
 	StagePlan         json.RawMessage `json:"stagePlan"        db:"stage_plan"`
 	QueuePosition     *int            `json:"queuePosition"    db:"queue_position"`
@@ -23,6 +24,14 @@ type AgentRun struct {
 	StartedAt         *time.Time      `json:"startedAt"        db:"started_at"`
 	FinishedAt        *time.Time      `json:"finishedAt"       db:"finished_at"`
 	CreatedAt         time.Time       `json:"createdAt"        db:"created_at"`
+}
+
+type AgentRunGitRepo struct {
+	CloneUrl       string `json:"cloneUrl"`
+	Host           string `json:"host"`
+	RepoPath       string `json:"repoPath"`
+	BaseBranch     string `json:"baseBranch"`
+	EncryptedToken string `json:"encryptedToken"`
 }
 
 type AgentRunWithEvents struct {
@@ -130,13 +139,6 @@ type CompleteStageReq struct {
 	ToolCallsCount *int    `json:"toolCallsCount"`
 	ErrorReason    *string `json:"errorReason"`
 	ErrorDetail    *string `json:"errorDetail"`
-}
-
-// ReportRunRepoReq records which repo (`owner/repo`) a run pushes to, sent by
-// the gateway at dispatch so the backend can resolve the git_integration
-// before complete_stage.
-type ReportRunRepoReq struct {
-	RepoPath string `json:"repoPath" binding:"required"`
 }
 
 type CompleteStageRes struct {

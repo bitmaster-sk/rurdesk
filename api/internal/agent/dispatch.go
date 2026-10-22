@@ -84,6 +84,13 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			return
 		}
 
+		repo, err := d.agentRunGitRepo(bgCtx, run)
+		if err != nil {
+			log.Error().Err(err).Int64("idRun", run.IdRun).Msg("resolving the run repo")
+			d.failTaskAndRun(bgCtx, run, task, err.Error())
+			return
+		}
+
 		prBranch, err := d.openPrBranch(bgCtx, run)
 		if err != nil {
 			log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
@@ -96,6 +103,7 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			"stagePlan":     run.StagePlan,
 			"contextBundle": bundle,
 			"prBranch":      prBranch,
+			"repo":          repo,
 		}
 		if constants.IsSkillStage(task.Stage) {
 			taskConfig, err := d.resolveAgentTaskConfig(bgCtx, run, task)

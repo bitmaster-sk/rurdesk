@@ -35,7 +35,10 @@ func (s *GitIntegrationSuite) SetupSuite() {
 	var u model.User
 	json.NewDecoder(userRes.Body).Decode(&u)
 	s.UserID = u.IdUser
+}
 
+// A project holds at most one integration, so every test gets its own project.
+func (s *GitIntegrationSuite) SetupTest() {
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"git-integration-test","color":"#aabbcc"}`, s.Token)
 	s.Require().Equal(http.StatusOK, prjRes.StatusCode)
@@ -44,7 +47,7 @@ func (s *GitIntegrationSuite) SetupSuite() {
 	s.ProjectID = prj.IdProject
 }
 
-func (s *GitIntegrationSuite) TearDownSuite() {
+func (s *GitIntegrationSuite) TearDownTest() {
 	s.App.Pool.Exec(context.Background(),
 		"DELETE FROM projects.project WHERE id_project = $1", s.ProjectID)
 }
@@ -73,13 +76,59 @@ func (s *GitIntegrationSuite) Test_Create_AddsIntegration() {
 	s.True(body.HasToken)
 }
 
-func (s *GitIntegrationSuite) Test_Create_DuplicateRepo_409() {
-	body := `{"name":"dup","hostType":"github","baseUrl":"https://github.com","repoPath":"org/dup","accessToken":"tok"}`
-	res1 := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID), body, s.Token)
-	s.Require().Equal(http.StatusCreated, res1.StatusCode)
+func (s *GitIntegrationSuite) Test_Create_SecondIntegrationInProject_409() {
+	s.createIntegration("first", "org/first")
 
-	res2 := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID), body, s.Token)
-	s.Equal(http.StatusConflict, res2.StatusCode)
+	res := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID),
+		`{"name":"second","hostType":"gitlab","baseUrl":"https://gitlab.com","repoPath":"org/second","accessToken":"tok"}`, s.Token)
+	s.Equal(http.StatusConflict, res.StatusCode)
+	s.Contains(readBody(s.T(), res), "error.git_integration_limit_reached")
+
+	listRes := Request(s.T(), s.App, "GET", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID), "", s.Token)
+	var list []model.GitIntegrationRes
+	json.NewDecoder(listRes.Body).Decode(&list)
+	s.Len(list, 1)
+}
+
+func (s *GitIntegrationSuite) Test_Create_AfterDeletingTheIntegration_OK() {
+	created := s.createIntegration("old", "org/old")
+	delRes := Request(s.T(), s.App, "DELETE",
+		fmt.Sprintf("/api/private/project/%d/git-integration/%d", s.ProjectID, created.IdGitIntegration), "", s.Token)
+	s.Require().Equal(http.StatusNoContent, delRes.StatusCode)
+
+	s.createIntegration("new", "org/new")
+}
+
+func (s *GitIntegrationSuite) Test_Create_WithBaseBranch_ReturnsIt() {
+	res := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID),
+		`{"name":"dev","hostType":"github","baseUrl":"https://github.com","repoPath":"org/dev","baseBranch":" develop ","accessToken":"tok"}`, s.Token)
+	s.Require().Equal(http.StatusCreated, res.StatusCode)
+
+	var created model.GitIntegrationRes
+	json.NewDecoder(res.Body).Decode(&created)
+	s.Require().NotNil(created.BaseBranch)
+	s.Equal("develop", *created.BaseBranch)
+}
+
+func (s *GitIntegrationSuite) Test_Create_WithoutBaseBranch_ReturnsNull() {
+	created := s.createIntegration("default-branch", "org/default-branch")
+	s.Nil(created.BaseBranch)
+}
+
+func (s *GitIntegrationSuite) Test_Update_BlankBaseBranch_ClearsIt() {
+	res := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID),
+		`{"name":"dev","hostType":"github","baseUrl":"https://github.com","repoPath":"org/dev","baseBranch":"develop","accessToken":"tok"}`, s.Token)
+	s.Require().Equal(http.StatusCreated, res.StatusCode)
+	var created model.GitIntegrationRes
+	json.NewDecoder(res.Body).Decode(&created)
+
+	updateRes := Request(s.T(), s.App, "PUT",
+		fmt.Sprintf("/api/private/project/%d/git-integration/%d", s.ProjectID, created.IdGitIntegration),
+		`{"name":"dev","hostType":"github","baseUrl":"https://github.com","repoPath":"org/dev","baseBranch":""}`, s.Token)
+	s.Require().Equal(http.StatusOK, updateRes.StatusCode)
+	var updated model.GitIntegrationRes
+	json.NewDecoder(updateRes.Body).Decode(&updated)
+	s.Nil(updated.BaseBranch)
 }
 
 func (s *GitIntegrationSuite) Test_Create_SameRepoOtherProject_OK() {
@@ -99,20 +148,17 @@ func (s *GitIntegrationSuite) Test_Create_SameRepoOtherProject_OK() {
 	s.Equal(http.StatusCreated, res2.StatusCode)
 }
 
-func (s *GitIntegrationSuite) Test_List_ReturnsAllForProject_OrderedByCreatedAt() {
-	for i := 0; i < 3; i++ {
-		s.createIntegration(fmt.Sprintf("list-svc-%d", i), fmt.Sprintf("org/list-repo-%d", i))
-	}
+func (s *GitIntegrationSuite) Test_List_ReturnsTheProjectIntegration() {
+	created := s.createIntegration("list-svc", "org/list-repo")
 
 	res := Request(s.T(), s.App, "GET", fmt.Sprintf("/api/private/project/%d/git-integration", s.ProjectID), "", s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
 
 	var list []model.GitIntegrationRes
 	json.NewDecoder(res.Body).Decode(&list)
-	s.GreaterOrEqual(len(list), 3)
-	for _, item := range list {
-		s.True(item.HasToken)
-	}
+	s.Require().Len(list, 1)
+	s.Equal(created.IdGitIntegration, list[0].IdGitIntegration)
+	s.True(list[0].HasToken)
 }
 
 func (s *GitIntegrationSuite) Test_List_EmptyProject_ReturnsEmptyArray() {

@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	HostTypeGitHub = "github"
@@ -21,6 +24,7 @@ type GitIntegration struct {
 	HostType         string    `json:"-" db:"host_type"`
 	BaseUrl          string    `json:"-" db:"base_url"`
 	RepoPath         string    `json:"-" db:"repo_path"`
+	BaseBranch       *string   `json:"-" db:"base_branch"`
 	AccessTokenEnc   []byte    `json:"-" db:"access_token_enc"`
 	TokenNonce       []byte    `json:"-" db:"token_nonce"`
 	CreatedAt        time.Time `json:"-" db:"created_at"`
@@ -34,6 +38,7 @@ type GitIntegrationRes struct {
 	HostType         string    `json:"hostType"`
 	BaseUrl          string    `json:"baseUrl"`
 	RepoPath         string    `json:"repoPath"`
+	BaseBranch       *string   `json:"baseBranch"`
 	HasToken         bool      `json:"hasToken"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
@@ -47,6 +52,7 @@ func (g *GitIntegration) ToRes() *GitIntegrationRes {
 		HostType:         g.HostType,
 		BaseUrl:          g.BaseUrl,
 		RepoPath:         g.RepoPath,
+		BaseBranch:       g.BaseBranch,
 		HasToken:         len(g.AccessTokenEnc) > 0,
 		CreatedAt:        g.CreatedAt,
 		UpdatedAt:        g.UpdatedAt,
@@ -54,11 +60,12 @@ func (g *GitIntegration) ToRes() *GitIntegrationRes {
 }
 
 type CreateGitIntegrationReq struct {
-	Name        string `json:"name"        binding:"required,max=100"`
-	HostType    string `json:"hostType"    binding:"required,oneof=github gitlab gitea"`
-	BaseUrl     string `json:"baseUrl"     binding:"required,url"`
-	RepoPath    string `json:"repoPath"    binding:"required,max=500"`
-	AccessToken string `json:"accessToken" binding:"required,min=1,max=500"`
+	Name        string  `json:"name"        binding:"required,max=100"`
+	HostType    string  `json:"hostType"    binding:"required,oneof=github gitlab gitea"`
+	BaseUrl     string  `json:"baseUrl"     binding:"required,url"`
+	RepoPath    string  `json:"repoPath"    binding:"required,max=500"`
+	BaseBranch  *string `json:"baseBranch"  binding:"omitempty,max=255"`
+	AccessToken string  `json:"accessToken" binding:"required,min=1,max=500"`
 }
 
 type CheckGitIntegrationReq struct {
@@ -70,9 +77,29 @@ type CheckGitIntegrationReq struct {
 }
 
 type UpdateGitIntegrationReq struct {
-	Name        string `json:"name"        binding:"required,max=100"`
-	HostType    string `json:"hostType"    binding:"required,oneof=github gitlab gitea"`
-	BaseUrl     string `json:"baseUrl"     binding:"required,url"`
-	RepoPath    string `json:"repoPath"    binding:"required,max=500"`
-	AccessToken string `json:"accessToken" binding:"omitempty,min=1,max=500"`
+	Name        string  `json:"name"        binding:"required,max=100"`
+	HostType    string  `json:"hostType"    binding:"required,oneof=github gitlab gitea"`
+	BaseUrl     string  `json:"baseUrl"     binding:"required,url"`
+	RepoPath    string  `json:"repoPath"    binding:"required,max=500"`
+	BaseBranch  *string `json:"baseBranch"  binding:"omitempty,max=255"`
+	AccessToken string  `json:"accessToken" binding:"omitempty,min=1,max=500"`
+}
+
+func (r *CreateGitIntegrationReq) NormalizedBaseBranch() *string {
+	return normalizedBaseBranch(r.BaseBranch)
+}
+
+func (r *UpdateGitIntegrationReq) NormalizedBaseBranch() *string {
+	return normalizedBaseBranch(r.BaseBranch)
+}
+
+func normalizedBaseBranch(baseBranch *string) *string {
+	if baseBranch == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*baseBranch)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
 }

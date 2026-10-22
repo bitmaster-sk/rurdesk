@@ -12,8 +12,6 @@ func setBaseEnv(t *testing.T) {
 	t.Setenv("TRACKER_URL", "http://rurdesk.proxy")
 	t.Setenv("GATEWAY_TO_TRACKER_TOKEN", "botkey")
 	t.Setenv("TRACKER_TO_GATEWAY_TOKEN", "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff")
-	t.Setenv("REPO_URL", "https://github.com/org/repo.git")
-	t.Setenv("GIT_ACCESS_TOKEN", "gat")
 	t.Setenv("MODELS", "openai/kimi")
 	t.Setenv("MODEL_DEFAULT", "")
 	t.Setenv("MAX_TURNS_LIMIT", "")
@@ -166,5 +164,17 @@ func TestLoadConfigGooseCredentialsFlowThrough(t *testing.T) {
 	}
 	if g.OllamaHost != "http://gpu-box:11434" {
 		t.Errorf("OllamaHost = %q", g.OllamaHost)
+	}
+}
+
+func TestIgnoredRepoEnv_ListsTheRepoVarsStillSet(t *testing.T) {
+	t.Setenv("REPO_URL", "https://github.com/org/repo.git")
+	t.Setenv("GIT_ACCESS_TOKEN", "")
+	t.Setenv("REPO_BRANCH_BASE", "develop")
+
+	got := IgnoredRepoEnv()
+
+	if len(got) != 2 || got[0] != "REPO_URL" || got[1] != "REPO_BRANCH_BASE" {
+		t.Errorf("IgnoredRepoEnv = %v, want [REPO_URL REPO_BRANCH_BASE]", got)
 	}
 }

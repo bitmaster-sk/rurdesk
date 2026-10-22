@@ -80,7 +80,7 @@ func (r *AgentRunRepository) phaseWrite(
 }
 
 const agentRunColumns = `
-	id_run, id_issue, id_user_agent, id_project, id_git_integration,
+	id_run, id_issue, id_user_agent, id_project, id_git_integration, base_branch,
 	phase, stage_plan, queue_position,
 	pr_url, pr_host_type, pr_id, branch_name, error_message,
 	approved_mockup_ref,
@@ -89,7 +89,7 @@ const agentRunColumns = `
 func scanAgentRun(row pgx.Row) (*model.AgentRun, error) {
 	run := &model.AgentRun{}
 	err := row.Scan(
-		&run.IdRun, &run.IdIssue, &run.IdUserAgent, &run.IdProject, &run.IdGitIntegration,
+		&run.IdRun, &run.IdIssue, &run.IdUserAgent, &run.IdProject, &run.IdGitIntegration, &run.BaseBranch,
 		&run.Phase, &run.StagePlan, &run.QueuePosition,
 		&run.PrUrl, &run.PrHostType, &run.PrId, &run.BranchName, &run.ErrorMessage,
 		&run.ApprovedMockupRef,
@@ -344,7 +344,7 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserAgent i
 	// order_rank lives on projects.project_issue_severity, not issues.severity, so we
 	// join through it. Issues without severity get a sentinel rank to sort last.
 	row := db.QueryRow(ctx, `
-		SELECT r.id_run, r.id_issue, r.id_user_agent, r.id_project, r.id_git_integration,
+		SELECT r.id_run, r.id_issue, r.id_user_agent, r.id_project, r.id_git_integration, r.base_branch,
 		       r.phase, r.stage_plan, r.queue_position,
 		       r.pr_url, r.pr_host_type, r.pr_id, r.branch_name, r.error_message,
 		       r.approved_mockup_ref,
@@ -575,16 +575,14 @@ func (r *AgentRunRepository) reconcileToPhase(ctx context.Context, idRun int64, 
 	return run, nil
 }
 
-// SetGitIntegration stamps the resolved git_integration onto the run so the PR-creation
-// path at complete_stage knows which repo/credentials to use. Idempotent.
-func (r *AgentRunRepository) SetGitIntegration(ctx context.Context, idRun, idGitIntegration int64) error {
+func (r *AgentRunRepository) SetGitIntegrationAndBaseBranch(ctx context.Context, idRun, idGitIntegration int64, baseBranch string) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx,
-		`UPDATE agent.run SET id_git_integration = $2 WHERE id_run = $1`,
-		idRun, idGitIntegration,
+		`UPDATE agent.run SET id_git_integration = $2, base_branch = $3 WHERE id_run = $1`,
+		idRun, idGitIntegration, baseBranch,
 	)
 	if err != nil {
-		return fmt.Errorf("setting run git integration: %w", err)
+		return fmt.Errorf("setting run repo: %w", err)
 	}
 	return nil
 }

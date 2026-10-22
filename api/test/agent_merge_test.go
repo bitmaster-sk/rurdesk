@@ -120,7 +120,7 @@ func (s *MergePollerSuite) SetupSuite() {
 
 	// Create git integration pointing at the mock server.
 	intBody := fmt.Sprintf(
-		`{"name":"mock-git","hostType":"github","baseUrl":%q,"repoPath":"org/repo","accessToken":"ghp_mock_token"}`,
+		`{"name":"mock-git","hostType":"github","baseUrl":%q,"repoPath":"org/repo","baseBranch":"main","accessToken":"ghp_mock_token"}`,
 		s.mockServer.URL,
 	)
 	intRes := Request(s.T(), s.App, "POST",

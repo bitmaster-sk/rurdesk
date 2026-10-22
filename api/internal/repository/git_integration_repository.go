@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const gitIntegrationOnePerProjectIndex = "git_integration_one_per_project"
+
 type GitIntegrationRepository struct {
 	pool *pgxpool.Pool
 }
@@ -23,7 +25,7 @@ func NewGitIntegrationRepository(pool *pgxpool.Pool) *GitIntegrationRepository {
 func (r *GitIntegrationRepository) ListByProject(ctx context.Context, idProject int64) ([]*model.GitIntegration, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_git_integration, id_project, name, host_type, base_url, repo_path,
+		SELECT id_git_integration, id_project, name, host_type, base_url, repo_path, base_branch,
 		       access_token_enc, token_nonce, created_at, updated_at
 		FROM projects.git_integration
 		WHERE id_project = $1
@@ -35,10 +37,28 @@ func (r *GitIntegrationRepository) ListByProject(ctx context.Context, idProject 
 	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.GitIntegration])
 }
 
+func (r *GitIntegrationRepository) LoadByProject(ctx context.Context, idProject int64) (*model.GitIntegration, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT id_git_integration, id_project, name, host_type, base_url, repo_path, base_branch,
+		       access_token_enc, token_nonce, created_at, updated_at
+		FROM projects.git_integration
+		WHERE id_project = $1
+	`, idProject)
+	if err != nil {
+		return nil, fmt.Errorf("loading the git integration of project %d: %w", idProject, err)
+	}
+	integration, err := pgx.CollectOneRow(rows, pgx.RowToAddrOfStructByName[model.GitIntegration])
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return integration, err
+}
+
 func (r *GitIntegrationRepository) LoadByID(ctx context.Context, idGitIntegration, idProject int64) (*model.GitIntegration, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_git_integration, id_project, name, host_type, base_url, repo_path,
+		SELECT id_git_integration, id_project, name, host_type, base_url, repo_path, base_branch,
 		       access_token_enc, token_nonce, created_at, updated_at
 		FROM projects.git_integration
 		WHERE id_git_integration = $1 AND id_project = $2
@@ -53,15 +73,15 @@ func (r *GitIntegrationRepository) LoadByID(ctx context.Context, idGitIntegratio
 	return integration, err
 }
 
-func (r *GitIntegrationRepository) Create(ctx context.Context, idProject int64, name, hostType, baseUrl, repoPath string, tokenEnc, nonce []byte) (*model.GitIntegration, error) {
+func (r *GitIntegrationRepository) Create(ctx context.Context, idProject int64, name, hostType, baseUrl, repoPath string, baseBranch *string, tokenEnc, nonce []byte) (*model.GitIntegration, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		INSERT INTO projects.git_integration
-		    (id_project, name, host_type, base_url, repo_path, access_token_enc, token_nonce)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id_git_integration, id_project, name, host_type, base_url, repo_path,
+		    (id_project, name, host_type, base_url, repo_path, base_branch, access_token_enc, token_nonce)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id_git_integration, id_project, name, host_type, base_url, repo_path, base_branch,
 		          access_token_enc, token_nonce, created_at, updated_at
-	`, idProject, name, hostType, baseUrl, repoPath, tokenEnc, nonce)
+	`, idProject, name, hostType, baseUrl, repoPath, baseBranch, tokenEnc, nonce)
 	if err != nil {
 		return nil, fmt.Errorf("creating git integration: %w", err)
 	}
@@ -69,6 +89,9 @@ func (r *GitIntegrationRepository) Create(ctx context.Context, idProject int64, 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if pgErr.ConstraintName == gitIntegrationOnePerProjectIndex {
+				return nil, ErrGitIntegrationLimitReached
+			}
 			return nil, ErrGitIntegrationDuplicate
 		}
 		return nil, fmt.Errorf("scanning created integration: %w", err)
@@ -76,7 +99,7 @@ func (r *GitIntegrationRepository) Create(ctx context.Context, idProject int64, 
 	return integration, nil
 }
 
-func (r *GitIntegrationRepository) Update(ctx context.Context, idGitIntegration, idProject int64, name, hostType, baseUrl, repoPath string, tokenEnc, nonce []byte) (*model.GitIntegration, error) {
+func (r *GitIntegrationRepository) Update(ctx context.Context, idGitIntegration, idProject int64, name, hostType, baseUrl, repoPath string, baseBranch *string, tokenEnc, nonce []byte) (*model.GitIntegration, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		UPDATE projects.git_integration SET
@@ -84,13 +107,14 @@ func (r *GitIntegrationRepository) Update(ctx context.Context, idGitIntegration,
 		    host_type        = $2,
 		    base_url         = $3,
 		    repo_path        = $4,
-		    access_token_enc = COALESCE($5, access_token_enc),
-		    token_nonce      = COALESCE($6, token_nonce),
+		    base_branch      = $5,
+		    access_token_enc = COALESCE($6, access_token_enc),
+		    token_nonce      = COALESCE($7, token_nonce),
 		    updated_at       = NOW()
-		WHERE id_git_integration = $7 AND id_project = $8
-		RETURNING id_git_integration, id_project, name, host_type, base_url, repo_path,
+		WHERE id_git_integration = $8 AND id_project = $9
+		RETURNING id_git_integration, id_project, name, host_type, base_url, repo_path, base_branch,
 		          access_token_enc, token_nonce, created_at, updated_at
-	`, name, hostType, baseUrl, repoPath, tokenEnc, nonce, idGitIntegration, idProject)
+	`, name, hostType, baseUrl, repoPath, baseBranch, tokenEnc, nonce, idGitIntegration, idProject)
 	if err != nil {
 		return nil, fmt.Errorf("updating git integration %d: %w", idGitIntegration, err)
 	}

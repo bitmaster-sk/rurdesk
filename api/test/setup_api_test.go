@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/ai"
+	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -369,6 +370,25 @@ func createProject(t *testing.T, app *issue.Application, token, name string) int
 	var prj model.Project
 	require.Nil(t, json.NewDecoder(res.Body).Decode(&prj))
 	return prj.IdProject
+}
+
+// The base branch is set so dispatch never asks the fake host for one.
+func ensureGitIntegration(t *testing.T, app *issue.Application, token string, idProject int64) {
+	t.Helper()
+	if os.Getenv("GIT_INTEGRATION_ENCRYPTION_KEY") == "" {
+		t.Setenv("GIT_INTEGRATION_ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+		githost.ResetEncryptionKey()
+		t.Cleanup(githost.ResetEncryptionKey)
+	}
+	integrations, err := injector.GetGitIntegrationRepository().ListByProject(context.Background(), idProject)
+	require.NoError(t, err)
+	if len(integrations) > 0 {
+		return
+	}
+	res := Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/git-integration", idProject),
+		`{"name":"test-git","hostType":"github","baseUrl":"https://git.example.test","repoPath":"org/repo","baseBranch":"main","accessToken":"test-git-token"}`,
+		token)
+	require.Equal(t, http.StatusCreated, res.StatusCode, readBody(t, res))
 }
 
 func envOrDefault(key, fallback string) string {

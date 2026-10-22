@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -34,44 +32,22 @@ func (a *blockingAgent) Run(ctx context.Context, task Task) (RunStats, error) {
 
 func (a *blockingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
 
-func initGitRepo(t *testing.T, dir string) {
+func stageTestWorkspace(t *testing.T) (string, AgentRunGitRepo) {
 	t.Helper()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir repo: %v", err)
-	}
-	originPath := dir + ".origin.git"
-	run := func(workDir string, args ...string) {
-		cmd := exec.Command("git", args...)
-		cmd.Dir = workDir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v (in %s): %v\n%s", args, workDir, err, out)
-		}
-	}
-	run(dir, "init", "--bare", "-b", "main", originPath)
-	for _, args := range [][]string{
-		{"init", "-b", "main"},
-		{"config", "user.email", "test@test"},
-		{"config", "user.name", "test"},
-		{"commit", "--allow-empty", "-m", "init"},
-		{"remote", "add", "origin", originPath},
-		{"push", "-u", "origin", "main"},
-	} {
-		run(dir, args...)
-	}
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	return filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main")
 }
 
 // TestRunStage_RunsOneStageAtATime verifies the gateway runs one stage
 // attempt at a time, queueing the rest — the property
 // that keeps concurrent CLI processes off the shared OAuth credential.
 func TestRunStage_RunsOneStageAtATime(t *testing.T) {
-	workspaceBase := t.TempDir()
-	repoURL := "https://example.com/acme/myrepo.git"
-	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+	workspaceBase, repo := stageTestWorkspace(t)
 
 	cfg := &Config{
-		WorkspaceBase:  workspaceBase,
-		RepoUrl:        repoURL,
-		RepoBranchBase: "main",
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
 	}
 	agent := &blockingAgent{entered: make(chan int64, 3), release: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
@@ -79,6 +55,7 @@ func TestRunStage_RunsOneStageAtATime(t *testing.T) {
 	const taskCount = 3
 	for i := 0; i < taskCount; i++ {
 		task := Task{
+			Repo:        repo,
 			IdTask:      int64(100 + i),
 			IdRun:       int64(200 + i),
 			IdUserAgent: 1,
@@ -116,19 +93,16 @@ func TestRunStage_RunsOneStageAtATime(t *testing.T) {
 }
 
 func TestRunStage_CancelledQueuedStageNeverRunsTheAgent(t *testing.T) {
-	workspaceBase := t.TempDir()
-	repoURL := "https://example.com/acme/myrepo.git"
-	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+	workspaceBase, repo := stageTestWorkspace(t)
 
 	cfg := &Config{
-		WorkspaceBase:  workspaceBase,
-		RepoUrl:        repoURL,
-		RepoBranchBase: "main",
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
 	}
 	agent := &blockingAgent{entered: make(chan int64, 2), release: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
 
-	go orchestrator.runStage(Task{IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+	go orchestrator.runStage(Task{Repo: repo, IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
 	select {
 	case <-agent.entered:
 	case <-time.After(2 * time.Second):
@@ -137,7 +111,7 @@ func TestRunStage_CancelledQueuedStageNeverRunsTheAgent(t *testing.T) {
 
 	queuedDone := make(chan struct{})
 	go func() {
-		orchestrator.runStage(Task{IdTask: 101, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
+		orchestrator.runStage(Task{Repo: repo, IdTask: 101, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
 		close(queuedDone)
 	}()
 	deadline := time.Now().Add(2 * time.Second)
@@ -204,22 +178,18 @@ func TestRunStage_ReleasesTheSlotWhenTheTrackerNoLongerRunsTheTask(t *testing.T)
 	}))
 	t.Cleanup(server.Close)
 
-	workspaceBase := t.TempDir()
-	repoURL := "https://example.com/acme/myrepo.git"
-	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+	workspaceBase, repo := stageTestWorkspace(t)
 	cfg := &Config{
-		TrackerAPIUrl:  server.URL,
-		WebhookSecret:  []byte("secret"),
-		WorkspaceBase:  workspaceBase,
-		RepoUrl:        repoURL,
-		RepoBranchBase: "main",
+		TrackerAPIUrl: server.URL,
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
 	}
 	agent := &cancellableAgent{entered: make(chan int64, 2), release: make(chan struct{})}
 	t.Cleanup(func() { close(agent.release) })
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
 	orchestrator.heartbeatLoop.interval = 20 * time.Millisecond
 
-	go orchestrator.runStage(Task{IdTask: goneTask, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+	go orchestrator.runStage(Task{Repo: repo, IdTask: goneTask, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
 	select {
 	case id := <-agent.entered:
 		if id != goneTask {
@@ -228,7 +198,7 @@ func TestRunStage_ReleasesTheSlotWhenTheTrackerNoLongerRunsTheTask(t *testing.T)
 	case <-time.After(2 * time.Second):
 		t.Fatal("no agent.Run started within timeout")
 	}
-	go orchestrator.runStage(Task{IdTask: queuedTask, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
+	go orchestrator.runStage(Task{Repo: repo, IdTask: queuedTask, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
 
 	select {
 	case id := <-agent.entered:
@@ -278,16 +248,15 @@ func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 	}))
 	t.Cleanup(server.Close)
 
-	workspaceBase := t.TempDir()
-	repoURL := "https://example.com/acme/myrepo.git"
-	repoPath := RepoPathFromURL(workspaceBase, repoURL)
-	initGitRepo(t, repoPath)
+	workspaceBase, repo := stageTestWorkspace(t)
+	repoPath, err := repo.LocalPath(workspaceBase)
+	if err != nil {
+		t.Fatal(err)
+	}
 	cfg := &Config{
-		TrackerAPIUrl:  server.URL,
-		WebhookSecret:  []byte("secret"),
-		WorkspaceBase:  workspaceBase,
-		RepoUrl:        repoURL,
-		RepoBranchBase: "main",
+		TrackerAPIUrl: server.URL,
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
 	}
 	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}
 	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
@@ -295,7 +264,7 @@ func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 
 	stageDone := make(chan struct{})
 	go func() {
-		orchestrator.runStage(Task{IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+		orchestrator.runStage(Task{Repo: repo, IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
 		close(stageDone)
 	}()
 	select {
@@ -379,6 +348,30 @@ func TestParseStageExecutePayload_Minimal(t *testing.T) {
 	}
 }
 
+func TestParseStageExecutePayload_CarriesTheRepo(t *testing.T) {
+	task, err := parseStageExecutePayload(map[string]any{
+		"idRun": float64(42),
+		"payload": map[string]any{
+			"idTask": float64(123),
+			"stage":  "implementation",
+			"repo": map[string]any{
+				"cloneUrl":       "https://gitlab.com/group/sub/repo.git",
+				"host":           "gitlab.com",
+				"repoPath":       "group/sub/repo",
+				"baseBranch":     "develop",
+				"encryptedToken": "c2VhbGVk",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := AgentRunGitRepo{CloneUrl: "https://gitlab.com/group/sub/repo.git", Host: "gitlab.com", RepoPath: "group/sub/repo", BaseBranch: "develop", EncryptedToken: "c2VhbGVk"}
+	if task.Repo != want {
+		t.Errorf("Repo = %+v, want %+v", task.Repo, want)
+	}
+}
+
 func TestParseStageExecutePayload_CarriesPrBranch(t *testing.T) {
 	payload := map[string]any{
 		"idRun": float64(42),
@@ -414,14 +407,12 @@ func TestCreateRunWorktree_PicksBranch(t *testing.T) {
 			tmp := newGitEnv(t)
 			originPath, seed := seedOrigin(t, tmp, "main")
 			pushAgentBranch(t, seed, prBranch)
-			cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws"), RepoUrl: originPath, RepoBranchBase: "main"}
-			if err := CloneRepo(cfg); err != nil {
-				t.Fatalf("CloneRepo: %v", err)
-			}
-			repoPath := filepath.Join(cfg.WorkspaceBase, "origin")
+			cfg := &Config{WorkspaceBase: filepath.Join(tmp, "ws")}
+			repo := testRepo(originPath, "example.com", "main")
+			repoPath := ensureRepo(t, cfg.WorkspaceBase, repo)
 			orchestrator := NewOrchestrator(cfg, nil, NewTrackerClient(cfg), NewState())
 
-			task := Task{IdRun: 9, IdUserAgent: 3, IdIssue: 48, PrBranch: tc.prBranch}
+			task := Task{Repo: repo, IdRun: 9, IdUserAgent: 3, IdIssue: 48, PrBranch: tc.prBranch}
 			path, branch, err := orchestrator.createRunWorktree(repoPath, task)
 			if err != nil {
 				t.Fatalf("createRunWorktree: %v", err)

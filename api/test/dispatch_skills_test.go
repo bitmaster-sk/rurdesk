@@ -46,6 +46,7 @@ func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	require.Equal(t, http.StatusOK, gwRes.StatusCode)
 
 	idProject := createProject(t, app, token, "dispatch-skills-project")
+	ensureGitIntegration(t, app, token, idProject)
 	member := Request(t, app, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), token)

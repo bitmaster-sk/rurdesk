@@ -163,6 +163,9 @@
             "MODEL_NOT_ALLOWED": "The gateway refused the chosen model. Restart the gateway so it reports the models it allows, then press Continue.",
             "MAX_TURNS_OVER_LIMIT": "The turn limit is higher than the gateway allows. Lower it and press Continue.",
             "WORKTREE_ERROR": "The workspace could not be prepared. Press Restart to begin a fresh run.",
+            "TRACKER_MISSING_REPO": "The gateway got no repository for this run. Update the tracker so it sends the project git integration, then press Continue.",
+            "GIT_TOKEN_UNREADABLE": "The gateway could not decrypt the git token of this run. Make sure its TRACKER_TO_GATEWAY_TOKEN matches the gateway in the tracker, then press Continue.",
+            "DISPATCH_FAILED": "The tracker could not start this stage. Check the details below, then press Continue or Restart.",
             "CRASH_RECOVERY": "The agent process crashed mid-stage. Press Continue to retry.",
             "HEARTBEAT_STALE": "The agent stopped reporting progress and was timed out. Press Continue to retry.",
             "GATEWAY_RESTART": "The gateway restarted and dropped this run. Press Continue to retry."
@@ -1196,7 +1199,8 @@
         "plantuml_disabled": "PlantUML diagrams are not configured on this server.",
         "plantuml_syntax": "The PlantUML diagram has an error.",
         "plantuml_unavailable": "The PlantUML diagram server is unavailable.",
-        "plantuml_source_too_large": "The PlantUML diagram source is too large."
+        "plantuml_source_too_large": "The PlantUML diagram source is too large.",
+        "git_integration_limit_reached": "A project can have only one git integration."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
@@ -1336,11 +1340,15 @@
         "PLURAL": "Git Integrations",
         "CONFIRM_DELETE": "Delete this integration? Linked merge requests will stop syncing.",
         "NEW": "New integration",
+        "LIMIT_REACHED": "A project can have only one git integration.",
         "ADD": "Add integration",
         "EDIT": "Edit integration",
         "HOST_TYPE": "Host type",
         "BASE_URL": "Base URL",
         "REPO_PATH": "Repository path",
+        "BASE_BRANCH": "Base branch",
+        "BASE_BRANCH_PLACEHOLDER": "Default branch of the repository",
+        "BASE_BRANCH_HINT": "Agents branch from it and open pull requests against it.",
         "ACCESS_TOKEN": "Access token",
         "TOKEN_HINT": "Leave blank to keep the existing token",
         "CHECK": "Check connection",

@@ -21,14 +21,16 @@ import (
 // per-stage completion; the API drives queueing, scheduling, and crash
 // recovery, and run-level transitions are not the gateway's concern.
 type TrackerClient struct {
-	cfg    *Config
-	client *http.Client
+	cfg     *Config
+	client  *http.Client
+	secrets *SecretSet
 }
 
 func NewTrackerClient(cfg *Config) *TrackerClient {
 	return &TrackerClient{
-		cfg:    cfg,
-		client: &http.Client{Timeout: 15 * time.Second},
+		cfg:     cfg,
+		client:  &http.Client{Timeout: 15 * time.Second},
+		secrets: NewSecretSet(),
 	}
 }
 
@@ -53,16 +55,12 @@ func (tc *TrackerClient) CompleteStage(ctx context.Context, idTask int64, payloa
 	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/complete", idTask), payload)
 }
 
-// ReportRunRepo tells the tracker which repo (owner/repo) a run pushes to, so
-// the API can resolve the matching git_integration onto the run before the
-// agent reports complete_stage. Deliberately a reliable, non-LLM channel —
-// repo identity must not flow through the agent. Best-effort: on failure the
-// run stays unresolved and the complete path errors clearly.
-func (tc *TrackerClient) ReportRunRepo(ctx context.Context, idRun int64, repoPath string) error {
-	type body struct {
-		RepoPath string `json:"repoPath"`
-	}
-	return tc.post(ctx, fmt.Sprintf("/agent/run/%d/repo", idRun), body{RepoPath: repoPath})
+func (tc *TrackerClient) RedactSecret(secret string) {
+	tc.secrets.Add(secret)
+}
+
+func (tc *TrackerClient) ForgetSecret(secret string) {
+	tc.secrets.Remove(secret)
 }
 
 // SendTaskHeartbeat refreshes last_heartbeat_at on the agent_task row.
@@ -116,6 +114,7 @@ func (tc *TrackerClient) post(ctx context.Context, path string, body any) error 
 		if err != nil {
 			return fmt.Errorf("marshaling body: %w", err)
 		}
+		bodyBytes = tc.secrets.RedactJson(bodyBytes)
 	}
 
 	url := tc.cfg.TrackerAPIUrl + path

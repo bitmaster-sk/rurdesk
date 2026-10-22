@@ -45,6 +45,7 @@ type Task struct {
 	WorktreePath  string
 	IssueTitle    string
 	IssueDesc     string
+	Repo          AgentRunGitRepo
 
 	OnStageSubmitted func()
 

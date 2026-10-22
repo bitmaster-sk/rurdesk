@@ -83,7 +83,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 
 	intRes := Request(t, app, "POST",
 		fmt.Sprintf("/api/private/project/%d/git-integration", idProject),
-		fmt.Sprintf(`{"name":"mock-git","hostType":"github","baseUrl":%q,"repoPath":"org/repo","accessToken":"ghp_mock_token"}`, gitHost.URL),
+		fmt.Sprintf(`{"name":"mock-git","hostType":"github","baseUrl":%q,"repoPath":"org/repo","baseBranch":"main","accessToken":"ghp_mock_token"}`, gitHost.URL),
 		token)
 	require.Equal(t, http.StatusCreated, intRes.StatusCode)
 	var integration model.GitIntegrationRes

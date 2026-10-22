@@ -10,18 +10,18 @@ A **git integration** connects a project to a repository on **GitHub**,
 talks to the host's API to **open pull/merge requests for agent runs** and to
 show **PR/MR diffs and status** right inside the app — most importantly on
 [agent run](./agents.md) cards, where the PR is reviewable without leaving the
-tracker.
+tracker. It is also the repository agents work in: the tracker hands the
+repository, its base branch and the token to the
+[gateway](../agentic-workflow/gateway.md#repositories) with every stage.
 
 > **The tracker opens the PR itself.** When an agent finishes implementing, it
 > only pushes its branch; the tracker then opens the PR/MR through this
 > integration's API. That's why the access token needs **write** permission
 > (see [Token scopes](#token-scopes)), not just read.
 
-> Don't confuse this with the gateway's
-> [`REPO_URL`/`GIT_ACCESS_TOKEN`](../agentic-workflow/gateway.md#gitaccesstoken-scopes),
-> which let the **agent** clone and push. The git integration is how the **tracker
-> UI** reads PRs/MRs back from the host. For the full agent loop you typically
-> configure both against the same repository.
+> **One integration per project.** A project connects to exactly one
+> repository, and agent runs on its tasks work there. Delete the integration to
+> connect a different repository.
 
 ## Add an integration
 
@@ -35,7 +35,8 @@ tracker.
 | **Host type**    | `github` · `gitlab` · `gitea`                          | `github`                                                            |
 | **Base URL**     | Web URL of the host, prefilled for the cloud hosts     | `https://github.com`, `https://gitlab.com`, or your self-hosted URL |
 | **Repo path**    | `owner/repo` path on the host                          | `your-org/your-repo`                                                |
-| **Access token** | Token used to open PRs/MRs and read their diffs/status | see scopes below                                                    |
+| **Base branch**  | Optional. Agents branch from it and open PRs/MRs against it; empty means the repository's default branch, or `main` for an empty repository | `develop` |
+| **Access token** | Token used to open PRs/MRs, read their diffs/status and push agent branches | see scopes below                                       |
 
 Picking a host type fills in its cloud URL (`https://github.com`,
 `https://gitlab.com`, `https://gitea.com`). A URL you typed yourself is kept.
@@ -44,25 +45,30 @@ Fill the form and save:
 
 ![Git integration create form](../../site/assets/img/git-integration-form.png)
 
-A project can have **multiple integrations** (e.g. backend + frontend repos);
-they're listed on the project's Git integrations settings page:
+The integration is listed on the project's Git integrations settings page. While
+it exists, **New integration** is disabled:
 
 ![Git integrations settings page](../../site/assets/img/git-integration-settings.png)
 
 ### Token scopes
 
 The token **reads** PR/MR diffs & status, **reads file contents** for diff expansion,
-and **opens** the PR/MR for agent runs, so it needs **write** access:
+**opens** the PR/MR for agent runs, and the agent uses it to **clone and push** its
+branch, so it needs **write** access to both pull requests and contents:
 
-| Host   | Token                         | Scope                                                         |
-| ------ | ----------------------------- | ------------------------------------------------------------- |
-| GitHub | fine-grained PAT              | _Pull requests: write_ + _Contents: read_ (or classic `repo`) |
-| GitLab | project/personal access token | `api`                                                         |
-| Gitea  | access token                  | `write:repository`                                            |
+| Host   | Token                         | Scope                                                                      |
+| ------ | ----------------------------- | -------------------------------------------------------------------------- |
+| GitHub | fine-grained PAT              | _Pull requests: write_ + _Contents: read & write_ (or classic `repo`)      |
+| GitLab | project/personal access token | `api` (a project token needs the **Developer** role or higher)             |
+| Gitea  | access token                  | `write:repository`                                                         |
 
 > Read-only tokens (`read_api`, _Pull requests: read_, `read:repository`) are
-> not enough: diffs and status will load, but opening a PR/MR fails and the
-> agent run is marked failed with the host's error message.
+> not enough: diffs and status will load, but pushing the branch or opening a
+> PR/MR fails and the agent run is marked failed with the host's error message.
+
+> The agent sees the token of the run it works on, so scope it to this one
+> repository. The gateway never writes it to disk, see
+> [Repositories](../agentic-workflow/gateway.md#repositories).
 
 ### Check the connection
 
@@ -172,4 +178,6 @@ request that meets its approval rules but that nobody approved shows no tag.
 | Diff/status returns an error           | Token expired or missing scope; base URL wrong (self-hosted hosts need the full API root)                                    |
 | Agent run fails at "open PR"           | Token lacks **write** scope, or `repoPath`/`baseUrl` is wrong — the host rejected the create call                            |
 | `403` on the settings page             | You're a member, not an owner                                                                                                |
-| Agent pushed a branch but no PR opened | No git integration on the project whose `repoPath` matches the pushed repo (the tracker can't tell which integration to use) |
+| Agent run fails right at the start     | The project has no git integration, so the tracker does not know which repository to send to the gateway                    |
+| Agent can't push its branch            | The token lacks _Contents: write_ (GitHub) or write access to the repository                                                |
+| **New integration** is disabled        | The project already has its one integration                                                                                  |

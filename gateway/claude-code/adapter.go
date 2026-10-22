@@ -89,7 +89,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken)
+	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.Repo.Token)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -363,9 +363,9 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 // container is a disposable per-run worktree sandbox where headless
 // auto-approve is intended, so we opt into the root bypass instead of
 // re-plumbing the image to non-root.
-func childEnv(oauthToken string) []string {
+func childEnv(oauthToken, gitToken string) []string {
 	base := os.Environ()
-	out := make([]string, 0, len(base)+3)
+	out := make([]string, 0, len(base)+4)
 	for _, kv := range base {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") ||
 			strings.HasPrefix(kv, "ANTHROPIC_AUTH_TOKEN=") {
@@ -375,6 +375,7 @@ func childEnv(oauthToken string) []string {
 	}
 	out = append(out, "GIT_PAGER=cat")
 	out = append(out, "IS_SANDBOX=1")
+	out = append(out, common.GitTokenEnv(gitToken))
 	if oauthToken != "" {
 		out = append(out, "CLAUDE_CODE_OAUTH_TOKEN="+oauthToken)
 	}

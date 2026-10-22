@@ -64,6 +64,20 @@
         </div>
 
         <div class="ui-field">
+            <label for="gi-base-branch">{{ 'GIT_INTEGRATION.BASE_BRANCH' | translate }}</label>
+            <small class="block ui-color-text-muted mb-1">
+                {{ 'GIT_INTEGRATION.BASE_BRANCH_HINT' | translate }}
+            </small>
+            <input
+                id="gi-base-branch"
+                uiInput
+                formControlName="baseBranch"
+                [placeholder]="'GIT_INTEGRATION.BASE_BRANCH_PLACEHOLDER' | translate"
+                class="w-full"
+            />
+        </div>
+
+        <div class="ui-field">
             <label for="gi-token" [class.required]="!isEdit">
                 {{ 'GIT_INTEGRATION.ACCESS_TOKEN' | translate }}
             </label>

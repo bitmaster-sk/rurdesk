@@ -17,11 +17,11 @@ import (
 
 type RotateGitTokensSuite struct {
 	suite.Suite
-	App       *issue.Application
-	Token     string
-	ProjectID int64
-	oldKey    []byte
-	newKey    []byte
+	App        *issue.Application
+	Token      string
+	ProjectIDs []int64
+	oldKey     []byte
+	newKey     []byte
 }
 
 func (s *RotateGitTokensSuite) SetupSuite() {
@@ -35,18 +35,22 @@ func (s *RotateGitTokensSuite) SetupSuite() {
 	s.Require().NoError(err)
 	s.oldKey = key
 	s.newKey = []byte("0123456789abcdef0123456789abcdef") // 32 bytes
+}
 
+func (s *RotateGitTokensSuite) TearDownSuite() {
+	s.App.Pool.Exec(context.Background(),
+		"DELETE FROM projects.project WHERE id_project = ANY($1)", s.ProjectIDs)
+}
+
+// A project holds at most one integration, so every seeded row gets its own project.
+func (s *RotateGitTokensSuite) createProject() int64 {
 	prjRes := Request(s.T(), s.App, "POST", "/api/private/project",
 		`{"name":"rotate-key-test","color":"#123456"}`, s.Token)
 	s.Require().Equal(http.StatusOK, prjRes.StatusCode)
 	var prj model.Project
 	s.Require().NoError(json.NewDecoder(prjRes.Body).Decode(&prj))
-	s.ProjectID = prj.IdProject
-}
-
-func (s *RotateGitTokensSuite) TearDownSuite() {
-	s.App.Pool.Exec(context.Background(),
-		"DELETE FROM projects.project WHERE id_project = $1", s.ProjectID)
+	s.ProjectIDs = append(s.ProjectIDs, prj.IdProject)
+	return prj.IdProject
 }
 
 func (s *RotateGitTokensSuite) SetupTest() {
@@ -69,7 +73,7 @@ func (s *RotateGitTokensSuite) seedIntegration(repoPath, plainToken string) int6
 			(id_project, name, host_type, base_url, repo_path, access_token_enc, token_nonce)
 		VALUES ($1, $2, 'github', 'https://github.com', $3, $4, $5)
 		RETURNING id_git_integration`,
-		s.ProjectID, "rot-"+repoPath, repoPath, ciphertext, nonce,
+		s.createProject(), "rot-"+repoPath, repoPath, ciphertext, nonce,
 	).Scan(&id)
 	s.Require().NoError(err)
 	return id
@@ -133,7 +137,7 @@ func (s *RotateGitTokensSuite) Test_Rotate_PartialFailure_RollsBackEarlierRows()
 		INSERT INTO projects.git_integration
 			(id_project, name, host_type, base_url, repo_path, access_token_enc, token_nonce)
 		VALUES ($1, 'rot-bad', 'github', 'https://github.com', 'org/repo-bad', $2, $3)`,
-		s.ProjectID, badCiphertext, badNonce)
+		s.createProject(), badCiphertext, badNonce)
 	s.Require().NoError(err)
 
 	n, err := adminops.RotateGitTokens(context.Background(), s.App.Pool, s.oldKey, s.newKey)

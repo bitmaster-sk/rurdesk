@@ -30,6 +30,7 @@ interface GitIntegrationSettingsForm {
     hostType: FormControl<HostType>;
     baseUrl: FormControl<string>;
     repoPath: FormControl<string>;
+    baseBranch: FormControl<string>;
     accessToken: FormControl<string>;
 }
 
@@ -102,6 +103,7 @@ export class GitIntegrationSettingsComponent implements OnInit {
                 Validators.required,
                 Validators.maxLength(255)
             ]),
+            baseBranch: this.fb.control(integration?.baseBranch ?? '', Validators.maxLength(255)),
             accessToken: this.fb.control('', integration ? [] : [Validators.required])
         });
         this.form.controls.hostType.valueChanges.subscribe(selected =>
@@ -181,7 +183,8 @@ export class GitIntegrationSettingsComponent implements OnInit {
                 name: value.name,
                 hostType: value.hostType,
                 baseUrl: value.baseUrl,
-                repoPath: value.repoPath
+                repoPath: value.repoPath,
+                baseBranch: this.baseBranchOf(value.baseBranch)
             };
             // Empty string = user didn't enter a new token → omit → backend keeps stored token.
             if (value.accessToken) {
@@ -196,11 +199,16 @@ export class GitIntegrationSettingsComponent implements OnInit {
                 hostType: value.hostType,
                 baseUrl: value.baseUrl,
                 repoPath: value.repoPath,
+                baseBranch: this.baseBranchOf(value.baseBranch),
                 accessToken: value.accessToken
             };
             this.gitIntegrationApi
                 .insert$(this.project().idProject, req)
                 .subscribe(result => this.saved.emit(result));
         }
+    }
+
+    private baseBranchOf(value: string): string | null {
+        return value.trim() || null;
     }
 }

@@ -26,7 +26,7 @@ approving stages.
 
 In **Administration → Users** click **Create user**, toggle **Agent**, give it a
 name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
-`http://gateway-goose-qwen-local:9090`. Each agent has exactly **one** gateway
+`http://gateway-agent-007:9090`. Each agent has exactly **one** gateway
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
 
@@ -351,7 +351,8 @@ a run that has a PR** — use **Continue** instead.
 | Webhook returns `401`                                             | `TRACKER_TO_GATEWAY_TOKEN` mismatch between tracker and gateway                                                                                                |
 | Tracker calls rejected                                            | Wrong/expired `GATEWAY_TO_TRACKER_TOKEN`                                                                                                                       |
 | Run fails immediately with auth error                             | Wrong/missing provider credential — check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)) |
-| Agent can't push                                                  | `GIT_ACCESS_TOKEN` lacks write on the repo, or `REPO_URL` wrong                                                                                                |
+| Agent can't push                                                  | The project's git integration token lacks write on the repo, see [token scopes](../using-the-tracker/git-integration.md#token-scopes)                          |
+| Run fails at the first stage with "no git integration"           | The project has no git integration; add one in **Project settings → Git integrations**                                                                       |
 | Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                                              |
 | Run briefly shows `failed` after a tracker restart, then recovers | Expected — the tracker reconciles the live gateway's completion automatically                                                                                  |
 | **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue**                                                                                                              |

@@ -101,8 +101,6 @@ services:
     #         TRACKER_URL: http://rurdesk:1000
     #         GATEWAY_TO_TRACKER_TOKEN: ""  # CHANGE ME (Admin → agent user → Agent credentials)
     #         TRACKER_TO_GATEWAY_TOKEN: ""  # CHANGE ME (… → Register gateway)
-    #         REPO_URL: https://github.com/your-org/your-repo.git
-    #         GIT_ACCESS_TOKEN: ""          # CHANGE ME (GitHub/GitLab PAT)
     #         MODELS: anthropic/claude-sonnet-4-6  # provider/model, comma-separated
     #         ANTHROPIC_API_KEY: ""         # CHANGE ME (key for each provider in MODELS)
     #     volumes:
@@ -214,6 +212,7 @@ docker compose up -d
 ```
 
 New migrations apply automatically on tracker startup.
+Some releases need more than that, see [Upgrading](./upgrading.md).
 
 ## Checking which version you run
 

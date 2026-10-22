@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -58,26 +59,22 @@ func (r *trackerRecorder) complete(path string) (CompleteStagePayload, bool) {
 	return payload, ok
 }
 
-func modelTestOrchestrator(t *testing.T, trackerURL string, maxTurnsLimit int) (*Orchestrator, *recordingAgent) {
+func modelTestOrchestrator(t *testing.T, trackerURL string, maxTurnsLimit int) (*Orchestrator, *recordingAgent, AgentRunGitRepo) {
 	t.Helper()
-	workspaceBase := t.TempDir()
-	repoURL := "https://example.com/acme/myrepo.git"
-	initGitRepo(t, RepoPathFromURL(workspaceBase, repoURL))
+	workspaceBase, repo := stageTestWorkspace(t)
 	catalog, err := parseModelCatalog("goose", "openai/a,ollama/b:8b", "openai/a")
 	if err != nil {
 		t.Fatalf("parseModelCatalog: %v", err)
 	}
 	cfg := &Config{
-		TrackerAPIUrl:  trackerURL,
-		WebhookSecret:  []byte("secret"),
-		WorkspaceBase:  workspaceBase,
-		RepoUrl:        repoURL,
-		RepoBranchBase: "main",
-		Models:         catalog,
-		MaxTurnsLimit:  maxTurnsLimit,
+		TrackerAPIUrl: trackerURL,
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
+		Models:        catalog,
+		MaxTurnsLimit: maxTurnsLimit,
 	}
 	agent := &recordingAgent{}
-	return NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState()), agent
+	return NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState()), agent, repo
 }
 
 func TestParseStageExecutePayload_CarriesModelAndMaxTurns(t *testing.T) {
@@ -100,9 +97,9 @@ func TestParseStageExecutePayload_CarriesModelAndMaxTurns(t *testing.T) {
 
 func TestRunStage_RunsTheAgentWithTheRequestedModelAndTurns(t *testing.T) {
 	_, trackerURL := newTrackerRecorder(t)
-	orchestrator, agent := modelTestOrchestrator(t, trackerURL, 0)
+	orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, 0)
 
-	orchestrator.runStage(Task{IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign, RequestedModel: "ollama/b:8b", MaxTurns: 40})
+	orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign, RequestedModel: "ollama/b:8b", MaxTurns: 40})
 
 	ran := agent.ran()
 	if len(ran) != 1 {
@@ -126,9 +123,9 @@ func TestRunStage_UsesTheGatewayDefaultsWhenTheTrackerSendsNone(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.stage, func(t *testing.T) {
 			_, trackerURL := newTrackerRecorder(t)
-			orchestrator, agent := modelTestOrchestrator(t, trackerURL, tt.limit)
+			orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, tt.limit)
 
-			orchestrator.runStage(Task{IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: tt.stage})
+			orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: tt.stage})
 
 			ran := agent.ran()
 			if len(ran) != 1 {
@@ -153,8 +150,9 @@ func TestRunStage_RejectsWhatTheGatewayDoesNotAllow(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			recorder, trackerURL := newTrackerRecorder(t)
-			orchestrator, agent := modelTestOrchestrator(t, trackerURL, 300)
+			orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, 300)
 			task := tt.task
+			task.Repo = repo
 			task.IdTask, task.IdRun, task.IdUserAgent, task.IdIssue, task.Stage = 1, 2, 1, 3, StageDesign
 
 			orchestrator.runStage(task)
@@ -170,5 +168,68 @@ func TestRunStage_RejectsWhatTheGatewayDoesNotAllow(t *testing.T) {
 				t.Errorf("complete = %+v, want errored with %s and a detail", complete, tt.wantReason)
 			}
 		})
+	}
+}
+
+func TestRunStage_FailsAStageWithoutARepo(t *testing.T) {
+	recorder, trackerURL := newTrackerRecorder(t)
+	orchestrator, agent, _ := modelTestOrchestrator(t, trackerURL, 0)
+
+	orchestrator.runStage(Task{IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign})
+
+	if ran := agent.ran(); len(ran) != 0 {
+		t.Fatalf("agent ran %d times, want it never started", len(ran))
+	}
+	complete, ok := recorder.complete("/agent/task/1/complete")
+	if !ok || complete.Outcome != OutcomeErrored || complete.ErrorReason != ErrCodeTrackerMissingRepo {
+		t.Errorf("complete = %+v (sent %v), want errored with %s", complete, ok, ErrCodeTrackerMissingRepo)
+	}
+}
+
+func TestRunStage_FailsAStageWhoseGitTokenTheGatewayCannotRead(t *testing.T) {
+	recorder, trackerURL := newTrackerRecorder(t)
+	orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, 0)
+	repo.EncryptedToken = encryptGitTokenForTest([]byte("another-gateway-secret"), testGitToken)
+
+	orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign})
+
+	if ran := agent.ran(); len(ran) != 0 {
+		t.Fatalf("agent ran %d times, want it never started", len(ran))
+	}
+	complete, ok := recorder.complete("/agent/task/1/complete")
+	if !ok || complete.Outcome != OutcomeErrored || complete.ErrorReason != ErrCodeGitTokenUnreadable {
+		t.Errorf("complete = %+v (sent %v), want errored with %s", complete, ok, ErrCodeGitTokenUnreadable)
+	}
+}
+
+type failingAgent struct {
+	detail string
+}
+
+func (a *failingAgent) Run(_ context.Context, _ Task) (RunStats, error) {
+	return RunStats{}, &AgentError{Code: ErrCodeProviderError, Detail: a.detail}
+}
+
+func (a *failingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
+
+func TestRunStage_MasksTheGitTokenInWhatItReportsToTheTracker(t *testing.T) {
+	recorder, trackerURL := newTrackerRecorder(t)
+	workspaceBase, repo := stageTestWorkspace(t)
+	catalog, err := parseModelCatalog("goose", "openai/a", "openai/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := &Config{TrackerAPIUrl: trackerURL, WebhookSecret: testWebhookSecret, WorkspaceBase: workspaceBase, Models: catalog}
+	agent := &failingAgent{detail: "remote: https://x-token:" + repo.Token + "@example.com rejected"}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+
+	orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign})
+
+	complete, ok := recorder.complete("/agent/task/1/complete")
+	if !ok {
+		t.Fatal("gateway did not report the failed stage")
+	}
+	if strings.Contains(complete.ErrorDetail, repo.Token) || !strings.Contains(complete.ErrorDetail, "x-token:***@") {
+		t.Errorf("ErrorDetail = %q, want the git token masked", complete.ErrorDetail)
 	}
 }

@@ -3,7 +3,6 @@ package common
 import (
 	"fmt"
 	"io"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,9 +16,6 @@ import (
 
 const agentRunsDir = ".agent-runs"
 
-// Used only for an empty origin, which has no HEAD to detect.
-const fallbackBaseBranch = "main"
-
 // Concurrent git ref updates on one repo fail with "cannot lock ref".
 var worktreeMu sync.Mutex
 
@@ -27,115 +23,61 @@ var worktreeMu sync.Mutex
 // every cloned repo. A var, not const, so tests can point it at a fixture.
 var hookSourcePath = "/etc/git-hooks/pre-push"
 
-// CloneRepo clones cfg.RepoUrl into <cfg.WorkspaceBase>/<repo-name>/.
-// If already cloned, pulls latest from the base branch.
-//
-// One repo per gateway: a run's worktree and the repo it reports back to the
-// tracker both come from this clone. A project may hold several git
-// integrations, but nothing today says which repo a given issue belongs to, so
-// serving more than one repo means running another gateway with another agent.
-func CloneRepo(cfg *Config) error {
-	if err := os.MkdirAll(cfg.WorkspaceBase, 0o755); err != nil {
-		return fmt.Errorf("creating workspace base: %w", err)
+// Never put the token in the clone URL: git writes the URL to .git/config.
+func EnsureRepo(workspaceBase string, repo AgentRunGitRepo) (string, error) {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
+	repoPath, err := repo.LocalPath(workspaceBase)
+	if err != nil {
+		return "", err
 	}
-
-	rawURL := cfg.RepoUrl
-	repoName := repoNameFromURL(rawURL)
-	repoPath := filepath.Join(cfg.WorkspaceBase, repoName)
-	authenticatedURL := injectToken(rawURL, cfg.GitAccessToken)
-
 	if _, err := os.Stat(filepath.Join(repoPath, ".git")); os.IsNotExist(err) {
-		log.Info().Str("url", rawURL).Str("path", repoPath).Msg("cloning repo")
-		if err := runGit(".", "clone", authenticatedURL, repoPath); err != nil {
-			return fmt.Errorf("cloning %s: %w", rawURL, err)
+		if err := os.MkdirAll(filepath.Dir(repoPath), 0o755); err != nil {
+			return "", fmt.Errorf("creating workspace dir: %w", err)
+		}
+		log.Info().Str("url", repo.CloneUrl).Str("path", repoPath).Msg("cloning repo")
+		if err := runRemoteGit(".", repo.Token, "clone", "-c", "credential.helper="+credentialHelper, repo.CloneUrl, repoPath); err != nil {
+			return "", fmt.Errorf("cloning %s: %w", repo.CloneUrl, err)
 		}
 	} else {
-		log.Info().Str("path", repoPath).Str("branch", cfg.RepoBranchBase).Msg("pulling repo")
-		// Refresh the stored remote URL with the current PAT — the workspace
-		// is a persistent volume, so a stale token would otherwise survive
-		// restarts and break both the pull here and the agent's push.
-		if err := runGit(repoPath, "remote", "set-url", "origin", authenticatedURL); err != nil {
-			return fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
+		if err := runGit(repoPath, "remote", "set-url", "origin", repo.CloneUrl); err != nil {
+			return "", fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
 		}
-	}
-
-	if cfg.RepoBranchBase == "" {
-		resolved, err := detectDefaultBranch(repoPath)
-		if err != nil {
-			return fmt.Errorf("detecting default branch in %s: %w", repoPath, err)
+		if err := runGit(repoPath, "config", "--replace-all", "credential.helper", credentialHelper); err != nil {
+			return "", fmt.Errorf("setting the credential helper in %s: %w", repoPath, err)
 		}
-		if resolved == "" {
-			resolved = fallbackBaseBranch
-		}
-		log.Info().Str("branch", resolved).Msg("REPO_BRANCH_BASE unset — using the repo's default branch")
-		cfg.RepoBranchBase = resolved
 	}
 
 	// A brand-new (empty) repo has no branches: `fetch origin main` would
-	// fatal with "couldn't find remote ref main" and take the gateway down.
-	hasBase, err := remoteHasBranch(repoPath, cfg.RepoBranchBase)
+	// fatal with "couldn't find remote ref main".
+	hasBase, err := remoteHasBranch(repoPath, repo.Token, repo.BaseBranch)
 	if err != nil {
-		return fmt.Errorf("checking base branch on origin in %s: %w", repoPath, err)
+		return "", fmt.Errorf("checking base branch on origin in %s: %w", repoPath, err)
 	}
-	if hasBase {
-		if err := syncBaseToOrigin(repoPath, cfg.RepoBranchBase); err != nil {
-			return err
-		}
-	} else {
-		empty, err := remoteIsEmpty(repoPath)
+	if !hasBase {
+		empty, err := remoteIsEmpty(repoPath, repo.Token)
 		if err != nil {
-			return fmt.Errorf("checking whether origin is empty in %s: %w", repoPath, err)
+			return "", fmt.Errorf("checking whether origin is empty in %s: %w", repoPath, err)
 		}
 		if !empty {
-			// Branches exist, just not the configured base one — a genuine
-			// misconfiguration (e.g. the repo's default is `master`). Don't
-			// guess; fail with a message pointing at the actual cause.
-			return fmt.Errorf(
-				"base branch %q not found on origin in %s (the repo has other branches — set REPO_BRANCH_BASE to the correct default)",
-				cfg.RepoBranchBase, repoPath,
+			return "", fmt.Errorf(
+				"base branch %q not found on origin in %s (set Base branch on the project's git integration)",
+				repo.BaseBranch, repoPath,
 			)
 		}
-		if err := seedEmptyRemote(repoPath, cfg.RepoBranchBase); err != nil {
-			return fmt.Errorf("seeding empty remote in %s: %w", repoPath, err)
+		if err := seedEmptyRemote(repoPath, repo.Token, repo.BaseBranch); err != nil {
+			return "", fmt.Errorf("seeding empty remote in %s: %w", repoPath, err)
 		}
 	}
 
 	if err := InstallHooks(repoPath); err != nil {
-		return fmt.Errorf("installing hooks in %s: %w", repoPath, err)
+		return "", fmt.Errorf("installing hooks in %s: %w", repoPath, err)
 	}
-
-	agentRunsPath := filepath.Join(repoPath, agentRunsDir)
-	if err := os.MkdirAll(agentRunsPath, 0o755); err != nil {
-		return fmt.Errorf("creating agent-runs dir: %w", err)
+	if err := os.MkdirAll(filepath.Join(repoPath, agentRunsDir), 0o755); err != nil {
+		return "", fmt.Errorf("creating agent-runs dir: %w", err)
 	}
-	return nil
-}
-
-// syncBaseToOrigin forces the local base checkout back to origin's base
-// branch. The checkout is a disposable mirror — agents only touch per-run
-// worktrees under .agent-runs/, never this tree — but a persistent volume can
-// still carry leftover edits or untracked files (crashed run, manual poke,
-// merged PR whose new files linger untracked), which would abort a plain
-// `pull --ff-only`. Force instead.
-func syncBaseToOrigin(repoPath, branch string) error {
-	originRef := "origin/" + branch
-	if err := runGit(repoPath, "fetch", "origin", branch); err != nil {
-		return fmt.Errorf("fetching %s in %s: %w", branch, repoPath, err)
-	}
-	// Reset first (clobbers tracked edits and files origin now tracks that the
-	// volume still holds untracked), then drop remaining untracked leftovers,
-	// preserving the per-run worktree tree. Branch pointer moves only once
-	// the tree is clean, so no checkout can collide.
-	if err := runGit(repoPath, "reset", "--hard", originRef); err != nil {
-		return fmt.Errorf("resetting %s in %s: %w", branch, repoPath, err)
-	}
-	if err := runGit(repoPath, "clean", "-fd", "-e", agentRunsDir); err != nil {
-		return fmt.Errorf("cleaning %s: %w", repoPath, err)
-	}
-	if err := runGit(repoPath, "checkout", "-B", branch, originRef); err != nil {
-		return fmt.Errorf("checkout %s in %s: %w", branch, repoPath, err)
-	}
-	return nil
+	return repoPath, nil
 }
 
 // seedInitialCommitIdentity is the author/committer for the empty initial
@@ -150,7 +92,7 @@ const (
 // seedEmptyRemote initialises a completely empty origin with a base branch so
 // the gateway can start and agents have something to branch from: point the
 // unborn HEAD at the base branch, commit empty, push.
-func seedEmptyRemote(repoPath, branch string) error {
+func seedEmptyRemote(repoPath, token, branch string) error {
 	log.Info().Str("path", repoPath).Str("branch", branch).Msg("origin is empty — seeding initial branch")
 	if err := runGit(repoPath, "symbolic-ref", "HEAD", "refs/heads/"+branch); err != nil {
 		return fmt.Errorf("pointing HEAD at %s: %w", branch, err)
@@ -162,36 +104,17 @@ func seedEmptyRemote(repoPath, branch string) error {
 	); err != nil {
 		return fmt.Errorf("creating initial commit: %w", err)
 	}
-	if err := runGit(repoPath, "push", "-u", "origin", branch); err != nil {
+	if err := runRemoteGit(repoPath, token, "push", "-u", "origin", branch); err != nil {
 		return fmt.Errorf("pushing initial %s: %w", branch, err)
 	}
 	return nil
 }
 
-// Returns "" when origin has no HEAD, i.e. an empty repo.
-func detectDefaultBranch(repoPath string) (string, error) {
-	out, err := runGitOutput(repoPath, "ls-remote", "--symref", "origin", "HEAD")
-	if err != nil {
-		return "", err
-	}
-	for _, line := range strings.Split(out, "\n") {
-		rest, found := strings.CutPrefix(line, "ref: ")
-		if !found {
-			continue
-		}
-		ref, _, _ := strings.Cut(rest, "\t")
-		if branch, ok := strings.CutPrefix(strings.TrimSpace(ref), "refs/heads/"); ok {
-			return branch, nil
-		}
-	}
-	return "", nil
-}
-
 // remoteHasBranch reports whether origin has the given branch. `ls-remote
 // --heads` exits 0 either way; a match prints a line, a miss prints nothing,
 // so emptiness of stdout is the signal.
-func remoteHasBranch(repoPath, branch string) (bool, error) {
-	out, err := runGitOutput(repoPath, "ls-remote", "--heads", "origin", branch)
+func remoteHasBranch(repoPath, token, branch string) (bool, error) {
+	out, err := runRemoteGitOutput(repoPath, token, "ls-remote", "--heads", "origin", branch)
 	if err != nil {
 		return false, err
 	}
@@ -199,8 +122,8 @@ func remoteHasBranch(repoPath, branch string) (bool, error) {
 }
 
 // remoteIsEmpty reports whether origin has no branches at all (a brand-new repo).
-func remoteIsEmpty(repoPath string) (bool, error) {
-	out, err := runGitOutput(repoPath, "ls-remote", "--heads", "origin")
+func remoteIsEmpty(repoPath, token string) (bool, error) {
+	out, err := runRemoteGitOutput(repoPath, token, "ls-remote", "--heads", "origin")
 	if err != nil {
 		return false, err
 	}
@@ -223,13 +146,13 @@ func InstallHooks(repoPath string) error {
 
 // CreateWorktree creates a new git worktree for a run. Returns the worktree path.
 // The start point must stay an explicitly fetched origin/<baseBranch>: the base
-// checkout's HEAD is only as new as gateway startup.
-func CreateWorktree(repoPath, baseBranch, branch string, idRun int64) (string, error) {
+// checkout's HEAD is only as new as the clone.
+func CreateWorktree(repoPath, token, baseBranch, branch string, idRun int64) (string, error) {
 	worktreeMu.Lock()
 	defer worktreeMu.Unlock()
 
 	worktreePath := WorktreePath(repoPath, idRun)
-	if err := runGit(repoPath, "fetch", "origin", baseBranch); err != nil {
+	if err := runRemoteGit(repoPath, token, "fetch", "origin", baseBranch); err != nil {
 		return "", fmt.Errorf("fetching %s: %w", baseBranch, err)
 	}
 	if err := runGit(repoPath, "worktree", "add", worktreePath, "-b", branch, "origin/"+baseBranch); err != nil {
@@ -238,12 +161,12 @@ func CreateWorktree(repoPath, baseBranch, branch string, idRun int64) (string, e
 	return worktreePath, nil
 }
 
-func ResumeWorktree(repoPath, branch string, idRun int64) (string, error) {
+func ResumeWorktree(repoPath, token, branch string, idRun int64) (string, error) {
 	worktreeMu.Lock()
 	defer worktreeMu.Unlock()
 
 	worktreePath := WorktreePath(repoPath, idRun)
-	if err := runGit(repoPath, "fetch", "origin", branch); err != nil {
+	if err := runRemoteGit(repoPath, token, "fetch", "origin", branch); err != nil {
 		return "", fmt.Errorf("fetching %s: %w", branch, err)
 	}
 	if err := releaseBranch(repoPath, branch); err != nil {
@@ -313,8 +236,7 @@ func RemoveWorktree(repoPath string, idRun int64) error {
 // git's complaints (e.g. "not a working tree" after metadata was already
 // cleared) are expected and harmless.
 func runGitQuiet(dir string, args ...string) error {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
+	cmd := newGitCmd(dir, nil, args...)
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	return cmd.Run()
@@ -333,69 +255,43 @@ func IsAgentBranch(branch string) bool {
 	return agentBranchPattern.MatchString(branch)
 }
 
-// RepoPathFromURL returns the local filesystem path for a given repo URL.
-func RepoPathFromURL(workspaceBase, rawURL string) string {
-	return filepath.Join(workspaceBase, repoNameFromURL(rawURL))
-}
-
-// RepoSlugFromURL extracts the "owner/repo" slug from a clone URL, used to
-// tell the tracker which repo a run pushed to so it can resolve the matching
-// git_integration. Supports HTTPS and SSH (git@host:owner/repo); GitLab
-// subgroups keep their full path.
-func RepoSlugFromURL(rawURL string) string {
-	trimmed := strings.TrimSuffix(strings.TrimSpace(rawURL), ".git")
-	if parsed, err := url.Parse(trimmed); err == nil && parsed.Host != "" && parsed.Path != "" {
-		return strings.Trim(parsed.Path, "/")
-	}
-	// SSH-style git@host:owner/repo
-	if i := strings.LastIndex(trimmed, ":"); i >= 0 {
-		return strings.Trim(trimmed[i+1:], "/")
-	}
-	return strings.Trim(trimmed, "/")
-}
-
-func repoNameFromURL(rawURL string) string {
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		parts := strings.Split(rawURL, "/")
-		name := parts[len(parts)-1]
-		return strings.TrimSuffix(name, ".git")
-	}
-	base := filepath.Base(parsed.Path)
-	return strings.TrimSuffix(base, ".git")
-}
-
-// injectToken embeds the PAT into a clone/fetch URL. Git persists the URL
-// (with credentials) into .git/config on clone, so callers must refresh it
-// on subsequent pulls to handle token rotation.
-func injectToken(rawURL, token string) string {
-	if token == "" {
-		return rawURL
-	}
-	parsed, err := url.Parse(rawURL)
-	if err != nil {
-		return rawURL
-	}
-	parsed.User = url.UserPassword("x-token", token)
-	return parsed.String()
-}
-
-func runGit(dir string, args ...string) error {
+func newGitCmd(dir string, env []string, args ...string) *exec.Cmd {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
+	return cmd
+}
+
+func runGitCmd(cmd *exec.Cmd) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
-// runGitOutput runs git and returns its stdout; stderr still streams to the
-// gateway log so failures stay visible.
-func runGitOutput(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
+// gitCmdOutput returns stdout; stderr still streams to the gateway log so
+// failures stay visible.
+func gitCmdOutput(cmd *exec.Cmd) (string, error) {
 	cmd.Stderr = os.Stderr
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+func runGit(dir string, args ...string) error {
+	return runGitCmd(newGitCmd(dir, nil, args...))
+}
+
+func runGitOutput(dir string, args ...string) (string, error) {
+	return gitCmdOutput(newGitCmd(dir, nil, args...))
+}
+
+func runRemoteGit(dir, token string, args ...string) error {
+	return runGitCmd(newGitCmd(dir, []string{GitTokenEnv(token)}, args...))
+}
+
+func runRemoteGitOutput(dir, token string, args ...string) (string, error) {
+	return gitCmdOutput(newGitCmd(dir, []string{GitTokenEnv(token)}, args...))
 }
 
 func copyFile(src, dst string) error {

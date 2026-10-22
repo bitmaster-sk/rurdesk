@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, input, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    OnInit,
+    computed,
+    inject,
+    input,
+    signal
+} from '@angular/core';
 import { Project } from '../../model/project.model';
 import { GitIntegrationRes, HostType } from '../../model/git-integration.model';
 import { GitIntegrationApi } from '../../api/git-integration.api.service';
@@ -21,6 +29,10 @@ export class GitIntegrationListComponent implements OnInit {
     protected readonly integrations = signal<GitIntegrationRes[]>([]);
     protected readonly isSettingsOpen = signal(false);
     protected readonly editTarget = signal<GitIntegrationRes | null>(null);
+    public readonly canAdd = computed(() => this.integrations().length === 0);
+    public readonly addTooltipKey = computed(() =>
+        this.canAdd() ? '' : 'GIT_INTEGRATION.LIMIT_REACHED'
+    );
 
     public ngOnInit(): void {
         this.load();
@@ -35,6 +47,7 @@ export class GitIntegrationListComponent implements OnInit {
     }
 
     public onAdd(): void {
+        if (!this.canAdd()) return;
         this.editTarget.set(null);
         this.isSettingsOpen.set(true);
     }

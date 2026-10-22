@@ -72,6 +72,7 @@ func (s *ModelSelectionSuite) SetupSuite() {
 	s.Require().Equal(http.StatusOK, gw.StatusCode)
 
 	s.IdProject = createProject(s.T(), s.App, s.Token, "model-selection-project")
+	ensureGitIntegration(s.T(), s.App, s.Token, s.IdProject)
 	member := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", s.IdProject),
 		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, s.AgentUserID), s.Token)

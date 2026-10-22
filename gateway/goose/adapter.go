@@ -90,7 +90,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Repo.Token)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -317,12 +317,13 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // The tracker MCP URL + bearer are NOT set here — writeGooseConfig writes
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
-func childEnv(cfg *common.GooseConfig, provider string) []string {
+func childEnv(cfg *common.GooseConfig, provider, gitToken string) []string {
 	out := append([]string{}, os.Environ()...)
 	out = append(out,
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",
 		"GOOSE_PROVIDER="+provider,
+		common.GitTokenEnv(gitToken),
 	)
 	if cfg.AnthropicAPIKey != "" {
 		out = append(out, "ANTHROPIC_API_KEY="+cfg.AnthropicAPIKey)

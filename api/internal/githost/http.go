@@ -66,8 +66,9 @@ func readBody(resp *http.Response) string {
 }
 
 var (
-	ErrFileTooLarge = errors.New("file exceeds maximum allowed size")
-	ErrBinaryFile   = errors.New("file appears to be binary")
+	ErrFileTooLarge    = errors.New("file exceeds maximum allowed size")
+	ErrBinaryFile      = errors.New("file appears to be binary")
+	ErrNoDefaultBranch = errors.New("the repository has no default branch")
 )
 
 func fetchFileContent(ctx context.Context, client *http.Client, req *http.Request, path, ref string) ([]byte, error) {

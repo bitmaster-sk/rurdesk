@@ -144,38 +144,72 @@ Billing is per-token against your Google AI API key.
 
 ## Required environment variables
 
-The gateway refuses to start without all six:
+The gateway refuses to start without all four:
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status, heartbeats, recovery). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (agent credentials).                                                                                                                       |
 | `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the agent's gateway** (see [Agents](./agents.md)).                                                                                |
-| `REPO_URL`                 | The single git remote this gateway works in, cloned into `/worktrees` at startup. One repo per gateway — run another gateway with another agent for a second repo.                                                                                                                     |
-| `GIT_ACCESS_TOKEN`         | PAT/app token with read+write on `REPO_URL`; injected into the remote URL so the agent can **push branches**. See [token scopes](#gitaccesstoken-scopes).                                                                                                                              |
 | `MODELS`                   | The models this gateway allows, as `provider/model` entries separated by commas. See [Models](#models).                                                                                                                                                                                |
 
-### `GIT_ACCESS_TOKEN` scopes
+## Repositories
 
-The token is used for **git over HTTPS** (clone, fetch, push the run branch). It
-therefore needs _write_ (contents) access on `REPO_URL`. Opening the PR/MR is
-**not** done with this token — the tracker opens it via the project's
-[git integration](../using-the-tracker/git-integration.md) token instead. The
-two can be the same PAT or different ones.
+Every stage the tracker sends carries the repository of the run: the clone URL,
+the base branch and the access token of the project's
+[git integration](../using-the-tracker/git-integration.md). One gateway therefore
+works for every project, whatever its git host, and nothing in its environment
+changes when you add a project.
 
-Only **push** (contents write) is needed — the PR/MR is opened by the tracker's
-git-integration token, not this one.
+- **Clone.** The gateway clones a repository the first time a run needs it, into
+  `<WORKSPACE_BASE>/<host>/<repository path>`, e.g.
+  `/worktrees/github.com/your-org/your-repo`. Every run gets its own worktree in
+  that clone, branched from the freshly fetched base branch.
+- **Base branch.** The tracker picks it when the run starts: the **Base branch**
+  of the git integration, or the repository's default branch when it is empty.
+  An empty repository gets `main`, and the gateway pushes an initial commit to it.
+  Every stage of the run and its pull request use that same branch.
+- **Token.** The token is never written to disk. The clone's git config holds a
+  credential helper that reads the token from the environment of the git
+  process, and the agent gets only the token of the run it works on.
+- **Masking.** The gateway replaces the token with `***` in everything it sends
+  to the tracker itself: the live thinking stream and error details. Text the
+  agent posts through its own MCP tools does not pass through the gateway and is
+  not masked.
 
-| Host   | Token                          | Scope                                                                     |
-| ------ | ------------------------------ | ------------------------------------------------------------------------- |
-| GitHub | fine-grained PAT (recommended) | _Contents: read & write_, limited to the `REPO_URL` repo                  |
-| GitHub | classic PAT                    | `repo` (`public_repo` is enough for public repos)                         |
-| GitLab | project/personal access token  | `write_repository` (project token needs the **Developer** role or higher) |
-| Gitea  | access token                   | `write:repository`                                                        |
+The token needs to both open pull requests and push branches. See
+[token scopes](../using-the-tracker/git-integration.md#token-scopes).
 
-> Use a separate token per gateway and scope it to exactly the repositories in
-> `REPO_URL` — the token ends up in the agent's environment, so treat it as
-> agent-visible.
+## Securing the tracker → gateway link
+
+The webhook that starts a stage carries the git token of the run encrypted with
+AES-GCM. The key is derived from `TRACKER_TO_GATEWAY_TOKEN`, which only the
+tracker and that gateway know, so the token cannot be read on the way even over
+plain HTTP. The HMAC signature proves the event came from the tracker.
+
+The rest of the event is not encrypted: the task, the approved design and plan,
+the comments and the wiki pages the agent gets. When that must not be readable
+on the network, run the link over HTTPS or over a network nobody else can read
+(the same compose network, a private VPN).
+
+The gateway itself serves plain HTTP. For HTTPS put a reverse proxy in front of
+it, for example Caddy, which also gets the certificate:
+
+```yaml
+services:
+    gateway-proxy:
+        image: caddy:2
+        restart: unless-stopped
+        command: caddy reverse-proxy --from gateway.example.com --to gateway-goose:9090
+        ports:
+            - "443:443"
+        networks:
+            rurdesk_network:
+```
+
+Then register the gateway in the tracker as `https://gateway.example.com/event`.
+If the certificate comes from an internal CA, point the tracker at it with
+`SSL_CERT_FILE=/path/to/ca.pem` (or `SSL_CERT_DIR`) in the tracker's environment.
 
 ## Optional environment variables
 
@@ -188,8 +222,7 @@ git-integration token, not this one.
 | `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                              |
 | `MAX_OUTPUT_LINE_MB`        | `4`              | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                   |
 | `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                          |
-| `WORKSPACE_BASE`            | `/worktrees`     | Root for per-run worktrees; must match the workspace volume mount.                                                                                                                             |
-| `REPO_BRANCH_BASE`          | _auto-detected_  | Branch each per-run worktree starts from. Left unset, the gateway reads the repository's own default branch from the remote at startup — set it only to target something else, e.g. `develop`. |
+| `WORKSPACE_BASE`            | `/worktrees`     | Root for the clones and their per-run worktrees; must match the workspace volume mount.                                                                                                        |
 
 ## Authentication
 
@@ -216,8 +249,6 @@ services:
             TRACKER_URL: http://rurdesk:1000
             GATEWAY_TO_TRACKER_TOKEN: "" # CHANGE ME (Admin → agent user → Agent credentials)
             TRACKER_TO_GATEWAY_TOKEN: "" # CHANGE ME (… → Register gateway)
-            REPO_URL: https://github.com/your-org/your-repo.git
-            GIT_ACCESS_TOKEN: "" # CHANGE ME (GitHub/GitLab PAT)
             LISTEN_PORT: "9090"
             LOG_LEVEL: info
             # --- models: list the ones this gateway allows, see "Models" ---
