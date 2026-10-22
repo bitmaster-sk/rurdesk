@@ -1,0 +1,57 @@
+<button
+    #trigger
+    type="button"
+    class="ui-day-select__trigger"
+    [id]="inputId()"
+    [class.ui-day-select--past]="isPast()"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-controls]="isOpen() ? panelId : null"
+    [attr.aria-label]="ariaLabel()"
+    [disabled]="isDisabled()"
+    (click)="onTriggerClick($event)"
+    (blur)="onTouched()"
+>
+    <tabler-icon icon="calendar" [size]="14" aria-hidden="true" />
+    <span class="ui-day-select__value">{{ triggerLabel() }}</span>
+</button>
+
+<ui-popover #panel panelClass="ui-day-select-panel" (closed)="onPanelHide()">
+    <div
+        role="dialog"
+        [id]="panelId"
+        [attr.aria-label]="ariaLabel() || triggerLabel()"
+        (keydown.escape)="restoreFocusOnHide = true"
+    >
+        <div class="ui-day-select__presets">
+            <button
+                type="button"
+                class="ui-day-select__preset"
+                [class.ui-day-select__preset--active]="relative() === UiDaySelectRelative.Today"
+                [attr.aria-pressed]="relative() === UiDaySelectRelative.Today"
+                (click)="onPickRelative(UiDaySelectRelative.Today)"
+            >
+                {{ 'UI.DAY_SELECT.TODAY' | translate }}
+            </button>
+            <button
+                type="button"
+                class="ui-day-select__preset"
+                [class.ui-day-select__preset--active]="relative() === UiDaySelectRelative.Yesterday"
+                [attr.aria-pressed]="relative() === UiDaySelectRelative.Yesterday"
+                (click)="onPickRelative(UiDaySelectRelative.Yesterday)"
+            >
+                {{ 'UI.DAY_SELECT.YESTERDAY' | translate }}
+            </button>
+        </div>
+        <input
+            uiDatepicker
+            mode="date"
+            inline
+            tabindex="-1"
+            class="ui-day-select__calendar-host"
+            [maxDate]="maxDate()"
+            [formControl]="dayControl"
+            (ready)="panel.reposition()"
+        />
+    </div>
+</ui-popover>
