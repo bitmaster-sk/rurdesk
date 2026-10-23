@@ -98,7 +98,6 @@ describe('TrackerComponent (browser)', () => {
         return {
             fixture,
             component,
-            hint: () => el.querySelector<HTMLElement>('[data-testid="track-day-hint"]'),
             daySelect: () => el.querySelector<HTMLElement>('[data-testid="track-day"]'),
             saveButton: () =>
                 fixture.debugElement
@@ -107,11 +106,10 @@ describe('TrackerComponent (browser)', () => {
         };
     }
 
-    it('logs to today by default and shows no hint', () => {
+    it('logs to today by default', () => {
         const page = create();
 
         expect(page.daySelect()).not.toBeNull();
-        expect(page.hint()).toBeNull();
 
         page.component.trackedControl.setValue('1h 30m');
         page.component.onSaveTrack();
@@ -123,15 +121,11 @@ describe('TrackerComponent (browser)', () => {
         });
     });
 
-    it('shows the hint and logs to the chosen past day', () => {
+    it('logs to the chosen past day', () => {
         const page = create();
         const yesterday = startOfDay(subDays(new Date(), 1));
 
         page.component.dayControl.setValue(yesterday);
-        page.fixture.detectChanges();
-
-        expect(page.hint()).not.toBeNull();
-        expect(page.hint()!.textContent).toContain('Logs to');
 
         page.component.trackedControl.setValue('1h');
         page.component.onSaveTrack();
@@ -150,9 +144,6 @@ describe('TrackerComponent (browser)', () => {
         page.component.onSaveTrack();
 
         expect(page.component.dayControl.value).toEqual(startOfToday());
-
-        page.fixture.detectChanges();
-        expect(page.hint()).toBeNull();
     });
 
     it('disables saving while the day is in the future', () => {

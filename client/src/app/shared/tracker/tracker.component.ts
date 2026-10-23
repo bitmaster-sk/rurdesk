@@ -21,7 +21,7 @@ import { DurationValidator } from '../duration/duration.validator';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Track } from './model/track.model';
 import { TrackDayValidator } from './track-day.validator';
-import { isToday, startOfDay, startOfToday } from 'date-fns';
+import { startOfDay, startOfToday } from 'date-fns';
 
 @Component({
     selector: 'app-tracker',
@@ -107,12 +107,6 @@ export class TrackerComponent {
     });
 
     protected readonly today = startOfToday();
-
-    protected readonly day = toSignal(this.dayControl.valueChanges, {
-        initialValue: this.dayControl.value
-    });
-
-    protected readonly isPastDay = computed(() => !isToday(this.day()));
 
     public onSaveTrack(): void {
         const issue = this.issue();

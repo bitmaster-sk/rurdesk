@@ -77,12 +77,6 @@
         </div>
     </div>
 
-    @if (isPastDay()) {
-        <div class="text-xs ui-color-text-muted mt-1" data-testid="track-day-hint">
-            {{ 'TRACK.LOGS_TO' | translate: { day: (day() | date: 'EEE, MMM d') } }}
-        </div>
-    }
-
     @if (runningTracker(); as running) {
         <app-tracker-switch-dialog
             [(visible)]="isSwitchOpen"
