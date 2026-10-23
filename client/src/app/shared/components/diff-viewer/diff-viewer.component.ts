@@ -14,8 +14,8 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { Diff2HtmlConfig, html } from 'diff2html';
 import { FileContentLoader, MrDiff, MrDiffFile } from 'src/app/project/model/git-integration.model';
+import { Diff2HtmlUI, type Diff2HtmlUIConfig } from 'diff2html/lib-esm/ui/js/diff2html-ui-slim';
 import { DiffParser, EXPAND_STEP, ExpandAction, ExpandDirection, ExpandSlot } from './diff-parser';
 
 // Tabler icons inlined as SVG so they render inside diff2html's
@@ -75,10 +75,16 @@ const ICON_FOLD_OUT =
     '<path d="M4 12h16"/>' +
     '</svg>';
 
-const DIFF2HTML_CONFIG: Diff2HtmlConfig = {
+const DIFF2HTML_UI_CONFIG: Diff2HtmlUIConfig = {
     drawFileList: false,
     matching: 'lines',
-    outputFormat: 'line-by-line'
+    outputFormat: 'line-by-line',
+    highlight: true,
+    synchronisedScroll: false,
+    fileListToggle: false,
+    fileContentToggle: false,
+    stickyFileHeaders: false,
+    smartSelection: false
 };
 
 export type DiffFileLinkBuilder = (file: MrDiffFile) => string | null;
@@ -161,7 +167,9 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
 
         const raw = this.rawPatch();
         if (raw) {
-            container.innerHTML = html(raw, DIFF2HTML_CONFIG);
+            const scratch = document.createElement('div');
+            new Diff2HtmlUI(scratch, raw, DIFF2HTML_UI_CONFIG).draw();
+            container.innerHTML = scratch.innerHTML;
             this.enrichFileHeaders(container);
             return;
         }
@@ -182,7 +190,7 @@ export class DiffViewerComponent implements AfterViewInit, OnChanges {
 
     private renderFile(idx: number): HTMLElement | null {
         const scratch = document.createElement('div');
-        scratch.innerHTML = html(this.filePatch(idx), DIFF2HTML_CONFIG);
+        new Diff2HtmlUI(scratch, this.filePatch(idx), DIFF2HTML_UI_CONFIG).draw();
         const wrapper = scratch.querySelector<HTMLElement>('.d2h-file-wrapper');
         wrapper?.setAttribute('data-idx', String(idx));
         return wrapper;

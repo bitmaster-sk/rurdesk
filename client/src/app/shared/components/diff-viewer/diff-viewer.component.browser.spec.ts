@@ -386,6 +386,26 @@ describe('DiffViewerComponent context expansion (browser)', () => {
         expect(body.classList).not.toContain('d2h-d-none');
     });
 
+    it('highlights code tokens for known file extensions', () => {
+        const fixture = TestBed.createComponent(DiffViewerComponent);
+        fixture.componentRef.setInput(
+            'rawPatch',
+            [
+                '--- a/src/foo.ts',
+                '+++ b/src/foo.ts',
+                '@@ -1,2 +1,2 @@',
+                '-import { x } from "old";',
+                '+import { y } from "new";',
+                ' const z = 1;'
+            ].join('\n')
+        );
+        fixture.detectChanges();
+
+        const root = fixture.nativeElement as HTMLElement;
+        expect(root.querySelector('.hljs-keyword')).toBeTruthy();
+        expect(root.querySelector('.hljs-string')).toBeTruthy();
+    });
+
     it('disables the whole-file expander while the file content is loading', () => {
         const response = new Subject<string[]>();
         const { root } = setup(() => response);
