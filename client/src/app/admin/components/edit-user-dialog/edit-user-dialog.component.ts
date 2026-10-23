@@ -62,7 +62,27 @@ export class EditUserDialogComponent {
         gatewayUrl: ['', [Validators.maxLength(2000)]],
         maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
-        colorAvatarBg: ['']
+        colorAvatarBg: [''],
+        // Manual avatar initials; empty clears back to auto-computed from the name.
+        avatarInitials: ['', [Validators.maxLength(2)]]
+    });
+
+    // Placeholder for the initials input: the initials the avatar would show
+    // when the field is left empty (auto-computed from the current name).
+    protected readonly autoInitials = computed(() => {
+        const name = (this.form.controls.name.value ?? '').trim();
+        if (!name) {
+            return '';
+        }
+        const parts = name.split(' ');
+        if (parts.length > 1) {
+            return parts
+                .slice(0, 2)
+                .map(p => p[0])
+                .join('')
+                .toUpperCase();
+        }
+        return parts[0].substring(0, 2).toUpperCase();
     });
 
     public constructor() {
@@ -80,7 +100,8 @@ export class EditUserDialogComponent {
                 gatewayUrl: '',
                 maxTurnsPlan: null,
                 maxTurnsImplement: null,
-                colorAvatarBg: user.colorAvatarBg
+                colorAvatarBg: user.colorAvatarBg,
+                avatarInitials: user.avatarInitials ?? ''
             });
             const email = this.form.controls.email;
             const gatewayUrl = this.form.controls.gatewayUrl;
@@ -123,12 +144,17 @@ export class EditUserDialogComponent {
         }
         const value = this.form.getRawValue();
         const req: AdminUpdateUserReq = user.isAgent
-            ? { name: value.name!.trim(), colorAvatarBg: value.colorAvatarBg! }
+            ? {
+                  name: value.name!.trim(),
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
+              }
             : {
                   name: value.name!.trim(),
                   email: value.email!.trim(),
                   isAdmin: value.isAdmin!,
-                  colorAvatarBg: value.colorAvatarBg!
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
               };
 
         // For an agent with an existing gateway, save a changed URL alongside the name.

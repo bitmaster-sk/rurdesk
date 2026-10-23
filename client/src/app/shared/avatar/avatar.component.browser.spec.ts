@@ -30,4 +30,22 @@ describe('AvatarComponent (browser)', () => {
             'rgb(255, 255, 255)'
         );
     });
+
+    it('explicit initials win over the name-based computation', () => {
+        const fixture = TestBed.createComponent(AvatarComponent);
+        fixture.componentRef.setInput('name', 'Ada Lovelace');
+        fixture.componentRef.setInput('initials', 'xy');
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.textContent.trim()).toBe('XY');
+    });
+
+    it('falls back to the name-based initials when initials are empty', () => {
+        const fixture = TestBed.createComponent(AvatarComponent);
+        fixture.componentRef.setInput('name', 'Ada Lovelace');
+        fixture.componentRef.setInput('initials', '');
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.textContent.trim()).toBe('AL');
+    });
 });

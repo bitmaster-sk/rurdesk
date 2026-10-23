@@ -2,12 +2,13 @@ package model
 
 // IssueParticipant represents a user attached to an issue for notification scoping.
 type IssueParticipant struct {
-	IdUser                  int64  `json:"idUser"                  db:"id_user"`
-	Name                    string `json:"name"                    db:"name"`
-	ColorAvatarBg           string `json:"colorAvatarBg"           db:"color_avatar_bg"`
-	IsAgent                 bool   `json:"isAgent"                   db:"is_agent"`
-	Source                  string `json:"source"                  db:"source"`
-	HasNotificationsEnabled bool   `json:"hasNotificationsEnabled" db:"has_notifications_enabled"`
+	IdUser                  int64   `json:"idUser"                  db:"id_user"`
+	Name                    string  `json:"name"                    db:"name"`
+	ColorAvatarBg           string  `json:"colorAvatarBg"           db:"color_avatar_bg"`
+	AvatarInitials          *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
+	IsAgent                 bool    `json:"isAgent"                   db:"is_agent"`
+	Source                  string  `json:"source"                  db:"source"`
+	HasNotificationsEnabled bool    `json:"hasNotificationsEnabled" db:"has_notifications_enabled"`
 }
 
 // AddParticipantReq is the request body for manually adding a project member as a participant.

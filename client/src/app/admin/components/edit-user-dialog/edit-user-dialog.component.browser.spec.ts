@@ -115,3 +115,67 @@ describe('EditUserDialogComponent — gateway turn limits (browser)', () => {
         expect(updateGateway).not.toHaveBeenCalled();
     });
 });
+
+describe('EditUserDialogComponent — avatar initials (browser)', () => {
+    let updateUser: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        updateUser = vi.fn().mockReturnValue(of(undefined));
+
+        await TestBed.configureTestingModule({
+            declarations: [EditUserDialogComponent],
+            imports: [ReactiveFormsModule],
+            providers: [
+                { provide: AdminUserApi, useValue: { update$: updateUser } },
+                {
+                    provide: AgentGatewayApi,
+                    useValue: { load$: () => of(null), update$: () => of({}) }
+                },
+                { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
+            ]
+        })
+            .overrideComponent(EditUserDialogComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    function open(): EditUserDialogInternals {
+        const fixture = TestBed.createComponent(EditUserDialogComponent);
+        fixture.componentRef.setInput('user', {
+            idUser: 8,
+            name: 'modelbot',
+            email: '',
+            colorAvatarBg: '#123456',
+            avatarInitials: 'MB',
+            isAgent: true,
+            isAdmin: false
+        });
+        fixture.componentRef.setInput('visible', true);
+        fixture.detectChanges();
+        return fixture.componentInstance as unknown as EditUserDialogInternals;
+    }
+
+    it('loads the stored initials into the form', () => {
+        expect(open().form.controls.avatarInitials.value).toBe('MB');
+    });
+
+    it('sends the edited initials in the update request', () => {
+        const dialog = open();
+
+        dialog.form.controls.avatarInitials.setValue('xy');
+        dialog.onSubmit();
+
+        expect(updateUser).toHaveBeenCalledWith(
+            8,
+            expect.objectContaining({ name: 'modelbot', avatarInitials: 'xy' })
+        );
+    });
+
+    it('sends an empty string when initials are cleared (back to auto)', () => {
+        const dialog = open();
+
+        dialog.form.controls.avatarInitials.setValue('');
+        dialog.onSubmit();
+
+        expect(updateUser).toHaveBeenCalledWith(8, expect.objectContaining({ avatarInitials: '' }));
+    });
+});

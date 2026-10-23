@@ -15,7 +15,14 @@ export class AvatarComponent {
     public readonly name = input('');
     public readonly bgColor = input('');
 
-    public readonly initials = computed(() => {
+    // Optional manual initials override; when set it wins over the name-based computation.
+    public readonly initials = input('');
+
+    public readonly displayInitials = computed(() => {
+        const override = this.initials().trim();
+        if (override) {
+            return override.toUpperCase();
+        }
         const name = this.name().trim();
         if (!name) {
             return '';

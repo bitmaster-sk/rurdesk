@@ -110,11 +110,12 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		return
 	}
 	user := &model.User{
-		Email:         req.Email,
-		Name:          req.Name,
-		Password:      hash,
-		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
-		IsAdmin:       req.IsAdmin,
+		Email:          req.Email,
+		Name:           req.Name,
+		Password:       hash,
+		ColorAvatarBg:  avatarColorOrRandom(req.ColorAvatarBg),
+		IsAdmin:        req.IsAdmin,
+		AvatarInitials: avatarInitialsOrNil(req.AvatarInitials),
 	}
 	var created *model.User
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
@@ -225,11 +226,12 @@ func (ac *AdminController) createAgent(c *gin.Context, req *model.AdminCreateUse
 		return
 	}
 	user := &model.User{
-		Email:         email,
-		Name:          req.Name,
-		Password:      hash,
-		ColorAvatarBg: avatarColorOrRandom(req.ColorAvatarBg),
-		IsAgent:       true,
+		Email:          email,
+		Name:           req.Name,
+		Password:       hash,
+		ColorAvatarBg:  avatarColorOrRandom(req.ColorAvatarBg),
+		IsAgent:        true,
+		AvatarInitials: avatarInitialsOrNil(req.AvatarInitials),
 	}
 	var created *model.User
 	var keyRes *model.CreateApiKeyRes
@@ -347,7 +349,15 @@ func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64,
 	}
 	// Applied independently of name/email so a colour-only edit never nulls them.
 	if req.ColorAvatarBg != nil {
-		return ac.userRepo.UpdateAvatarColor(ctx, idUser, *req.ColorAvatarBg)
+		if err := ac.userRepo.UpdateAvatarColor(ctx, idUser, *req.ColorAvatarBg); err != nil {
+			return err
+		}
+	}
+	// Initials apply the same way — nil means "not sent", so a name-only edit keeps them.
+	if req.AvatarInitials != nil {
+		if err := ac.userRepo.UpdateAvatarInitials(ctx, idUser, avatarInitialsOrNil(req.AvatarInitials)); err != nil {
+			return err
+		}
 	}
 	return nil
 }

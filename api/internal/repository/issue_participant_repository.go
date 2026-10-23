@@ -37,7 +37,7 @@ func (r *IssueParticipantRepository) Add(ctx context.Context, idIssue, idUser in
 func (r *IssueParticipantRepository) List(ctx context.Context, idIssue int64) ([]*model.IssueParticipant, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT p.id_user, u.name, u.color_avatar_bg, u.is_agent,
+		SELECT p.id_user, u.name, u.color_avatar_bg, u.avatar_initials, u.is_agent,
 		       p.source, p.has_notifications_enabled
 		FROM issues.issue_participant p
 		JOIN users.user u ON u.id_user = p.id_user

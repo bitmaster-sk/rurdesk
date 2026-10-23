@@ -10,6 +10,7 @@ export interface IssueParticipantModel {
     idUser: number;
     name: string;
     colorAvatarBg: string;
+    avatarInitials?: string | null;
     isAgent: boolean;
     source: ParticipantSource;
     hasNotificationsEnabled: boolean;

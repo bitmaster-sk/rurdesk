@@ -10,6 +10,9 @@ type User struct {
 	Password      string `json:"-"             db:"password"`
 	IsAgent       bool   `json:"isAgent"         db:"is_agent"`
 	IsAdmin       bool   `json:"isAdmin"       db:"is_admin"`
+	// AvatarInitials is the optional manual override for the avatar letters
+	// (max 2 chars, stored uppercase). nil/empty means auto-computed from Name.
+	AvatarInitials *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
 }
 
 func (u *User) MarshalBinary() ([]byte, error) {
@@ -36,6 +39,8 @@ type UpdateUserReq struct {
 	Name string `json:"name" binding:"required,min=1,max=250"`
 	// Optional: when present, overrides the avatar background colour. Omitted → unchanged.
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
+	// Optional: manual avatar initials (max 2 chars, stored uppercase). Omitted → unchanged, empty string → auto-computed from the name.
+	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
 }
 
 type ChangePasswordReq struct {
@@ -54,6 +59,8 @@ type AdminCreateUserReq struct {
 	Role      Role   `json:"role"`
 	// Optional: when present, seeds the avatar background colour instead of a random one.
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
+	// Optional: manual avatar initials (max 2 chars, stored uppercase). Omitted → auto-computed from the name.
+	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
 }
 
 // AdminCreateUserRes returns the created user. RawKey is set only for agents (shown once).
@@ -70,4 +77,6 @@ type AdminUpdateUserReq struct {
 	Email         *string `json:"email"         binding:"omitempty,email,max=250"`
 	IsAdmin       *bool   `json:"isAdmin"`
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
+	// Optional: manual avatar initials (max 2 chars, stored uppercase). Empty string clears to auto.
+	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
 }
