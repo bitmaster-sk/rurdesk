@@ -8,7 +8,7 @@ import en from 'src/assets/i18n/en.json';
 import { Track } from 'src/app/shared/tracker/model/track.model';
 import { TrackedTimeChartDataset } from 'src/app/user/entity/tracked-time-chart-dataset.entity';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
-import { TablerIconStub, UiDialogStub } from 'src/testing/stubs';
+import { TablerIconStub, UiButtonStub, UiDialogStub } from 'src/testing/stubs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TrackedTimeChartComponent } from './tracked-time-chart.component';
 
@@ -95,7 +95,11 @@ class UiConfirmStub {
     public readonly confirmed = output<void>();
 }
 
-@Component({ selector: 'app-track-edit-form', template: '', standalone: true })
+@Component({
+    selector: 'app-track-edit-form',
+    template: '<ng-content select="[trackEditFormStart]" />',
+    standalone: true
+})
 class TrackEditFormStub {
     public readonly track = input<Track | null>(null);
     public readonly saved = output<Track>();
@@ -123,13 +127,11 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
 
     const segmentApi = (): {
         selection: () => { idIssue: number; dayKey: string } | null;
-        dialogHeader: () => string;
         isDialogOpen: () => boolean;
         onChartClick: (event: { active?: object[] }) => void;
     } =>
         fixture.componentInstance as unknown as {
             selection: () => { idIssue: number; dayKey: string } | null;
-            dialogHeader: () => string;
             isDialogOpen: () => boolean;
             onChartClick: (event: { active?: object[] }) => void;
         };
@@ -148,6 +150,7 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
                 CommonModule,
                 TranslateModule.forRoot(),
                 UiDialogStub,
+                UiButtonStub,
                 TablerIconStub,
                 BaseChartStub,
                 UiConfirmStub,
@@ -182,8 +185,14 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
         fixture.detectChanges();
 
         expect(chart.selection()).toEqual({ idIssue: 11, dayKey: 'Oct 21, 2026' });
-        expect(chart.dialogHeader()).toBe('#204 Trackovanie · Oct 21, 2026');
         expect(chart.isDialogOpen()).toBe(true);
+
+        const dialog = fixture.debugElement.query(By.directive(UiDialogStub)).componentInstance;
+        expect(dialog.header()).toBe('Time entries');
+        const context = fixture.nativeElement.querySelector('[data-testid="chart-track-context"]');
+        expect(context.textContent).toContain('#204');
+        expect(context.textContent).toContain('Trackovanie');
+        expect(context.textContent).toContain('Oct 21, 2026');
 
         const rows = fixture.nativeElement.querySelectorAll('.chart-track');
         expect(rows.length).toBe(2);
@@ -191,6 +200,13 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
         expect(rows[0].textContent).toContain('10:00');
         expect(rows[0].textContent).toContain('1h');
         expect(rows[0].textContent).toContain('Dokončenie grafu');
+        expect(rows[1].textContent).toContain('No note');
+        expect(fixture.nativeElement.querySelector('[cdkFocusInitial]')).toBe(
+            fixture.nativeElement.querySelector('.chart-tracks')
+        );
+        expect(fixture.nativeElement.textContent).toContain('2 entries');
+        expect(fixture.nativeElement.textContent).toContain('Total');
+        expect(fixture.nativeElement.textContent).toContain('2h');
     });
 
     it('renders one row per track of the issue for the clicked day only', () => {
@@ -281,8 +297,15 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
         expect(fixture.nativeElement.querySelector('app-track-edit-form')).not.toBeNull();
         expect(fixture.nativeElement.querySelector('[data-testid="chart-track-edit"]')).toBeNull();
         expect(
-            fixture.nativeElement.querySelector('[data-testid="chart-track-delete"]')
-        ).not.toBeNull();
+            fixture.nativeElement.querySelector('[data-testid="chart-track-delete"]').textContent
+        ).toContain('Delete');
+
+        const dialog = fixture.debugElement.query(By.directive(UiDialogStub)).componentInstance;
+        expect(dialog.header()).toBe('Edit time entry');
+        const context = fixture.nativeElement.querySelector('[data-testid="chart-track-context"]');
+        expect(context.textContent).toContain('#204');
+        expect(context.textContent).toContain('9:00');
+        expect(context.textContent).toContain('10:00');
     });
 
     it('closes the dialog when the single track edit form is saved', () => {

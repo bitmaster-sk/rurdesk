@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
@@ -6,7 +7,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { addDays, startOfDay, startOfToday, subDays } from 'date-fns';
 import { of } from 'rxjs';
 import en from 'src/assets/i18n/en.json';
-import { UiButtonStub, UiDaySelectStub } from 'src/testing/stubs';
+import { TablerIconStub, UiButtonStub, UiDaySelectStub } from 'src/testing/stubs';
 import { Track } from '../model/track.model';
 import { TrackerService } from '../tracker.service';
 import { TrackEditFormComponent } from './track-edit-form.component';
@@ -46,6 +47,18 @@ const formatDay = (value: Date): string =>
         day: 'numeric'
     }).format(value);
 
+@Component({
+    template: `
+        <app-track-edit-form [track]="track">
+            <button trackEditFormStart type="button" data-testid="projected-start">Delete</button>
+        </app-track-edit-form>
+    `,
+    standalone: false
+})
+class HostComponent {
+    public readonly track = track();
+}
+
 describe('TrackEditFormComponent (browser)', () => {
     let updateTrack$: ReturnType<typeof vi.fn>;
     let fixture: ComponentFixture<TrackEditFormComponent>;
@@ -54,13 +67,14 @@ describe('TrackEditFormComponent (browser)', () => {
         updateTrack$ = vi.fn(() => of(track()));
 
         await TestBed.configureTestingModule({
-            declarations: [TrackEditFormComponent],
+            declarations: [TrackEditFormComponent, HostComponent],
             imports: [
                 CommonModule,
                 ReactiveFormsModule,
                 TranslateModule.forRoot(),
                 UiButtonStub,
-                UiDaySelectStub
+                UiDaySelectStub,
+                TablerIconStub
             ],
             providers: [
                 {
@@ -97,6 +111,53 @@ describe('TrackEditFormComponent (browser)', () => {
         expect(page.component.form.controls.note.value).toBe('reviewed the spec');
         expect(page.component.form.controls.day.value).toEqual(
             startOfDay(new Date('2026-09-08T10:00:00Z'))
+        );
+    });
+
+    it('labels the day, duration and note fields', () => {
+        const page = create(track());
+
+        const labelFor = (testId: string): string => {
+            const field = page.el.querySelector<HTMLElement>(`[data-testid="${testId}"]`)!;
+            const id =
+                testId === 'track-edit-day'
+                    ? fixture.debugElement
+                          .query(By.css(`[data-testid="${testId}"]`))
+                          .injector.get(UiDaySelectStub)
+                          .inputId()!
+                    : field.id;
+            return page.el.querySelector(`label[for="${id}"]`)!.textContent.trim();
+        };
+
+        expect(labelFor('track-edit-day')).toBe('Day');
+        expect(labelFor('track-edit-duration')).toBe('Duration');
+        expect(labelFor('track-edit-note')).toBe('Note');
+        expect(page.el.textContent).toContain('e.g. 1h 30m or 45m');
+    });
+
+    it('asks a surrounding dialog to focus the duration field first', () => {
+        const page = create(track());
+
+        expect(page.el.querySelector('[cdkFocusInitial]')!.getAttribute('data-testid')).toBe(
+            'track-edit-duration'
+        );
+    });
+
+    it('edits the note in a multi-line field', () => {
+        const page = create(track());
+
+        expect(page.el.querySelector('[data-testid="track-edit-note"]')!.tagName).toBe('TEXTAREA');
+    });
+
+    it('shows content projected into the start of the actions row next to Save', () => {
+        const host = TestBed.createComponent(HostComponent);
+        host.detectChanges();
+        const el = host.nativeElement as HTMLElement;
+
+        const projected = el.querySelector('[data-testid="projected-start"]')!;
+        expect(projected.textContent).toBe('Delete');
+        expect(projected.parentElement).toBe(
+            el.querySelector('[data-testid="track-edit-save"]')!.parentElement
         );
     });
 

@@ -64,14 +64,9 @@ export class TrackedTimeChartComponent {
 
     protected readonly isSingle = computed(() => this.selectedTracks().length === 1);
 
-    protected readonly dialogHeader = computed(() => {
-        const selection = this.selection();
-        const track = this.selectedTracks()[0];
-        if (selection === null || track === undefined) {
-            return '';
-        }
-        return `#${track.idIssuePublic} ${track.issueTitle} · ${selection.dayKey}`;
-    });
+    protected readonly selectedTotal = computed(() =>
+        this.selectedTracks().reduce((sum, t) => sum + (t.tracked ?? 0), 0)
+    );
 
     private readonly toDayKey = (d: Date): string => this.datePipe.transform(d, 'mediumDate')!;
 

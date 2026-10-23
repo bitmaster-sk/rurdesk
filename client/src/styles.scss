@@ -1047,6 +1047,9 @@ body {
     .ui-bg-canvas {
         background-color: var(--ui-color-canvas) !important;
     }
+    .ui-bg-primary-weak {
+        background-color: var(--ui-color-primary-weak) !important;
+    }
 
     .ui-border-hover-primary:hover {
         border-color: var(--ui-color-primary) !important;

@@ -40,6 +40,11 @@
     border: 1px solid var(--ui-surface-200);
     border-radius: var(--ui-radius-md);
 
+    &.time-card--editing {
+        border-color: var(--ui-color-primary-accent);
+        box-shadow: 0 0 0 3px var(--ui-color-primary-weak);
+    }
+
     .time-header {
         display: flex;
         justify-content: space-between;

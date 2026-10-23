@@ -1,49 +1,83 @@
-<form class="flex flex-wrap items-center gap-1" [formGroup]="form" (ngSubmit)="onSaveEdit()">
-    <ui-day-select
-        formControlName="day"
-        [format]="UiDaySelectFormat.Long"
-        [maxDate]="today"
-        data-testid="track-edit-day"
-        [ariaLabel]="'TRACK.DAY' | translate"
-    />
-    <input
-        type="text"
-        uiInput
-        class="w-24"
-        formControlName="tracked"
-        data-testid="track-edit-duration"
-        [attr.aria-label]="'TRACK.TIME' | translate"
-    />
-    <input
-        type="text"
-        uiInput
-        class="w-full"
-        formControlName="note"
-        data-testid="track-edit-note"
-        [attr.placeholder]="'TRACK.NOTE_PLACEHOLDER' | translate"
-    />
-    <ui-button type="submit" size="small" data-testid="track-edit-save" [disabled]="form.invalid">
-        {{ 'SAVE' | translate }}
-    </ui-button>
-    <ui-button
-        type="button"
-        size="small"
-        severity="secondary"
-        variant="text"
-        (click)="onCancelEdit()"
-    >
-        {{ 'CANCEL' | translate }}
-    </ui-button>
-</form>
-@if (isDayChanged()) {
-    <div class="text-xs ui-color-primary mt-1" data-testid="track-edit-moves">
-        {{
-            'TRACK.MOVES'
-                | translate
-                    : {
-                          from: originalDay() | date: 'EEE, MMM d',
-                          to: form.controls.day.value | date: 'EEE, MMM d'
-                      }
-        }}
+<form class="flex flex-col gap-4" [formGroup]="form" (ngSubmit)="onSaveEdit()">
+    <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1">
+            <label [for]="dayId">
+                {{ 'TRACK.DAY' | translate }}
+            </label>
+            <ui-day-select
+                formControlName="day"
+                fluid
+                [inputId]="dayId"
+                [format]="UiDaySelectFormat.Long"
+                [maxDate]="today"
+                data-testid="track-edit-day"
+            />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label [for]="durationId">
+                {{ 'TRACK.DURATION' | translate }}
+            </label>
+            <input
+                type="text"
+                uiInput
+                class="w-full"
+                formControlName="tracked"
+                cdkFocusInitial
+                data-testid="track-edit-duration"
+                [id]="durationId"
+            />
+            <span class="text-xs ui-color-text-muted">{{ 'TRACK.DURATION_HINT' | translate }}</span>
+        </div>
+        <div class="col-span-2 flex flex-col gap-1">
+            <label [for]="noteId">
+                {{ 'TRACK.NOTE' | translate }}
+            </label>
+            <textarea
+                uiTextarea
+                rows="3"
+                class="w-full resize-y"
+                formControlName="note"
+                data-testid="track-edit-note"
+                [id]="noteId"
+                [attr.placeholder]="'TRACK.NOTE_PLACEHOLDER' | translate"
+            ></textarea>
+        </div>
     </div>
-}
+    @if (isDayChanged()) {
+        <div
+            class="flex items-center gap-2 text-sm ui-color-primary ui-bg-primary-weak rounded-md px-3 py-2"
+            data-testid="track-edit-moves"
+        >
+            <tabler-icon icon="arrow-right" [size]="14" aria-hidden="true" />
+            {{
+                'TRACK.MOVES'
+                    | translate
+                        : {
+                              from: originalDay() | date: 'EEE, MMM d',
+                              to: form.controls.day.value | date: 'EEE, MMM d'
+                          }
+            }}
+        </div>
+    }
+    <div class="flex items-center gap-2">
+        <ng-content select="[trackEditFormStart]" />
+        <span class="flex-1"></span>
+        <ui-button
+            type="button"
+            size="small"
+            severity="secondary"
+            variant="outlined"
+            (click)="onCancelEdit()"
+        >
+            {{ 'CANCEL' | translate }}
+        </ui-button>
+        <ui-button
+            type="submit"
+            size="small"
+            data-testid="track-edit-save"
+            [disabled]="form.invalid"
+        >
+            {{ 'SAVE' | translate }}
+        </ui-button>
+    </div>
+</form>

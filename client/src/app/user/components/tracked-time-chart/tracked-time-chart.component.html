@@ -15,64 +15,106 @@
 <ui-dialog
     [visible]="isDialogOpen()"
     (visibleChange)="onDialogVisibleChange($event)"
-    [header]="dialogHeader()"
+    [header]="(isSingle() ? 'TRACK.EDIT_TITLE' : 'TRACK.ENTRIES_TITLE') | translate"
     width="32rem"
 >
-    <div class="chart-tracks">
-        @for (track of selectedTracks(); track track.idTrack) {
-            @if (editingId() === track.idTrack) {
-                <app-track-edit-form
-                    [track]="track"
-                    (saved)="onTrackEditClose()"
-                    (cancelled)="onTrackEditClose()"
-                />
-                @if (isSingle()) {
-                    <button
-                        type="button"
-                        class="chart-track-tool chart-track-tool--danger"
-                        data-testid="chart-track-delete"
-                        uiConfirm
-                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
-                        [attr.aria-label]="'TRACK.DELETE' | translate"
-                        (confirmed)="onDeleteTrack(track)"
-                    >
-                        <tabler-icon icon="trash" [size]="14" />
-                    </button>
-                }
+    @if (selectedTracks()[0]; as first) {
+        <div
+            class="flex flex-wrap items-center gap-2 mb-4 text-sm ui-color-text-muted"
+            data-testid="chart-track-context"
+        >
+            <span class="chart-issue-id">#{{ first.idIssuePublic }}</span>
+            <span class="font-bold ui-color-text truncate">{{ first.issueTitle }}</span>
+            <span aria-hidden="true">·</span>
+            @if (isSingle()) {
+                <span>
+                    {{ first.startAt | date: 'shortTime' }} → {{ first.endAt | date: 'shortTime' }}
+                </span>
             } @else {
-                <div class="chart-track">
-                    <span class="chart-track-range">
-                        {{ track.startAt | date: 'shortTime' }} →
-                        {{ track.endAt | date: 'shortTime' }}
-                    </span>
-                    <span class="chart-track-duration">
-                        {{ formatDuration(track.tracked ?? 0) }}
-                    </span>
-                    @if (track.note) {
-                        <span class="chart-track-note">{{ track.note }}</span>
-                    }
-                    <button
-                        type="button"
-                        class="chart-track-tool"
-                        data-testid="chart-track-edit"
-                        [attr.aria-label]="'TRACK.EDIT' | translate"
-                        (click)="editingId.set(track.idTrack)"
-                    >
-                        <tabler-icon icon="pencil" [size]="14" />
-                    </button>
-                    <button
-                        type="button"
-                        class="chart-track-tool chart-track-tool--danger"
-                        data-testid="chart-track-delete"
-                        uiConfirm
-                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
-                        [attr.aria-label]="'TRACK.DELETE' | translate"
-                        (confirmed)="onDeleteTrack(track)"
-                    >
-                        <tabler-icon icon="trash" [size]="14" />
-                    </button>
-                </div>
+                <span>{{ selection()?.dayKey }}</span>
             }
-        }
-    </div>
+        </div>
+    }
+    @if (isSingle()) {
+        @let track = selectedTracks()[0];
+        <app-track-edit-form
+            [track]="track"
+            (saved)="onTrackEditClose()"
+            (cancelled)="onTrackEditClose()"
+        >
+            <ui-button
+                trackEditFormStart
+                type="button"
+                size="small"
+                severity="danger"
+                variant="text"
+                data-testid="chart-track-delete"
+                uiConfirm
+                [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                (confirmed)="onDeleteTrack(track)"
+            >
+                <tabler-icon icon="trash" [size]="14" aria-hidden="true" />
+                {{ 'TRACK.DELETE_SHORT' | translate }}
+            </ui-button>
+        </app-track-edit-form>
+    } @else {
+        <div class="chart-tracks outline-none" tabindex="-1" cdkFocusInitial>
+            @for (track of selectedTracks(); track track.idTrack) {
+                @if (editingId() === track.idTrack) {
+                    <div class="chart-track-editing">
+                        <app-track-edit-form
+                            [track]="track"
+                            (saved)="onTrackEditClose()"
+                            (cancelled)="onTrackEditClose()"
+                        />
+                    </div>
+                } @else {
+                    <div class="chart-track">
+                        <span class="chart-track-range">
+                            {{ track.startAt | date: 'shortTime' }} →
+                            {{ track.endAt | date: 'shortTime' }}
+                        </span>
+                        <span class="chart-track-duration">
+                            {{ formatDuration(track.tracked ?? 0) }}
+                        </span>
+                        <span
+                            class="chart-track-note"
+                            [class.chart-track-note--empty]="!track.note"
+                        >
+                            {{ track.note || ('TRACK.NO_NOTE_SHORT' | translate) }}
+                        </span>
+                        <span class="flex gap-1">
+                            <button
+                                type="button"
+                                class="chart-track-tool"
+                                data-testid="chart-track-edit"
+                                [attr.aria-label]="'TRACK.EDIT' | translate"
+                                (click)="editingId.set(track.idTrack)"
+                            >
+                                <tabler-icon icon="pencil" [size]="14" />
+                            </button>
+                            <button
+                                type="button"
+                                class="chart-track-tool chart-track-tool--danger"
+                                data-testid="chart-track-delete"
+                                uiConfirm
+                                [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                                [attr.aria-label]="'TRACK.DELETE' | translate"
+                                (confirmed)="onDeleteTrack(track)"
+                            >
+                                <tabler-icon icon="trash" [size]="14" />
+                            </button>
+                        </span>
+                    </div>
+                }
+            }
+        </div>
+        <div class="flex justify-between mt-3 text-xs ui-color-text-muted">
+            <span>{{ 'TRACK.ENTRIES_COUNT' | translate: { count: selectedTracks().length } }}</span>
+            <span>
+                {{ 'TRACK.ENTRIES_TOTAL' | translate }}
+                <b class="ui-color-text">{{ formatDuration(selectedTotal()) }}</b>
+            </span>
+        </div>
+    }
 </ui-dialog>

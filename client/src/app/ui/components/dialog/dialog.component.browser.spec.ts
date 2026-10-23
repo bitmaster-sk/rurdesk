@@ -41,6 +41,9 @@ class ChildComponent implements OnInit, OnDestroy {
             (hide)="hideCount = hideCount + 1"
         >
             <test-dialog-child />
+            @if (withInitialFocus) {
+                <input class="initial" cdkFocusInitial />
+            }
             @if (withFooter) {
                 <ng-template #footer><button class="foot">ok</button></ng-template>
             }
@@ -55,6 +58,7 @@ class HostComponent {
     public closeOnEscape = true;
     public dismissable = false;
     public withFooter = false;
+    public withInitialFocus = false;
     public panelClass = '';
     public hideCount = 0;
 }
@@ -226,6 +230,17 @@ describe('UiDialogComponent (browser)', () => {
     it('installs a focus trap while open (anchors present)', () => {
         setup(h => (h.open = true));
         expect(document.querySelector('.cdk-focus-trap-anchor')).not.toBeNull();
+    });
+
+    it('focuses the element marked cdkFocusInitial instead of the close button', async () => {
+        const fixture = setup(h => {
+            h.withInitialFocus = true;
+            h.open = true;
+        });
+        await fixture.whenStable();
+        await new Promise(resolve => setTimeout(resolve));
+
+        expect(document.activeElement).toBe(document.querySelector('input.initial'));
     });
 
     it('restores focus to the trigger on close', () => {

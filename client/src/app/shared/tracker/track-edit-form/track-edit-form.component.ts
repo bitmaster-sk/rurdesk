@@ -19,6 +19,8 @@ import { Track } from '../model/track.model';
 import { TrackDayValidator } from '../track-day.validator';
 import { TrackerService } from '../tracker.service';
 
+let nextFormId = 0;
+
 @Component({
     selector: 'app-track-edit-form',
     templateUrl: './track-edit-form.component.html',
@@ -41,6 +43,11 @@ export class TrackEditFormComponent implements OnInit {
     );
 
     protected readonly UiDaySelectFormat = UiDaySelectFormat;
+
+    private readonly idPrefix = `track-edit-${nextFormId++}`;
+    protected readonly dayId = `${this.idPrefix}-day`;
+    protected readonly durationId = `${this.idPrefix}-duration`;
+    protected readonly noteId = `${this.idPrefix}-note`;
 
     protected readonly form = new FormGroup({
         tracked: new FormControl<string>('', [Validators.required, DurationValidator.duration]),
