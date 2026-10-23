@@ -78,27 +78,27 @@ func TestRenderPrompt_OmitsSectionWithoutSkills(t *testing.T) {
 }
 
 func TestParseStageExecute_MapsSkillsAndSkipsMalformed(t *testing.T) {
-	payload := map[string]any{
-		"idRun":       float64(42),
-		"idIssue":     float64(7),
-		"idProject":   float64(1),
-		"idUserAgent": float64(3),
-		"payload": map[string]any{
-			"idTask":    float64(100),
-			"stage":     StageImplementation,
-			"attemptNo": float64(1),
-			"contextBundle": map[string]any{
-				"skills": []any{
-					map[string]any{"name": "Verification rules", "content": "Run the checks."},
-					map[string]any{"name": "", "content": "no name"},
-					map[string]any{"name": "no content", "content": ""},
-					"not an object",
-				},
-			},
-		},
-	}
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"idIssue": 7,
+		"idProject": 1,
+		"idUserAgent": 3,
+		"payload": {
+			"idTask": 100,
+			"stage": "implementation",
+			"attemptNo": 1,
+			"contextBundle": {
+				"skills": [
+					{"name": "Verification rules", "content": "Run the checks."},
+					{"name": "", "content": "no name"},
+					{"name": "no content", "content": ""},
+					"not an object"
+				]
+			}
+		}
+	}`)
 
-	task, err := parseStageExecutePayload(payload)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("parseStageExecutePayload error: %v", err)
 	}
@@ -112,19 +112,19 @@ func TestParseStageExecute_MapsSkillsAndSkipsMalformed(t *testing.T) {
 }
 
 func TestParseStageExecute_NoSkillsFieldIsFine(t *testing.T) {
-	payload := map[string]any{
-		"idRun":       float64(42),
-		"idIssue":     float64(7),
-		"idProject":   float64(1),
-		"idUserAgent": float64(3),
-		"payload": map[string]any{
-			"idTask":        float64(100),
-			"stage":         StageDesign,
-			"contextBundle": map[string]any{},
-		},
-	}
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"idIssue": 7,
+		"idProject": 1,
+		"idUserAgent": 3,
+		"payload": {
+			"idTask": 100,
+			"stage": "design",
+			"contextBundle": {}
+		}
+	}`)
 
-	task, err := parseStageExecutePayload(payload)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("parseStageExecutePayload error: %v", err)
 	}
