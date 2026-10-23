@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -37,6 +38,18 @@ func stageTestWorkspace(t *testing.T) (string, AgentRunGitRepo) {
 	tmp := newGitEnv(t)
 	originPath, _ := seedOrigin(t, tmp, "main")
 	return filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main")
+}
+
+// unmarshalEvent decodes a JSON event body into a WebhookEvent and assigns
+// the stage_execute type so tests can focus on the payload shape.
+func unmarshalEvent(t *testing.T, body string) WebhookEvent {
+	t.Helper()
+	var event WebhookEvent
+	if err := json.Unmarshal([]byte(body), &event); err != nil {
+		t.Fatalf("unmarshal event: %v", err)
+	}
+	event.Type = "stage_execute"
+	return event
 }
 
 // TestRunStage_RunsOneStageAtATime verifies the gateway runs one stage
@@ -128,7 +141,7 @@ func TestRunStage_CancelledQueuedStageNeverRunsTheAgent(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 
-	if err := orchestrator.HandleEvent(WebhookEvent{Type: "cancelled", Payload: map[string]any{"idRun": float64(201)}}); err != nil {
+	if err := orchestrator.HandleEvent(WebhookEvent{Type: "cancelled", IdRun: 201}); err != nil {
 		t.Fatalf("HandleEvent(cancelled): %v", err)
 	}
 	select {
@@ -322,25 +335,25 @@ func TestAgentErrorReason(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_Minimal(t *testing.T) {
-	payload := map[string]any{
-		"idRun":       float64(42),
-		"idIssue":     float64(7),
-		"idUserAgent": float64(84),
-		"idProject":   float64(1),
-		"payload": map[string]any{
-			"idTask":    float64(123),
-			"stage":     "design",
-			"attemptNo": float64(1),
-			"contextBundle": map[string]any{
-				"issue": map[string]any{
-					"idIssuePublic": float64(11),
-					"title":         "Fix login",
-					"description":   "It crashes.",
-				},
-			},
-		},
-	}
-	task, err := parseStageExecutePayload(payload)
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"idIssue": 7,
+		"idUserAgent": 84,
+		"idProject": 1,
+		"payload": {
+			"idTask": 123,
+			"stage": "design",
+			"attemptNo": 1,
+			"contextBundle": {
+				"issue": {
+					"idIssuePublic": 11,
+					"title": "Fix login",
+					"description": "It crashes."
+				}
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -353,20 +366,21 @@ func TestParseStageExecutePayload_Minimal(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_CarriesTheRepo(t *testing.T) {
-	task, err := parseStageExecutePayload(map[string]any{
-		"idRun": float64(42),
-		"payload": map[string]any{
-			"idTask": float64(123),
-			"stage":  "implementation",
-			"repo": map[string]any{
-				"cloneUrl":       "https://gitlab.com/group/sub/repo.git",
-				"host":           "gitlab.com",
-				"repoPath":       "group/sub/repo",
-				"baseBranch":     "develop",
-				"encryptedToken": "c2VhbGVk",
-			},
-		},
-	})
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "implementation",
+			"repo": {
+				"cloneUrl": "https://gitlab.com/group/sub/repo.git",
+				"host": "gitlab.com",
+				"repoPath": "group/sub/repo",
+				"baseBranch": "develop",
+				"encryptedToken": "c2VhbGVk"
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -377,15 +391,15 @@ func TestParseStageExecutePayload_CarriesTheRepo(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_CarriesPrBranch(t *testing.T) {
-	payload := map[string]any{
-		"idRun": float64(42),
-		"payload": map[string]any{
-			"idTask":   float64(123),
-			"stage":    "implementation",
-			"prBranch": "agent/a3/i48/1790053695",
-		},
-	}
-	task, err := parseStageExecutePayload(payload)
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "implementation",
+			"prBranch": "agent/a3/i48/1790053695"
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -439,36 +453,37 @@ func TestCreateRunWorktree_PicksBranch(t *testing.T) {
 	}
 }
 
-func threadPayload(thread []any) map[string]any {
-	return map[string]any{
-		"idRun":       float64(1),
-		"idIssue":     float64(2),
-		"idUserAgent": float64(3),
-		"idProject":   float64(4),
-		"payload": map[string]any{
-			"idTask":        float64(5),
-			"stage":         "implementation",
-			"attemptNo":     float64(2),
-			"contextBundle": map[string]any{"reviewThread": thread},
-		},
-	}
+func threadPayload(thread string) string {
+	return `{
+		"idRun": 1,
+		"idIssue": 2,
+		"idUserAgent": 3,
+		"idProject": 4,
+		"payload": {
+			"idTask": 5,
+			"stage": "implementation",
+			"attemptNo": 2,
+			"contextBundle": {"reviewThread": ` + thread + `}
+		}
+	}`
 }
 
 func TestParseStageExecutePayload_WithReviewThread(t *testing.T) {
-	task, err := parseStageExecutePayload(threadPayload([]any{
-		map[string]any{
-			"message":     "Looks good but check edge case X.",
-			"messageKind": MessageKindComment,
-			"createdAt":   "2026-05-26T10:00:00Z",
-			"creator":     map[string]any{"name": "Alice"},
+	event := unmarshalEvent(t, threadPayload(`[
+		{
+			"message": "Looks good but check edge case X.",
+			"messageKind": "comment",
+			"createdAt": "2026-05-26T10:00:00Z",
+			"creator": {"name": "Alice"}
 		},
-		map[string]any{
-			"message":     "Pushed the fix.",
-			"messageKind": MessageKindPullRequestPushed,
-			"createdAt":   "2026-05-26T11:00:00Z",
-			"creator":     map[string]any{"name": "Bot"},
-		},
-	}))
+		{
+			"message": "Pushed the fix.",
+			"messageKind": "pull_request_pushed",
+			"createdAt": "2026-05-26T11:00:00Z",
+			"creator": {"name": "Bot"}
+		}
+	]`))
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -484,20 +499,21 @@ func TestParseStageExecutePayload_WithReviewThread(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_ElidesArtifactBodiesInThread(t *testing.T) {
-	task, err := parseStageExecutePayload(threadPayload([]any{
-		map[string]any{
-			"message":     "## Design\nLong document…",
-			"messageKind": MessageKindDesign,
-			"createdAt":   "2026-05-26T10:00:00Z",
-			"creator":     map[string]any{"name": "Bot"},
+	event := unmarshalEvent(t, threadPayload(`[
+		{
+			"message": "## Design\nLong document…",
+			"messageKind": "design",
+			"createdAt": "2026-05-26T10:00:00Z",
+			"creator": {"name": "Bot"}
 		},
-		map[string]any{
-			"message":     "## Plan\nLong document…",
-			"messageKind": MessageKindImplementationPlan,
-			"createdAt":   "2026-05-26T10:30:00Z",
-			"creator":     map[string]any{"name": "Bot"},
-		},
-	}))
+		{
+			"message": "## Plan\nLong document…",
+			"messageKind": "implementation_plan",
+			"createdAt": "2026-05-26T10:30:00Z",
+			"creator": {"name": "Bot"}
+		}
+	]`))
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -512,22 +528,22 @@ func TestParseStageExecutePayload_ElidesArtifactBodiesInThread(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_WithApprovedArtifacts(t *testing.T) {
-	payload := map[string]any{
-		"idRun":       float64(1),
-		"idIssue":     float64(2),
-		"idUserAgent": float64(3),
-		"idProject":   float64(4),
-		"payload": map[string]any{
-			"idTask":    float64(5),
-			"stage":     "implementation",
-			"attemptNo": float64(1),
-			"contextBundle": map[string]any{
-				"approvedDesign":   map[string]any{"message": "DESIGN-MD", "messageKind": MessageKindDesign},
-				"approvedImplPlan": map[string]any{"message": "PLAN-MD", "messageKind": MessageKindImplementationPlan},
-			},
-		},
-	}
-	task, err := parseStageExecutePayload(payload)
+	event := unmarshalEvent(t, `{
+		"idRun": 1,
+		"idIssue": 2,
+		"idUserAgent": 3,
+		"idProject": 4,
+		"payload": {
+			"idTask": 5,
+			"stage": "implementation",
+			"attemptNo": 1,
+			"contextBundle": {
+				"approvedDesign": {"message": "DESIGN-MD", "messageKind": "design"},
+				"approvedImplPlan": {"message": "PLAN-MD", "messageKind": "implementation_plan"}
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -540,21 +556,21 @@ func TestParseStageExecutePayload_WithApprovedArtifacts(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_WithRejectedOutput(t *testing.T) {
-	payload := map[string]any{
-		"idRun":       float64(1),
-		"idIssue":     float64(2),
-		"idUserAgent": float64(3),
-		"idProject":   float64(4),
-		"payload": map[string]any{
-			"idTask":    float64(5),
-			"stage":     "design",
-			"attemptNo": float64(2),
-			"contextBundle": map[string]any{
-				"rejectedOutput": map[string]any{"message": "OLD-DESIGN-MD", "messageKind": MessageKindDesign},
-			},
-		},
-	}
-	task, err := parseStageExecutePayload(payload)
+	event := unmarshalEvent(t, `{
+		"idRun": 1,
+		"idIssue": 2,
+		"idUserAgent": 3,
+		"idProject": 4,
+		"payload": {
+			"idTask": 5,
+			"stage": "design",
+			"attemptNo": 2,
+			"contextBundle": {
+				"rejectedOutput": {"message": "OLD-DESIGN-MD", "messageKind": "design"}
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -564,25 +580,25 @@ func TestParseStageExecutePayload_WithRejectedOutput(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_ApprovedArtifactsAbsentOrNull(t *testing.T) {
-	// A null/absent approvedDesign/approvedImplPlan must leave the fields empty,
-	// not panic on the type assertion. The API ships null when no such artifact
-	// exists yet (e.g. the design stage has no prior design).
-	payload := map[string]any{
-		"idRun":       float64(1),
-		"idIssue":     float64(2),
-		"idUserAgent": float64(3),
-		"idProject":   float64(4),
-		"payload": map[string]any{
-			"idTask":    float64(5),
-			"stage":     "design",
-			"attemptNo": float64(1),
-			"contextBundle": map[string]any{
-				"approvedDesign":   nil,
-				"approvedImplPlan": nil,
-			},
-		},
-	}
-	task, err := parseStageExecutePayload(payload)
+	// A null/absent approvedDesign/approvedImplPlan must leave the fields empty.
+	// The API ships null when no such artifact exists yet (e.g. the design
+	// stage has no prior design).
+	event := unmarshalEvent(t, `{
+		"idRun": 1,
+		"idIssue": 2,
+		"idUserAgent": 3,
+		"idProject": 4,
+		"payload": {
+			"idTask": 5,
+			"stage": "design",
+			"attemptNo": 1,
+			"contextBundle": {
+				"approvedDesign": null,
+				"approvedImplPlan": null
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -592,22 +608,162 @@ func TestParseStageExecutePayload_ApprovedArtifactsAbsentOrNull(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_RejectsMissingIdTask(t *testing.T) {
-	payload := map[string]any{
-		"idRun":   float64(1),
-		"payload": map[string]any{"stage": "design"},
-	}
-	if _, err := parseStageExecutePayload(payload); err == nil {
+	event := unmarshalEvent(t, `{
+		"idRun": 1,
+		"payload": {"stage": "design"}
+	}`)
+	if _, err := parseStageExecutePayload(event); err == nil {
 		t.Errorf("expected error for missing idTask")
 	}
 }
 
 func TestParseStageExecutePayload_RejectsMissingStage(t *testing.T) {
-	payload := map[string]any{
-		"idRun":   float64(1),
-		"payload": map[string]any{"idTask": float64(5)},
-	}
-	if _, err := parseStageExecutePayload(payload); err == nil {
+	event := unmarshalEvent(t, `{
+		"idRun": 1,
+		"payload": {"idTask": 5}
+	}`)
+	if _, err := parseStageExecutePayload(event); err == nil {
 		t.Errorf("expected error for missing stage")
+	}
+}
+
+func TestParseStageExecutePayload_RealTrackerPayload(t *testing.T) {
+	// A full event shaped like the tracker actually sends it, exercising
+	// every context-bundle section the gateway consumes.
+	body := `{
+		"idRun": 42,
+		"idProject": 1,
+		"idIssue": 7,
+		"idUserAgent": 3,
+		"event": "stage_execute",
+		"sequence": 5,
+		"payload": {
+			"idTask": 123,
+			"stage": "implementation",
+			"attemptNo": 1,
+			"stagePlan": "{\"stages\":[{\"stage\":\"design\"}]}",
+			"prBranch": "agent/a3/i7/1792731948",
+			"repo": {
+				"cloneUrl": "https://github.com/acme/project.git",
+				"host": "github.com",
+				"repoPath": "acme/project",
+				"baseBranch": "main",
+				"encryptedToken": "c2VhbGVkLXNlY3JldA=="
+			},
+			"model": "openai/gpt-4o",
+			"maxTurns": 300,
+			"contextBundle": {
+				"issue": {
+					"idIssue": 7,
+					"idIssuePublic": 42,
+					"title": "Add typed webhook parsing",
+					"description": "Replace map[string]any with typed structs."
+				},
+				"project": {
+					"idProject": 1,
+					"name": "Rurdesk",
+					"color": "#3366cc"
+				},
+				"agent": {
+					"idUser": 3,
+					"name": "goose",
+					"email": "goose@example.com",
+					"isAgent": true
+				},
+				"reviewThread": [
+					{
+						"idMessage": 100,
+						"message": "Please implement this.",
+						"messageKind": "comment",
+						"createdAt": "2026-10-22T09:00:00Z",
+						"creator": {"name": "Alice"}
+					},
+					{
+						"idMessage": 101,
+						"message": "## Design\nApproved design body.",
+						"messageKind": "design",
+						"createdAt": "2026-10-22T10:00:00Z",
+						"creator": {"name": "goose"}
+					}
+				],
+				"approvedDesign": {"message": "## Design\nApproved design body.", "messageKind": "design"},
+				"approvedImplPlan": {"message": "## Plan\nApproved plan body.", "messageKind": "implementation_plan"},
+				"rejectedOutput": null,
+				"approvedMockupRef": "mockup-A",
+				"skills": [
+					{"idSkill": 1, "name": "pr-rules", "content": "Pull request rules."},
+					{"idSkill": 2, "name": "repo-rules", "content": "Repository rules."}
+				],
+				"wiki": {
+					"pages": [
+						{"slug": "overview", "title": "Overview", "version": 3, "reason": "linked", "body": "# Overview\nProject overview."}
+					],
+					"index": [
+						{"slug": "architecture", "title": "Architecture", "summary": "Architecture notes.", "overLimit": false}
+					],
+					"indexMore": 0
+				},
+				"wikiProposals": [
+					{"id": 9, "kind": "update", "slug": "gateway-webhook-protocol", "title": "Gateway Webhook Protocol", "parent": null, "reason": "payload types", "baseVersion": 1, "state": "open", "updated": false}
+				],
+				"isShortWorkflow": false,
+				"previousFailedAttempt": null
+			}
+		}
+	}`
+	event := unmarshalEvent(t, body)
+	task, err := parseStageExecutePayload(event)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.IdRun != 42 || task.IdProject != 1 || task.IdIssue != 7 || task.IdUserAgent != 3 {
+		t.Errorf("envelope fields not parsed: %+v", task)
+	}
+	if task.IdTask != 123 || task.Stage != StageImplementation || task.AttemptNo != 1 {
+		t.Errorf("payload fields not parsed: %+v", task)
+	}
+	if task.PrBranch != "agent/a3/i7/1792731948" {
+		t.Errorf("PrBranch = %q", task.PrBranch)
+	}
+	wantRepo := AgentRunGitRepo{
+		CloneUrl:       "https://github.com/acme/project.git",
+		Host:           "github.com",
+		RepoPath:       "acme/project",
+		BaseBranch:     "main",
+		EncryptedToken: "c2VhbGVkLXNlY3JldA==",
+	}
+	if task.Repo != wantRepo {
+		t.Errorf("Repo = %+v, want %+v", task.Repo, wantRepo)
+	}
+	if task.RequestedModel != "openai/gpt-4o" || task.MaxTurns != 300 {
+		t.Errorf("model/turns = %q/%d, want openai/gpt-4o/300", task.RequestedModel, task.MaxTurns)
+	}
+	if task.IdIssuePublic != 42 || task.IssueTitle != "Add typed webhook parsing" {
+		t.Errorf("issue context not parsed: %+v", task)
+	}
+	if task.ApprovedDesign == "" || task.ApprovedImplPlan == "" {
+		t.Errorf("approved artifacts missing: design=%q plan=%q", task.ApprovedDesign, task.ApprovedImplPlan)
+	}
+	if task.RejectedOutput != "" {
+		t.Errorf("rejected output should be empty when null, got %q", task.RejectedOutput)
+	}
+	if task.ApprovedMockupRef != "mockup-A" {
+		t.Errorf("ApprovedMockupRef = %q", task.ApprovedMockupRef)
+	}
+	if len(task.Skills) != 2 {
+		t.Errorf("skills count = %d", len(task.Skills))
+	}
+	if task.Wiki == nil || len(task.Wiki.Pages) != 1 || len(task.Wiki.Index) != 1 {
+		t.Errorf("wiki context not parsed: %+v", task.Wiki)
+	}
+	if len(task.WikiProposals) != 1 || task.WikiProposals[0].Slug != "gateway-webhook-protocol" {
+		t.Errorf("wiki proposals not parsed: %+v", task.WikiProposals)
+	}
+	if len(task.Conversation) != 2 {
+		t.Errorf("conversation length = %d", len(task.Conversation))
+	}
+	if task.IsShortWorkflow {
+		t.Errorf("IsShortWorkflow should be false")
 	}
 }
 
