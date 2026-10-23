@@ -3,7 +3,7 @@
         <div class="time-icon"><tabler-icon icon="clock" [size]="16" /></div>
         <div class="connector"></div>
     </div>
-    <div class="time-card">
+    <div class="time-card" [class.time-card--editing]="isEditing()">
         <div class="time-header">
             <span class="label">Time logged</span>
             <span class="timestamp">{{ track().endAt | date: 'medium' }}</span>

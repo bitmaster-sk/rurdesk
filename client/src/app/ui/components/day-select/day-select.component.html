@@ -4,6 +4,7 @@
     class="ui-day-select__trigger"
     [id]="inputId()"
     [class.ui-day-select--past]="isPast()"
+    [class.ui-day-select--fluid]="fluid()"
     aria-haspopup="dialog"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-controls]="isOpen() ? panelId : null"

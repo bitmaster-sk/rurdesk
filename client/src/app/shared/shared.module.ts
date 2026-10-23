@@ -54,7 +54,8 @@ import {
     IconAlertTriangle,
     IconTrash,
     IconChevronDown,
-    IconArrowDown
+    IconArrowDown,
+    IconArrowRight
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -116,7 +117,8 @@ import {
             IconAlertTriangle,
             IconTrash,
             IconChevronDown,
-            IconArrowDown
+            IconArrowDown,
+            IconArrowRight
         })
     ],
     exports: [

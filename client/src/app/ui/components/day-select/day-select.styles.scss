@@ -21,6 +21,10 @@ ui-day-select {
     transition: border-color 0.2s;
 }
 
+.ui-day-select--fluid {
+    width: 100%;
+}
+
 .ui-day-select__trigger:hover:not(:disabled) {
     border-color: var(--ui-input-border-hover);
 }

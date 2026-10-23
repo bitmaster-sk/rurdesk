@@ -10,7 +10,12 @@ import { UiDaySelectFormat } from './day-select-label';
 @Component({
     template: `
         <input id="outside" />
-        <ui-day-select [maxDate]="today" [format]="format" [formControl]="control" />
+        <ui-day-select
+            [maxDate]="today"
+            [format]="format"
+            [fluid]="fluid"
+            [formControl]="control"
+        />
     `,
     standalone: false
 })
@@ -18,6 +23,7 @@ class HostComponent {
     public readonly control = new FormControl<Date | null>(startOfDay(new Date()));
     public readonly today = new Date();
     public format = UiDaySelectFormat.Short;
+    public fluid = false;
 }
 
 describe('UiDaySelectComponent (browser)', () => {
@@ -112,6 +118,21 @@ describe('UiDaySelectComponent (browser)', () => {
         const el = fixture.nativeElement as HTMLElement;
 
         expect(el.querySelector('.ui-day-select__value')!.textContent.trim()).toBe('Mon, Oct 19');
+    });
+
+    it('marks the trigger fluid only when the fluid input is set', () => {
+        const fixture = TestBed.createComponent(HostComponent);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        const trigger = () => el.querySelector<HTMLElement>('button.ui-day-select__trigger')!;
+
+        expect(trigger().classList).not.toContain('ui-day-select--fluid');
+
+        fixture.componentInstance.fluid = true;
+        fixture.changeDetectorRef.markForCheck();
+        fixture.detectChanges();
+
+        expect(trigger().classList).toContain('ui-day-select--fluid');
     });
 
     it('formats an older day as EEE d in the short format', () => {

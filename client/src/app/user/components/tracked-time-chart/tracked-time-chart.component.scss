@@ -2,3 +2,104 @@
     position: relative;
     width: 100%;
 }
+
+.chart-issue-id {
+    padding: 1px 6px;
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-blue-50);
+    color: var(--ui-blue-700);
+    font-family: var(--ui-font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.chart-tracks {
+    border: 1px solid var(--ui-surface-200);
+    border-radius: var(--ui-radius-md);
+    overflow: hidden;
+}
+
+.chart-track {
+    display: grid;
+    grid-template-columns: 7rem 4.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-top: 1px solid var(--ui-surface-200);
+
+    &:first-child {
+        border-top: 0;
+    }
+
+    &:hover {
+        background: var(--ui-surface-50);
+    }
+}
+
+.chart-track-editing {
+    padding: 0.875rem 0.75rem;
+    border-top: 1px solid var(--ui-surface-200);
+    background: var(--ui-color-primary-weak);
+    box-shadow: inset 3px 0 0 var(--ui-color-primary);
+
+    &:first-child {
+        border-top: 0;
+    }
+}
+
+.chart-track-range {
+    font-family: var(--ui-font-mono);
+    font-size: 0.75rem;
+    color: var(--ui-color-text-muted);
+    white-space: nowrap;
+}
+
+.chart-track-duration {
+    justify-self: start;
+    background: var(--ui-blue-100);
+    color: var(--ui-blue-800);
+    padding: 1px 8px;
+    border-radius: var(--ui-radius-md);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.chart-track-note {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+}
+
+.chart-track-note--empty {
+    color: var(--ui-color-text-muted);
+    font-style: italic;
+}
+
+.chart-track-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+    transition:
+        background 0.14s ease,
+        color 0.14s ease;
+}
+
+.chart-track-tool:hover {
+    background: var(--ui-blue-50);
+    color: var(--ui-blue-600);
+}
+
+.chart-track-tool--danger:hover {
+    background: var(--ui-red-50);
+    color: var(--ui-red-600);
+}
