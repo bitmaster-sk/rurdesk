@@ -1,6 +1,6 @@
 module github.com/bitmaster-sk/rurdesk/api
 
-go 1.25.5
+go 1.25.12
 
 require (
 	github.com/gin-gonic/gin v1.11.0
