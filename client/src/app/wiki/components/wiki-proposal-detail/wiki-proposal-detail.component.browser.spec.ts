@@ -283,6 +283,13 @@ describe('WikiProposalDetailComponent', () => {
         );
     });
 
+    it('wraps the diff viewer in a padded body so it is not flush against the container', () => {
+        const el = render();
+        const body = el.querySelector('.wiki-proposal__diff-body');
+        expect(body).not.toBeNull();
+        expect(body?.querySelector('app-diff-viewer')).not.toBeNull();
+    });
+
     it('rejects with the reason the person typed', () => {
         const el = render();
 
