@@ -39,10 +39,16 @@
     </div>
 } @else if (!global()) {
     <div class="ui-input-group">
+        <ui-day-select
+            [formControl]="dayControl"
+            [maxDate]="today"
+            data-testid="track-day"
+            [ariaLabel]="'TRACK.DAY' | translate"
+        />
         <input type="text" uiInput [formControl]="trackedControl" class="w-full" [id]="inputId()" />
         <div class="ui-input-group-addon">
             <ui-button
-                [disabled]="!trackedControl.valid"
+                [disabled]="!trackedControl.valid || !dayControl.valid"
                 type="button"
                 size="small"
                 severity="secondary"

@@ -94,15 +94,18 @@
             </div>
 
             @if (!isNewIssue()) {
-                <div class="ui-field tracked-field">
-                    <label for="issue-tracked">{{ 'ISSUE.TIME.TRACKED' | translate }}</label>
-                    <div id="issue-tracked" class="tracked-value">
-                        {{ currentIssue()?.tracked ?? 0 | secDuration }}
+                <div class="ui-field tracker-field">
+                    <div class="tracker-field__head">
+                        <label for="issue-tracker">{{ 'ISSUE.TIME.TRACKER' | translate }}</label>
+                        <span class="tracker-field__total">
+                            @if (currentIssue()?.tracked) {
+                                {{ 'ISSUE.TIME.TRACKED' | translate }}
+                            }
+                            <strong id="issue-tracked">
+                                {{ currentIssue()?.tracked ?? 0 | secDuration }}
+                            </strong>
+                        </span>
                     </div>
-                </div>
-
-                <div class="ui-field">
-                    <label for="issue-tracker">{{ 'ISSUE.TIME.TRACKER' | translate }}</label>
                     <app-tracker
                         [issue]="currentIssue()"
                         [project]="project()"

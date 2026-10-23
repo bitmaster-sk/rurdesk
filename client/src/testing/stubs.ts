@@ -1,5 +1,6 @@
-import { Component, Directive, input, output } from '@angular/core';
+import { Component, Directive, forwardRef, input, output } from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 /**
  * Shared standalone stubs for browser component specs.
@@ -111,4 +112,30 @@ export class UiDialogStub {
 export class UiTooltipStub {
     public readonly uiTooltip = input<string>('');
     public readonly uiTooltipPosition = input<string>('top');
+}
+
+@Component({
+    selector: 'ui-day-select',
+    template: '',
+    standalone: true,
+    providers: [
+        {
+            provide: NG_VALUE_ACCESSOR,
+            useExisting: forwardRef(() => UiDaySelectStub),
+            multi: true
+        }
+    ]
+})
+export class UiDaySelectStub implements ControlValueAccessor {
+    public readonly maxDate = input<Date | null>(null);
+    public readonly format = input<unknown>(undefined);
+    public readonly inputId = input<string | null>(null);
+    public readonly ariaLabel = input<string | null>(null);
+    public readonly disabled = input<boolean>(false);
+
+    public writeValue(): void {}
+
+    public registerOnChange(): void {}
+
+    public registerOnTouched(): void {}
 }

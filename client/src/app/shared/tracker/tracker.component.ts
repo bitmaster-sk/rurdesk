@@ -20,6 +20,8 @@ import { DurationParser } from '../duration/duration.parser';
 import { DurationValidator } from '../duration/duration.validator';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Track } from './model/track.model';
+import { TrackDayValidator } from './track-day.validator';
+import { startOfDay, startOfToday } from 'date-fns';
 
 @Component({
     selector: 'app-tracker',
@@ -99,6 +101,13 @@ export class TrackerComponent {
         DurationValidator.duration
     ]);
 
+    public dayControl = new FormControl<Date>(startOfToday(), {
+        nonNullable: true,
+        validators: [Validators.required, TrackDayValidator.notInFuture]
+    });
+
+    protected readonly today = startOfToday();
+
     public onSaveTrack(): void {
         const issue = this.issue();
         if (!issue) {
@@ -108,9 +117,14 @@ export class TrackerComponent {
             DurationParser.stringToDuration(this.trackedControl.value ?? '')
         );
         this.trackerService
-            .insertTrack$({ idIssue: issue.idIssue, tracked: seconds })
+            .insertTrack$({
+                idIssue: issue.idIssue,
+                tracked: seconds,
+                startAt: startOfDay(this.dayControl.value)
+            })
             .subscribe(track => {
                 this.trackedControl.reset();
+                this.dayControl.setValue(startOfToday());
                 this.trackAdded.emit(track);
             });
     }
