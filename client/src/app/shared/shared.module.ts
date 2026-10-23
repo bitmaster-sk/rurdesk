@@ -12,6 +12,7 @@ import { TrackerComponent } from './tracker/tracker.component';
 import { TrackerControlComponent } from './tracker/tracker-control/tracker-control.component';
 import { TrackerStartButtonComponent } from './tracker/tracker-start-button/tracker-start-button.component';
 import { TrackerSwitchDialogComponent } from './tracker/tracker-switch-dialog/tracker-switch-dialog.component';
+import { TrackEditFormComponent } from './tracker/track-edit-form/track-edit-form.component';
 import { DurationPipe } from './duration/duration.pipe';
 import { RouterModule } from '@angular/router';
 import { SecDurationPipe } from './duration/sec-duration.pipe';
@@ -73,6 +74,7 @@ import {
         TrackerControlComponent,
         TrackerStartButtonComponent,
         TrackerSwitchDialogComponent,
+        TrackEditFormComponent,
         DurationPipe,
         SecDurationPipe,
         TeammateSelectorComponent,
@@ -135,6 +137,7 @@ import {
         TrackerControlComponent,
         TrackerStartButtonComponent,
         TrackerSwitchDialogComponent,
+        TrackEditFormComponent,
         DurationPipe,
         SecDurationPipe,
         TeammateSelectorComponent,

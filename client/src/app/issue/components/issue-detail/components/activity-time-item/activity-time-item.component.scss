@@ -144,17 +144,6 @@
     color: var(--ui-red-600);
 }
 
-.time-edit {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--ui-space-s);
-}
-
-.time-edit input[uiInput]:first-of-type {
-    width: 6rem;
-}
-
 .note {
     margin: 6px 0 0;
     font-size: var(--font-size-s);
