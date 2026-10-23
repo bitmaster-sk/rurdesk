@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
+import { TrackFilter } from '../entity/track-filter.entity';
 import { TrackerConverter } from '../converter/tracker.converter';
 import { Track, CreateTrackReq, TrackUpdate } from '../model/track.model';
 
