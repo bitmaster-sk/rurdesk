@@ -3,6 +3,7 @@ export interface AdminUser {
     name: string;
     email: string;
     colorAvatarBg: string;
+    avatarInitials?: string | null;
     isAgent: boolean;
     isAdmin: boolean;
 }
@@ -14,6 +15,7 @@ export interface AdminCreateUserReq {
     isAgent: boolean;
     isAdmin?: boolean;
     colorAvatarBg?: string;
+    avatarInitials?: string;
 }
 
 export interface AdminCreateUserRes extends AdminUser {
@@ -27,6 +29,7 @@ export interface AdminUpdateUserReq {
     email?: string;
     isAdmin?: boolean;
     colorAvatarBg?: string;
+    avatarInitials?: string;
 }
 
 // Emitted by the create-user dialog. For an agent we may also have created its

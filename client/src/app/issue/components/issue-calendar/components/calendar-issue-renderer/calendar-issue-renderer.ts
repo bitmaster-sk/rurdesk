@@ -152,7 +152,9 @@ export class CalendarIssueRenderer {
         if (assigned) {
             av.title = assigned.name;
             av.style.backgroundColor = assigned.colorAvatarBg || 'rgba(255,255,255,0.3)';
-            av.innerText = this.buildInitials(assigned.name);
+            av.innerText = assigned.avatarInitials?.trim()
+                ? assigned.avatarInitials.trim().toUpperCase()
+                : this.buildInitials(assigned.name);
         } else {
             av.classList.add('cal-event__avatar--unknown');
             av.title = 'Unassigned';

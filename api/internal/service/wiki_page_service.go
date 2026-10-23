@@ -52,8 +52,9 @@ type wikiMergedFields struct {
 }
 
 type wikiEditorEntry struct {
-	Name   string `json:"name"`
-	SeenAt int64  `json:"seenAt"`
+	Name           string  `json:"name"`
+	AvatarInitials *string `json:"avatarInitials,omitempty"`
+	SeenAt         int64   `json:"seenAt"`
 }
 
 func (s *WikiService) Save(ctx context.Context, user model.User, idPage int64, req model.SaveWikiPageReq) (*WikiSaveResult, error) {
@@ -446,7 +447,7 @@ func (s *WikiService) Heartbeat(ctx context.Context, user model.User, idPage int
 	now := time.Now()
 	field := strconv.FormatInt(user.IdUser, 10)
 	if isEditing {
-		value, err := json.Marshal(wikiEditorEntry{Name: user.Name, SeenAt: now.Unix()})
+		value, err := json.Marshal(wikiEditorEntry{Name: user.Name, AvatarInitials: user.AvatarInitials, SeenAt: now.Unix()})
 		if err != nil {
 			return nil, err
 		}
@@ -476,7 +477,7 @@ func (s *WikiService) Heartbeat(ctx context.Context, user model.User, idPage int
 		if now.Sub(time.Unix(entry.SeenAt, 0)) > wikiEditorTTL {
 			continue
 		}
-		editors = append(editors, model.WikiEditor{IdUser: idEditor, Name: entry.Name})
+		editors = append(editors, model.WikiEditor{IdUser: idEditor, Name: entry.Name, AvatarInitials: entry.AvatarInitials})
 	}
 	return editors, nil
 }

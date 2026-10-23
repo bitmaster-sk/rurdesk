@@ -39,6 +39,7 @@ func (r *MessageRepository) LoadTeammateMessages(ctx context.Context, idRecipien
 				usr.id_user,
 				usr.name,
 				usr.color_avatar_bg,
+				usr.avatar_initials,
 				CASE WHEN msg.created_at > COALESCE(ure.read_at, '1900-1-1') AND msg.id_user_from != $1 THEN FALSE ELSE TRUE END AS read,
 				umg.id_user_to
 			FROM
@@ -63,6 +64,7 @@ func (r *MessageRepository) LoadTeammateMessages(ctx context.Context, idRecipien
 				usr.id_user,
 				usr.name,
 				usr.color_avatar_bg,
+				usr.avatar_initials,
 				CASE WHEN msg.created_at > COALESCE(ure.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 				umg.id_user_to
 			FROM
@@ -103,6 +105,7 @@ func (r *MessageRepository) LoadTeamMessages(ctx context.Context, idsTeam []int6
 			usr.id_user,
 			usr.name,
 			usr.color_avatar_bg,
+			usr.avatar_initials,
 			CASE WHEN msg.created_at > COALESCE(tre.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			tmm.id_team_to
 		FROM
@@ -141,6 +144,7 @@ func (r *MessageRepository) LoadProjectMessages(ctx context.Context, idsProject 
 			usr.id_user,
 			usr.name,
 			usr.color_avatar_bg,
+			usr.avatar_initials,
 			CASE WHEN msg.created_at > COALESCE(pre.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			prm.id_project_to
 		FROM
@@ -174,6 +178,7 @@ func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64
 			usr.id_user,
 			usr.name,
 			usr.color_avatar_bg,
+			usr.avatar_initials,
 			true AS read,
 			ism.id_issue_to,
 			a.id_parent_message,
@@ -341,12 +346,12 @@ func (r *MessageRepository) UpdateMessage(ctx context.Context, idMessage int64, 
 			RETURNING id_message, message, created_at, updated_at, id_user_from, version, message_kind
 		)
 		SELECT u.id_message, u.message, u.created_at, u.updated_at, u.version, u.message_kind,
-		       usr.id_user, usr.name, usr.color_avatar_bg
+		       usr.id_user, usr.name, usr.color_avatar_bg, usr.avatar_initials
 		FROM updated u
 		INNER JOIN users.user usr ON usr.id_user = u.id_user_from
 	`, idMessage, idUserFrom, newMessage).Scan(
 		&msg.IdMessage, &msg.Message, &msg.CreatedAt, &msg.UpdatedAt, &msg.Version, &msg.MessageKind,
-		&creator.IdUser, &creator.Name, &creator.ColorAvatarBg,
+		&creator.IdUser, &creator.Name, &creator.ColorAvatarBg, &creator.AvatarInitials,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -424,7 +429,7 @@ func scanMessages(rows pgx.Rows, recipientType model.MessageRecipientType) ([]*m
 	for rows.Next() {
 		m := &model.Message{}
 		u := &model.User{}
-		if err := rows.Scan(&m.IdMessage, &m.Message, &m.CreatedAt, &m.UpdatedAt, &m.Version, &u.IdUser, &u.Name, &u.ColorAvatarBg, &m.IsRead, &m.IdRecipient); err != nil {
+		if err := rows.Scan(&m.IdMessage, &m.Message, &m.CreatedAt, &m.UpdatedAt, &m.Version, &u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &m.IsRead, &m.IdRecipient); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
 		}
 		m.Creator = u
@@ -453,7 +458,7 @@ func scanIssueMessages(rows pgx.Rows) ([]*model.Message, error) {
 		)
 		if err := rows.Scan(
 			&m.IdMessage, &m.Message, &kind, &m.CreatedAt, &m.UpdatedAt, &m.Version,
-			&u.IdUser, &u.Name, &u.ColorAvatarBg,
+			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials,
 			&m.IsRead, &m.IdRecipient,
 			&idParentMessage, &parentVersion, &anchorLineStart, &anchorLineEnd, &parentCurrentVer,
 		); err != nil {

@@ -1,16 +1,17 @@
 package model
 
 type PinIssueView struct {
-	IdIssue                 int64   `json:"idIssue"`
-	IdIssuePublic           int64   `json:"idIssuePublic"`
-	IdProject               int64   `json:"idProject"`
-	IdSeverity              *int64  `json:"idSeverity"`
-	Title                   string  `json:"title"`
-	StateName               *string `json:"stateName"`
-	StateIsStart            *bool   `json:"stateIsStart"`
-	StateIsFinal            *bool   `json:"stateIsFinal"`
-	AssignedToName          *string `json:"assignedToName"`
-	AssignedToColorAvatarBg *string `json:"assignedToColorAvatarBg"`
+	IdIssue                  int64   `json:"idIssue"`
+	IdIssuePublic            int64   `json:"idIssuePublic"`
+	IdProject                int64   `json:"idProject"`
+	IdSeverity               *int64  `json:"idSeverity"`
+	Title                    string  `json:"title"`
+	StateName                *string `json:"stateName"`
+	StateIsStart             *bool   `json:"stateIsStart"`
+	StateIsFinal             *bool   `json:"stateIsFinal"`
+	AssignedToName           *string `json:"assignedToName"`
+	AssignedToColorAvatarBg  *string `json:"assignedToColorAvatarBg"`
+	AssignedToAvatarInitials *string `json:"assignedToAvatarInitials,omitempty"`
 }
 
 type Pin struct {

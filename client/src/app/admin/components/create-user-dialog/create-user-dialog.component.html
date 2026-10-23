@@ -25,6 +25,17 @@
             </div>
         </div>
 
+        <div class="flex flex-col gap-1">
+            <label for="cu-initials">{{ 'USER.AVATAR_INITIALS' | translate }}</label>
+            <input
+                uiInput
+                id="cu-initials"
+                formControlName="avatarInitials"
+                maxlength="2"
+                [placeholder]="autoInitials()"
+            />
+        </div>
+
         <div class="flex items-center gap-2">
             <input type="checkbox" uiToggle id="cu-isagent" formControlName="isAgent" />
             <label for="cu-isagent">{{ 'ADMIN.IS_AGENT' | translate }}</label>

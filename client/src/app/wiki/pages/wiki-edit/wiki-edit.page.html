@@ -13,7 +13,13 @@
         <div class="wiki-edit__bar-end">
             @for (editor of editors(); track editor.idUser) {
             <span class="wiki-edit__presence" [uiTooltip]="editor.name">
-                <app-avatar [name]="editor.name" [height]="1.4" [width]="1.4" [radius]="0.7" />
+                <app-avatar
+                    [name]="editor.name"
+                    [initials]="editor.avatarInitials ?? ''"
+                    [height]="1.4"
+                    [width]="1.4"
+                    [radius]="0.7"
+                />
             </span>
             } @switch (draftState()) { @case (DraftState.Saving) {
             <span class="wiki-edit__draft-state">{{ 'WIKI.DRAFT.SAVING' | translate }}</span>

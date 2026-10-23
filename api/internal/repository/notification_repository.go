@@ -37,24 +37,25 @@ func (r *NotificationRepository) Insert(ctx context.Context, dto *model.CreateNo
 	}
 
 	notification := &model.Notification{
-		IdUser:        dto.IdUser,
-		Type:          dto.Type,
-		IdProject:     dto.IdProject,
-		ProjectName:   dto.ProjectName,
-		ProjectColor:  dto.ProjectColor,
-		ActorName:     dto.ActorName,
-		ActorAvatarBg: dto.ActorAvatarBg,
-		RefType:       dto.RefType,
-		RefId:         dto.RefId,
-		RefTitle:      dto.RefTitle,
-		RefPublicId:   dto.RefPublicId,
-		Body:          bodyRaw,
+		IdUser:              dto.IdUser,
+		Type:                dto.Type,
+		IdProject:           dto.IdProject,
+		ProjectName:         dto.ProjectName,
+		ProjectColor:        dto.ProjectColor,
+		ActorName:           dto.ActorName,
+		ActorAvatarBg:       dto.ActorAvatarBg,
+		ActorAvatarInitials: dto.ActorAvatarInitials,
+		RefType:             dto.RefType,
+		RefId:               dto.RefId,
+		RefTitle:            dto.RefTitle,
+		RefPublicId:         dto.RefPublicId,
+		Body:                bodyRaw,
 	}
 	err := db.QueryRow(ctx, `
 		INSERT INTO notification.notification
-			(id_user, type, id_project, actor_name, actor_avatar_bg,
+			(id_user, type, id_project, actor_name, actor_avatar_bg, actor_avatar_initials,
 			 ref_type, ref_id, ref_title, ref_public_id, body)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id_notification, is_read, created_at
 	`,
 		notification.IdUser,
@@ -62,6 +63,7 @@ func (r *NotificationRepository) Insert(ctx context.Context, dto *model.CreateNo
 		notification.IdProject,
 		notification.ActorName,
 		notification.ActorAvatarBg,
+		notification.ActorAvatarInitials,
 		notification.RefType,
 		notification.RefId,
 		notification.RefTitle,
@@ -85,6 +87,7 @@ func (r *NotificationRepository) GetForUser(ctx context.Context, filter *model.N
 			COALESCE(p.color, '')       AS project_color,
 			COALESCE(n.actor_name, '')  AS actor_name,
 			COALESCE(n.actor_avatar_bg,'') AS actor_avatar_bg,
+			n.actor_avatar_initials,
 			COALESCE(n.ref_type, '')    AS ref_type,
 			COALESCE(n.ref_id, '')      AS ref_id,
 			COALESCE(n.ref_title, '')   AS ref_title,

@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, model, output, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    computed,
+    inject,
+    model,
+    output,
+    signal
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
@@ -46,7 +54,27 @@ export class CreateUserDialogComponent {
         gatewayUrl: ['', [Validators.maxLength(2000)]],
         maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
-        colorAvatarBg: [Color.randomAvatarBg()]
+        colorAvatarBg: [Color.randomAvatarBg()],
+        // Optional manual avatar initials; empty = auto-computed from the name.
+        avatarInitials: ['', [Validators.maxLength(2)]]
+    });
+
+    // Placeholder for the initials input: the initials the avatar would show
+    // when the field is left empty (auto-computed from the current name).
+    protected readonly autoInitials = computed(() => {
+        const name = (this.form.controls.name.value ?? '').trim();
+        if (!name) {
+            return '';
+        }
+        const parts = name.split(' ');
+        if (parts.length > 1) {
+            return parts
+                .slice(0, 2)
+                .map(p => p[0])
+                .join('')
+                .toUpperCase();
+        }
+        return parts[0].substring(0, 2).toUpperCase();
     });
 
     public constructor() {
@@ -91,14 +119,20 @@ export class CreateUserDialogComponent {
         }
         const value = this.form.getRawValue();
         const req: AdminCreateUserReq = value.isAgent!
-            ? { name: value.name!, isAgent: true, colorAvatarBg: value.colorAvatarBg! }
+            ? {
+                  name: value.name!,
+                  isAgent: true,
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
+              }
             : {
                   name: value.name!,
                   isAgent: false,
                   email: value.email!,
                   password: value.password!,
                   isAdmin: value.isAdmin!,
-                  colorAvatarBg: value.colorAvatarBg!
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
               };
 
         const gatewayReq: CreateAgentGatewayReq = {
@@ -151,7 +185,12 @@ export class CreateUserDialogComponent {
     }
 
     private close(): void {
-        this.form.reset({ isAgent: false, isAdmin: false, colorAvatarBg: Color.randomAvatarBg() });
+        this.form.reset({
+            isAgent: false,
+            isAdmin: false,
+            colorAvatarBg: Color.randomAvatarBg(),
+            avatarInitials: ''
+        });
         this.onToggleBot();
         this.visible.set(false);
     }

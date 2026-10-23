@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -112,7 +113,12 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		color = *dto.ColorAvatarBg
 	}
 
-	if err := uc.userService.Update(ctx, token, user, dto.Name, color); err != nil {
+	var initials *string
+	if dto.AvatarInitials != nil {
+		initials = avatarInitialsOrNil(dto.AvatarInitials)
+	}
+
+	if err := uc.userService.Update(ctx, token, user, dto.Name, color, initials); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return
@@ -120,6 +126,15 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 
 	user.Name = dto.Name
 	user.ColorAvatarBg = color
+	if initials != nil {
+		// Applied — keep the stored (normalized) value in the response.
+		user.AvatarInitials = initials
+	} else {
+		// Omitted — reload so the response carries the stored initials, not nil.
+		if stored, err := uc.userService.LoadById(ctx, user.IdUser); err == nil {
+			user.AvatarInitials = stored.AvatarInitials
+		}
+	}
 	c.JSON(http.StatusOK, user)
 }
 
@@ -184,4 +199,18 @@ func avatarColorOrRandom(supplied *string) string {
 		return *supplied
 	}
 	return randomAvatarColor()
+}
+
+// avatarInitialsOrNil normalizes optional manual avatar initials: trimmed and
+// uppercased, with an empty result mapping to nil (= auto-computed from the
+// name). Shared by the admin create/update paths and the self-service update.
+func avatarInitialsOrNil(supplied *string) *string {
+	if supplied == nil {
+		return nil
+	}
+	normalized := strings.ToUpper(strings.TrimSpace(*supplied))
+	if normalized == "" {
+		return nil
+	}
+	return &normalized
 }

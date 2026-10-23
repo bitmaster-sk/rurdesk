@@ -22,10 +22,10 @@ func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
 func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
-		INSERT INTO users.user(email, password, name, color_avatar_bg, is_agent, is_admin)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO users.user(email, password, name, color_avatar_bg, avatar_initials, is_agent, is_admin)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id_user
-	`, user.Email, user.Password, user.Name, user.ColorAvatarBg, user.IsAgent, user.IsAdmin,
+	`, user.Email, user.Password, user.Name, user.ColorAvatarBg, user.AvatarInitials, user.IsAgent, user.IsAdmin,
 	).Scan(&user.IdUser)
 	if err != nil {
 		return nil, fmt.Errorf("inserting user: %w", err)
@@ -36,7 +36,7 @@ func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*mod
 func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
 		FROM users.user
 		WHERE id_user = $1
 	`, idUser)
@@ -53,7 +53,7 @@ func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.Use
 func (r *UserRepository) LoadUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
 		FROM users.user
 		WHERE email = $1
 	`, email)
@@ -110,6 +110,21 @@ func (r *UserRepository) UpdateAvatarColor(ctx context.Context, idUser int64, co
 	return nil
 }
 
+// UpdateAvatarInitials sets the manual avatar initials independently of the
+// name/email fields (nil clears back to auto-computed-from-name), so a
+// name-only edit never wipes them — mirrors UpdateAvatarColor.
+func (r *UserRepository) UpdateAvatarInitials(ctx context.Context, idUser int64, avatarInitials *string) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx,
+		`UPDATE users.user SET avatar_initials = $1 WHERE id_user = $2`,
+		avatarInitials, idUser,
+	)
+	if err != nil {
+		return fmt.Errorf("updating user avatar initials: %w", err)
+	}
+	return nil
+}
+
 func (r *UserRepository) UpdatePassword(ctx context.Context, idUser int64, passwordHash string) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx,
@@ -137,7 +152,7 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
 		FROM users.user
 		ORDER BY id_user
 	`)

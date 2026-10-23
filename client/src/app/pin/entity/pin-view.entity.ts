@@ -11,4 +11,5 @@ export interface PinView {
     stateIsFinal?: boolean | null;
     assignedToName?: string | null;
     assignedToColorAvatarBg?: string | null;
+    assignedToAvatarInitials?: string | null;
 }

@@ -26,7 +26,8 @@ const pinIssueSelectSQL = `SELECT
 			st.start            AS state_is_start,
 			st.final            AS state_is_final,
 			u.name              AS assigned_to_name,
-			u.color_avatar_bg   AS assigned_to_color_avatar_bg
+			u.color_avatar_bg   AS assigned_to_color_avatar_bg,
+			u.avatar_initials   AS assigned_to_avatar_initials
 		FROM
 			issues.pin
 			INNER JOIN issues.issue iss ON pin.id_issue    = iss.id_issue
@@ -166,7 +167,7 @@ func scanPin(row pgx.Row, p *model.Pin) error {
 		&i.IdIssue, &i.IdIssuePublic, &i.IdProject, &i.IdSeverity,
 		&i.Title,
 		&i.StateName, &i.StateIsStart, &i.StateIsFinal,
-		&i.AssignedToName, &i.AssignedToColorAvatarBg,
+		&i.AssignedToName, &i.AssignedToColorAvatarBg, &i.AssignedToAvatarInitials,
 	); err != nil {
 		return fmt.Errorf("scanning pinned issue: %w", err)
 	}

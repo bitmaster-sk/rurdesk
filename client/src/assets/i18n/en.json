@@ -491,6 +491,7 @@
         "EMAIL_READONLY": "Used to sign in — contact an administrator to change it",
         "AVATAR_COLOR": "Avatar color",
         "SHUFFLE_COLOR": "Random color",
+        "AVATAR_INITIALS": "Avatar initials",
         "AVATAR": "Avatar"
     },
     "HOME": {
