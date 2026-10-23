@@ -23,6 +23,7 @@
     }
 
     &__heading {
+        flex: 1 1 auto;
         min-width: 0;
     }
 
@@ -62,7 +63,9 @@
 
     &__actions {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
+        justify-content: flex-end;
         gap: var(--ui-space-s);
         flex-shrink: 0;
     }
