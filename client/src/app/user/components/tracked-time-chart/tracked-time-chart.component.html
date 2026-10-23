@@ -23,9 +23,22 @@
             @if (editingId() === track.idTrack) {
                 <app-track-edit-form
                     [track]="track"
-                    (saved)="editingId.set(null)"
-                    (cancelled)="editingId.set(null)"
+                    (saved)="onTrackEditClose()"
+                    (cancelled)="onTrackEditClose()"
                 />
+                @if (isSingle()) {
+                    <button
+                        type="button"
+                        class="chart-track-tool chart-track-tool--danger"
+                        data-testid="chart-track-delete"
+                        uiConfirm
+                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                        [attr.aria-label]="'TRACK.DELETE' | translate"
+                        (confirmed)="onDeleteTrack(track)"
+                    >
+                        <tabler-icon icon="trash" [size]="14" />
+                    </button>
+                }
             } @else {
                 <div class="chart-track">
                     <span class="chart-track-range">

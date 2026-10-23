@@ -248,7 +248,7 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
         expect(segmentApi().isDialogOpen()).toBe(false);
     });
 
-    it('deletes the track of the row after the confirm is accepted', () => {
+    it('deletes the single track opened directly in the edit form after the confirm is accepted', () => {
         fixture.componentRef.setInput('tracks', [track({ idTrack: 5 })]);
         fixture.detectChanges();
 
@@ -267,8 +267,65 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
         expect(deleteTrack$).toHaveBeenCalledWith(5);
     });
 
-    it('swaps the row for the shared edit form and back after saving', () => {
+    it('opens the shared edit form directly when the segment has a single track', () => {
+        fixture.componentRef.setInput('tracks', [track({ idTrack: 7 })]);
+        fixture.detectChanges();
+
+        openSegment();
+
+        const form = fixture.debugElement
+            .query(By.directive(TrackEditFormStub))
+            .injector.get(TrackEditFormStub);
+        expect(form.track()!.idTrack).toBe(7);
+
+        expect(fixture.nativeElement.querySelector('app-track-edit-form')).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('[data-testid="chart-track-edit"]')).toBeNull();
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="chart-track-delete"]')
+        ).not.toBeNull();
+    });
+
+    it('closes the dialog when the single track edit form is saved', () => {
         fixture.componentRef.setInput('tracks', [track()]);
+        fixture.detectChanges();
+
+        openSegment();
+
+        fixture.debugElement
+            .query(By.directive(TrackEditFormStub))
+            .injector.get(TrackEditFormStub)
+            .saved.emit(track());
+        fixture.detectChanges();
+
+        expect(segmentApi().isDialogOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('app-track-edit-form')).toBeNull();
+    });
+
+    it('closes the dialog when the single track edit form is cancelled', () => {
+        fixture.componentRef.setInput('tracks', [track()]);
+        fixture.detectChanges();
+
+        openSegment();
+
+        fixture.debugElement
+            .query(By.directive(TrackEditFormStub))
+            .injector.get(TrackEditFormStub)
+            .cancelled.emit();
+        fixture.detectChanges();
+
+        expect(segmentApi().isDialogOpen()).toBe(false);
+        expect(fixture.nativeElement.querySelector('app-track-edit-form')).toBeNull();
+    });
+
+    it('swaps only the edited row for the shared edit form and back after saving', () => {
+        fixture.componentRef.setInput('tracks', [
+            track(),
+            track({
+                idTrack: 2,
+                startAt: new Date('2026-10-21T15:00:00'),
+                endAt: new Date('2026-10-21T16:00:00')
+            })
+        ]);
         fixture.detectChanges();
 
         openSegment();
@@ -283,10 +340,15 @@ describe('TrackedTimeChartComponent segment click (browser)', () => {
             .injector.get(TrackEditFormStub);
         expect(form.track()!.idTrack).toBe(1);
 
+        expect(fixture.nativeElement.querySelectorAll('.chart-track').length).toBe(1);
+        expect(
+            fixture.nativeElement.querySelectorAll('[data-testid="chart-track-delete"]').length
+        ).toBe(1);
+
         form.saved.emit(track());
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelector('app-track-edit-form')).toBeNull();
-        expect(fixture.nativeElement.querySelector('.chart-track')).not.toBeNull();
+        expect(fixture.nativeElement.querySelectorAll('.chart-track').length).toBe(2);
     });
 });

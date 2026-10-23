@@ -62,6 +62,8 @@ export class TrackedTimeChartComponent {
         () => this.selection() !== null && this.selectedTracks().length > 0
     );
 
+    protected readonly isSingle = computed(() => this.selectedTracks().length === 1);
+
     protected readonly dialogHeader = computed(() => {
         const selection = this.selection();
         const track = this.selectedTracks()[0];
@@ -180,8 +182,21 @@ export class TrackedTimeChartComponent {
         if (aggregate === undefined || dayKey === undefined) {
             return;
         }
-        this.editingId.set(null);
         this.selection.set({ idIssue: aggregate.idIssue, dayKey });
+        const segmentTracks = TrackedTimeChartSelection.forSegment(
+            this.tracks(),
+            aggregate.idIssue,
+            dayKey,
+            this.toDayKey
+        );
+        this.editingId.set(segmentTracks.length === 1 ? segmentTracks[0].idTrack : null);
+    }
+
+    protected onTrackEditClose(): void {
+        this.editingId.set(null);
+        if (this.isSingle()) {
+            this.selection.set(null);
+        }
     }
 
     protected onDialogVisibleChange(visible: boolean): void {
