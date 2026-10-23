@@ -1,6 +1,6 @@
 module github.com/bitmaster-sk/rurdesk/gateway
 
-go 1.25.12
+go 1.25
 
 require github.com/rs/zerolog v1.34.0
 
