@@ -34,59 +34,11 @@
         </div>
 
         @if (isEditing()) {
-            <form class="time-edit" [formGroup]="form" (ngSubmit)="onSaveEdit()">
-                <ui-day-select
-                    formControlName="day"
-                    [format]="UiDaySelectFormat.Long"
-                    [maxDate]="today"
-                    data-testid="track-edit-day"
-                    [ariaLabel]="'TRACK.DAY' | translate"
-                />
-                <input
-                    type="text"
-                    uiInput
-                    formControlName="tracked"
-                    data-testid="track-edit-duration"
-                    [attr.aria-label]="'TRACK.TIME' | translate"
-                />
-                <input
-                    type="text"
-                    uiInput
-                    class="w-full"
-                    formControlName="note"
-                    data-testid="track-edit-note"
-                    [attr.placeholder]="'TRACK.NOTE_PLACEHOLDER' | translate"
-                />
-                <ui-button
-                    type="submit"
-                    size="small"
-                    data-testid="track-edit-save"
-                    [disabled]="form.invalid"
-                >
-                    {{ 'SAVE' | translate }}
-                </ui-button>
-                <ui-button
-                    type="button"
-                    size="small"
-                    severity="secondary"
-                    variant="text"
-                    (click)="onCancelEdit()"
-                >
-                    {{ 'CANCEL' | translate }}
-                </ui-button>
-            </form>
-            @if (isDayChanged()) {
-                <div class="text-xs ui-color-primary mt-1" data-testid="track-edit-moves">
-                    {{
-                        'TRACK.MOVES'
-                            | translate
-                                : {
-                                      from: originalDay() | date: 'EEE, MMM d',
-                                      to: form.controls.day.value | date: 'EEE, MMM d'
-                                  }
-                    }}
-                </div>
-            }
+            <app-track-edit-form
+                [track]="track()"
+                (saved)="isEditing.set(false)"
+                (cancelled)="isEditing.set(false)"
+            />
         } @else {
             <div class="time-body">
                 @if (user(); as u) {
