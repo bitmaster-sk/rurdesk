@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/gateway/model"
 	"github.com/rs/zerolog/log"
 )
 
@@ -367,98 +368,6 @@ func (o *Orchestrator) activeRunIDs() map[int64]bool {
 	return out
 }
 
-// payload types below mirror the API contract from api/internal/agent/dispatch.go
-// and api/internal/agent/gateway_client.go. They live in the gateway module
-// because it cannot import api/internal/model.
-
-type stageExecutePayload struct {
-	IdTask        int64                 `json:"idTask"`
-	Stage         string                `json:"stage"`
-	AttemptNo     int64                 `json:"attemptNo"`
-	PrBranch      string                `json:"prBranch"`
-	Repo          *repoPayload          `json:"repo"`
-	Model         string                `json:"model"`
-	MaxTurns      int64                 `json:"maxTurns"`
-	ContextBundle *contextBundlePayload `json:"contextBundle"`
-}
-
-type repoPayload struct {
-	CloneUrl       string `json:"cloneUrl"`
-	Host           string `json:"host"`
-	RepoPath       string `json:"repoPath"`
-	BaseBranch     string `json:"baseBranch"`
-	EncryptedToken string `json:"encryptedToken"`
-}
-
-type contextBundlePayload struct {
-	Issue             *issuePayload     `json:"issue"`
-	ReviewThread      []json.RawMessage `json:"reviewThread"`
-	ApprovedDesign    *artifactPayload  `json:"approvedDesign"`
-	ApprovedImplPlan  *artifactPayload  `json:"approvedImplPlan"`
-	RejectedOutput    *artifactPayload  `json:"rejectedOutput"`
-	ApprovedMockupRef *string           `json:"approvedMockupRef"`
-	Skills            []json.RawMessage `json:"skills"`
-	Wiki              *wikiPayload      `json:"wiki"`
-	WikiProposals     []json.RawMessage `json:"wikiProposals"`
-	IsShortWorkflow   bool              `json:"isShortWorkflow"`
-}
-
-type issuePayload struct {
-	IdIssuePublic int64  `json:"idIssuePublic"`
-	Title         string `json:"title"`
-	Description   string `json:"description"`
-}
-
-type artifactPayload struct {
-	Message     string `json:"message"`
-	MessageKind string `json:"messageKind"`
-}
-
-type skillPayload struct {
-	Name    string `json:"name"`
-	Content string `json:"content"`
-}
-
-type wikiPayload struct {
-	Pages     []json.RawMessage `json:"pages"`
-	Index     []json.RawMessage `json:"index"`
-	IndexMore int               `json:"indexMore"`
-}
-
-type wikiPagePayload struct {
-	Slug    string `json:"slug"`
-	Title   string `json:"title"`
-	Version int    `json:"version"`
-	Reason  string `json:"reason"`
-	Body    string `json:"body"`
-}
-
-type wikiIndexEntryPayload struct {
-	Slug      string `json:"slug"`
-	Title     string `json:"title"`
-	Summary   string `json:"summary"`
-	OverLimit bool   `json:"overLimit"`
-}
-
-type wikiProposalPayload struct {
-	Kind   string  `json:"kind"`
-	Slug   string  `json:"slug"`
-	Title  string  `json:"title"`
-	Parent *string `json:"parent,omitempty"`
-	Reason string  `json:"reason"`
-}
-
-type messagePayload struct {
-	Message     string          `json:"message"`
-	MessageKind string          `json:"messageKind"`
-	CreatedAt   string          `json:"createdAt"`
-	Creator     *creatorPayload `json:"creator"`
-}
-
-type creatorPayload struct {
-	Name string `json:"name"`
-}
-
 func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 	if event.IdRun == 0 {
 		return Task{}, fmt.Errorf("missing idRun")
@@ -467,9 +376,9 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		return Task{}, fmt.Errorf("empty payload")
 	}
 
-	var p stageExecutePayload
-	if err := json.Unmarshal(event.Payload, &p); err != nil {
-		return Task{}, fmt.Errorf("unmarshal stage_execute payload: %w", err)
+	var payload model.StageExecutePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return Task{}, fmt.Errorf("decoding stage_execute payload: %w", err)
 	}
 
 	task := Task{
@@ -477,70 +386,55 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		IdIssue:        event.IdIssue,
 		IdUserAgent:    event.IdUserAgent,
 		IdProject:      event.IdProject,
-		IdTask:         p.IdTask,
-		Stage:          p.Stage,
-		AttemptNo:      int(p.AttemptNo),
-		PrBranch:       p.PrBranch,
-		RequestedModel: p.Model,
-		MaxTurns:       int(p.MaxTurns),
+		IdTask:         payload.IdTask,
+		Stage:          payload.Stage,
+		AttemptNo:      payload.AttemptNo,
+		PrBranch:       payload.PrBranch,
+		RequestedModel: payload.Model,
+		MaxTurns:       payload.MaxTurns,
 	}
 
-	if p.Repo != nil {
+	if payload.Repo != nil {
 		task.Repo = AgentRunGitRepo{
-			CloneUrl:       p.Repo.CloneUrl,
-			Host:           p.Repo.Host,
-			RepoPath:       p.Repo.RepoPath,
-			BaseBranch:     p.Repo.BaseBranch,
-			EncryptedToken: p.Repo.EncryptedToken,
+			CloneUrl:       payload.Repo.CloneUrl,
+			Host:           payload.Repo.Host,
+			RepoPath:       payload.Repo.RepoPath,
+			BaseBranch:     payload.Repo.BaseBranch,
+			EncryptedToken: payload.Repo.EncryptedToken,
 		}
 	}
 
-	if p.ContextBundle != nil {
-		ctx := p.ContextBundle
-		if ctx.Issue != nil {
-			task.IdIssuePublic = ctx.Issue.IdIssuePublic
-			task.IssueTitle = ctx.Issue.Title
-			task.IssueDesc = ctx.Issue.Description
+	if bundle := payload.ContextBundle; bundle != nil {
+		if bundle.Issue != nil {
+			task.IdIssuePublic = bundle.Issue.IdIssuePublic
+			task.IssueTitle = bundle.Issue.Title
+			task.IssueDesc = bundle.Issue.Description
 		}
-		if ctx.ApprovedDesign != nil {
-			task.ApprovedDesign = ctx.ApprovedDesign.Message
+		task.ApprovedDesign = messageBody(bundle.ApprovedDesign)
+		task.ApprovedImplPlan = messageBody(bundle.ApprovedImplPlan)
+		task.RejectedOutput = messageBody(bundle.RejectedOutput)
+		if bundle.ApprovedMockupRef != nil {
+			task.ApprovedMockupRef = *bundle.ApprovedMockupRef
 		}
-		if ctx.ApprovedImplPlan != nil {
-			task.ApprovedImplPlan = ctx.ApprovedImplPlan.Message
-		}
-		if ctx.RejectedOutput != nil {
-			task.RejectedOutput = ctx.RejectedOutput.Message
-		}
-		if ctx.ApprovedMockupRef != nil {
-			task.ApprovedMockupRef = *ctx.ApprovedMockupRef
-		}
-		task.IsShortWorkflow = ctx.IsShortWorkflow
-		for _, raw := range ctx.Skills {
-			var s skillPayload
-			if err := json.Unmarshal(raw, &s); err != nil {
+		task.IsShortWorkflow = bundle.IsShortWorkflow
+		for _, skill := range decodeEach[model.Skill](bundle.Skills) {
+			if skill.Name == "" || skill.Content == "" {
 				continue
 			}
-			if s.Name == "" || s.Content == "" {
-				continue
-			}
-			task.Skills = append(task.Skills, Skill(s))
+			task.Skills = append(task.Skills, Skill(skill))
 		}
-		task.Wiki = parseWiki(ctx.Wiki)
-		task.WikiProposals = parseWikiProposals(ctx.WikiProposals)
-		for _, raw := range ctx.ReviewThread {
-			var m messagePayload
-			if err := json.Unmarshal(raw, &m); err != nil {
-				continue
-			}
-			name := ""
-			if m.Creator != nil {
-				name = m.Creator.Name
+		task.Wiki = parseWiki(bundle.Wiki)
+		task.WikiProposals = parseWikiProposals(bundle.WikiProposals)
+		for _, message := range decodeEach[model.Message](bundle.ReviewThread) {
+			creatorName := ""
+			if message.Creator != nil {
+				creatorName = message.Creator.Name
 			}
 			task.Conversation = append(task.Conversation, TaskMessage{
-				CreatorName: name,
-				CreatedAt:   m.CreatedAt,
-				Kind:        m.MessageKind,
-				Message:     conversationBody(m.MessageKind, m.Message),
+				CreatorName: creatorName,
+				CreatedAt:   message.CreatedAt,
+				Kind:        message.MessageKind,
+				Message:     conversationBody(message.MessageKind, message.Message),
 			})
 		}
 	}
@@ -552,6 +446,26 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		return Task{}, fmt.Errorf("missing stage")
 	}
 	return task, nil
+}
+
+// decodeEach skips elements that do not decode so one malformed entry never fails a stage.
+func decodeEach[T any](rawItems []json.RawMessage) []T {
+	var items []T
+	for _, rawItem := range rawItems {
+		var item T
+		if err := json.Unmarshal(rawItem, &item); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func messageBody(message *model.Message) string {
+	if message == nil {
+		return ""
+	}
+	return message.Message
 }
 
 // conversationBody drops the body of artifacts the prompt already renders in
@@ -567,26 +481,18 @@ func conversationBody(kind, message string) string {
 	}
 }
 
-func parseWiki(w *wikiPayload) *WikiContext {
-	if w == nil {
+func parseWiki(promptContext *model.WikiPromptContext) *WikiContext {
+	if promptContext == nil {
 		return nil
 	}
-	wiki := &WikiContext{IndexMore: w.IndexMore}
-	for _, raw := range w.Pages {
-		var page wikiPagePayload
-		if err := json.Unmarshal(raw, &page); err != nil {
-			continue
-		}
+	wiki := &WikiContext{IndexMore: promptContext.IndexMore}
+	for _, page := range decodeEach[model.WikiPromptPage](promptContext.Pages) {
 		if page.Slug == "" || page.Body == "" {
 			continue
 		}
 		wiki.Pages = append(wiki.Pages, WikiPage(page))
 	}
-	for _, raw := range w.Index {
-		var entry wikiIndexEntryPayload
-		if err := json.Unmarshal(raw, &entry); err != nil {
-			continue
-		}
+	for _, entry := range decodeEach[model.WikiPromptIndexEntry](promptContext.Index) {
 		if entry.Slug == "" {
 			continue
 		}
@@ -599,15 +505,8 @@ func parseWiki(w *wikiPayload) *WikiContext {
 }
 
 func parseWikiProposals(rawProposals []json.RawMessage) []WikiProposal {
-	if len(rawProposals) == 0 {
-		return nil
-	}
-	proposals := make([]WikiProposal, 0, len(rawProposals))
-	for _, raw := range rawProposals {
-		var proposal wikiProposalPayload
-		if err := json.Unmarshal(raw, &proposal); err != nil {
-			continue
-		}
+	var proposals []WikiProposal
+	for _, proposal := range decodeEach[model.WikiProposalAgentView](rawProposals) {
 		if proposal.Slug == "" {
 			continue
 		}

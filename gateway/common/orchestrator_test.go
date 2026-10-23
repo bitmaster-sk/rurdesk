@@ -40,8 +40,6 @@ func stageTestWorkspace(t *testing.T) (string, AgentRunGitRepo) {
 	return filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main")
 }
 
-// unmarshalEvent decodes a JSON event body into a WebhookEvent and assigns
-// the stage_execute type so tests can focus on the payload shape.
 func unmarshalEvent(t *testing.T, body string) WebhookEvent {
 	t.Helper()
 	var event WebhookEvent
@@ -628,8 +626,6 @@ func TestParseStageExecutePayload_RejectsMissingStage(t *testing.T) {
 }
 
 func TestParseStageExecutePayload_RealTrackerPayload(t *testing.T) {
-	// A full event shaped like the tracker actually sends it, exercising
-	// every context-bundle section the gateway consumes.
 	body := `{
 		"idRun": 42,
 		"idProject": 1,

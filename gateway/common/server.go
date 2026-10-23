@@ -18,9 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// WebhookEvent is the envelope the tracker POSTs to /event. It mirrors
-// api/internal/agent.WebhookEvent, duplicated here because the gateway is a
-// separate Go module and cannot import api/internal/model.
+// Mirrors api/internal/agent.WebhookEvent.
 type WebhookEvent struct {
 	EventId     string          `json:"-"`
 	Type        string          `json:"-"`
