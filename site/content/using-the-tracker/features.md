@@ -345,6 +345,11 @@ When you confirm a timer you can attach a **note** describing what you did.
 Entries in the activity feed can be edited or deleted afterwards by whoever
 logged them (project owners can correct anyone's), including the note.
 
+Your **My page** charts the week's tracked time in its **Statistics** section.
+Clicking a segment of that chart opens the entries of the same task logged on
+that day — each one can be edited there (the day, the length, the note) or
+deleted, and the chart redraws immediately.
+
 A single entry is capped at **24 hours**, so a timer left running overnight
 cannot distort a task's totals. The control turns amber and warns you once a
 timer has been running for more than eight hours.

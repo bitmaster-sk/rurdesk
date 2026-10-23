@@ -27,7 +27,8 @@ import {
     IconChevronLeft,
     IconChevronRight,
     IconRefresh,
-    IconAlertTriangle
+    IconAlertTriangle,
+    IconPencil
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -59,7 +60,8 @@ import {
             IconChevronLeft,
             IconChevronRight,
             IconRefresh,
-            IconAlertTriangle
+            IconAlertTriangle,
+            IconPencil
         })
     ]
 })

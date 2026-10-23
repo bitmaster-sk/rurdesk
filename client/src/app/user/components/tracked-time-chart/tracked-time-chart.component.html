@@ -5,8 +5,61 @@
         [data]="chartData()"
         [options]="chartOptions()"
         [plugins]="chartPlugins"
+        (chartClick)="onChartClick($event)"
     ></canvas>
     @if (isEmpty()) {
         <div class="chart-empty-overlay">{{ 'NO_DATA_YET' | translate }}</div>
     }
 </div>
+
+<ui-dialog
+    [visible]="isDialogOpen()"
+    (visibleChange)="onDialogVisibleChange($event)"
+    [header]="dialogHeader()"
+    width="32rem"
+>
+    <div class="chart-tracks">
+        @for (track of selectedTracks(); track track.idTrack) {
+            @if (editingId() === track.idTrack) {
+                <app-track-edit-form
+                    [track]="track"
+                    (saved)="editingId.set(null)"
+                    (cancelled)="editingId.set(null)"
+                />
+            } @else {
+                <div class="chart-track">
+                    <span class="chart-track-range">
+                        {{ track.startAt | date: 'shortTime' }} →
+                        {{ track.endAt | date: 'shortTime' }}
+                    </span>
+                    <span class="chart-track-duration">
+                        {{ formatDuration(track.tracked ?? 0) }}
+                    </span>
+                    @if (track.note) {
+                        <span class="chart-track-note">{{ track.note }}</span>
+                    }
+                    <button
+                        type="button"
+                        class="chart-track-tool"
+                        data-testid="chart-track-edit"
+                        [attr.aria-label]="'TRACK.EDIT' | translate"
+                        (click)="editingId.set(track.idTrack)"
+                    >
+                        <tabler-icon icon="pencil" [size]="14" />
+                    </button>
+                    <button
+                        type="button"
+                        class="chart-track-tool chart-track-tool--danger"
+                        data-testid="chart-track-delete"
+                        uiConfirm
+                        [confirmText]="'TRACK.CONFIRM.DELETE' | translate"
+                        [attr.aria-label]="'TRACK.DELETE' | translate"
+                        (confirmed)="onDeleteTrack(track)"
+                    >
+                        <tabler-icon icon="trash" [size]="14" />
+                    </button>
+                </div>
+            }
+        }
+    </div>
+</ui-dialog>
