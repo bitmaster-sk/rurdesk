@@ -46,6 +46,7 @@ export class UiDaySelectComponent implements ControlValueAccessor {
     public readonly inputId = input<string>();
     public readonly ariaLabel = input<string>();
     public readonly disabled = input(false, { transform: booleanAttribute });
+    public readonly fluid = input(false, { transform: booleanAttribute });
 
     protected readonly panelId = `ui-day-select-panel-${nextPanelId++}`;
 

@@ -132,6 +132,7 @@ export class UiDaySelectStub implements ControlValueAccessor {
     public readonly inputId = input<string | null>(null);
     public readonly ariaLabel = input<string | null>(null);
     public readonly disabled = input<boolean>(false);
+    public readonly fluid = input<boolean>(false);
 
     public writeValue(): void {}
 
