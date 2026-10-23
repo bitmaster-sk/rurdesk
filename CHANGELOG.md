@@ -5,6 +5,107 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-10-23
+
+One gateway for every project, a model of your choice for every stage, and time entries
+you can put on the right day.
+
+### Highlights
+
+- **One gateway for every project** — the tracker sends the repository, the base branch
+  and the git token of the project's git integration with every stage. A gateway is no
+  longer tied to one repository, and adding a project needs no change in its environment.
+- **Model and turn limit per run and stage** — the agent dialog offers the models the
+  gateway allows. The run, and each stage on its own, can use a different model and turn
+  limit, and a stage can still be changed on the run card until it starts.
+- **Stage cards** — the run card shows a summary with the run totals and one card per
+  stage, with the tokens, tool calls and duration of all its attempts, the model it ran
+  with and its wiki reads.
+- **Time entries on the right day** — the manual time entry has a day picker with Today
+  and Yesterday, an entry can move to another day from the task activity, and the tracked
+  time chart on My page opens its entries to edit or delete them.
+- **PlantUML** — ` ```plantuml ` blocks render wherever mermaid diagrams do, through a
+  PlantUML server you run next to the tracker.
+
+### Breaking changes
+
+- **The gateway takes the repository from the project's git integration.** `REPO_URL`,
+  `GIT_ACCESS_TOKEN` and `REPO_BRANCH_BASE` are ignored and only log a warning. Every
+  project the agent works on needs a git integration whose token can open pull requests
+  and push branches. A 1.6.0 gateway fails every stage of an older tracker with
+  `tracker_missing_repo`, so update the tracker and every gateway together.
+- **The gateway needs `MODELS`.** `GOOSE_PROVIDER` and `GOOSE_MODEL` are replaced by
+  `MODELS`, a comma-separated list of `provider/model` entries, with an optional
+  `MODEL_DEFAULT`. The gateway refuses to start without it and fails a stage that asks
+  for a model outside the list with `model_not_allowed`.
+- **A project can have only one git integration.**
+
+### Added
+
+- A model and a turn limit for the run and for each stage in the agent dialog and on the
+  run card. Turn limits fall back to the agent's planning and implementation limits, then
+  to the app settings.
+- `MODELS`, `MODEL_DEFAULT` and `MAX_TURNS_LIMIT` gateway settings, reported to the
+  tracker at startup.
+- A **Base branch** field on the git integration.
+- A timeline of the stages of an agent run with a wiki summary, showing the models its
+  stages ran with.
+- The `plantuml.server_url` app setting and PlantUML rendering in wiki pages, the editor
+  preview, task descriptions, comments, replies and chat. Rendered diagrams are cached
+  for 7 days.
+- Syntax highlighting in the diff viewer.
+- A day picker for the manual time entry and a way to move a time entry to another day.
+- The tracked time chart on My page draws one row per day with the task number, title and
+  day total, and opens its entries to edit or delete them.
+
+### Changed
+
+- Each stage of an agent run is its own card on the run card.
+- The tracked total sits next to the Time tracker label instead of in its own field.
+- Admin settings and agent skills scroll when they do not fit.
+- Wiki page actions wrap below the title on narrow screens.
+
+### Removed
+
+- The `GOOSE_PROVIDER`, `GOOSE_MODEL`, `REPO_URL`, `GIT_ACCESS_TOKEN` and
+  `REPO_BRANCH_BASE` gateway settings.
+
+### Fixed
+
+- A run resumed with Continue kept the finish time of its first failure, so the wiki
+  tools refused it with 403.
+- `complete_stage` with a message but no valid kind failed with 500 after the pull
+  request was already open. It now returns 400 with the allowed kinds.
+- A time entry ignored the sent `startAt`. A `startAt` in the future is now rejected.
+- Admin settings stayed stale in the app until a reload after saving.
+- A wiki page title shrank to nothing on narrow screens.
+
+### Database
+
+Two migrations, applied automatically on startup:
+
+| Migration                                            | Purpose                                                                    |
+| ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| `20261017120000_agent_model_selection.sql`           | gateway models and turn limits, the model and turn limit of each task      |
+| `20261021120000_git_integration_one_per_project.sql` | one git integration per project and a base branch on integrations and runs |
+
+Rolling back to 1.5.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. Upgrade the tracker and every gateway together. Before
+starting a gateway, add a git integration to every project its agent works on, replace
+`GOOSE_PROVIDER` and `GOOSE_MODEL` with `MODELS`, and remove `REPO_URL`,
+`GIT_ACCESS_TOKEN` and `REPO_BRANCH_BASE`. See
+[Upgrading](https://rurdesk.com/docs/upgrading.html) for the details.
+
+[1.6.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.5.0...v1.6.0
+
 ## [1.5.0] - 2026-10-17
 
 Agents that keep running when something goes wrong, a short workflow for small tasks,
