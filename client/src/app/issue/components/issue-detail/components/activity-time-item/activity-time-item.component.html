@@ -35,6 +35,13 @@
 
         @if (isEditing()) {
             <form class="time-edit" [formGroup]="form" (ngSubmit)="onSaveEdit()">
+                <ui-day-select
+                    formControlName="day"
+                    [format]="UiDaySelectFormat.Long"
+                    [maxDate]="today"
+                    data-testid="track-edit-day"
+                    [ariaLabel]="'TRACK.DAY' | translate"
+                />
                 <input
                     type="text"
                     uiInput
@@ -68,6 +75,18 @@
                     {{ 'CANCEL' | translate }}
                 </ui-button>
             </form>
+            @if (isDayChanged()) {
+                <div class="text-xs ui-color-primary mt-1" data-testid="track-edit-moves">
+                    {{
+                        'TRACK.MOVES'
+                            | translate
+                                : {
+                                      from: originalDay() | date: 'EEE, MMM d',
+                                      to: form.controls.day.value | date: 'EEE, MMM d'
+                                  }
+                    }}
+                </div>
+            }
         } @else {
             <div class="time-body">
                 @if (user(); as u) {

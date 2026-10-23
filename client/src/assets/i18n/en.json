@@ -1121,6 +1121,7 @@
         "NOTE": "Note",
         "NOTE_PLACEHOLDER": "What did you work on?",
         "NO_NOTE": "Add a note",
+        "MOVES": "Moves this entry from {{ from }} to {{ to }}.",
         "TODAY_TOTAL": "Today",
         "RUNAWAY_WARNING": "This timer has been running for a long time. Entries are capped at 24 hours.",
         "SWITCH_TITLE": "Another timer is running",
