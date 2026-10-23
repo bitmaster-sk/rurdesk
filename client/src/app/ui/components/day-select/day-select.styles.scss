@@ -16,6 +16,7 @@ ui-day-select {
     background: var(--ui-input-bg);
     border: 1px solid var(--ui-input-border);
     border-radius: var(--ui-input-radius);
+    white-space: nowrap;
     cursor: pointer;
     transition: border-color 0.2s;
 }
@@ -90,9 +91,29 @@ ui-day-select {
     background: var(--ui-input-bg);
 }
 
+.ui-input-group > ui-day-select {
+    flex: 0 0 auto;
+}
+
+.ui-input-group > ui-day-select:has(.ui-day-select--past) {
+    background: var(--ui-brand-50);
+}
+
+.ui-input-group > ui-day-select:has(.ui-day-select__trigger:disabled) {
+    background: var(--ui-input-disabled-bg);
+}
+
+.ui-input-group > ui-day-select:has(.ui-day-select__trigger:focus-visible) {
+    border-color: var(--ui-input-border-focus);
+    box-shadow: var(--ui-input-focus-ring);
+}
+
 .ui-input-group > ui-day-select .ui-day-select__trigger {
     flex: 1;
     border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
 .ui-day-select__calendar-host {
