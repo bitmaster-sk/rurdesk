@@ -523,7 +523,7 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 			if s.Name == "" || s.Content == "" {
 				continue
 			}
-			task.Skills = append(task.Skills, Skill{Name: s.Name, Content: s.Content})
+			task.Skills = append(task.Skills, Skill(s))
 		}
 		task.Wiki = parseWiki(ctx.Wiki)
 		task.WikiProposals = parseWikiProposals(ctx.WikiProposals)
@@ -580,13 +580,7 @@ func parseWiki(w *wikiPayload) *WikiContext {
 		if page.Slug == "" || page.Body == "" {
 			continue
 		}
-		wiki.Pages = append(wiki.Pages, WikiPage{
-			Slug:    page.Slug,
-			Title:   page.Title,
-			Version: page.Version,
-			Reason:  page.Reason,
-			Body:    page.Body,
-		})
+		wiki.Pages = append(wiki.Pages, WikiPage(page))
 	}
 	for _, raw := range w.Index {
 		var entry wikiIndexEntryPayload
@@ -596,12 +590,7 @@ func parseWiki(w *wikiPayload) *WikiContext {
 		if entry.Slug == "" {
 			continue
 		}
-		wiki.Index = append(wiki.Index, WikiIndexEntry{
-			Slug:      entry.Slug,
-			Title:     entry.Title,
-			Summary:   entry.Summary,
-			OverLimit: entry.OverLimit,
-		})
+		wiki.Index = append(wiki.Index, WikiIndexEntry(entry))
 	}
 	if len(wiki.Pages) == 0 && len(wiki.Index) == 0 && wiki.IndexMore == 0 {
 		return nil
