@@ -25,7 +25,6 @@ import { SavedViewMenuComponent } from './components/saved-view-menu/saved-view-
 import { SavedViewDialogComponent } from './components/saved-view-dialog/saved-view-dialog.component';
 import { IssueToolbarService } from './issue-toolbar.service';
 import { KanbanTileComponent } from './components/issue-kanban/components/issue-kanban-tile/issue-kanban-tile.component';
-import { TrackerModule } from '../tracker/tracker.module';
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { IssueTableDropZoneComponent } from './components/issue-table/components/issue-table-drop-zone/issue-table-drop-zone.component';
 import { SplitDialogComponent } from './components/split-dialog/split-dialog.component';
@@ -180,7 +179,6 @@ import { AgentModule } from '../agent/agent.module';
         MessageModule,
         MarkdownModule.forChild(),
         DragDropModule,
-        TrackerModule,
         FullCalendarModule,
         TablerIconComponent,
         BaseChartDirective,

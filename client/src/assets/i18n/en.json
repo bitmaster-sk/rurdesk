@@ -1101,7 +1101,6 @@
         "OPEN_SUFFIX": "open"
     },
     "TRACK": {
-        "RECORDS": "Track records",
         "CONFIRM.DELETE": "Do you really want to delete this track record?",
         "TIME": "Tracked time",
         "RANGE_LABEL": "{{ from }} – {{ to }}",

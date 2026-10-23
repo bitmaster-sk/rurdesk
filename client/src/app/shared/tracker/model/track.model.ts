@@ -22,12 +22,3 @@ export interface CreateTrackReq {
 export interface TrackUpdate extends CreateTrackReq {
     idTrack: number;
 }
-
-export interface TrackForm {
-    idTrack: number | null;
-    idUser: number;
-    idIssue: number;
-    tracked: number | null;
-    endAt: Date | null;
-    note: string | null;
-}

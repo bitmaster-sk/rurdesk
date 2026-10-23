@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
-import { TrackFilter } from 'src/app/tracker/entity/track-filter.entity';
+import { TrackFilter } from './entity/track-filter.entity';
 import { TrackApi } from './api/track.api.service';
 import { TrackerApi } from './api/tracker.api.service';
 import { TrackerSyncService } from './tracker-sync.service';
