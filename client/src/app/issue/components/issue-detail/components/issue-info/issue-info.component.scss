@@ -7,6 +7,7 @@
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     column-gap: var(--ui-space-s);
     row-gap: var(--ui-space-xs);
+    container-type: inline-size;
 }
 
 .issue-info {
@@ -147,13 +148,22 @@
         }
     }
 
-    .tracked-field {
-        display: flex;
-        flex-direction: column;
-        .tracked-value {
-            flex: 1 1 auto;
+    .tracker-field {
+        @container (min-width: 390px) {
+            grid-column: span 2;
+        }
+
+        &__head {
             display: flex;
-            align-items: center;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: var(--ui-space-s);
+        }
+
+        &__total {
+            font-size: var(--font-size-s);
+            color: var(--ui-color-text-muted);
+            white-space: nowrap;
         }
     }
 }
