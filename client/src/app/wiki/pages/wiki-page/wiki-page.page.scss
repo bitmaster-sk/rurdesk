@@ -15,6 +15,7 @@
 .wiki-page {
     &__head {
         display: flex;
+        flex-wrap: wrap;
         align-items: flex-start;
         justify-content: space-between;
         gap: var(--ui-space-l);
@@ -23,6 +24,7 @@
     }
 
     &__heading {
+        flex: 1 1 20rem;
         min-width: 0;
     }
 
@@ -62,9 +64,10 @@
 
     &__actions {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--ui-space-s);
-        flex-shrink: 0;
+        max-width: 100%;
     }
 
     &__draft {
