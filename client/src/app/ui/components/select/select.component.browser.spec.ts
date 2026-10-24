@@ -2,7 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UiModule } from '../../ui.module';
 
 interface Opt {
@@ -93,6 +93,10 @@ describe('UiSelectComponent (browser)', () => {
             imports: [UiModule, ReactiveFormsModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations()]
         }).compileComponents();
+
+        const translate = TestBed.inject(TranslateService);
+        translate.setTranslation('en', { UI: { CLEAR: 'Clear' } });
+        translate.use('en');
     });
 
     function setup(
@@ -199,6 +203,16 @@ describe('UiSelectComponent (browser)', () => {
         clear.click();
         fixture.detectChanges();
         expect(fixture.componentInstance.ctrl.value).toBeNull();
+    });
+
+    it('sets the translated aria-label on the clear button', () => {
+        const fixture = TestBed.createComponent(ClearHostComponent);
+        fixture.detectChanges();
+
+        const clear = fixture.nativeElement.querySelector(
+            '.ui-select-trigger__clear'
+        ) as HTMLButtonElement;
+        expect(clear.getAttribute('aria-label')).toBe('Clear');
     });
 
     it('keyboard: Tab moves into the highlighted row actions instead of closing', () => {

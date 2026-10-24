@@ -74,6 +74,7 @@
     },
     "UI": {
         "LOADING": "Loading",
+        "CLEAR": "Clear",
         "SAVE_STATUS": {
             "SAVING": "Saving",
             "SAVED": "Saved",
