@@ -217,7 +217,7 @@
                                                 [width]="1.75"
                                                 [name]="row.assigned.name"
                                                 [bgColor]="row.assigned.colorAvatarBg"
-                                                [initials]="row.assigned.avatarInitials ?? ''"
+                                                [manualInitials]="row.assigned.avatarInitials"
                                             ></app-avatar>
                                             <span>{{ row.assigned.name }}</span>
                                         } @else {
@@ -314,8 +314,8 @@
                                                         [width]="1.75"
                                                         [name]="rel.assigned.name"
                                                         [bgColor]="rel.assigned.colorAvatarBg"
-                                                        [initials]="
-                                                            rel.assigned.avatarInitials ?? ''
+                                                        [manualInitials]="
+                                                            rel.assigned.avatarInitials
                                                         "
                                                     ></app-avatar>
                                                     <span>{{ rel.assigned.name }}</span>

@@ -7,10 +7,11 @@ import {
     output,
     signal
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
+import { Initials } from 'src/app/shared/avatar/initials';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import {
@@ -55,27 +56,14 @@ export class CreateUserDialogComponent {
         maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         colorAvatarBg: [Color.randomAvatarBg()],
-        // Optional manual avatar initials; empty = auto-computed from the name.
         avatarInitials: ['', [Validators.maxLength(2)]]
     });
 
-    // Placeholder for the initials input: the initials the avatar would show
-    // when the field is left empty (auto-computed from the current name).
-    protected readonly autoInitials = computed(() => {
-        const name = (this.form.controls.name.value ?? '').trim();
-        if (!name) {
-            return '';
-        }
-        const parts = name.split(' ');
-        if (parts.length > 1) {
-            return parts
-                .slice(0, 2)
-                .map(p => p[0])
-                .join('')
-                .toUpperCase();
-        }
-        return parts[0].substring(0, 2).toUpperCase();
+    private readonly nameValue = toSignal(this.form.controls.name.valueChanges, {
+        initialValue: ''
     });
+
+    protected readonly autoInitials = computed(() => Initials.fromName(this.nameValue() ?? ''));
 
     public constructor() {
         // Re-apply the email/password/gateway validators whenever the agent flag

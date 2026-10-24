@@ -3,15 +3,13 @@ package model
 import "encoding/json"
 
 type User struct {
-	IdUser        int64  `json:"idUser"        db:"id_user"`
-	Name          string `json:"name"          db:"name"`
-	Email         string `json:"email"         db:"email"`
-	ColorAvatarBg string `json:"colorAvatarBg" db:"color_avatar_bg"`
-	Password      string `json:"-"             db:"password"`
-	IsAgent       bool   `json:"isAgent"         db:"is_agent"`
-	IsAdmin       bool   `json:"isAdmin"       db:"is_admin"`
-	// AvatarInitials is the optional manual override for the avatar letters
-	// (max 2 chars, stored uppercase). nil/empty means auto-computed from Name.
+	IdUser         int64   `json:"idUser"        db:"id_user"`
+	Name           string  `json:"name"          db:"name"`
+	Email          string  `json:"email"         db:"email"`
+	ColorAvatarBg  string  `json:"colorAvatarBg" db:"color_avatar_bg"`
+	Password       string  `json:"-"             db:"password"`
+	IsAgent        bool    `json:"isAgent"         db:"is_agent"`
+	IsAdmin        bool    `json:"isAdmin"       db:"is_admin"`
 	AvatarInitials *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
 }
 
@@ -39,8 +37,6 @@ type UpdateUserReq struct {
 	Name string `json:"name" binding:"required,min=1,max=250"`
 	// Optional: when present, overrides the avatar background colour. Omitted → unchanged.
 	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
-	// Optional: manual avatar initials (max 2 chars, stored uppercase). Omitted → unchanged, empty string → auto-computed from the name.
-	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
 }
 
 type ChangePasswordReq struct {
@@ -58,8 +54,7 @@ type AdminCreateUserReq struct {
 	IdProject *int64 `json:"idProject"`
 	Role      Role   `json:"role"`
 	// Optional: when present, seeds the avatar background colour instead of a random one.
-	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
-	// Optional: manual avatar initials (max 2 chars, stored uppercase). Omitted → auto-computed from the name.
+	ColorAvatarBg  *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
 	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
 }
 
@@ -73,10 +68,9 @@ type AdminCreateUserRes struct {
 // optional pointer, serving both the isAdmin toggle and the edit form — only
 // present fields apply, and an explicit false for IsAdmin differs from omitted.
 type AdminUpdateUserReq struct {
-	Name          *string `json:"name"          binding:"omitempty,min=1,max=250"`
-	Email         *string `json:"email"         binding:"omitempty,email,max=250"`
-	IsAdmin       *bool   `json:"isAdmin"`
-	ColorAvatarBg *string `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
-	// Optional: manual avatar initials (max 2 chars, stored uppercase). Empty string clears to auto.
-	AvatarInitials *string `json:"avatarInitials" binding:"omitempty,max=2"`
+	Name           *string          `json:"name"          binding:"omitempty,min=1,max=250"`
+	Email          *string          `json:"email"         binding:"omitempty,email,max=250"`
+	IsAdmin        *bool            `json:"isAdmin"`
+	ColorAvatarBg  *string          `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
+	AvatarInitials Optional[string] `json:"avatarInitials,omitzero"`
 }

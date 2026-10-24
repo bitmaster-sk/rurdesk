@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { Color } from 'src/app/shared/color/color';
+import { Initials } from './initials';
 
 @Component({
     selector: 'app-avatar',
@@ -14,28 +15,14 @@ export class AvatarComponent {
     public readonly radius = input(1.5);
     public readonly name = input('');
     public readonly bgColor = input('');
+    public readonly manualInitials = input<string | null | undefined>(null);
 
-    // Optional manual initials override; when set it wins over the name-based computation.
-    public readonly initials = input('');
-
-    public readonly displayInitials = computed(() => {
-        const override = this.initials().trim();
+    public readonly initials = computed(() => {
+        const override = this.manualInitials()?.trim();
         if (override) {
             return override.toUpperCase();
         }
-        const name = this.name().trim();
-        if (!name) {
-            return '';
-        }
-        const parts = name.split(' ');
-        if (parts.length > 1) {
-            return parts
-                .slice(0, 2)
-                .map(p => p[0])
-                .join('')
-                .toUpperCase();
-        }
-        return parts[0].substring(0, 2).toUpperCase();
+        return Initials.fromName(this.name());
     });
 
     public readonly textColor = computed(() => {

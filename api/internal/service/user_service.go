@@ -66,11 +66,6 @@ func (s *UserService) LoadByEmail(ctx context.Context, email string) (*model.Use
 	return s.userRepo.LoadUserByEmail(ctx, email)
 }
 
-// LoadById loads a user by primary key.
-func (s *UserService) LoadById(ctx context.Context, idUser int64) (*model.User, error) {
-	return s.userRepo.LoadUser(ctx, idUser)
-}
-
 func (s *UserService) CountUsers(ctx context.Context) (int64, error) {
 	return s.userRepo.CountUsers(ctx)
 }
@@ -125,24 +120,15 @@ func (s *UserService) Logout(ctx context.Context, token string) error {
 	return s.cache.Del(ctx, token).Err()
 }
 
-func (s *UserService) Update(ctx context.Context, token string, user model.User, name, colorAvatarBg string, avatarInitials *string) error {
+func (s *UserService) Update(ctx context.Context, token string, user model.User, name, colorAvatarBg string) error {
 	if err := s.userRepo.UpdateUser(ctx, user.IdUser, name); err != nil {
 		return fmt.Errorf("update user db: %w", err)
 	}
 	if err := s.userRepo.UpdateAvatarColor(ctx, user.IdUser, colorAvatarBg); err != nil {
 		return fmt.Errorf("update avatar colour db: %w", err)
 	}
-	// nil means "not sent" — a name/colour-only edit must not wipe manual initials.
-	if avatarInitials != nil {
-		if err := s.userRepo.UpdateAvatarInitials(ctx, user.IdUser, avatarInitials); err != nil {
-			return fmt.Errorf("update avatar initials db: %w", err)
-		}
-	}
 	user.Name = name
 	user.ColorAvatarBg = colorAvatarBg
-	if avatarInitials != nil {
-		user.AvatarInitials = avatarInitials
-	}
 	return s.cache.Set(ctx, token, &user, redis.KeepTTL).Err()
 }
 

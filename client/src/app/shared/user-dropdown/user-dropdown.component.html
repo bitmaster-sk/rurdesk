@@ -18,7 +18,7 @@
                     <app-avatar
                         [name]="user.name"
                         [bgColor]="user.colorAvatarBg"
-                        [initials]="user.avatarInitials ?? ''"
+                        [manualInitials]="user.avatarInitials"
                         [height]="1.5"
                         [width]="1.5"
                         [radius]="0.75"
@@ -34,7 +34,7 @@
                     <app-avatar
                         [name]="member.name"
                         [bgColor]="member.colorAvatarBg"
-                        [initials]="member.avatarInitials ?? ''"
+                        [manualInitials]="member.avatarInitials"
                         [height]="1.5"
                         [width]="1.5"
                         [radius]="0.75"
@@ -118,7 +118,7 @@
                     <app-avatar
                         [name]="member.name"
                         [bgColor]="member.colorAvatarBg"
-                        [initials]="member.avatarInitials ?? ''"
+                        [manualInitials]="member.avatarInitials"
                         [height]="1.5"
                         [width]="1.5"
                         [radius]="0.75"

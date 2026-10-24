@@ -11,6 +11,7 @@ import { EditUserDialogComponent } from './edit-user-dialog.component';
 interface EditUserDialogInternals {
     form: EditUserDialogComponent['form'];
     onSubmit(): void;
+    autoInitials(): string;
 }
 
 const GATEWAY: AgentGateway = {
@@ -177,5 +178,15 @@ describe('EditUserDialogComponent — avatar initials (browser)', () => {
         dialog.onSubmit();
 
         expect(updateUser).toHaveBeenCalledWith(8, expect.objectContaining({ avatarInitials: '' }));
+    });
+
+    it('updates the placeholder with the auto initials as the name is edited', () => {
+        const dialog = open();
+
+        expect(dialog.autoInitials()).toBe('MO');
+
+        dialog.form.controls.name.setValue('Ada Lovelace');
+
+        expect(dialog.autoInitials()).toBe('AL');
     });
 });

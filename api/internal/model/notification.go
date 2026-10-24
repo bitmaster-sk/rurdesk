@@ -6,16 +6,14 @@ import (
 )
 
 type Notification struct {
-	IdNotification int64  `json:"idNotification" db:"id_notification"`
-	IdUser         int64  `json:"-" db:"id_user"`
-	Type           string `json:"type" db:"type"`
-	IdProject      *int64 `json:"idProject,omitempty" db:"id_project"`
-	ProjectName    string `json:"projectName,omitempty" db:"project_name"`
-	ProjectColor   string `json:"projectColor,omitempty" db:"project_color"`
-	ActorName      string `json:"actorName,omitempty" db:"actor_name"`
-	ActorAvatarBg  string `json:"actorAvatarBg,omitempty" db:"actor_avatar_bg"`
-	// ActorAvatarInitials is the optional manual avatar initials of the actor at
-	// notification time; empty means the initials are derived from ActorName.
+	IdNotification      int64           `json:"idNotification" db:"id_notification"`
+	IdUser              int64           `json:"-" db:"id_user"`
+	Type                string          `json:"type" db:"type"`
+	IdProject           *int64          `json:"idProject,omitempty" db:"id_project"`
+	ProjectName         string          `json:"projectName,omitempty" db:"project_name"`
+	ProjectColor        string          `json:"projectColor,omitempty" db:"project_color"`
+	ActorName           string          `json:"actorName,omitempty" db:"actor_name"`
+	ActorAvatarBg       string          `json:"actorAvatarBg,omitempty" db:"actor_avatar_bg"`
 	ActorAvatarInitials *string         `json:"actorAvatarInitials,omitempty" db:"actor_avatar_initials"`
 	RefType             string          `json:"refType,omitempty" db:"ref_type"`
 	RefId               string          `json:"refId,omitempty" db:"ref_id"`

@@ -1,5 +1,6 @@
 import { EventContentArg } from '@fullcalendar/core';
 import { User } from 'src/app/auth/model/user.model';
+import { Initials } from 'src/app/shared/avatar/initials';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Issue } from '../../../../model/issue.model';
@@ -154,7 +155,7 @@ export class CalendarIssueRenderer {
             av.style.backgroundColor = assigned.colorAvatarBg || 'rgba(255,255,255,0.3)';
             av.innerText = assigned.avatarInitials?.trim()
                 ? assigned.avatarInitials.trim().toUpperCase()
-                : this.buildInitials(assigned.name);
+                : Initials.fromName(assigned.name);
         } else {
             av.classList.add('cal-event__avatar--unknown');
             av.title = 'Unassigned';
@@ -162,18 +163,6 @@ export class CalendarIssueRenderer {
         }
 
         return av;
-    }
-
-    private buildInitials(name: string): string {
-        const parts = name.trim().split(' ');
-        if (parts.length > 1) {
-            return parts
-                .slice(0, 2)
-                .map(p => p[0])
-                .join('')
-                .toUpperCase();
-        }
-        return parts[0].substring(0, 2).toUpperCase();
     }
 
     /**

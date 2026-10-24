@@ -10,6 +10,7 @@ import { CreateUserDialogComponent } from './create-user-dialog.component';
 interface CreateUserDialogInternals {
     form: CreateUserDialogComponent['form'];
     onSubmit(): void;
+    autoInitials(): string;
 }
 
 describe('CreateUserDialogComponent — agent turn limits (browser)', () => {
@@ -137,5 +138,15 @@ describe('CreateUserDialogComponent — avatar initials (browser)', () => {
         dialog.onSubmit();
 
         expect(insertUser).not.toHaveBeenCalled();
+    });
+
+    it('updates the placeholder with the auto initials as the name is typed', () => {
+        const dialog = openHumanForm();
+
+        expect(dialog.autoInitials()).toBe('HU');
+
+        dialog.form.controls.name.setValue('Ada Lovelace');
+
+        expect(dialog.autoInitials()).toBe('AL');
     });
 });

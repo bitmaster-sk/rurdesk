@@ -84,6 +84,22 @@ func (s *AdminSuite) Test_UpdateUser_EmptyAvatarInitialsClearsToAuto() {
 	s.Equal("", adminUserInitials(s, created.IdUser), "an explicit empty string must clear to auto (NULL)")
 }
 
+func (s *AdminSuite) Test_UpdateUser_NullAvatarInitialsClearsToAuto() {
+	s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE email = 'nullinit@test.sk'")
+	create := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+		`{"name":"Null Init","email":"nullinit@test.sk","password":"secret1","avatarInitials":"ni"}`, s.AdminToken)
+	s.Equal(http.StatusOK, create.StatusCode)
+	var created model.AdminCreateUserRes
+	s.Nil(json.NewDecoder(create.Body).Decode(&created))
+
+	patch := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", created.IdUser),
+		`{"name":"Null Init","email":"nullinit@test.sk","avatarInitials":null}`, s.AdminToken)
+	s.Equal(http.StatusOK, patch.StatusCode)
+
+	s.Equal("", adminUserInitials(s, created.IdUser), "an explicit null must clear to auto (NULL)")
+}
+
 // adminUserInitials reads a user's stored avatar initials back through the admin
 // list; "" means NULL (auto-computed from the name).
 func adminUserInitials(s *AdminSuite, idUser int64) string {
@@ -101,41 +117,4 @@ func adminUserInitials(s *AdminSuite, idUser int64) string {
 	}
 	s.Failf("user not found", "idUser %d missing from admin list", idUser)
 	return ""
-}
-
-// --- Self-service (methods on LoginSuite, defined in user_api_test.go) ---
-
-func (suite *LoginSuite) Test_UpdateUser_SetsAvatarInitials() {
-	token := Token(suite.T(), suite.App)
-	res := Request(suite.T(), suite.App, "PATCH", "/api/private/user",
-		`{"name":"tester","avatarInitials":"tt"}`, token)
-	suite.Equal(http.StatusOK, res.StatusCode)
-
-	var usr model.User
-	suite.Nil(json.NewDecoder(res.Body).Decode(&usr))
-	suite.Require().NotNil(usr.AvatarInitials)
-	suite.Equal("TT", *usr.AvatarInitials)
-}
-
-func (suite *LoginSuite) Test_UpdateUser_RejectsAvatarInitialsLongerThanTwo() {
-	token := Token(suite.T(), suite.App)
-	res := Request(suite.T(), suite.App, "PATCH", "/api/private/user",
-		`{"name":"tester","avatarInitials":"toolong"}`, token)
-	suite.Equal(http.StatusBadRequest, res.StatusCode)
-}
-
-func (suite *LoginSuite) Test_UpdateUser_OmittedInitialsLeaveThemUnchanged() {
-	token := Token(suite.T(), suite.App)
-
-	set := Request(suite.T(), suite.App, "PATCH", "/api/private/user",
-		`{"name":"tester","avatarInitials":"tt"}`, token)
-	suite.Equal(http.StatusOK, set.StatusCode)
-
-	// Name-only update must not wipe the initials.
-	upd := Request(suite.T(), suite.App, "PATCH", "/api/private/user", `{"name":"tester"}`, token)
-	suite.Equal(http.StatusOK, upd.StatusCode)
-	var usr model.User
-	suite.Nil(json.NewDecoder(upd.Body).Decode(&usr))
-	suite.Require().NotNil(usr.AvatarInitials)
-	suite.Equal("TT", *usr.AvatarInitials, "a name-only edit must preserve the avatar initials")
 }

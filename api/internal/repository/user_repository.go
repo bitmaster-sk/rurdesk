@@ -110,9 +110,6 @@ func (r *UserRepository) UpdateAvatarColor(ctx context.Context, idUser int64, co
 	return nil
 }
 
-// UpdateAvatarInitials sets the manual avatar initials independently of the
-// name/email fields (nil clears back to auto-computed-from-name), so a
-// name-only edit never wipes them — mirrors UpdateAvatarColor.
 func (r *UserRepository) UpdateAvatarInitials(ctx context.Context, idUser int64, avatarInitials *string) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx,

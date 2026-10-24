@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -115,7 +116,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 		Password:       hash,
 		ColorAvatarBg:  avatarColorOrRandom(req.ColorAvatarBg),
 		IsAdmin:        req.IsAdmin,
-		AvatarInitials: avatarInitialsOrNil(req.AvatarInitials),
+		AvatarInitials: normalizeAvatarInitials(req.AvatarInitials),
 	}
 	var created *model.User
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
@@ -231,7 +232,7 @@ func (ac *AdminController) createAgent(c *gin.Context, req *model.AdminCreateUse
 		Password:       hash,
 		ColorAvatarBg:  avatarColorOrRandom(req.ColorAvatarBg),
 		IsAgent:        true,
-		AvatarInitials: avatarInitialsOrNil(req.AvatarInitials),
+		AvatarInitials: normalizeAvatarInitials(req.AvatarInitials),
 	}
 	var created *model.User
 	var keyRes *model.CreateApiKeyRes
@@ -263,6 +264,12 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	var req model.AdminUpdateUserReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
+	}
+	if req.AvatarInitials.IsDefined && req.AvatarInitials.Value != nil &&
+		utf8.RuneCountInString(*req.AvatarInitials.Value) > 2 {
+		_ = c.Error(errs.ErrValidation.WithMessage("avatarInitials must be at most 2 characters"))
 		c.Status(http.StatusBadRequest)
 		return
 	}
@@ -353,9 +360,8 @@ func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64,
 			return err
 		}
 	}
-	// Initials apply the same way — nil means "not sent", so a name-only edit keeps them.
-	if req.AvatarInitials != nil {
-		if err := ac.userRepo.UpdateAvatarInitials(ctx, idUser, avatarInitialsOrNil(req.AvatarInitials)); err != nil {
+	if req.AvatarInitials.IsDefined {
+		if err := ac.userRepo.UpdateAvatarInitials(ctx, idUser, normalizeAvatarInitials(req.AvatarInitials.Value)); err != nil {
 			return err
 		}
 	}
