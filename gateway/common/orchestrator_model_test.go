@@ -78,15 +78,16 @@ func modelTestOrchestrator(t *testing.T, trackerURL string, maxTurnsLimit int) (
 }
 
 func TestParseStageExecutePayload_CarriesModelAndMaxTurns(t *testing.T) {
-	task, err := parseStageExecutePayload(map[string]any{
-		"idRun": float64(42),
-		"payload": map[string]any{
-			"idTask":   float64(123),
-			"stage":    "design",
-			"model":    "ollama/b:8b",
-			"maxTurns": float64(80),
-		},
-	})
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "design",
+			"model": "ollama/b:8b",
+			"maxTurns": 80
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

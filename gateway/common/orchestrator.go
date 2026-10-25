@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/gateway/model"
 	"github.com/rs/zerolog/log"
 )
 
@@ -69,7 +71,7 @@ func (o *Orchestrator) HandleEvent(event WebhookEvent) error {
 }
 
 func (o *Orchestrator) handleStageExecute(event WebhookEvent) error {
-	task, err := parseStageExecutePayload(event.Payload)
+	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		return fmt.Errorf("parsing stage_execute payload: %w", err)
 	}
@@ -94,14 +96,13 @@ func (o *Orchestrator) handleStageExecute(event WebhookEvent) error {
 }
 
 func (o *Orchestrator) handleCancelled(event WebhookEvent) error {
-	idRun := int64Field(event.Payload, "idRun")
-	if idRun == 0 {
+	if event.IdRun == 0 {
 		return fmt.Errorf("cancelled event missing idRun")
 	}
 	o.mu.Lock()
 	var toCancel []*activeTask
 	for _, at := range o.activeTasks {
-		if at.task.IdRun == idRun {
+		if at.task.IdRun == event.IdRun {
 			toCancel = append(toCancel, at)
 		}
 	}
@@ -367,93 +368,74 @@ func (o *Orchestrator) activeRunIDs() map[int64]bool {
 	return out
 }
 
-func parseStageExecutePayload(payload map[string]any) (Task, error) {
-	if payload == nil {
-		return Task{}, fmt.Errorf("nil payload")
-	}
-	task := Task{
-		IdRun:       int64Field(payload, "idRun"),
-		IdIssue:     int64Field(payload, "idIssue"),
-		IdUserAgent: int64Field(payload, "idUserAgent"),
-		IdProject:   int64Field(payload, "idProject"),
-	}
-	if task.IdRun == 0 {
+func parseStageExecutePayload(event WebhookEvent) (Task, error) {
+	if event.IdRun == 0 {
 		return Task{}, fmt.Errorf("missing idRun")
 	}
+	if len(event.Payload) == 0 {
+		return Task{}, fmt.Errorf("empty payload")
+	}
 
-	inner, _ := payload["payload"].(map[string]any)
-	if inner != nil {
-		task.IdTask = int64Field(inner, "idTask")
-		task.Stage, _ = inner["stage"].(string)
-		task.AttemptNo = int(int64Field(inner, "attemptNo"))
-		task.PrBranch = stringField(inner, "prBranch")
-		task.RequestedModel = stringField(inner, "model")
-		task.MaxTurns = int(int64Field(inner, "maxTurns"))
-		if repo, ok := inner["repo"].(map[string]any); ok {
-			task.Repo = AgentRunGitRepo{
-				CloneUrl:       stringField(repo, "cloneUrl"),
-				Host:           stringField(repo, "host"),
-				RepoPath:       stringField(repo, "repoPath"),
-				BaseBranch:     stringField(repo, "baseBranch"),
-				EncryptedToken: stringField(repo, "encryptedToken"),
-			}
+	var payload model.StageExecutePayload
+	if err := json.Unmarshal(event.Payload, &payload); err != nil {
+		return Task{}, fmt.Errorf("decoding stage_execute payload: %w", err)
+	}
+
+	task := Task{
+		IdRun:          event.IdRun,
+		IdIssue:        event.IdIssue,
+		IdUserAgent:    event.IdUserAgent,
+		IdProject:      event.IdProject,
+		IdTask:         payload.IdTask,
+		Stage:          payload.Stage,
+		AttemptNo:      payload.AttemptNo,
+		PrBranch:       payload.PrBranch,
+		RequestedModel: payload.Model,
+		MaxTurns:       payload.MaxTurns,
+	}
+
+	if payload.Repo != nil {
+		task.Repo = AgentRunGitRepo{
+			CloneUrl:       payload.Repo.CloneUrl,
+			Host:           payload.Repo.Host,
+			RepoPath:       payload.Repo.RepoPath,
+			BaseBranch:     payload.Repo.BaseBranch,
+			EncryptedToken: payload.Repo.EncryptedToken,
 		}
+	}
 
-		if ctx, ok := inner["contextBundle"].(map[string]any); ok {
-			if issue, ok := ctx["issue"].(map[string]any); ok {
-				task.IdIssuePublic = int64Field(issue, "idIssuePublic")
-				task.IssueTitle = stringField(issue, "title")
-				task.IssueDesc = stringField(issue, "description")
+	if bundle := payload.ContextBundle; bundle != nil {
+		if bundle.Issue != nil {
+			task.IdIssuePublic = bundle.Issue.IdIssuePublic
+			task.IssueTitle = bundle.Issue.Title
+			task.IssueDesc = bundle.Issue.Description
+		}
+		task.ApprovedDesign = messageBody(bundle.ApprovedDesign)
+		task.ApprovedImplPlan = messageBody(bundle.ApprovedImplPlan)
+		task.RejectedOutput = messageBody(bundle.RejectedOutput)
+		if bundle.ApprovedMockupRef != nil {
+			task.ApprovedMockupRef = *bundle.ApprovedMockupRef
+		}
+		task.IsShortWorkflow = bundle.IsShortWorkflow
+		for _, skill := range decodeEach[model.Skill](bundle.Skills) {
+			if skill.Name == "" || skill.Content == "" {
+				continue
 			}
-			if design, ok := ctx["approvedDesign"].(map[string]any); ok {
-				task.ApprovedDesign = stringField(design, "message")
+			task.Skills = append(task.Skills, Skill(skill))
+		}
+		task.Wiki = parseWiki(bundle.Wiki)
+		task.WikiProposals = parseWikiProposals(bundle.WikiProposals)
+		for _, message := range decodeEach[model.Message](bundle.ReviewThread) {
+			creatorName := ""
+			if message.Creator != nil {
+				creatorName = message.Creator.Name
 			}
-			if plan, ok := ctx["approvedImplPlan"].(map[string]any); ok {
-				task.ApprovedImplPlan = stringField(plan, "message")
-			}
-			if rejected, ok := ctx["rejectedOutput"].(map[string]any); ok {
-				task.RejectedOutput = stringField(rejected, "message")
-			}
-			if ref, ok := ctx["approvedMockupRef"].(string); ok {
-				task.ApprovedMockupRef = ref
-			}
-			task.IsShortWorkflow, _ = ctx["isShortWorkflow"].(bool)
-			if rawSkills, ok := ctx["skills"].([]any); ok {
-				for _, raw := range rawSkills {
-					m, ok := raw.(map[string]any)
-					if !ok {
-						continue
-					}
-					name := stringField(m, "name")
-					content := stringField(m, "content")
-					if name == "" || content == "" {
-						continue
-					}
-					task.Skills = append(task.Skills, Skill{Name: name, Content: content})
-				}
-			}
-			task.Wiki = parseWiki(ctx["wiki"])
-			task.WikiProposals = parseWikiProposals(ctx["wikiProposals"])
-			if thread, ok := ctx["reviewThread"].([]any); ok {
-				for _, raw := range thread {
-					m, ok := raw.(map[string]any)
-					if !ok {
-						continue
-					}
-					creator, _ := m["creator"].(map[string]any)
-					name := ""
-					if creator != nil {
-						name = stringField(creator, "name")
-					}
-					kind := stringField(m, "messageKind")
-					task.Conversation = append(task.Conversation, TaskMessage{
-						CreatorName: name,
-						CreatedAt:   stringField(m, "createdAt"),
-						Kind:        kind,
-						Message:     conversationBody(kind, stringField(m, "message")),
-					})
-				}
-			}
+			task.Conversation = append(task.Conversation, TaskMessage{
+				CreatorName: creatorName,
+				CreatedAt:   message.CreatedAt,
+				Kind:        message.MessageKind,
+				Message:     conversationBody(message.MessageKind, message.Message),
+			})
 		}
 	}
 
@@ -464,6 +446,26 @@ func parseStageExecutePayload(payload map[string]any) (Task, error) {
 		return Task{}, fmt.Errorf("missing stage")
 	}
 	return task, nil
+}
+
+// decodeEach skips elements that do not decode so one malformed entry never fails a stage.
+func decodeEach[T any](rawItems []json.RawMessage) []T {
+	var items []T
+	for _, rawItem := range rawItems {
+		var item T
+		if err := json.Unmarshal(rawItem, &item); err != nil {
+			continue
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+func messageBody(message *model.Message) string {
+	if message == nil {
+		return ""
+	}
+	return message.Message
 }
 
 // conversationBody drops the body of artifacts the prompt already renders in
@@ -479,49 +481,22 @@ func conversationBody(kind, message string) string {
 	}
 }
 
-func parseWiki(raw any) *WikiContext {
-	m, ok := raw.(map[string]any)
-	if !ok {
+func parseWiki(promptContext *model.WikiPromptContext) *WikiContext {
+	if promptContext == nil {
 		return nil
 	}
-	wiki := &WikiContext{IndexMore: int(int64Field(m, "indexMore"))}
-	if pages, ok := m["pages"].([]any); ok {
-		for _, rawPage := range pages {
-			page, ok := rawPage.(map[string]any)
-			if !ok {
-				continue
-			}
-			slug, body := stringField(page, "slug"), stringField(page, "body")
-			if slug == "" || body == "" {
-				continue
-			}
-			wiki.Pages = append(wiki.Pages, WikiPage{
-				Slug:    slug,
-				Title:   stringField(page, "title"),
-				Version: int(int64Field(page, "version")),
-				Reason:  stringField(page, "reason"),
-				Body:    body,
-			})
+	wiki := &WikiContext{IndexMore: promptContext.IndexMore}
+	for _, page := range decodeEach[model.WikiPromptPage](promptContext.Pages) {
+		if page.Slug == "" || page.Body == "" {
+			continue
 		}
+		wiki.Pages = append(wiki.Pages, WikiPage(page))
 	}
-	if index, ok := m["index"].([]any); ok {
-		for _, rawEntry := range index {
-			entry, ok := rawEntry.(map[string]any)
-			if !ok {
-				continue
-			}
-			slug := stringField(entry, "slug")
-			if slug == "" {
-				continue
-			}
-			overLimit, _ := entry["overLimit"].(bool)
-			wiki.Index = append(wiki.Index, WikiIndexEntry{
-				Slug:      slug,
-				Title:     stringField(entry, "title"),
-				Summary:   stringField(entry, "summary"),
-				OverLimit: overLimit,
-			})
+	for _, entry := range decodeEach[model.WikiPromptIndexEntry](promptContext.Index) {
+		if entry.Slug == "" {
+			continue
 		}
+		wiki.Index = append(wiki.Index, WikiIndexEntry(entry))
 	}
 	if len(wiki.Pages) == 0 && len(wiki.Index) == 0 && wiki.IndexMore == 0 {
 		return nil
@@ -529,55 +504,25 @@ func parseWiki(raw any) *WikiContext {
 	return wiki
 }
 
-func parseWikiProposals(raw any) []WikiProposal {
-	list, ok := raw.([]any)
-	if !ok {
-		return nil
-	}
+func parseWikiProposals(rawProposals []json.RawMessage) []WikiProposal {
 	var proposals []WikiProposal
-	for _, rawProposal := range list {
-		proposal, ok := rawProposal.(map[string]any)
-		if !ok {
+	for _, proposal := range decodeEach[model.WikiProposalAgentView](rawProposals) {
+		if proposal.Slug == "" {
 			continue
 		}
-		slug := stringField(proposal, "slug")
-		if slug == "" {
-			continue
+		parent := ""
+		if proposal.Parent != nil {
+			parent = *proposal.Parent
 		}
 		proposals = append(proposals, WikiProposal{
-			Kind:   stringField(proposal, "kind"),
-			Slug:   slug,
-			Title:  stringField(proposal, "title"),
-			Parent: stringField(proposal, "parent"),
-			Reason: stringField(proposal, "reason"),
+			Kind:   proposal.Kind,
+			Slug:   proposal.Slug,
+			Title:  proposal.Title,
+			Parent: parent,
+			Reason: proposal.Reason,
 		})
 	}
 	return proposals
-}
-
-func int64Field(m map[string]any, key string) int64 {
-	v, ok := m[key]
-	if !ok {
-		return 0
-	}
-	switch val := v.(type) {
-	case float64:
-		return int64(val)
-	case int64:
-		return val
-	case int:
-		return int64(val)
-	}
-	return 0
-}
-
-func stringField(m map[string]any, key string) string {
-	v, ok := m[key]
-	if !ok {
-		return ""
-	}
-	s, _ := v.(string)
-	return s
 }
 
 // branchOfWorktree returns the branch checked out in a worktree, or "" if

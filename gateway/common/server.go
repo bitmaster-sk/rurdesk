@@ -18,10 +18,17 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Mirrors api/internal/agent.WebhookEvent.
 type WebhookEvent struct {
-	EventId string
-	Type    string
-	Payload map[string]any
+	EventId     string          `json:"-"`
+	Type        string          `json:"-"`
+	IdRun       int64           `json:"idRun"`
+	IdProject   int64           `json:"idProject"`
+	IdIssue     int64           `json:"idIssue"`
+	IdUserAgent int64           `json:"idUserAgent"`
+	Event       string          `json:"event"`
+	Sequence    int64           `json:"-"`
+	Payload     json.RawMessage `json:"payload"`
 }
 
 type Server struct {
@@ -124,9 +131,9 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var payload map[string]any
+	var event WebhookEvent
 	if len(body) > 0 {
-		if err := json.Unmarshal(body, &payload); err != nil {
+		if err := json.Unmarshal(body, &event); err != nil {
 			http.Error(w, "invalid JSON body", http.StatusBadRequest)
 			return
 		}
@@ -137,17 +144,13 @@ func (s *Server) handleEvent(w http.ResponseWriter, r *http.Request) {
 	// silently turn every event into a no-op.
 	eventType := r.Header.Get("X-Tracker-Event-Type")
 	if eventType == "" {
-		if bodyType, ok := payload["event"].(string); ok {
-			eventType = bodyType
-		}
+		eventType = event.Event
 	}
 	log.Info().Str("eventId", eventID).Str("type", eventType).Int64("sequence", seq).Msg("event accepted")
 
-	event := WebhookEvent{
-		EventId: eventID,
-		Type:    eventType,
-		Payload: payload,
-	}
+	event.EventId = eventID
+	event.Type = eventType
+	event.Sequence = seq
 
 	if err := s.orchestrator.HandleEvent(event); err != nil {
 		log.Error().Err(err).Str("eventId", eventID).Msg("orchestrator failed to handle event")

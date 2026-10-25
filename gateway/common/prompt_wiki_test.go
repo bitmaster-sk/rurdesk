@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -137,17 +138,22 @@ func TestParseStageExecute_MissingNullOrEmptyWikiIsNil(t *testing.T) {
 	}
 }
 
-func stagePayload(bundle map[string]any) map[string]any {
-	return map[string]any{
-		"idRun":       float64(42),
-		"idIssue":     float64(7),
-		"idProject":   float64(1),
-		"idUserAgent": float64(3),
+func stagePayload(bundle map[string]any) WebhookEvent {
+	body := map[string]any{
+		"idRun":       42,
+		"idIssue":     7,
+		"idProject":   1,
+		"idUserAgent": 3,
 		"payload": map[string]any{
-			"idTask":        float64(100),
+			"idTask":        100,
 			"stage":         StageDesign,
-			"attemptNo":     float64(1),
+			"attemptNo":     1,
 			"contextBundle": bundle,
 		},
 	}
+	data, _ := json.Marshal(body)
+	var event WebhookEvent
+	_ = json.Unmarshal(data, &event)
+	event.Type = "stage_execute"
+	return event
 }
