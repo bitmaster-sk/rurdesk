@@ -273,7 +273,7 @@ export class IssueKanbanService {
     ): 'moved' | 'updated' | 'missing' {
         if (!this.ctx) return 'missing';
 
-        // A restrictive filter (state/severity/assignee) can't be re-evaluated
+        // A restrictive filter (state/severity/assignee/tag) can't be re-evaluated
         // client-side against the payload — fall back to a server reload so a
         // card edited out of the filter doesn't linger on the board.
         if (this.hasRestrictiveFilter(this.ctx.filter)) return 'missing';
@@ -291,7 +291,8 @@ export class IssueKanbanService {
         return (
             (!filter.stateUnset && (filter.idsState?.length ?? 0) > 0) ||
             (!filter.severityUnset && (filter.idsSeverity?.length ?? 0) > 0) ||
-            (!filter.assignedToUnset && (filter.idsAssignedTo?.length ?? 0) > 0)
+            (!filter.assignedToUnset && (filter.idsAssignedTo?.length ?? 0) > 0) ||
+            (filter.idsTag?.length ?? 0) > 0
         );
     }
 

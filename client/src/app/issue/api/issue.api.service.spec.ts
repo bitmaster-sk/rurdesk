@@ -2,14 +2,20 @@
 import { HttpClient, type HttpParams } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { IssueApi } from './issue.api.service';
 import { IssuesFilter } from '../components/filter/issue-filter.entity';
 import { Issue } from '../model/issue.model';
 import { IssuesPage } from '../model/issues-page.model';
 
-function build(getReturn: unknown) {
+function build(getReturn: unknown, knownTagIds: Set<number> | null = null) {
     const get = vi.fn().mockReturnValue(of(getReturn));
-    const injector = Injector.create({ providers: [{ provide: HttpClient, useValue: { get } }] });
+    const injector = Injector.create({
+        providers: [
+            { provide: HttpClient, useValue: { get } },
+            { provide: TagStore, useValue: { knownTagIds: () => knownTagIds } }
+        ]
+    });
     const service = runInInjectionContext(injector, () => new IssueApi());
     return { service, get };
 }
@@ -130,6 +136,27 @@ describe('IssueApi issue-type params', () => {
     it('always sends the unset flag', () => {
         expect(call({}).get('issueTypeUnset')).toBe('false');
         expect(call({ issueTypeUnset: true }).get('issueTypeUnset')).toBe('true');
+    });
+});
+
+describe('IssueApi tag params', () => {
+    const idsTagSent = (knownTagIds: Set<number> | null, idsTag: number[]) => {
+        const { service, get } = build(page([]), knownTagIds);
+        service.load$({ ...baseFilter, idsTag }).subscribe();
+        const [, options] = get.mock.calls[0] as [string, { params: HttpParams }];
+        return options.params.get('idsTag');
+    };
+
+    it('leaves out a tag that no longer exists', () => {
+        expect(idsTagSent(new Set([3]), [3, 9])).toBe('3');
+    });
+
+    it('drops the tag filter when none of its tags exist any more', () => {
+        expect(idsTagSent(new Set([3]), [9])).toBeNull();
+    });
+
+    it('sends the tags unchanged before the tag list has loaded', () => {
+        expect(idsTagSent(null, [3, 9])).toBe('3,9');
     });
 });
 

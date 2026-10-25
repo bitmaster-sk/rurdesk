@@ -257,6 +257,10 @@ func (acl *AclService) CanManageCustomField(ctx context.Context, idUser, idProje
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
 }
 
+func (acl *AclService) CanManageTag(ctx context.Context, idUser, idProject int64) bool {
+	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)
+}
+
 // CanManageSprint gates sprint create/close — a project-config write, same as states.
 func (acl *AclService) CanManageSprint(ctx context.Context, idUser, idProject int64) bool {
 	return acl.atLeast(ctx, idUser, idProject, model.RoleOwner)

@@ -1,0 +1,15 @@
+.tag-color-picker {
+    &__swatch {
+        width: 1.25rem;
+        height: 1.25rem;
+        padding: 0;
+        border: 2px solid var(--ui-surface-0);
+        border-radius: 50%;
+        box-shadow: 0 0 0 1px var(--ui-color-border);
+        cursor: pointer;
+
+        &--selected {
+            box-shadow: 0 0 0 2px var(--ui-color-text);
+        }
+    }
+}

@@ -37,6 +37,12 @@
         {{ tile().title }}
     </a>
 
+    @if (tile().idsTag?.length) {
+        <div class="flex overflow-hidden pb-1">
+            <app-issue-tags [idsTag]="tile().idsTag" />
+        </div>
+    }
+
     <!-- Row 3: type + state badges + assignee avatar -->
     <div class="flex items-center justify-between">
         <span class="flex items-center gap-1">

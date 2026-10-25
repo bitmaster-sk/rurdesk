@@ -47,4 +47,5 @@ export interface Issue {
     points?: number | null;
     carryoverCount?: number;
     customFields?: Record<string, string | number | boolean | null>;
+    idsTag?: number[];
 }

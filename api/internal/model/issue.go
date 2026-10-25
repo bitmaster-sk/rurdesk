@@ -28,6 +28,7 @@ type Issue struct {
 	IdSprint         *int64         `json:"idSprint"                  db:"id_sprint"`
 	Points           *int           `json:"points"                    db:"points"`
 	CarryoverCount   int            `json:"carryoverCount"            db:"carryover_count"`
+	IdsTag           []int64        `json:"idsTag"                    db:"ids_tag"`
 	CustomFields     map[string]any `json:"customFields,omitempty" db:"-"`
 }
 
@@ -43,6 +44,8 @@ type LoadIssuesFilter struct {
 	StateUnset          bool
 	IdsAssignedTo       []int64
 	AssignedToUnset     bool
+	IdsTag              []int64
+	TagUnset            bool
 	IdSprint            *int64 // filter to a single sprint (kanban sprint scope)
 	SprintUnset         bool   // when true, filter to id_sprint IS NULL (the Backlog tab)
 	Title               string

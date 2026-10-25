@@ -1,0 +1,68 @@
+<table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+    <thead>
+        <tr>
+            <th scope="col" style="width: 2rem"></th>
+            <th scope="col">{{ 'NAME' | translate }}</th>
+            <th scope="col">{{ 'TAG.ISSUE_COUNT' | translate }}</th>
+            <th scope="col" class="action-column"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (tag of tags(); track tag.idTag) {
+            <tr
+                data-testid="tag-row"
+                cdkDrag
+                (pointerdown)="onRowPointerDown($event)"
+                (pointerup)="onRowPointerUp($event)"
+                (cdkDragEnded)="onDragEnded($event)"
+            >
+                <td>
+                    <tabler-icon
+                        icon="grip-vertical"
+                        [size]="16"
+                        cdkDragHandle
+                        class="drag-handle"
+                    />
+                </td>
+                <td>
+                    <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                </td>
+                <td class="ui-color-text-muted">{{ tag.issueCount }}</td>
+                <td class="action-column">
+                    <ui-button
+                        variant="text"
+                        severity="info"
+                        size="small"
+                        data-testid="tag-edit"
+                        (click)="onEditTag(tag)"
+                    >
+                        <tabler-icon icon="pencil" [size]="16" />
+                    </ui-button>
+                    <ui-button
+                        variant="text"
+                        severity="danger"
+                        size="small"
+                        data-testid="tag-delete"
+                        (click)="onDeleteTag(tag)"
+                    >
+                        <tabler-icon icon="trash" [size]="16" />
+                    </ui-button>
+                </td>
+            </tr>
+        } @empty {
+            <tr>
+                <td colspan="4" class="ui-color-text-muted text-center">
+                    {{ 'TAG.EMPTY' | translate }}
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+<app-delete-migration-dialog
+    [(visible)]="isDeleteDialogVisible"
+    [entityLabel]="'TAG.SINGULAR' | translate"
+    [usageItems]="deleteUsageItems()"
+    [hasUsage]="hasDeleteUsage()"
+    [isLoading]="isDeleting()"
+    (confirmed)="onConfirmDelete()"
+/>

@@ -1,0 +1,17 @@
+<div class="tag-color-picker flex flex-wrap gap-1" role="radiogroup" [attr.aria-label]="label()">
+    @for (color of colors(); track color) {
+        <button
+            type="button"
+            role="radio"
+            class="tag-color-picker__swatch"
+            data-testid="tag-color-swatch"
+            [class.tag-color-picker__swatch--selected]="value() === color"
+            [attr.aria-checked]="value() === color"
+            [attr.aria-label]="color"
+            [style.background]="color"
+            [disabled]="isDisabled()"
+            (mousedown)="$event.preventDefault()"
+            (click)="onPick(color)"
+        ></button>
+    }
+</div>

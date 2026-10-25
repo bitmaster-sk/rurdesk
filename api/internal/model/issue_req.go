@@ -27,6 +27,7 @@ type CreateIssueReq struct {
 	ScheduledAt    *time.Time                 `json:"scheduledAt"`
 	IdempotencyKey *string                    `json:"-"` // populated from Idempotency-Key header only
 	CustomFields   map[string]json.RawMessage `json:"customFields"`
+	IdsTag         []int64                    `json:"idsTag"`
 }
 
 type EditIssueReq struct {
@@ -43,6 +44,7 @@ type EditIssueReq struct {
 	ScheduledAt      Optional[time.Time]        `json:"scheduledAt,omitzero"`
 	IdGitIntegration Optional[int64]            `json:"idGitIntegration,omitzero"`
 	MrId             Optional[string]           `json:"mrId,omitzero"`
+	IdsTag           Optional[[]int64]          `json:"idsTag,omitzero"`
 	CustomFields     map[string]json.RawMessage `json:"customFields"`
 }
 
@@ -76,6 +78,8 @@ type BulkEditIssueEntryReq struct {
 	IdSeverity     *int64     `json:"idSeverity"`
 	IdIssueType    *int64     `json:"idIssueType"`
 	IdUserAssigned *int64     `json:"idUserAssigned"` // explicit null clears assignment
+	AddIdsTag      []int64    `json:"addIdsTag"`
+	RemoveIdsTag   []int64    `json:"removeIdsTag"`
 }
 
 type BulkEditIssuesReq struct {
@@ -94,6 +98,8 @@ type LoadIssuesReq struct {
 	StateUnset          bool      `json:"stateUnset"`
 	IdsAssignedTo       []int64   `json:"idsAssignedTo"`
 	AssignedToUnset     bool      `json:"assignedToUnset"`
+	IdsTag              []int64   `json:"idsTag"`
+	TagUnset            bool      `json:"tagUnset"`
 	Title               string    `json:"title"`
 	CreateAtFrom        time.Time `json:"createAtFrom"`
 	CreateAtTo          time.Time `json:"createAtTo"`
@@ -122,6 +128,8 @@ func NewLoadIssuesFilter(dto *LoadIssuesReq) *LoadIssuesFilter {
 		StateUnset:          dto.StateUnset,
 		IdsAssignedTo:       dto.IdsAssignedTo,
 		AssignedToUnset:     dto.AssignedToUnset,
+		IdsTag:              dto.IdsTag,
+		TagUnset:            dto.TagUnset,
 		Title:               dto.Title,
 		CreateAtFrom:        dto.CreateAtFrom,
 		CreateAtTo:          dto.CreateAtTo,

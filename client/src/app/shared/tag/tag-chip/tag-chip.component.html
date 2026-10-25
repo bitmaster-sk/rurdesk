@@ -1,0 +1,14 @@
+<span class="tag-chip" [class.tag-chip--count]="!color()" [style.--tag-color]="color()">
+    <span class="tag-chip__name">{{ name() }}</span>
+    @if (isRemovable()) {
+        <button
+            type="button"
+            class="tag-chip__remove"
+            [attr.aria-label]="removeLabel()"
+            (mousedown)="$event.preventDefault()"
+            (click)="onRemove($event)"
+        >
+            <tabler-icon icon="x" [size]="12" />
+        </button>
+    }
+</span>

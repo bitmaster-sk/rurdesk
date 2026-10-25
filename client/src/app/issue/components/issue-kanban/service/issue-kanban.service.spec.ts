@@ -89,7 +89,12 @@ function buildGroups(issues: Issue[], groupBy: string) {
     }));
 }
 
-function buildService(issues: Issue[], states: IssueState[], usersArr: User[]): IssueKanbanService {
+function buildService(
+    issues: Issue[],
+    states: IssueState[],
+    usersArr: User[],
+    filter: Partial<IssuesFilter> = { idProject: 1 }
+): IssueKanbanService {
     const statesMap = new Map(states.map(s => [s.idState, s]));
     const usersMap = new Map(usersArr.map(u => [u.idUser, u]));
     const sevsMap = new Map<number, IssueSeverity>([[1, sev]]);
@@ -108,8 +113,8 @@ function buildService(issues: Issue[], states: IssueState[], usersArr: User[]): 
                 provide: IssueFilterStore,
                 useValue: {
                     clear: () => {},
-                    actualFilter$: of({ idProject: 1 }),
-                    actualFilterChange$: of({ filter: { idProject: 1 }, refresh: false })
+                    actualFilter$: of(filter),
+                    actualFilterChange$: of({ filter, refresh: false })
                 }
             },
             { provide: SeverityStore, useValue: { severitiesMapByProject$: () => of(sevsMap) } },
@@ -259,6 +264,24 @@ describe('IssueKanbanService — applyRemoteIssue (live updates)', () => {
         const columns = firstEmit<KanbanColumn[]>(svc.columns$);
         expect(columns.find(c => c.state.idState === 1)!.tiles).toHaveLength(0);
         expect(columns.find(c => c.state.idState === 1)!.total).toBe(0);
+    });
+
+    it('a board filtered by tag reloads instead of merging the change', () => {
+        const svc = buildService(
+            [makeIssue({ idIssue: 1, idState: 1 })],
+            [stateA, stateB],
+            [alice],
+            {
+                idProject: 1,
+                idsTag: [5],
+                tagUnset: true
+            }
+        );
+        svc.columns$.subscribe();
+
+        expect(svc.applyRemoteIssue(makeIssue({ idIssue: 1, idState: 1 }), null, 'columns')).toBe(
+            'missing'
+        );
     });
 
     it('unknown issue reports missing so the caller reloads', () => {

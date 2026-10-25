@@ -933,10 +933,17 @@
         "TIME.TRACKER": "Time tracker",
         "TIME.TRACKED": "Tracked time",
         "TIME.ESTIMATED": "Estimated time",
-        "DISPLAY.UNSET.SEVERITIES": "Display tasks with unset severities",
-        "DISPLAY.UNSET.ISSUE_TYPES": "Display tasks with unset types",
-        "DISPLAY.UNSET.STATES": "Display tasks with unset states",
-        "DISPLAY.UNSET.ASSIGNED.TO": "Display tasks with unassigned user",
+        "DISPLAY": {
+            "UNSET": {
+                "SEVERITIES": "Display tasks with unset severities",
+                "ISSUE_TYPES": "Display tasks with unset types",
+                "STATES": "Display tasks with unset states",
+                "ASSIGNED": {
+                    "TO": "Display tasks with unassigned user"
+                },
+                "TAGS": "Display tasks without tags"
+            }
+        },
         "PINNED": "Pinned tasks",
         "COMMENTS": "Comments",
         "PIN": {
@@ -1169,6 +1176,8 @@
         "custom_field_required": "A required field cannot be cleared.",
         "custom_field_immutable": "The key and type of a field cannot be changed. Create a new field instead.",
         "custom_field_key_exists": "A field with this key already exists in the project.",
+        "tag_name_exists": "A tag with this name already exists in the project.",
+        "tag_not_in_project": "The tag does not belong to this project.",
         "invalid_custom_field_option_migration_target": "The migration target must be a different option of the same field.",
         "bad_request": "Invalid request. Please check your input.",
         "validation": "Some fields are invalid. Please check your input.",
@@ -1601,6 +1610,21 @@
             "DATE": "Date",
             "SELECT": "Select",
             "BOOLEAN": "Yes/No"
+        }
+    },
+    "TAG": {
+        "SINGULAR": "Tag",
+        "PLURAL": "Tags",
+        "NEW": "New tag",
+        "EDIT": "Edit tag",
+        "COLOR": "Color",
+        "ISSUE_COUNT": "Tasks",
+        "EMPTY": "No tags yet",
+        "REMOVE": "Remove tag {{name}}",
+        "DELETE_USAGE": "The tag is on {{count}} tasks. It will be removed from them; the tasks stay.",
+        "INPUT": {
+            "CREATE": "Create",
+            "OWNER_ONLY": "Only project owners can create new tags."
         }
     },
     "USER_API_KEY": {

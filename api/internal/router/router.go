@@ -31,6 +31,7 @@ func New(
 	sevCtrl *controller.SeverityController,
 	itCtrl *controller.IssueTypeController,
 	cfCtrl *controller.CustomFieldController,
+	tagCtrl *controller.TagController,
 	wikiCtrl *controller.WikiController,
 	wikiAgentCtrl *controller.WikiAgentController,
 	wikiProposalCtrl *controller.WikiProposalController,
@@ -239,6 +240,11 @@ func New(
 	pri.PATCH("/issue-type/:idIssueType", itCtrl.EditIssueType)
 	pri.DELETE("/issue-type/:idIssueType/project/:idProject", itCtrl.DeleteIssueType)
 	pri.GET("/issue-type/:idIssueType/project/:idProject/usage", itCtrl.GetIssueTypeUsage)
+
+	pri.GET("/tag", tagCtrl.GetTags)
+	pri.POST("/tag", tagCtrl.CreateTag)
+	pri.PATCH("/tag/:idTag", tagCtrl.EditTag)
+	pri.DELETE("/tag/:idTag/project/:idProject", tagCtrl.DeleteTag)
 
 	pri.GET("/custom-field", cfCtrl.GetCustomFields)
 	pri.POST("/custom-field", cfCtrl.CreateCustomField)

@@ -11,6 +11,7 @@ import { ProjectWikiSettingsComponent } from './components/project-wiki-settings
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueTypeModule } from '../issue-type/issue-type.module';
+import { TagModule } from '../tag/tag.module';
 import { CustomFieldModule } from '../custom-field/custom-field.module';
 import { BaseChartDirective } from 'ng2-charts';
 import { PinModule } from '../pin/pin.module';
@@ -57,6 +58,7 @@ import {
     IconHistory,
     IconInfoCircle,
     IconCategory,
+    IconTag,
     IconListDetails,
     IconPlugConnected
 } from '@tabler/icons-angular';
@@ -102,6 +104,7 @@ import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
         StateModule,
         SeverityModule,
         IssueTypeModule,
+        TagModule,
         CustomFieldModule,
         BaseChartDirective,
         PinModule,
@@ -136,6 +139,7 @@ import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
             IconHistory,
             IconInfoCircle,
             IconCategory,
+            IconTag,
             IconListDetails,
             IconPlugConnected
         })

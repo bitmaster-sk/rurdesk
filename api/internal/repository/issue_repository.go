@@ -28,6 +28,13 @@ var issueSortMap = map[string]string{
 	"qualityScore":   "iq.score",
 }
 
+const issueTagIdsSelect = `COALESCE((
+	SELECT array_agg(itg.id_tag ORDER BY tg.order_rank, tg.id_tag)
+	FROM issues.issue_tag itg
+	INNER JOIN issues.tag tg ON tg.id_tag = itg.id_tag
+	WHERE itg.id_issue = iss.id_issue
+), '{}') AS ids_tag`
+
 type LoadIssueFilter struct {
 	IdProject     *int64
 	IdIssuePublic *int64
@@ -63,7 +70,7 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, ` + issueTagIdsSelect + `,
 			(SELECT count(*) FROM issues.issue_relation r
 			   WHERE r.id_issue_from = iss.id_issue OR r.id_issue_to = iss.id_issue) AS relation_count
 		FROM issues.issue iss
@@ -170,6 +177,17 @@ func (r *IssueRepository) appendIssueFilters(sb *strings.Builder, args *[]any, i
 			fmt.Fprintf(sb, "AND iss.assigned_to = ANY($%d) ", *idx)
 		}
 		*args = append(*args, f.IdsAssignedTo)
+		(*idx)++
+	}
+
+	if len(f.IdsTag) > 0 {
+		tagMatch := fmt.Sprintf("EXISTS (SELECT 1 FROM issues.issue_tag itg WHERE itg.id_issue = iss.id_issue AND itg.id_tag = ANY($%d))", *idx)
+		if f.TagUnset {
+			fmt.Fprintf(sb, "AND (%s OR NOT EXISTS (SELECT 1 FROM issues.issue_tag itg WHERE itg.id_issue = iss.id_issue)) ", tagMatch)
+		} else {
+			fmt.Fprintf(sb, "AND %s ", tagMatch)
+		}
+		*args = append(*args, f.IdsTag)
 		(*idx)++
 	}
 
@@ -316,7 +334,7 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 		SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`,
 			(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
 			%s AS __sort_val
 		FROM issues.issue iss
@@ -466,7 +484,7 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 				iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 				iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count,
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`,
 				(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
 				%s AS __sort_val,
 				ROW_NUMBER() OVER (PARTITION BY %s ORDER BY %s) AS __rn,
@@ -563,7 +581,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
 				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
 			FROM issues.issue iss
 			LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 			WHERE iss.id_project = $1 AND iss.id_issue_public = $2
@@ -573,7 +591,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
 				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
 			FROM issues.issue iss
 			LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 			WHERE iss.id_issue = $1
@@ -663,7 +681,7 @@ func (r *IssueRepository) FindByIdempotencyKey(ctx context.Context, idUser int64
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_sprint, iss.points, iss.carryover_count
+			iq.score AS quality_score, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
 		FROM issues.issue iss
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 		WHERE iss.create_by = $1 AND iss.idempotency_key = $2
@@ -873,7 +891,7 @@ func (r *IssueRepository) LoadIssuesByIds(ctx context.Context, f *model.LoadIssu
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
 		FROM issues.issue iss
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 		WHERE iss.id_issue = ANY($1)
@@ -1019,8 +1037,62 @@ func (r *IssueRepository) BulkUpdateIssues(
 		return nil, fmt.Errorf("bulk updating issues: %w", err)
 	}
 
+	for _, entry := range entries {
+		idIssue := issueMap[entry.IdIssuePublic].IdIssue
+		if err := r.AddIssueTags(ctx, []int64{idIssue}, entry.AddIdsTag); err != nil {
+			return nil, err
+		}
+		if err := r.RemoveIssueTags(ctx, []int64{idIssue}, entry.RemoveIdsTag); err != nil {
+			return nil, err
+		}
+	}
+
 	return r.LoadIssues(ctx, &model.LoadIssuesFilter{
 		IdProject:      idProject,
 		IdsIssuePublic: publicIds,
 	})
+}
+
+func (r *IssueRepository) SetIssueTags(ctx context.Context, idIssue int64, idsTag []int64) error {
+	if idsTag == nil {
+		idsTag = []int64{}
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		DELETE FROM issues.issue_tag WHERE id_issue = $1 AND NOT (id_tag = ANY($2))
+	`, idIssue, idsTag)
+	if err != nil {
+		return fmt.Errorf("clearing tags of issue %d: %w", idIssue, err)
+	}
+	return r.AddIssueTags(ctx, []int64{idIssue}, idsTag)
+}
+
+func (r *IssueRepository) AddIssueTags(ctx context.Context, idsIssue, idsTag []int64) error {
+	if len(idsIssue) == 0 || len(idsTag) == 0 {
+		return nil
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO issues.issue_tag (id_issue, id_tag)
+		SELECT issue_id, tag_id FROM unnest($1::bigint[]) AS issue_id CROSS JOIN unnest($2::bigint[]) AS tag_id
+		ON CONFLICT DO NOTHING
+	`, idsIssue, idsTag)
+	if err != nil {
+		return fmt.Errorf("adding issue tags: %w", err)
+	}
+	return nil
+}
+
+func (r *IssueRepository) RemoveIssueTags(ctx context.Context, idsIssue, idsTag []int64) error {
+	if len(idsIssue) == 0 || len(idsTag) == 0 {
+		return nil
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		DELETE FROM issues.issue_tag WHERE id_issue = ANY($1) AND id_tag = ANY($2)
+	`, idsIssue, idsTag)
+	if err != nil {
+		return fmt.Errorf("removing issue tags: %w", err)
+	}
+	return nil
 }

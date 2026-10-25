@@ -10,6 +10,7 @@ export enum NoticeSubject {
     Participant = 'issue_participant',
     MrStatus = 'mr_status',
     CustomField = 'custom_field',
+    Tag = 'tag',
     WikiPage = 'wiki_page',
     WikiProposal = 'wiki_proposal'
 }
