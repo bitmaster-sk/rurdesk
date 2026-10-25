@@ -26,6 +26,7 @@ type IssueFormValues = Pick<
     | 'estimated'
     | 'points'
     | 'scheduledAt'
+    | 'idsTag'
 >;
 
 interface IssueInfoForm {
@@ -41,6 +42,7 @@ interface IssueInfoForm {
     estimated: FormControl<string | null>;
     points: FormControl<number | null>;
     scheduledAt: FormControl<Date | null>;
+    idsTag: FormControl<number[]>;
 }
 
 import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
@@ -83,6 +85,9 @@ import { GitHostUrl } from 'src/app/issue/util/git-host-file-url';
 import { DiffFileLinkBuilder } from 'src/app/shared/components/diff-viewer/diff-viewer.component';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
+import { CreateTagReq } from 'src/app/tag/model/tag.model';
+import { TagStore } from 'src/app/tag/store/tag.store';
+import { TagColorService } from 'src/app/tag/service/tag-color.service';
 
 @Component({
     selector: 'app-issue-info',
@@ -115,6 +120,8 @@ export class IssueInfoComponent implements OnInit {
     private readonly stateStore = inject(StateStore);
     private readonly severityStore = inject(SeverityStore);
     private readonly issueTypeStore = inject(IssueTypeStore);
+    private readonly tagStore = inject(TagStore);
+    protected readonly tagColor = inject(TagColorService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly projectStore = inject(ProjectStore);
     private readonly mrDiffApi = inject(MrDiffApi);
@@ -227,6 +234,21 @@ export class IssueInfoComponent implements OnInit {
         ),
         { initialValue: [] }
     );
+
+    public readonly tags = toSignal(
+        this.projectStore.project$.pipe(
+            switchMap(project => this.tagStore.tagsByProject$(project.idProject))
+        ),
+        { initialValue: [] }
+    );
+
+    protected readonly idProjectOfTags = toSignal(
+        this.projectStore.project$.pipe(map(project => project.idProject))
+    );
+
+    protected readonly canCreateTag = computed(() => this.aclStore.canManageTag());
+
+    protected readonly defaultTagColor = computed(() => this.tagColor.nextColor(this.tags()));
 
     public readonly users = toSignal(this.projectMemberStore.users$, { initialValue: [] });
 
@@ -512,6 +534,13 @@ export class IssueInfoComponent implements OnInit {
         this.customFieldValues.set(values);
     }
 
+    protected onCreateTag(request: CreateTagReq): void {
+        this.tagStore.insert$(request).subscribe(created => {
+            const control = this.form.controls.idsTag;
+            control.setValue([...control.value, created.idTag]);
+        });
+    }
+
     protected onCustomFieldsMissingRequired(isMissing: boolean): void {
         this.isMissingRequiredCustomField.set(isMissing);
     }
@@ -689,7 +718,8 @@ export class IssueInfoComponent implements OnInit {
                 validators: [Validators.min(0)],
                 updateOn
             }),
-            scheduledAt: this.fb.control<Date | null>(issue?.scheduledAt ?? null)
+            scheduledAt: this.fb.control<Date | null>(issue?.scheduledAt ?? null),
+            idsTag: this.fb.nonNullable.control<number[]>(issue?.idsTag ?? [])
         });
     }
 
@@ -719,7 +749,8 @@ export class IssueInfoComponent implements OnInit {
                 DurationParser.stringToDuration(v.estimated ?? '')
             ),
             points: v.points ?? null,
-            scheduledAt: v.scheduledAt
+            scheduledAt: v.scheduledAt,
+            idsTag: v.idsTag.filter(idTag => !this.tagStore.isDeleted(idTag))
         };
     }
 }

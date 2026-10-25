@@ -10,6 +10,7 @@ import { IssueParticipantModel } from 'src/app/issue/model/issue-participant.mod
 import { NoticeSubject } from './constant/notice-subject.enum';
 import { NoticeAction } from './constant/notice-action.enum';
 import { CustomField } from 'src/app/custom-field/model/custom-field.model';
+import { Tag } from 'src/app/tag/model/tag.model';
 import { MrStatusNotice } from './model/mr-status-notice.model';
 import { Notice } from './model/notice.model';
 import { WikiSavedNotice } from 'src/app/wiki/model/wiki-page.model';
@@ -63,6 +64,9 @@ export class NoticeService {
 
     private customFieldSubject = new Subject<Notice<CustomField>>();
     public customField$: Observable<Notice<CustomField>> = this.customFieldSubject.asObservable();
+
+    private tagSubject = new Subject<Notice<Tag>>();
+    public tag$: Observable<Notice<Tag>> = this.tagSubject.asObservable();
 
     private wikiPageSubject = new Subject<Notice<WikiSavedNotice>>();
     public wikiPage$: Observable<Notice<WikiSavedNotice>> = this.wikiPageSubject.asObservable();
@@ -195,6 +199,9 @@ export class NoticeService {
                 break;
             case NoticeSubject.CustomField:
                 this.customFieldSubject.next(notice as Notice<CustomField>);
+                break;
+            case NoticeSubject.Tag:
+                this.tagSubject.next(notice as Notice<Tag>);
                 break;
             default:
                 console.warn('unsupported notice');

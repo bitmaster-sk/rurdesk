@@ -31,6 +31,7 @@ const (
 	SubjectIssueParticipant NoticeSubject = "issue_participant"
 	SubjectMrStatus         NoticeSubject = "mr_status"
 	SubjectCustomField      NoticeSubject = "custom_field"
+	SubjectTag              NoticeSubject = "tag"
 	SubjectWikiPage         NoticeSubject = "wiki_page"
 	SubjectWikiProposal     NoticeSubject = "wiki_proposal"
 )

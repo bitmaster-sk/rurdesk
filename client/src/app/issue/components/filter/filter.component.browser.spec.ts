@@ -6,15 +6,27 @@ import { ProjectMemberStore } from '../../../project/project-member.store';
 import { ProjectStore } from '../../../project/project.store';
 import { SeverityStore } from '../../../severity/store/severity.store';
 import { StateStore } from '../../../state/store/state.store';
+import { Tag } from '../../../tag/model/tag.model';
+import { TagStore } from '../../../tag/store/tag.store';
 import { FilterComponent } from './filter.component';
 import { IssuesFilter, IssuesFilterParams } from './issue-filter.entity';
 import { IssueFilterStore } from './issue-filter.store';
 
 // Both directions of the value ↔ params mapping are hand-written — the spot where
 // a filter silently goes missing.
+const tag = (idTag: number): Tag => ({
+    idTag,
+    idProject: 1,
+    name: `tag-${idTag}`,
+    color: '#16a34a',
+    orderRank: idTag,
+    issueCount: 0
+});
+
 describe('FilterComponent — date modes (browser)', () => {
     let setFilter: ReturnType<typeof vi.fn>;
     let initialFilter$: BehaviorSubject<IssuesFilter>;
+    let tags$: BehaviorSubject<Tag[]>;
 
     const filter = (extra: Partial<IssuesFilterParams> = {}): IssuesFilter => ({
         idProject: 1,
@@ -26,6 +38,7 @@ describe('FilterComponent — date modes (browser)', () => {
     beforeEach(async () => {
         setFilter = vi.fn();
         initialFilter$ = new BehaviorSubject<IssuesFilter>(filter());
+        tags$ = new BehaviorSubject([3, 4, 5].map(tag));
 
         await TestBed.configureTestingModule({
             imports: [ReactiveFormsModule],
@@ -39,6 +52,12 @@ describe('FilterComponent — date modes (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: {
+                        tagsByProject$: () => tags$
+                    }
+                },
                 { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
@@ -138,6 +157,46 @@ describe('FilterComponent — date modes (browser)', () => {
         expect(presetValues(component).filter(value => value === '7d')).toHaveLength(1);
     });
 
+    it('narrows to the selected tags', () => {
+        const component = render();
+        component.form.patchValue({ idsTag: [3, 4] });
+
+        expect(lastFilter().idsTag).toEqual([3, 4]);
+    });
+
+    it('widens the tag filter to untagged tasks when asked', () => {
+        const component = render();
+        component.form.patchValue({ idsTag: [3], tagUnset: true });
+
+        expect(lastFilter().tagUnset).toBe(true);
+    });
+
+    it('hydrates the tag selection from a saved filter', () => {
+        initialFilter$.next(filter({ idsTag: [5], tagUnset: true }));
+        const component = render();
+
+        expect(component.form.get('idsTag')!.value).toEqual([5]);
+        expect(component.form.get('tagUnset')!.value).toBe(true);
+    });
+
+    it('drops a tag from a saved filter when the tag no longer exists', () => {
+        initialFilter$.next(filter({ idsTag: [5, 99] }));
+        const component = render();
+
+        expect(component.form.get('idsTag')!.value).toEqual([5]);
+        expect(lastFilter().idsTag).toEqual([5]);
+    });
+
+    it('clears the tag filter when its only tag is deleted', () => {
+        const component = render();
+        component.form.patchValue({ idsTag: [3] });
+
+        tags$.next([4, 5].map(tag));
+
+        expect(component.form.get('idsTag')!.value).toBeNull();
+        expect(lastFilter().idsTag).toBeUndefined();
+    });
+
     it('hydration does not push a filter back into the store', () => {
         initialFilter$.next(filter({ updateAtWithin: '30d' }));
         render();
@@ -174,6 +233,7 @@ describe('FilterComponent — late mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: TagStore, useValue: { tagsByProject$: () => of([]) } },
                 { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
@@ -217,6 +277,7 @@ describe('FilterComponent — rehydration after mount (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: TagStore, useValue: { tagsByProject$: () => of([]) } },
                 { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })
@@ -301,6 +362,7 @@ describe('FilterComponent — title debounce (browser)', () => {
                 { provide: ProjectMemberStore, useValue: { users$: of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: TagStore, useValue: { tagsByProject$: () => of([]) } },
                 { provide: I18nService, useValue: { instant: (key: string) => key } }
             ]
         })

@@ -19,6 +19,8 @@ import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
+import { Tag } from 'src/app/tag/model/tag.model';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import {
     UiDateRangePreset,
@@ -36,6 +38,8 @@ interface IssueFilterForm {
     issueTypeUnset: FormControl<boolean | null>;
     idsAssignedTo: FormControl<number[] | null>;
     assignedToUnset: FormControl<boolean | null>;
+    idsTag: FormControl<number[] | null>;
+    tagUnset: FormControl<boolean | null>;
     createAt: FormControl<UiDateRangeValue | null>;
     updateAt: FormControl<UiDateRangeValue | null>;
     title: FormControl<string | null>;
@@ -52,6 +56,7 @@ export class FilterComponent implements OnInit {
     private readonly severityStore = inject(SeverityStore);
     private readonly issueTypeStore = inject(IssueTypeStore);
     private readonly stateStore = inject(StateStore);
+    private readonly tagStore = inject(TagStore);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly projectStore = inject(ProjectStore);
@@ -70,7 +75,13 @@ export class FilterComponent implements OnInit {
         switchMap(project => this.stateStore.statesByProject$(project.idProject))
     );
 
+    public readonly tags$: Observable<Tag[]> = this.projectStore.project$.pipe(
+        switchMap(project => this.tagStore.tagsByProject$(project.idProject))
+    );
+
     public readonly users$: Observable<User[]> = this.projectMemberStore.users$;
+
+    private knownTagIds: Set<number> | null = null;
 
     public form: FormGroup<IssueFilterForm> = this.fb.group<IssueFilterForm>({
         idsState: this.fb.control<number[] | null>(null),
@@ -81,6 +92,8 @@ export class FilterComponent implements OnInit {
         issueTypeUnset: this.fb.control<boolean | null>(null),
         idsAssignedTo: this.fb.control<number[] | null>(null),
         assignedToUnset: this.fb.control<boolean | null>(null),
+        idsTag: this.fb.control<number[] | null>(null),
+        tagUnset: this.fb.control<boolean | null>(null),
         createAt: this.fb.control<UiDateRangeValue | null>(null),
         updateAt: this.fb.control<UiDateRangeValue | null>(null),
         title: this.fb.control<string | null>(null)
@@ -113,9 +126,33 @@ export class FilterComponent implements OnInit {
         return this.form.controls.assignedToUnset;
     }
 
+    public get tagUnsetControl(): FormControl<boolean | null> {
+        return this.form.controls.tagUnset;
+    }
+
     public ngOnInit(): void {
         this.onFormChange();
         this.onFilterChange();
+        this.onTagsChange();
+    }
+
+    private onTagsChange(): void {
+        this.tags$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(tags => {
+            this.knownTagIds = new Set(tags.map(tag => tag.idTag));
+            this.dropDeletedTags();
+        });
+    }
+
+    private dropDeletedTags(): void {
+        const control = this.form.controls.idsTag;
+        const idsTag = control.value ?? [];
+        if (!this.knownTagIds || idsTag.length === 0) {
+            return;
+        }
+        const kept = idsTag.filter(idTag => this.knownTagIds!.has(idTag));
+        if (kept.length !== idsTag.length) {
+            control.setValue(kept.length ? kept : null);
+        }
     }
 
     private onFormChange(): void {
@@ -130,6 +167,8 @@ export class FilterComponent implements OnInit {
             controls.issueTypeUnset.valueChanges,
             controls.idsAssignedTo.valueChanges,
             controls.assignedToUnset.valueChanges,
+            controls.idsTag.valueChanges,
+            controls.tagUnset.valueChanges,
             controls.createAt.valueChanges,
             controls.updateAt.valueChanges
         );
@@ -155,6 +194,8 @@ export class FilterComponent implements OnInit {
             stateUnset: values.stateUnset ?? undefined,
             idsAssignedTo: values.idsAssignedTo ?? undefined,
             assignedToUnset: values.assignedToUnset ?? undefined,
+            idsTag: values.idsTag ?? undefined,
+            tagUnset: values.tagUnset ?? undefined,
             createAtFrom: createAt.from,
             createAtTo: createAt.to,
             createAtWithin: createAt.within,
@@ -174,6 +215,7 @@ export class FilterComponent implements OnInit {
             .subscribe(issuesFilter => {
                 if (issuesFilter) {
                     this.hydrate(issuesFilter);
+                    this.dropDeletedTags();
                 }
             });
     }
@@ -193,6 +235,8 @@ export class FilterComponent implements OnInit {
                 stateUnset: filter.stateUnset,
                 idsAssignedTo: filter.idsAssignedTo,
                 assignedToUnset: filter.assignedToUnset,
+                idsTag: filter.idsTag,
+                tagUnset: filter.tagUnset,
                 createAt: this.dateValueFor(filter, 'createAt'),
                 updateAt: this.dateValueFor(filter, 'updateAt')
             },

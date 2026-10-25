@@ -4,6 +4,7 @@ import { NEVER, of } from 'rxjs';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { ProjectStore } from 'src/app/project/project.store';
@@ -47,6 +48,10 @@ describe('IssueInfoComponent — agent assigned from the dock (browser)', () => 
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
                 {
                     provide: ProjectMemberStore,
                     useValue: { users$: of([]), usersMap$: of(new Map()) }

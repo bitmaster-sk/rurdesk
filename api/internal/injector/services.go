@@ -208,6 +208,14 @@ func GetIssueTypeRepository() *repository.IssueTypeRepository {
 	return instance.(*repository.IssueTypeRepository)
 }
 
+func GetTagRepository() *repository.TagRepository {
+	instance, _ := di.GetWithNew("tag-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewTagRepository(pool), nil
+	})
+	return instance.(*repository.TagRepository)
+}
+
 func GetCustomFieldRepository() *repository.CustomFieldRepository {
 	instance, _ := di.GetWithNew("custom-field-repository", func() (any, error) {
 		pool := mustDb()
@@ -350,6 +358,21 @@ func GetSeverityService() *service.SeverityService {
 		return service.NewSeverityService(pool, GetSeverityRepository()), nil
 	})
 	return instance.(*service.SeverityService)
+}
+
+func GetProjectMemberService() *service.ProjectMemberService {
+	instance, _ := di.GetWithNew("project-member-service", func() (any, error) {
+		return service.NewProjectMemberService(GetProjectRepository()), nil
+	})
+	return instance.(*service.ProjectMemberService)
+}
+
+func GetTagService() *service.TagService {
+	instance, _ := di.GetWithNew("tag-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewTagService(pool, GetTagRepository()), nil
+	})
+	return instance.(*service.TagService)
 }
 
 func GetIssueTypeService() *service.IssueTypeService {
@@ -842,6 +865,7 @@ func GetIssueController() *controller.IssueController {
 			GetIssueTypeRepository(),
 			GetIssueParticipantRepository(),
 			GetAclService(),
+			GetTagService(),
 			GetNotificationService(),
 			GetCustomFieldValueService(),
 			pool,
@@ -869,11 +893,20 @@ func GetIssueTypeController() *controller.IssueTypeController {
 	return instance.(*controller.IssueTypeController)
 }
 
+func GetTagController() *controller.TagController {
+	instance, _ := di.GetWithNew("tag-controller", func() (any, error) {
+		return controller.NewTagController(
+			GetTagRepository(), GetTagService(), GetAclService(),
+			GetNotifier(), GetProjectMemberService()), nil
+	})
+	return instance.(*controller.TagController)
+}
+
 func GetCustomFieldController() *controller.CustomFieldController {
 	instance, _ := di.GetWithNew("custom-field-controller", func() (any, error) {
 		return controller.NewCustomFieldController(
 			GetCustomFieldRepository(), GetCustomFieldService(), GetAclService(),
-			GetNotifier(), GetProjectRepository()), nil
+			GetNotifier(), GetProjectMemberService()), nil
 	})
 	return instance.(*controller.CustomFieldController)
 }
@@ -1336,6 +1369,7 @@ func GetRouter() (*router.Router, error) {
 			GetSeverityController(),
 			GetIssueTypeController(),
 			GetCustomFieldController(),
+			GetTagController(),
 			GetWikiController(),
 			GetWikiAgentController(),
 			GetWikiProposalController(),

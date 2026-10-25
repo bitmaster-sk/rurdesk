@@ -1,0 +1,37 @@
+<div class="form w-full" [formGroup]="form">
+    <div class="form-body">
+        <div class="ui-field">
+            <label class="required" for="tag-name">{{ 'NAME' | translate }}:</label>
+            <input
+                id="tag-name"
+                data-testid="tag-name"
+                uiInput
+                formControlName="name"
+                type="text"
+                class="w-full"
+            />
+        </div>
+        <div class="ui-field">
+            <label class="required">{{ 'TAG.COLOR' | translate }}:</label>
+            <app-tag-color-picker
+                formControlName="color"
+                [colors]="tagColor.palette"
+                [label]="'TAG.COLOR' | translate"
+            />
+        </div>
+    </div>
+    <div class="form-footer">
+        <ui-button
+            data-testid="tag-save"
+            [disabled]="!form.valid"
+            severity="primary"
+            [label]="'SAVE' | translate"
+            (click)="onSave()"
+        >
+            <tabler-icon icon="device-floppy" [size]="16" />
+        </ui-button>
+        <ui-button severity="secondary" [label]="'CANCEL' | translate" (click)="onCancel()">
+            <tabler-icon icon="cancel" [size]="16" />
+        </ui-button>
+    </div>
+</div>

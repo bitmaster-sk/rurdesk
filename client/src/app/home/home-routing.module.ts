@@ -3,6 +3,7 @@ import { Routes, RouterModule } from '@angular/router';
 import { SeverityResolver } from '../severity/severity.resolver';
 import { StateResolver } from '../state/state.resolver';
 import { IssueTypeResolver } from '../issue-type/issue-type.resolver';
+import { TagResolver } from '../tag/tag.resolver';
 import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
 import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
 import { FirstProjectGuard } from '../onboarding/first-project.guard';
@@ -16,7 +17,8 @@ const routes: Routes = [
         resolve: {
             severities: SeverityResolver,
             state: StateResolver,
-            issueTypes: IssueTypeResolver
+            issueTypes: IssueTypeResolver,
+            tags: TagResolver
         },
         children: [
             {

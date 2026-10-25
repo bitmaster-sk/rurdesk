@@ -1,0 +1,19 @@
+<ui-multiselect
+    [inputId]="inputId()"
+    [options]="options()"
+    optionLabel="name"
+    [ngModel]="selectedTags()"
+    (ngModelChange)="onSelectionChange($event)"
+>
+    <ng-template #selectedItems let-tags>
+        <span class="flex flex-wrap items-center gap-1">
+            @for (tag of tags; track tag.idTag) {
+                <app-tag-chip [name]="tag.name" [color]="tag.color" />
+            }
+        </span>
+    </ng-template>
+
+    <ng-template #item let-tag>
+        <app-tag-chip [name]="tag.name" [color]="tag.color" />
+    </ng-template>
+</ui-multiselect>

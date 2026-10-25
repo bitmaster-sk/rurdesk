@@ -1,0 +1,8 @@
+@if (winCfg.data; as data) {
+    <app-tag-form
+        [tag]="data.tag"
+        [defaultColor]="data.defaultColor"
+        (save)="onSave($event)"
+        (cancelled)="onCancel()"
+    ></app-tag-form>
+}

@@ -60,6 +60,8 @@ var (
 	ErrIssueTypeInUse     = newErr("ISSUE_TYPE_IN_USE", "issue type is still in use (issues or project default); pass migrateTo=<id> or migrateTo=null", "error.issue_type_in_use", http.StatusConflict)
 	ErrIssueTypeProtected = newErr("ISSUE_TYPE_PROTECTED", "issue type is protected and cannot be deleted", "error.issue_type_protected", http.StatusConflict)
 
+	ErrTagNameExists = newErr("TAG_NAME_EXISTS", "a tag with this name already exists in the project", "error.tag_name_exists", http.StatusConflict)
+
 	ErrInvalidStateMigrationTarget     = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different state of the same project", "error.invalid_state_migration_target", http.StatusUnprocessableEntity)
 	ErrInvalidSeverityMigrationTarget  = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different severity of the same project", "error.invalid_severity_migration_target", http.StatusUnprocessableEntity)
 	ErrInvalidIssueTypeMigrationTarget = newErr("INVALID_MIGRATION_TARGET", "migration target must be a different issue type of the same project", "error.invalid_issue_type_migration_target", http.StatusUnprocessableEntity)
@@ -148,6 +150,7 @@ var (
 	ErrStateNotInProject     = newErr("STATE_NOT_IN_PROJECT", "state does not belong to this project", "error.state_not_in_project", http.StatusUnprocessableEntity)
 	ErrSeverityNotInProject  = newErr("SEVERITY_NOT_IN_PROJECT", "severity does not belong to this project", "error.severity_not_in_project", http.StatusUnprocessableEntity)
 	ErrIssueTypeNotInProject = newErr("ISSUE_TYPE_NOT_IN_PROJECT", "issue type does not belong to this project", "error.issue_type_not_in_project", http.StatusUnprocessableEntity)
+	ErrTagNotInProject       = newErr("TAG_NOT_IN_PROJECT", "tag does not belong to this project", "error.tag_not_in_project", http.StatusUnprocessableEntity)
 
 	// ── Saved views ────────────────────────────────────────────────────────
 

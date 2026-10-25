@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { IssuesFilter } from '../components/filter/issue-filter.entity';
 import { IssueConverter } from '../converter/issue.converter';
 import { Issue, CreateIssueReq, UpdateIssueReq } from '../model/issue.model';
@@ -12,13 +13,14 @@ import { IssuesPage, IssueGroup } from '../model/issues-page.model';
 })
 export class IssueApi {
     private readonly http = inject(HttpClient);
+    private readonly tagStore = inject(TagStore);
 
     // Legacy array form (unwraps the envelope). Used by callers that want the whole set
     // (calendar/gantt scheduled + backlog) by omitting limit.
     public load$(filter: IssuesFilter): Observable<Issue[]> {
         return this.http
             .get<IssuesPage>(`/api/private/project/${filter.idProject}/issue`, {
-                params: IssueConverter.toParams(filter)
+                params: IssueConverter.toParams(this.withoutUnknownTags(filter))
             })
             .pipe(map(page => page.items.map(i => IssueConverter.toIssue(i))));
     }
@@ -28,7 +30,10 @@ export class IssueApi {
         limit: number,
         cursor: string | null
     ): Observable<IssuesPage> {
-        let params = IssueConverter.toParams(filter).set('limit', String(limit));
+        let params = IssueConverter.toParams(this.withoutUnknownTags(filter)).set(
+            'limit',
+            String(limit)
+        );
         if (cursor) {
             params = params.set('cursor', cursor);
         }
@@ -44,7 +49,7 @@ export class IssueApi {
         groupBy: string,
         perGroup: number
     ): Observable<{ groups: IssueGroup[] }> {
-        const params = IssueConverter.toParams(filter)
+        const params = IssueConverter.toParams(this.withoutUnknownTags(filter))
             .set('groupBy', groupBy)
             .set('limit', String(perGroup));
         return this.http
@@ -85,5 +90,13 @@ export class IssueApi {
 
     public delete$(idProject: number, idIssuePublic: number): Observable<void> {
         return this.http.delete<void>(`/api/private/project/${idProject}/issue/${idIssuePublic}`);
+    }
+
+    private withoutUnknownTags(filter: IssuesFilter): IssuesFilter {
+        const knownTagIds = this.tagStore.knownTagIds();
+        if (!knownTagIds || !filter.idsTag?.length) {
+            return filter;
+        }
+        return { ...filter, idsTag: filter.idsTag.filter(idTag => knownTagIds.has(idTag)) };
     }
 }

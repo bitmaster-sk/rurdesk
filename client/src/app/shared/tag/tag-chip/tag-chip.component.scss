@@ -1,0 +1,58 @@
+:host {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.tag-chip {
+    --tag-color: var(--ui-color-state-start);
+
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    min-width: 0;
+    padding: 0 var(--ui-space);
+    border: 1px solid color-mix(in srgb, var(--tag-color) 45%, var(--ui-surface-0));
+    border-radius: 999px;
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-s);
+    font-style: italic;
+    line-height: 1.4;
+    white-space: nowrap;
+
+    &::before {
+        content: '';
+        flex-shrink: 0;
+        width: 0.45rem;
+        height: 0.45rem;
+        border-radius: 50%;
+        background: color-mix(in srgb, var(--tag-color) 55%, var(--ui-surface-0));
+    }
+
+    &--count {
+        border-color: var(--ui-color-border);
+        font-style: normal;
+
+        &::before {
+            display: none;
+        }
+    }
+
+    &__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__remove {
+        display: inline-flex;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        opacity: 0.6;
+        cursor: pointer;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}

@@ -1,0 +1,94 @@
+<div
+    class="ui-select-trigger tag-input"
+    data-testid="tag-input"
+    [class.ui-select-trigger--disabled]="isDisabled()"
+    (click)="onFieldClick()"
+>
+    @for (tag of selectedTags(); track tag.idTag) {
+        <app-tag-chip
+            [name]="tag.name"
+            [color]="tag.color"
+            [isRemovable]="!isDisabled()"
+            [removeLabel]="'TAG.REMOVE' | translate: { name: tag.name }"
+            (removed)="onRemove(tag)"
+        />
+    }
+    <span class="relative inline-flex min-w-24 flex-[1_1_6rem]">
+        <input
+            #queryInput
+            class="tag-input__field"
+            data-testid="tag-input-field"
+            type="text"
+            autocomplete="off"
+            role="combobox"
+            [maxLength]="nameMaxLength"
+            aria-autocomplete="list"
+            [attr.aria-expanded]="isPanelVisible()"
+            [id]="inputId()"
+            [disabled]="isDisabled()"
+            (input)="onQueryInput(queryInput.value)"
+            (keydown)="onKeydown($event)"
+            (blur)="onBlur()"
+        />
+        @if (ghost()) {
+            <span class="tag-input__ghost" aria-hidden="true">
+                <span class="tag-input__ghost-typed">{{ query() }}</span>
+                <span>{{ ghost() }}</span>
+            </span>
+        }
+    </span>
+
+    @if (isPanelVisible()) {
+        <div class="ui-select-panel tag-input__panel" (mousedown)="$event.preventDefault()">
+            <ul class="ui-select-panel__list" role="listbox">
+                @for (suggestion of suggestions(); track suggestion.tag.idTag; let i = $index) {
+                    <li
+                        class="ui-select-panel__option"
+                        role="option"
+                        data-testid="tag-suggestion"
+                        [class.ui-select-panel__option--highlighted]="i === highlightedIndex()"
+                        [attr.aria-selected]="i === highlightedIndex()"
+                        (click)="onPickSuggestion(suggestion.tag)"
+                    >
+                        <app-tag-chip [name]="suggestion.tag.name" [color]="suggestion.tag.color" />
+                        <span class="tag-input__count">{{ suggestion.tag.issueCount }}</span>
+                        @if (i === highlightedIndex()) {
+                            <kbd class="tag-input__kbd">Tab</kbd>
+                        }
+                    </li>
+                }
+                @if (isCreateOffered()) {
+                    <li
+                        class="ui-select-panel__option tag-input__create flex-col"
+                        role="option"
+                        data-testid="tag-create"
+                        [class.ui-select-panel__option--highlighted]="isCreateHighlighted()"
+                        [attr.aria-selected]="isCreateHighlighted()"
+                    >
+                        <button
+                            type="button"
+                            class="tag-input__create-head flex items-center gap-2"
+                            (click)="onCreate()"
+                        >
+                            <tabler-icon icon="plus" [size]="14" />
+                            {{ 'TAG.INPUT.CREATE' | translate }}
+                            <app-tag-chip [name]="query().trim()" [color]="createColor()" />
+                            @if (isCreateHighlighted()) {
+                                <kbd class="tag-input__kbd">Tab</kbd>
+                            }
+                        </button>
+                        <app-tag-color-picker
+                            [colors]="colors()"
+                            [label]="'TAG.COLOR' | translate"
+                            [ngModel]="createColor()"
+                            (ngModelChange)="onCreateColorChange($event)"
+                        />
+                    </li>
+                }
+            </ul>
+            @if (isCreateForbidden()) {
+                <div class="tag-input__hint">{{ 'TAG.INPUT.OWNER_ONLY' | translate }}</div>
+            }
+        </div>
+    }
+</div>

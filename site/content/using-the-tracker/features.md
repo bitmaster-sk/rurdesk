@@ -26,8 +26,8 @@ summary of where the project stands:
 ## Tasks
 
 Tasks are the core unit of work. Create, edit, assign, and move them through
-states. Each task has a state, severity, type, tags, and a tracker, and can carry
-relations to other tasks.
+states. Each task has a state, severity, type, [tags](tags.md), and a tracker,
+and can carry relations to other tasks.
 
 ![Task detail panel](../../site/assets/img/issue-detail.png)
 
@@ -144,6 +144,9 @@ so a filter you set carries over when you switch views.
 **Created** and **Last update** filter by date: pick a rolling window (_Last 7 /
 30 / 90 days_) or a **Custom range** of two fixed dates. A rolling window keeps
 rolling — set to _Last 30 days_, it still means the last 30 days next month.
+
+**Tags** keeps the tasks carrying at least one of the selected
+[tags](tags.md).
 
 #### Quick actions (right-click)
 
@@ -412,6 +415,10 @@ two steps:
 The API exposes its operations as **MCP tools** (`create_issue`, `list_issues`,
 `update_issue`, `add_relation`, …), so MCP-capable clients (Claude Code, Cursor)
 can drive the backlog natively.
+
+Tags have their own tools (`list_tags`, `create_tag`, `update_tag`,
+`delete_tag`) and a `tag_ids` argument on the issue tools — see
+[Tags](tags.md#api-and-agents).
 
 `list_issues` accepts `updated_within` and `created_within` as rolling windows —
 `"2h"`, `"30d"`, `"1d8h6m"` (units: `d` = 24h, `h`, `m`, `s`). Prefer them over

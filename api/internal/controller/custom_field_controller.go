@@ -15,11 +15,11 @@ import (
 )
 
 type CustomFieldController struct {
-	customFieldRepo *repository.CustomFieldRepository
-	customFieldSvc  *service.CustomFieldService
-	acl             *service.AclService
-	notifier        *notify.Notifier
-	projectRepo     *repository.ProjectRepository
+	customFieldRepo  *repository.CustomFieldRepository
+	customFieldSvc   *service.CustomFieldService
+	acl              *service.AclService
+	notifier         *notify.Notifier
+	projectMemberSvc *service.ProjectMemberService
 }
 
 func NewCustomFieldController(
@@ -27,14 +27,14 @@ func NewCustomFieldController(
 	customFieldSvc *service.CustomFieldService,
 	acl *service.AclService,
 	notifier *notify.Notifier,
-	projectRepo *repository.ProjectRepository,
+	projectMemberSvc *service.ProjectMemberService,
 ) *CustomFieldController {
 	return &CustomFieldController{
-		customFieldRepo: customFieldRepo,
-		customFieldSvc:  customFieldSvc,
-		acl:             acl,
-		notifier:        notifier,
-		projectRepo:     projectRepo,
+		customFieldRepo:  customFieldRepo,
+		customFieldSvc:   customFieldSvc,
+		acl:              acl,
+		notifier:         notifier,
+		projectMemberSvc: projectMemberSvc,
 	}
 }
 
@@ -48,13 +48,9 @@ func (cfc *CustomFieldController) BroadcastCustomField(
 	if cfc.notifier == nil || field == nil {
 		return
 	}
-	members, err := cfc.projectRepo.LoadProjectsMembers(ctx, []int64{field.IdProject})
-	if err != nil || len(members) == 0 {
+	idsUser, err := cfc.projectMemberSvc.LoadMemberIds(ctx, field.IdProject)
+	if err != nil || len(idsUser) == 0 {
 		return
-	}
-	idsUser := make([]int64, len(members))
-	for i, member := range members {
-		idsUser[i] = member.IdUser
 	}
 	cfc.notifier.Send <- &notify.Notice{
 		IdsUser: idsUser,

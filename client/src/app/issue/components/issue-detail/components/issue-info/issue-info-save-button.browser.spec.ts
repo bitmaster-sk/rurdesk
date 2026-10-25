@@ -8,6 +8,7 @@ import { NEVER, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
 import { Issue } from 'src/app/issue/model/issue.model';
@@ -19,7 +20,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { SecDurationPipe } from 'src/app/shared/duration/sec-duration.pipe';
 import { StateStore } from 'src/app/state/store/state.store';
 import { UiModule } from 'src/app/ui/ui.module';
-import { MessageBodyStub, TablerIconStub } from 'src/testing/stubs';
+import { MessageBodyStub, TablerIconStub, TagInputStub } from 'src/testing/stubs';
 import { IssueInfoComponent } from './issue-info.component';
 
 abstract class ValueAccessorStub implements ControlValueAccessor {
@@ -218,13 +219,18 @@ async function render(issue: Issue): Promise<ComponentFixture<IssueInfoComponent
             IssueCustomFieldsStub,
             QualityPanelStub,
             IssueParticipantsStub,
-            IssueWikiPanelStub
+            IssueWikiPanelStub,
+            TagInputStub
         ],
         providers: [
             { provide: IssueApi, useValue: { update$: apiUpdate$ } },
             { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
             { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
             { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+            {
+                provide: TagStore,
+                useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+            },
             {
                 provide: ProjectMemberStore,
                 useValue: { users$: of([]), usersMap$: of(new Map()) }

@@ -24,6 +24,27 @@
                 [placeholder]="'FILTER.DATE.ANY' | translate"
             />
         </div>
+
+        <div class="ui-field col-span-3">
+            <label for="tag-filter">{{ 'TAG.PLURAL' | translate }}</label>
+            <app-tag-dropdown
+                inputId="tag-filter"
+                data-testid="tag-filter"
+                [tags]="(tags$ | async) ?? []"
+                formControlName="idsTag"
+            ></app-tag-dropdown>
+            <div class="ui-field-checkbox mt-1 mb-0">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="tag-unset-filter"
+                    [formControl]="tagUnsetControl"
+                />
+                <label for="tag-unset-filter">
+                    {{ 'ISSUE.DISPLAY.UNSET.TAGS' | translate }}
+                </label>
+            </div>
+        </div>
     </div>
 
     <div class="col-span-12 grid grid-cols-12 gap-2 m-0 p-0">

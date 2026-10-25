@@ -20,7 +20,7 @@ func captureNotifier() *notify.Notifier {
 }
 
 func broadcastController(notifier *notify.Notifier) *controller.CustomFieldController {
-	return controller.NewCustomFieldController(nil, nil, nil, notifier, injector.GetProjectRepository())
+	return controller.NewCustomFieldController(nil, nil, nil, notifier, injector.GetProjectMemberService())
 }
 
 func drainNotice(t *testing.T, notifier *notify.Notifier) *notify.Notice {

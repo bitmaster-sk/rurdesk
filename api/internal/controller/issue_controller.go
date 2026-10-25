@@ -40,6 +40,7 @@ type IssueController struct {
 	dispatcher          *agent.Dispatcher
 	notifier            *notify.Notifier
 	acl                 *service.AclService
+	tagSvc              *service.TagService
 	stagePlan           *service.AgentStagePlanService
 	agentTaskConfig     *service.AgentTaskConfigService
 	notifSvc            *service.NotificationService
@@ -58,6 +59,7 @@ func NewIssueController(
 	issueTypeRepo *repository.IssueTypeRepository,
 	participantRepo *repository.IssueParticipantRepository,
 	acl *service.AclService,
+	tagSvc *service.TagService,
 	notifSvc *service.NotificationService,
 	customFieldValueSvc *service.CustomFieldValueService,
 	pool *pgxpool.Pool,
@@ -71,6 +73,7 @@ func NewIssueController(
 		issueTypeRepo:       issueTypeRepo,
 		participantRepo:     participantRepo,
 		acl:                 acl,
+		tagSvc:              tagSvc,
 		notifSvc:            notifSvc,
 		customFieldValueSvc: customFieldValueSvc,
 		pool:                pool,
@@ -288,6 +291,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity, dto.IdIssueType); err != nil {
 			return err
 		}
+		idsTag, err := ic.tagSvc.ValidateInProject(ctx, dto.IdProject, dto.IdsTag)
+		if err != nil {
+			return err
+		}
 		var insertErr error
 		result, insertErr = ic.issueRepo.InsertIssue(ctx, &model.Issue{
 			IdProject:      dto.IdProject,
@@ -307,6 +314,10 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		if insertErr != nil {
 			return insertErr
 		}
+		if err := ic.issueRepo.SetIssueTags(ctx, result.IdIssue, idsTag); err != nil {
+			return err
+		}
+		result.IdsTag = idsTag
 		idCreator := user.IdUser
 		if err := ic.participantRepo.Add(ctx, result.IdIssue, idCreator, "creator", &idCreator); err != nil {
 			return fmt.Errorf("adding creator participant: %w", err)
@@ -329,7 +340,7 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject || err == errs.ErrTagNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -415,6 +426,14 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value, dto.IdIssueType.Value); err != nil {
 			return err
 		}
+		var idsTag []int64
+		if dto.IdsTag.IsDefined {
+			var tagErr error
+			idsTag, tagErr = ic.tagSvc.ValidateInProject(ctx, dto.IdProject, dto.IdsTag.OrElse(nil))
+			if tagErr != nil {
+				return tagErr
+			}
+		}
 		issue, err := ic.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdProject: &dto.IdProject, IdIssuePublic: &dto.IdIssuePublic})
 		if err != nil {
 			return err
@@ -467,6 +486,12 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if err != nil {
 			return err
 		}
+		if dto.IdsTag.IsDefined {
+			if err := ic.issueRepo.SetIssueTags(ctx, issue.IdIssue, idsTag); err != nil {
+				return err
+			}
+			result.IdsTag = idsTag
+		}
 		if dto.AssignedTo.Value != nil {
 			if addErr := ic.participantRepo.Add(ctx, issue.IdIssue, *dto.AssignedTo.Value, "assignee", &user.IdUser); addErr != nil {
 				return fmt.Errorf("auto-adding assignee as participant (edit): %w", addErr)
@@ -493,7 +518,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject || err == errs.ErrTagNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -831,10 +856,20 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			return errs.ErrForbidden
 		}
 
-		for _, entry := range dto.Issues {
+		for i, entry := range dto.Issues {
 			if err := ic.validateIssueRefsInProject(ctx, idProject, entry.IdState, entry.IdSeverity, entry.IdIssueType); err != nil {
 				return err
 			}
+			addIdsTag, err := ic.tagSvc.ValidateInProject(ctx, idProject, entry.AddIdsTag)
+			if err != nil {
+				return err
+			}
+			removeIdsTag, err := ic.tagSvc.ValidateInProject(ctx, idProject, entry.RemoveIdsTag)
+			if err != nil {
+				return err
+			}
+			dto.Issues[i].AddIdsTag = addIdsTag
+			dto.Issues[i].RemoveIdsTag = removeIdsTag
 			if entry.IdUserAssigned != nil {
 				if !ic.acl.CanReadProject(ctx, *entry.IdUserAssigned, idProject) {
 					return fmt.Errorf("user %d is not a member of project %d", *entry.IdUserAssigned, idProject)
@@ -893,7 +928,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject {
+	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject || err == errs.ErrTagNotInProject {
 		_ = c.Error(err)
 		c.Status(http.StatusBadRequest)
 		return
@@ -946,6 +981,8 @@ func buildIssueFilter(c *gin.Context, idProject int64) (*model.LoadIssuesFilter,
 	f.StateUnset = c.Query("stateUnset") == "true"
 	f.IdsAssignedTo = urlutil.ParseInt64Array(c, "idsAssignedTo")
 	f.AssignedToUnset = c.Query("assignedToUnset") == "true"
+	f.IdsTag = urlutil.ParseInt64Array(c, "idsTag")
+	f.TagUnset = c.Query("tagUnset") == "true"
 	f.ScheduledAtUnset = c.Query("scheduledAtUnset") == "true"
 	f.AssignedToNull = c.Query("assignedToNull") == "true"
 	f.IdsIssuePublic = urlutil.ParseInt64Array(c, "idsIssuePublic")
