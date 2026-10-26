@@ -4,6 +4,7 @@ export interface WorkloadEntry {
     name: string;
     count: number;
     bgColor?: string;
+    initials?: string | null;
     isUnassigned: boolean;
 }
 

@@ -76,6 +76,7 @@ export class ProjectPage implements OnInit {
                             name: user?.name ?? `#${w.idAssignedTo}`,
                             count: w.count,
                             bgColor: user?.colorAvatarBg,
+                            initials: user?.avatarInitials ?? null,
                             isUnassigned: false
                         };
                     })
@@ -144,7 +145,8 @@ export class ProjectPage implements OnInit {
                                         stateIsStart: p.issue?.stateIsStart,
                                         stateIsFinal: p.issue?.stateIsFinal,
                                         assignedToName: p.issue?.assignedToName,
-                                        assignedToColorAvatarBg: p.issue?.assignedToColorAvatarBg
+                                        assignedToColorAvatarBg: p.issue?.assignedToColorAvatarBg,
+                                        assignedToAvatarInitials: p.issue?.assignedToAvatarInitials
                                     };
                                 })
                         )

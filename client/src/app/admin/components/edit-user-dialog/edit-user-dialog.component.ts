@@ -9,10 +9,12 @@ import {
     output,
     signal
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, Validators } from '@angular/forms';
 import { forkJoin, map } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
+import { Initials } from 'src/app/shared/avatar/initials';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
@@ -62,8 +64,15 @@ export class EditUserDialogComponent {
         gatewayUrl: ['', [Validators.maxLength(2000)]],
         maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
         maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
-        colorAvatarBg: ['']
+        colorAvatarBg: [''],
+        avatarInitials: ['', [Validators.maxLength(2)]]
     });
+
+    private readonly nameValue = toSignal(this.form.controls.name.valueChanges, {
+        initialValue: ''
+    });
+
+    protected readonly autoInitials = computed(() => Initials.fromName(this.nameValue() ?? ''));
 
     public constructor() {
         // Re-seed the form whenever a different user is opened for editing.
@@ -80,7 +89,8 @@ export class EditUserDialogComponent {
                 gatewayUrl: '',
                 maxTurnsPlan: null,
                 maxTurnsImplement: null,
-                colorAvatarBg: user.colorAvatarBg
+                colorAvatarBg: user.colorAvatarBg,
+                avatarInitials: user.avatarInitials ?? ''
             });
             const email = this.form.controls.email;
             const gatewayUrl = this.form.controls.gatewayUrl;
@@ -123,12 +133,17 @@ export class EditUserDialogComponent {
         }
         const value = this.form.getRawValue();
         const req: AdminUpdateUserReq = user.isAgent
-            ? { name: value.name!.trim(), colorAvatarBg: value.colorAvatarBg! }
+            ? {
+                  name: value.name!.trim(),
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
+              }
             : {
                   name: value.name!.trim(),
                   email: value.email!.trim(),
                   isAdmin: value.isAdmin!,
-                  colorAvatarBg: value.colorAvatarBg!
+                  colorAvatarBg: value.colorAvatarBg!,
+                  avatarInitials: value.avatarInitials?.trim() ?? ''
               };
 
         // For an agent with an existing gateway, save a changed URL alongside the name.

@@ -11,6 +11,7 @@ export interface PinIssue {
     stateIsFinal?: boolean | null;
     assignedToName?: string | null;
     assignedToColorAvatarBg?: string | null;
+    assignedToAvatarInitials?: string | null;
 }
 
 export interface Pin {

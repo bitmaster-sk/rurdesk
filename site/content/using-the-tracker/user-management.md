@@ -28,7 +28,9 @@ password change (all other sessions), and on an admin-flag change or account
 deletion.
 
 Avatars are generated from the user's initials on a colour they pick in their
-profile — nothing is fetched from a third party.
+profile — nothing is fetched from a third party. An administrator can override
+the initials (up to 2 characters, shown uppercase) when creating or editing a
+user; when left empty, the initials are derived from the name.
 
 ![Login screen](../../site/assets/img/login.png)
 

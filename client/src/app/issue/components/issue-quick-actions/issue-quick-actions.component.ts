@@ -27,6 +27,7 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue, UpdateIssueReq } from '../../model/issue.model';
+import { Initials } from 'src/app/shared/avatar/initials';
 import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ClipboardService } from 'src/app/core/clipboard.service';
@@ -175,15 +176,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
     }
 
     protected buildInitials(name: string): string {
-        const parts = name.trim().split(' ');
-        if (parts.length > 1) {
-            return parts
-                .slice(0, 2)
-                .map(p => p[0])
-                .join('')
-                .toUpperCase();
-        }
-        return parts[0].substring(0, 2).toUpperCase();
+        return Initials.fromName(name);
     }
 
     protected onStateChange(idState: number): void {

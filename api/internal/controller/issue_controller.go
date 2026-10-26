@@ -1074,16 +1074,17 @@ func (ic *IssueController) sendIssueNotifications(
 	}
 
 	base := &model.CreateNotificationReq{
-		IdProject:     &idProject,
-		ProjectName:   project.Name,
-		ProjectColor:  project.Color,
-		ActorName:     actor.Name,
-		ActorAvatarBg: actor.ColorAvatarBg,
-		RefType:       constants.NotificationRefTypeIssue,
-		RefId:         strconv.FormatInt(newIssue.IdIssue, 10),
-		RefTitle:      newIssue.Title,
-		RefPublicId:   &idIssuePublic,
-		Source:        source,
+		IdProject:           &idProject,
+		ProjectName:         project.Name,
+		ProjectColor:        project.Color,
+		ActorName:           actor.Name,
+		ActorAvatarBg:       actor.ColorAvatarBg,
+		ActorAvatarInitials: actor.AvatarInitials,
+		RefType:             constants.NotificationRefTypeIssue,
+		RefId:               strconv.FormatInt(newIssue.IdIssue, 10),
+		RefTitle:            newIssue.Title,
+		RefPublicId:         &idIssuePublic,
+		Source:              source,
 	}
 
 	// Assignee changed

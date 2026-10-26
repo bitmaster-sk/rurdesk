@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -184,4 +185,15 @@ func avatarColorOrRandom(supplied *string) string {
 		return *supplied
 	}
 	return randomAvatarColor()
+}
+
+func normalizeAvatarInitials(supplied *string) *string {
+	if supplied == nil {
+		return nil
+	}
+	normalized := strings.ToUpper(strings.TrimSpace(*supplied))
+	if normalized == "" {
+		return nil
+	}
+	return &normalized
 }
