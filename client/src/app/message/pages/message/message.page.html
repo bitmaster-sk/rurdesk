@@ -51,6 +51,7 @@
                 [isEditing]="idMessageEdit() === message.idMessage"
                 [candidates]="mentionCandidates()"
                 [mentionCandidates]="mentionCandidates()"
+                [idProject]="issueLinkProject()"
                 (editRequest)="onEditRequest(message)"
                 (editSave)="onEditSave(message, $event)"
                 (editCancel)="onEditCancel()"
@@ -64,6 +65,7 @@
                 change="onaction"
                 [mentionCandidates]="mentionCandidates()"
                 [attachmentScope]="attachmentScope()"
+                [idProject]="issueLinkProject()"
                 (messageChange)="onMessage($event)"
             ></app-message-editor>
         </div>

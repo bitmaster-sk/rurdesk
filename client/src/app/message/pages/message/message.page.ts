@@ -104,6 +104,15 @@ export class MessagePage implements OnInit, OnDestroy {
             : { idMessageRecipientType, idRecipient: this.idActiveRecipient() };
     });
 
+    // Project context for `#123` task links: only a project conversation has
+    // a project (the recipient id IS the idProject). DM and team chat keep
+    // `#123` as plain text.
+    protected readonly issueLinkProject = computed<number | null>(() =>
+        this.idActiveRecipientType() === MessageRecipientType.project
+            ? this.idActiveRecipient()
+            : null
+    );
+
     private readonly unread = toSignal(this.unreadStore.unread$, {
         initialValue: new Map<string, Message[]>()
     });

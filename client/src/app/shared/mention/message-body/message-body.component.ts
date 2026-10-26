@@ -43,6 +43,11 @@ export class MessageBodyComponent {
     public readonly body = input.required<string>();
     public readonly messageKind = input<MessageKind | undefined>(undefined);
     public readonly candidates = input<Map<number, User> | User[] | null>(null);
+    /**
+     * Project id for `#123` task links when no WikiLinkScope is injected
+     * (project chats supply it explicitly; issue detail provides the scope).
+     */
+    public readonly idProject = input<number | null>(null);
 
     /** When true, mockup cards in this body show the "use & approve" action. */
     public readonly approvable = input(false);
@@ -62,8 +67,12 @@ export class MessageBodyComponent {
         return idProject !== null && tree ? WikiLinkConverter.toContext(idProject, tree) : null;
     });
 
+    /** Project context for `#123` task links: the injected scope or the input. */
+    private readonly linkProject = computed(() => this.wikiScope?.idProject() ?? this.idProject());
+
     public readonly segments = computed<RenderSegment[]>(() => {
         const context = this.wikiContext();
+        const idProject = this.linkProject();
         return this.baseSegments().map(segment => {
             if (segment.type !== 'text') {
                 return segment;
@@ -71,6 +80,9 @@ export class MessageBodyComponent {
             let content = segment.content;
             if (context && content.includes('[[')) {
                 content = WikiLinkConverter.toPageLinksMarkdown(content, context);
+            }
+            if (idProject !== null && content.includes('#')) {
+                content = WikiLinkConverter.toIssueLinksMarkdown(content, idProject);
             }
             if (content.includes('](attachment:')) {
                 content = AttachmentLinkConverter.toMarkerMarkdown(content);

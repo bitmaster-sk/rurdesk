@@ -29,6 +29,7 @@
                     [message]="message().message"
                     [mentionCandidates]="mentionCandidates()"
                     [attachmentScope]="attachmentScope()"
+                    [idProject]="idProject()"
                     sendIcon="device-floppy"
                     sendLabel="{{ 'SAVE' | translate }}"
                     [disableCancelButton]="false"
@@ -40,6 +41,7 @@
             <app-message-body
                 [body]="message().message"
                 [candidates]="candidates()"
+                [idProject]="idProject()"
                 class="message-text"
             />
             @if (message().updatedAt) {

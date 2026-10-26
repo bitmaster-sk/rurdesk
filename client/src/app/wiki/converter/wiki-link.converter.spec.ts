@@ -111,6 +111,21 @@ describe('WikiLinkConverter', () => {
         );
     });
 
+    it('links task references in a comment without wiki tree context', () => {
+        expect(WikiLinkConverter.toIssueLinksMarkdown('fixed in #11 (and #12)', 7)).toBe(
+            'fixed in [#11](/project/7/issue/11) (and [#12](/project/7/issue/12))'
+        );
+    });
+
+    it('leaves code and link anchors alone when linking task references', () => {
+        expect(
+            WikiLinkConverter.toIssueLinksMarkdown(
+                '`#5` and\n```\n#5 code\n```\nsee #6\n[year](#2026)',
+                7
+            )
+        ).toBe('`#5` and\n```\n#5 code\n```\nsee [#6](/project/7/issue/6)\n[year](#2026)');
+    });
+
     it('resolves a comment link like the server: project first, then the shared space', () => {
         const node = (idPage: number, idSpace: number, slug: string, title: string) => ({
             idPage,

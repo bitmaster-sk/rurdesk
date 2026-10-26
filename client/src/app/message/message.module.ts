@@ -30,6 +30,7 @@ import {
     IconDeviceFloppy,
     IconPencil,
     IconFileText,
+    IconListCheck,
     IconPaperclip
 } from '@tabler/icons-angular';
 
@@ -63,6 +64,7 @@ import {
             IconDeviceFloppy,
             IconPencil,
             IconFileText,
+            IconListCheck,
             IconPaperclip
         })
     ],

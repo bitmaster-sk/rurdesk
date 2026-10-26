@@ -26,6 +26,8 @@ export class MessageViewComponent {
     public readonly isEditing = input(false);
     public readonly candidates = input<Map<number, User> | User[] | null>(null);
     public readonly mentionCandidates = input<User[]>([]);
+    /** Project context for `#123` task links (project conversations only). */
+    public readonly idProject = input<number | null>(null);
 
     protected readonly attachmentScope = computed(() =>
         MessageConverter.toAttachmentScope(this.message())

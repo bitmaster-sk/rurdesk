@@ -31,6 +31,8 @@ import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
 import { Mention } from 'src/app/shared/mention/mention';
+import { IssueLinkOption } from 'src/app/issue/entity/issue-link-option.entity';
+import { IssueLinkStore } from 'src/app/issue/store/issue-link.store';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
 import { WikiTreeConverter } from 'src/app/wiki/converter/wiki-tree.converter';
@@ -85,6 +87,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     public readonly mentionCandidates = input<User[]>([]);
 
     public readonly attachmentScope = input<AttachmentScope | null>(null);
+
+    /**
+     * Project id for the `#123` task picker when no WikiLinkScope is injected
+     * (project chats supply it explicitly; issue detail provides the scope).
+     */
+    public readonly idProject = input<number | null>(null);
 
     public readonly cancelled = output<void>();
 
@@ -147,6 +155,29 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return [];
         }
         return WikiTreeConverter.toLinkCandidates(tree, query.query, 8);
+    });
+
+    // `#123` task autocomplete state — mirrors the wiki picker, but the option
+    // list comes from IssueLinkStore and needs only the project id.
+    private readonly issueLinkProject = computed(
+        () => this.wikiScope?.idProject() ?? this.idProject()
+    );
+    private readonly issueStore = inject(IssueLinkStore);
+    protected readonly issueQuery = signal<{ start: number; query: string } | null>(null);
+    protected readonly isIssuesLoading = computed(() => {
+        const idProject = this.issueLinkProject();
+        return idProject !== null && this.issueStore.list(idProject) === null;
+    });
+    protected readonly issueCandidates = computed<IssueLinkOption[]>(() => {
+        const query = this.issueQuery();
+        const idProject = this.issueLinkProject();
+        const options = idProject === null ? null : this.issueStore.list(idProject);
+        if (!query || !options) {
+            return [];
+        }
+        return options
+            .filter(option => String(option.idIssuePublic).startsWith(query.query))
+            .slice(0, 8);
     });
 
     // Platform-aware shortcut hint for the send button tooltip.
@@ -269,6 +300,30 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return;
         }
 
+        const issueCandidates = this.issueCandidates();
+        if (this.issueQuery() && issueCandidates.length > 0) {
+            if (evt.key === 'ArrowDown') {
+                evt.preventDefault();
+                this.activeIndex.update(i => Math.min(i + 1, issueCandidates.length - 1));
+                return;
+            }
+            if (evt.key === 'ArrowUp') {
+                evt.preventDefault();
+                this.activeIndex.update(i => Math.max(i - 1, 0));
+                return;
+            }
+            if (evt.key === 'Enter' || evt.key === 'Tab') {
+                evt.preventDefault();
+                this.selectIssue(issueCandidates[this.activeIndex()]);
+                return;
+            }
+        }
+        if (this.issueQuery() && evt.key === 'Escape') {
+            evt.preventDefault();
+            this.issueQuery.set(null);
+            return;
+        }
+
         const isDelete = evt.key === 'Backspace' || evt.key === 'Delete';
         if (isDelete && !evt.ctrlKey && !evt.metaKey && !evt.altKey) {
             const root = this.editorRef().nativeElement;
@@ -302,6 +357,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
         this.detectMentionQuery(body);
         this.detectWikiQuery(body);
+        this.detectIssueQuery(body);
     }
 
     protected selectWikiPage(candidate: WikiLinkCandidate): void {
@@ -321,6 +377,21 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         this.onInput();
     }
 
+    protected selectIssue(issue: IssueLinkOption): void {
+        const query = this.issueQuery();
+        if (!query) {
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        EditorSelection.setLinearSelection(root, query.start, caret);
+        // Trailing space moves the caret off the `#id` run so the picker does
+        // not reopen for the freshly inserted text (same trick as mention
+        // chips).
+        root.ownerDocument.execCommand('insertText', false, `#${issue.idIssuePublic} `);
+        this.issueQuery.set(null);
+        this.onInput();
+    }
     private detectWikiQuery(body: string): void {
         const idProject = this.wikiScope?.idProject() ?? null;
         if (idProject === null) {
@@ -339,6 +410,32 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
         this.wikiQuery.set({ start: caret - match[0].length, query: match[1] });
         this.placePicker(caret - match[0].length);
+    }
+
+    // Detect a `#123` run at the caret: a `#` at a boundary (BOF, whitespace or
+    // `(` — the same lead classes as the converter's issue pattern) followed by
+    // digits. Opens the task picker without converting anything; the inserted
+    // text stays `#<id>` and the renderer links it.
+    private detectIssueQuery(body: string): void {
+        const idProject = this.issueLinkProject();
+        if (idProject === null) {
+            this.issueQuery.set(null);
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        const match = /(^|[\s(])#(\d*)$/.exec(body.slice(0, caret));
+        if (!match) {
+            this.issueQuery.set(null);
+            return;
+        }
+        if (!this.issueQuery()) {
+            this.issueStore.ensure(idProject);
+            this.activeIndex.set(0);
+        }
+        const start = caret - match[2].length - 1;
+        this.issueQuery.set({ start, query: match[2] });
+        this.placePicker(start);
     }
 
     private placePicker(offset: number): void {

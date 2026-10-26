@@ -69,6 +69,13 @@ export abstract class WikiLinkConverter {
         );
     }
 
+    /** Converts `#123` task references to issue links outside code blocks. */
+    public static toIssueLinksMarkdown(body: string, idProject: number): string {
+        return MarkdownCode.replaceOutsideCode(body, part =>
+            WikiLinkConverter.replaceIssueLinks(part, idProject)
+        );
+    }
+
     public static toContext(idProject: number, tree: WikiTree): WikiLinkContext {
         const shared = tree.spaces.find(space => space.kind === WikiSpaceKind.Instance);
         const project = tree.spaces.find(space => space.kind === WikiSpaceKind.Project);
@@ -110,10 +117,17 @@ export abstract class WikiLinkConverter {
             (_match, marker: string, state: string) =>
                 `${marker}<span class="wiki-task${state === ' ' ? '' : ' wiki-task--done'}"></span> `
         );
-        return WikiLinkConverter.replaceLinks(withTasks, context).replace(
+        return WikiLinkConverter.replaceIssueLinks(
+            WikiLinkConverter.replaceLinks(withTasks, context),
+            context.idProject
+        );
+    }
+
+    private static replaceIssueLinks(text: string, idProject: number): string {
+        return text.replace(
             WikiLinkConverter.issuePattern,
             (_match, lead: string, id: string) =>
-                `${lead}[#${id}](/project/${context.idProject}/issue/${id})`
+                `${lead}[#${id}](/project/${idProject}/issue/${id})`
         );
     }
 
