@@ -86,6 +86,22 @@ peer (in direct messages). Click to insert a mention as a structured token
 Mentions are reliably detected by user ID — no false positives from similar names,
 case sensitivity, or word boundaries.
 
+### Task references
+
+Type `#` in a task comment, the task description or a project chat message to
+open a task picker — it lists the project's tasks by number and title, and the
+list narrows as you type the number. Pick one (or just type the number, e.g.
+`#123`) and it renders as a link to that task, the same as `#123` in the
+[wiki](wiki.md#writing).
+
+- **In task comments, task descriptions and project chat:** `#123` becomes a
+  clickable link to task #123
+- **In team chat and direct messages:** there is no project to link against, so
+  `#123` stays plain text
+
+Links are not validated: a typo like `#99` simply renders as a link to a task
+that does not exist.
+
 ### Attachments
 
 Task descriptions, task comments, chat messages (team, project and direct) and
