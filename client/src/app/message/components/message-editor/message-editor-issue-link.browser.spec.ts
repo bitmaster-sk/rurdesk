@@ -6,17 +6,15 @@ import { Subject } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Issue } from 'src/app/issue/model/issue.model';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageModule } from '../../message.module';
 import { EditorText } from './editor-text';
 
 @Component({
     standalone: false,
-    template: '<app-message-editor [idProject]="idProject"></app-message-editor>'
+    template: '<app-message-editor></app-message-editor>'
 })
-class HostComponent {
-    public idProject: number | null = null;
-}
+class HostComponent {}
 
 const issue = (idIssuePublic: number, title: string): Issue => {
     return {
@@ -34,20 +32,24 @@ const issue = (idIssuePublic: number, title: string): Issue => {
 
 const issues: Issue[] = [issue(123, 'Fix login'), issue(456, 'Add dark mode')];
 
-async function render(
-    idProject: number | null,
-    issues$: Subject<Issue[]>,
-    hostIdProject: number | null = null
-): Promise<{ fixture: ComponentFixture<HostComponent>; load: ReturnType<typeof vi.fn> }> {
-    const load = vi.fn().mockReturnValue(issues$);
+async function render(options: { idProject?: number | null; withScope?: boolean }): Promise<{
+    fixture: ComponentFixture<HostComponent>;
+    load: ReturnType<typeof vi.fn>;
+}> {
+    const load = vi.fn().mockImplementation(() => new Subject<Issue[]>());
+    const providers: object[] = [{ provide: IssueApi, useValue: { load$: load } }];
+    if (options.withScope !== false) {
+        providers.push(LinkScope);
+    }
     await TestBed.configureTestingModule({
         declarations: [HostComponent],
         imports: [MessageModule, NoopAnimationsModule, TranslateModule.forRoot()],
-        providers: [{ provide: IssueApi, useValue: { load$: load } }, WikiLinkScope]
+        providers
     }).compileComponents();
-    TestBed.inject(WikiLinkScope).idProject.set(idProject);
+    if (options.withScope !== false) {
+        TestBed.inject(LinkScope).idProject.set(options.idProject ?? null);
+    }
     const fixture = TestBed.createComponent(HostComponent);
-    fixture.componentInstance.idProject = hostIdProject;
     fixture.detectChanges();
     await fixture.whenStable();
     return { fixture, load };
@@ -84,8 +86,7 @@ describe('MessageEditorComponent issue links', () => {
     afterEach(() => TestBed.resetTestingModule());
 
     it('opens the task picker after #, loads the project issues and filters by the typed number', async () => {
-        const issues$ = new Subject<Issue[]>();
-        const { fixture, load } = await render(7, issues$);
+        const { fixture, load } = await render({ idProject: 7 });
 
         type(fixture, 'see #12');
         expect(load).toHaveBeenCalledWith({
@@ -96,7 +97,7 @@ describe('MessageEditorComponent issue links', () => {
         expect(picker(fixture)).not.toBeNull();
         expect(options(fixture)).toEqual([]);
 
-        issues$.next(issues);
+        load.mock.results[0].value.next(issues);
         fixture.detectChanges();
         expect(options(fixture)).toEqual(['#123Fix login']);
 
@@ -105,10 +106,9 @@ describe('MessageEditorComponent issue links', () => {
     });
 
     it('inserts the picked issue as a #reference with a trailing space', async () => {
-        const issues$ = new Subject<Issue[]>();
-        const { fixture } = await render(7, issues$);
+        const { fixture, load } = await render({ idProject: 7 });
         const editor = type(fixture, 'see #45');
-        issues$.next(issues);
+        load.mock.results[0].value.next(issues);
         fixture.detectChanges();
 
         editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
@@ -118,37 +118,41 @@ describe('MessageEditorComponent issue links', () => {
         expect(picker(fixture)).toBeNull();
     });
 
-    it('loads the issue list once per project across picker opens', async () => {
-        const issues$ = new Subject<Issue[]>();
-        const { fixture, load } = await render(7, issues$);
+    it('refreshes the list in the background when the picker reopens, keeping the old options meanwhile', async () => {
+        const { fixture, load } = await render({ idProject: 7 });
 
         type(fixture, 'see #12');
-        issues$.next(issues);
+        load.mock.results[0].value.next(issues);
         fixture.detectChanges();
+        expect(options(fixture)).toEqual(['#123Fix login']);
+
         type(fixture, 'see');
         type(fixture, 'see #12');
-        expect(load).toHaveBeenCalledTimes(1);
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(options(fixture)).toEqual(['#123Fix login']);
+
+        const refreshed = [issue(123, 'Fix login'), issue(789, 'New task')];
+        load.mock.results[1].value.next(refreshed);
+        fixture.detectChanges();
+        expect(options(fixture)).toEqual(['#123Fix login']);
+
+        type(fixture, 'see #78');
+        expect(options(fixture)).toEqual(['#789New task']);
     });
 
-    it('stays a plain editor outside a project', async () => {
-        const issues$ = new Subject<Issue[]>();
-        const { fixture, load } = await render(null, issues$);
+    it('does not open the picker outside a project', async () => {
+        const { fixture, load } = await render({ idProject: null });
 
         type(fixture, 'see #12');
         expect(load).not.toHaveBeenCalled();
         expect(picker(fixture)).toBeNull();
     });
 
-    it('uses the idProject input when no wiki scope is provided (project chat)', async () => {
-        const issues$ = new Subject<Issue[]>();
-        const { fixture, load } = await render(null, issues$, 3);
+    it('does not open the picker without a link scope', async () => {
+        const { fixture, load } = await render({ withScope: false });
 
-        type(fixture, 'see #1');
-        expect(load).toHaveBeenCalledWith({
-            idProject: 3,
-            orderColumn: 'createAt',
-            orderDirection: 'desc'
-        });
-        expect(picker(fixture)).not.toBeNull();
+        type(fixture, 'see #12');
+        expect(load).not.toHaveBeenCalled();
+        expect(picker(fixture)).toBeNull();
     });
 });

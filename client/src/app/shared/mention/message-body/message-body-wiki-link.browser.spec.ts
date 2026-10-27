@@ -13,7 +13,7 @@ import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 import { WikiAgentAccess } from 'src/app/wiki/constants/wiki-agent-access.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiTree } from 'src/app/wiki/model/wiki-tree.model';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { AttachmentLightboxStub, TablerIconStub } from 'src/testing/stubs';
 import { MessageBodyComponent } from './message-body.component';
 
@@ -89,10 +89,10 @@ async function render(
         providers: [
             provideRouter([]),
             { provide: WikiApi, useValue: { loadTree$: loadTree } },
-            WikiLinkScope
+            LinkScope
         ]
     }).compileComponents();
-    TestBed.inject(WikiLinkScope).idProject.set(idProject);
+    TestBed.inject(LinkScope).idProject.set(idProject);
     const fixture = TestBed.createComponent(MessageBodyComponent);
     fixture.componentRef.setInput('body', body);
     fixture.detectChanges();

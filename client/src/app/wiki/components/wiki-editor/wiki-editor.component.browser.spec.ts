@@ -1,10 +1,14 @@
 import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { EditorView } from '@codemirror/view';
+import { startCompletion, closeCompletion } from '@codemirror/autocomplete';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
-import { Observable, of } from 'rxjs';
-import { describe, expect, it } from 'vitest';
+import { Observable, Subject, of } from 'rxjs';
+import { describe, expect, it, vi } from 'vitest';
 import { TablerIconStub, UiButtonStub, UiTooltipStub } from 'src/testing/stubs';
+import { IssueApi } from 'src/app/issue/api/issue.api.service';
+import { Issue } from 'src/app/issue/model/issue.model';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { WikiTablePickerComponent } from '../wiki-table-picker/wiki-table-picker.component';
 import { WikiEditorComponent } from './wiki-editor.component';
@@ -41,6 +45,10 @@ async function render(
             UiTooltipStub,
             UiPopoverStub,
             UiMenuStub
+        ],
+        providers: [
+            { provide: IssueApi, useValue: { load$: () => new Subject<Issue[]>() } },
+            LinkScope
         ]
     }).compileComponents();
     const fixture = TestBed.createComponent(WikiEditorComponent);
@@ -114,5 +122,97 @@ describe('WikiEditorComponent toolbar', () => {
         menu.find(item => item.labelKey === 'WIKI.CALLOUT.WARNING')?.command?.();
 
         expect(values.at(-1)).toBe('> [!WARNING]\n> Run migrations first');
+    });
+});
+
+const issueOption = (idIssuePublic: number, title: string): Issue => ({
+    idIssue: idIssuePublic,
+    idIssuePublic,
+    idProject: 7,
+    idState: null,
+    idSeverity: null,
+    idIssueType: null,
+    title,
+    description: '',
+    tracked: 0
+});
+
+describe('WikiEditorComponent issue picker', () => {
+    async function renderIssuePicker(issues$: Subject<Issue[]>): Promise<{
+        element: HTMLElement;
+        view: EditorView;
+        load: ReturnType<typeof vi.fn>;
+    }> {
+        const load = vi.fn().mockReturnValue(issues$);
+        await TestBed.configureTestingModule({
+            declarations: [WikiEditorComponent, WikiTablePickerComponent],
+            imports: [
+                TranslateModule.forRoot({
+                    loader: { provide: TranslateLoader, useClass: EmptyLoader }
+                }),
+                TablerIconStub,
+                UiButtonStub,
+                UiTooltipStub,
+                UiPopoverStub,
+                UiMenuStub
+            ],
+            providers: [{ provide: IssueApi, useValue: { load$: load } }, LinkScope]
+        }).compileComponents();
+        TestBed.inject(LinkScope).idProject.set(7);
+        const fixture = TestBed.createComponent(WikiEditorComponent);
+        fixture.componentRef.setInput('initialValue', 'fixed in ');
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+        const view = EditorView.findFromDOM(element.querySelector<HTMLElement>('.cm-editor')!)!;
+        return { element, view, load };
+    }
+
+    function tooltipOptions(element: HTMLElement): string[] {
+        return Array.from(element.querySelectorAll('.cm-completionLabel')).map(
+            option => option.textContent?.trim() ?? ''
+        );
+    }
+
+    async function openPicker(view: EditorView): Promise<void> {
+        startCompletion(view);
+        await new Promise(resolve => setTimeout(resolve, 120));
+    }
+
+    it('takes the # options from the issue link store and refreshes them on every open', async () => {
+        const issues$ = new Subject<Issue[]>();
+        const { element, view, load } = await renderIssuePicker(issues$);
+
+        view.dispatch({ changes: { from: 9, to: 9, insert: '#' }, selection: { anchor: 10 } });
+        await openPicker(view);
+        expect(load).toHaveBeenCalledWith({
+            idProject: 7,
+            orderColumn: 'createAt',
+            orderDirection: 'desc'
+        });
+        expect(tooltipOptions(element)).toEqual([]);
+
+        issues$.next([issueOption(123, 'Fix login'), issueOption(456, 'Add dark mode')]);
+        await openPicker(view);
+        expect(tooltipOptions(element)).toEqual(['123', '456']);
+
+        issues$.next([issueOption(123, 'Fix login'), issueOption(456, 'Add dark mode')]);
+        closeCompletion(view);
+        view.dispatch({ changes: { from: 10, to: 10, insert: '4' }, selection: { anchor: 11 } });
+        await openPicker(view);
+        expect(load).toHaveBeenCalledTimes(3);
+        expect(tooltipOptions(element)).toEqual(['456']);
+    });
+
+    it('keeps offering the cached list while a refresh is in flight', async () => {
+        const issues$ = new Subject<Issue[]>();
+        const { element, view, load } = await renderIssuePicker(issues$);
+
+        view.dispatch({ changes: { from: 9, to: 9, insert: '#' }, selection: { anchor: 10 } });
+        await openPicker(view);
+        issues$.next([issueOption(123, 'Fix login')]);
+
+        await openPicker(view);
+        expect(load).toHaveBeenCalledTimes(2);
+        expect(tooltipOptions(element)).toEqual(['123']);
     });
 });

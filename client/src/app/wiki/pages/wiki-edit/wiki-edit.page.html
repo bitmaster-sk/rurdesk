@@ -83,10 +83,8 @@
                     [initialValue]="body()"
                     [placeholderText]="'WIKI.FIELD.BODY_PLACEHOLDER' | translate"
                     [pages]="pageOptions()"
-                    [issues]="issueOptions()"
                     [attachmentScope]="attachmentScope()"
                     (valueChange)="onBodyChange($event)"
-                    (issuesRequested)="onIssuesRequested()"
                 />
             </div>
             <div class="wiki-edit__pane">

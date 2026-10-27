@@ -28,6 +28,7 @@ import { Team } from 'src/app/team/model/team.model';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
 import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ConversationGroup } from '../../entity/conversation-group.entity';
 import { MessageApi } from '../../api/message.api.service';
@@ -41,7 +42,8 @@ import { MessageKeyConverter } from '../../converter/message-key.converter';
     templateUrl: './message.page.html',
     styleUrls: ['./message.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    standalone: false,
+    providers: [LinkScope]
 })
 export class MessagePage implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
@@ -54,6 +56,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly teamMemberStore = inject(TeamMemberStore);
+    private readonly linkScope = inject(LinkScope);
 
     private readonly msgList = viewChild<ElementRef<HTMLElement>>('msgList');
     private readonly msgListItems = viewChildren('msgListItems');
@@ -104,15 +107,6 @@ export class MessagePage implements OnInit, OnDestroy {
             : { idMessageRecipientType, idRecipient: this.idActiveRecipient() };
     });
 
-    // Project context for `#123` task links: only a project conversation has
-    // a project (the recipient id IS the idProject). DM and team chat keep
-    // `#123` as plain text.
-    protected readonly issueLinkProject = computed<number | null>(() =>
-        this.idActiveRecipientType() === MessageRecipientType.project
-            ? this.idActiveRecipient()
-            : null
-    );
-
     private readonly unread = toSignal(this.unreadStore.unread$, {
         initialValue: new Map<string, Message[]>()
     });
@@ -142,6 +136,9 @@ export class MessagePage implements OnInit, OnDestroy {
                         );
                         this.idActiveRecipient.set(recipientId);
                         this.idActiveRecipientType.set(recipientType);
+                        this.linkScope.idProject.set(
+                            recipientType === MessageRecipientType.project ? recipientId : null
+                        );
                         if (recipientType === MessageRecipientType.project) {
                             this.projectMemberStore.load(recipientId);
                         } else if (recipientType === MessageRecipientType.team) {

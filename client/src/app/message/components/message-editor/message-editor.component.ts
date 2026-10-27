@@ -31,13 +31,14 @@ import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
 import { Mention } from 'src/app/shared/mention/mention';
-import { IssueLinkOption } from 'src/app/issue/entity/issue-link-option.entity';
-import { IssueLinkStore } from 'src/app/issue/store/issue-link.store';
+import { IssueLinkOption } from 'src/app/link/entity/issue-link-option.entity';
+import { IssueLinkStore } from 'src/app/link/store/issue-link.store';
+import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
 import { WikiTreeConverter } from 'src/app/wiki/converter/wiki-tree.converter';
 import { WikiLinkCandidate } from 'src/app/wiki/entity/wiki-link-candidate.entity';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
 import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 
 type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
@@ -88,12 +89,6 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
 
     public readonly attachmentScope = input<AttachmentScope | null>(null);
 
-    /**
-     * Project id for the `#123` task picker when no WikiLinkScope is injected
-     * (project chats supply it explicitly; issue detail provides the scope).
-     */
-    public readonly idProject = input<number | null>(null);
-
     public readonly cancelled = output<void>();
 
     private readonly uploader = inject(AttachmentUploader);
@@ -139,17 +134,17 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             .slice(0, 8);
     });
 
-    private readonly wikiScope = inject(WikiLinkScope, { optional: true });
+    private readonly linkScope = inject(LinkScope, { optional: true });
     private readonly wikiStore = inject(WikiLinkStore);
     protected readonly WikiSpaceKind = WikiSpaceKind;
     protected readonly wikiQuery = signal<{ start: number; query: string } | null>(null);
     protected readonly isWikiLoading = computed(() => {
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         return idProject !== null && this.wikiStore.tree(idProject) === null;
     });
     protected readonly wikiCandidates = computed<WikiLinkCandidate[]>(() => {
         const query = this.wikiQuery();
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         const tree = idProject === null ? null : this.wikiStore.tree(idProject);
         if (!query || !tree) {
             return [];
@@ -157,27 +152,20 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         return WikiTreeConverter.toLinkCandidates(tree, query.query, 8);
     });
 
-    // `#123` task autocomplete state — mirrors the wiki picker, but the option
-    // list comes from IssueLinkStore and needs only the project id.
-    private readonly issueLinkProject = computed(
-        () => this.wikiScope?.idProject() ?? this.idProject()
-    );
     private readonly issueStore = inject(IssueLinkStore);
     protected readonly issueQuery = signal<{ start: number; query: string } | null>(null);
     protected readonly isIssuesLoading = computed(() => {
-        const idProject = this.issueLinkProject();
+        const idProject = this.linkScope?.idProject() ?? null;
         return idProject !== null && this.issueStore.list(idProject) === null;
     });
     protected readonly issueCandidates = computed<IssueLinkOption[]>(() => {
         const query = this.issueQuery();
-        const idProject = this.issueLinkProject();
+        const idProject = this.linkScope?.idProject() ?? null;
         const options = idProject === null ? null : this.issueStore.list(idProject);
         if (!query || !options) {
             return [];
         }
-        return options
-            .filter(option => String(option.idIssuePublic).startsWith(query.query))
-            .slice(0, 8);
+        return IssueLinkConverter.toPickerOptions(options, query.query);
     });
 
     // Platform-aware shortcut hint for the send button tooltip.
@@ -385,15 +373,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const root = this.editorRef().nativeElement;
         const { start: caret } = EditorSelection.getLinearSelection(root);
         EditorSelection.setLinearSelection(root, query.start, caret);
-        // Trailing space moves the caret off the `#id` run so the picker does
-        // not reopen for the freshly inserted text (same trick as mention
-        // chips).
         root.ownerDocument.execCommand('insertText', false, `#${issue.idIssuePublic} `);
         this.issueQuery.set(null);
         this.onInput();
     }
     private detectWikiQuery(body: string): void {
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         if (idProject === null) {
             return;
         }
@@ -412,12 +397,8 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         this.placePicker(caret - match[0].length);
     }
 
-    // Detect a `#123` run at the caret: a `#` at a boundary (BOF, whitespace or
-    // `(` — the same lead classes as the converter's issue pattern) followed by
-    // digits. Opens the task picker without converting anything; the inserted
-    // text stays `#<id>` and the renderer links it.
     private detectIssueQuery(body: string): void {
-        const idProject = this.issueLinkProject();
+        const idProject = this.linkScope?.idProject() ?? null;
         if (idProject === null) {
             this.issueQuery.set(null);
             return;

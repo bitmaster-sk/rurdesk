@@ -102,6 +102,12 @@ list narrows as you type the number. Pick one (or just type the number, e.g.
 Links are not validated: a typo like `#99` simply renders as a link to a task
 that does not exist.
 
+Project chat messages also support wiki links: `[[Page title]]` becomes a link
+to that page, with the same `[[` picker as in the
+[wiki editor](wiki.md#writing). The wiki link syntax, including shared pages
+(`[[shared:Page title]]`) and headings (`[[Page title#Heading]]`), works the
+same way as in the wiki.
+
 ### Attachments
 
 Task descriptions, task comments, chat messages (team, project and direct) and

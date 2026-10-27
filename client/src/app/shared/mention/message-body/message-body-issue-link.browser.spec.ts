@@ -13,7 +13,7 @@ import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 import { WikiAgentAccess } from 'src/app/wiki/constants/wiki-agent-access.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiTree } from 'src/app/wiki/model/wiki-tree.model';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { AttachmentLightboxStub, TablerIconStub } from 'src/testing/stubs';
 import { MessageBodyComponent } from './message-body.component';
 
@@ -58,12 +58,19 @@ const tree: WikiTree = {
 
 async function render(
     body: string,
-    opts: { scopeIdProject?: number | null; inputIdProject?: number | null } = {}
+    opts: { idProject?: number | null; withScope?: boolean } = {}
 ): Promise<{
     fixture: ComponentFixture<MessageBodyComponent>;
     loadTree: ReturnType<typeof vi.fn>;
 }> {
     const loadTree = vi.fn().mockReturnValue(of(tree));
+    const providers: object[] = [
+        provideRouter([]),
+        { provide: WikiApi, useValue: { loadTree$: loadTree } }
+    ];
+    if (opts.withScope !== false) {
+        providers.push(LinkScope);
+    }
     await TestBed.configureTestingModule({
         imports: [
             MarkdownModule.forRoot({
@@ -77,18 +84,13 @@ async function render(
             DiffViewerStub
         ],
         declarations: [MessageBodyComponent, MockupCardComponent],
-        providers: [
-            provideRouter([]),
-            { provide: WikiApi, useValue: { loadTree$: loadTree } },
-            WikiLinkScope
-        ]
+        providers
     }).compileComponents();
-    TestBed.inject(WikiLinkScope).idProject.set(opts.scopeIdProject ?? null);
+    if (opts.withScope !== false) {
+        TestBed.inject(LinkScope).idProject.set(opts.idProject ?? null);
+    }
     const fixture = TestBed.createComponent(MessageBodyComponent);
     fixture.componentRef.setInput('body', body);
-    if (opts.inputIdProject !== null && opts.inputIdProject !== undefined) {
-        fixture.componentRef.setInput('idProject', opts.inputIdProject);
-    }
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -101,26 +103,16 @@ function links(fixture: ComponentFixture<MessageBodyComponent>): HTMLAnchorEleme
 
 describe('MessageBodyComponent issue links', () => {
     it('turns #123 into an issue link inside a project without loading the wiki', async () => {
-        const { fixture, loadTree } = await render('blocked by #123', {
-            scopeIdProject: 7
-        });
+        const { fixture, loadTree } = await render('blocked by #123', { idProject: 7 });
         expect(loadTree).not.toHaveBeenCalled();
         expect(links(fixture).map(link => [link.textContent, link.getAttribute('href')])).toEqual([
             ['#123', '/project/7/issue/123']
         ]);
     });
 
-    it('links several references and uses the idProject input without a scope', async () => {
-        const { fixture } = await render('see #9 and #10', { inputIdProject: 9 });
-        expect(links(fixture).map(link => link.getAttribute('href'))).toEqual([
-            '/project/9/issue/9',
-            '/project/9/issue/10'
-        ]);
-    });
-
     it('links wiki pages and task references together', async () => {
         const { fixture, loadTree } = await render('see [[Deploy runbook]] and #11', {
-            scopeIdProject: 7
+            idProject: 7
         });
         expect(loadTree).toHaveBeenCalledWith(7);
         expect(links(fixture).map(link => [link.textContent, link.getAttribute('href')])).toEqual([
@@ -129,16 +121,21 @@ describe('MessageBodyComponent issue links', () => {
         ]);
     });
 
-    it('leaves task references as text outside a project', async () => {
-        const { fixture } = await render('see #123');
+    it('leaves task references as text when the scope has no project', async () => {
+        const { fixture } = await render('see #123', { idProject: null });
+        expect(links(fixture)).toEqual([]);
+        expect((fixture.nativeElement as HTMLElement).textContent).toContain('see #123');
+    });
+
+    it('leaves task references as text without a link scope and loads nothing', async () => {
+        const { fixture, loadTree } = await render('see #123', { withScope: false });
+        expect(loadTree).not.toHaveBeenCalled();
         expect(links(fixture)).toEqual([]);
         expect((fixture.nativeElement as HTMLElement).textContent).toContain('see #123');
     });
 
     it('does not link task references inside code', async () => {
-        const { fixture } = await render('try `#1` and\n```\n#2\n```\nthen #3', {
-            scopeIdProject: 7
-        });
+        const { fixture } = await render('try `#1` and\n```\n#2\n```\nthen #3', { idProject: 7 });
         expect(links(fixture).map(link => link.getAttribute('href'))).toEqual([
             '/project/7/issue/3'
         ]);

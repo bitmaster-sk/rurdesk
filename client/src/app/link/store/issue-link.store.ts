@@ -1,13 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { IssueApi } from '../api/issue.api.service';
+import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { IssueLinkOption } from '../entity/issue-link-option.entity';
 
-/**
- * Caches the task list used by the `#123` autocomplete in message editors,
- * keyed by project (mirrors WikiLinkStore for `[[page]]` links). Loaded once
- * per project on first use; `#` links are blind, so the cache never has to be
- * validated.
- */
 @Injectable({ providedIn: 'root' })
 export class IssueLinkStore {
     private readonly api = inject(IssueApi);
@@ -19,15 +13,12 @@ export class IssueLinkStore {
     }
 
     public ensure(idProject: number): void {
-        if (!this.options().has(idProject)) {
+        if (!this.idsLoading.has(idProject)) {
             this.reload(idProject);
         }
     }
 
-    public reload(idProject: number): void {
-        if (this.idsLoading.has(idProject)) {
-            return;
-        }
+    private reload(idProject: number): void {
         this.idsLoading.add(idProject);
         this.api.load$({ idProject, orderColumn: 'createAt', orderDirection: 'desc' }).subscribe({
             next: issues => {

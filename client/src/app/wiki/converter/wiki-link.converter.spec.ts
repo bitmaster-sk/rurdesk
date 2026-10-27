@@ -62,8 +62,8 @@ describe('WikiLinkConverter', () => {
         );
     });
 
-    it('leaves links and task references inside code untouched', () => {
-        const body = 'Use `[[prehlad-systemu]]` and\n```\n[[prehlad-systemu]] #5\n```';
+    it('leaves links inside code untouched', () => {
+        const body = 'Use `[[prehlad-systemu]]` and\n```\n[[prehlad-systemu]]\n```';
         expect(WikiLinkConverter.toMarkdown(body, context)).toBe(body);
     });
 
@@ -98,32 +98,6 @@ describe('WikiLinkConverter', () => {
         expect(WikiLinkConverter.toMarkdown('[[#2026]] and [year](#2026)', context)).toBe(
             '[2026](#2026) and [year](#2026)'
         );
-    });
-
-    it('links only wiki pages in a comment and leaves task refs, checklists and code alone', () => {
-        expect(
-            WikiLinkConverter.toPageLinksMarkdown(
-                'see [[Prehľad systému]] for #11\n- [ ] todo\n`[[commits]]`',
-                context
-            )
-        ).toBe(
-            'see [Prehľad systému](/project/7/wiki/project/prehlad-systemu) for #11\n- [ ] todo\n`[[commits]]`'
-        );
-    });
-
-    it('links task references in a comment without wiki tree context', () => {
-        expect(WikiLinkConverter.toIssueLinksMarkdown('fixed in #11 (and #12)', 7)).toBe(
-            'fixed in [#11](/project/7/issue/11) (and [#12](/project/7/issue/12))'
-        );
-    });
-
-    it('leaves code and link anchors alone when linking task references', () => {
-        expect(
-            WikiLinkConverter.toIssueLinksMarkdown(
-                '`#5` and\n```\n#5 code\n```\nsee #6\n[year](#2026)',
-                7
-            )
-        ).toBe('`#5` and\n```\n#5 code\n```\nsee [#6](/project/7/issue/6)\n[year](#2026)');
     });
 
     it('resolves a comment link like the server: project first, then the shared space', () => {

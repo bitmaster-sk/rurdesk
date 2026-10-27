@@ -1,4 +1,5 @@
 import { MarkdownCode } from 'src/app/shared/markdown/markdown-code';
+import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
 import { WikiSpaceKind } from '../constants/wiki-space-kind.enum';
 import { WikiLinkCandidate } from '../entity/wiki-link-candidate.entity';
 import { WikiResolvedLink } from '../model/wiki-page.model';
@@ -23,7 +24,6 @@ export interface WikiLinkContext {
 export abstract class WikiLinkConverter {
     private static readonly sharedPrefixes = ['shared:', 'spolocne:'];
     private static readonly linkPattern = /\[\[([^[\]\n]+?)\]\]/g;
-    private static readonly issuePattern = /(^|[\s(])(?<!\]\()#(\d+)\b/g;
     private static readonly taskPattern = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX])\] /gm;
 
     public static toTarget(raw: string): WikiLinkTarget | null {
@@ -69,13 +69,6 @@ export abstract class WikiLinkConverter {
         );
     }
 
-    /** Converts `#123` task references to issue links outside code blocks. */
-    public static toIssueLinksMarkdown(body: string, idProject: number): string {
-        return MarkdownCode.replaceOutsideCode(body, part =>
-            WikiLinkConverter.replaceIssueLinks(part, idProject)
-        );
-    }
-
     public static toContext(idProject: number, tree: WikiTree): WikiLinkContext {
         const shared = tree.spaces.find(space => space.kind === WikiSpaceKind.Instance);
         const project = tree.spaces.find(space => space.kind === WikiSpaceKind.Project);
@@ -117,17 +110,9 @@ export abstract class WikiLinkConverter {
             (_match, marker: string, state: string) =>
                 `${marker}<span class="wiki-task${state === ' ' ? '' : ' wiki-task--done'}"></span> `
         );
-        return WikiLinkConverter.replaceIssueLinks(
+        return IssueLinkConverter.toMarkdown(
             WikiLinkConverter.replaceLinks(withTasks, context),
             context.idProject
-        );
-    }
-
-    private static replaceIssueLinks(text: string, idProject: number): string {
-        return text.replace(
-            WikiLinkConverter.issuePattern,
-            (_match, lead: string, id: string) =>
-                `${lead}[#${id}](/project/${idProject}/issue/${id})`
         );
     }
 

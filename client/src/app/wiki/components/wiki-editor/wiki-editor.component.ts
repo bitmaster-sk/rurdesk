@@ -38,6 +38,9 @@ import { AttachmentUploader } from 'src/app/shared/attachment/service/attachment
 import { ClipboardContent } from 'src/app/shared/attachment/util/clipboard-content';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
+import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
+import { IssueLinkStore } from 'src/app/link/store/issue-link.store';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiCalloutKind } from '../../constants/wiki-callout-kind.enum';
 import { WikiFormat } from '../../constants/wiki-format.enum';
 import { WikiAnchorConverter } from '../../converter/wiki-anchor.converter';
@@ -53,11 +56,6 @@ export interface WikiEditorPageOption {
     isShared: boolean;
 }
 
-export interface WikiEditorIssueOption {
-    idIssuePublic: number;
-    title: string;
-}
-
 @Component({
     selector: 'app-wiki-editor',
     templateUrl: './wiki-editor.component.html',
@@ -69,15 +67,15 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
     public readonly initialValue = input<string>('');
     public readonly placeholderText = input<string>('');
     public readonly pages = input<WikiEditorPageOption[]>([]);
-    public readonly issues = input<WikiEditorIssueOption[]>([]);
     public readonly attachmentScope = input<AttachmentScope | null>(null);
 
     public readonly valueChange = output<string>();
-    public readonly issuesRequested = output<void>();
 
     private readonly uploader = inject(AttachmentUploader);
     private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly issueStore = inject(IssueLinkStore);
+    private readonly linkScope = inject(LinkScope);
     private readonly pendingUploads = signal(0);
     private placeholders: WikiUploadPlaceholder[] = [];
 
@@ -407,16 +405,28 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
         if (!match) {
             return null;
         }
-        if (this.issues().length === 0) {
-            this.issuesRequested.emit();
+        const idProject = this.linkScope.idProject();
+        if (idProject === null) {
+            return null;
+        }
+        this.issueStore.ensure(idProject);
+        const query = match.text.slice(match.text.indexOf('#') + 1);
+        const options = IssueLinkConverter.toPickerOptions(
+            this.issueStore.list(idProject) ?? [],
+            query
+        );
+        if (options.length === 0) {
             return null;
         }
         const from = match.from + match.text.indexOf('#') + 1;
-        const options: Completion[] = this.issues().map(issue => ({
-            label: String(issue.idIssuePublic),
-            detail: issue.title,
-            type: 'variable'
-        }));
-        return { from, options, validFor: /^\d*$/ };
+        return {
+            from,
+            options: options.map(issue => ({
+                label: String(issue.idIssuePublic),
+                detail: issue.title,
+                type: 'variable' as const
+            })),
+            validFor: /^\d*$/
+        };
     }
 }

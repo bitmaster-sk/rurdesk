@@ -19,6 +19,7 @@ import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageEditorStub, TablerIconStub, UiBadgeStub } from 'src/testing/stubs';
 import { User } from 'src/app/auth/model/user.model';
 import { Project } from 'src/app/project/model/project.model';
@@ -274,5 +275,31 @@ describe('MessagePage mentionCandidates', () => {
         expect(newHeadings[0].textContent.trim()).toBe('Projektové chaty');
         expect(newHeadings[1].textContent.trim()).toBe('Tímové chaty');
         expect(newHeadings[2].textContent.trim()).toBe('Priame správy');
+    });
+
+    it('provides the project id to the link scope in a project chat', () => {
+        paramMapSubject.next(makeParamMap(7, MessageRecipientType.project));
+
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+
+        expect(fixture.debugElement.injector.get(LinkScope).idProject()).toBe(7);
+    });
+
+    it('clears the link scope in team and DM chats and refills it when switching back', () => {
+        paramMapSubject.next(makeParamMap(7, MessageRecipientType.project));
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+        const linkScope = fixture.debugElement.injector.get(LinkScope);
+        expect(linkScope.idProject()).toBe(7);
+
+        paramMapSubject.next(makeParamMap(42, MessageRecipientType.team));
+        expect(linkScope.idProject()).toBeNull();
+
+        paramMapSubject.next(makeParamMap(1, MessageRecipientType.user));
+        expect(linkScope.idProject()).toBeNull();
+
+        paramMapSubject.next(makeParamMap(9, MessageRecipientType.project));
+        expect(linkScope.idProject()).toBe(9);
     });
 });
