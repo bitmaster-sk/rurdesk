@@ -10,6 +10,7 @@ type User struct {
 	Password       string  `json:"-"             db:"password"`
 	IsAgent        bool    `json:"isAgent"         db:"is_agent"`
 	IsAdmin        bool    `json:"isAdmin"       db:"is_admin"`
+	IsActive       bool    `json:"isActive"      db:"is_active"`
 	AvatarInitials *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
 }
 
@@ -65,12 +66,14 @@ type AdminCreateUserRes struct {
 }
 
 // AdminUpdateUserReq is the PATCH /admin/user/:idUser body. Every field is an
-// optional pointer, serving both the isAdmin toggle and the edit form — only
-// present fields apply, and an explicit false for IsAdmin differs from omitted.
+// optional pointer, serving the isAdmin/isActive toggles and the edit form —
+// only present fields apply, and an explicit false for IsAdmin/IsActive
+// differs from omitted.
 type AdminUpdateUserReq struct {
 	Name           *string          `json:"name"          binding:"omitempty,min=1,max=250"`
 	Email          *string          `json:"email"         binding:"omitempty,email,max=250"`
 	IsAdmin        *bool            `json:"isAdmin"`
+	IsActive       *bool            `json:"isActive"`
 	ColorAvatarBg  *string          `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
 	AvatarInitials Optional[string] `json:"avatarInitials,omitzero"`
 }

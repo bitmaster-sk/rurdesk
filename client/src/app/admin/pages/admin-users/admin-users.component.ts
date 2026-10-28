@@ -68,6 +68,14 @@ export class AdminUsersComponent implements OnInit {
         });
     }
 
+    protected onToggleActive(user: AdminUser): void {
+        this.adminUserApi.setActive$(user.idUser, !user.isActive).subscribe({
+            next: () => this.loadUsers(),
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
+        });
+    }
+
     protected onConfirmDelete(user: AdminUser): void {
         this.adminUserApi.delete$(user.idUser).subscribe({
             next: () => this.loadUsers(),

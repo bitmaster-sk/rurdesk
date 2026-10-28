@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/stretchr/testify/suite"
@@ -426,6 +427,169 @@ func (s *AdminSuite) Test_CreateHuman_DuplicateEmail_409() {
 		Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken).StatusCode)
 	s.Equal(http.StatusConflict,
 		Request(s.T(), s.App, "POST", "/api/private/admin/user", body, s.AdminToken).StatusCode)
+}
+
+func (s *AdminSuite) Test_DisableUser_BlocksLogin_ExistingSessionDies() {
+	tok := createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"disabled user","email":"disabled@test.sk","password":"secret1"}`)
+	s.Require().Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", tok).StatusCode)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "disabled@test.sk")
+
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	// existing session is invalidated
+	s.Equal(http.StatusUnauthorized,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", tok).StatusCode,
+		"a disabled user's existing session must be invalidated")
+	// fresh login is rejected with the same 401 as a wrong password
+	s.Equal(http.StatusUnauthorized,
+		Request(s.T(), s.App, "POST", "/api/public/login",
+			`{"email":"disabled@test.sk","password":"secret1"}`, "").StatusCode,
+		"a disabled user must not be able to log in")
+
+	// re-enable restores login
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	s.Equal(http.StatusOK,
+		Request(s.T(), s.App, "POST", "/api/public/login",
+			`{"email":"disabled@test.sk","password":"secret1"}`, "").StatusCode,
+		"a re-enabled user must be able to log in again")
+}
+
+func (s *AdminSuite) Test_DisableUser_ListShowsFlag() {
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"listed user","email":"listed@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "listed@test.sk")
+
+	getUser := func() model.User {
+		res := Request(s.T(), s.App, "GET", "/api/private/admin/user", "", s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode)
+		var users []model.User
+		s.Require().Nil(json.NewDecoder(res.Body).Decode(&users))
+		for _, u := range users {
+			if u.IdUser == id {
+				return u
+			}
+		}
+		s.Fail("user not listed")
+		return model.User{}
+	}
+	s.True(getUser().IsActive, "a freshly created user must be active")
+
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	s.False(getUser().IsActive, "the list must expose isActive=false after disabling")
+}
+
+func (s *AdminSuite) Test_DisableAgent_StopsApiKey_AndDispatch() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "agent-disable-project")
+	adminID := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
+
+	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+		`{"name":"dis bot","isAgent":true}`, s.AdminToken)
+	var agent model.AdminCreateUserRes
+	s.Require().Nil(json.NewDecoder(res.Body).Decode(&agent))
+
+	ctx := context.Background()
+	var idIssue int64
+	err := s.App.Pool.QueryRow(ctx, `
+		INSERT INTO issues.issue (id_issue_public, id_project, title, description, create_by, update_by)
+		VALUES (901, $1, 'disabled agent issue', 'x', $2, $2) RETURNING id_issue`,
+		idProject, adminID).Scan(&idIssue)
+	s.Require().Nil(err)
+	_, err = s.App.Pool.Exec(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'queued', '{"stages":[]}'::jsonb)`,
+		idIssue, agent.IdUser, idProject)
+	s.Require().Nil(err)
+
+	// scheduler picks the agent up while active
+	ids, err := injector.GetAgentRunRepository().LoadActiveAgentIds(ctx)
+	s.Require().Nil(err)
+	s.Contains(ids, agent.IdUser, "an active agent with a queued run must be dispatched")
+
+	// warm the api-key cache
+	s.Require().Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode)
+
+	patch := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, patch.StatusCode)
+
+	// the cached key session is purged and the DB path filters disabled users
+	s.Equal(http.StatusUnauthorized,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
+		"a disabled agent's api key must stop authenticating immediately")
+	// no further dispatch for the disabled agent
+	ids, err = injector.GetAgentRunRepository().LoadActiveAgentIds(ctx)
+	s.Require().Nil(err)
+	s.NotContains(ids, agent.IdUser, "a disabled agent must not be dispatched again")
+
+	// re-enable: the key works again (the key itself was never deleted)
+	patch = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, patch.StatusCode)
+	s.Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
+		"a re-enabled agent's api key must work again")
+	ids, err = injector.GetAgentRunRepository().LoadActiveAgentIds(ctx)
+	s.Require().Nil(err)
+	s.Contains(ids, agent.IdUser)
+}
+
+func (s *AdminSuite) Test_DisableSelf_Rejected() {
+	id := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode,
+		"an admin must not be able to disable their own account")
+
+	var stillActive bool
+	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
+		"SELECT is_active FROM users.user WHERE id_user = $1", id).Scan(&stillActive))
+	s.True(stillActive, "the rejected self-disable must leave the account active")
+}
+
+func (s *AdminSuite) Test_DisableAdmin_WithAnotherActiveAdmin() {
+	// Disabling an admin is allowed when another active admin remains — the
+	// account simply loses access; history is preserved.
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"admin to disable","email":"admin-disable@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "admin-disable@test.sk")
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isAdmin":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	s.Equal(http.StatusUnauthorized,
+		Request(s.T(), s.App, "POST", "/api/public/login",
+			`{"email":"admin-disable@test.sk","password":"secret1"}`, "").StatusCode,
+		"a disabled admin must not be able to log in")
+	// The acting admin is untouched.
+	s.Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/admin/user", "", s.AdminToken).StatusCode)
+}
+
+func (s *AdminSuite) Test_DisableUser_SelfProfile_StillEditable() {
+	// Session invalidation on disable must not leak into an unrelated profile edit.
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"profile edit","email":"profile-edit@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "profile-edit@test.sk")
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"name":"profile edited"}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode)
+
+	var name string
+	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
+		"SELECT name FROM users.user WHERE id_user = $1", id).Scan(&name))
+	s.Equal("profile edited", name)
 }
 
 func Test_RunAdminSuite(t *testing.T) {

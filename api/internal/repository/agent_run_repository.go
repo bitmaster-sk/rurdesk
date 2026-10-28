@@ -307,12 +307,15 @@ func (r *AgentRunRepository) LoadActiveByAgentAndProject(ctx context.Context, id
 }
 
 // LoadActiveAgentIds returns distinct id_user_agent for runs that are not terminal.
-// Used by the scheduler to know which agents to consider on each tick.
+// Used by the scheduler to know which agents to consider on each tick. Agents whose
+// user account is disabled are excluded: a disabled agent gets no new dispatches
+// (runs already in flight are left to finish or be cancelled explicitly).
 func (r *AgentRunRepository) LoadActiveAgentIds(ctx context.Context) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT DISTINCT id_user_agent
 		FROM agent.run
+		JOIN users.user u ON u.id_user = agent.run.id_user_agent AND u.is_active = TRUE
 		WHERE phase NOT IN ('done', 'failed', 'cancelled')`)
 	if err != nil {
 		return nil, fmt.Errorf("querying active agent ids: %w", err)

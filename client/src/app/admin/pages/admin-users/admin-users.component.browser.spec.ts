@@ -19,7 +19,8 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
         email: 'ada@x.io',
         colorAvatarBg: '#123456',
         isAgent: false,
-        isAdmin: false
+        isAdmin: false,
+        isActive: true
     };
 
     beforeEach(async () => {

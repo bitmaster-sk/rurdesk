@@ -68,7 +68,7 @@ func performAuthHeaderRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKe
 
 func sessionJSON(t *testing.T) string {
 	t.Helper()
-	payload, err := json.Marshal(model.User{IdUser: 1, Name: "John Snow"})
+	payload, err := json.Marshal(model.User{IdUser: 1, Name: "John Snow", IsActive: true})
 	require.NoError(t, err)
 	return string(payload)
 }
@@ -90,6 +90,17 @@ func TestAuthValidSessionPasses(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
+// A disabled user's session snapshot can linger in Redis until its TTL runs out;
+// the middleware must reject it so disabling takes effect immediately.
+func TestAuthDisabledSessionSnapshotIsUnauthorized(t *testing.T) {
+	payload, err := json.Marshal(model.User{IdUser: 1, Name: "John Snow", IsActive: false})
+	require.NoError(t, err)
+	cache := &fakeSessionCache{value: string(payload)}
+	recorder := performAuthRequest(t, cache, &fakeApiKeyAuth{}, "some-session-token")
+
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
 func TestAuthUnknownTokenIsUnauthorized(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{}
 	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, "expired-session-token")
@@ -106,7 +117,7 @@ func TestAuthBareSessionTokenIsUnauthorized(t *testing.T) {
 }
 
 func TestAuthBareApiKeyIsUnauthorized(t *testing.T) {
-	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{IdApiKey: 7, User: model.User{IdUser: 2}}}
+	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{IdApiKey: 7, User: model.User{IdUser: 2, IsActive: true}}}
 	recorder := performAuthHeaderRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
@@ -151,10 +162,22 @@ func TestAuthUnknownApiKeyIsUnauthorized(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
 }
 
+func TestAuthDisabledApiKeyUserIsUnauthorized(t *testing.T) {
+	// Mirrors a snapshot cached before the user was disabled: the session user
+	// carries isActive=false and must be rejected like an unknown key.
+	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{
+		IdApiKey: 7,
+		User:     model.User{IdUser: 2, Name: "Agent", IsActive: false},
+	}}
+	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
+
+	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+}
+
 func TestAuthValidApiKeyPasses(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{
 		IdApiKey: 7,
-		User:     model.User{IdUser: 2, Name: "Agent"},
+		User:     model.User{IdUser: 2, Name: "Agent", IsActive: true},
 	}}
 	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
 
@@ -163,7 +186,7 @@ func TestAuthValidApiKeyPasses(t *testing.T) {
 
 func TestAuthRateLimitedApiKeyIsTooManyRequests(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{
-		session:      &model.ApiKeySession{IdApiKey: 7, User: model.User{IdUser: 2}},
+		session:      &model.ApiKeySession{IdApiKey: 7, User: model.User{IdUser: 2, IsActive: true}},
 		rateLimitErr: errors.New("rate limited"),
 	}
 	recorder := performAuthRequest(t, &fakeSessionCache{err: redis.Nil}, apiKeyAuth, rawApiKeyBearer)
@@ -176,7 +199,7 @@ func TestAuthRateLimitedApiKeyIsTooManyRequests(t *testing.T) {
 func TestAuthApiKeyBearerSkipsSessionCache(t *testing.T) {
 	apiKeyAuth := &fakeApiKeyAuth{session: &model.ApiKeySession{
 		IdApiKey: 7,
-		User:     model.User{IdUser: 2},
+		User:     model.User{IdUser: 2, IsActive: true},
 	}}
 	cache := &fakeSessionCache{err: errors.New("dial tcp: connection refused")}
 	recorder := performAuthRequest(t, cache, apiKeyAuth, rawApiKeyBearer)

@@ -6,6 +6,7 @@ export interface AdminUser {
     avatarInitials?: string | null;
     isAgent: boolean;
     isAdmin: boolean;
+    isActive: boolean;
 }
 
 export interface AdminCreateUserReq {
@@ -28,6 +29,7 @@ export interface AdminUpdateUserReq {
     name?: string;
     email?: string;
     isAdmin?: boolean;
+    isActive?: boolean;
     colorAvatarBg?: string;
     avatarInitials?: string;
 }

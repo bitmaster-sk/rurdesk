@@ -233,6 +233,12 @@ func (s *ApiKeyService) LookupSession(ctx context.Context, rawKey string) (*mode
 			_ = s.cache.Del(ctx, cacheKey).Err()
 			return nil, nil
 		}
+		// Same staleness guard for a user disabled after the snapshot was
+		// cached: LoadByHash already filters disabled users on the DB path.
+		if !session.User.IsActive {
+			_ = s.cache.Del(ctx, cacheKey).Err()
+			return nil, nil
+		}
 		// Fire-and-forget last_used_at update
 		select {
 		case s.lastUsedCh <- hash:

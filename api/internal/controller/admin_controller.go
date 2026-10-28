@@ -287,34 +287,62 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// Guards that need the acting admin are resolved before the tx so a self
+	// disable / last-admin demotion fails fast without touching the row.
+	if req.IsActive != nil && !*req.IsActive {
+		acting, ok := extctx.GetUser(ctx)
+		if !ok || acting.IdUser == idUser {
+			_ = c.Error(errs.ErrSelfDisable)
+			c.Status(http.StatusUnprocessableEntity)
+			return
+		}
+	}
+
+	// Captured before the mutation for the api-key cache purge when the active
+	// flag changes (the key rows themselves are not touched by a disable). Purged
+	// in BOTH directions: disabling must kill cached sessions at once, and
+	// re-enabling must clear the negative cache entry a disabled key's lookup
+	// writes, or the key would stay 401 for up to the negative-cache TTL.
+	var keyHashes []string
+	purgeKeyCache := false
 	// Guard + mutate in a tx to avoid a TOCTOU race on the admin count (mirrors guardLastOwner).
-	// Only fields present in the request are applied — this endpoint serves both the
-	// admin toggle (isAdmin only) and the edit form (name/email[/isAdmin]).
+	// Only fields present in the request are applied — this endpoint serves the
+	// admin toggle (isAdmin only), the active toggle (isActive only) and the edit
+	// form (name/email[/isAdmin]).
 	adminChanged := false
+	activeChanged := false
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
 		if pErr := ac.applyProfileUpdate(ctx, idUser, isAgent, &req); pErr != nil {
 			return pErr
 		}
-		if req.IsAdmin == nil {
-			return nil
-		}
-		targetIsAdmin, gErr := ac.userRepo.IsAdminUser(ctx, idUser)
+		changed, gErr := ac.applyAdminUpdate(ctx, idUser, &req)
 		if gErr != nil {
 			return gErr
 		}
-		// The edit form always sends isAdmin, even unchanged. Only a real change may
-		// invalidate sessions, or a self name/colour edit would log you out.
-		adminChanged = targetIsAdmin != *req.IsAdmin
-		if targetIsAdmin && !*req.IsAdmin {
-			if gErr := ac.guardLastAdmin(ctx); gErr != nil {
-				return gErr
-			}
+		adminChanged = changed
+		acChanged, aErr := ac.applyActiveUpdate(ctx, idUser, &req)
+		if aErr != nil {
+			return aErr
 		}
-		return ac.userRepo.SetAdmin(ctx, idUser, *req.IsAdmin)
+		activeChanged = acChanged
+		if activeChanged {
+			// Key hashes must be read before the flag flips so the cache purge
+			// can run once the tx commits.
+			hashes, hErr := ac.apiKeySvc.KeyHashesByUser(ctx, idUser)
+			if hErr != nil {
+				return hErr
+			}
+			keyHashes = hashes
+			purgeKeyCache = true
+		}
+		return nil
 	})
 	switch {
 	case err == errs.ErrLastAdmin:
 		_ = c.Error(errs.ErrLastAdmin)
+		c.Status(http.StatusUnprocessableEntity)
+	case err == errs.ErrSelfDisable:
+		_ = c.Error(errs.ErrSelfDisable)
 		c.Status(http.StatusUnprocessableEntity)
 	case errors.Is(err, repository.ErrUserNotFound):
 		_ = c.Error(errs.ErrNotFound)
@@ -327,17 +355,64 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 	default:
 		// An isAdmin change must kill existing sessions and the cached project-role
-		// admin bypass; a name/email/colour edit needs neither.
-		if adminChanged {
+		// admin bypass; an isActive change must do the same plus purge the cached
+		// api-key sessions (a disabled agent's key must stop working at once, and a
+		// re-enabled one must not trip the negative cache entry). A name/email/colour
+		// edit needs neither.
+		if adminChanged || activeChanged {
 			if iErr := ac.userService.InvalidateUserSessions(ctx, idUser); iErr != nil {
 				_ = c.Error(iErr)
 				c.Status(http.StatusInternalServerError)
 				return
 			}
 			ac.acl.InvalidateAllUserProjectCaches(ctx, idUser)
+			if purgeKeyCache {
+				ac.apiKeySvc.PurgeCache(ctx, keyHashes)
+			}
 		}
 		c.Status(http.StatusOK)
 	}
+}
+
+// applyAdminUpdate applies the isAdmin toggle when present and reports whether
+// the flag actually changed (only a real change may invalidate sessions — the
+// edit form always sends isAdmin, even unchanged).
+func (ac *AdminController) applyAdminUpdate(ctx context.Context, idUser int64, req *model.AdminUpdateUserReq) (bool, error) {
+	if req.IsAdmin == nil {
+		return false, nil
+	}
+	targetIsAdmin, err := ac.userRepo.IsAdminUser(ctx, idUser)
+	if err != nil {
+		return false, err
+	}
+	changed := targetIsAdmin != *req.IsAdmin
+	if targetIsAdmin && !*req.IsAdmin {
+		if err := ac.guardLastAdmin(ctx); err != nil {
+			return false, err
+		}
+	}
+	return changed, ac.userRepo.SetAdmin(ctx, idUser, *req.IsAdmin)
+}
+
+// applyActiveUpdate applies the isActive toggle when present and reports whether
+// the flag actually changed. Disabling the last active admin is rejected; an admin
+// can always be re-enabled, and self-disable is rejected by the caller before the
+// tx starts.
+func (ac *AdminController) applyActiveUpdate(ctx context.Context, idUser int64, req *model.AdminUpdateUserReq) (bool, error) {
+	if req.IsActive == nil {
+		return false, nil
+	}
+	user, err := ac.userRepo.LoadUser(ctx, idUser)
+	if err != nil {
+		return false, err
+	}
+	changed := user.IsActive != *req.IsActive
+	if user.IsAdmin && user.IsActive && !*req.IsActive {
+		if err := ac.guardLastAdmin(ctx); err != nil {
+			return false, err
+		}
+	}
+	return changed, ac.userRepo.SetActive(ctx, idUser, *req.IsActive)
 }
 
 // applyProfileUpdate writes name/email when present. Agents have a synthetic,
