@@ -88,19 +88,23 @@ case sensitivity, or word boundaries.
 
 ### Task references
 
-Type `#` in a task comment, the task description or a project chat message to
-open a task picker — it lists the project's tasks by number and title, and the
-list narrows as you type the number. Pick one (or just type the number, e.g.
-`#123`) and it renders as a link to that task, the same as `#123` in the
-[wiki](wiki.md#writing).
+Type `#` in a task comment, the task description or a chat message to open a
+task picker — inside a project it lists that project's tasks by number and
+title; in team chat and direct messages it lists the tasks of every project
+you can see, each with its project name. The list narrows as you type the
+number. Pick one (or just type the number, e.g. `#123`) and it renders as a
+link to that task, the same as `#123` in the [wiki](wiki.md#writing).
 
 - **In task comments, task descriptions and project chat:** `#123` becomes a
-  clickable link to task #123
-- **In team chat and direct messages:** there is no project to link against, so
-  `#123` stays plain text
+  clickable link to task #123 of the current project
+- **In team chat and direct messages:** a picked task is inserted as a link
+  that carries its project, so it opens for anyone who can see that task. A
+  `#123` typed by hand stays plain text there, because there is no project
+  to resolve it against
 
 Links are not validated: a typo like `#99` simply renders as a link to a task
-that does not exist.
+that does not exist. A reader without access to the linked task's project
+gets a 404 when they open the link.
 
 Project chat messages also support wiki links: `[[Page title]]` becomes a link
 to that page, with the same `[[` picker as in the

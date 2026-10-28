@@ -127,6 +127,16 @@ describe('MessageBodyComponent issue links', () => {
         expect((fixture.nativeElement as HTMLElement).textContent).toContain('see #123');
     });
 
+    it('renders an explicit issue link even without a project', async () => {
+        const { fixture, loadTree } = await render('see [#123](/project/7/issue/123) there', {
+            idProject: null
+        });
+        expect(loadTree).not.toHaveBeenCalled();
+        expect(links(fixture).map(link => [link.textContent, link.getAttribute('href')])).toEqual([
+            ['#123', '/project/7/issue/123']
+        ]);
+    });
+
     it('leaves task references as text without a link scope and loads nothing', async () => {
         const { fixture, loadTree } = await render('see #123', { withScope: false });
         expect(loadTree).not.toHaveBeenCalled();

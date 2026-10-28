@@ -5,7 +5,9 @@ import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
+import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { Issue } from 'src/app/issue/model/issue.model';
+import { Project } from 'src/app/project/model/project.model';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageModule } from '../../message.module';
 import { EditorText } from './editor-text';
@@ -30,14 +32,27 @@ const issue = (idIssuePublic: number, title: string): Issue => {
     };
 };
 
+const project = (idProject: number, name: string): Project => ({
+    idProject,
+    name,
+    color: ''
+});
+
 const issues: Issue[] = [issue(123, 'Fix login'), issue(456, 'Add dark mode')];
+
+const projects: Project[] = [project(7, 'Rurdesk'), project(9, 'Website')];
 
 async function render(options: { idProject?: number | null; withScope?: boolean }): Promise<{
     fixture: ComponentFixture<HostComponent>;
     load: ReturnType<typeof vi.fn>;
+    loadProjects: ReturnType<typeof vi.fn>;
 }> {
     const load = vi.fn().mockImplementation(() => new Subject<Issue[]>());
-    const providers: object[] = [{ provide: IssueApi, useValue: { load$: load } }];
+    const loadProjects = vi.fn().mockImplementation(() => new Subject<Project[]>());
+    const providers: object[] = [
+        { provide: IssueApi, useValue: { load$: load } },
+        { provide: ProjectApi, useValue: { load$: loadProjects } }
+    ];
     if (options.withScope !== false) {
         providers.push(LinkScope);
     }
@@ -52,7 +67,7 @@ async function render(options: { idProject?: number | null; withScope?: boolean 
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     await fixture.whenStable();
-    return { fixture, load };
+    return { fixture, load, loadProjects };
 }
 
 function type(fixture: ComponentFixture<HostComponent>, text: string): HTMLDivElement {
@@ -86,7 +101,7 @@ describe('MessageEditorComponent issue links', () => {
     afterEach(() => TestBed.resetTestingModule());
 
     it('opens the task picker after #, loads the project issues and filters by the typed number', async () => {
-        const { fixture, load } = await render({ idProject: 7 });
+        const { fixture, load, loadProjects } = await render({ idProject: 7 });
 
         type(fixture, 'see #12');
         expect(load).toHaveBeenCalledWith({
@@ -94,6 +109,7 @@ describe('MessageEditorComponent issue links', () => {
             orderColumn: 'createAt',
             orderDirection: 'desc'
         });
+        expect(loadProjects).not.toHaveBeenCalled();
         expect(picker(fixture)).not.toBeNull();
         expect(options(fixture)).toEqual([]);
 
@@ -140,19 +156,43 @@ describe('MessageEditorComponent issue links', () => {
         expect(options(fixture)).toEqual(['#789New task']);
     });
 
-    it('does not open the picker outside a project', async () => {
-        const { fixture, load } = await render({ idProject: null });
+    it('lists the tasks of every visible project when the chat has no project', async () => {
+        const { fixture, load, loadProjects } = await render({ idProject: null });
 
-        type(fixture, 'see #12');
-        expect(load).not.toHaveBeenCalled();
+        type(fixture, 'see #1');
+        expect(loadProjects).toHaveBeenCalledTimes(1);
+        expect(picker(fixture)).not.toBeNull();
+        expect(options(fixture)).toEqual([]);
+
+        loadProjects.mock.results[0].value.next(projects);
+        expect(load.mock.calls.map(call => call[0].idProject)).toEqual([7, 9]);
+        load.mock.results[0].value.next([issue(123, 'Fix login')]);
+        load.mock.results[1].value.next([issue(12, 'Blog redesign')]);
+        fixture.detectChanges();
+        expect(options(fixture)).toEqual(['#123Fix loginRurdesk', '#12Blog redesignWebsite']);
+    });
+
+    it('inserts a picked cross-project task as a link carrying its project', async () => {
+        const { fixture, load, loadProjects } = await render({ idProject: null });
+        const editor = type(fixture, 'see #1');
+        loadProjects.mock.results[0].value.next(projects);
+        load.mock.results[0].value.next([issue(123, 'Fix login')]);
+        load.mock.results[1].value.next([issue(12, 'Blog redesign')]);
+        fixture.detectChanges();
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(EditorText.serialize(editor)).toBe('see [#123](/project/7/issue/123) ');
         expect(picker(fixture)).toBeNull();
     });
 
     it('does not open the picker without a link scope', async () => {
-        const { fixture, load } = await render({ withScope: false });
+        const { fixture, load, loadProjects } = await render({ withScope: false });
 
         type(fixture, 'see #12');
         expect(load).not.toHaveBeenCalled();
+        expect(loadProjects).not.toHaveBeenCalled();
         expect(picker(fixture)).toBeNull();
     });
 });

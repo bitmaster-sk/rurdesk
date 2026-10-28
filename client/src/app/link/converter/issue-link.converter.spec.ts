@@ -27,15 +27,22 @@ describe('IssueLinkConverter', () => {
         );
     });
 
+    it('builds a standalone issue link carrying the task project', () => {
+        expect(
+            IssueLinkConverter.toLinkMarkdown({ idIssuePublic: 12, idProject: 7, title: 'Fix' })
+        ).toBe('[#12](/project/7/issue/12)');
+    });
+
     it('filters picker options by the typed number and caps the list', () => {
         const options = [1, 12, 123, 1234, 2, 21].map(idIssuePublic => ({
             idIssuePublic,
+            idProject: 7,
             title: `Task ${idIssuePublic}`
         }));
         expect(IssueLinkConverter.toPickerOptions(options, '12')).toEqual([
-            { idIssuePublic: 12, title: 'Task 12' },
-            { idIssuePublic: 123, title: 'Task 123' },
-            { idIssuePublic: 1234, title: 'Task 1234' }
+            { idIssuePublic: 12, idProject: 7, title: 'Task 12' },
+            { idIssuePublic: 123, idProject: 7, title: 'Task 123' },
+            { idIssuePublic: 1234, idProject: 7, title: 'Task 1234' }
         ]);
         expect(
             IssueLinkConverter.toPickerOptions(options, '').map(option => option.idIssuePublic)
@@ -45,6 +52,7 @@ describe('IssueLinkConverter', () => {
             IssueLinkConverter.toPickerOptions(
                 Array.from({ length: 12 }, (_, index) => ({
                     idIssuePublic: index + 1,
+                    idProject: 7,
                     title: `Task ${index + 1}`
                 })),
                 ''

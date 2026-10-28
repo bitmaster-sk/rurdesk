@@ -15,6 +15,10 @@ export abstract class IssueLinkConverter {
         );
     }
 
+    public static toLinkMarkdown(option: IssueLinkOption): string {
+        return `[#${option.idIssuePublic}](/project/${option.idProject}/issue/${option.idIssuePublic})`;
+    }
+
     public static toPickerOptions(options: IssueLinkOption[], query: string): IssueLinkOption[] {
         return options
             .filter(option => String(option.idIssuePublic).startsWith(query))

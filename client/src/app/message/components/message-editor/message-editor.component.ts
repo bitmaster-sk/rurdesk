@@ -156,12 +156,15 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     protected readonly issueQuery = signal<{ start: number; query: string } | null>(null);
     protected readonly isIssuesLoading = computed(() => {
         const idProject = this.linkScope?.idProject() ?? null;
-        return idProject !== null && this.issueStore.list(idProject) === null;
+        return idProject === null
+            ? this.issueStore.listAll() === null
+            : this.issueStore.list(idProject) === null;
     });
     protected readonly issueCandidates = computed<IssueLinkOption[]>(() => {
         const query = this.issueQuery();
         const idProject = this.linkScope?.idProject() ?? null;
-        const options = idProject === null ? null : this.issueStore.list(idProject);
+        const options =
+            idProject === null ? this.issueStore.listAll() : this.issueStore.list(idProject);
         if (!query || !options) {
             return [];
         }
@@ -373,7 +376,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         const root = this.editorRef().nativeElement;
         const { start: caret } = EditorSelection.getLinearSelection(root);
         EditorSelection.setLinearSelection(root, query.start, caret);
-        root.ownerDocument.execCommand('insertText', false, `#${issue.idIssuePublic} `);
+        const idProject = this.linkScope?.idProject() ?? null;
+        const insertion =
+            idProject === null
+                ? `${IssueLinkConverter.toLinkMarkdown(issue)} `
+                : `#${issue.idIssuePublic} `;
+        root.ownerDocument.execCommand('insertText', false, insertion);
         this.issueQuery.set(null);
         this.onInput();
     }
@@ -398,8 +406,8 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     private detectIssueQuery(body: string): void {
-        const idProject = this.linkScope?.idProject() ?? null;
-        if (idProject === null) {
+        const scope = this.linkScope;
+        if (!scope) {
             this.issueQuery.set(null);
             return;
         }
@@ -411,7 +419,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return;
         }
         if (!this.issueQuery()) {
-            this.issueStore.ensure(idProject);
+            const idProject = scope.idProject();
+            if (idProject === null) {
+                this.issueStore.ensureAll();
+            } else {
+                this.issueStore.ensure(idProject);
+            }
             this.activeIndex.set(0);
         }
         const start = caret - match[2].length - 1;

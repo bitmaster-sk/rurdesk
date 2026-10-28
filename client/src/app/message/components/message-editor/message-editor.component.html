@@ -100,6 +100,9 @@
                         <tabler-icon icon="list-check" [size]="14" />
                         <span class="mention-picker__name">#{{ issue.idIssuePublic }}</span>
                         <span class="mention-picker__hint">{{ issue.title }}</span>
+                        @if (issue.projectName) {
+                            <span class="mention-picker__hint">{{ issue.projectName }}</span>
+                        }
                     </div>
                 }
             </div>
