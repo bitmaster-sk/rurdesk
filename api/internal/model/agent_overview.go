@@ -20,6 +20,7 @@ type AgentOverview struct {
 }
 
 type AgentCurrentRun struct {
-	IdIssuePublic int64  `json:"idIssuePublic"`
-	Stage         string `json:"stage"`
+	IdIssuePublic *int64  `json:"idIssuePublic"`
+	ReleaseName   *string `json:"releaseName"`
+	Stage         string  `json:"stage"`
 }

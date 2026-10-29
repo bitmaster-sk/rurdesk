@@ -197,7 +197,7 @@ func (r *AclRepository) GetProjectMembers(ctx context.Context, idProject int64) 
 
 	// 1. Direct users
 	directRows, err := db.Query(ctx, `
-		SELECT u.id_user, u.name, u.email, u.color_avatar_bg, pu.role
+		SELECT u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, pu.role
 		FROM projects.project_user pu
 		INNER JOIN users.user u ON u.id_user = pu.id_user
 		WHERE pu.id_project = $1
@@ -215,7 +215,7 @@ func (r *AclRepository) GetProjectMembers(ctx context.Context, idProject int64) 
 	for directRows.Next() {
 		var u model.User
 		var role model.Role
-		if err := directRows.Scan(&u.IdUser, &u.Name, &u.Email, &u.ColorAvatarBg, &role); err != nil {
+		if err := directRows.Scan(&u.IdUser, &u.Name, &u.Email, &u.ColorAvatarBg, &u.AvatarInitials, &role); err != nil {
 			return nil, fmt.Errorf("scanning direct project member: %w", err)
 		}
 		directMap[u.IdUser] = directEntry{user: u, role: role}
@@ -226,7 +226,7 @@ func (r *AclRepository) GetProjectMembers(ctx context.Context, idProject int64) 
 
 	// 2. Team-user assignments
 	teamUserRows, err := db.Query(ctx, `
-		SELECT u.id_user, u.name, u.email, u.color_avatar_bg, pt.id_team, pt.role
+		SELECT u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, pt.id_team, pt.role
 		FROM projects.project_team pt
 		INNER JOIN users.user_team ut ON ut.id_team = pt.id_team
 		INNER JOIN users.user u ON u.id_user = ut.id_user
@@ -246,7 +246,7 @@ func (r *AclRepository) GetProjectMembers(ctx context.Context, idProject int64) 
 		var u model.User
 		var idTeam int64
 		var role model.Role
-		if err := teamUserRows.Scan(&u.IdUser, &u.Name, &u.Email, &u.ColorAvatarBg, &idTeam, &role); err != nil {
+		if err := teamUserRows.Scan(&u.IdUser, &u.Name, &u.Email, &u.ColorAvatarBg, &u.AvatarInitials, &idTeam, &role); err != nil {
 			return nil, fmt.Errorf("scanning team-user assignment: %w", err)
 		}
 		entry, exists := teamAccum[u.IdUser]

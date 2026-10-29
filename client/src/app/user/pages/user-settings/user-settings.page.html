@@ -13,6 +13,7 @@
                     <app-avatar
                         [name]="currentUser()?.name ?? ''"
                         [bgColor]="avatarColor()"
+                        [manualInitials]="currentUser()?.avatarInitials"
                         [width]="3.5"
                         [height]="3.5"
                         [radius]="1.75"

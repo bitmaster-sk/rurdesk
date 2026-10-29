@@ -21,6 +21,8 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithArray("issue_type_ids", mcpgo.Description("Filter by issue type IDs"), mcpgo.WithNumberItems()),
 			mcpgo.WithBoolean("issue_type_unset", mcpgo.Description("Also include issues with no type set (widens issue_type_ids)")),
 			mcpgo.WithArray("assigned_to_ids", mcpgo.Description("Filter by assigned user IDs"), mcpgo.WithNumberItems()),
+			mcpgo.WithArray("tag_ids", mcpgo.Description("Filter by tag IDs from list_tags; an issue matches when it has at least one of them"), mcpgo.WithNumberItems()),
+			mcpgo.WithBoolean("tag_unset", mcpgo.Description("Also include issues with no tags (widens tag_ids)")),
 			mcpgo.WithBoolean("exclude_final_states", mcpgo.Description("Exclude issues in final/terminal states")),
 			mcpgo.WithString("updated_within", mcpgo.Description(`Only issues updated within this rolling window, e.g. "2h", "30d", "1d8h6m". Units: d (24h), h, m, s. Not calendar-aligned. Prefer this over computing dates yourself.`)),
 			mcpgo.WithString("created_within", mcpgo.Description(`Only issues created within this rolling window, same format as updated_within`)),
@@ -83,6 +85,7 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithNumber("estimated", mcpgo.Description("Estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("Story points")),
 			mcpgo.WithString("scheduled_at", mcpgo.Description("Scheduled datetime (RFC3339)")),
+			mcpgo.WithArray("tag_ids", mcpgo.Description("Tag IDs from list_tags to put on the issue"), mcpgo.WithNumberItems()),
 			mcpgo.WithObject("custom_fields", mcpgo.Description(
 				"Custom field values as a key→value object, e.g. {\"impact\": 7, \"reviewed\": true}. "+
 					"Keys are the field keys from list_custom_fields; call it first, an unknown key is rejected. "+
@@ -112,6 +115,7 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 			mcpgo.WithNumber("estimated", mcpgo.Description("New estimated seconds")),
 			mcpgo.WithNumber("points", mcpgo.Description("New story points")),
 			mcpgo.WithString("scheduled_at", mcpgo.Description("New scheduled datetime (RFC3339)")),
+			mcpgo.WithArray("tag_ids", mcpgo.Description("Replace the issue's tags with these tag IDs from list_tags; an empty array removes all tags. Omit to keep the tags unchanged."), mcpgo.WithNumberItems()),
 			mcpgo.WithObject("custom_fields", mcpgo.Description(
 				"Custom field values as a key→value object, e.g. {\"impact\": 7, \"reviewed\": true}. "+
 					"Keys are the field keys from list_custom_fields; call it first, an unknown key is rejected. "+
@@ -127,13 +131,15 @@ func registerIssueTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage 
 	)
 	server.AddTool(
 		mcpgo.NewTool("bulk_update_issues",
-			mcpgo.WithDescription("Update state, severity, issue type, or assignee on multiple issues atomically"),
+			mcpgo.WithDescription("Update state, severity, issue type, assignee or tags on multiple issues atomically"),
 			mcpgo.WithNumber("project_id", mcpgo.Required(), mcpgo.Description("Project ID")),
 			mcpgo.WithArray("issue_ids", mcpgo.Required(), mcpgo.Description("Public issue IDs to update"), mcpgo.WithNumberItems()),
 			mcpgo.WithNumber("state_id", mcpgo.Description("State ID to apply to all")),
 			mcpgo.WithNumber("severity_id", mcpgo.Description("Severity ID to apply to all")),
 			mcpgo.WithNumber("issue_type_id", mcpgo.Description("Issue type ID to apply to all")),
 			mcpgo.WithNumber("assigned_to_id", mcpgo.Description("Assignee user ID to apply to all")),
+			mcpgo.WithArray("add_tag_ids", mcpgo.Description("Tag IDs to add to every issue; other tags stay"), mcpgo.WithNumberItems()),
+			mcpgo.WithArray("remove_tag_ids", mcpgo.Description("Tag IDs to remove from every issue; other tags stay"), mcpgo.WithNumberItems()),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 			return handleBulkUpdateIssues(ctx, req, dispatcher)
@@ -166,6 +172,12 @@ func handleListIssues(ctx context.Context, req mcpgo.CallToolRequest, dispatcher
 	}
 	for _, id := range req.GetIntSlice("assigned_to_ids", nil) {
 		query.Add("idsAssignedTo", strconv.Itoa(id))
+	}
+	for _, id := range req.GetIntSlice("tag_ids", nil) {
+		query.Add("idsTag", strconv.Itoa(id))
+	}
+	if req.GetBool("tag_unset", false) {
+		query.Set("tagUnset", "true")
 	}
 	if req.GetBool("exclude_final_states", false) {
 		query.Set("excludeFinalStates", "true")
@@ -339,6 +351,9 @@ func handleCreateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 	if customFields, ok := req.GetArguments()["custom_fields"]; ok {
 		body["customFields"] = customFields
 	}
+	if tagIDs := req.GetIntSlice("tag_ids", nil); len(tagIDs) > 0 {
+		body["idsTag"] = tagIDs
+	}
 
 	idempotencyKey := req.GetString("idempotency_key", "")
 
@@ -402,6 +417,9 @@ func handleUpdateIssue(ctx context.Context, req mcpgo.CallToolRequest, dispatche
 	if customFields, ok := args["custom_fields"]; ok {
 		body["customFields"] = customFields
 	}
+	if _, ok := args["tag_ids"]; ok {
+		body["idsTag"] = req.GetIntSlice("tag_ids", []int{})
+	}
 
 	path := fmt.Sprintf("/api/private/project/%d/issue/%d", projectID, issueID)
 	resp, err := dispatcher.Request(ctx, RequestOpts{
@@ -433,21 +451,25 @@ func handleBulkUpdateIssues(ctx context.Context, req mcpgo.CallToolRequest, disp
 
 	args := req.GetArguments()
 	type entry struct {
-		IdIssuePublic  int  `json:"idIssuePublic"`
-		IdState        *int `json:"idState,omitempty"`
-		IdSeverity     *int `json:"idSeverity,omitempty"`
-		IdIssueType    *int `json:"idIssueType,omitempty"`
-		IdUserAssigned *int `json:"idUserAssigned,omitempty"`
+		IdIssuePublic  int   `json:"idIssuePublic"`
+		IdState        *int  `json:"idState,omitempty"`
+		IdSeverity     *int  `json:"idSeverity,omitempty"`
+		IdIssueType    *int  `json:"idIssueType,omitempty"`
+		IdUserAssigned *int  `json:"idUserAssigned,omitempty"`
+		AddIdsTag      []int `json:"addIdsTag,omitempty"`
+		RemoveIdsTag   []int `json:"removeIdsTag,omitempty"`
 	}
 
 	stateID := req.GetInt("state_id", 0)
 	sevID := req.GetInt("severity_id", 0)
 	typeID := req.GetInt("issue_type_id", 0)
 	assignedTo := req.GetInt("assigned_to_id", 0)
+	addTagIDs := req.GetIntSlice("add_tag_ids", nil)
+	removeTagIDs := req.GetIntSlice("remove_tag_ids", nil)
 
 	entries := make([]entry, len(issueIDs))
 	for i, id := range issueIDs {
-		e := entry{IdIssuePublic: id}
+		e := entry{IdIssuePublic: id, AddIdsTag: addTagIDs, RemoveIdsTag: removeTagIDs}
 		if _, ok := args["state_id"]; ok && stateID > 0 {
 			e.IdState = &stateID
 		}

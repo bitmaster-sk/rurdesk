@@ -1,0 +1,91 @@
+:host {
+    display: block;
+}
+
+.tag-input {
+    position: relative;
+    flex-wrap: wrap;
+    gap: var(--ui-space-s);
+    padding-block: var(--ui-space-s);
+    cursor: text;
+
+    &:focus-within {
+        border-color: var(--ui-input-border-focus);
+        box-shadow: var(--ui-focus-ring-halo);
+    }
+
+    &__field {
+        width: 100%;
+        padding: 0;
+        border: 0;
+        outline: none;
+        background: transparent;
+        color: var(--ui-input-fg);
+        font: inherit;
+    }
+
+    &__ghost {
+        position: absolute;
+        inset: 0;
+        color: var(--ui-input-placeholder);
+        white-space: pre;
+        pointer-events: none;
+    }
+
+    &__ghost-typed {
+        visibility: hidden;
+    }
+
+    &__panel {
+        position: absolute;
+        top: calc(100% + var(--ui-space-xs));
+        left: 0;
+        z-index: 10;
+        width: min(22rem, 100%);
+        cursor: default;
+    }
+
+    &__count {
+        margin-left: auto;
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+
+    &__kbd {
+        padding: 0 var(--ui-space-s);
+        border: 1px solid var(--ui-color-border);
+        border-bottom-width: 2px;
+        border-radius: var(--ui-radius-sm);
+        background: var(--ui-surface-0);
+        color: var(--ui-color-text-muted);
+        font-family: var(--ui-font-mono);
+        font-size: var(--font-size-xs);
+    }
+
+    &__create {
+        align-items: stretch;
+        white-space: normal;
+    }
+
+    &__create-head {
+        padding: 0;
+        border: 0;
+        background: none;
+        color: var(--ui-color-primary-strong);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+
+        .tag-input__kbd {
+            margin-left: auto;
+        }
+    }
+
+    &__hint {
+        padding: var(--ui-space) var(--ui-input-padding-x);
+        border-top: 1px solid var(--ui-color-border);
+        background: var(--ui-color-canvas);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+}

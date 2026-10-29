@@ -43,10 +43,10 @@ func (r *AgentRunRepository) WithPhaseStateTransitioner(transitioner PhaseTransi
 
 // transitionState must be called by every method that writes agent.run.phase, or that phase skips the project's event-to-state mapping.
 func (r *AgentRunRepository) transitionState(ctx context.Context, run *model.AgentRun, event string) {
-	if r.phaseTransitioner == nil || run == nil {
+	if r.phaseTransitioner == nil || run == nil || run.IdIssue == nil {
 		return
 	}
-	r.phaseTransitioner.Transition(ctx, run.IdProject, run.IdIssue, event)
+	r.phaseTransitioner.Transition(ctx, run.IdProject, *run.IdIssue, event)
 }
 
 // phaseWrite keeps a phase write and the issue state it maps to in one transaction, so a
@@ -80,7 +80,7 @@ func (r *AgentRunRepository) phaseWrite(
 }
 
 const agentRunColumns = `
-	id_run, id_issue, id_user_agent, id_project, id_git_integration, base_branch,
+	id_run, id_issue, id_release, id_user_agent, id_project, kind, id_git_integration, base_branch,
 	phase, stage_plan, queue_position,
 	pr_url, pr_host_type, pr_id, branch_name, error_message,
 	approved_mockup_ref,
@@ -89,7 +89,7 @@ const agentRunColumns = `
 func scanAgentRun(row pgx.Row) (*model.AgentRun, error) {
 	run := &model.AgentRun{}
 	err := row.Scan(
-		&run.IdRun, &run.IdIssue, &run.IdUserAgent, &run.IdProject, &run.IdGitIntegration, &run.BaseBranch,
+		&run.IdRun, &run.IdIssue, &run.IdRelease, &run.IdUserAgent, &run.IdProject, &run.Kind, &run.IdGitIntegration, &run.BaseBranch,
 		&run.Phase, &run.StagePlan, &run.QueuePosition,
 		&run.PrUrl, &run.PrHostType, &run.PrId, &run.BranchName, &run.ErrorMessage,
 		&run.ApprovedMockupRef,
@@ -101,18 +101,26 @@ func scanAgentRun(row pgx.Row) (*model.AgentRun, error) {
 	return run, nil
 }
 
-func (r *AgentRunRepository) Insert(ctx context.Context, idIssue, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+func (r *AgentRunRepository) InsertForIssue(ctx context.Context, idIssue, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+	return r.Insert(ctx, &model.AgentRun{IdIssue: &idIssue, IdUserAgent: idUserAgent, IdProject: idProject, Kind: constants.RunKindIssue}, stagePlan)
+}
+
+func (r *AgentRunRepository) InsertForRelease(ctx context.Context, idRelease, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+	return r.Insert(ctx, &model.AgentRun{IdRelease: &idRelease, IdUserAgent: idUserAgent, IdProject: idProject, Kind: constants.RunKindReleaseNotes}, stagePlan)
+}
+
+func (r *AgentRunRepository) Insert(ctx context.Context, subject *model.AgentRun, stagePlan json.RawMessage) (*model.AgentRun, error) {
 	return r.phaseWrite(ctx, func(ctx context.Context) (*model.AgentRun, error) {
-		return r.insert(ctx, idIssue, idUserAgent, idProject, stagePlan)
+		return r.insert(ctx, subject, stagePlan)
 	})
 }
 
-func (r *AgentRunRepository) insert(ctx context.Context, idIssue, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
+func (r *AgentRunRepository) insert(ctx context.Context, subject *model.AgentRun, stagePlan json.RawMessage) (*model.AgentRun, error) {
 	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
-		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO agent.run (id_issue, id_release, id_user_agent, id_project, kind, phase, stage_plan)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING %s`, agentRunColumns),
-		idIssue, idUserAgent, idProject, constants.PhaseQueued, stagePlan,
+		subject.IdIssue, subject.IdRelease, subject.IdUserAgent, subject.IdProject, subject.Kind, constants.PhaseQueued, stagePlan,
 	)
 	run, err := scanAgentRun(row)
 	if err != nil {
@@ -166,6 +174,42 @@ func (r *AgentRunRepository) LoadActiveByIssue(ctx context.Context, idIssue int6
 		ORDER BY created_at DESC
 		LIMIT 1`, agentRunColumns),
 		idIssue,
+	)
+	run, err := scanAgentRun(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return run, err
+}
+
+func (r *AgentRunRepository) LoadActiveOfSubject(ctx context.Context, run *model.AgentRun) (*model.AgentRun, error) {
+	if run.IdRelease != nil {
+		return r.LoadActiveByRelease(ctx, *run.IdRelease)
+	}
+	return r.LoadActiveByIssue(ctx, *run.IdIssue)
+}
+
+func (r *AgentRunRepository) DeleteByRelease(ctx context.Context, idRelease int64) error {
+	db := extctx.GetDb(ctx, r.pool)
+	if _, err := db.Exec(ctx, `
+		DELETE FROM agent.task WHERE id_run IN (SELECT id_run FROM agent.run WHERE id_release = $1)
+	`, idRelease); err != nil {
+		return fmt.Errorf("deleting release run tasks: %w", err)
+	}
+	if _, err := db.Exec(ctx, `DELETE FROM agent.run WHERE id_release = $1`, idRelease); err != nil {
+		return fmt.Errorf("deleting release runs: %w", err)
+	}
+	return nil
+}
+
+func (r *AgentRunRepository) LoadActiveByRelease(ctx context.Context, idRelease int64) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
+		SELECT %s FROM agent.run
+		WHERE id_release = $1
+		  AND phase NOT IN ('done', 'failed', 'cancelled')
+		ORDER BY created_at DESC
+		LIMIT 1`, agentRunColumns),
+		idRelease,
 	)
 	run, err := scanAgentRun(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -344,7 +388,7 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserAgent i
 	// order_rank lives on projects.project_issue_severity, not issues.severity, so we
 	// join through it. Issues without severity get a sentinel rank to sort last.
 	row := db.QueryRow(ctx, `
-		SELECT r.id_run, r.id_issue, r.id_user_agent, r.id_project, r.id_git_integration, r.base_branch,
+		SELECT r.id_run, r.id_issue, r.id_release, r.id_user_agent, r.id_project, r.kind, r.id_git_integration, r.base_branch,
 		       r.phase, r.stage_plan, r.queue_position,
 		       r.pr_url, r.pr_host_type, r.pr_id, r.branch_name, r.error_message,
 		       r.approved_mockup_ref,
@@ -356,7 +400,7 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserAgent i
 		      AND pis.id_project = r.id_project
 		WHERE r.id_user_agent = $1
 		  AND r.phase IN ('queued', 'in_progress')
-		  AND i.assigned_to = r.id_user_agent
+		  AND (r.id_issue IS NULL OR i.assigned_to = r.id_user_agent)
 		ORDER BY r.queue_position ASC NULLS LAST,
 		         COALESCE(pis.order_rank, 1000000) ASC,
 		         r.created_at ASC

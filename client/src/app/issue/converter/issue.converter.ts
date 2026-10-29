@@ -23,6 +23,9 @@ export abstract class IssueConverter {
         if (filter.idsAssignedTo?.length) {
             params = params.set('idsAssignedTo', filter.idsAssignedTo.join(','));
         }
+        if (filter.idsTag?.length) {
+            params = params.set('idsTag', filter.idsTag.join(','));
+        }
         if (filter.idsIssuePublic?.length) {
             params = params.set('idsIssuePublic', filter.idsIssuePublic.join(','));
         }
@@ -71,6 +74,7 @@ export abstract class IssueConverter {
         params = params.set('severityUnset', filter.severityUnset ? 'true' : 'false');
         params = params.set('issueTypeUnset', filter.issueTypeUnset ? 'true' : 'false');
         params = params.set('assignedToUnset', filter.assignedToUnset ? 'true' : 'false');
+        params = params.set('tagUnset', filter.tagUnset ? 'true' : 'false');
         return params;
     }
 

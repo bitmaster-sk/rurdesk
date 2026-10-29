@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"net/http"
 	"testing"
 
@@ -278,9 +279,9 @@ func (s *RunStagePlanSuite) TestInsertMaterializesSkillsIntoStagePlan() {
 	var iss model.Issue
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&iss))
 
-	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{IdsSkillByStage: map[string][]int64{"design": {s.IdSkill}}})
+	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: map[string][]int64{"design": {s.IdSkill}}})
 	s.Require().NoError(err)
-	run, err := repo.Insert(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, stagePlan)
+	run, err := repo.InsertForIssue(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, stagePlan)
 	s.Require().NoError(err)
 
 	var plan model.AgentStagePlan

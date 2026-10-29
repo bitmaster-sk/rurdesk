@@ -31,6 +31,8 @@ func New(
 	sevCtrl *controller.SeverityController,
 	itCtrl *controller.IssueTypeController,
 	cfCtrl *controller.CustomFieldController,
+	tagCtrl *controller.TagController,
+	releaseCtrl *controller.ReleaseController,
 	wikiCtrl *controller.WikiController,
 	wikiAgentCtrl *controller.WikiAgentController,
 	wikiProposalCtrl *controller.WikiProposalController,
@@ -107,6 +109,7 @@ func New(
 	pri.GET("/license", licenseCtrl.Get)
 
 	pri.GET("/skills", skillCtrl.List)
+	pri.GET("/agent/run-kinds", skillCtrl.RunKinds)
 
 	// Admin (global instance admin only)
 	admin := pri.Group("/admin", middleware.AdminOnly())
@@ -239,6 +242,21 @@ func New(
 	pri.PATCH("/issue-type/:idIssueType", itCtrl.EditIssueType)
 	pri.DELETE("/issue-type/:idIssueType/project/:idProject", itCtrl.DeleteIssueType)
 	pri.GET("/issue-type/:idIssueType/project/:idProject/usage", itCtrl.GetIssueTypeUsage)
+
+	pri.GET("/tag", tagCtrl.GetTags)
+	pri.POST("/tag", tagCtrl.CreateTag)
+	pri.PATCH("/tag/:idTag", tagCtrl.EditTag)
+	pri.DELETE("/tag/:idTag/project/:idProject", tagCtrl.DeleteTag)
+
+	pri.GET("/project/:idProject/release", releaseCtrl.GetReleases)
+	pri.GET("/project/:idProject/release/draft", releaseCtrl.GetDraft)
+	pri.POST("/project/:idProject/release", releaseCtrl.CreateRelease)
+	pri.GET("/project/:idProject/release/:idRelease", releaseCtrl.GetRelease)
+	pri.PUT("/project/:idProject/release/:idRelease", releaseCtrl.UpdateRelease)
+	pri.POST("/project/:idProject/release/:idRelease/agent", releaseCtrl.StartAgent)
+	pri.POST("/project/:idProject/release/:idRelease/publish", releaseCtrl.PublishRelease)
+	pri.PUT("/project/:idProject/release/:idRelease/notes", releaseCtrl.UpdateNotes)
+	pri.DELETE("/project/:idProject/release/:idRelease", releaseCtrl.DeleteRelease)
 
 	pri.GET("/custom-field", cfCtrl.GetCustomFields)
 	pri.POST("/custom-field", cfCtrl.CreateCustomField)

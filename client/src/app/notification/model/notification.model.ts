@@ -9,6 +9,7 @@ export interface Notification {
     projectColor?: string;
     actorName?: string;
     actorAvatarBg?: string;
+    actorAvatarInitials?: string | null;
     refType?: string;
     refId?: string;
     refTitle?: string;

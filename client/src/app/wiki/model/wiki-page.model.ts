@@ -87,6 +87,7 @@ export interface WikiIssueLink {
 export interface WikiEditor {
     idUser: number;
     name: string;
+    avatarInitials?: string | null;
 }
 
 export interface WikiSavedNotice {

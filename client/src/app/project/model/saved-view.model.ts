@@ -13,6 +13,8 @@ export interface SavedViewConfig {
     stateUnset?: boolean;
     idsAssignedTo?: number[];
     assignedToUnset?: boolean;
+    idsTag?: number[];
+    tagUnset?: boolean;
     assignedToNull?: boolean;
     scheduledAtUnset?: boolean;
     createAtFrom?: string;

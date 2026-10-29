@@ -3,7 +3,8 @@ export enum AgentStage {
     Brainstorming = 'brainstorming',
     Design = 'design',
     ImplementationPlan = 'implementation_plan',
-    Implementation = 'implementation'
+    Implementation = 'implementation',
+    ReleaseNotes = 'release_notes'
 }
 
 export const STAGE_LABELS: Record<AgentStage, string> = {
@@ -11,5 +12,6 @@ export const STAGE_LABELS: Record<AgentStage, string> = {
     [AgentStage.Brainstorming]: 'AGENT.STAGE.BRAINSTORMING',
     [AgentStage.Design]: 'AGENT.STAGE.DESIGN',
     [AgentStage.ImplementationPlan]: 'AGENT.STAGE.IMPLEMENTATION_PLAN',
-    [AgentStage.Implementation]: 'AGENT.STAGE.IMPLEMENTATION'
+    [AgentStage.Implementation]: 'AGENT.STAGE.IMPLEMENTATION',
+    [AgentStage.ReleaseNotes]: 'AGENT.STAGE.RELEASE_NOTES'
 };

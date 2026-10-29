@@ -1,0 +1,105 @@
+<div class="flex flex-col gap-6" data-testid="release-tasks-step">
+    @if (draft(); as draft) {
+        @if (closedCount() > 0) {
+            <section class="flex flex-col gap-3">
+                <h2 class="m-0 text-base font-semibold" data-testid="release-closed-count">
+                    {{
+                        'RELEASE.TASKS_STEP.CLOSED'
+                            | translate: { count: closedCount(), name: name() }
+                    }}
+                </h2>
+                @for (section of draft.sections; track section.idIssueType) {
+                    <div class="flex flex-col gap-2">
+                        <h3 class="m-0 text-sm font-semibold ui-color-text-muted">
+                            {{ section.name ?? ('RELEASE.OTHER' | translate) }}
+                        </h3>
+                        <app-release-issue-list
+                            [idProject]="idProject()"
+                            [issues]="section.issues"
+                        />
+                    </div>
+                }
+            </section>
+        }
+
+        @if (closedCount() === 0 || draft.openIssues.length > 0) {
+            <section class="flex flex-col gap-3" data-testid="release-tasks-warning">
+                <div class="flex flex-col gap-1">
+                    <h2 class="m-0 flex items-center gap-2 text-base font-semibold">
+                        <tabler-icon class="ui-color-orange" icon="alert-triangle" [size]="18" />
+                        @if (closedCount() === 0) {
+                            <span data-testid="release-empty">
+                                {{ 'RELEASE.TASKS_STEP.EMPTY' | translate: { tag: tagName() } }}
+                            </span>
+                        } @else {
+                            {{
+                                'RELEASE.TASKS_STEP.OPEN'
+                                    | translate: { count: draft.openIssues.length }
+                            }}
+                        }
+                    </h2>
+                    <p class="m-0 ui-field-hint">
+                        @if (draft.openIssues.length === 0) {
+                            {{ 'RELEASE.TASKS_STEP.EMPTY_HINT' | translate }}
+                        } @else if (closedCount() === 0) {
+                            {{
+                                'RELEASE.TASKS_STEP.EMPTY_OPEN_HINT'
+                                    | translate: { count: draft.openIssues.length, tag: tagName() }
+                            }}
+                        } @else {
+                            {{ 'RELEASE.TASKS_STEP.OPEN_HINT' | translate: { tag: tagName() } }}
+                        }
+                    </p>
+                </div>
+                @if (draft.openIssues.length > 0) {
+                    <app-release-issue-list
+                        data-testid="release-open-issues"
+                        [idProject]="idProject()"
+                        [issues]="draft.openIssues"
+                    />
+                    <div class="flex flex-col gap-2" role="radiogroup">
+                        <label class="flex cursor-pointer items-center gap-2">
+                            <input
+                                type="radio"
+                                name="openIssues"
+                                data-testid="release-open-move"
+                                [formControl]="openIssues()"
+                                [value]="ReleaseOpenIssues.Move"
+                            />
+                            <span>
+                                @if (isRecreateTag()) {
+                                    {{
+                                        'RELEASE.TASKS_STEP.OPEN_MOVE'
+                                            | translate: { name: tagName() }
+                                    }}
+                                } @else {
+                                    {{
+                                        'RELEASE.TASKS_STEP.OPEN_REMOVE'
+                                            | translate: { name: tagName() }
+                                    }}
+                                }
+                            </span>
+                        </label>
+                        <label class="flex cursor-pointer items-center gap-2">
+                            <input
+                                type="radio"
+                                name="openIssues"
+                                data-testid="release-open-keep"
+                                [formControl]="openIssues()"
+                                [value]="ReleaseOpenIssues.Keep"
+                            />
+                            <span>
+                                {{ 'RELEASE.TASKS_STEP.OPEN_KEEP' | translate: { name: name() } }}
+                            </span>
+                        </label>
+                    </div>
+                }
+            </section>
+        }
+    } @else {
+        <div class="flex flex-col items-center gap-3 py-12 ui-color-text-muted" role="status">
+            <ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" />
+            <span>{{ 'RELEASE.TASKS_STEP.LOADING' | translate: { tag: tagName() } }}</span>
+        </div>
+    }
+</div>

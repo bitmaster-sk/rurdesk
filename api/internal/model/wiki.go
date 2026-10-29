@@ -234,8 +234,9 @@ type WikiIssueLink struct {
 }
 
 type WikiEditor struct {
-	IdUser int64  `json:"idUser"`
-	Name   string `json:"name"`
+	IdUser         int64   `json:"idUser"`
+	Name           string  `json:"name"`
+	AvatarInitials *string `json:"avatarInitials,omitempty"`
 }
 
 type WikiSavedNotice struct {

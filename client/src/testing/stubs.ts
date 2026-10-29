@@ -92,6 +92,7 @@ export class UiOdometerStub {
 @Component({ selector: 'ui-loader', template: '', standalone: true })
 export class UiLoaderStub {
     public readonly size = input<number>(16);
+    public readonly ariaLabel = input<string>('');
 }
 
 @Component({ selector: 'ui-dialog', template: '<ng-content></ng-content>', standalone: true })
@@ -139,4 +140,33 @@ export class UiDaySelectStub implements ControlValueAccessor {
     public registerOnChange(): void {}
 
     public registerOnTouched(): void {}
+}
+
+@Component({
+    selector: 'app-tag-input',
+    template: '',
+    standalone: true,
+    providers: [
+        { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => TagInputStub), multi: true }
+    ]
+})
+export class TagInputStub implements ControlValueAccessor {
+    public readonly tags = input<unknown>(null);
+    public readonly canCreate = input(false);
+    public readonly colors = input<unknown>(null);
+    public readonly defaultColor = input<string>('');
+    public readonly inputId = input<string>('');
+    public readonly createTag = output<unknown>();
+
+    public writeValue(): void {}
+
+    public registerOnChange(): void {}
+
+    public registerOnTouched(): void {}
+}
+
+@Component({ selector: 'app-issue-tags', template: '', standalone: true })
+export class IssueTagsStub {
+    public readonly idsTag = input<number[] | null | undefined>([]);
+    public readonly max = input(3);
 }

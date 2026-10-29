@@ -22,6 +22,7 @@
 
 @import '@fontsource/lato/300.css';
 @import '@fontsource/lato/400.css';
+@import '@fontsource/lato/400-italic.css';
 @import '@fontsource/lato/700.css';
 
 // Global border-box baseline. The app was originally built under PrimeNG's
@@ -1068,6 +1069,15 @@ body {
         display: flex;
         align-items: center;
         gap: var(--ui-space-s);
+    }
+
+    .ui-field-hint {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+
+        &--error {
+            color: var(--ui-color-danger);
+        }
     }
 
     //####################################################

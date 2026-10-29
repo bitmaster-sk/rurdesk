@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"net/http"
 	"testing"
 
@@ -28,7 +29,7 @@ type AgentOverviewSuite struct {
 
 func emptyStagePlan(t *testing.T) json.RawMessage {
 	t.Helper()
-	plan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{})
+	plan, err := injector.GetAgentStagePlanService().BuildFromChoices(constants.RunKindIssue, model.RunChoices{})
 	require.NoError(t, err)
 	return plan
 }
@@ -78,7 +79,7 @@ func (s *AgentOverviewSuite) SetupSuite() {
 		s.BusyAgentID, s.IssueA.IdIssue, s.IssueB.IdIssue)
 	s.Require().NoError(err)
 
-	runA, err := injector.GetAgentRunRepository().Insert(ctx, s.IssueA.IdIssue, s.BusyAgentID, s.IdProjectA, emptyStagePlan(s.T()))
+	runA, err := injector.GetAgentRunRepository().InsertForIssue(ctx, s.IssueA.IdIssue, s.BusyAgentID, s.IdProjectA, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
 	_, err = injector.GetAgentTaskRepository().Insert(ctx, runA.IdRun, s.BusyAgentID, "design", 1)
 	s.Require().NoError(err)
@@ -88,7 +89,7 @@ func (s *AgentOverviewSuite) SetupSuite() {
 	_, err = s.App.Pool.Exec(ctx, "UPDATE agent.run SET phase = 'in_progress' WHERE id_run = $1", runA.IdRun)
 	s.Require().NoError(err)
 
-	_, err = injector.GetAgentRunRepository().Insert(ctx, s.IssueB.IdIssue, s.BusyAgentID, s.IdProjectB, emptyStagePlan(s.T()))
+	_, err = injector.GetAgentRunRepository().InsertForIssue(ctx, s.IssueB.IdIssue, s.BusyAgentID, s.IdProjectB, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
 }
 
@@ -127,7 +128,7 @@ func (s *AgentOverviewSuite) TestBusyAgentShowsCurrentRunOfThisProject() {
 
 	s.True(busy.IsBusy)
 	s.Require().NotNil(busy.Current)
-	s.Equal(s.IssueA.IdIssuePublic, busy.Current.IdIssuePublic)
+	s.Equal(&s.IssueA.IdIssuePublic, busy.Current.IdIssuePublic)
 	s.Equal("design", busy.Current.Stage)
 	s.Equal(1, busy.QueueCount, "queue count is global")
 	s.Empty(busy.QueuedIdsIssuePublic, "the queued run belongs to project B, so its issue is not named here")
@@ -145,7 +146,7 @@ func (s *AgentOverviewSuite) TestOtherProjectSeesQueueButNotForeignCurrent() {
 func (s *AgentOverviewSuite) TestParkedQueuedRunIsNotInTheQueue() {
 	ctx := context.Background()
 	parked := s.createIssueIn(s.IdProjectB, "overview-parked")
-	run, err := injector.GetAgentRunRepository().Insert(ctx, parked.IdIssue, s.BusyAgentID, s.IdProjectB, emptyStagePlan(s.T()))
+	run, err := injector.GetAgentRunRepository().InsertForIssue(ctx, parked.IdIssue, s.BusyAgentID, s.IdProjectB, emptyStagePlan(s.T()))
 	s.Require().NoError(err)
 	defer s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_run = $1", run.IdRun)
 

@@ -70,4 +70,31 @@ describe('AgentStagePlanFormComponent (browser)', () => {
 
         expect(root.textContent).toContain('AGENT_STAGE_PLAN_EDITOR.DEFAULTS_HINT');
     });
+
+    it('renders compact fields by default and form-sized ones on request', () => {
+        fixture.componentRef.setInput('models', ['opus']);
+        fixture.detectChanges();
+        const turns = root.querySelector('[data-testid="stage-turns-design"]') as HTMLElement;
+        expect(turns.classList).toContain('ui-input--sm');
+        expect(root.querySelector('.text-xs')).not.toBeNull();
+
+        fixture.componentRef.setInput('size', 'medium');
+        fixture.detectChanges();
+
+        expect(turns.classList).not.toContain('ui-input--sm');
+        expect(root.querySelector('.text-xs')).toBeNull();
+        expect(root.querySelector('.text-sm')?.textContent).toContain(
+            'AGENT_STAGE_PLAN_EDITOR.SKILLS'
+        );
+    });
+
+    it('shows the placeholder it is given for the model', () => {
+        fixture.componentRef.setInput('models', ['opus']);
+        fixture.componentRef.setInput('modelPlaceholder', 'RELEASE.AGENT.MODEL_DEFAULT');
+        fixture.detectChanges();
+
+        expect(root.querySelector('[data-testid="stage-model-design"]')?.textContent).toContain(
+            'RELEASE.AGENT.MODEL_DEFAULT'
+        );
+    });
 });

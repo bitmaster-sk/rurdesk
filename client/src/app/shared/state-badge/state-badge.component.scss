@@ -11,6 +11,8 @@
     @include badge.badge-sizes;
     @include badge.badge-tinted(var(--badge-color));
 
+    white-space: nowrap;
+
     &--start {
         --badge-color: var(--ui-color-state-start);
     }

@@ -473,7 +473,7 @@ func (s *WorkflowEventMapSuite) Test_PhaseStateTransition_AppliesOnInsert() {
 
 	ctx := context.Background()
 	run, err := injector.GetAgentRunRepository().
-		Insert(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, json.RawMessage(`{"stages":[]}`))
+		InsertForIssue(ctx, iss.IdIssue, s.AgentUserID, s.IdProject, json.RawMessage(`{"stages":[]}`))
 	s.Require().NoError(err)
 	defer s.App.Pool.Exec(ctx, `DELETE FROM agent.run WHERE id_run = $1`, run.IdRun) //nolint:errcheck
 

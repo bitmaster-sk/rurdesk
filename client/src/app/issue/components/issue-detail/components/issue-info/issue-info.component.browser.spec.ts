@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { NEVER, Subject, of } from 'rxjs';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { AclStore } from 'src/app/project/store/acl.store';
@@ -57,6 +58,10 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
                 {
                     provide: ProjectMemberStore,
                     useValue: { users$: of([]), usersMap$: of(new Map()) }
@@ -251,6 +256,10 @@ describe('IssueInfoComponent — "New task" menu action', () => {
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
                 {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
+                {
                     provide: ProjectMemberStore,
                     useValue: { users$: of([]), usersMap$: of(new Map()) }
                 },
@@ -367,6 +376,10 @@ describe('IssueInfoComponent — "Delete task" menu action', () => {
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
                 {
                     provide: ProjectMemberStore,
                     useValue: { users$: of([]), usersMap$: of(new Map()) }

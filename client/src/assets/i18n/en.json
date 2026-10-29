@@ -128,7 +128,12 @@
             "BRAINSTORMING": "Brainstorming",
             "DESIGN": "Design",
             "IMPLEMENTATION_PLAN": "Implementation plan",
-            "IMPLEMENTATION": "Implementation"
+            "IMPLEMENTATION": "Implementation",
+            "RELEASE_NOTES": "Release notes"
+        },
+        "RUN_KIND": {
+            "ISSUE": "Development",
+            "RELEASE_NOTES": "Release notes"
         },
         "SIDEBAR": {
             "TITLE": "Agent Run",
@@ -492,6 +497,7 @@
         "EMAIL_READONLY": "Used to sign in — contact an administrator to change it",
         "AVATAR_COLOR": "Avatar color",
         "SHUFFLE_COLOR": "Random color",
+        "AVATAR_INITIALS": "Avatar initials",
         "AVATAR": "Avatar"
     },
     "HOME": {
@@ -501,7 +507,8 @@
         "BOARD": "Board",
         "CALENDAR": "Calendar",
         "GANTT": "Gantt",
-        "WIKI": "Wiki"
+        "WIKI": "Wiki",
+        "RELEASES": "Releases"
     },
     "WIKI": {
         "TITLE": "Wiki",
@@ -934,10 +941,17 @@
         "TIME.TRACKER": "Time tracker",
         "TIME.TRACKED": "Tracked time",
         "TIME.ESTIMATED": "Estimated time",
-        "DISPLAY.UNSET.SEVERITIES": "Display tasks with unset severities",
-        "DISPLAY.UNSET.ISSUE_TYPES": "Display tasks with unset types",
-        "DISPLAY.UNSET.STATES": "Display tasks with unset states",
-        "DISPLAY.UNSET.ASSIGNED.TO": "Display tasks with unassigned user",
+        "DISPLAY": {
+            "UNSET": {
+                "SEVERITIES": "Display tasks with unset severities",
+                "ISSUE_TYPES": "Display tasks with unset types",
+                "STATES": "Display tasks with unset states",
+                "ASSIGNED": {
+                    "TO": "Display tasks with unassigned user"
+                },
+                "TAGS": "Display tasks without tags"
+            }
+        },
         "PINNED": "Pinned tasks",
         "COMMENTS": "Comments",
         "PIN": {
@@ -1170,6 +1184,8 @@
         "custom_field_required": "A required field cannot be cleared.",
         "custom_field_immutable": "The key and type of a field cannot be changed. Create a new field instead.",
         "custom_field_key_exists": "A field with this key already exists in the project.",
+        "tag_name_exists": "A tag with this name already exists in the project.",
+        "tag_not_in_project": "The tag does not belong to this project.",
         "invalid_custom_field_option_migration_target": "The migration target must be a different option of the same field.",
         "bad_request": "Invalid request. Please check your input.",
         "validation": "Some fields are invalid. Please check your input.",
@@ -1228,7 +1244,12 @@
         "plantuml_syntax": "The PlantUML diagram has an error.",
         "plantuml_unavailable": "The PlantUML diagram server is unavailable.",
         "plantuml_source_too_large": "The PlantUML diagram source is too large.",
-        "git_integration_limit_reached": "A project can have only one git integration."
+        "git_integration_limit_reached": "A project can have only one git integration.",
+        "release_name_taken": "A release or a tag with this name already exists in the project.",
+        "release_notes_pending": "An agent is still writing the release notes.",
+        "release_draft_exists": "This tag already has a release draft.",
+        "release_not_draft": "This release is already out.",
+        "release_name_is_tag": "The version name must differ from the tag name to create the tag again."
     },
     "NOTIFICATION": {
         "TITLE": "Notifications",
@@ -1602,6 +1623,129 @@
             "DATE": "Date",
             "SELECT": "Select",
             "BOOLEAN": "Yes/No"
+        }
+    },
+    "TAG": {
+        "SINGULAR": "Tag",
+        "PLURAL": "Tags",
+        "NEW": "New tag",
+        "EDIT": "Edit tag",
+        "COLOR": "Color",
+        "ISSUE_COUNT": "Tasks",
+        "EMPTY": "No tags yet",
+        "REMOVE": "Remove tag {{name}}",
+        "DELETE_USAGE": "The tag is on {{count}} tasks. It will be removed from them; the tasks stay.",
+        "INPUT": {
+            "CREATE": "Create",
+            "OWNER_ONLY": "Only project owners can create new tags."
+        }
+    },
+    "RELEASE": {
+        "TITLE": "Releases",
+        "HINT": "A release turns a tag into a version. Start a draft, check the tasks, write the release notes and release it when you are ready.",
+        "NEW": "New release",
+        "NEW_TITLE": "New release",
+        "EMPTY": "Nothing released yet",
+        "VERSION": "Version",
+        "STATE": "State",
+        "WHO_WHEN": "Who and when",
+        "RELEASED": "Released",
+        "TASKS": "Tasks",
+        "TASK_LIST": "Tasks in this release",
+        "NO_TASKS": "No task carries the tag of this release.",
+        "TAG_DELETED": "The tag of this draft was deleted, so it cannot be released. Delete the draft and start a new one from another tag.",
+        "OTHER": "Other",
+        "NEXT": "Continue",
+        "CONTINUE_DRAFT": "Continue",
+        "ACTIONS": "Actions",
+        "DRAFT_SAVED": "Draft saved",
+        "PUBLISH": "Release {{name}}",
+        "PUBLISH_CONFIRM": "Release {{name}} now? The {{tag}} tag is renamed to {{name}}.",
+        "PUBLISH_CONFIRM_EMPTY": "{{tag}} has no closed task. Release {{name}} anyway? The {{tag}} tag is renamed to {{name}}.",
+        "STATUS": {
+            "DRAFT": "Draft",
+            "RELEASED": "Released"
+        },
+        "STEP": {
+            "VERSION": "Version",
+            "TASKS": "Tasks",
+            "NOTES": "Release notes"
+        },
+        "BLOCKER": {
+            "AGENT": "An agent is writing the release notes",
+            "NAME": "The version needs a name",
+            "NOTES": "Write the release notes first",
+            "SAME_NAME": "The version needs a name other than the tag to create the tag again",
+            "TAG": "The tag of this version was deleted"
+        },
+        "NEW_STEP": {
+            "PICK_TAG": "Pick the tag to release",
+            "TAG_HINT": "The tasks you collected under this tag make up the release.",
+            "TAG_COUNT": "{{count}} tasks",
+            "DRAFT_EXISTS": "{{tag}} already has the draft {{name}}.",
+            "OPEN_DRAFT": "Open the draft",
+            "CREATE": "Start the draft"
+        },
+        "VERSION_STEP": {
+            "TAG_HINT": "The draft belongs to this tag. Nothing changes on it until you release.",
+            "NAME_HINT": "On release the {{tag}} tag is renamed to this name.",
+            "RECREATE_TAG": "Create an empty {{name}} tag again",
+            "RECREATE_TAG_HINT": "Keep collecting the next release under the same tag.",
+            "SAME_NAME": "The version has the name of the tag, so the tag cannot be created again. Rename the version or turn this off."
+        },
+        "TASKS_STEP": {
+            "LOADING": "Loading the tasks tagged {{tag}}…",
+            "EMPTY": "{{tag}} has no closed task yet",
+            "EMPTY_HINT": "You can still release it, but the release notes have no closed task to list.",
+            "EMPTY_OPEN_HINT": "{{count}} tasks carry {{tag}} but are not closed. Decide what happens with them on release.",
+            "CLOSED": "{{count}} closed tasks go into {{name}}",
+            "OPEN": "{{count}} tasks are not closed yet",
+            "OPEN_HINT": "They carry {{tag}} too. Decide what happens with them on release.",
+            "OPEN_MOVE": "Move them to the new {{name}} tag",
+            "OPEN_REMOVE": "Remove the {{name}} tag from them",
+            "OPEN_KEEP": "Release them in {{name}} too"
+        },
+        "NOTES": {
+            "HINT": "Markdown. You can still edit the text after the release.",
+            "EDIT": "Edit release notes",
+            "CHOOSE": "How do you want to write the release notes?",
+            "CHOOSE_HINT": "You can edit the text afterwards either way.",
+            "MYSELF": "Write it myself",
+            "MYSELF_HINT": "Start from the list of closed tasks and edit it in the editor.",
+            "PLACEHOLDER": "Write the release notes…"
+        },
+        "AGENT": {
+            "WRITE": "Write with an agent",
+            "WRITE_HINT": "The agent reads the closed tasks and writes the text for you to check.",
+            "NO_AGENT": "The project has no agent.",
+            "REWRITE": "Rewrite with an agent",
+            "MODEL_DEFAULT": "Gateway default",
+            "AGENT": "Agent",
+            "START": "Start writing",
+            "OVERWRITE": "The agent replaces the text you have now.",
+            "WRITING": "{{name}} is writing the release notes",
+            "WRITING_SHORT": "an agent is writing",
+            "WRITING_HINT": "The text shows up in the editor when the agent is done. You can keep working on the other steps.",
+            "WAITING": "Waiting for {{name}} to start.",
+            "STOP": "Stop",
+            "FAILED": "The agent could not write the release notes.",
+            "DISMISS": "Hide"
+        },
+        "DELETE": {
+            "ACTION": "Delete release",
+            "TITLE": "Delete {{name}}",
+            "DRAFT": "The draft goes away. The {{tag}} tag and its tasks stay as they are.",
+            "TAG_QUESTION": "What happens with the {{tag}} tag and its {{count}} tasks?",
+            "KEEP": "Keep the {{tag}} tag as it is",
+            "MOVE_DELETE": "Move the tasks to another tag and delete {{tag}}",
+            "MOVE_KEEP": "Move the tasks to another tag and keep {{tag}} empty",
+            "PICK_TARGET": "Pick the tag",
+            "CONFIRM": "Delete"
+        },
+        "COMMAND": {
+            "GROUP": "Releases",
+            "OPEN": "Open releases",
+            "NEW": "Release a version"
         }
     },
     "USER_API_KEY": {

@@ -11,6 +11,7 @@ import { ProjectWikiSettingsComponent } from './components/project-wiki-settings
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueTypeModule } from '../issue-type/issue-type.module';
+import { TagModule } from '../tag/tag.module';
 import { CustomFieldModule } from '../custom-field/custom-field.module';
 import { BaseChartDirective } from 'ng2-charts';
 import { PinModule } from '../pin/pin.module';
@@ -57,6 +58,7 @@ import {
     IconHistory,
     IconInfoCircle,
     IconCategory,
+    IconTag,
     IconListDetails,
     IconPlugConnected
 } from '@tabler/icons-angular';
@@ -68,6 +70,7 @@ import { NavigationCommandProvider } from './command/navigation.command-provider
 import { SavedViewCommandProvider } from './command/saved-view.command-provider';
 import { PeopleCommandProvider } from './command/people.command-provider';
 import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
+import { ReleaseCommandProvider } from '../release/command/release.command-provider';
 
 @NgModule({
     declarations: [
@@ -102,6 +105,7 @@ import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
         StateModule,
         SeverityModule,
         IssueTypeModule,
+        TagModule,
         CustomFieldModule,
         BaseChartDirective,
         PinModule,
@@ -136,6 +140,7 @@ import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
             IconHistory,
             IconInfoCircle,
             IconCategory,
+            IconTag,
             IconListDetails,
             IconPlugConnected
         })
@@ -148,11 +153,13 @@ export class ProjectModule {
         nav: NavigationCommandProvider,
         people: PeopleCommandProvider,
         savedViews: SavedViewCommandProvider,
-        wiki: WikiCommandProvider
+        wiki: WikiCommandProvider,
+        releases: ReleaseCommandProvider
     ) {
         registry.register(nav);
         registry.register(people);
         registry.register(savedViews);
         registry.register(wiki);
+        registry.register(releases);
     }
 }

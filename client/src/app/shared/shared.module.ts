@@ -26,6 +26,7 @@ import { IssueTypeDropdownComponent } from './issue-type-dropdown/issue-type-dro
 import { TeammateSelectorComponent } from './teammate-selector/teammate-selector.component';
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
+import { AgentThinkingRowComponent } from './components/agent-thinking-row/agent-thinking-row.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
@@ -33,6 +34,11 @@ import { PlantUmlDiagramComponent } from './plantuml/plantuml-diagram.component'
 import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
 import { AttachmentLightboxComponent } from './attachment/components/attachment-lightbox/attachment-lightbox.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
+import { TagChipComponent } from './tag/tag-chip/tag-chip.component';
+import { IssueTagsComponent } from './tag/issue-tags/issue-tags.component';
+import { TagColorPickerComponent } from './tag/tag-color-picker/tag-color-picker.component';
+import { TagInputComponent } from './tag/tag-input/tag-input.component';
+import { TagDropdownComponent } from './tag/tag-dropdown/tag-dropdown.component';
 import { DeleteMigrationDialogComponent } from './components/delete-migration-dialog/delete-migration-dialog.component';
 import { AgentDockComponent } from './components/agent-dock/agent-dock.component';
 import { MarkdownModule } from 'ngx-markdown';
@@ -55,7 +61,14 @@ import {
     IconTrash,
     IconChevronDown,
     IconArrowDown,
-    IconArrowRight
+    IconArrowRight,
+    IconPlus,
+    IconBrain,
+    IconChevronRight,
+    IconTerminal2,
+    IconPencil,
+    IconSearch,
+    IconHammer
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -81,6 +94,7 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
@@ -89,7 +103,12 @@ import {
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
         AgentDockComponent,
-        IssueCustomFieldsComponent
+        IssueCustomFieldsComponent,
+        TagChipComponent,
+        IssueTagsComponent,
+        TagColorPickerComponent,
+        TagInputComponent,
+        TagDropdownComponent
     ],
     imports: [
         AgentModule,
@@ -118,7 +137,14 @@ import {
             IconTrash,
             IconChevronDown,
             IconArrowDown,
-            IconArrowRight
+            IconArrowRight,
+            IconPlus,
+            IconBrain,
+            IconChevronRight,
+            IconTerminal2,
+            IconPencil,
+            IconSearch,
+            IconHammer
         })
     ],
     exports: [
@@ -145,6 +171,7 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
@@ -153,7 +180,12 @@ import {
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
         AgentDockComponent,
-        IssueCustomFieldsComponent
+        IssueCustomFieldsComponent,
+        TagChipComponent,
+        IssueTagsComponent,
+        TagColorPickerComponent,
+        TagInputComponent,
+        TagDropdownComponent
     ]
 })
 export class SharedModule {}

@@ -23,6 +23,7 @@ import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 
 import { signal } from '@angular/core';
 import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { IssueTagsStub } from 'src/testing/stubs';
 
 export function makeIssue(over: Partial<Issue> = {}): Issue {
     return Fixtures.issue({ idProject: 5, title: 'T', ...over });
@@ -163,7 +164,8 @@ export function configureTableTestBed(): TableMocks {
             AvatarStub,
             QualityBadgeStub,
             DropZoneStub,
-            SplitDialogStub
+            SplitDialogStub,
+            IssueTagsStub
         ],
         declarations: [IssueTableComponent],
         providers: [

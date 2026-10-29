@@ -66,13 +66,13 @@
                             Id
                             <tabler-icon [icon]="idSort.icon()" [size]="14" />
                         </th>
-                        <th scope="col" uiSortColumn="title" #titleSort="uiSortColumn">
-                            {{ 'TITLE' | translate }}
-                            <tabler-icon [icon]="titleSort.icon()" [size]="14" />
-                        </th>
                         <th scope="col" uiSortColumn="issueType" #typeSort="uiSortColumn">
                             {{ 'ISSUE_TYPE.SINGULAR' | translate }}
                             <tabler-icon [icon]="typeSort.icon()" [size]="14" />
+                        </th>
+                        <th scope="col" uiSortColumn="title" #titleSort="uiSortColumn">
+                            {{ 'TITLE' | translate }}
+                            <tabler-icon [icon]="titleSort.icon()" [size]="14" />
                         </th>
                         <th scope="col" uiSortColumn="severity" #sevSort="uiSortColumn">
                             {{ 'SEVERITY.SINGULAR' | translate }}
@@ -150,6 +150,18 @@
                                 <td class="id-col ui-color-text-muted">
                                     #{{ row.issue.idIssuePublic }}
                                 </td>
+                                <td data-testid="issue-type-cell">
+                                    @if (row.issueType) {
+                                        <app-issue-type-badge
+                                            [issueType]="row.issueType"
+                                            size="s"
+                                        ></app-issue-type-badge>
+                                    } @else {
+                                        <span class="ui-color-text-muted">
+                                            {{ 'NONE' | translate }}
+                                        </span>
+                                    }
+                                </td>
                                 <td>
                                     <span class="title-cell">
                                         <a
@@ -182,19 +194,8 @@
                                                 {{ row.issue.relationCount }}
                                             </button>
                                         }
+                                        <app-issue-tags [idsTag]="row.issue.idsTag" />
                                     </span>
-                                </td>
-                                <td data-testid="issue-type-cell">
-                                    @if (row.issueType) {
-                                        <app-issue-type-badge
-                                            [issueType]="row.issueType"
-                                            size="s"
-                                        ></app-issue-type-badge>
-                                    } @else {
-                                        <span class="ui-color-text-muted">
-                                            {{ 'NONE' | translate }}
-                                        </span>
-                                    }
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-1">
@@ -217,6 +218,7 @@
                                                 [width]="1.75"
                                                 [name]="row.assigned.name"
                                                 [bgColor]="row.assigned.colorAvatarBg"
+                                                [manualInitials]="row.assigned.avatarInitials"
                                             ></app-avatar>
                                             <span>{{ row.assigned.name }}</span>
                                         } @else {
@@ -270,6 +272,7 @@
                                         <td class="id-col ui-color-text-muted">
                                             #{{ rel.ref.idIssuePublic }}
                                         </td>
+                                        <td></td>
                                         <td>
                                             <span class="relation-label-text">
                                                 {{ rel.labelKey | translate }}
@@ -285,7 +288,6 @@
                                                 {{ rel.ref.title }}
                                             </a>
                                         </td>
-                                        <td></td>
                                         <td>
                                             <div class="flex items-center gap-1">
                                                 @if (rel.severity) {
@@ -313,6 +315,9 @@
                                                         [width]="1.75"
                                                         [name]="rel.assigned.name"
                                                         [bgColor]="rel.assigned.colorAvatarBg"
+                                                        [manualInitials]="
+                                                            rel.assigned.avatarInitials
+                                                        "
                                                     ></app-avatar>
                                                     <span>{{ rel.assigned.name }}</span>
                                                 } @else {

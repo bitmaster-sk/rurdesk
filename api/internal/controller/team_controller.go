@@ -201,13 +201,14 @@ func (tc *TeamController) AddTeamMember(c *gin.Context) {
 	// Notify the added user.
 	if team, lErr := tc.teamRepo.LoadTeam(ctx, dto.IdTeam); lErr == nil {
 		notifReq := &model.CreateNotificationReq{
-			IdUser:        dto.IdUser,
-			Type:          constants.NotificationTypeTeamJoined,
-			ActorName:     user.Name,
-			ActorAvatarBg: user.ColorAvatarBg,
-			RefType:       constants.NotificationRefTypeTeam,
-			RefId:         strconv.FormatInt(team.IdTeam, 10),
-			RefTitle:      team.Name,
+			IdUser:              dto.IdUser,
+			Type:                constants.NotificationTypeTeamJoined,
+			ActorName:           user.Name,
+			ActorAvatarBg:       user.ColorAvatarBg,
+			ActorAvatarInitials: user.AvatarInitials,
+			RefType:             constants.NotificationRefTypeTeam,
+			RefId:               strconv.FormatInt(team.IdTeam, 10),
+			RefTitle:            team.Name,
 		}
 		if notifErr := tc.notifSvc.Notify(ctx, notifReq); notifErr != nil {
 			log.Warn().Err(notifErr).

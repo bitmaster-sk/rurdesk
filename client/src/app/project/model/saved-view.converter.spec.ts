@@ -22,6 +22,29 @@ describe('SavedViewConfigConverter', () => {
         expect(params.orderColumn).toBe('issueType');
     });
 
+    it('round-trips the tag filter so a saved view restores it', () => {
+        const filter: IssuesFilter = {
+            idProject: 5,
+            idsTag: [3, 4],
+            tagUnset: true,
+            orderColumn: 'updateAt',
+            orderDirection: 'desc'
+        };
+
+        const params = SavedViewConfigConverter.toFilter(SavedViewConfigConverter.toConfig(filter));
+
+        expect(params.idsTag).toEqual([3, 4]);
+        expect(params.tagUnset).toBe(true);
+    });
+
+    it('drops a malformed idsTag instead of forwarding it', () => {
+        const params = SavedViewConfigConverter.toFilter({
+            v: 1,
+            idsTag: 7 as unknown as number[]
+        });
+        expect('idsTag' in params).toBe(false);
+    });
+
     it('drops a malformed idsIssueType instead of forwarding it', () => {
         const params = SavedViewConfigConverter.toFilter({
             v: 1,

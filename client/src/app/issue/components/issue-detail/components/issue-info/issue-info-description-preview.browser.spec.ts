@@ -4,6 +4,7 @@ import { NEVER, of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
 import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { Issue } from 'src/app/issue/model/issue.model';
 import { GitIntegrationApi } from 'src/app/project/api/git-integration.api.service';
@@ -47,6 +48,10 @@ describe('IssueInfoComponent — description preview click behaviour (browser)',
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
                 { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
                 { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
                 {
                     provide: ProjectMemberStore,
                     useValue: { users$: of([]), usersMap$: of(new Map()) }

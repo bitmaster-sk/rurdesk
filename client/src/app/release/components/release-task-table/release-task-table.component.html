@@ -1,0 +1,57 @@
+<div class="ui-box overflow-hidden">
+    <table class="ui-table" data-testid="release-task-table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">{{ 'ISSUE_TYPE.SINGULAR' | translate }}</th>
+                <th scope="col">{{ 'TITLE' | translate }}</th>
+                <th scope="col">{{ 'SEVERITY.SINGULAR' | translate }}</th>
+                <th scope="col">{{ 'STATE.SINGULAR' | translate }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            @for (row of rows(); track row.issue.idIssue) {
+                <tr data-testid="release-task-row">
+                    <td class="ui-color-text-muted">#{{ row.issue.idIssuePublic }}</td>
+                    <td>
+                        @if (row.issueType) {
+                            <app-issue-type-badge [issueType]="row.issueType" size="s" />
+                        } @else {
+                            <span class="ui-color-text-muted">{{ 'NONE' | translate }}</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="flex flex-wrap items-center gap-2">
+                            <a
+                                [routerLink]="[
+                                    '/project',
+                                    row.issue.idProject,
+                                    'issue',
+                                    row.issue.idIssuePublic
+                                ]"
+                            >
+                                {{ row.issue.title }}
+                            </a>
+                            <app-issue-tags [idsTag]="row.issue.idsTag" />
+                        </span>
+                    </td>
+                    <td>
+                        <span class="flex items-center gap-1">
+                            <app-severity-circle [color]="row.severity?.color" />
+                            <span>{{ row.severity?.title ?? ('NONE' | translate) }}</span>
+                        </span>
+                    </td>
+                    <td>
+                        <app-state-badge [state]="row.state ?? undefined" size="s" />
+                    </td>
+                </tr>
+            } @empty {
+                <tr>
+                    <td colspan="5" class="ui-color-text-muted">
+                        {{ 'RELEASE.NO_TASKS' | translate }}
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

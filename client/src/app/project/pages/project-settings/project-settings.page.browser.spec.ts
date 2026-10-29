@@ -85,6 +85,7 @@ describe('ProjectSettingsPage (browser)', () => {
                         canManageSeverity: signal(true),
                         canManageIssueType: signal(true),
                         canManageCustomField: signal(false),
+                        canManageTag: signal(false),
                         canReadMembers: signal(false),
                         canCreateMembers: signal(false),
                         canReadGitIntegration: signal(false),

@@ -9,6 +9,8 @@ export interface IssuesFilterParams {
     stateUnset?: boolean;
     idsAssignedTo?: number[];
     assignedToUnset?: boolean;
+    idsTag?: number[];
+    tagUnset?: boolean;
     idsIssuePublic?: number[];
     createAtFrom?: Date | null;
     createAtTo?: Date | null;

@@ -1,0 +1,27 @@
+@if (visibleTags().length) {
+    <span class="inline-flex min-w-0 flex-wrap items-center gap-1" data-testid="issue-tags">
+        @for (tag of visibleTags(); track tag.idTag) {
+            <app-tag-chip [name]="tag.name" [color]="tag.color" />
+        }
+        @if (hiddenTags().length) {
+            <span
+                class="inline-flex cursor-default"
+                tabindex="0"
+                data-testid="issue-tags-more"
+                (mouseenter)="hiddenPopover.show($event)"
+                (mouseleave)="hiddenPopover.hide()"
+                (focus)="hiddenPopover.show($event)"
+                (blur)="hiddenPopover.hide()"
+            >
+                <app-tag-chip [name]="'+' + hiddenTags().length" />
+            </span>
+            <ui-popover #hiddenPopover>
+                <span class="flex max-w-64 flex-wrap gap-1" data-testid="issue-tags-hidden">
+                    @for (tag of hiddenTags(); track tag.idTag) {
+                        <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                    }
+                </span>
+            </ui-popover>
+        }
+    </span>
+}

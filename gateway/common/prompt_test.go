@@ -479,3 +479,87 @@ func TestParseStageExecute_ReadsShortWorkflowFlag(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderPrompt_ReleaseNotesListsTheTasksAndAsksForTheNotesAsTheMessage(t *testing.T) {
+	out, err := RenderPrompt(Task{
+		IdTask: 100, IdRun: 42, IdProject: 3, Stage: StageReleaseNotes, AttemptNo: 1,
+		Release: &ReleaseContext{
+			Name: "v1.0.4",
+			Tag:  "next",
+			Sections: []ReleaseSection{
+				{Name: "Feature", Issues: []ReleaseIssue{{IdIssuePublic: 104, Title: "Release notes generator"}}},
+				{Issues: []ReleaseIssue{{IdIssuePublic: 105, Title: "Bump deps"}}},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("RenderPrompt error: %v", err)
+	}
+	for _, want := range []string{
+		"RELEASE NOTES stage",
+		"**v1.0.4**",
+		"### Feature",
+		"- #104 Release notes generator",
+		"### Other",
+		"- #105 Bump deps",
+		"the tasks tagged `next`",
+		"the list is complete",
+		"`message=<the whole release notes>`",
+		"without `message_kind`",
+		"the structure the skills of this stage give",
+		"project_id: 3",
+		"id_task=100",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("release notes prompt is missing %q", want)
+		}
+	}
+	for _, unwanted := range []string{"working on issue", "## Issue", "issue_id: ", "## Conversation", "## Released although not closed", "the release has no tasks"} {
+		if strings.Contains(out, unwanted) {
+			t.Errorf("a release notes prompt has no task, but it contains %q", unwanted)
+		}
+	}
+	if strings.Contains(out, "Commit and **push**") {
+		t.Error("a release notes prompt must not ask for a push")
+	}
+	if strings.Contains(out, "suggest_wiki_change") {
+		t.Error("release notes go into the draft, not into a wiki proposal")
+	}
+}
+
+func TestRenderPrompt_ReleaseNotesListsOpenTasksTheTeamReleases(t *testing.T) {
+	out, err := RenderPrompt(Task{IdTask: 1, Stage: StageReleaseNotes, Release: &ReleaseContext{
+		Name:       "v2",
+		Tag:        "next",
+		OpenIssues: []ReleaseIssue{{IdIssuePublic: 7, Title: "Half done"}},
+	}})
+	if err != nil {
+		t.Fatalf("RenderPrompt error: %v", err)
+	}
+	for _, want := range []string{"## Closed tasks", "(none)", "## Released although not closed", "- #7 Half done", "`outcome=output_submitted`"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("release notes prompt is missing %q", want)
+		}
+	}
+}
+
+func TestRenderPrompt_ReleaseNotesWithoutTasksEndsWithAnError(t *testing.T) {
+	out, err := RenderPrompt(Task{IdTask: 1, Stage: StageReleaseNotes, Release: &ReleaseContext{Name: "v2", Tag: "next"}})
+	if err != nil {
+		t.Fatalf("RenderPrompt error: %v", err)
+	}
+	for _, want := range []string{"Do not look for tasks in the tracker", "`error_reason=the release has no tasks`"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("an empty release prompt is missing %q", want)
+		}
+	}
+	if strings.Contains(out, "`outcome=output_submitted`") {
+		t.Error("an empty release has no notes to submit")
+	}
+}
+
+func TestRenderPrompt_ReleaseNotesNeedsTheRelease(t *testing.T) {
+	if _, err := RenderPrompt(Task{IdTask: 1, Stage: StageReleaseNotes}); err == nil {
+		t.Fatal("a release notes stage without its release must not render")
+	}
+}

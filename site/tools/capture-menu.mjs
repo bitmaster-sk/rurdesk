@@ -16,6 +16,8 @@
  *   CAPTURE_PASSWORD  login password        (default kreslo)
  *   CAPTURE_PROJECT   project id            (default 1)
  *   CAPTURE_ISSUE     public issue id for the detail shot (optional)
+ *   CAPTURE_RELEASE_PROJECT  project id for the release shots (default CAPTURE_PROJECT)
+ *   CAPTURE_RELEASE   release id for the release notes shot (default: newest released)
  *
  * NOT INCLUDED (do these by hand — they need real AI runs or mutate data in
  * ways better done manually): Project Kickstart / AI import, the agent-run
@@ -47,6 +49,9 @@ const USER2_NAME = process.env.CAPTURE_USER2_NAME || "Robert Stark";
 // demo issue (public id) the mutating shots act on; split can target its own
 const DEMO_ISSUE = process.env.CAPTURE_DEMO_ISSUE || "20";
 const SPLIT_ISSUE = process.env.CAPTURE_SPLIT_ISSUE || DEMO_ISSUE;
+const TAG_QUERY = process.env.CAPTURE_TAG_QUERY || "ne";
+const RELEASE_PROJECT = process.env.CAPTURE_RELEASE_PROJECT || PROJECT;
+const RELEASE = process.env.CAPTURE_RELEASE || "";
 
 const VW = 1600,
     VH = 1000;
@@ -1225,6 +1230,152 @@ const SHOTS = [
             await page.waitForTimeout(500);
             await comp.screenshot({
                 path: path.join(IMG, "project-members.png"),
+            });
+        },
+    },
+
+    {
+        id: "project-tags",
+        file: "project-tags.png",
+        kind: "png",
+        desc: "Project settings → tags panel (header + list with task counts)",
+        run: async (page) => {
+            await page.setViewportSize({ width: 1100, height: VH });
+            await gotoApp(page, `${BASE}/project/${PROJECT}/settings`);
+            await settle(page);
+            const comp = page.getByTestId("tag-panel");
+            await comp.waitFor({ state: "visible", timeout: 15000 });
+            await comp.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(500);
+            await comp.screenshot({ path: path.join(IMG, "project-tags.png") });
+            await page.setViewportSize({ width: VW, height: VH });
+        },
+    },
+
+    {
+        id: "release-list",
+        file: "release-list.png",
+        kind: "png",
+        desc: "Releases page: drafts and released versions",
+        run: async (page) => {
+            await page.setViewportSize({ width: 1100, height: VH });
+            await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release`);
+            await page.getByTestId("release-row").first().waitFor({ timeout: 15000 });
+            await settle(page);
+            await page.locator('[data-testid="release-list"] .panel').screenshot({
+                path: path.join(IMG, "release-list.png"),
+            });
+            await page.setViewportSize({ width: VW, height: VH });
+        },
+    },
+
+    {
+        id: "release-notes",
+        file: "release-notes.png",
+        kind: "png",
+        desc: "A released version: its release notes and the tasks in it",
+        run: async (page) => {
+            if (RELEASE) {
+                await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release/${RELEASE}`);
+            } else {
+                await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release`);
+                const released = page
+                    .getByTestId("release-row")
+                    .filter({ hasNot: page.getByTestId("release-continue") })
+                    .first();
+                await released.waitFor({ timeout: 15000 });
+                await released.getByTestId("release-open").click();
+            }
+            await page.locator(".wiki-article").first().waitFor({ timeout: 15000 });
+            await settle(page);
+            await shoot(page, "release-notes.png");
+        },
+    },
+
+    {
+        id: "tag-input",
+        file: "tag-input.png",
+        kind: "png",
+        desc: "Task detail tags field with suggestions for typed text (nothing saved)",
+        run: async (page) => {
+            if (ISSUE) {
+                await gotoApp(page, `${BASE}/project/${PROJECT}/issue/${ISSUE}`);
+            } else {
+                await gotoApp(
+                    page,
+                    `${BASE}/project/${PROJECT}/issue/view/table`,
+                );
+                await settle(page);
+                const row = page
+                    .locator("tbody tr", { has: page.getByTestId("issue-tags") })
+                    .first();
+                await row.waitFor({ state: "visible", timeout: 15000 });
+                await row.locator("a").first().click();
+                await page.waitForLoadState("networkidle");
+            }
+            const field = page.getByTestId("tag-input-field");
+            await field.waitFor({ state: "visible", timeout: 15000 });
+            await field.scrollIntoViewIfNeeded();
+            await field.click();
+            await field.pressSequentially(TAG_QUERY, { delay: 60 });
+            await page
+                .getByTestId("tag-suggestion")
+                .first()
+                .waitFor({ state: "visible", timeout: 5000 });
+            await page.waitForTimeout(400);
+            const box = await page
+                .locator(".ui-field", { has: field })
+                .boundingBox();
+            const panel = await page.locator(".tag-input__panel").boundingBox();
+            const pad = 16;
+            await page.screenshot({
+                path: path.join(IMG, "tag-input.png"),
+                clip: {
+                    x: box.x - pad,
+                    y: box.y - pad,
+                    width: box.width + 2 * pad,
+                    height: panel.y + panel.height - box.y + 2 * pad,
+                },
+            });
+            await field.fill("");
+        },
+    },
+
+    {
+        id: "issue-tags-more",
+        file: "issue-tags-more.png",
+        kind: "png",
+        desc: "Task table row with +N hovered, popover listing the hidden tags",
+        run: async (page) => {
+            await gotoApp(page, `${BASE}/project/${PROJECT}/issue/view/table`);
+            await settle(page);
+            const more = page.getByTestId("issue-tags-more").first();
+            await more.waitFor({ state: "visible", timeout: 15000 });
+            await more.hover();
+            const popover = page.getByTestId("issue-tags-hidden");
+            await popover.waitFor({ state: "visible", timeout: 5000 });
+            await page.waitForTimeout(400);
+            const row = await more.locator("xpath=ancestor::tr[1]").boundingBox();
+            const severity = await more
+                .locator("xpath=ancestor::td[1]/following-sibling::td[1]")
+                .boundingBox();
+            const pop = await popover.boundingBox();
+            const pad = 12;
+            const next = await more
+                .locator("xpath=ancestor::tr[1]/following-sibling::tr[1]")
+                .boundingBox();
+            const bottom = Math.max(
+                (next ?? row).y + (next ?? row).height,
+                pop.y + pop.height + 8,
+            );
+            await page.screenshot({
+                path: path.join(IMG, "issue-tags-more.png"),
+                clip: {
+                    x: row.x,
+                    y: row.y - pad,
+                    width: severity.x + severity.width - row.x,
+                    height: bottom - row.y + 2 * pad,
+                },
             });
         },
     },

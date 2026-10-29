@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 )
 
@@ -104,9 +105,9 @@ func overrideField(body map[string]any, key, value string) {
 
 func defaultCannedBody(stage string) map[string]any {
 	switch stage {
-	case "pickup":
+	case constants.StagePickup:
 		return map[string]any{"outcome": "no_action_needed", "tokensUsed": 0, "durationMs": 100, "toolCallsCount": 0}
-	case "brainstorming":
+	case constants.StageBrainstorming:
 		return map[string]any{
 			"outcome":        "no_action_needed",
 			"message":        "No clarifications needed.",
@@ -115,7 +116,7 @@ func defaultCannedBody(stage string) map[string]any {
 			"durationMs":     1000,
 			"toolCallsCount": 0,
 		}
-	case "design":
+	case constants.StageDesign:
 		return map[string]any{
 			"outcome":        "output_submitted",
 			"message":        "Stub design proposal.",
@@ -124,7 +125,7 @@ func defaultCannedBody(stage string) map[string]any {
 			"durationMs":     3000,
 			"toolCallsCount": 2,
 		}
-	case "implementation_plan":
+	case constants.StageImplementationPlan:
 		return map[string]any{
 			"outcome":        "output_submitted",
 			"message":        "Stub implementation plan.",
@@ -133,7 +134,7 @@ func defaultCannedBody(stage string) map[string]any {
 			"durationMs":     4000,
 			"toolCallsCount": 3,
 		}
-	case "implementation":
+	case constants.StageImplementation:
 		return map[string]any{
 			"outcome":        "output_submitted",
 			"message":        "Stub push to PR.",
@@ -143,6 +144,14 @@ func defaultCannedBody(stage string) map[string]any {
 			"tokensUsed":     8000,
 			"durationMs":     12000,
 			"toolCallsCount": 14,
+		}
+	case constants.StageReleaseNotes:
+		return map[string]any{
+			"outcome":        "output_submitted",
+			"message":        "Stub release notes proposal.",
+			"tokensUsed":     1500,
+			"durationMs":     2000,
+			"toolCallsCount": 1,
 		}
 	default:
 		return map[string]any{"outcome": "no_action_needed"}

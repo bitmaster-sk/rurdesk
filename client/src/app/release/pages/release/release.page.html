@@ -1,0 +1,308 @@
+@if (release(); as release) {
+<div class="release-page" data-testid="release-page">
+    <header class="release-page__bar">
+        <a class="release-page__back" [routerLink]="['/project', idProject, 'release']">
+            <tabler-icon icon="arrow-left" [size]="16" />
+            {{ 'RELEASE.TITLE' | translate }}
+        </a>
+        <div class="release-page__title">
+            <h1 class="m-0 truncate text-lg font-semibold" data-testid="release-title">
+                {{ isDraft() ? name() || release.name : release.name }}
+            </h1>
+            @if (isDraft()) {
+            <ui-badge data-testid="release-status" [value]="'RELEASE.STATUS.DRAFT' | translate" />
+            } @else {
+            <ui-badge
+                data-testid="release-status"
+                severity="success"
+                [value]="'RELEASE.STATUS.RELEASED' | translate"
+            />
+            }
+        </div>
+        <div class="release-page__actions">
+            @if (canEdit()) { @switch (saveState()) { @case (SaveState.Saving) {
+            <span class="ui-field-hint">{{ 'UI.SAVE_STATUS.SAVING' | translate }}</span>
+            } @case (SaveState.Saved) {
+            <span class="flex items-center gap-1 ui-field-hint">
+                <tabler-icon icon="cloud-check" [size]="14" />
+                {{ 'RELEASE.DRAFT_SAVED' | translate }}
+            </span>
+            } @case (SaveState.Error) {
+            <span class="ui-field-hint ui-field-hint--error">
+                {{ 'UI.SAVE_STATUS.FAILED' | translate }}
+            </span>
+            } } } @if (acl.canUpdateProject()) {
+            <ui-button
+                data-testid="release-delete"
+                variant="text"
+                severity="danger"
+                size="small"
+                [ariaLabel]="'RELEASE.DELETE.ACTION' | translate"
+                [uiTooltip]="'RELEASE.DELETE.ACTION' | translate"
+                (click)="onDelete()"
+            >
+                <tabler-icon icon="trash" [size]="16" />
+            </ui-button>
+            } @if (canEdit()) { @if (publishBlocker(); as blocker) {
+            <span class="hidden ui-field-hint md:inline" data-testid="release-blocker">
+                {{ blocker | translate }}
+            </span>
+            <ui-button
+                data-testid="release-publish"
+                [label]="'RELEASE.PUBLISH' | translate: { name: name() }"
+                [disabled]="true"
+            >
+                <tabler-icon icon="rocket" [size]="16" />
+            </ui-button>
+            } @else {
+            <ui-button
+                data-testid="release-publish"
+                uiConfirm
+                [confirmText]="
+                    (draft() && closedCount() === 0 ? 'RELEASE.PUBLISH_CONFIRM_EMPTY' : 'RELEASE.PUBLISH_CONFIRM')
+                        | translate: { name: name(), tag: release.tagName }
+                "
+                [acceptLabel]="'RELEASE.PUBLISH' | translate: { name: name() }"
+                [label]="'RELEASE.PUBLISH' | translate: { name: name() }"
+                [loading]="isBusy()"
+                (confirmed)="onPublish()"
+            >
+                <tabler-icon icon="rocket" [size]="16" />
+            </ui-button>
+            } }
+        </div>
+    </header>
+
+    @if (isDraft()) {
+    <div class="release-page__stepper">
+        <ui-stepper [steps]="steps()" [(active)]="step" />
+    </div>
+    @if (isTagDeleted()) {
+    <div class="mx-auto w-full max-w-3xl px-6">
+        <ui-message severity="warn" data-testid="release-tag-deleted">
+            {{ 'RELEASE.TAG_DELETED' | translate }}
+        </ui-message>
+    </div>
+    } @switch (step()) { @case (Step.Version) {
+    <div class="release-page__scroll">
+        <div class="release-page__content release-page__content--narrow">
+            <app-release-version-step
+                [form]="form"
+                [tagName]="release.tagName ?? ''"
+                [tagColor]="tag()?.color ?? ''"
+                [isNameSameAsTag]="isNameSameAsTag()"
+            />
+            <div class="flex justify-end">
+                <ui-button
+                    data-testid="release-next"
+                    [label]="'RELEASE.NEXT' | translate"
+                    (click)="onNext()"
+                />
+            </div>
+        </div>
+    </div>
+    } @case (Step.Tasks) {
+    <div class="release-page__scroll">
+        <div class="release-page__content">
+            @if (!isTagDeleted()) {
+            <app-release-tasks-step
+                [idProject]="idProject"
+                [draft]="draft()"
+                [tagName]="release.tagName ?? ''"
+                [name]="name()"
+                [isRecreateTag]="isRecreateTag()"
+                [openIssues]="form.controls.openIssues"
+            />
+            }
+            <div class="flex justify-end">
+                <ui-button
+                    data-testid="release-next"
+                    [label]="'RELEASE.NEXT' | translate"
+                    (click)="onNext()"
+                />
+            </div>
+        </div>
+    </div>
+    } @case (Step.Notes) {
+    <div class="release-notes" data-testid="release-notes-step">
+        @if (notesRunError(); as error) {
+        <div class="release-notes__error">
+            <ui-message severity="danger" data-testid="release-agent-failed">
+                <span class="flex flex-wrap items-center gap-2">
+                    <span>{{ 'RELEASE.AGENT.FAILED' | translate }}</span>
+                    @if (error) {
+                    <span class="ui-field-hint">{{ error }}</span>
+                    }
+                </span>
+            </ui-message>
+            <ui-button
+                variant="text"
+                severity="secondary"
+                size="small"
+                [ariaLabel]="'RELEASE.AGENT.DISMISS' | translate"
+                (click)="onDismissRunError()"
+            >
+                <tabler-icon icon="x" [size]="16" />
+            </ui-button>
+        </div>
+        } @if (isNotesPending()) {
+        <div class="release-page__scroll">
+            <div class="release-page__content" role="status" data-testid="release-notes-pending">
+                <div class="flex items-center gap-3">
+                    <ui-loader [size]="24" [ariaLabel]="'UI.LOADING' | translate" />
+                    <div class="flex min-w-0 flex-1 flex-col">
+                        <span class="font-semibold">
+                            {{ 'RELEASE.AGENT.WRITING' | translate: { name: writingAgent()?.name ??
+                            '' } }}
+                        </span>
+                        <span class="ui-field-hint">
+                            {{ 'RELEASE.AGENT.WRITING_HINT' | translate }}
+                        </span>
+                    </div>
+                    @if (canEdit()) {
+                    <ui-button
+                        data-testid="release-agent-stop"
+                        variant="outlined"
+                        severity="secondary"
+                        [label]="'RELEASE.AGENT.STOP' | translate"
+                        [loading]="isBusy()"
+                        (click)="onStopAgent()"
+                    >
+                        <tabler-icon icon="player-stop" [size]="16" />
+                    </ui-button>
+                    }
+                </div>
+                @if (notesStage(); as stage) { @if (stage.status === 'active') {
+                <app-agent-thinking-row
+                    [idRun]="release.idRunNotes ?? 0"
+                    [stage]="stage"
+                    [isLive]="true"
+                    [creator]="writingAgent()"
+                />
+                } @else {
+                <p class="m-0 ui-field-hint" data-testid="release-agent-waiting">
+                    {{ 'RELEASE.AGENT.WAITING' | translate: { name: writingAgent()?.name ?? '' } }}
+                </p>
+                } }
+            </div>
+        </div>
+        } @else if (canEdit() && notesMode() === NotesMode.Choose) {
+        <div class="release-page__scroll">
+            <div class="release-page__content">
+                <div class="flex flex-col gap-1">
+                    <h2 class="m-0 text-base font-semibold">
+                        {{ 'RELEASE.NOTES.CHOOSE' | translate }}
+                    </h2>
+                    <p class="m-0 ui-field-hint">{{ 'RELEASE.NOTES.CHOOSE_HINT' | translate }}</p>
+                </div>
+                <div class="release-notes__choices">
+                    <button
+                        type="button"
+                        class="release-notes__choice"
+                        data-testid="release-write-myself"
+                        (click)="onWriteMyself()"
+                    >
+                        <tabler-icon icon="pencil" [size]="24" />
+                        <span class="font-semibold">{{ 'RELEASE.NOTES.MYSELF' | translate }}</span>
+                        <span class="ui-field-hint">
+                            {{ 'RELEASE.NOTES.MYSELF_HINT' | translate }}
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        class="release-notes__choice"
+                        data-testid="release-write-agent"
+                        [disabled]="agents().length === 0"
+                        (click)="onWriteWithAgent()"
+                    >
+                        <tabler-icon icon="robot" [size]="24" />
+                        <span class="font-semibold">{{ 'RELEASE.AGENT.WRITE' | translate }}</span>
+                        <span class="ui-field-hint">
+                            {{ (agents().length > 0 ? 'RELEASE.AGENT.WRITE_HINT' :
+                            'RELEASE.AGENT.NO_AGENT') | translate }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        } @else if (canEdit() && notesMode() === NotesMode.Agent) {
+        <div class="release-page__scroll">
+            <div class="release-page__content release-page__content--narrow">
+                <h2 class="m-0 text-base font-semibold">{{ 'RELEASE.AGENT.WRITE' | translate }}</h2>
+                <app-release-agent-form
+                    [idProject]="idProject"
+                    [agents]="agents()"
+                    [hasNotes]="!!notes().trim()"
+                    [isBusy]="isBusy()"
+                    (started)="onAgentStarted($event)"
+                    (cancelled)="onAgentCancelled()"
+                />
+            </div>
+        </div>
+        } @else { @if (canEdit()) {
+        <div class="release-notes__bar">
+            <span class="ui-field-hint">{{ 'RELEASE.NOTES.HINT' | translate }}</span>
+            @if (agents().length > 0) {
+            <ui-button
+                data-testid="release-agent-toggle"
+                variant="outlined"
+                [label]="'RELEASE.AGENT.REWRITE' | translate"
+                (click)="onWriteWithAgent()"
+            >
+                <tabler-icon icon="robot" [size]="16" />
+            </ui-button>
+            }
+        </div>
+        }
+        <div class="release-notes__split" [class.release-notes__split--single]="!canEdit()">
+            @if (canEdit()) {
+            <div class="release-notes__pane release-notes__pane--source">
+                <app-wiki-editor
+                    data-testid="release-notes-editor"
+                    [initialValue]="notes()"
+                    [placeholderText]="'RELEASE.NOTES.PLACEHOLDER' | translate"
+                    (valueChange)="onEditorChange($event)"
+                />
+            </div>
+            }
+            <div class="release-notes__pane">
+                <div class="release-notes__pane-label">{{ 'WIKI.FIELD.PREVIEW' | translate }}</div>
+                <article
+                    class="wiki-article"
+                    data-testid="release-notes-preview"
+                    markdown
+                    ngPreserveWhitespaces
+                    [data]="notes()"
+                ></article>
+            </div>
+        </div>
+        }
+    </div>
+    } } } @else {
+    <div class="release-page__scroll">
+        <div class="release-page__content release-page__content--wide">
+            <app-release-published
+                [release]="release"
+                [authorName]="authorName()"
+                [canEdit]="acl.canUpdateProject()"
+                [isEditing]="isEditingNotes()"
+                [tasks]="tasks()"
+                [isBusy]="isBusy()"
+                (editStarted)="onEditNotes()"
+                (editCancelled)="onCancelEditNotes()"
+                (notesSaved)="onSaveNotes($event)"
+            />
+        </div>
+    </div>
+    }
+</div>
+
+@if (isDeleteOpen()) {
+<app-release-delete-dialog
+    [release]="release"
+    (deleted)="onDeleted()"
+    (closed)="onDeleteClosed()"
+/>
+} } @else {
+<div class="p-6"><ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" /></div>
+}

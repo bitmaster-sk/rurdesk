@@ -394,19 +394,20 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 						notifType = constants.NotificationTypeMention
 					}
 					if notifErr := mc.notifSvc.Notify(ctx, &model.CreateNotificationReq{
-						IdUser:        idRecipient,
-						Type:          notifType,
-						IdProject:     &idProject,
-						ProjectName:   project.Name,
-						ProjectColor:  project.Color,
-						ActorName:     user.Name,
-						ActorAvatarBg: user.ColorAvatarBg,
-						RefType:       constants.NotificationRefTypeIssue,
-						RefId:         strconv.FormatInt(dto.IdRecipient, 10),
-						RefTitle:      refTitle,
-						RefPublicId:   refPublicId,
-						Body:          truncate(stripMentionTokens(attachmenttext.StripLinks(dto.Message)), 200),
-						Source:        source,
+						IdUser:              idRecipient,
+						Type:                notifType,
+						IdProject:           &idProject,
+						ProjectName:         project.Name,
+						ProjectColor:        project.Color,
+						ActorName:           user.Name,
+						ActorAvatarBg:       user.ColorAvatarBg,
+						ActorAvatarInitials: user.AvatarInitials,
+						RefType:             constants.NotificationRefTypeIssue,
+						RefId:               strconv.FormatInt(dto.IdRecipient, 10),
+						RefTitle:            refTitle,
+						RefPublicId:         refPublicId,
+						Body:                truncate(stripMentionTokens(attachmenttext.StripLinks(dto.Message)), 200),
+						Source:              source,
 					}); notifErr != nil {
 						log.Warn().Err(notifErr).Int64("idUser", idRecipient).Int64("idIssue", dto.IdRecipient).Msg("CreateMessage: failed to create notification")
 					}

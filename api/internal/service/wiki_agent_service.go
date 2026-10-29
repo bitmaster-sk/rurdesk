@@ -50,9 +50,12 @@ func (s *WikiAgentService) BuildPromptContext(ctx context.Context, run *model.Ag
 	if err != nil {
 		return nil, nil, err
 	}
-	linked, err := s.wiki.issuePageRepo.LoadByIssue(ctx, run.IdIssue, true)
-	if err != nil {
-		return nil, nil, err
+	var linked []*repository.WikiIssuePageRef
+	if run.IdIssue != nil {
+		linked, err = s.wiki.issuePageRepo.LoadByIssue(ctx, *run.IdIssue, true)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	idsLinked := make(map[int64]bool, len(linked))
 	idsWithBody := make([]int64, 0, len(linked))

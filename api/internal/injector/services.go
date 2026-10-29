@@ -208,6 +208,22 @@ func GetIssueTypeRepository() *repository.IssueTypeRepository {
 	return instance.(*repository.IssueTypeRepository)
 }
 
+func GetReleaseRepository() *repository.ReleaseRepository {
+	instance, _ := di.GetWithNew("release-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewReleaseRepository(pool), nil
+	})
+	return instance.(*repository.ReleaseRepository)
+}
+
+func GetTagRepository() *repository.TagRepository {
+	instance, _ := di.GetWithNew("tag-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewTagRepository(pool), nil
+	})
+	return instance.(*repository.TagRepository)
+}
+
 func GetCustomFieldRepository() *repository.CustomFieldRepository {
 	instance, _ := di.GetWithNew("custom-field-repository", func() (any, error) {
 		pool := mustDb()
@@ -350,6 +366,72 @@ func GetSeverityService() *service.SeverityService {
 		return service.NewSeverityService(pool, GetSeverityRepository()), nil
 	})
 	return instance.(*service.SeverityService)
+}
+
+func GetProjectMemberService() *service.ProjectMemberService {
+	instance, _ := di.GetWithNew("project-member-service", func() (any, error) {
+		return service.NewProjectMemberService(GetProjectRepository()), nil
+	})
+	return instance.(*service.ProjectMemberService)
+}
+
+func GetReleaseService() *service.ReleaseService {
+	instance, _ := di.GetWithNew("release-service", func() (any, error) {
+		releases := service.NewReleaseService(service.ReleaseServiceDeps{
+			Pool:                mustDb(),
+			ReleaseRepo:         GetReleaseRepository(),
+			TagRepo:             GetTagRepository(),
+			IssueRepo:           GetIssueRepository(),
+			UserRepo:            GetUserRepository(),
+			AgentRunRepo:        GetAgentRunRepository(),
+			AgentTaskRepo:       GetAgentTaskRepository(),
+			AgentGwRepo:         GetAgentGatewayRepository(),
+			StagePlan:           GetAgentStagePlanService(),
+			ProjectSkillService: GetProjectSkillService(),
+			AgentTaskConfig:     GetAgentTaskConfigService(),
+			Acl:                 GetAclService(),
+		})
+		releases.OnReleaseChanged(func(ctx context.Context, idProject, idRelease int64) {
+			controller.BroadcastRelease(ctx, GetNotifier(), GetProjectMemberService(), GetReleaseRepository(), idProject, idRelease)
+		})
+		return releases, nil
+	})
+	return instance.(*service.ReleaseService)
+}
+
+func GetReleaseController() (*controller.ReleaseController, error) {
+	instance, err := di.GetWithNew("release-controller", func() (any, error) {
+		thinking, err := GetAgentThinkingService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewReleaseController(controller.ReleaseControllerDeps{
+			ReleaseRepo:      GetReleaseRepository(),
+			Releases:         GetReleaseService(),
+			Acl:              GetAclService(),
+			TagCtrl:          GetTagController(),
+			AgentRunRepo:     GetAgentRunRepository(),
+			AgentTaskRepo:    GetAgentTaskRepository(),
+			IssueRepo:        GetIssueRepository(),
+			ProjectRepo:      GetProjectRepository(),
+			ProjectMemberSvc: GetProjectMemberService(),
+			Thinking:         thinking,
+			Dispatcher:       GetDispatcher(),
+			Notifier:         GetNotifier(),
+		}), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.ReleaseController), nil
+}
+
+func GetTagService() *service.TagService {
+	instance, _ := di.GetWithNew("tag-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewTagService(pool, GetTagRepository()), nil
+	})
+	return instance.(*service.TagService)
 }
 
 func GetIssueTypeService() *service.IssueTypeService {
@@ -617,6 +699,7 @@ func GetDispatcher() *agent.Dispatcher {
 			GetAgentStagePlanService(),
 			GetWikiAgentService(),
 			GetWikiProposalService(),
+			GetReleaseService(),
 			GetAgentTaskConfigService(),
 			GetGatewayClient(),
 			GetNotifier(),
@@ -736,6 +819,8 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAgentStagePlanService(),
 			GetAgentTaskConfigService(),
 			GetDispatcher(),
+			GetWikiProposalService(),
+			GetReleaseService(),
 			GetNotifier(),
 			pool,
 		), nil
@@ -842,6 +927,7 @@ func GetIssueController() *controller.IssueController {
 			GetIssueTypeRepository(),
 			GetIssueParticipantRepository(),
 			GetAclService(),
+			GetTagService(),
 			GetNotificationService(),
 			GetCustomFieldValueService(),
 			pool,
@@ -869,11 +955,20 @@ func GetIssueTypeController() *controller.IssueTypeController {
 	return instance.(*controller.IssueTypeController)
 }
 
+func GetTagController() *controller.TagController {
+	instance, _ := di.GetWithNew("tag-controller", func() (any, error) {
+		return controller.NewTagController(
+			GetTagRepository(), GetTagService(), GetAclService(),
+			GetNotifier(), GetProjectMemberService()), nil
+	})
+	return instance.(*controller.TagController)
+}
+
 func GetCustomFieldController() *controller.CustomFieldController {
 	instance, _ := di.GetWithNew("custom-field-controller", func() (any, error) {
 		return controller.NewCustomFieldController(
 			GetCustomFieldRepository(), GetCustomFieldService(), GetAclService(),
-			GetNotifier(), GetProjectRepository()), nil
+			GetNotifier(), GetProjectMemberService()), nil
 	})
 	return instance.(*controller.CustomFieldController)
 }
@@ -1310,6 +1405,11 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		releaseController, err := GetReleaseController()
+		if err != nil {
+			return nil, err
+		}
+
 		attachmentController, err := GetAttachmentController()
 		if err != nil {
 			return nil, err
@@ -1336,6 +1436,8 @@ func GetRouter() (*router.Router, error) {
 			GetSeverityController(),
 			GetIssueTypeController(),
 			GetCustomFieldController(),
+			GetTagController(),
+			releaseController,
 			GetWikiController(),
 			GetWikiAgentController(),
 			GetWikiProposalController(),

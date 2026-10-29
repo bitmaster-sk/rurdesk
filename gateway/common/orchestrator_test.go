@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -772,6 +774,7 @@ func TestStageConstantsMirrorAPI(t *testing.T) {
 		{StageDesign, "design"},
 		{StageImplementationPlan, "implementation_plan"},
 		{StageImplementation, "implementation"},
+		{StageReleaseNotes, "release_notes"},
 	}
 	for _, c := range cases {
 		if c.got != c.want {
@@ -809,5 +812,90 @@ func TestOutcomeConstantsMirrorAPI(t *testing.T) {
 		if c.got != c.want {
 			t.Errorf("outcome constant drift: got %q want %q", c.got, c.want)
 		}
+	}
+}
+
+type workspaceRecordingAgent struct {
+	workspace chan string
+	entries   chan int
+}
+
+func (a *workspaceRecordingAgent) Run(_ context.Context, task Task) (RunStats, error) {
+	entries, _ := os.ReadDir(task.WorktreePath)
+	a.entries <- len(entries)
+	a.workspace <- task.WorktreePath
+	return RunStats{}, nil
+}
+
+func (a *workspaceRecordingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
+
+func TestRunStage_ReleaseNotesRunsInAScratchDirectoryWithoutARepo(t *testing.T) {
+	tracker := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer tracker.Close()
+	cfg := &Config{WebhookSecret: testWebhookSecret, TrackerAPIUrl: tracker.URL, WorkspaceBase: filepath.Join(t.TempDir(), "never-created")}
+	agent := &workspaceRecordingAgent{workspace: make(chan string, 1), entries: make(chan int, 1)}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+
+	orchestrator.runStage(Task{IdTask: 1, IdRun: 2, Stage: StageReleaseNotes, AttemptNo: 1})
+
+	select {
+	case workspace := <-agent.workspace:
+		if workspace == "" {
+			t.Fatal("the agent got no working directory")
+		}
+		if entries := <-agent.entries; entries != 0 {
+			t.Errorf("the scratch directory held %d entries, want none", entries)
+		}
+		if _, err := os.Stat(workspace); !os.IsNotExist(err) {
+			t.Errorf("the scratch directory %s is left behind", workspace)
+		}
+	default:
+		t.Fatal("the agent never ran: a release notes stage must not be rejected for its missing repo")
+	}
+	if _, err := os.Stat(cfg.WorkspaceBase); !os.IsNotExist(err) {
+		t.Error("a release notes stage must not touch the repo workspace")
+	}
+}
+
+func TestParseStageExecutePayload_CarriesTheRelease(t *testing.T) {
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "release_notes",
+			"repo": null,
+			"contextBundle": {
+				"release": {
+					"name": "v1.0.4",
+					"tag": "next",
+					"openIssues": [{"idIssue": 11, "idIssuePublic": 106, "title": "Half done"}],
+					"sections": [
+						{"idIssueType": 2, "name": "Feature", "issues": [{"idIssue": 9, "idIssuePublic": 104, "title": "Release notes"}]},
+						{"idIssueType": null, "name": null, "issues": [{"idIssue": 10, "idIssuePublic": 105, "title": "Bump deps"}]}
+					]
+				}
+			}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.Repo.IsSet() {
+		t.Errorf("Repo = %+v, want none", task.Repo)
+	}
+	want := &ReleaseContext{
+		Name:       "v1.0.4",
+		Tag:        "next",
+		OpenIssues: []ReleaseIssue{{IdIssuePublic: 106, Title: "Half done"}},
+		Sections: []ReleaseSection{
+			{Name: "Feature", Issues: []ReleaseIssue{{IdIssuePublic: 104, Title: "Release notes"}}},
+			{Name: "", Issues: []ReleaseIssue{{IdIssuePublic: 105, Title: "Bump deps"}}},
+		},
+	}
+	if !reflect.DeepEqual(task.Release, want) {
+		t.Errorf("Release = %+v, want %+v", task.Release, want)
 	}
 }

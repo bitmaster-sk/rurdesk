@@ -41,8 +41,9 @@
 
 .title-cell {
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--ui-space-s);
+    gap: var(--ui-space-s) var(--ui-space);
 }
 
 .relation-badge {
