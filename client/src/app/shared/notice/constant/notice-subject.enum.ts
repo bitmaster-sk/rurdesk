@@ -12,5 +12,6 @@ export enum NoticeSubject {
     CustomField = 'custom_field',
     Tag = 'tag',
     WikiPage = 'wiki_page',
-    WikiProposal = 'wiki_proposal'
+    WikiProposal = 'wiki_proposal',
+    Release = 'release'
 }

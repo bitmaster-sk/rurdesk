@@ -14,7 +14,7 @@ import (
 func TestStagePlanBuildCoversEveryStageInOrder(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.BuildFromChoices(model.RunChoices{IdsSkillByStage: map[string][]int64{"design": {7, 9}}})
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: map[string][]int64{"design": {7, 9}}})
 	require.NoError(t, err)
 
 	plan, err := planner.Parse(planJSON)
@@ -33,7 +33,7 @@ func TestStagePlanBuildCoversEveryStageInOrder(t *testing.T) {
 func TestStagePlanBuildIgnoresUnknownStage(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.BuildFromChoices(model.RunChoices{IdsSkillByStage: map[string][]int64{"nope": {1}}})
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: map[string][]int64{"nope": {1}}})
 	require.NoError(t, err)
 
 	plan, err := planner.Parse(planJSON)
@@ -80,7 +80,7 @@ func TestChoicesOfAnUnparseablePlanAreEmpty(t *testing.T) {
 func TestStagePlanBuildShortSkipsDesignAndPlanOnly(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.BuildFromChoices(model.RunChoices{IsShortWorkflow: true})
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IsShortWorkflow: true})
 	require.NoError(t, err)
 
 	plan, err := planner.Parse(planJSON)
@@ -101,9 +101,9 @@ func TestStagePlanBuildShortSkipsDesignAndPlanOnly(t *testing.T) {
 func TestIsShortWorkflow(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
 
-	short, err := planner.BuildFromChoices(model.RunChoices{IsShortWorkflow: true})
+	short, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IsShortWorkflow: true})
 	require.NoError(t, err)
-	full, err := planner.BuildFromChoices(model.RunChoices{})
+	full, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{})
 	require.NoError(t, err)
 
 	assert.True(t, planner.IsShortWorkflow(short))
@@ -180,7 +180,7 @@ func TestApplyChoices(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			planJSON, err := planner.BuildFromChoices(model.RunChoices{IdsSkillByStage: map[string][]int64{constants.StageBrainstorming: {1}}, IsShortWorkflow: tc.isShortCurrent})
+			planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: map[string][]int64{constants.StageBrainstorming: {1}}, IsShortWorkflow: tc.isShortCurrent})
 			require.NoError(t, err)
 			plan, err := planner.Parse(planJSON)
 			require.NoError(t, err)
@@ -214,7 +214,7 @@ func TestApplyChoices(t *testing.T) {
 func TestBuildFromChoicesCarriesTheModelChoices(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
 
-	planJSON, err := planner.BuildFromChoices(model.RunChoices{
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{
 		Model:           "openai/kimi",
 		ModelByStage:    map[string]string{constants.StageDesign: "ollama/qwen3:8b"},
 		MaxTurnsByStage: map[string]int{constants.StageImplementation: 700},
@@ -247,7 +247,7 @@ func TestChoicesReadBackWhatBuildFromChoicesStored(t *testing.T) {
 		MaxTurnsByStage: map[string]int{constants.StageImplementation: 700},
 	}
 
-	planJSON, err := planner.BuildFromChoices(choices)
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, choices)
 	require.NoError(t, err)
 
 	assert.Equal(t, choices, planner.Choices(planJSON))
@@ -255,7 +255,7 @@ func TestChoicesReadBackWhatBuildFromChoicesStored(t *testing.T) {
 
 func TestApplyChoicesKeepsTheModelOfADispatchedStage(t *testing.T) {
 	planner := NewAgentStagePlanService(nil, nil, nil)
-	planJSON, err := planner.BuildFromChoices(model.RunChoices{
+	planJSON, err := planner.BuildFromChoices(constants.RunKindIssue, model.RunChoices{
 		Model:           "openai/old",
 		ModelByStage:    map[string]string{constants.StageBrainstorming: "openai/old"},
 		MaxTurnsByStage: map[string]int{constants.StageBrainstorming: 10},
@@ -282,4 +282,22 @@ func TestApplyChoicesKeepsTheModelOfADispatchedStage(t *testing.T) {
 			assert.Equal(t, 30, entry.MaxTurns)
 		}
 	}
+}
+
+func TestBuildFromChoices_ReleaseNotesKindHasItsOwnStages(t *testing.T) {
+	planner := NewAgentStagePlanService(nil, nil, nil)
+
+	planJSON, err := planner.BuildFromChoices(constants.RunKindReleaseNotes, model.RunChoices{
+		IdsSkillByStage: map[string][]int64{constants.StageReleaseNotes: {4}},
+		IsShortWorkflow: true,
+	})
+	require.NoError(t, err)
+
+	plan, err := planner.Parse(planJSON)
+	require.NoError(t, err)
+	require.Len(t, plan.Stages, 2)
+	require.Equal(t, constants.StagePickup, plan.Stages[0].Name)
+	require.Equal(t, constants.StageReleaseNotes, plan.Stages[1].Name)
+	require.False(t, plan.Stages[1].Skip, "the short workflow skips nothing in a release notes run")
+	require.Equal(t, []int64{4}, plan.Stages[1].IdsSkill)
 }

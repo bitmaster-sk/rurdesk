@@ -6,16 +6,18 @@ import (
 	"text/template"
 )
 
-const promptHeader = `You are an AI agent working on issue #{{.IdIssuePublic}} in project.
-
-## ⚠️ How this stage ends — read this first
+const stageEndWarning = `## ⚠️ How this stage ends — read this first
 Nothing you write reaches the tracker on its own. The ONLY way to submit your
 work and finish this stage is to call the MCP tool ` + "`complete_stage`" + `. Any design,
 plan, answer, or summary you write as a normal message is DISCARDED — it is NOT
 your submission. If you end your turn without calling ` + "`complete_stage`" + `, all your
 work is lost and the run hangs in this stage forever. Calling ` + "`complete_stage`" + ` is
 mandatory and is the LAST thing you do.
+`
 
+const promptHeader = `You are an AI agent working on issue #{{.IdIssuePublic}} in project.
+
+` + stageEndWarning + `
 ## Issue
 **Title:** {{.IssueTitle}}
 **Description:**
@@ -55,6 +57,17 @@ The user reviewed the version below and REJECTED it. Revise it according to the 
 ## Chosen mockup (user picked this variant)
 The user reviewed the mockups in the approved design and chose: **{{.ApprovedMockupRef}}**. Implement that variant. Do NOT regenerate or re-post mockups — proceed with the implementation of the chosen design.
 {{end}}`
+
+const releaseHeader = `You are an AI agent writing the release notes of version **{{.Release.Name}}** in project.
+
+` + stageEndWarning + `
+## Identifiers (use exactly these values when calling tools)
+- project_id: {{.IdProject}} ← pass this to every tool that takes project_id
+- task_id: {{.IdTask}}        ← pass this to complete_stage
+
+## Stage
+{{.Stage}} (attempt #{{.AttemptNo}})
+`
 
 // completeStageReminder is appended to every prompt so the agent always ends
 // by calling complete_stage, letting the server advance the run.
@@ -217,6 +230,34 @@ Such an attempt does not have to produce code, so it can end two ways:
 
 If something goes wrong (build error you can't fix, push rejected), call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
 
+const releaseNotesBody = `You are in the RELEASE NOTES stage. Write the release notes of version **{{.Release.Name}}**. There is no repository in this stage: do not look for code.
+
+ALLOWED tools: the {{.Vocab.Tracker}} tools.
+
+FORBIDDEN: {{.Vocab.WriteFile}}, {{.Vocab.Replace}}, {{.Vocab.RunShell}}.
+{{if or .Release.Sections .Release.OpenIssues}}
+The release is made of exactly the tasks below{{if .Release.Tag}}, the tasks tagged ` + "`{{.Release.Tag}}`" + `{{end}}. They are your only source and the list is complete. Do not list or search the project's other tasks, and do not decide from the tracker which tasks belong to the release: a task that is not below is not in the release, whatever its state, tags or merge requests say.
+
+## Closed tasks
+Grouped by task type. The groups help you sort the tasks; they are not the sections of the release notes.
+{{range .Release.Sections}}
+### {{if .Name}}{{.Name}}{{else}}Other{{end}}
+{{range .Issues}}- #{{.IdIssuePublic}} {{.Title}}
+{{end}}{{else}}
+(none)
+{{end}}{{if .Release.OpenIssues}}
+## Released although not closed
+The team decided to release these tasks before they are closed. They belong to the release like the closed ones.
+{{range .Release.OpenIssues}}- #{{.IdIssuePublic}} {{.Title}}
+{{end}}{{end}}
+## Steps
+1. When a title does not say enough, read the task with ` + "`get_issue`" + ` (project_id={{.IdProject}}, issue_id=the number after #). Read only the tasks listed above.
+2. Write the release notes as Markdown in the structure the skills of this stage give.
+3. Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + ` and ` + "`message=<the whole release notes>`" + `, without ` + "`message_kind`" + `. The message is the release notes: no greeting, no summary of your work, nothing but the Markdown. It goes into the release draft, where a person reviews it before the release.
+
+If you cannot write them, call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.{{else}}
+The release has no tasks, so there is nothing to write about. Do not look for tasks in the tracker. Call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=the release has no tasks`" + `.{{end}}`
+
 // No wiki means no section at all. The page header and index line formats are mirrored by the
 // tracker's token estimate (api/internal/service/wiki_prompt.go), so change both together.
 const wikiSection = `{{with .Wiki}}
@@ -245,6 +286,7 @@ The following instructions are mandatory for this stage. Where they conflict wit
 `
 
 var compiledHeader = template.Must(template.New("header").Parse(promptHeader))
+var compiledReleaseHeader = template.Must(template.New("releaseHeader").Parse(releaseHeader))
 var compiledWiki = template.Must(template.New("wiki").Parse(wikiSection))
 var compiledSkills = template.Must(template.New("skills").Parse(skillsSection))
 var compiledReminder = template.Must(template.New("reminder").Parse(completeStageReminder))
@@ -252,6 +294,7 @@ var compiledImpl = template.Must(template.New("impl").Parse(implementationInstru
 var compiledBrainstorming = template.Must(template.New("brainstorming").Parse(brainstormingBody))
 var compiledDesign = template.Must(template.New("design").Parse(designBody))
 var compiledImplPlan = template.Must(template.New("implPlan").Parse(implementationPlanBody))
+var compiledReleaseNotes = template.Must(template.New("releaseNotes").Parse(releaseNotesBody))
 
 // RenderPrompt renders the per-stage prompt for the agent, ending with the
 // complete_stage reminder. Stage bodies substitute task.Vocab into their
@@ -261,8 +304,12 @@ func RenderPrompt(task Task) (string, error) {
 		task.Vocab = ToolVocabClaudeCode
 	}
 
+	header := compiledHeader
+	if task.Release != nil {
+		header = compiledReleaseHeader
+	}
 	var buf bytes.Buffer
-	if err := compiledHeader.Execute(&buf, task); err != nil {
+	if err := header.Execute(&buf, task); err != nil {
 		return "", fmt.Errorf("rendering header: %w", err)
 	}
 
@@ -284,6 +331,11 @@ func RenderPrompt(task Task) (string, error) {
 		body = compiledImplPlan
 	case StageImplementation:
 		body = compiledImpl
+	case StageReleaseNotes:
+		if task.Release == nil {
+			return "", fmt.Errorf("release notes stage without a release")
+		}
+		body = compiledReleaseNotes
 	default:
 		return "", fmt.Errorf("unknown stage: %q", task.Stage)
 	}

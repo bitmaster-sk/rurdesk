@@ -151,6 +151,11 @@ var (
 	ErrSeverityNotInProject  = newErr("SEVERITY_NOT_IN_PROJECT", "severity does not belong to this project", "error.severity_not_in_project", http.StatusUnprocessableEntity)
 	ErrIssueTypeNotInProject = newErr("ISSUE_TYPE_NOT_IN_PROJECT", "issue type does not belong to this project", "error.issue_type_not_in_project", http.StatusUnprocessableEntity)
 	ErrTagNotInProject       = newErr("TAG_NOT_IN_PROJECT", "tag does not belong to this project", "error.tag_not_in_project", http.StatusUnprocessableEntity)
+	ErrReleaseNameTaken      = newErr("RELEASE_NAME_TAKEN", "a release or tag with this name already exists in the project", "error.release_name_taken", http.StatusConflict)
+	ErrReleaseNotesPending   = newErr("RELEASE_NOTES_PENDING", "an agent is still writing the release notes", "error.release_notes_pending", http.StatusConflict)
+	ErrReleaseDraftExists    = newErr("RELEASE_DRAFT_EXISTS", "this tag already has a release draft", "error.release_draft_exists", http.StatusConflict)
+	ErrReleaseNotDraft       = newErr("RELEASE_NOT_DRAFT", "the release is already out", "error.release_not_draft", http.StatusConflict)
+	ErrReleaseNameIsTag      = newErr("RELEASE_NAME_IS_TAG", "the version name must differ from the tag name to create the tag again", "error.release_name_is_tag", http.StatusConflict)
 
 	// ── Saved views ────────────────────────────────────────────────────────
 

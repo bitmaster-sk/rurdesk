@@ -40,6 +40,8 @@ type AgentRunController struct {
 	stagePlan         *service.AgentStagePlanService
 	agentTaskConfig   *service.AgentTaskConfigService
 	dispatcher        *agent.Dispatcher
+	proposals         *service.WikiProposalService
+	releases          *service.ReleaseService
 	notifier          *notify.Notifier
 	pool              *pgxpool.Pool
 }
@@ -59,6 +61,8 @@ func NewAgentRunController(
 	stagePlan *service.AgentStagePlanService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
+	proposals *service.WikiProposalService,
+	releases *service.ReleaseService,
 	notifier *notify.Notifier,
 	pool *pgxpool.Pool,
 ) *AgentRunController {
@@ -77,6 +81,8 @@ func NewAgentRunController(
 		stagePlan:         stagePlan,
 		agentTaskConfig:   agentTaskConfig,
 		dispatcher:        dispatcher,
+		proposals:         proposals,
+		releases:          releases,
 		notifier:          notifier,
 		pool:              pool,
 	}
@@ -413,12 +419,12 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
-	stagePlan, err := ctrl.stagePlan.BuildFromChoices(ctrl.stagePlan.Choices(oldRun.StagePlan))
+	stagePlan, err := ctrl.stagePlan.BuildFromChoices(oldRun.Kind, ctrl.stagePlan.Choices(oldRun.StagePlan))
 	if err != nil {
 		ResponseErr(c, err)
 		return
 	}
-	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun.IdIssue, oldRun.IdUserAgent, oldRun.IdProject, stagePlan)
+	newRun, err := ctrl.agentRunRepo.Insert(ctx, oldRun, stagePlan)
 	if err != nil {
 		ResponseErr(c, err)
 		return
@@ -727,9 +733,11 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if err := validateMessageKind(body.Message, body.MessageKind); err != nil {
-		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
-		return
+	if run.IdIssue != nil {
+		if err := validateMessageKind(body.Message, body.MessageKind); err != nil {
+			ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
+			return
+		}
 	}
 
 	agentUser, _ := extctx.GetUser(ctx)
@@ -752,7 +760,7 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		// If Continue already moved it out, or the user Restarted (a newer
 		// non-terminal run exists), reconciling would resurrect/duplicate: no-op.
 		// (The in-tx CAS is the final authority for the race after this check.)
-		if active, aerr := ctrl.agentRunRepo.LoadActiveByIssue(ctx, run.IdIssue); aerr == nil && active != nil && active.IdRun != run.IdRun {
+		if active, aerr := ctrl.agentRunRepo.LoadActiveOfSubject(ctx, run); aerr == nil && active != nil && active.IdRun != run.IdRun {
 			c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
 			return
 		}
@@ -824,7 +832,9 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	}
 	// applyCompleteStage mutates the issue out-of-band (PR link, phase→state
 	// mirror); push the fresh issue so the detail page updates live.
-	agent.BroadcastIssueUpdate(context.Background(), ctrl.notifier, ctrl.issueRepo, ctrl.projectRepo, run.IdIssue)
+	if run.IdIssue != nil {
+		agent.BroadcastIssueUpdate(context.Background(), ctrl.notifier, ctrl.issueRepo, ctrl.projectRepo, *run.IdIssue)
+	}
 
 	c.JSON(http.StatusOK, model.CompleteStageRes{
 		IdTask:    idTask,
@@ -844,9 +854,9 @@ func (ctrl *AgentRunController) applyCompleteStage(
 ) (completeStageResult, error) {
 	var res completeStageResult
 	var idMessage *int64
-	if body.Message != "" {
+	if body.Message != "" && run.IdIssue != nil {
 		msg, err := ctrl.messageRepo.InsertIssueAgentMessage(
-			ctx, body.Message, agentUser, run.IdIssue, constants.MessageKind(body.MessageKind),
+			ctx, body.Message, agentUser, *run.IdIssue, constants.MessageKind(body.MessageKind),
 		)
 		if err != nil {
 			return completeStageResult{}, fmt.Errorf("writing message: %w", err)
@@ -871,6 +881,12 @@ func (ctrl *AgentRunController) applyCompleteStage(
 			return completeStageResult{}, fmt.Errorf("applying PR info: %w", err)
 		}
 		prWritten = true
+	}
+
+	if run.IdRelease != nil && body.Outcome == constants.StageOutcomeOutputSubmitted {
+		if err := ctrl.releases.NotesWritten(ctx, *run.IdRelease, body.Message); err != nil {
+			return completeStageResult{}, fmt.Errorf("writing release notes: %w", err)
+		}
 	}
 
 	targetStatus := constants.TaskStatusCompleted
@@ -928,6 +944,14 @@ func (ctrl *AgentRunController) applyCompleteStage(
 		} else if _, err := ctrl.agentRunRepo.TransitionPhase(ctx, run.IdRun, run.Phase, nextPhase, constants.ActorTypeAgent, nil, "complete_stage:"+body.Outcome); err != nil {
 			log.Debug().Err(err).Int64("idRun", run.IdRun).Str("toPhase", nextPhase).Msg("phase transition tolerated")
 		}
+	}
+	if nextPhase == constants.PhaseDone {
+		idRun := run.IdRun
+		extctx.AfterCommit(ctx, func(detached context.Context) {
+			if finished, err := ctrl.agentRunRepo.LoadById(detached, idRun); err == nil {
+				ctrl.proposals.RunFinished(detached, finished)
+			}
+		})
 	}
 
 	return completeStageResult{notifierMsg: res.notifierMsg, targetStatus: targetStatus, nextPhase: nextPhase}, nil
@@ -1105,6 +1129,8 @@ func decideNextRunPhase(stage, outcome string) string {
 		return constants.PhaseAwaitingApproval
 	case constants.StageImplementation:
 		return constants.PhasePrOpen
+	case constants.StageReleaseNotes:
+		return constants.PhaseDone
 	default:
 		return constants.PhaseInProgress
 	}
@@ -1247,8 +1273,8 @@ func prTargetBranch(ctx context.Context, host githost.GitHost, baseBranch *strin
 }
 
 // fallbackPrTitle is used only when the agent did not supply a pr_title.
-func (ctrl *AgentRunController) fallbackPrTitle(ctx context.Context, idIssue int64, branchName string) string {
-	issue, err := ctrl.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &idIssue})
+func (ctrl *AgentRunController) fallbackPrTitle(ctx context.Context, idIssue *int64, branchName string) string {
+	issue, err := ctrl.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: idIssue})
 	if err == nil && issue != nil && issue.Title != "" {
 		return issue.Title
 	}
@@ -1272,7 +1298,9 @@ func (ctrl *AgentRunController) writePrInfo(ctx context.Context, run *model.Agen
 		return err
 	}
 	// Mirror onto issues.issue.{id_git_integration, mr_id} best-effort.
-	_ = ctrl.issueRepo.LinkMr(ctx, run.IdIssue, dto.IdGitIntegration, dto.PrId)
+	if run.IdIssue != nil {
+		_ = ctrl.issueRepo.LinkMr(ctx, *run.IdIssue, dto.IdGitIntegration, dto.PrId)
+	}
 	return nil
 }
 
@@ -1355,7 +1383,7 @@ func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.C
 		ResponseErr(c, err)
 		return
 	}
-	idAssignee, err := ctrl.issueRepo.LoadAssignee(ctx, run.IdIssue)
+	idAssignee, err := agent.LoadRunAssignee(ctx, ctrl.issueRepo, run)
 	if err != nil {
 		ResponseErr(c, err)
 		return

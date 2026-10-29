@@ -1,0 +1,76 @@
+<div class="flex flex-col gap-6" data-testid="release-published">
+    <dl class="release-facts">
+        <div>
+            <dt>{{ 'RELEASE.RELEASED' | translate }}</dt>
+            <dd>{{ authorName() }} · {{ release().releasedAt | date: 'medium' }}</dd>
+        </div>
+        <div>
+            <dt>{{ 'RELEASE.TASKS' | translate }}</dt>
+            <dd data-testid="release-issue-count">{{ release().issueCount }}</dd>
+        </div>
+        @if (canEdit() && !isEditing()) {
+            <div class="release-facts__action">
+                <ui-button
+                    data-testid="release-notes-edit-start"
+                    variant="outlined"
+                    size="small"
+                    [label]="'RELEASE.NOTES.EDIT' | translate"
+                    (click)="onEdit()"
+                >
+                    <tabler-icon icon="pencil" [size]="16" />
+                </ui-button>
+            </div>
+        }
+    </dl>
+    @if (isEditing()) {
+        <div class="release-notes-edit" data-testid="release-notes-edit">
+            <div class="release-notes-edit__pane">
+                <app-wiki-editor
+                    data-testid="release-published-editor"
+                    [initialValue]="release().notes"
+                    [placeholderText]="'RELEASE.NOTES.PLACEHOLDER' | translate"
+                    (valueChange)="onNotesChange($event)"
+                />
+            </div>
+            <div class="release-notes-edit__pane">
+                <article
+                    class="wiki-article"
+                    data-testid="release-published-preview"
+                    markdown
+                    ngPreserveWhitespaces
+                    [data]="notes()"
+                ></article>
+            </div>
+        </div>
+        <div class="flex justify-end gap-2">
+            <ui-button
+                severity="secondary"
+                variant="text"
+                data-testid="release-notes-cancel"
+                [label]="'CANCEL' | translate"
+                (click)="onCancel()"
+            />
+            <ui-button
+                data-testid="release-notes-save"
+                [label]="'SAVE' | translate"
+                [disabled]="!canSave()"
+                [loading]="isBusy()"
+                (click)="onSave()"
+            />
+        </div>
+    } @else {
+        <article
+            class="wiki-article"
+            data-testid="release-published-notes"
+            markdown
+            ngPreserveWhitespaces
+            [data]="release().notes"
+        ></article>
+    }
+    @if (tasks(); as rows) {
+        <section class="flex flex-col gap-3" data-testid="release-task-list">
+            <h2 class="m-0 text-base font-semibold">{{ 'RELEASE.TASK_LIST' | translate }}</h2>
+            <app-release-task-table [rows]="rows" />
+        </section>
+    }
+</div>

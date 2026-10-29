@@ -17,6 +17,21 @@ worktree management, prompt rendering, MCP wiring) and differ only in how they
 drive their respective agent. Pick one per gateway instance via the `--adapter`
 flag (the Docker images set it for you).
 
+### Release notes runs need no repository
+
+A `release_notes` run has a single `release_notes` stage after pickup. It
+belongs to a release, not to a task, so its events carry no `idIssue`. The
+tracker sends no repository for it, so the gateway runs the agent in an empty
+scratch directory that it deletes afterwards. The prompt has its own header
+without the task sections. It lists the tag, the closed tasks of the release and,
+when the draft releases open tasks too, those under their own heading, and tells
+the agent the list is complete. A release without tasks makes the agent end the
+stage with an error instead of writing. The agent
+writes the notes and hands them in as the message of `complete_stage`, without
+a `message_kind`. The tracker puts that message into the release draft and posts
+it nowhere else. The stage uses the restricted `/mcp/plan` endpoint like
+every other non-implementation stage.
+
 ### Prior outputs are injected into the prompt
 
 Each stage runs a fresh agent process, so to avoid re-fetching prior work the
@@ -71,9 +86,8 @@ the tracker MCP server lives in `~/.config/goose/config.yaml`. It is a
 **writes this config per run** (`writeGooseConfig`) with the **literal**
 stage-scoped URL + bearer token — goose does _not_ substitute `${ENV}` in an
 extension `uri` (an unsubstituted value fails with a reqwest "builder error"),
-and the URL differs by stage anyway: `/mcp/plan/http` for plan stages,
-`/mcp/http` for implementation (converted from the `/sse` base by
-`toStreamableHTTP`). The config path is shared, which is safe because the
+and the URL differs by stage anyway: `/mcp/plan/http` for plan stages, `/mcp/http` for
+implementation (converted from the `/sse` base by `toStreamableHTTP`). The config path is shared, which is safe because the
 gateway runs one stage at a time. The API serves both transports: SSE (`/mcp/sse`) for the
 claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
 
@@ -105,7 +119,7 @@ contract.
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
+| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; every other stage gets the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (agent credentials).                                                                                                                      |
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
 | `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the subscription. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |

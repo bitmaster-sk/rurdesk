@@ -26,6 +26,7 @@ import { IssueTypeDropdownComponent } from './issue-type-dropdown/issue-type-dro
 import { TeammateSelectorComponent } from './teammate-selector/teammate-selector.component';
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
+import { AgentThinkingRowComponent } from './components/agent-thinking-row/agent-thinking-row.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
@@ -61,7 +62,13 @@ import {
     IconChevronDown,
     IconArrowDown,
     IconArrowRight,
-    IconPlus
+    IconPlus,
+    IconBrain,
+    IconChevronRight,
+    IconTerminal2,
+    IconPencil,
+    IconSearch,
+    IconHammer
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -87,6 +94,7 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
@@ -130,7 +138,13 @@ import {
             IconChevronDown,
             IconArrowDown,
             IconArrowRight,
-            IconPlus
+            IconPlus,
+            IconBrain,
+            IconChevronRight,
+            IconTerminal2,
+            IconPencil,
+            IconSearch,
+            IconHammer
         })
     ],
     exports: [
@@ -157,6 +171,7 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,

@@ -1,0 +1,30 @@
+<ol class="ui-stepper__list">
+    @for (step of steps(); track $index; let index = $index, isLast = $last) {
+        <li
+            class="ui-stepper__item"
+            data-testid="ui-stepper-step"
+            [class.ui-stepper__item--done]="index < active()"
+            [class.ui-stepper__item--current]="index === active()"
+        >
+            <button
+                type="button"
+                class="ui-stepper__step"
+                [disabled]="step.isDisabled || index === active()"
+                [attr.aria-current]="index === active() ? 'step' : null"
+                (click)="onSelect(index)"
+            >
+                <span class="ui-stepper__marker">
+                    @if (index < active()) {
+                        <tabler-icon icon="check" [size]="14" [stroke]="2.5" />
+                    } @else {
+                        {{ index + 1 }}
+                    }
+                </span>
+                <span class="ui-stepper__label">{{ step.label }}</span>
+            </button>
+            @if (!isLast) {
+                <span class="ui-stepper__line" aria-hidden="true"></span>
+            }
+        </li>
+    }
+</ol>

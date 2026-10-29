@@ -1,0 +1,198 @@
+@use '../../../wiki/wiki-article';
+
+:host {
+    display: block;
+    height: 100%;
+}
+
+:host ::ng-deep .wiki-article {
+    @include wiki-article.article;
+
+    padding: var(--ui-space-m) var(--ui-space-l);
+}
+
+.release-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    &__bar {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-l);
+        padding: var(--ui-space) var(--ui-space-xl);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    &__back {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: var(--ui-space-s);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+        text-decoration: none;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+    }
+
+    &__title {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        gap: var(--ui-space);
+        min-width: 0;
+    }
+
+    &__actions {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: var(--ui-space);
+    }
+
+    &__stepper {
+        width: 100%;
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: var(--ui-space-l) var(--ui-space-xl);
+    }
+
+    &__scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    &__content {
+        display: flex;
+        flex-direction: column;
+        gap: var(--ui-space-xl);
+        width: 100%;
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: var(--ui-space) var(--ui-space-xl) var(--ui-space-xl);
+
+        &--narrow {
+            max-width: 36rem;
+        }
+
+        &--wide {
+            max-width: 64rem;
+            padding-top: var(--ui-space-xl);
+        }
+    }
+}
+
+.release-notes {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    border-top: 1px solid var(--ui-color-border);
+
+    &__bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ui-space-l);
+        padding: var(--ui-space) var(--ui-space-xl);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    &__error {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--ui-space);
+        padding: var(--ui-space) var(--ui-space-xl);
+        border-bottom: 1px solid var(--ui-color-border);
+
+        ui-message {
+            flex: 1;
+        }
+    }
+
+    &__choices {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+        gap: var(--ui-space-l);
+    }
+
+    &__choice {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-l);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-color-surface);
+        color: var(--ui-color-text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+
+        tabler-icon {
+            color: var(--ui-color-primary);
+        }
+
+        &:hover:not(:disabled) {
+            border-color: var(--ui-color-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--ui-color-primary);
+            outline-offset: 2px;
+        }
+
+        &:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    }
+
+    &__split {
+        display: grid;
+        flex: 1;
+        grid-template-columns: 1fr 1fr;
+        min-height: 24rem;
+
+        &--single {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    &__pane {
+        min-height: 0;
+        overflow-y: auto;
+
+        &--source {
+            border-right: 1px solid var(--ui-color-border);
+        }
+    }
+
+    &__pane-label {
+        display: flex;
+        align-items: center;
+        min-height: 2.25rem;
+        padding: 0 var(--ui-space-l);
+        border-bottom: 1px solid var(--ui-color-border);
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+}
+
+@media (max-width: 960px) {
+    .release-notes__split {
+        grid-template-columns: 1fr;
+    }
+
+    .release-notes__pane--source {
+        min-height: 20rem;
+        border-right: 0;
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+}

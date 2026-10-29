@@ -41,7 +41,7 @@
                             </a>
                         </li>
                     }
-                    <li class="menu-item mb-0">
+                    <li class="menu-item">
                         <div class="menu-item-border"></div>
                         <a
                             class="link"
@@ -51,6 +51,18 @@
                         >
                             <tabler-icon icon="book-2" [size]="16" class="icon" />
                             <span class="text">{{ 'HOME.WIKI' | translate }}</span>
+                        </a>
+                    </li>
+                    <li class="menu-item mb-0">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            data-testid="sidebar-link-release"
+                            [routerLink]="['/project', project()?.idProject, 'release']"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="rocket" [size]="16" class="icon" />
+                            <span class="text">{{ 'HOME.RELEASES' | translate }}</span>
                         </a>
                     </li>
                     <li class="menu-section-title">{{ 'HOME.TASKS' | translate }}</li>

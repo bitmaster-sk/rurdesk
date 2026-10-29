@@ -49,7 +49,7 @@
                 </small>
             }
             @if (isNew()) {
-                <small class="custom-field-hint">
+                <small class="ui-field-hint">
                     {{ 'CUSTOM_FIELD.IMMUTABLE_HINT' | translate }}
                 </small>
             }
@@ -71,7 +71,7 @@
                 </ng-template>
             </ui-select>
             @if (isNew()) {
-                <small class="custom-field-hint">
+                <small class="ui-field-hint">
                     {{ 'CUSTOM_FIELD.IMMUTABLE_HINT' | translate }}
                 </small>
             }
@@ -124,11 +124,11 @@
                     [value]="defaultValue()"
                     (valueChange)="onDefaultChange($event)"
                 ></app-custom-field-value-input>
-                <small class="custom-field-hint">
+                <small class="ui-field-hint">
                     {{ 'CUSTOM_FIELD.DEFAULT_HINT' | translate }}
                 </small>
             } @else {
-                <small class="custom-field-hint">
+                <small class="ui-field-hint">
                     {{ 'CUSTOM_FIELD.DEFAULT_LATER' | translate }}
                 </small>
             }
@@ -161,7 +161,7 @@
                     [value]="backfill()"
                     (valueChange)="onBackfillChange($event)"
                 ></app-custom-field-value-input>
-                <small class="custom-field-hint">
+                <small class="ui-field-hint">
                     {{ 'CUSTOM_FIELD.BACKFILL_HINT' | translate }}
                 </small>
             </div>

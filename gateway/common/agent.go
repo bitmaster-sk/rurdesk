@@ -11,6 +11,7 @@ const (
 	StageDesign             = "design"
 	StageImplementationPlan = "implementation_plan"
 	StageImplementation     = "implementation"
+	StageReleaseNotes       = "release_notes"
 )
 
 // Outcome enum, mirroring api/internal/constants/agent.go.
@@ -83,6 +84,8 @@ type Task struct {
 
 	WikiProposals []WikiProposal
 
+	Release *ReleaseContext
+
 	// Stage selects which instruction block the prompt template uses.
 	Stage string
 
@@ -105,6 +108,23 @@ type Task struct {
 	// its own vocab before RenderPrompt. Zero value falls back to
 	// ToolVocabClaudeCode.
 	Vocab ToolVocab
+}
+
+type ReleaseContext struct {
+	Name       string
+	Tag        string
+	Sections   []ReleaseSection
+	OpenIssues []ReleaseIssue
+}
+
+type ReleaseSection struct {
+	Name   string
+	Issues []ReleaseIssue
+}
+
+type ReleaseIssue struct {
+	IdIssuePublic int64
+	Title         string
 }
 
 type WikiContext struct {

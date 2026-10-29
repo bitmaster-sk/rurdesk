@@ -1,0 +1,87 @@
+<div class="release-page" data-testid="release-new">
+    <header class="release-page__bar">
+        <a class="release-page__back" [routerLink]="['/project', idProject, 'release']">
+            <tabler-icon icon="arrow-left" [size]="16" />
+            {{ 'RELEASE.TITLE' | translate }}
+        </a>
+        <div class="release-page__title">
+            <h1 class="m-0 text-lg font-semibold">{{ 'RELEASE.NEW_TITLE' | translate }}</h1>
+        </div>
+    </header>
+    <div class="release-page__stepper">
+        <ui-stepper [steps]="steps()" [active]="0" />
+    </div>
+    <div class="release-page__scroll">
+        <form
+            class="release-page__content release-page__content--narrow"
+            [formGroup]="form"
+            (ngSubmit)="onCreate()"
+        >
+            <div class="ui-field m-0">
+                <label class="required" for="release-tag">{{ 'TAG.SINGULAR' | translate }}</label>
+                <ui-select
+                    class="w-full"
+                    inputId="release-tag"
+                    data-testid="release-tag"
+                    optionLabel="name"
+                    optionValue="idTag"
+                    formControlName="idTag"
+                    [options]="tags()"
+                    [placeholder]="'RELEASE.NEW_STEP.PICK_TAG' | translate"
+                >
+                    <ng-template #item let-tag>
+                        <span class="flex items-center justify-between gap-3">
+                            <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                            <span class="ui-color-text-muted text-sm">
+                                {{ 'RELEASE.NEW_STEP.TAG_COUNT' | translate: { count: tag.issueCount
+                                } }}
+                            </span>
+                        </span>
+                    </ng-template>
+                    <ng-template #selectedItem let-tag>
+                        <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                    </ng-template>
+                </ui-select>
+                <span class="ui-field-hint">{{ 'RELEASE.NEW_STEP.TAG_HINT' | translate }}</span>
+            </div>
+            @if (existingDraft(); as draft) {
+            <ui-message severity="info" data-testid="release-existing-draft">
+                <span class="flex flex-wrap items-center gap-2">
+                    {{ 'RELEASE.NEW_STEP.DRAFT_EXISTS' | translate: { tag: tagName(), name:
+                    draft.name } }}
+                    <a [routerLink]="['/project', idProject, 'release', draft.idRelease]">
+                        {{ 'RELEASE.NEW_STEP.OPEN_DRAFT' | translate }}
+                    </a>
+                </span>
+            </ui-message>
+            }
+            <div class="ui-field m-0">
+                <label class="required" for="release-name">
+                    {{ 'RELEASE.VERSION' | translate }}
+                </label>
+                <input
+                    id="release-name"
+                    data-testid="release-name"
+                    uiInput
+                    type="text"
+                    class="w-full"
+                    placeholder="v1.0.4"
+                    formControlName="name"
+                    [maxlength]="maxLength"
+                />
+                <span class="ui-field-hint">
+                    {{ 'RELEASE.VERSION_STEP.NAME_HINT' | translate: { tag: tagName() || '…' } }}
+                </span>
+            </div>
+            <div class="flex justify-end">
+                <ui-button
+                    type="submit"
+                    data-testid="release-create"
+                    [label]="'RELEASE.NEW_STEP.CREATE' | translate"
+                    [disabled]="!isValid()"
+                    [loading]="isBusy()"
+                />
+            </div>
+        </form>
+    </div>
+</div>

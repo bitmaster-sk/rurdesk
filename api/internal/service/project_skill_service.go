@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent/skills"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
@@ -35,6 +36,11 @@ func (s *ProjectSkillService) LoadDefaultIdsSkillByStage(ctx context.Context, id
 }
 
 func (s *ProjectSkillService) Replace(ctx context.Context, idProject int64, entries []model.UpdateProjectSkillReq) ([]*model.ProjectSkill, error) {
+	for _, entry := range entries {
+		if !constants.IsSkillStage(entry.Stage) {
+			return nil, errs.ErrBadRequest.WithMessage(fmt.Sprintf("unknown stage %q", entry.Stage))
+		}
+	}
 	if err := s.assertSkillsExist(ctx, entries); err != nil {
 		return nil, err
 	}

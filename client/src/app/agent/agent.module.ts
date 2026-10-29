@@ -85,7 +85,8 @@ import { AgentStagePlanFormComponent } from './components/agent-stage-plan-form/
         AgentRunCardComponent,
         PlanActionsComponent,
         RunRecoveryBannerComponent,
-        AgentStagePlanEditorComponent
+        AgentStagePlanEditorComponent,
+        AgentStagePlanFormComponent
     ]
 })
 export class AgentModule {}

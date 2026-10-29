@@ -658,11 +658,11 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.RunChoices)
 			return txErr
 		}
-		stagePlan, txErr := ic.stagePlan.BuildFromChoices(dto.RunChoices)
+		stagePlan, txErr := ic.stagePlan.BuildFromChoices(constants.RunKindIssue, dto.RunChoices)
 		if txErr != nil {
 			return txErr
 		}
-		run, txErr = ic.agentRunRepo.Insert(ctx, issue.IdIssue, agentUser.IdUser, idProject, stagePlan)
+		run, txErr = ic.agentRunRepo.InsertForIssue(ctx, issue.IdIssue, agentUser.IdUser, idProject, stagePlan)
 		return txErr
 	})
 	if err != nil {
@@ -764,12 +764,12 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 			Msg("loading project skill defaults — creating run without skills")
 		idsSkillByStage = nil
 	}
-	stagePlan, err := ic.stagePlan.BuildFromChoices(model.RunChoices{IdsSkillByStage: idsSkillByStage})
+	stagePlan, err := ic.stagePlan.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: idsSkillByStage})
 	if err != nil {
 		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("building stage plan — run not created")
 		return
 	}
-	run, err := ic.agentRunRepo.Insert(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject, stagePlan)
+	run, err := ic.agentRunRepo.InsertForIssue(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject, stagePlan)
 	if err != nil {
 		return
 	}
