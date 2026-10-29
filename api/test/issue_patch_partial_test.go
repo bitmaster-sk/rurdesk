@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -206,4 +207,40 @@ func repeatRune(r rune, count int) string {
 		out[i] = r
 	}
 	return string(out)
+}
+
+func TestEditIssue_KeepsAssigneeWithoutProjectAccess(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "patch-outsider-assignee")
+	states := loadProjectStates(t, app, token, idProject)
+	idIssuePublic := createIssueInState(t, app, token, idProject, states[0].IdState)
+	createUserAndLogin(t, app, token, "outsider-assignee@test.sk")
+	idOutsider := idOfUser(t, app, token, "outsider-assignee@test.sk")
+	_, err := app.Pool.Exec(context.Background(),
+		"UPDATE issues.issue SET assigned_to = $1 WHERE id_project = $2 AND id_issue_public = $3",
+		idOutsider, idProject, idIssuePublic)
+	require.NoError(t, err)
+
+	res := patchIssue(t, app, token, idProject, idIssuePublic,
+		fmt.Sprintf(`{"description":"edited","assignedTo":%d}`, idOutsider))
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+
+	after := loadIssue(t, app, token, idProject, idIssuePublic)
+	require.Equal(t, "edited", after.Description)
+	require.NotNil(t, after.AssignedTo)
+	require.Equal(t, idOutsider, *after.AssignedTo)
+}
+
+func TestEditIssue_RejectsNewAssigneeWithoutProjectAccess(t *testing.T) {
+	app := Setup(t)
+	token := Token(t, app)
+	idProject := createProject(t, app, token, "patch-outsider-new-assignee")
+	states := loadProjectStates(t, app, token, idProject)
+	idIssuePublic := createIssueInState(t, app, token, idProject, states[0].IdState)
+	createUserAndLogin(t, app, token, "outsider-new-assignee@test.sk")
+	idOutsider := idOfUser(t, app, token, "outsider-new-assignee@test.sk")
+
+	res := patchIssue(t, app, token, idProject, idIssuePublic, fmt.Sprintf(`{"assignedTo":%d}`, idOutsider))
+	require.Equal(t, http.StatusForbidden, res.StatusCode, readBody(t, res))
 }
