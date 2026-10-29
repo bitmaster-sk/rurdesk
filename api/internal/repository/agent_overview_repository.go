@@ -84,10 +84,11 @@ func (r *AgentOverviewRepository) Load(ctx context.Context, idProject int64) ([]
 
 func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int64, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
-		SELECT t.id_user_agent, t.stage, r.id_project, i.id_issue_public
+		SELECT t.id_user_agent, t.stage, r.id_project, i.id_issue_public, rel.name
 		FROM agent.task t
 		JOIN agent.run r ON r.id_run = t.id_run
-		JOIN issues.issue i ON i.id_issue = r.id_issue
+		LEFT JOIN issues.issue i ON i.id_issue = r.id_issue
+		LEFT JOIN issues.release rel ON rel.id_release = r.id_release
 		WHERE t.status = $1
 	`, constants.TaskStatusActive)
 	if err != nil {
@@ -96,9 +97,11 @@ func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int
 	defer rows.Close()
 
 	for rows.Next() {
-		var idUserAgent, idRunProject, idIssuePublic int64
+		var idUserAgent, idRunProject int64
+		var idIssuePublic *int64
+		var releaseName *string
 		var stage string
-		if err := rows.Scan(&idUserAgent, &stage, &idRunProject, &idIssuePublic); err != nil {
+		if err := rows.Scan(&idUserAgent, &stage, &idRunProject, &idIssuePublic, &releaseName); err != nil {
 			return fmt.Errorf("scanning active task: %w", err)
 		}
 		entry, ok := byAgent[idUserAgent]
@@ -107,7 +110,7 @@ func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int
 		}
 		entry.IsBusy = true
 		if idRunProject == idProject {
-			entry.Current = &model.AgentCurrentRun{IdIssuePublic: idIssuePublic, Stage: stage}
+			entry.Current = &model.AgentCurrentRun{IdIssuePublic: idIssuePublic, ReleaseName: releaseName, Stage: stage}
 		}
 	}
 	return rows.Err()
@@ -117,9 +120,9 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT r.id_user_agent, r.id_project, i.id_issue_public
 		FROM agent.run r
-		JOIN issues.issue i ON i.id_issue = r.id_issue
+		LEFT JOIN issues.issue i ON i.id_issue = r.id_issue
 		WHERE r.phase = $1
-		  AND i.assigned_to = r.id_user_agent
+		  AND (r.id_issue IS NULL OR i.assigned_to = r.id_user_agent)
 		ORDER BY r.created_at
 	`, constants.PhaseQueued)
 	if err != nil {
@@ -128,7 +131,8 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 	defer rows.Close()
 
 	for rows.Next() {
-		var idUserAgent, idRunProject, idIssuePublic int64
+		var idUserAgent, idRunProject int64
+		var idIssuePublic *int64
 		if err := rows.Scan(&idUserAgent, &idRunProject, &idIssuePublic); err != nil {
 			return fmt.Errorf("scanning queued run: %w", err)
 		}
@@ -137,8 +141,8 @@ func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int6
 			continue
 		}
 		entry.QueueCount++
-		if idRunProject == idProject {
-			entry.QueuedIdsIssuePublic = append(entry.QueuedIdsIssuePublic, idIssuePublic)
+		if idRunProject == idProject && idIssuePublic != nil {
+			entry.QueuedIdsIssuePublic = append(entry.QueuedIdsIssuePublic, *idIssuePublic)
 		}
 	}
 	return rows.Err()

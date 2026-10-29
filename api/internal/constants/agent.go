@@ -1,6 +1,9 @@
 package constants
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 // DefaultMergePollInterval is how often linked pull requests are checked when MERGE_POLL_INTERVAL is unset or unparseable.
 const DefaultMergePollInterval = 60 * time.Second
@@ -22,6 +25,12 @@ const (
 	StageDesign             = "design"
 	StageImplementationPlan = "implementation_plan"
 	StageImplementation     = "implementation"
+	StageReleaseNotes       = "release_notes"
+)
+
+const (
+	RunKindIssue        = "issue"
+	RunKindReleaseNotes = "release_notes"
 )
 
 const (
@@ -66,6 +75,28 @@ var StageDefinitions = []StageDef{
 	{Name: StageImplementation, Skippable: false},
 }
 
+type RunKindDef struct {
+	Name   string
+	Stages []StageDef
+}
+
+var RunKinds = []RunKindDef{
+	{Name: RunKindIssue, Stages: StageDefinitions},
+	{Name: RunKindReleaseNotes, Stages: []StageDef{
+		{Name: StagePickup, Skippable: false},
+		{Name: StageReleaseNotes, Skippable: false},
+	}},
+}
+
+func StagesOfKind(kind string) []StageDef {
+	for _, def := range RunKinds {
+		if def.Name == kind {
+			return def.Stages
+		}
+	}
+	return StageDefinitions
+}
+
 var ShortWorkflowSkippedStages = []string{StageDesign, StageImplementationPlan}
 
 // Once any of these stages is dispatched, switching the workflow length would
@@ -74,7 +105,19 @@ var ShortWorkflowLockingStages = []string{StageDesign, StageImplementationPlan, 
 
 // Pickup is absent: no prompt is rendered for it, so a skill attached there
 // would never reach an agent.
-var SkillStages = []string{StageBrainstorming, StageDesign, StageImplementationPlan, StageImplementation}
+var SkillStages = collectSkillStages()
+
+func collectSkillStages() []string {
+	var stages []string
+	for _, kind := range RunKinds {
+		for _, def := range kind.Stages {
+			if def.Name != StagePickup && !slices.Contains(stages, def.Name) {
+				stages = append(stages, def.Name)
+			}
+		}
+	}
+	return stages
+}
 
 func IsSkillStage(stage string) bool {
 	for _, skillStage := range SkillStages {

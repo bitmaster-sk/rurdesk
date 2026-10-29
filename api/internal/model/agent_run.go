@@ -7,9 +7,11 @@ import (
 
 type AgentRun struct {
 	IdRun             int64           `json:"idRun"            db:"id_run"`
-	IdIssue           int64           `json:"idIssue"          db:"id_issue"`
+	IdIssue           *int64          `json:"idIssue"          db:"id_issue"`
+	IdRelease         *int64          `json:"idRelease"        db:"id_release"`
 	IdUserAgent       int64           `json:"idUserAgent"        db:"id_user_agent"`
 	IdProject         int64           `json:"idProject"        db:"id_project"`
+	Kind              string          `json:"kind"             db:"kind"`
 	IdGitIntegration  *int64          `json:"idGitIntegration" db:"id_git_integration"`
 	BaseBranch        *string         `json:"baseBranch"       db:"base_branch"`
 	Phase             string          `json:"phase"            db:"phase"`

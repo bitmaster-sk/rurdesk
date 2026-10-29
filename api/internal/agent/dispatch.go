@@ -30,6 +30,7 @@ type Dispatcher struct {
 	stagePlan       *service.AgentStagePlanService
 	wikiAgent       *service.WikiAgentService
 	proposals       *service.WikiProposalService
+	releases        *service.ReleaseService
 	agentTaskConfig *service.AgentTaskConfigService
 	gwClient        *GatewayClient
 	notifier        *notify.Notifier
@@ -48,6 +49,7 @@ func NewDispatcher(
 	stagePlan *service.AgentStagePlanService,
 	wikiAgent *service.WikiAgentService,
 	proposals *service.WikiProposalService,
+	releases *service.ReleaseService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	gwClient *GatewayClient,
 	notifier *notify.Notifier,
@@ -65,6 +67,7 @@ func NewDispatcher(
 		stagePlan:       stagePlan,
 		wikiAgent:       wikiAgent,
 		proposals:       proposals,
+		releases:        releases,
 		agentTaskConfig: agentTaskConfig,
 		gwClient:        gwClient,
 		notifier:        notifier,
@@ -84,16 +87,19 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			return
 		}
 
-		repo, err := d.agentRunGitRepo(bgCtx, run)
-		if err != nil {
-			log.Error().Err(err).Int64("idRun", run.IdRun).Msg("resolving the run repo")
-			d.failTaskAndRun(bgCtx, run, task, err.Error())
-			return
-		}
-
-		prBranch, err := d.openPrBranch(bgCtx, run)
-		if err != nil {
-			log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
+		var repo *model.AgentRunGitRepo
+		prBranch := ""
+		if run.IdIssue != nil {
+			repo, err = d.agentRunGitRepo(bgCtx, run)
+			if err != nil {
+				log.Error().Err(err).Int64("idRun", run.IdRun).Msg("resolving the run repo")
+				d.failTaskAndRun(bgCtx, run, task, err.Error())
+				return
+			}
+			prBranch, err = d.openPrBranch(bgCtx, run)
+			if err != nil {
+				log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
+			}
 		}
 
 		payload := map[string]any{
@@ -171,7 +177,7 @@ func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.Agen
 }
 
 func (d *Dispatcher) openPrBranch(ctx context.Context, run *model.AgentRun) (string, error) {
-	prRun, err := d.agentRunRepo.LoadLatestWithPrByIssue(ctx, run.IdIssue)
+	prRun, err := d.agentRunRepo.LoadLatestWithPrByIssue(ctx, *run.IdIssue)
 	if err != nil {
 		return "", fmt.Errorf("loading the issue's latest PR run: %w", err)
 	}
@@ -237,10 +243,6 @@ func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, eve
 
 // buildContextBundle assembles the per-stage context for a stage attempt.
 func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (map[string]any, []*model.AgentRunWikiRead, error) {
-	issue, err := d.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &run.IdIssue})
-	if err != nil {
-		return nil, nil, fmt.Errorf("loading issue: %w", err)
-	}
 	project, err := d.projectRepo.LoadProject(ctx, run.IdProject)
 	if err != nil {
 		return nil, nil, fmt.Errorf("loading project: %w", err)
@@ -249,12 +251,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	if err != nil {
 		return nil, nil, fmt.Errorf("loading agent user: %w", err)
 	}
-
-	messages, err := d.messageRepo.LoadIssueMessages(ctx, run.IdIssue, 0, nil)
-	if err != nil {
-		messages = nil
-	}
-	// Must not be swallowed like the load above: without tasks the prompt would
+	// Must not be swallowed: without tasks the prompt would
 	// tell the agent to implement an approved plan and attach nothing.
 	priorTasks, err := d.taskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
@@ -288,20 +285,37 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		}
 	}
 
-	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle := map[string]any{
-		"issue":             issue,
 		"project":           project,
 		"agent":             agent,
-		"reviewThread":      reviewThread(messages),
-		"approvedDesign":    artifacts.ApprovedDesign,
-		"approvedImplPlan":  artifacts.ApprovedImplPlan,
-		"rejectedOutput":    artifacts.RejectedOutput,
 		"approvedMockupRef": derefStringOrNil(run.ApprovedMockupRef),
 		"skills":            stageSkills,
 		"wiki":              wiki,
 		"wikiProposals":     proposals,
 		"isShortWorkflow":   d.stagePlan.IsShortWorkflow(run.StagePlan),
+	}
+	if run.IdIssue != nil {
+		issue, err := d.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: run.IdIssue})
+		if err != nil {
+			return nil, nil, fmt.Errorf("loading issue: %w", err)
+		}
+		messages, err := d.messageRepo.LoadIssueMessages(ctx, *run.IdIssue, 0, nil)
+		if err != nil {
+			messages = nil
+		}
+		artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
+		bundle["issue"] = issue
+		bundle["reviewThread"] = reviewThread(messages)
+		bundle["approvedDesign"] = artifacts.ApprovedDesign
+		bundle["approvedImplPlan"] = artifacts.ApprovedImplPlan
+		bundle["rejectedOutput"] = artifacts.RejectedOutput
+	}
+	if run.IdRelease != nil {
+		release, err := d.releases.PromptContext(ctx, run)
+		if err != nil {
+			return nil, nil, fmt.Errorf("loading release: %w", err)
+		}
+		bundle["release"] = release
 	}
 	if task.AttemptNo > 1 {
 		for _, t := range priorTasks {

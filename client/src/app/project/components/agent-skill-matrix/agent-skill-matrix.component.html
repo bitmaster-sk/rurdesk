@@ -9,8 +9,19 @@
         <table class="ui-table min-w-[34rem]" data-testid="skill-matrix">
             <thead>
                 <tr>
-                    <th scope="col">{{ 'AGENT.SKILLS.SKILL' | translate }}</th>
-                    @for (stage of stages; track stage) {
+                    <th scope="col" rowspan="2">{{ 'AGENT.SKILLS.SKILL' | translate }}</th>
+                    @for (kind of kindColumns(); track kind.label) {
+                        <th
+                            scope="colgroup"
+                            data-testid="skill-matrix-kind"
+                            [attr.colspan]="kind.stages.length"
+                        >
+                            {{ kind.label | translate }}
+                        </th>
+                    }
+                </tr>
+                <tr>
+                    @for (stage of stages(); track stage) {
                         <th scope="col">{{ stageLabel(stage) | translate }}</th>
                     }
                 </tr>
@@ -26,7 +37,7 @@
                                 </span>
                             }
                         </td>
-                        @for (stage of stages; track stage; let isLast = $last) {
+                        @for (stage of stages(); track stage; let isLast = $last) {
                             <td>
                                 <span
                                     class="inline-flex"

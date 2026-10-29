@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -95,7 +96,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 	var iss model.Issue
 	require.NoError(t, json.NewDecoder(issRes.Body).Decode(&iss))
 
-	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{})
+	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(constants.RunKindIssue, model.RunChoices{})
 	require.NoError(t, err)
 	runRepo := injector.GetAgentRunRepository()
 
@@ -122,7 +123,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 		return event.Payload.PrBranch
 	}
 
-	firstRun, err := runRepo.Insert(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
+	firstRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 	require.Empty(t, dispatchPrBranch(t, firstRun), "an issue without a PR must get a new branch")
 
@@ -135,7 +136,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 		firstRun.IdRun, prBranch, integration.IdGitIntegration)
 	require.NoError(t, err)
 
-	secondRun, err := runRepo.Insert(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
+	secondRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 
 	tests := []struct {

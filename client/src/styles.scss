@@ -1071,6 +1071,15 @@ body {
         gap: var(--ui-space-s);
     }
 
+    .ui-field-hint {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+
+        &--error {
+            color: var(--ui-color-danger);
+        }
+    }
+
     //####################################################
     //## Page layout
     //####################################################

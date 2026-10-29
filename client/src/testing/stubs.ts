@@ -92,6 +92,7 @@ export class UiOdometerStub {
 @Component({ selector: 'ui-loader', template: '', standalone: true })
 export class UiLoaderStub {
     public readonly size = input<number>(16);
+    public readonly ariaLabel = input<string>('');
 }
 
 @Component({ selector: 'ui-dialog', template: '<ng-content></ng-content>', standalone: true })

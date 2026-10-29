@@ -17,6 +17,18 @@ class HostComponent {
     }
 }
 
+@Component({
+    standalone: false,
+    template: `
+        <button
+            uiConfirm
+            style="position: fixed; top: 0; right: 0; width: 6rem; height: 2rem"
+            [confirmText]="'Publish this release to everyone?'"
+        ></button>
+    `
+})
+class CornerHostComponent {}
+
 describe('UiConfirmDirective (browser)', () => {
     function panel(): HTMLElement | null {
         return document.querySelector('.ui-confirm-panel');
@@ -28,7 +40,7 @@ describe('UiConfirmDirective (browser)', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [HostComponent],
+            declarations: [HostComponent, CornerHostComponent],
             imports: [UiModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations()]
         }).compileComponents();
@@ -88,5 +100,18 @@ describe('UiConfirmDirective (browser)', () => {
 
         expect(fixture.componentInstance.confirmedCount).toBe(0);
         expect(panel()).toBeNull();
+    });
+
+    it('keeps the popup below a button in the top right corner of the viewport', () => {
+        const fixture = TestBed.createComponent(CornerHostComponent);
+        fixture.detectChanges();
+        const trigger = fixture.nativeElement.querySelector('button') as HTMLButtonElement;
+
+        trigger.click();
+        TestBed.inject(ApplicationRef).tick();
+
+        const popup = panel()!.getBoundingClientRect();
+        expect(popup.top).toBeGreaterThanOrEqual(trigger.getBoundingClientRect().bottom);
+        expect(popup.right).toBeLessThanOrEqual(window.innerWidth);
     });
 });

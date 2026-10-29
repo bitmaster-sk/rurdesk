@@ -73,15 +73,11 @@ filter is saved into a [saved view](saved-views.md) like any other filter.
 
 ## Release contents with tags
 
-A tag can collect what goes into the next release:
-
-1. Put the tag `next` on tasks as they are finished.
-2. When you release, rename `next` to the version, e.g. `v1.6.0`. All its tasks
-   now carry `v1.6.0`.
-3. Create a new, empty `next` for the following release.
-
-Only finished tasks get `next`, so the rename never moves unfinished work into
-a released version.
+A tag can collect what goes into the next release. Put a tag such as `next` on
+tasks as you plan them. When you ship, [release](releases.md) the tag: start a
+draft, write the release notes from the closed tasks, and release it. The tag is
+renamed to the version, a new empty `next` is created and unfinished tasks move
+to it.
 
 ## API and agents
 

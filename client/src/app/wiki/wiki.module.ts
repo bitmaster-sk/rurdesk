@@ -58,7 +58,6 @@ import { MarkdownModule } from 'ngx-markdown';
 import { CoreModule } from '../core/core.module';
 import { SharedModule } from '../shared/shared.module';
 import { WikiConflictComponent } from './components/wiki-conflict/wiki-conflict.component';
-import { WikiEditorComponent } from './components/wiki-editor/wiki-editor.component';
 import { WikiMoveDialogComponent } from './components/wiki-move-dialog/wiki-move-dialog.component';
 import { WikiTreeComponent } from './components/wiki-tree/wiki-tree.component';
 import { WikiEditPage } from './pages/wiki-edit/wiki-edit.page';
@@ -72,10 +71,10 @@ import { WikiProposalDetailComponent } from './components/wiki-proposal-detail/w
 import { WikiProposalOriginComponent } from './components/wiki-proposal-origin/wiki-proposal-origin.component';
 import { WikiPageAsideComponent } from './components/wiki-page-aside/wiki-page-aside.component';
 import { WikiTreeShowComponent } from './components/wiki-tree-show/wiki-tree-show.component';
-import { WikiTablePickerComponent } from './components/wiki-table-picker/wiki-table-picker.component';
 import { WikiHeadingAnchorsDirective } from './directives/wiki-heading-anchors.directive';
 import { WikiMermaidDirective } from './directives/wiki-mermaid.directive';
 import { WikiPlantUmlDirective } from './directives/wiki-plantuml.directive';
+import { WikiEditorModule } from './wiki-editor.module';
 import { WikiRoutingModule } from './wiki-routing.module';
 
 @NgModule({
@@ -90,10 +89,8 @@ import { WikiRoutingModule } from './wiki-routing.module';
         WikiProposalDetailComponent,
         WikiProposalOriginComponent,
         WikiTreeComponent,
-        WikiEditorComponent,
         WikiConflictComponent,
         WikiMoveDialogComponent,
-        WikiTablePickerComponent,
         WikiTreeShowComponent,
         WikiPageAsideComponent,
         WikiHeadingAnchorsDirective,
@@ -107,6 +104,7 @@ import { WikiRoutingModule } from './wiki-routing.module';
         DragDropModule,
         MarkdownModule.forChild(),
         TablerIconComponent,
+        WikiEditorModule,
         WikiRoutingModule
     ],
     providers: [

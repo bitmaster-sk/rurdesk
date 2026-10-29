@@ -155,11 +155,13 @@ The gateway refuses to start without all four:
 
 ## Repositories
 
-Every stage the tracker sends carries the repository of the run: the clone URL,
+The tracker sends the repository with the work for the agent: the clone URL,
 the base branch and the access token of the project's
 [git integration](../using-the-tracker/git-integration.md). One gateway therefore
 works for every project, whatever its git host, and nothing in its environment
-changes when you add a project.
+changes when you add a project. Writing
+[release notes](../using-the-tracker/releases.md#letting-an-agent-write-the-release-notes)
+needs no repository.
 
 - **Clone.** The gateway clones a repository the first time a run needs it, into
   `<WORKSPACE_BASE>/<host>/<repository path>`, e.g.

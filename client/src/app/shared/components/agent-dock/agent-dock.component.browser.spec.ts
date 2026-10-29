@@ -31,7 +31,7 @@ const RUN: AgentRun = Fixtures.agentRun();
 const WORKLOAD: AgentOverview = {
     idUserAgent: 8,
     isBusy: true,
-    current: { idIssuePublic: 42, stage: AgentStage.Design },
+    current: { idIssuePublic: 42, releaseName: null, stage: AgentStage.Design },
     queueCount: 3,
     queuedIdsIssuePublic: [43],
     completedToday: 2,

@@ -34,6 +34,7 @@ const (
 	SubjectTag              NoticeSubject = "tag"
 	SubjectWikiPage         NoticeSubject = "wiki_page"
 	SubjectWikiProposal     NoticeSubject = "wiki_proposal"
+	SubjectRelease          NoticeSubject = "release"
 )
 
 const (

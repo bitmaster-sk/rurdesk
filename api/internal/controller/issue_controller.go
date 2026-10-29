@@ -418,11 +418,6 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, dto.IdProject) {
 			return errs.ErrForbidden
 		}
-		if dto.AssignedTo.Value != nil {
-			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
-				return errs.ErrForbidden
-			}
-		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState.Value, dto.IdSeverity.Value, dto.IdIssueType.Value); err != nil {
 			return err
 		}
@@ -440,6 +435,11 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 		snapshot := *issue
 		oldIssue = &snapshot
+
+		isAssigneeChanged := dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value)
+		if isAssigneeChanged && !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
+			return errs.ErrForbidden
+		}
 
 		idGitIntegration := dto.IdGitIntegration.PtrOrElse(issue.IdGitIntegration)
 		mrId := dto.MrId.PtrOrElse(issue.MrId)
@@ -459,7 +459,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 
 		// An agent with no configured gateway can't be assigned.
-		if ic.agentGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
+		if ic.agentGwRepo != nil && isAssigneeChanged {
 			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
 			if loadErr == nil && assignee.IsAgent {
 				gw, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, assignee.IdUser)
@@ -658,11 +658,11 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.RunChoices)
 			return txErr
 		}
-		stagePlan, txErr := ic.stagePlan.BuildFromChoices(dto.RunChoices)
+		stagePlan, txErr := ic.stagePlan.BuildFromChoices(constants.RunKindIssue, dto.RunChoices)
 		if txErr != nil {
 			return txErr
 		}
-		run, txErr = ic.agentRunRepo.Insert(ctx, issue.IdIssue, agentUser.IdUser, idProject, stagePlan)
+		run, txErr = ic.agentRunRepo.InsertForIssue(ctx, issue.IdIssue, agentUser.IdUser, idProject, stagePlan)
 		return txErr
 	})
 	if err != nil {
@@ -764,12 +764,12 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 			Msg("loading project skill defaults — creating run without skills")
 		idsSkillByStage = nil
 	}
-	stagePlan, err := ic.stagePlan.BuildFromChoices(model.RunChoices{IdsSkillByStage: idsSkillByStage})
+	stagePlan, err := ic.stagePlan.BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: idsSkillByStage})
 	if err != nil {
 		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("building stage plan — run not created")
 		return
 	}
-	run, err := ic.agentRunRepo.Insert(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject, stagePlan)
+	run, err := ic.agentRunRepo.InsertForIssue(ctx, newIssue.IdIssue, newUser.IdUser, newIssue.IdProject, stagePlan)
 	if err != nil {
 		return
 	}

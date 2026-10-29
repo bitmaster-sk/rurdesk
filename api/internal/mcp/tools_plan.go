@@ -16,14 +16,14 @@ func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 	server.AddTool(
 		mcpgo.NewTool("complete_stage",
 			mcpgo.WithDescription(
-				"End the current stage attempt. Required exactly once per stage_execute event. The outcome dictates the next state: output_submitted records a message and either moves to approval (design / implementation_plan) or pr_open (implementation); question_asked posts a brainstorming question and waits for the user; no_action_needed records that no clarification or output was necessary and the pipeline moves forward; errored marks the attempt failed so the user can decide Continue / Restart. The server validates outcome ↔ stage compatibility (e.g. question_asked is only valid in brainstorming).",
+				"End the current stage attempt. Required exactly once per stage_execute event. The outcome dictates the next state: output_submitted records a message and either moves to approval (design / implementation_plan), pr_open (implementation) or done (release_notes, where the message is the release notes); question_asked posts a brainstorming question and waits for the user; no_action_needed records that no clarification or output was necessary and the pipeline moves forward; errored marks the attempt failed so the user can decide Continue / Restart. The server validates outcome ↔ stage compatibility (e.g. question_asked is only valid in brainstorming).",
 			),
 			mcpgo.WithNumber("id_task", mcpgo.Required(), mcpgo.Description("The id_task from the stage_execute event payload.")),
 			mcpgo.WithString("outcome", mcpgo.Required(), mcpgo.Description("One of: output_submitted, question_asked, no_action_needed, errored.")),
 			mcpgo.WithString("message", mcpgo.Description("Output message body, plain markdown. Required when outcome=output_submitted or question_asked.")),
 			mcpgo.WithString("message_kind",
 				mcpgo.Enum(constants.AgentMessageKinds...),
-				mcpgo.Description("What the message is. Required when message is set, a missing or unknown value is rejected with 400. "+
+				mcpgo.Description("What the message is. Required when message is set, a missing or unknown value is rejected with 400. Leave it out in the release_notes stage, where the message is the release notes. "+
 					"brainstorming_question: a question to the user (brainstorming, outcome=question_asked). "+
 					"brainstorming_complete: the brainstorming summary (brainstorming, outcome=output_submitted). "+
 					"design: the design (design stage). "+

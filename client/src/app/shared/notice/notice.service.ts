@@ -15,6 +15,7 @@ import { MrStatusNotice } from './model/mr-status-notice.model';
 import { Notice } from './model/notice.model';
 import { WikiSavedNotice } from 'src/app/wiki/model/wiki-page.model';
 import { WikiProposalNotice } from 'src/app/wiki/model/wiki-proposal.model';
+import { Release } from 'src/app/release/model/release.model';
 
 @Injectable({
     providedIn: 'root'
@@ -74,6 +75,9 @@ export class NoticeService {
     private wikiProposalSubject = new Subject<Notice<WikiProposalNotice>>();
     public wikiProposal$: Observable<Notice<WikiProposalNotice>> =
         this.wikiProposalSubject.asObservable();
+
+    private releaseSubject = new Subject<Notice<Release>>();
+    public release$: Observable<Notice<Release>> = this.releaseSubject.asObservable();
 
     private socket: WebSocket | null = null;
 
@@ -202,6 +206,9 @@ export class NoticeService {
                 break;
             case NoticeSubject.Tag:
                 this.tagSubject.next(notice as Notice<Tag>);
+                break;
+            case NoticeSubject.Release:
+                this.releaseSubject.next(notice as Notice<Release>);
                 break;
             default:
                 console.warn('unsupported notice');

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"net/http"
 	"strconv"
 
@@ -120,4 +121,26 @@ func (ctrl *SkillController) Restore(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, restored)
+}
+
+type runKindRes struct {
+	Name   string        `json:"name"`
+	Stages []runStageRes `json:"stages"`
+}
+
+type runStageRes struct {
+	Name      string `json:"name"`
+	HasSkills bool   `json:"hasSkills"`
+}
+
+func (ctrl *SkillController) RunKinds(c *gin.Context) {
+	kinds := make([]runKindRes, len(constants.RunKinds))
+	for i, kind := range constants.RunKinds {
+		stages := make([]runStageRes, len(kind.Stages))
+		for j, stage := range kind.Stages {
+			stages[j] = runStageRes{Name: stage.Name, HasSkills: constants.IsSkillStage(stage.Name)}
+		}
+		kinds[i] = runKindRes{Name: kind.Name, Stages: stages}
+	}
+	ResponseOk(c, kinds)
 }

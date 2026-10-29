@@ -165,9 +165,12 @@ func (p *MergePoller) notifyRunUpdate(run *model.AgentRun) {
 // broadcastRunMrStatus sends the final MR status of a run whose PR merged or
 // closed. The run notice carries no MR state, so the badge needs this one.
 func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.AgentRun, status *githost.Status) {
-	issue, err := p.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &run.IdIssue})
+	if run.IdIssue == nil {
+		return
+	}
+	issue, err := p.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: run.IdIssue})
 	if err != nil || issue == nil {
-		log.Debug().Err(err).Int64("idRun", run.IdRun).Int64("idIssue", run.IdIssue).
+		log.Debug().Err(err).Int64("idRun", run.IdRun).Int64("idIssue", *run.IdIssue).
 			Msg("merge poller: issue load failed, skipping mr status broadcast")
 		return
 	}
@@ -180,8 +183,11 @@ func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.Agent
 }
 
 func (p *MergePoller) broadcastRunMrStatusIfChanged(ctx context.Context, run *model.AgentRun, status *githost.Status) {
+	if run.IdIssue == nil {
+		return
+	}
 	runMr := &model.Issue{
-		IdIssue:          run.IdIssue,
+		IdIssue:          *run.IdIssue,
 		IdProject:        run.IdProject,
 		IdGitIntegration: run.IdGitIntegration,
 		MrId:             run.PrId,

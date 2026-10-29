@@ -11,6 +11,7 @@ function makeRun(idRun: number, idIssue = 10): AgentRun {
     return {
         idRun,
         idIssue,
+        idRelease: null,
         idProject: 1,
         idUserAgent: 2,
         idGitIntegration: null,

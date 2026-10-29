@@ -10,6 +10,13 @@ Most releases need nothing beyond pulling the new images, see
 more. Go through every section between your current version and the one you
 move to, oldest first.
 
+## Upgrading to 1.7.0
+
+An agent can write the release notes of a version. That needs a gateway of the
+same version: an older gateway refuses it with the error `tracker_missing_repo`.
+Update the tracker and every gateway together. Development work runs on either
+gateway.
+
 ## Upgrading to 1.6.0
 
 The gateway now takes the repository, the base branch and the git token of a

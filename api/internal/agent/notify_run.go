@@ -20,6 +20,13 @@ type assigneeLoader interface {
 	LoadAssignee(ctx context.Context, idIssue int64) (*int64, error)
 }
 
+func LoadRunAssignee(ctx context.Context, issueRepo assigneeLoader, run *model.AgentRun) (*int64, error) {
+	if run.IdIssue == nil {
+		return &run.IdUserAgent, nil
+	}
+	return issueRepo.LoadAssignee(ctx, *run.IdIssue)
+}
+
 func BroadcastRunUpdate(
 	ctx context.Context,
 	notifier *notify.Notifier,
@@ -42,7 +49,7 @@ func BroadcastRunUpdate(
 		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: tasks load failed, sending without")
 		tasks = nil
 	}
-	idAssignee, err := issueRepo.LoadAssignee(ctx, run.IdIssue)
+	idAssignee, err := LoadRunAssignee(ctx, issueRepo, run)
 	if err != nil {
 		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: assignee load failed, sending as not parked")
 		idAssignee = &run.IdUserAgent
