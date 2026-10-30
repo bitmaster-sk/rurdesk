@@ -143,6 +143,23 @@ func (r *AclRepository) GetProjectTeamRoleById(ctx context.Context, idTeam, idPr
 	return role, true, nil
 }
 
+// CountActiveTeamMembers returns how many members of the team are active users.
+// The last-owner guard for team demote/remove must ignore disabled members: a
+// disabled member no longer grants owner access, so only active members count
+// when deciding whether removing the team would orphan the project.
+func (r *AclRepository) CountActiveTeamMembers(ctx context.Context, idTeam int64) (int, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var count int
+	err := db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users.user_team ut
+		INNER JOIN users.user u ON u.id_user = ut.id_user AND u.is_active = TRUE
+		WHERE ut.id_team = $1`, idTeam).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting active team members: %w", err)
+	}
+	return count, nil
+}
+
 // GetTeamMemberIds returns the user IDs of all members of a team.
 // Used to invalidate individual project-role cache keys when a team role changes.
 func (r *AclRepository) GetTeamMemberIds(ctx context.Context, idTeam int64) ([]int64, error) {

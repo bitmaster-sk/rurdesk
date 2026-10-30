@@ -233,20 +233,28 @@ func (s *ApiKeyService) LookupSession(ctx context.Context, rawKey string) (*mode
 			_ = s.cache.Del(ctx, cacheKey).Err()
 			return nil, nil
 		}
-		// Same staleness guard for a user disabled after the snapshot was
-		// cached: LoadByHash already filters disabled users on the DB path.
+		// A cached snapshot with isActive=false can only be a legacy entry
+		// cached before the is_active column existed (snapshots are only
+		// written from an active DB lookup, so a post-deploy cache write
+		// always has isActive=true). Drop the entry and fall through to
+		// LoadByHash instead of failing the request: otherwise every agent
+		// would lose one request right after the deploy, possibly a
+		// complete/heartbeat callback. A genuinely disabled user is filtered
+		// on the DB path below.
 		if !session.User.IsActive {
 			_ = s.cache.Del(ctx, cacheKey).Err()
-			return nil, nil
+			session = model.ApiKeySession{}
+		} else {
+			// Fire-and-forget last_used_at update
+			select {
+			case s.lastUsedCh <- hash:
+			default:
+			}
+			return &session, nil
 		}
-		// Fire-and-forget last_used_at update
-		select {
-		case s.lastUsedCh <- hash:
-		default:
-		}
-		return &session, nil
 	}
-
+	// Either no cache entry at all, or a legacy pre-is_active snapshot that was
+	// just dropped above — resolve from the DB, which filters disabled owners.
 	dbSession, err := s.apiKeyRepo.LoadByHash(ctx, hash)
 	if err != nil {
 		return nil, fmt.Errorf("looking up api key: %w", err)

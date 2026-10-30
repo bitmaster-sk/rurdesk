@@ -122,6 +122,16 @@ func mustDb() *pgxpool.Pool {
 	return pool
 }
 
+// mustAgentThinkingService mirrors mustDb for the thinking service used by the
+// admin controller's run-cancel-on-disable path.
+func mustAgentThinkingService() *agent.ThinkingService {
+	svc, err := GetAgentThinkingService()
+	if err != nil {
+		panic(fmt.Sprintf("injector: agent thinking service unavailable: %v", err))
+	}
+	return svc
+}
+
 func mustCache() *redis.Client {
 	client, err := GetCache()
 	if err != nil {
@@ -510,6 +520,7 @@ func GetAdminController() *controller.AdminController {
 			GetIssueRepository(),
 			GetDispatcher(),
 			GetNotifier(),
+			mustAgentThinkingService(),
 			pool,
 		), nil
 	})

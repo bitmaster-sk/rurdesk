@@ -38,6 +38,7 @@ type AdminController struct {
 	issueRepo     *repository.IssueRepository
 	dispatcher    *agent.Dispatcher
 	notifier      *notify.Notifier
+	thinking      *agent.ThinkingService
 	pool          *pgxpool.Pool
 }
 
@@ -53,6 +54,7 @@ func NewAdminController(
 	issueRepo *repository.IssueRepository,
 	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
+	thinking *agent.ThinkingService,
 	pool *pgxpool.Pool,
 ) *AdminController {
 	return &AdminController{
@@ -67,6 +69,7 @@ func NewAdminController(
 		issueRepo:     issueRepo,
 		dispatcher:    dispatcher,
 		notifier:      notifier,
+		thinking:      thinking,
 		pool:          pool,
 	}
 }
@@ -352,8 +355,18 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 	var keyHashes []string
 	purgeKeyCache := false
 	// Runs of a disabled agent, captured inside the tx so the non-terminal set is
-	// consistent with the flag flip; cancelled after commit (below).
+	// consistent with the flag flip; dispatched/broadcast after commit (below).
 	var cancelledRuns []*model.AgentRun
+	// Task ids cancelled with those runs, compacted after commit like
+	// AgentRunController.Cancel does.
+	var cancelledTaskIds []int64
+	// The acting admin, recorded as the actor of the run-cancel events.
+	acting, _ := extctx.GetUser(ctx)
+	var actorID *int64
+	if acting.IdUser != 0 {
+		actingID := acting.IdUser
+		actorID = &actingID
+	}
 	// Guard + mutate in a tx to avoid a TOCTOU race on the admin count (mirrors guardLastOwner).
 	// Only fields present in the request are applied — this endpoint serves the
 	// admin toggle (isAdmin only), the active toggle (isActive only) and the edit
@@ -399,14 +412,17 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 			for _, locked := range runs {
 				// The rows are locked FOR UPDATE by LoadActiveForUpdate, so a
 				// concurrent phase transition can't slip between the load and
-				// the cancel.
-				updated, tErr := ac.agentRunRepo.TransitionPhase(ctx, locked.IdRun, locked.Phase, constants.PhaseCancelled, constants.ActorTypeUser, nil, "agent account disabled")
+				// the cancel. The acting admin is the actor so run_event shows
+				// who cancelled the run.
+				updated, tErr := ac.agentRunRepo.TransitionPhase(ctx, locked.IdRun, locked.Phase, constants.PhaseCancelled, constants.ActorTypeUser, actorID, "agent account disabled")
 				if tErr != nil {
 					return tErr
 				}
-				if _, cErr := ac.agentTaskRepo.CancelNonTerminalForRun(ctx, locked.IdRun); cErr != nil {
+				idsTask, cErr := ac.agentTaskRepo.CancelNonTerminalForRun(ctx, locked.IdRun)
+				if cErr != nil {
 					return cErr
 				}
+				cancelledTaskIds = append(cancelledTaskIds, idsTask...)
 				cancelledRuns = append(cancelledRuns, updated)
 			}
 		}
@@ -450,6 +466,12 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 			}
 		}
 		if disableApplied {
+			// Fold the cancelled tasks' live thinking events, like
+			// AgentRunController.Cancel does. Must run after the tx committed so
+			// the rows it reads are visible; best-effort, never fails the request.
+			if len(cancelledTaskIds) > 0 {
+				ac.thinking.Compact(ctx, cancelledTaskIds...)
+			}
 			// Tell the gateways of the cancelled runs and refresh open clients.
 			// Dispatch is async like in AgentRunController.Cancel — a gateway
 			// that is down must not fail the disable.
@@ -616,8 +638,13 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 				return gErr
 			}
 		}
-		if gErr := ac.guardLastProjectOwner(ctx, idUser); gErr != nil {
-			return gErr
+		// The owner guard only applies to an active target: a disabled user no
+		// longer counts as an owner (GetProjectOwnerCount joins on is_active),
+		// so deleting an already-disabled owner can never orphan the project.
+		if active {
+			if gErr := ac.guardLastProjectOwner(ctx, idUser); gErr != nil {
+				return gErr
+			}
 		}
 		return ac.userRepo.DeleteUser(ctx, idUser)
 	})

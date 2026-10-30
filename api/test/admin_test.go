@@ -669,6 +669,12 @@ func (s *AdminSuite) Test_DisableAgent_CancelsNonTerminalRuns() {
 	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
 		SELECT COUNT(*) FROM agent.run_event WHERE id_run = $1 AND to_phase = 'cancelled'`, idRun).Scan(&events))
 	s.GreaterOrEqual(events, 1, "the cancel must be recorded as a run event")
+	// The acting admin must be recorded as the actor so run_event shows who
+	// cancelled the run.
+	var actorID int64
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		SELECT id_user FROM agent.run_event WHERE id_run = $1 AND to_phase = 'cancelled' ORDER BY id_event DESC LIMIT 1`, idRun).Scan(&actorID))
+	s.Equal(adminID, actorID, "the cancel event must name the acting admin as actor")
 }
 
 func (s *AdminSuite) Test_DisableLastActiveAdmin_StillBlocked_ToggleDisabledAdminAllowed() {
@@ -828,6 +834,144 @@ func (s *AdminSuite) Test_AssignDisabledAgent_Rejected() {
 		fmt.Sprintf(`{"idUserAgent":%d}`, agent.IdUser), s.AdminToken)
 	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, readBody(s.T(), res),
 		"the assign-agent endpoint must reject a disabled agent")
+}
+
+// A disabled owner must be removable/demotable while another active owner
+// remains: the member controller's last-owner guard must only run when the
+// target is itself active (GetProjectOwnerCount already excludes disabled
+// users, so guarding a disabled owner wrongly blocks with ErrLastOwner).
+func (s *AdminSuite) Test_RemoveDisabledOwner_WithActiveOwnerRemaining_Succeeds() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-owner-remove-project")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"owner x","email":"owner-x@test.sk","password":"secret1"}`)
+	idX := idOfUser(s.T(), s.App, s.AdminToken, "owner-x@test.sk")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"owner y","email":"owner-y@test.sk","password":"secret1"}`)
+	idY := idOfUser(s.T(), s.App, s.AdminToken, "owner-y@test.sk")
+	for _, id := range []int64{idX, idY} {
+		res := Request(s.T(), s.App, "POST",
+			fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+			fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, id), s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	}
+	// Demote the bootstrap creator to member so X and Y are the only owners.
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject,
+			idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")),
+		`{"role":"member"}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Disable X; Y remains the only active owner.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", idX), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Removing the DISABLED owner X must succeed (Y stays active owner).
+	res = Request(s.T(), s.App, "DELETE",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, idX), "", s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"removing a disabled owner while another active owner remains must not hit the last-owner guard")
+
+	// Demoting the disabled owner must also succeed — re-add X as owner first.
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, idX), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, idX),
+		`{"role":"member"}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"demoting a disabled owner while another active owner remains must not hit the last-owner guard")
+}
+
+// Deleting a disabled owner while another active owner remains must succeed:
+// AdminController.DeleteUser must run the last-owner guard only for active targets.
+// The user must have no agent activity and no authored content for DELETE to
+// reach the guards at all.
+func (s *AdminSuite) Test_DeleteDisabledOwner_WithActiveOwnerRemaining_Succeeds() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-owner-delete-project")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"del owner x","email":"del-owner-x@test.sk","password":"secret1"}`)
+	idX := idOfUser(s.T(), s.App, s.AdminToken, "del-owner-x@test.sk")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"del owner y","email":"del-owner-y@test.sk","password":"secret1"}`)
+	idY := idOfUser(s.T(), s.App, s.AdminToken, "del-owner-y@test.sk")
+	for _, id := range []int64{idX, idY} {
+		res := Request(s.T(), s.App, "POST",
+			fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+			fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, id), s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	}
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject,
+			idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")),
+		`{"role":"member"}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", idX), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	res = Request(s.T(), s.App, "DELETE",
+		fmt.Sprintf("/api/private/admin/user/%d", idX), "", s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"deleting a disabled owner while another active owner remains must not hit the last-owner guard")
+}
+
+// Team variant: an owner team whose members are all disabled must be
+// demotable/removable while another active owner remains.
+func (s *AdminSuite) Test_RemoveAllDisabledOwnerTeam_WithActiveOwnerRemaining_Succeeds() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-owner-team-project")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"team owner z","email":"team-owner-z@test.sk","password":"secret1"}`)
+	idZ := idOfUser(s.T(), s.App, s.AdminToken, "team-owner-z@test.sk")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"team member w","email":"team-member-w@test.sk","password":"secret1"}`)
+	idW := idOfUser(s.T(), s.App, s.AdminToken, "team-member-w@test.sk")
+	// Bootstrap creator stays a direct owner so the project always has an active owner.
+	// Team names are unique per instance, so suffix with the project name in case a
+	// previous run left one behind.
+	teamRes := Request(s.T(), s.App, "POST", "/api/private/admin/team",
+		`{"name":"disabled-owner-team-x","color":"#123456"}`, s.AdminToken)
+	teamBody := readBody(s.T(), teamRes)
+	s.Require().Equal(http.StatusOK, teamRes.StatusCode, teamBody)
+	var team struct {
+		IdTeam int64 `json:"idTeam"`
+	}
+	s.Require().NoError(json.Unmarshal([]byte(teamBody), &team))
+	for _, id := range []int64{idZ, idW} {
+		res := Request(s.T(), s.App, "POST", "/api/private/admin/team/member",
+			fmt.Sprintf(`{"idTeam":%d,"idUser":%d}`, team.IdTeam, id), s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	}
+	// Team is an owner of the project; the bootstrap admin is the active owner.
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/team", idProject),
+		fmt.Sprintf(`{"idTeam":%d,"role":"owner"}`, team.IdTeam), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Disable both team members, then demote the team — the guard must not fire
+	// (no active member would lose ownership; the bootstrap owner stays).
+	for _, id := range []int64{idZ, idW} {
+		res = Request(s.T(), s.App, "PATCH",
+			fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	}
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/team/%d", idProject, team.IdTeam),
+		`{"role":"member"}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"demoting an owner team with only disabled members must not hit the last-owner guard")
+
+	// Re-add as owner, then remove the team — also allowed.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/team/%d", idProject, team.IdTeam),
+		`{"role":"owner"}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	res = Request(s.T(), s.App, "DELETE",
+		fmt.Sprintf("/api/private/project/%d/member/team/%d", idProject, team.IdTeam), "", s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"removing an owner team with only disabled members must not hit the last-owner guard")
 }
 
 func Test_RunAdminSuite(t *testing.T) {
