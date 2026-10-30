@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { AvatarStub, TablerIconStub } from 'src/testing/stubs';
 import { UiModule } from 'src/app/ui/ui.module';
 import { AdminUserApi } from '../../api/admin-user.api.service';
@@ -80,7 +81,9 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
                         setActive$
                     }
                 },
-                { provide: ToastNotificationService, useValue: { showError } }
+                { provide: ToastNotificationService, useValue: { showError } },
+                // Acting admin is idUser 1 — neither list row, so both show the toggle.
+                { provide: AuthStore, useValue: { user: () => ({ idUser: 1 }) } }
             ]
         }).compileComponents();
     });
@@ -144,6 +147,23 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
         confirm(fixture);
 
         expect(setActive$).toHaveBeenCalledWith(8, true);
+    });
+
+    it("hides the disable button on the acting admin's own row", () => {
+        // Own row (idUser 1) plus a normal row; only the normal row gets a toggle.
+        TestBed.overrideProvider(AuthStore, {
+            useValue: { user: () => ({ idUser: active.idUser }) }
+        });
+        TestBed.overrideProvider(AdminUserApi, {
+            useValue: { load$: () => of([active, disabled]), setActive$ }
+        });
+        const fixture = render();
+        const [ownRow, otherRow] = rows(fixture);
+
+        // Own row: promote, edit, delete (no disable toggle).
+        expect(actionButtons(ownRow).length).toBe(3);
+        // Other row: promote, disable, edit, delete.
+        expect(actionButtons(otherRow).length).toBe(4);
     });
 
     it('surfaces a failed toggle as an error toast', async () => {

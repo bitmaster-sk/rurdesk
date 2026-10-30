@@ -90,15 +90,17 @@ func TestAuthValidSessionPasses(t *testing.T) {
 	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
-// A disabled user's session snapshot can linger in Redis until its TTL runs out;
-// the middleware must reject it so disabling takes effect immediately.
-func TestAuthDisabledSessionSnapshotIsUnauthorized(t *testing.T) {
+// A session snapshot predating the is_active column deserializes with
+// IsActive=false; it must still authenticate — otherwise deploying the column
+// would log every existing user out. Disabling a user is enforced by session
+// invalidation (and Login refusing disabled accounts), not by this middleware.
+func TestAuthLegacySessionSnapshotWithoutIsActivePasses(t *testing.T) {
 	payload, err := json.Marshal(model.User{IdUser: 1, Name: "John Snow", IsActive: false})
 	require.NoError(t, err)
 	cache := &fakeSessionCache{value: string(payload)}
 	recorder := performAuthRequest(t, cache, &fakeApiKeyAuth{}, "some-session-token")
 
-	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
+	assert.Equal(t, http.StatusOK, recorder.Code)
 }
 
 func TestAuthUnknownTokenIsUnauthorized(t *testing.T) {

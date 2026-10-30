@@ -125,7 +125,7 @@ var (
 
 	ErrAuthoredContent    = newErr("USER_HAS_AUTHORED_CONTENT", "user authored issues and cannot be deleted", "error.user_has_authored_content", http.StatusUnprocessableEntity)
 	ErrSelfDisable        = newErr("SELF_DISABLE", "you cannot disable your own account", "error.self_disable", http.StatusUnprocessableEntity)
-	ErrUserDisabled       = newErr("USER_DISABLED", "this account is disabled", "error.user_disabled", http.StatusForbidden)
+	ErrUserDisabled       = newErr("USER_DISABLED", "this account is disabled and cannot be assigned", "error.user_disabled", http.StatusUnprocessableEntity)
 	ErrRegistrationClosed = newErr("REGISTRATION_CLOSED", "public registration is closed; ask an admin to create your account", "error.registration_closed", http.StatusUnprocessableEntity)
 	ErrMissingCredentials = newErr("MISSING_CREDENTIALS", "email and password are required for human users", "error.missing_credentials", http.StatusBadRequest)
 

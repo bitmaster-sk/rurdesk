@@ -215,6 +215,20 @@ func (r *UserRepository) SetActive(ctx context.Context, idUser int64, isActive b
 	return nil
 }
 
+// IsActiveUser reports the account's is_active flag (missing user → ErrUserNotFound).
+func (r *UserRepository) IsActiveUser(ctx context.Context, idUser int64) (bool, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var isActive bool
+	err := db.QueryRow(ctx, `SELECT is_active FROM users.user WHERE id_user = $1`, idUser).Scan(&isActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrUserNotFound
+	}
+	if err != nil {
+		return false, fmt.Errorf("querying user active: %w", err)
+	}
+	return isActive, nil
+}
+
 func (r *UserRepository) IsAdminUser(ctx context.Context, idUser int64) (bool, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var isAdmin bool

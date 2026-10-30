@@ -502,8 +502,14 @@ func GetAdminController() *controller.AdminController {
 			GetUserService(),
 			GetUserRepository(),
 			GetProjectRepository(),
+			GetAclRepository(),
 			GetApiKeyService(),
 			GetAclService(),
+			GetAgentRunRepository(),
+			GetAgentTaskRepository(),
+			GetIssueRepository(),
+			GetDispatcher(),
+			GetNotifier(),
 			pool,
 		), nil
 	})

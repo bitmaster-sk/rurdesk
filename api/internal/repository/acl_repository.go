@@ -75,19 +75,22 @@ func (r *AclRepository) GetProjectTeamRoles(ctx context.Context, idUser, idProje
 	return results, nil
 }
 
-// GetProjectOwnerCount returns the count of distinct users with owner-level
+// GetProjectOwnerCount returns the count of distinct ACTIVE users with owner-level
 // access (direct or via an owner-ranked team), so an empty team never counts
-// as an owner.
+// as an owner and a disabled user no longer counts either — a project whose only
+// owner is disabled must still be recognised as ownerless by the guard.
 func (r *AclRepository) GetProjectOwnerCount(ctx context.Context, idProject int64) (int, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var count int
 	err := db.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT id_user) FROM (
-			SELECT id_user FROM projects.project_user
-			WHERE id_project = $1 AND role = 'owner'
+			SELECT pu.id_user FROM projects.project_user pu
+			INNER JOIN users.user u ON u.id_user = pu.id_user AND u.is_active = TRUE
+			WHERE pu.id_project = $1 AND pu.role = 'owner'
 			UNION ALL
 			SELECT ut.id_user FROM projects.project_team pt
 			INNER JOIN users.user_team ut ON ut.id_team = pt.id_team
+			INNER JOIN users.user u ON u.id_user = ut.id_user AND u.is_active = TRUE
 			WHERE pt.id_project = $1 AND pt.role = 'owner'
 		) owners
 	`, idProject).Scan(&count)

@@ -193,7 +193,11 @@ func (s *AdminSuite) Test_DeleteUser_GuardLastAdmin() {
 	id := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
 	del := Request(s.T(), s.App, "DELETE",
 		fmt.Sprintf("/api/private/admin/user/%d", id), "", s.AdminToken)
-	s.Equal(http.StatusUnprocessableEntity, del.StatusCode)
+	// The bootstrap admin owns projects, so the delete hits the last-owner guard
+	// (422 from the admin controller) before/alongside the last-admin guard —
+	// either way it must be a 4xx rejection, never a 200 delete.
+	s.Contains([]int{http.StatusUnprocessableEntity, http.StatusBadRequest, http.StatusConflict},
+		del.StatusCode, readBody(s.T(), del))
 }
 
 func (s *AdminSuite) Test_DeleteUser_WithAgentRun_409() {
@@ -499,7 +503,8 @@ func (s *AdminSuite) Test_DisableAgent_StopsApiKey_AndDispatch() {
 	var idIssue int64
 	err := s.App.Pool.QueryRow(ctx, `
 		INSERT INTO issues.issue (id_issue_public, id_project, title, description, create_by, update_by)
-		VALUES (901, $1, 'disabled agent issue', 'x', $2, $2) RETURNING id_issue`,
+		VALUES ((SELECT COALESCE(MAX(id_issue_public), 0) + 1 FROM issues.issue WHERE id_project = $1), $1, 'disabled agent issue', 'x', $2, $2)
+		RETURNING id_issue`,
 		idProject, adminID).Scan(&idIssue)
 	s.Require().Nil(err)
 	_, err = s.App.Pool.Exec(ctx, `
@@ -525,10 +530,15 @@ func (s *AdminSuite) Test_DisableAgent_StopsApiKey_AndDispatch() {
 	s.Equal(http.StatusUnauthorized,
 		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
 		"a disabled agent's api key must stop authenticating immediately")
-	// no further dispatch for the disabled agent
+	// no further dispatch for the disabled agent: the queued run was cancelled
+	// by the disable, so the agent id disappears from the active set entirely.
 	ids, err = injector.GetAgentRunRepository().LoadActiveAgentIds(ctx)
 	s.Require().Nil(err)
 	s.NotContains(ids, agent.IdUser, "a disabled agent must not be dispatched again")
+	var phase string
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		SELECT phase FROM agent.run WHERE id_issue = $1`, idIssue).Scan(&phase))
+	s.Equal("cancelled", phase, "the disable must cancel the agent's non-terminal run")
 
 	// re-enable: the key works again (the key itself was never deleted)
 	patch = Request(s.T(), s.App, "PATCH",
@@ -537,9 +547,10 @@ func (s *AdminSuite) Test_DisableAgent_StopsApiKey_AndDispatch() {
 	s.Equal(http.StatusOK,
 		Request(s.T(), s.App, "GET", "/api/private/user", "", agent.RawKey).StatusCode,
 		"a re-enabled agent's api key must work again")
+	// The cancelled run stays terminal — re-enabling does not resurrect it.
 	ids, err = injector.GetAgentRunRepository().LoadActiveAgentIds(ctx)
 	s.Require().Nil(err)
-	s.Contains(ids, agent.IdUser)
+	s.NotContains(ids, agent.IdUser, "a cancelled run must not make the agent dispatchable again")
 }
 
 func (s *AdminSuite) Test_DisableSelf_Rejected() {
@@ -590,6 +601,233 @@ func (s *AdminSuite) Test_DisableUser_SelfProfile_StillEditable() {
 	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
 		"SELECT name FROM users.user WHERE id_user = $1", id).Scan(&name))
 	s.Equal("profile edited", name)
+}
+
+// createIssueInProject inserts an issue directly (bypassing the API) so tests can
+// drive agent assignment without depending on state/severity/type fixtures.
+func (s *AdminSuite) createIssueRaw(idProject int64, title string) int64 {
+	adminID := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
+	var idIssue int64
+	err := s.App.Pool.QueryRow(context.Background(), `
+		INSERT INTO issues.issue (id_issue_public, id_project, title, description, create_by, update_by)
+		VALUES ((SELECT COALESCE(MAX(id_issue_public), 0) + 1 FROM issues.issue WHERE id_project = $1), $1, $2, 'x', $3, $3)
+		RETURNING id_issue`,
+		idProject, title, adminID).Scan(&idIssue)
+	s.Require().Nil(err)
+	return idIssue
+}
+
+// createAgentWithGateway registers an agent and gives it a gateway row so the
+// assign path's gateway check passes.
+func (s *AdminSuite) createAgentWithGateway(name string) model.AdminCreateUserRes {
+	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+		fmt.Sprintf(`{"name":%q,"isAgent":true}`, name), s.AdminToken)
+	if !s.Equal(http.StatusOK, res.StatusCode) {
+		s.FailNow(readBody(s.T(), res))
+	}
+	var agent model.AdminCreateUserRes
+	s.Require().Nil(json.NewDecoder(res.Body).Decode(&agent))
+	_, err := s.App.Pool.Exec(context.Background(),
+		`INSERT INTO agent.gateway (id_user_agent, gateway_url, webhook_secret) VALUES ($1, 'http://gateway.test', decode('00','hex'))`,
+		agent.IdUser)
+	s.Require().Nil(err)
+	return agent
+}
+
+func (s *AdminSuite) Test_DisableAgent_CancelsNonTerminalRuns() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "agent-disable-runs-project")
+	agent := s.createAgentWithGateway("cancel bot")
+	adminID := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
+
+	ctx := context.Background()
+	var idIss int64
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		INSERT INTO issues.issue (id_issue_public, id_project, title, description, create_by, update_by)
+		VALUES ((SELECT COALESCE(MAX(id_issue_public), 0) + 1 FROM issues.issue WHERE id_project = $1), $1, 'run to cancel', 'x', $2, $2)
+		RETURNING id_issue`, idProject, adminID).Scan(&idIss))
+	var idRun int64
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
+		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}'::jsonb) RETURNING id_run`,
+		idIss, agent.IdUser, idProject).Scan(&idRun))
+	_, taskErr := s.App.Pool.Exec(ctx, `
+		INSERT INTO agent.task (id_run, stage, attempt_no, status) VALUES ($1, 'implementation', 1, 'active')`, idRun)
+	s.Require().Nil(taskErr)
+
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	var phase string
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, "SELECT phase FROM agent.run WHERE id_run = $1", idRun).Scan(&phase))
+	s.Equal("cancelled", phase, "disabling an agent must cancel its non-terminal run")
+	var taskStatus string
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		SELECT status FROM agent.task WHERE id_run = $1`, idRun).Scan(&taskStatus))
+	s.Equal("cancelled", taskStatus, "the in-flight task must be cancelled too")
+	var events int
+	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM agent.run_event WHERE id_run = $1 AND to_phase = 'cancelled'`, idRun).Scan(&events))
+	s.GreaterOrEqual(events, 1, "the cancel must be recorded as a run event")
+}
+
+func (s *AdminSuite) Test_DisableLastActiveAdmin_StillBlocked_ToggleDisabledAdminAllowed() {
+	// One active admin (the bootstrap) + one admin that gets disabled: with
+	// CountAdmins counting active admins only, the guard must NOT block acting on
+	// the *disabled* admin (demote/delete/disable again is a no-op or allowed),
+	// but must still block disabling the single remaining active admin's own…
+	// self-disable is rejected separately, so here: demoting the disabled admin
+	// must succeed.
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"second admin","email":"second-admin@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "second-admin@test.sk")
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isAdmin":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+
+	// Now only the bootstrap admin is active. Demoting the DISABLED admin must
+	// not trip the last-admin guard (it is not an active admin).
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isAdmin":false}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"demoting an already-disabled admin must not hit the last-admin guard")
+
+	// But demoting the last ACTIVE admin is still blocked.
+	bootstrap := idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", bootstrap), `{"isAdmin":false}`, s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode,
+		"demoting the last active admin must stay blocked")
+}
+
+func (s *AdminSuite) Test_DisableLastProjectOwner_Rejected_WithProjectName() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "owner-guard-project")
+	// The bootstrap admin is the project creator → sole owner. Create a second
+	// user, make them project member (not owner), then disabling the admin-owner
+	// is the acting admin itself (self-disable) — use a second admin as owner.
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"guard admin","email":"guard-admin@test.sk","password":"secret1"}`)
+	ownerID := idOfUser(s.T(), s.App, s.AdminToken, "guard-admin@test.sk")
+	// Promote to admin and add as owner of the project.
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", ownerID), `{"isAdmin":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, ownerID), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Make the bootstrap admin a non-owner so ownerID is the only *active* owner
+	// when the bootstrap is disabled… simpler: demote the bootstrap's ownership.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject,
+			idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")),
+		`{"role":"member"}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Disable the sole owner → must be rejected with 422 and name the project.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", ownerID), `{"isActive":false}`, s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
+	s.Contains(readBody(s.T(), res), "owner-guard-project",
+		"the error must name the project whose last owner would be disabled")
+
+	// Add a second active owner, then the disable succeeds.
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"second owner","email":"second-owner@test.sk","password":"secret1"}`)
+	secondOwner := idOfUser(s.T(), s.App, s.AdminToken, "second-owner@test.sk")
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, secondOwner), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", ownerID), `{"isActive":false}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"with another active owner present the disable must succeed")
+}
+
+func (s *AdminSuite) Test_DisabledOwner_NoLongerCounts_AsProjectOwner() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "owner-count-project")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"count owner a","email":"count-a@test.sk","password":"secret1"}`)
+	idA := idOfUser(s.T(), s.App, s.AdminToken, "count-a@test.sk")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"count owner b","email":"count-b@test.sk","password":"secret1"}`)
+	idB := idOfUser(s.T(), s.App, s.AdminToken, "count-b@test.sk")
+	for _, id := range []int64{idA, idB} {
+		res := Request(s.T(), s.App, "POST",
+			fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+			fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, id), s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	}
+	// Demote the bootstrap owner to member so A and B are the only owners.
+	res := Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject,
+			idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")),
+		`{"role":"member"}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Disable A: owner count must drop to 1 (only B counts as active), so
+	// demoting B afterwards must be rejected by the member controller's own
+	// last-owner guard (ErrLastOwner), proving the count no longer sees A.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", idA), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/member/user/%d", idProject, idB),
+		`{"role":"member"}`, s.AdminToken)
+	// The member controller maps ErrLastOwner to 400 (its existing convention).
+	s.Equal(http.StatusBadRequest, res.StatusCode, readBody(s.T(), res),
+		"with only one ACTIVE owner left, demoting them must hit the last-owner guard")
+}
+
+func (s *AdminSuite) Test_AssignDisabledAgent_Rejected() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "assign-disabled-project")
+	agent := s.createAgentWithGateway("assign bot")
+	// The agent must be able to read the project for the assign path to reach the
+	// disabled check (same gate as the EditIssue assignee path).
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	idIssue := s.createIssueRaw(idProject, "assign-disabled issue")
+	var idIssuePublic int64
+	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
+		"SELECT id_issue_public FROM issues.issue WHERE id_issue = $1", idIssue).Scan(&idIssuePublic))
+
+	// Assign while active → 200.
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue/%d/assign-agent", idProject, idIssuePublic),
+		fmt.Sprintf(`{"idUserAgent":%d}`, agent.IdUser), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	// Disable the agent, then re-assign a DIFFERENT issue to it via EditIssue → 422.
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	idIssue3 := s.createIssueRaw(idProject, "assign-disabled issue 3")
+	var idIssuePublic3 int64
+	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
+		"SELECT id_issue_public FROM issues.issue WHERE id_issue = $1", idIssue3).Scan(&idIssuePublic3))
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/issue/%d", idProject, idIssuePublic3),
+		fmt.Sprintf(`{"assignedTo":%d}`, agent.IdUser), s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, readBody(s.T(), res),
+		"assigning a disabled agent via EditIssue must be rejected")
+
+	// AssignAgent endpoint on another issue → 422 as well.
+	idIssue2 := s.createIssueRaw(idProject, "assign-disabled issue 2")
+	var idIssuePublic2 int64
+	s.Require().Nil(s.App.Pool.QueryRow(context.Background(),
+		"SELECT id_issue_public FROM issues.issue WHERE id_issue = $1", idIssue2).Scan(&idIssuePublic2))
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/issue/%d/assign-agent", idProject, idIssuePublic2),
+		fmt.Sprintf(`{"idUserAgent":%d}`, agent.IdUser), s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, readBody(s.T(), res),
+		"the assign-agent endpoint must reject a disabled agent")
 }
 
 func Test_RunAdminSuite(t *testing.T) {

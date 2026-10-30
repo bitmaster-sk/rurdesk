@@ -79,13 +79,12 @@ func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
 			err := cache.Get(c.Request.Context(), bearer).Scan(&user)
 			switch {
 			case err == nil:
-				// A disabled user's snapshot can linger in Redis until its TTL
-				// runs out (invalidation on disable is best-effort); reject it here
-				// so disabling takes effect immediately, not at token expiry.
-				if !user.IsActive {
-					c.AbortWithStatus(http.StatusUnauthorized)
-					return
-				}
+				// No isActive check here on purpose: snapshots minted before the
+				// is_active column existed deserialize with IsActive=false and
+				// would log every existing user out on deploy. A disable is
+				// enforced by invalidating the user's sessions (UserService) —
+				// Login refuses disabled accounts, so no isActive=false session
+				// can be created after the deploy.
 				ctx := extctx.WithUser(c.Request.Context(), user)
 				c.Request = c.Request.WithContext(ctx)
 				c.Next()

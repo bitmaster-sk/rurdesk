@@ -110,29 +110,33 @@
                                             <tabler-icon icon="key" [size]="14" />
                                         </ui-button>
                                     }
-                                    <ui-button
-                                        variant="text"
-                                        [severity]="user.isActive ? 'warn' : 'success'"
-                                        size="small"
-                                        uiConfirm
-                                        [confirmText]="
-                                            (user.isActive
-                                                ? 'ADMIN.CONFIRM_DISABLE'
-                                                : 'ADMIN.CONFIRM_ENABLE'
-                                            ) | translate
-                                        "
-                                        (confirmed)="onToggleActive(user)"
-                                        [uiTooltip]="
-                                            (user.isActive ? 'ADMIN.DISABLE' : 'ADMIN.ENABLE')
-                                                | translate
-                                        "
-                                        uiTooltipPosition="top"
-                                    >
-                                        <tabler-icon
-                                            [icon]="user.isActive ? 'user-off' : 'user-check'"
-                                            [size]="14"
-                                        />
-                                    </ui-button>
+                                    @if (user.idUser !== currentUserId()) {
+                                        <ui-button
+                                            variant="text"
+                                            [severity]="user.isActive ? 'warn' : 'success'"
+                                            size="small"
+                                            uiConfirm
+                                            [confirmText]="
+                                                (user.isActive
+                                                    ? user.isAgent
+                                                        ? 'ADMIN.CONFIRM_DISABLE_AGENT'
+                                                        : 'ADMIN.CONFIRM_DISABLE_USER'
+                                                    : 'ADMIN.CONFIRM_ENABLE'
+                                                ) | translate
+                                            "
+                                            (confirmed)="onToggleActive(user)"
+                                            [uiTooltip]="
+                                                (user.isActive ? 'ADMIN.DISABLE' : 'ADMIN.ENABLE')
+                                                    | translate
+                                            "
+                                            uiTooltipPosition="top"
+                                        >
+                                            <tabler-icon
+                                                [icon]="user.isActive ? 'user-off' : 'user-check'"
+                                                [size]="14"
+                                            />
+                                        </ui-button>
+                                    }
                                     <ui-button
                                         variant="text"
                                         severity="info"

@@ -131,6 +131,37 @@ func (r *AgentRunRepository) UpdateStagePlan(ctx context.Context, idRun int64, s
 	return scanAgentRun(row)
 }
 
+// LoadActiveForUpdate locks and returns the run's non-terminal rows for an agent —
+// the lock is held for the rest of the (caller's) transaction, so a concurrent
+// phase transition can't slip in between the load and a cancel.
+func (r *AgentRunRepository) LoadActiveForUpdate(ctx context.Context, idUserAgent int64) ([]*model.AgentRun, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, fmt.Sprintf(`
+		SELECT %s FROM agent.run
+		WHERE id_user_agent = $1
+		  AND phase NOT IN ('done', 'failed', 'cancelled')
+		ORDER BY created_at DESC
+		FOR UPDATE`, agentRunColumns),
+		idUserAgent,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying active runs by agent for update: %w", err)
+	}
+	defer rows.Close()
+	var runs []*model.AgentRun
+	for rows.Next() {
+		run, scanErr := scanAgentRun(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		runs = append(runs, run)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating active runs by agent for update: %w", err)
+	}
+	return runs, nil
+}
+
 // Locks the row for the rest of the transaction; use before a read-modify-write.
 func (r *AgentRunRepository) LoadByIdForUpdate(ctx context.Context, idRun int64) (*model.AgentRun, error) {
 	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
