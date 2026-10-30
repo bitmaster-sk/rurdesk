@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -162,6 +163,52 @@ func (r *ProjectRepository) LoadProject(ctx context.Context, idProject int64) (*
 		return nil, fmt.Errorf("collecting project: %w", err)
 	}
 	return project, nil
+}
+
+// LoadProjectIdsWhereUserOwner returns the ids of every project where idUser holds
+// owner-level access, directly or via an owner-ranked team. Used by the admin
+// disable/delete path: a user who is a project's last active owner cannot be
+// disabled or deleted without orphaning the project.
+func (r *ProjectRepository) LoadProjectIdsWhereUserOwner(ctx context.Context, idUser int64) ([]int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT id_project FROM projects.project_user
+		WHERE id_user = $1 AND role = 'owner'
+		UNION
+		SELECT pt.id_project FROM projects.project_team pt
+		INNER JOIN users.user_team ut ON ut.id_team = pt.id_team
+		WHERE ut.id_user = $1 AND pt.role = 'owner'
+	`, idUser)
+	if err != nil {
+		return nil, fmt.Errorf("querying owner projects of user %d: %w", idUser, err)
+	}
+	defer rows.Close()
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scanning owner project id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating owner project ids: %w", err)
+	}
+	return ids, nil
+}
+
+// LoadProjectName returns just the project name, for guard error messages.
+func (r *ProjectRepository) LoadProjectName(ctx context.Context, idProject int64) (string, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var name string
+	err := db.QueryRow(ctx, `SELECT name FROM projects.project WHERE id_project = $1`, idProject).Scan(&name)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", fmt.Errorf("project %d not found", idProject)
+	}
+	if err != nil {
+		return "", fmt.Errorf("loading project %d name: %w", idProject, err)
+	}
+	return name, nil
 }
 
 func (r *ProjectRepository) LoadProjectByIssue(ctx context.Context, idIssue int64) (*model.Project, error) {

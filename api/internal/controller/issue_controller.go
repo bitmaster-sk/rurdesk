@@ -462,6 +462,9 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if ic.agentGwRepo != nil && isAssigneeChanged {
 			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
 			if loadErr == nil && assignee.IsAgent {
+				if !assignee.IsActive {
+					return errs.ErrUserDisabled
+				}
 				gw, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
 					return errs.ErrAgentNoGateway
@@ -530,6 +533,11 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	}
 	if err == errs.ErrAgentNoGateway {
 		_ = c.Error(errs.ErrAgentNoGateway)
+		c.Status(http.StatusUnprocessableEntity)
+		return
+	}
+	if err == errs.ErrUserDisabled {
+		_ = c.Error(errs.ErrUserDisabled)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -608,6 +616,10 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 	}
 	if !agentUser.IsAgent {
 		ResponseErr(c, errs.ErrValidation.WithMessage("the user is not an agent"))
+		return
+	}
+	if !agentUser.IsActive {
+		ResponseErr(c, errs.ErrUserDisabled)
 		return
 	}
 	// Same gate as the EditIssue assignee path: without it this endpoint could
@@ -728,7 +740,7 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 		return
 	}
 	newUser, err := ic.userRepo.LoadUser(ctx, *newIssue.AssignedTo)
-	if err != nil || !newUser.IsAgent {
+	if err != nil || !newUser.IsAgent || !newUser.IsActive {
 		if existing != nil {
 			agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, existing)
 		}
@@ -874,6 +886,12 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 				if !ic.acl.CanReadProject(ctx, *entry.IdUserAssigned, idProject) {
 					return fmt.Errorf("user %d is not a member of project %d", *entry.IdUserAssigned, idProject)
 				}
+				// A disabled agent must not be assigned: the scheduler would never
+				// dispatch its run and the assignee would get no feedback.
+				assignee, loadErr := ic.userRepo.LoadUser(ctx, *entry.IdUserAssigned)
+				if loadErr == nil && assignee != nil && assignee.IsAgent && !assignee.IsActive {
+					return errs.ErrUserDisabled
+				}
 			}
 		}
 
@@ -926,6 +944,11 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
 		c.Status(http.StatusForbidden)
+		return
+	}
+	if err == errs.ErrUserDisabled {
+		_ = c.Error(errs.ErrUserDisabled)
+		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
 	if err == errs.ErrStateNotInProject || err == errs.ErrSeverityNotInProject || err == errs.ErrIssueTypeNotInProject || err == errs.ErrTagNotInProject {

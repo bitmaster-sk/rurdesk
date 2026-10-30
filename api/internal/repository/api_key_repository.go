@@ -180,16 +180,18 @@ func (r *ApiKeyRepository) LoadByHash(ctx context.Context, hash string) (*model.
 	var rateLimitOverride *int
 	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
 		SELECT k.id_api_key, k.rate_limit_override, k.expires_at,
-		       u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, u.is_agent
+		       u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, u.is_agent, u.is_active
 		FROM users.api_key k
 		JOIN users.user u ON u.id_user = k.id_user
 		WHERE k.key_hash = $1
+		  AND u.is_active = TRUE
 		  AND (k.expires_at IS NULL OR k.expires_at > (NOW() AT TIME ZONE 'utc'))`,
 		hash,
 	).Scan(
 		&session.IdApiKey, &rateLimitOverride, &session.ExpiresAt,
 		&session.User.IdUser, &session.User.Name, &session.User.Email,
 		&session.User.ColorAvatarBg, &session.User.AvatarInitials, &session.User.IsAgent,
+		&session.User.IsActive,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
