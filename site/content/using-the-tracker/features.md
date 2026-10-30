@@ -86,6 +86,36 @@ peer (in direct messages). Click to insert a mention as a structured token
 Mentions are reliably detected by user ID — no false positives from similar names,
 case sensitivity, or word boundaries.
 
+### Task references
+
+Type `#` anywhere you write Markdown to link a task: task descriptions, task
+comments, every chat (project, team and direct messages), wiki pages and
+release notes. A picker opens with the tasks of every project you can see.
+Each row shows the task number, its title and its project, and the tasks of
+the project you are in come first. Keep typing to narrow the list by number or
+by title.
+
+The picked task is inserted as a chip that shows only `#123`. It is stored as
+an ordinary Markdown link, `[#123](/project/7/issue/123)`, so it always points
+to the right project, wherever it is written or read. Backspace removes the
+whole link at once. A `#123` you type yourself without picking a task stays
+plain text.
+
+When the link is shown:
+
+- a link to a closed task (one in a final state) is greyed out and struck
+  through, and it changes as soon as someone closes or reopens the task
+- resting the mouse on the link shows a card with the task's title, project,
+  state, type and assignee
+- a reader who cannot see the task gets a plain link without a card, and a 404
+  when they open it
+
+Project chat messages also support wiki links: `[[Page title]]` becomes a link
+to that page, with the same `[[` picker as in the
+[wiki editor](wiki.md#writing). The wiki link syntax, including shared pages
+(`[[shared:Page title]]`) and headings (`[[Page title#Heading]]`), works the
+same way as in the wiki.
+
 ### Attachments
 
 Task descriptions, task comments, chat messages (team, project and direct) and

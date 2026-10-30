@@ -1,0 +1,56 @@
+@if (view(); as issue) {
+    <div class="ui-popover issue-link-card flex flex-col gap-1" data-testid="issue-link-card">
+        <div class="flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-2">
+                <span class="issue-link-card__id" data-testid="issue-link-card-number">
+                    #{{ issue.idIssuePublic }}
+                </span>
+                @if (issue.severity) {
+                    <app-severity-badge
+                        size="s"
+                        data-testid="issue-link-card-severity"
+                        [severity]="issue.severity"
+                    />
+                }
+            </div>
+            <span class="issue-link-card__project truncate" data-testid="issue-link-card-project">
+                {{ issue.projectName }}
+            </span>
+        </div>
+        <a
+            class="issue-link-card__title"
+            data-testid="issue-link-card-title"
+            [class.issue-link-card__title--final]="issue.isFinal"
+            [routerLink]="['/project', issue.idProject, 'issue', issue.idIssuePublic]"
+            (click)="onOpen()"
+        >
+            {{ issue.title }}
+        </a>
+        <div class="flex items-center justify-between gap-2">
+            <span class="flex min-w-0 items-center gap-1">
+                @if (issue.issueType) {
+                    <app-issue-type-badge size="s" [issueType]="issue.issueType" />
+                }
+                @if (issue.state) {
+                    <app-state-badge size="s" [state]="issue.state" />
+                }
+            </span>
+            @if (issue.assignee; as assignee) {
+                <span
+                    class="flex min-w-0 items-center gap-2"
+                    data-testid="issue-link-card-assignee"
+                >
+                    <span class="issue-link-card__assignee truncate">{{ assignee.name }}</span>
+                    <app-avatar
+                        [height]="1.75"
+                        [width]="1.75"
+                        [radius]="1"
+                        [name]="assignee.name"
+                        [bgColor]="assignee.colorAvatarBg"
+                        [manualInitials]="assignee.avatarInitials"
+                    />
+                </span>
+            }
+        </div>
+    </div>
+}

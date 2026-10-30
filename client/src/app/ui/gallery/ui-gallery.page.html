@@ -926,6 +926,24 @@
     </section>
 
     <section class="ui-gallery__section">
+        <h2>UiHoverCard</h2>
+
+        <div class="ui-gallery__row">
+            <div class="ui-gallery__cell ui-gallery__cell--stack">
+                <a
+                    href="#"
+                    (pointerenter)="onHoverCardEnter($event)"
+                    (pointerleave)="onHoverCardLeave($event)"
+                    (click)="$event.preventDefault()"
+                >
+                    Rest the mouse here
+                </a>
+                <code>show() after a delay, hide() after leaving the anchor and the card</code>
+            </div>
+        </div>
+    </section>
+
+    <section class="ui-gallery__section">
         <h2>ui-popover</h2>
 
         <h3>Variants</h3>

@@ -52,6 +52,15 @@
         border-left-color: var(--ui-color-text);
     }
 
+    ::ng-deep .cm-issue-link {
+        display: inline-block;
+        padding: 0 0.35em;
+        border-radius: var(--ui-radius-sm);
+        background: var(--ui-color-mention-bg);
+        color: var(--ui-color-mention-fg);
+        user-select: none;
+    }
+
     ::ng-deep .cm-tooltip-autocomplete {
         border: 1px solid var(--ui-color-border);
         border-radius: var(--ui-radius-md);

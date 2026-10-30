@@ -75,6 +75,12 @@
                 }
             </div>
         }
+        <app-issue-link-picker
+            [style.left]="pickerPosition().left"
+            [style.top]="pickerPosition().top"
+            [style.bottom]="pickerPosition().bottom"
+            (picked)="selectIssue($event)"
+        />
     </div>
     <div class="editor-toolbar">
         <div class="flex items-center">

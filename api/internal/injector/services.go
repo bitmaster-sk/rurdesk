@@ -1161,6 +1161,35 @@ func GetMyIssuesController() *controller.MyIssuesController {
 	return instance.(*controller.MyIssuesController)
 }
 
+func GetIssueLinkRepository() *repository.IssueLinkRepository {
+	instance, _ := di.GetWithNew("issue-link-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewIssueLinkRepository(pool), nil
+	})
+	return instance.(*repository.IssueLinkRepository)
+}
+
+func GetIssueLinkController() *controller.IssueLinkController {
+	instance, _ := di.GetWithNew("issue-link-controller", func() (any, error) {
+		return controller.NewIssueLinkController(GetIssueLinkService()), nil
+	})
+	return instance.(*controller.IssueLinkController)
+}
+
+func GetIssueLinkService() *service.IssueLinkService {
+	instance, _ := di.GetWithNew("issue-link-service", func() (any, error) {
+		return service.NewIssueLinkService(
+			GetAclService(),
+			GetIssueLinkRepository(),
+			GetStateRepository(),
+			GetSeverityRepository(),
+			GetIssueTypeRepository(),
+			GetProjectRepository(),
+		), nil
+	})
+	return instance.(*service.IssueLinkService)
+}
+
 func GetGitIntegrationRepository() *repository.GitIntegrationRepository {
 	instance, _ := di.GetWithNew("git-integration-repository", func() (any, error) {
 		pool := mustDb()
@@ -1455,6 +1484,7 @@ func GetRouter() (*router.Router, error) {
 			GetNotificationController(),
 			GetAdminController(),
 			GetMyIssuesController(),
+			GetIssueLinkController(),
 			GetGitIntegrationController(),
 			agentRunController,
 			agentThinkingController,

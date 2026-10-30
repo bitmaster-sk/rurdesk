@@ -28,6 +28,7 @@ import { Team } from 'src/app/team/model/team.model';
 import { TeamMemberStore } from 'src/app/team/team-member.store';
 import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { ConversationGroup } from '../../entity/conversation-group.entity';
 import { MessageApi } from '../../api/message.api.service';
@@ -41,7 +42,8 @@ import { MessageKeyConverter } from '../../converter/message-key.converter';
     templateUrl: './message.page.html',
     styleUrls: ['./message.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    standalone: false,
+    providers: [LinkScope]
 })
 export class MessagePage implements OnInit, OnDestroy {
     private readonly route = inject(ActivatedRoute);
@@ -54,6 +56,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
     private readonly teamMemberStore = inject(TeamMemberStore);
+    private readonly linkScope = inject(LinkScope);
 
     private readonly msgList = viewChild<ElementRef<HTMLElement>>('msgList');
     private readonly msgListItems = viewChildren('msgListItems');
@@ -133,6 +136,9 @@ export class MessagePage implements OnInit, OnDestroy {
                         );
                         this.idActiveRecipient.set(recipientId);
                         this.idActiveRecipientType.set(recipientType);
+                        this.linkScope.idProject.set(
+                            recipientType === MessageRecipientType.project ? recipientId : null
+                        );
                         if (recipientType === MessageRecipientType.project) {
                             this.projectMemberStore.load(recipientId);
                         } else if (recipientType === MessageRecipientType.team) {

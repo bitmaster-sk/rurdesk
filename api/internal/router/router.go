@@ -50,6 +50,7 @@ func New(
 	notifCtrl *controller.NotificationController,
 	adminCtrl *controller.AdminController,
 	myIssuesCtrl *controller.MyIssuesController,
+	issueLinkCtrl *controller.IssueLinkController,
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
 	agentThinkingCtrl *controller.AgentThinkingController,
@@ -322,6 +323,8 @@ func New(
 
 	// My Issues
 	pri.GET("/my-issues", myIssuesCtrl.GetMyIssues)
+	pri.GET("/issue-link/search", issueLinkCtrl.Search)
+	pri.POST("/issue-link/info", issueLinkCtrl.Info)
 
 	// Git integration CRUD
 	pri.GET("/project/:idProject/git-integration", gitIntCtrl.List)

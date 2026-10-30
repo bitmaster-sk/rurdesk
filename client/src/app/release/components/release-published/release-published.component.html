@@ -37,6 +37,7 @@
                     class="wiki-article"
                     data-testid="release-published-preview"
                     markdown
+                    appIssueLinkRender
                     ngPreserveWhitespaces
                     [data]="notes()"
                 ></article>
@@ -63,6 +64,7 @@
             class="wiki-article"
             data-testid="release-published-notes"
             markdown
+            appIssueLinkRender
             ngPreserveWhitespaces
             [data]="release().notes"
         ></article>

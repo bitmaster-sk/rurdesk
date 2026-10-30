@@ -51,11 +51,11 @@ the draft first, with **Continue** to open it again.
    ```markdown
    ## Feature
 
-   - Dark mode (#105)
+   - Dark mode ([#105](/project/3/issue/105))
 
    ## Bug
 
-   - Login loops after a password change (#98)
+   - Login loops after a password change ([#98](/project/3/issue/98))
    ```
 
    Rewrite it for your readers. **Rewrite with an agent** above the editor

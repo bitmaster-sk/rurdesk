@@ -32,6 +32,9 @@ import { MessageBodyComponent } from './mention/message-body/message-body.compon
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
 import { PlantUmlDiagramComponent } from './plantuml/plantuml-diagram.component';
 import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
+import { IssueLinkCardComponent } from '../link/components/issue-link-card/issue-link-card.component';
+import { IssueLinkPickerComponent } from '../link/components/issue-link-picker/issue-link-picker.component';
+import { IssueLinkRenderDirective } from '../link/directives/issue-link-render.directive';
 import { AttachmentLightboxComponent } from './attachment/components/attachment-lightbox/attachment-lightbox.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
 import { TagChipComponent } from './tag/tag-chip/tag-chip.component';
@@ -68,7 +71,8 @@ import {
     IconTerminal2,
     IconPencil,
     IconSearch,
-    IconHammer
+    IconHammer,
+    IconLink
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -99,6 +103,9 @@ import {
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,
+        IssueLinkRenderDirective,
+        IssueLinkCardComponent,
+        IssueLinkPickerComponent,
         AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
@@ -144,7 +151,8 @@ import {
             IconTerminal2,
             IconPencil,
             IconSearch,
-            IconHammer
+            IconHammer,
+            IconLink
         })
     ],
     exports: [
@@ -176,6 +184,8 @@ import {
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,
+        IssueLinkRenderDirective,
+        IssueLinkPickerComponent,
         AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,

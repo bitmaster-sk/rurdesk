@@ -23,7 +23,6 @@ export interface WikiLinkContext {
 export abstract class WikiLinkConverter {
     private static readonly sharedPrefixes = ['shared:', 'spolocne:'];
     private static readonly linkPattern = /\[\[([^[\]\n]+?)\]\]/g;
-    private static readonly issuePattern = /(^|[\s(])(?<!\]\()#(\d+)\b/g;
     private static readonly taskPattern = /^(\s*(?:[-*+]|\d+[.)]) )\[([ xX])\] /gm;
 
     public static toTarget(raw: string): WikiLinkTarget | null {
@@ -110,11 +109,7 @@ export abstract class WikiLinkConverter {
             (_match, marker: string, state: string) =>
                 `${marker}<span class="wiki-task${state === ' ' ? '' : ' wiki-task--done'}"></span> `
         );
-        return WikiLinkConverter.replaceLinks(withTasks, context).replace(
-            WikiLinkConverter.issuePattern,
-            (_match, lead: string, id: string) =>
-                `${lead}[#${id}](/project/${context.idProject}/issue/${id})`
-        );
+        return WikiLinkConverter.replaceLinks(withTasks, context);
     }
 
     private static replaceLinks(text: string, context: WikiLinkContext): string {
