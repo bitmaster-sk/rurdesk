@@ -1,27 +1,49 @@
-import { MarkdownCode } from 'src/app/shared/markdown/markdown-code';
-import { IssueLinkOption } from '../entity/issue-link-option.entity';
+import { IssueLinkPart } from '../entity/issue-link-part.entity';
+import { IssueLinkRef } from '../model/issue-link.model';
 
 export abstract class IssueLinkConverter {
-    private static readonly issuePattern = /(^|[\s(])(?<!\]\()#(\d+)\b/g;
-    private static readonly pickerLimit = 8;
+    private static readonly linkPattern = /\[#(\d+)\]\(\/project\/(\d+)\/issue\/(\d+)\)/g;
+    private static readonly hrefPattern = /^\/project\/(\d+)\/issue\/(\d+)$/;
 
-    public static toMarkdown(body: string, idProject: number): string {
-        return MarkdownCode.replaceOutsideCode(body, part =>
-            part.replace(
-                IssueLinkConverter.issuePattern,
-                (_match, lead: string, id: string) =>
-                    `${lead}[#${id}](/project/${idProject}/issue/${id})`
-            )
-        );
+    public static toLinkMarkdown(ref: IssueLinkRef): string {
+        return `[#${ref.idIssuePublic}](${IssueLinkConverter.toHref(ref)})`;
     }
 
-    public static toLinkMarkdown(option: IssueLinkOption): string {
-        return `[#${option.idIssuePublic}](/project/${option.idProject}/issue/${option.idIssuePublic})`;
+    public static toHref(ref: IssueLinkRef): string {
+        return `/project/${ref.idProject}/issue/${ref.idIssuePublic}`;
     }
 
-    public static toPickerOptions(options: IssueLinkOption[], query: string): IssueLinkOption[] {
-        return options
-            .filter(option => String(option.idIssuePublic).startsWith(query))
-            .slice(0, IssueLinkConverter.pickerLimit);
+    public static toKey(ref: IssueLinkRef): string {
+        return `${ref.idProject}/${ref.idIssuePublic}`;
+    }
+
+    public static toRef(href: string): IssueLinkRef | null {
+        const match = IssueLinkConverter.hrefPattern.exec(href);
+        return match ? { idProject: Number(match[1]), idIssuePublic: Number(match[2]) } : null;
+    }
+
+    public static toParts(text: string): IssueLinkPart[] {
+        const parts: IssueLinkPart[] = [];
+        const pattern = new RegExp(IssueLinkConverter.linkPattern.source, 'g');
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = pattern.exec(text)) !== null) {
+            if (match[1] !== match[3]) {
+                continue;
+            }
+            if (match.index > lastIndex) {
+                parts.push({ type: 'text', text: text.slice(lastIndex, match.index) });
+            }
+            parts.push({
+                type: 'issue',
+                idProject: Number(match[2]),
+                idIssuePublic: Number(match[3])
+            });
+            lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+            parts.push({ type: 'text', text: text.slice(lastIndex) });
+        }
+        return parts;
     }
 }

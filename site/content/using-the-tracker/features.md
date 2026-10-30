@@ -88,23 +88,27 @@ case sensitivity, or word boundaries.
 
 ### Task references
 
-Type `#` in a task comment, the task description or a chat message to open a
-task picker — inside a project it lists that project's tasks by number and
-title; in team chat and direct messages it lists the tasks of every project
-you can see, each with its project name. The list narrows as you type the
-number. Pick one (or just type the number, e.g. `#123`) and it renders as a
-link to that task, the same as `#123` in the [wiki](wiki.md#writing).
+Type `#` anywhere you write Markdown to link a task: task descriptions, task
+comments, every chat (project, team and direct messages), wiki pages and
+release notes. A picker opens with the tasks of every project you can see.
+Each row shows the task number, its title and its project, and the tasks of
+the project you are in come first. Keep typing to narrow the list by number or
+by title.
 
-- **In task comments, task descriptions and project chat:** `#123` becomes a
-  clickable link to task #123 of the current project
-- **In team chat and direct messages:** a picked task is inserted as a link
-  that carries its project, so it opens for anyone who can see that task. A
-  `#123` typed by hand stays plain text there, because there is no project
-  to resolve it against
+The picked task is inserted as a chip that shows only `#123`. It is stored as
+an ordinary Markdown link, `[#123](/project/7/issue/123)`, so it always points
+to the right project, wherever it is written or read. Backspace removes the
+whole link at once. A `#123` you type yourself without picking a task stays
+plain text.
 
-Links are not validated: a typo like `#99` simply renders as a link to a task
-that does not exist. A reader without access to the linked task's project
-gets a 404 when they open the link.
+When the link is shown:
+
+- a link to a closed task (one in a final state) is greyed out and struck
+  through, and it changes as soon as someone closes or reopens the task
+- resting the mouse on the link shows a card with the task's title, project,
+  state, type and assignee
+- a reader who cannot see the task gets a plain link without a card, and a 404
+  when they open it
 
 Project chat messages also support wiki links: `[[Page title]]` becomes a link
 to that page, with the same `[[` picker as in the

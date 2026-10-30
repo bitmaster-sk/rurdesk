@@ -17,6 +17,12 @@ same version: an older gateway refuses it with the error `tracker_missing_repo`.
 Update the tracker and every gateway together. Development work runs on either
 gateway.
 
+A `#123` typed in a wiki page is no longer turned into a link to a task. Task
+links are now picked with `#` and stored as Markdown links that carry their
+project, see [task references](../using-the-tracker/features.md#task-references).
+The text of older pages stays as it was, so to make an old `#123` clickable
+again, delete it and pick the task from the `#` suggestions.
+
 ## Upgrading to 1.6.0
 
 The gateway now takes the repository, the base branch and the git token of a

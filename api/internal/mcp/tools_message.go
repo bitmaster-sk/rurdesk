@@ -11,6 +11,8 @@ import (
 // issueRecipientType is the enum value for issue-type message recipients.
 const issueRecipientType = 4
 
+const taskLinkHint = " Link a task as [#123](/project/{idProject}/issue/123), where {idProject} is the task's project; a bare #123 stays plain text."
+
 func registerMessageTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage string) {
 	server.AddTool(
 		mcpgo.NewTool("list_issue_messages",
@@ -29,7 +31,7 @@ func registerMessageTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stag
 		mcpgo.NewTool("post_issue_message",
 			mcpgo.WithDescription("Post a message on an issue. Optionally anchor this message to a line range of an earlier message in the thread (e.g. to reply to a specific section of the agent's plan). When replying to a specific part of the user's message or your own earlier plan, prefer anchoring over inline quoting — pass parent_message_id with anchor_line_start and anchor_line_end together."),
 			mcpgo.WithNumber("issue_id", mcpgo.Required(), mcpgo.Description("Internal issue ID (idIssue)")),
-			mcpgo.WithString("message", mcpgo.Required(), mcpgo.Description("Message text")),
+			mcpgo.WithString("message", mcpgo.Required(), mcpgo.Description("Message text, Markdown."+taskLinkHint)),
 			mcpgo.WithNumber("parent_message_id", mcpgo.Description("ID of the message to anchor this reply to. Must be provided together with anchor_line_start and anchor_line_end, or all three must be omitted.")),
 			mcpgo.WithNumber("anchor_line_start", mcpgo.Description("First line number (1-based) of the anchor range in the parent message.")),
 			mcpgo.WithNumber("anchor_line_end", mcpgo.Description("Last line number (1-based, >= anchor_line_start) of the anchor range in the parent message.")),
@@ -42,7 +44,7 @@ func registerMessageTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stag
 		mcpgo.NewTool("update_issue_message",
 			mcpgo.WithDescription("Update a message you authored (returns 403 if not the author)"),
 			mcpgo.WithNumber("message_id", mcpgo.Required(), mcpgo.Description("Message ID")),
-			mcpgo.WithString("message", mcpgo.Required(), mcpgo.Description("New message text")),
+			mcpgo.WithString("message", mcpgo.Required(), mcpgo.Description("New message text, Markdown."+taskLinkHint)),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 			return handleUpdateIssueMessage(ctx, req, dispatcher)

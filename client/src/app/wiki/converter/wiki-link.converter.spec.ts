@@ -56,10 +56,13 @@ describe('WikiLinkConverter', () => {
         );
     });
 
-    it('links task references but not headings', () => {
-        expect(WikiLinkConverter.toMarkdown('# Title\nfixed in #11 (and #12)', context)).toBe(
-            '# Title\nfixed in [#11](/project/7/issue/11) (and [#12](/project/7/issue/12))'
-        );
+    it('leaves a typed task number as text and keeps a stored task link as it is', () => {
+        expect(
+            WikiLinkConverter.toMarkdown(
+                '# Title\nfixed in #11 and [#12](/project/9/issue/12)',
+                context
+            )
+        ).toBe('# Title\nfixed in #11 and [#12](/project/9/issue/12)');
     });
 
     it('leaves links inside code untouched', () => {

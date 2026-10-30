@@ -75,39 +75,12 @@
                 }
             </div>
         }
-        @if (issueQuery() && (isIssuesLoading() || issueCandidates().length)) {
-            <div
-                class="mention-picker"
-                role="listbox"
-                data-testid="issue-link-picker"
-                [style.left]="pickerPosition().left"
-                [style.top]="pickerPosition().top"
-                [style.bottom]="pickerPosition().bottom"
-            >
-                @if (isIssuesLoading()) {
-                    <div class="mention-picker__item">
-                        <ui-loader [size]="16" />
-                    </div>
-                }
-                @for (issue of issueCandidates(); track issue.idIssuePublic; let i = $index) {
-                    <div
-                        class="mention-picker__item"
-                        data-testid="issue-link-option"
-                        [class.mention-picker__item--active]="i === activeIndex()"
-                        role="option"
-                        [attr.aria-selected]="i === activeIndex()"
-                        (mousedown)="selectIssue(issue); $event.preventDefault()"
-                    >
-                        <tabler-icon icon="list-check" [size]="14" />
-                        <span class="mention-picker__name">#{{ issue.idIssuePublic }}</span>
-                        <span class="mention-picker__hint">{{ issue.title }}</span>
-                        @if (issue.projectName) {
-                            <span class="mention-picker__hint">{{ issue.projectName }}</span>
-                        }
-                    </div>
-                }
-            </div>
-        }
+        <app-issue-link-picker
+            [style.left]="pickerPosition().left"
+            [style.top]="pickerPosition().top"
+            [style.bottom]="pickerPosition().bottom"
+            (picked)="selectIssue($event)"
+        />
     </div>
     <div class="editor-toolbar">
         <div class="flex items-center">

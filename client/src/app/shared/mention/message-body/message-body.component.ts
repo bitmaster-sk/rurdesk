@@ -14,7 +14,6 @@ import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/att
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 import { MENTION_TOKEN_RE } from 'src/app/shared/mention/mention';
-import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
 import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
@@ -65,7 +64,6 @@ export class MessageBodyComponent {
 
     public readonly segments = computed<RenderSegment[]>(() => {
         const context = this.wikiContext();
-        const idProject = this.linkScope?.idProject() ?? null;
         return this.baseSegments().map(segment => {
             if (segment.type !== 'text') {
                 return segment;
@@ -73,9 +71,6 @@ export class MessageBodyComponent {
             let content = segment.content;
             if (context && content.includes('[[')) {
                 content = WikiLinkConverter.toPageLinksMarkdown(content, context);
-            }
-            if (idProject !== null && content.includes('#')) {
-                content = IssueLinkConverter.toMarkdown(content, idProject);
             }
             if (content.includes('](attachment:')) {
                 content = AttachmentLinkConverter.toMarkerMarkdown(content);

@@ -251,7 +251,11 @@ export class ReleasePage {
         const draft = this.draft();
         if (!this.notes().trim() && draft) {
             this.form.controls.notes.setValue(
-                ReleaseNotesConverter.toMarkdown(draft.sections, this.i18n.instant('RELEASE.OTHER'))
+                ReleaseNotesConverter.toMarkdown(
+                    draft.sections,
+                    this.i18n.instant('RELEASE.OTHER'),
+                    this.idProject
+                )
             );
         }
         this.notesMode.set(ReleaseNotesMode.Editor);

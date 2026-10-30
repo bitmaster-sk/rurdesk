@@ -198,7 +198,7 @@ describe('ReleasePage', () => {
             3,
             5,
             expect.objectContaining({
-                notes: '## Feature\n\n- Release notes (#104)\n'
+                notes: '## Feature\n\n- Release notes ([#104](/project/3/issue/104))\n'
             })
         );
     });

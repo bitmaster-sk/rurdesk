@@ -4,56 +4,32 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { TranslateModule } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IssueApi } from 'src/app/issue/api/issue.api.service';
-import { ProjectApi } from 'src/app/project/api/project.api.service';
-import { Issue } from 'src/app/issue/model/issue.model';
-import { Project } from 'src/app/project/model/project.model';
+import { IssueLinkApi } from 'src/app/link/api/issue-link.api.service';
+import { IssueLinkOption } from 'src/app/link/model/issue-link.model';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageModule } from '../../message.module';
 import { EditorText } from './editor-text';
 
 @Component({
     standalone: false,
-    template: '<app-message-editor></app-message-editor>'
+    template: '<app-message-editor [message]="message"></app-message-editor>'
 })
-class HostComponent {}
+class HostComponent {
+    public message = '';
+}
 
-const issue = (idIssuePublic: number, title: string): Issue => {
-    return {
-        idIssue: idIssuePublic,
-        idIssuePublic,
-        idProject: 7,
-        idState: null,
-        idSeverity: null,
-        idIssueType: null,
-        title,
-        description: '',
-        tracked: 0
-    };
-};
+const options: IssueLinkOption[] = [
+    { idProject: 7, projectName: 'Rurdesk', idIssuePublic: 123, title: 'Fix login' },
+    { idProject: 9, projectName: 'Website', idIssuePublic: 12, title: 'Blog redesign' }
+];
 
-const project = (idProject: number, name: string): Project => ({
-    idProject,
-    name,
-    color: ''
-});
-
-const issues: Issue[] = [issue(123, 'Fix login'), issue(456, 'Add dark mode')];
-
-const projects: Project[] = [project(7, 'Rurdesk'), project(9, 'Website')];
-
-async function render(options: { idProject?: number | null; withScope?: boolean }): Promise<{
+async function render(opts: { idProject?: number | null; message?: string } = {}): Promise<{
     fixture: ComponentFixture<HostComponent>;
     load: ReturnType<typeof vi.fn>;
-    loadProjects: ReturnType<typeof vi.fn>;
 }> {
-    const load = vi.fn().mockImplementation(() => new Subject<Issue[]>());
-    const loadProjects = vi.fn().mockImplementation(() => new Subject<Project[]>());
-    const providers: object[] = [
-        { provide: IssueApi, useValue: { load$: load } },
-        { provide: ProjectApi, useValue: { load$: loadProjects } }
-    ];
-    if (options.withScope !== false) {
+    const load = vi.fn().mockImplementation(() => new Subject<IssueLinkOption[]>());
+    const providers: object[] = [{ provide: IssueLinkApi, useValue: { load$: load } }];
+    if (opts.idProject !== undefined) {
         providers.push(LinkScope);
     }
     await TestBed.configureTestingModule({
@@ -61,34 +37,51 @@ async function render(options: { idProject?: number | null; withScope?: boolean 
         imports: [MessageModule, NoopAnimationsModule, TranslateModule.forRoot()],
         providers
     }).compileComponents();
-    if (options.withScope !== false) {
-        TestBed.inject(LinkScope).idProject.set(options.idProject ?? null);
+    if (opts.idProject !== undefined) {
+        TestBed.inject(LinkScope).idProject.set(opts.idProject);
     }
     const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.message = opts.message ?? '';
     fixture.detectChanges();
     await fixture.whenStable();
-    return { fixture, load, loadProjects };
+    fixture.detectChanges();
+    return { fixture, load };
 }
 
-function type(fixture: ComponentFixture<HostComponent>, text: string): HTMLDivElement {
-    const editor = fixture.nativeElement.querySelector('.editor__content') as HTMLDivElement;
+function editorOf(fixture: ComponentFixture<HostComponent>): HTMLDivElement {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+        '.editor__content'
+    ) as HTMLDivElement;
+}
+
+function placeCaretAtEnd(editor: HTMLDivElement): void {
     editor.focus();
-    editor.textContent = text;
     const range = document.createRange();
     range.selectNodeContents(editor);
     range.collapse(false);
     const selection = window.getSelection()!;
     selection.removeAllRanges();
     selection.addRange(range);
+}
+
+async function type(
+    fixture: ComponentFixture<HostComponent>,
+    text: string
+): Promise<HTMLDivElement> {
+    const editor = editorOf(fixture);
+    editor.textContent = text;
+    placeCaretAtEnd(editor);
     editor.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    await new Promise(resolve => setTimeout(resolve, 200));
     fixture.detectChanges();
     return editor;
 }
 
-function options(fixture: ComponentFixture<HostComponent>): string[] {
+function optionTexts(fixture: ComponentFixture<HostComponent>): string[] {
     return Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="issue-link-option"]')
-    ).map(option => option.textContent?.trim() ?? '');
+    ).map(option => option.textContent?.replace(/\s+/g, ' ').trim() ?? '');
 }
 
 function picker(fixture: ComponentFixture<HostComponent>): HTMLElement | null {
@@ -100,99 +93,172 @@ function picker(fixture: ComponentFixture<HostComponent>): HTMLElement | null {
 describe('MessageEditorComponent issue links', () => {
     afterEach(() => TestBed.resetTestingModule());
 
-    it('opens the task picker after #, loads the project issues and filters by the typed number', async () => {
-        const { fixture, load, loadProjects } = await render({ idProject: 7 });
+    it('opens the task picker after # in a chat without a project and lists tasks with their project', async () => {
+        const { fixture, load } = await render();
 
-        type(fixture, 'see #12');
-        expect(load).toHaveBeenCalledWith({
-            idProject: 7,
-            orderColumn: 'createAt',
-            orderDirection: 'desc'
-        });
-        expect(loadProjects).not.toHaveBeenCalled();
+        await type(fixture, 'see #fix');
+        expect(load).toHaveBeenCalledWith('fix', null);
         expect(picker(fixture)).not.toBeNull();
-        expect(options(fixture)).toEqual([]);
+        expect(optionTexts(fixture)).toEqual([]);
 
-        load.mock.results[0].value.next(issues);
+        load.mock.results[0].value.next(options);
         fixture.detectChanges();
-        expect(options(fixture)).toEqual(['#123Fix login']);
 
-        type(fixture, 'see #45');
-        expect(options(fixture)).toEqual(['#456Add dark mode']);
+        expect(optionTexts(fixture)).toEqual([
+            'Rurdesk #123 Fix login',
+            'Website #12 Blog redesign'
+        ]);
     });
 
-    it('inserts the picked issue as a #reference with a trailing space', async () => {
+    it('asks for the tasks of the current project first', async () => {
         const { fixture, load } = await render({ idProject: 7 });
-        const editor = type(fixture, 'see #45');
-        load.mock.results[0].value.next(issues);
-        fixture.detectChanges();
 
-        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        fixture.detectChanges();
+        await type(fixture, 'see #12');
 
-        expect(EditorText.serialize(editor)).toBe('see #456 ');
-        expect(picker(fixture)).toBeNull();
+        expect(load).toHaveBeenCalledWith('12', 7);
     });
 
-    it('refreshes the list in the background when the picker reopens, keeping the old options meanwhile', async () => {
-        const { fixture, load } = await render({ idProject: 7 });
-
-        type(fixture, 'see #12');
-        load.mock.results[0].value.next(issues);
+    it('does not offer the tasks of the previous search while the next one is running', async () => {
+        const { fixture, load } = await render();
+        await type(fixture, 'see #1');
+        load.mock.results[0].value.next(options);
         fixture.detectChanges();
-        expect(options(fixture)).toEqual(['#123Fix login']);
 
-        type(fixture, 'see');
-        type(fixture, 'see #12');
+        const editor = await type(fixture, 'see #12');
         expect(load).toHaveBeenCalledTimes(2);
-        expect(options(fixture)).toEqual(['#123Fix login']);
-
-        const refreshed = [issue(123, 'Fix login'), issue(789, 'New task')];
-        load.mock.results[1].value.next(refreshed);
-        fixture.detectChanges();
-        expect(options(fixture)).toEqual(['#123Fix login']);
-
-        type(fixture, 'see #78');
-        expect(options(fixture)).toEqual(['#789New task']);
-    });
-
-    it('lists the tasks of every visible project when the chat has no project', async () => {
-        const { fixture, load, loadProjects } = await render({ idProject: null });
-
-        type(fixture, 'see #1');
-        expect(loadProjects).toHaveBeenCalledTimes(1);
+        expect(optionTexts(fixture)).toEqual([]);
         expect(picker(fixture)).not.toBeNull();
-        expect(options(fixture)).toEqual([]);
-
-        loadProjects.mock.results[0].value.next(projects);
-        expect(load.mock.calls.map(call => call[0].idProject)).toEqual([7, 9]);
-        load.mock.results[0].value.next([issue(123, 'Fix login')]);
-        load.mock.results[1].value.next([issue(12, 'Blog redesign')]);
-        fixture.detectChanges();
-        expect(options(fixture)).toEqual(['#123Fix loginRurdesk', '#12Blog redesignWebsite']);
-    });
-
-    it('inserts a picked cross-project task as a link carrying its project', async () => {
-        const { fixture, load, loadProjects } = await render({ idProject: null });
-        const editor = type(fixture, 'see #1');
-        loadProjects.mock.results[0].value.next(projects);
-        load.mock.results[0].value.next([issue(123, 'Fix login')]);
-        load.mock.results[1].value.next([issue(12, 'Blog redesign')]);
-        fixture.detectChanges();
 
         editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
         fixture.detectChanges();
+        expect(editor.querySelector('.issue-link-chip')).toBeNull();
 
-        expect(EditorText.serialize(editor)).toBe('see [#123](/project/7/issue/123) ');
+        load.mock.results[1].value.next([options[1]]);
+        fixture.detectChanges();
+        expect(optionTexts(fixture)).toEqual(['Website #12 Blog redesign']);
+    });
+
+    it('picks the first task of a narrowed search even after moving down the longer list', async () => {
+        const { fixture, load } = await render();
+        const editor = await type(fixture, 'see #1');
+        load.mock.results[0].value.next(options);
+        fixture.detectChanges();
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+
+        await type(fixture, 'see #12');
+        load.mock.results[1].value.next([options[1]]);
+        fixture.detectChanges();
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(EditorText.serialize(editor)).toBe('see [#12](/project/9/issue/12) ');
+    });
+
+    it('inserts the picked task as a #number chip stored as a full link', async () => {
+        const { fixture, load } = await render();
+        const editor = await type(fixture, 'see #12');
+        load.mock.results[0].value.next(options);
+        fixture.detectChanges();
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(EditorText.serialize(editor)).toBe('see [#12](/project/9/issue/12) ');
+        expect(editor.querySelector('.issue-link-chip')?.textContent).toBe('#12');
         expect(picker(fixture)).toBeNull();
     });
 
-    it('does not open the picker without a link scope', async () => {
-        const { fixture, load, loadProjects } = await render({ withScope: false });
+    it('highlights one option, keeps the keyboard choice under a still mouse and follows real mouse moves', async () => {
+        const { fixture, load } = await render();
+        const editor = await type(fixture, 'see #1');
+        load.mock.results[0].value.next(options);
+        fixture.detectChanges();
+        const active = (): string[] =>
+            Array.from(
+                (fixture.nativeElement as HTMLElement).querySelectorAll(
+                    '.issue-link-picker__item--active'
+                )
+            ).map(option => option.textContent?.replace(/\s+/g, ' ').trim() ?? '');
+        expect(active()).toEqual(['Rurdesk #123 Fix login']);
 
-        type(fixture, 'see #12');
-        expect(load).not.toHaveBeenCalled();
-        expect(loadProjects).not.toHaveBeenCalled();
+        (fixture.nativeElement as HTMLElement)
+            .querySelectorAll('[data-testid="issue-link-option"]')[1]
+            .dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        fixture.detectChanges();
+        expect(active()).toEqual(['Rurdesk #123 Fix login']);
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+        fixture.detectChanges();
+        expect(active()).toEqual(['Website #12 Blog redesign']);
+
+        (fixture.nativeElement as HTMLElement)
+            .querySelectorAll('[data-testid="issue-link-option"]')[0]
+            .dispatchEvent(new PointerEvent('pointermove', { bubbles: true, movementY: 3 }));
+        fixture.detectChanges();
+        expect(active()).toEqual(['Rurdesk #123 Fix login']);
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        fixture.detectChanges();
+        expect(EditorText.serialize(editor)).toBe('see [#123](/project/7/issue/123) ');
+    });
+
+    it('closes the picker on Escape without inserting anything', async () => {
+        const { fixture, load } = await render();
+        const editor = await type(fixture, 'see #12');
+        load.mock.results[0].value.next(options);
+        fixture.detectChanges();
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        fixture.detectChanges();
+
         expect(picker(fixture)).toBeNull();
+        expect(EditorText.serialize(editor)).toBe('see #12');
+    });
+
+    it('shows a stored task link as a chip when an existing message is edited', async () => {
+        const { fixture } = await render({
+            message: 'blocked by [#123](/project/7/issue/123) today'
+        });
+        const editor = editorOf(fixture);
+
+        expect(editor.querySelector('.issue-link-chip')?.textContent).toBe('#123');
+        expect(EditorText.serialize(editor)).toBe('blocked by [#123](/project/7/issue/123) today');
+    });
+
+    it('shows a task link as a highlighted chip', async () => {
+        const { fixture } = await render({ message: 'see [#123](/project/7/issue/123)' });
+        const chip = editorOf(fixture).querySelector<HTMLElement>('.issue-link-chip')!;
+
+        expect(getComputedStyle(chip).display).toBe('inline-block');
+    });
+
+    it('removes the whole task link with one Backspace', async () => {
+        const { fixture } = await render({ message: 'see [#123](/project/7/issue/123)' });
+        const editor = editorOf(fixture);
+        placeCaretAtEnd(editor);
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(editor.querySelector('.issue-link-chip')).toBeNull();
+        expect(EditorText.serialize(editor)).toBe('see ');
+    });
+
+    it('removes the whole task link with one Delete in front of it', async () => {
+        const { fixture } = await render({ message: '[#123](/project/7/issue/123) done' });
+        const editor = editorOf(fixture);
+        editor.focus();
+        const range = document.createRange();
+        range.setStart(editor, 0);
+        range.collapse(true);
+        window.getSelection()!.removeAllRanges();
+        window.getSelection()!.addRange(range);
+
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+        fixture.detectChanges();
+
+        expect(editor.querySelector('.issue-link-chip')).toBeNull();
+        expect(EditorText.serialize(editor)).toBe(' done');
     });
 });

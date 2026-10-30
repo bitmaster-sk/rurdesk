@@ -1,4 +1,6 @@
 import { IconLoader2, IconPaperclip } from '@tabler/icons-angular';
+import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
+import { IssueLinkRef } from 'src/app/link/model/issue-link.model';
 import { Mention } from 'src/app/shared/mention/mention';
 import { UiTablerSvg } from 'src/app/ui/util/ui-tabler-svg';
 
@@ -10,7 +12,9 @@ export abstract class EditorChip {
         const classList = n.nodeType === 1 ? (n as HTMLElement).classList : undefined;
         return (
             !!classList &&
-            (classList.contains('mention-chip') || classList.contains('attachment-chip'))
+            (classList.contains('mention-chip') ||
+                classList.contains('attachment-chip') ||
+                classList.contains('issue-link-chip'))
         );
     }
 
@@ -53,6 +57,18 @@ export abstract class EditorChip {
         return s;
     }
 
+    public static buildIssueLinkChip(ref: IssueLinkRef, title?: string): HTMLElement {
+        const s = document.createElement('span');
+        s.className = 'issue-link-chip';
+        s.contentEditable = 'false';
+        s.dataset['token'] = IssueLinkConverter.toLinkMarkdown(ref);
+        s.textContent = `#${ref.idIssuePublic}`;
+        if (title) {
+            s.title = title;
+        }
+        return s;
+    }
+
     // True when the caret is at a valid '@' mention opener:
     // preceding char is whitespace/BOF, or the immediately preceding DOM node is a chip.
     public static atMentionBoundary(root: HTMLElement): boolean {
@@ -89,6 +105,39 @@ export abstract class EditorChip {
         const sel = root.ownerDocument.getSelection();
         sel?.removeAllRanges();
         sel?.addRange(range);
+    }
+
+    public static deleteChip(root: HTMLElement, isBackward: boolean): boolean {
+        const sel = root.ownerDocument.getSelection();
+        if (!sel?.rangeCount || !sel.isCollapsed) {
+            return false;
+        }
+        const { startContainer: container, startOffset: offset } = sel.getRangeAt(0);
+        if (!root.contains(container)) {
+            return false;
+        }
+        const isText = container.nodeType === Node.TEXT_NODE;
+        const chip = isBackward
+            ? isText
+                ? offset === 0
+                    ? container.previousSibling
+                    : null
+                : (container.childNodes[offset - 1] ?? null)
+            : isText
+              ? offset === (container as Text).length
+                  ? container.nextSibling
+                  : null
+              : (container.childNodes[offset] ?? null);
+        if (!chip || !EditorChip.isChip(chip)) {
+            return false;
+        }
+        const range = root.ownerDocument.createRange();
+        range.setStartBefore(chip);
+        range.collapse(true);
+        chip.remove();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return true;
     }
 
     // Chrome deletes the chip instead of a line break next to it, so that line break is removed by hand.
@@ -151,6 +200,21 @@ export abstract class EditorChip {
             sel,
             sel.getRangeAt(0),
             EditorChip.buildChip(idUser, name)
+        );
+    }
+
+    public static insertIssueLinkChipAtCaret(
+        root: HTMLElement,
+        ref: IssueLinkRef,
+        title: string
+    ): void {
+        const sel = root.ownerDocument.getSelection();
+        if (!sel?.rangeCount) return;
+        EditorChip.insertNodeAtRange(
+            root,
+            sel,
+            sel.getRangeAt(0),
+            EditorChip.buildIssueLinkChip(ref, title)
         );
     }
 

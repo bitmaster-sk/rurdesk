@@ -1,0 +1,43 @@
+:host {
+    position: absolute;
+    z-index: 100;
+}
+
+.issue-link-picker {
+    min-width: 14rem;
+    max-width: 22rem;
+    background: var(--ui-color-surface);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-sm);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+    font-family: var(--font-family);
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.375rem 0.625rem;
+        cursor: pointer;
+        color: var(--ui-color-text);
+
+        &--active {
+            background: var(--ui-color-surface-hover);
+        }
+    }
+
+    &__title {
+        font-size: var(--font-size-s);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    &__project {
+        font-size: calc(var(--font-size-xs) + 1px);
+        color: var(--ui-color-text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}

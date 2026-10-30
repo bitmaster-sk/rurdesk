@@ -26,19 +26,19 @@ One or two sentences that sum up the release: the two or three changes that matt
 
 ### Added
 
-- One bullet per new feature or option. (#12)
+- One bullet per new feature or option. ([#12](/project/3/issue/12))
 
 ### Changed
 
-- One bullet per change to something that already existed. (#14, #15)
+- One bullet per change to something that already existed. ([#14](/project/3/issue/14), [#15](/project/3/issue/15))
 
 ### Removed
 
-- One bullet per feature or option that is gone. (#16)
+- One bullet per feature or option that is gone. ([#16](/project/3/issue/16))
 
 ### Fixed
 
-- One bullet per bug: what went wrong, said so a user recognizes it. (#18)
+- One bullet per bug: what went wrong, said so a user recognizes it. ([#18](/project/3/issue/18))
 ```
 
 - **Highlights** names the three to five changes a user would care about most, with a bold
@@ -51,8 +51,9 @@ One or two sentences that sum up the release: the two or three changes that matt
 
 **Bullets.** One bullet per change, starting with what the user can now do or what no
 longer goes wrong. Merge tasks that describe the same change into one bullet. End each
-bullet in Added, Changed, Removed and Fixed with the numbers of its tasks in parentheses,
-for example (#104), so the team can trace it.
+bullet in Added, Changed, Removed and Fixed with links to its tasks in parentheses, so the
+team can trace it. A task link is `[#104](/project/{idProject}/issue/104)` with the id of the
+release's project, for example ([#104](/project/3/issue/104)). A bare `#104` is not a link.
 
 **Facts only.** Write only about the tasks of the release you are given, and describe only what they say. Do not invent features, numbers or
 dates. When a task is unclear, read it with `get_issue` before you write about it, and

@@ -1,5 +1,4 @@
 import { MarkdownCode } from 'src/app/shared/markdown/markdown-code';
-import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
 import { WikiSpaceKind } from '../constants/wiki-space-kind.enum';
 import { WikiLinkCandidate } from '../entity/wiki-link-candidate.entity';
 import { WikiResolvedLink } from '../model/wiki-page.model';
@@ -110,10 +109,7 @@ export abstract class WikiLinkConverter {
             (_match, marker: string, state: string) =>
                 `${marker}<span class="wiki-task${state === ' ' ? '' : ' wiki-task--done'}"></span> `
         );
-        return IssueLinkConverter.toMarkdown(
-            WikiLinkConverter.replaceLinks(withTasks, context),
-            context.idProject
-        );
+        return WikiLinkConverter.replaceLinks(withTasks, context);
     }
 
     private static replaceLinks(text: string, context: WikiLinkContext): string {

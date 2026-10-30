@@ -20,7 +20,7 @@ func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 			),
 			mcpgo.WithNumber("id_task", mcpgo.Required(), mcpgo.Description("The id_task from the stage_execute event payload.")),
 			mcpgo.WithString("outcome", mcpgo.Required(), mcpgo.Description("One of: output_submitted, question_asked, no_action_needed, errored.")),
-			mcpgo.WithString("message", mcpgo.Description("Output message body, plain markdown. Required when outcome=output_submitted or question_asked.")),
+			mcpgo.WithString("message", mcpgo.Description("Output message body, plain markdown. Required when outcome=output_submitted or question_asked."+taskLinkHint)),
 			mcpgo.WithString("message_kind",
 				mcpgo.Enum(constants.AgentMessageKinds...),
 				mcpgo.Description("What the message is. Required when message is set, a missing or unknown value is rejected with 400. Leave it out in the release_notes stage, where the message is the release notes. "+

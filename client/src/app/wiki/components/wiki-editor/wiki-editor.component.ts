@@ -28,7 +28,7 @@ import {
     defineLanguageFacet,
     syntaxHighlighting
 } from '@codemirror/language';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Prec } from '@codemirror/state';
 import { EditorView, keymap, placeholder } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { GFM, parser as markdownParser } from '@lezer/markdown';
@@ -39,9 +39,10 @@ import { ClipboardContent } from 'src/app/shared/attachment/util/clipboard-conte
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
-import { IssueLinkStore } from 'src/app/link/store/issue-link.store';
-import { LinkScope } from 'src/app/link/service/link-scope.service';
+import { IssueLinkOption } from 'src/app/link/model/issue-link.model';
+import { IssueLinkPicker } from 'src/app/link/service/issue-link-picker.service';
 import { WikiCalloutKind } from '../../constants/wiki-callout-kind.enum';
+import { WikiIssueLinkDecoration } from './wiki-issue-link.decoration';
 import { WikiFormat } from '../../constants/wiki-format.enum';
 import { WikiAnchorConverter } from '../../converter/wiki-anchor.converter';
 import { WikiFormatConverter } from '../../converter/wiki-format.converter';
@@ -61,7 +62,8 @@ export interface WikiEditorPageOption {
     templateUrl: './wiki-editor.component.html',
     styleUrls: ['./wiki-editor.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    standalone: false,
+    providers: [IssueLinkPicker]
 })
 export class WikiEditorComponent implements AfterViewInit, OnDestroy {
     public readonly initialValue = input<string>('');
@@ -74,8 +76,9 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
     private readonly uploader = inject(AttachmentUploader);
     private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
-    private readonly issueStore = inject(IssueLinkStore);
-    private readonly linkScope = inject(LinkScope);
+    protected readonly issuePicker = inject(IssueLinkPicker);
+    protected readonly issuePickerPosition = signal({ left: '0px', top: '0px' });
+    private issueQueryFrom = 0;
     private readonly pendingUploads = signal(0);
     private placeholders: WikiUploadPlaceholder[] = [];
 
@@ -166,13 +169,20 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
                     markdown,
                     syntaxHighlighting(this.highlightStyle),
                     EditorView.lineWrapping,
+                    WikiIssueLinkDecoration.extension,
                     placeholder(this.placeholderText()),
                     autocompletion({
-                        override: [
-                            (context: CompletionContext) => this.completePages(context),
-                            (context: CompletionContext) => this.completeIssues(context)
-                        ]
+                        icons: false,
+                        override: [(context: CompletionContext) => this.completePages(context)]
                     }),
+                    Prec.highest(
+                        keymap.of(
+                            ['ArrowDown', 'ArrowUp', 'Enter', 'Tab', 'Escape'].map(key => ({
+                                key,
+                                run: (view: EditorView) => this.onIssuePickerKey(view, key)
+                            }))
+                        )
+                    ),
                     keymap.of([
                         { key: 'Mod-b', run: () => this.applyFormat(WikiFormat.Bold) },
                         { key: 'Mod-i', run: () => this.applyFormat(WikiFormat.Italic) },
@@ -183,10 +193,14 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
                         indentWithTab
                     ]),
                     EditorView.domEventHandlers({
+                        blur: () => this.issuePicker.close(),
                         paste: event => this.onPasteFiles(event),
                         drop: (event, view) => this.onDropFiles(event, view)
                     }),
                     EditorView.updateListener.of(update => {
+                        if (update.docChanged || update.selectionSet) {
+                            this.detectIssueQuery(update.view);
+                        }
                         if (!update.docChanged) {
                             return;
                         }
@@ -377,6 +391,56 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
         };
     }
 
+    protected onIssuePicked(issue: IssueLinkOption): void {
+        if (this.view) {
+            this.insertIssueLink(this.view, issue);
+        }
+    }
+
+    private onIssuePickerKey(view: EditorView, key: string): boolean {
+        const result = this.issuePicker.onKey(key);
+        if (result.picked) {
+            this.insertIssueLink(view, result.picked);
+        }
+        return result.isHandled;
+    }
+
+    private insertIssueLink(view: EditorView, issue: IssueLinkOption): void {
+        const insert = `${IssueLinkConverter.toLinkMarkdown(issue)} `;
+        const from = this.issueQueryFrom;
+        view.dispatch({
+            changes: { from, to: view.state.selection.main.head, insert },
+            selection: { anchor: from + insert.length }
+        });
+        this.issuePicker.close();
+        view.focus();
+    }
+
+    private detectIssueQuery(view: EditorView): void {
+        const selection = view.state.selection.main;
+        if (!selection.empty) {
+            this.issuePicker.close();
+            return;
+        }
+        const line = view.state.doc.lineAt(selection.head);
+        const query = this.issuePicker.detect(line.text.slice(0, selection.head - line.from));
+        if (!query) {
+            return;
+        }
+        this.issueQueryFrom = line.from + query.start;
+        view.requestMeasure({
+            read: measured => measured.coordsAtPos(this.issueQueryFrom),
+            write: coords => {
+                if (coords) {
+                    this.issuePickerPosition.set({
+                        left: `${coords.left}px`,
+                        top: `${coords.bottom + 4}px`
+                    });
+                }
+            }
+        });
+    }
+
     private completePages(context: CompletionContext): CompletionResult | null {
         const match = context.matchBefore(/\[\[[^[\]\n]*/);
         if (!match) {
@@ -398,35 +462,5 @@ export class WikiEditorComponent implements AfterViewInit, OnDestroy {
             type: 'text'
         }));
         return { from: match.from + 2, options, validFor: /^[^[\]\n]*$/ };
-    }
-
-    private completeIssues(context: CompletionContext): CompletionResult | null {
-        const match = context.matchBefore(/(^|[\s(])#\d*/);
-        if (!match) {
-            return null;
-        }
-        const idProject = this.linkScope.idProject();
-        if (idProject === null) {
-            return null;
-        }
-        this.issueStore.ensure(idProject);
-        const query = match.text.slice(match.text.indexOf('#') + 1);
-        const options = IssueLinkConverter.toPickerOptions(
-            this.issueStore.list(idProject) ?? [],
-            query
-        );
-        if (options.length === 0) {
-            return null;
-        }
-        const from = match.from + match.text.indexOf('#') + 1;
-        return {
-            from,
-            options: options.map(issue => ({
-                label: String(issue.idIssuePublic),
-                detail: issue.title,
-                type: 'variable' as const
-            })),
-            validFor: /^\d*$/
-        };
     }
 }

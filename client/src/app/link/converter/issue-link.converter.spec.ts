@@ -2,61 +2,48 @@ import { describe, expect, it } from 'vitest';
 import { IssueLinkConverter } from './issue-link.converter';
 
 describe('IssueLinkConverter', () => {
-    it('turns a task reference into an issue link with the project route', () => {
-        expect(IssueLinkConverter.toMarkdown('fixed in #11 (and #12)', 7)).toBe(
-            'fixed in [#11](/project/7/issue/11) (and [#12](/project/7/issue/12))'
+    it('builds a markdown link that shows only the task number and carries its project', () => {
+        expect(IssueLinkConverter.toLinkMarkdown({ idProject: 7, idIssuePublic: 12 })).toBe(
+            '[#12](/project/7/issue/12)'
         );
     });
 
-    it('requires a boundary before the hash so headings stay plain', () => {
-        expect(IssueLinkConverter.toMarkdown('# Title\nsee #11', 7)).toBe(
-            '# Title\nsee [#11](/project/7/issue/11)'
-        );
-    });
-
-    it('leaves code blocks and inline code untouched', () => {
-        const body = '`#5` and\n```\n#5 code\n```\nsee #6';
-        expect(IssueLinkConverter.toMarkdown(body, 7)).toBe(
-            '`#5` and\n```\n#5 code\n```\nsee [#6](/project/7/issue/6)'
-        );
-    });
-
-    it('does not convert numbers inside existing markdown links and anchors', () => {
-        expect(IssueLinkConverter.toMarkdown('[year](#2026) and [x](/issue/8)', 7)).toBe(
-            '[year](#2026) and [x](/issue/8)'
-        );
-    });
-
-    it('builds a standalone issue link carrying the task project', () => {
-        expect(
-            IssueLinkConverter.toLinkMarkdown({ idIssuePublic: 12, idProject: 7, title: 'Fix' })
-        ).toBe('[#12](/project/7/issue/12)');
-    });
-
-    it('filters picker options by the typed number and caps the list', () => {
-        const options = [1, 12, 123, 1234, 2, 21].map(idIssuePublic => ({
-            idIssuePublic,
+    it('reads the task reference back from a link target', () => {
+        expect(IssueLinkConverter.toRef('/project/7/issue/12')).toEqual({
             idProject: 7,
-            title: `Task ${idIssuePublic}`
-        }));
-        expect(IssueLinkConverter.toPickerOptions(options, '12')).toEqual([
-            { idIssuePublic: 12, idProject: 7, title: 'Task 12' },
-            { idIssuePublic: 123, idProject: 7, title: 'Task 123' },
-            { idIssuePublic: 1234, idProject: 7, title: 'Task 1234' }
-        ]);
+            idIssuePublic: 12
+        });
+    });
+
+    it('does not treat other app routes or external links as task links', () => {
+        expect(IssueLinkConverter.toRef('/project/7/issue/12/edit')).toBeNull();
+        expect(IssueLinkConverter.toRef('/project/7/wiki/12')).toBeNull();
+        expect(IssueLinkConverter.toRef('https://example.com/project/7/issue/12')).toBeNull();
+    });
+
+    it('splits text into plain parts and task links', () => {
         expect(
-            IssueLinkConverter.toPickerOptions(options, '').map(option => option.idIssuePublic)
-        ).toEqual([1, 12, 123, 1234, 2, 21]);
-        expect(IssueLinkConverter.toPickerOptions(options, '9')).toEqual([]);
-        expect(
-            IssueLinkConverter.toPickerOptions(
-                Array.from({ length: 12 }, (_, index) => ({
-                    idIssuePublic: index + 1,
-                    idProject: 7,
-                    title: `Task ${index + 1}`
-                })),
-                ''
+            IssueLinkConverter.toParts(
+                'see [#12](/project/7/issue/12) and [#3](/project/9/issue/3)'
             )
-        ).toHaveLength(8);
+        ).toEqual([
+            { type: 'text', text: 'see ' },
+            { type: 'issue', idProject: 7, idIssuePublic: 12 },
+            { type: 'text', text: ' and ' },
+            { type: 'issue', idProject: 9, idIssuePublic: 3 }
+        ]);
+    });
+
+    it('keeps a bare task number and a relabeled link as plain text', () => {
+        expect(
+            IssueLinkConverter.toParts(
+                '#12 and [the bug](/project/7/issue/12) and [#5](/project/7/issue/6)'
+            )
+        ).toEqual([
+            {
+                type: 'text',
+                text: '#12 and [the bug](/project/7/issue/12) and [#5](/project/7/issue/6)'
+            }
+        ]);
     });
 });

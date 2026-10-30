@@ -31,9 +31,9 @@ import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
 import { Mention } from 'src/app/shared/mention/mention';
-import { IssueLinkOption } from 'src/app/link/entity/issue-link-option.entity';
-import { IssueLinkStore } from 'src/app/link/store/issue-link.store';
 import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
+import { IssueLinkOption } from 'src/app/link/model/issue-link.model';
+import { IssueLinkPicker } from 'src/app/link/service/issue-link-picker.service';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
@@ -59,7 +59,8 @@ interface PickerPosition {
             provide: NG_VALUE_ACCESSOR,
             useExisting: forwardRef(() => MessageEditorComponent),
             multi: true
-        }
+        },
+        IssueLinkPicker
     ],
     standalone: false
 })
@@ -152,24 +153,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         return WikiTreeConverter.toLinkCandidates(tree, query.query, 8);
     });
 
-    private readonly issueStore = inject(IssueLinkStore);
-    protected readonly issueQuery = signal<{ start: number; query: string } | null>(null);
-    protected readonly isIssuesLoading = computed(() => {
-        const idProject = this.linkScope?.idProject() ?? null;
-        return idProject === null
-            ? this.issueStore.listAll() === null
-            : this.issueStore.list(idProject) === null;
-    });
-    protected readonly issueCandidates = computed<IssueLinkOption[]>(() => {
-        const query = this.issueQuery();
-        const idProject = this.linkScope?.idProject() ?? null;
-        const options =
-            idProject === null ? this.issueStore.listAll() : this.issueStore.list(idProject);
-        if (!query || !options) {
-            return [];
-        }
-        return IssueLinkConverter.toPickerOptions(options, query.query);
-    });
+    protected readonly issuePicker = inject(IssueLinkPicker);
 
     // Platform-aware shortcut hint for the send button tooltip.
     protected readonly isMac = computed(() =>
@@ -227,7 +211,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     protected onEditorMousedown(evt: MouseEvent): void {
         const root = this.editorRef().nativeElement;
         const chip = (evt.target as HTMLElement | null)?.closest<HTMLElement>(
-            '.attachment-chip, .mention-chip'
+            '.attachment-chip, .mention-chip, .issue-link-chip'
         );
         if (!chip || !root.contains(chip)) {
             return;
@@ -291,34 +275,23 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return;
         }
 
-        const issueCandidates = this.issueCandidates();
-        if (this.issueQuery() && issueCandidates.length > 0) {
-            if (evt.key === 'ArrowDown') {
-                evt.preventDefault();
-                this.activeIndex.update(i => Math.min(i + 1, issueCandidates.length - 1));
-                return;
-            }
-            if (evt.key === 'ArrowUp') {
-                evt.preventDefault();
-                this.activeIndex.update(i => Math.max(i - 1, 0));
-                return;
-            }
-            if (evt.key === 'Enter' || evt.key === 'Tab') {
-                evt.preventDefault();
-                this.selectIssue(issueCandidates[this.activeIndex()]);
-                return;
-            }
-        }
-        if (this.issueQuery() && evt.key === 'Escape') {
+        const issueKey = this.issuePicker.onKey(evt.key);
+        if (issueKey.isHandled) {
             evt.preventDefault();
-            this.issueQuery.set(null);
+            if (issueKey.picked) {
+                this.selectIssue(issueKey.picked);
+            }
             return;
         }
 
         const isDelete = evt.key === 'Backspace' || evt.key === 'Delete';
         if (isDelete && !evt.ctrlKey && !evt.metaKey && !evt.altKey) {
             const root = this.editorRef().nativeElement;
-            if (EditorChip.deleteBesideChip(root, evt.key === 'Backspace')) {
+            const isBackward = evt.key === 'Backspace';
+            if (
+                EditorChip.deleteChip(root, isBackward) ||
+                EditorChip.deleteBesideChip(root, isBackward)
+            ) {
                 evt.preventDefault();
                 this.syncFromDom();
                 return;
@@ -369,22 +342,18 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     protected selectIssue(issue: IssueLinkOption): void {
-        const query = this.issueQuery();
+        const query = this.issuePicker.query();
         if (!query) {
             return;
         }
         const root = this.editorRef().nativeElement;
         const { start: caret } = EditorSelection.getLinearSelection(root);
         EditorSelection.setLinearSelection(root, query.start, caret);
-        const idProject = this.linkScope?.idProject() ?? null;
-        const insertion =
-            idProject === null
-                ? `${IssueLinkConverter.toLinkMarkdown(issue)} `
-                : `#${issue.idIssuePublic} `;
-        root.ownerDocument.execCommand('insertText', false, insertion);
-        this.issueQuery.set(null);
-        this.onInput();
+        EditorChip.insertIssueLinkChipAtCaret(root, issue, `${issue.projectName} · ${issue.title}`);
+        this.syncFromDom();
+        this.issuePicker.close();
     }
+
     private detectWikiQuery(body: string): void {
         const idProject = this.linkScope?.idProject() ?? null;
         if (idProject === null) {
@@ -406,30 +375,12 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     }
 
     private detectIssueQuery(body: string): void {
-        const scope = this.linkScope;
-        if (!scope) {
-            this.issueQuery.set(null);
-            return;
-        }
         const root = this.editorRef().nativeElement;
         const { start: caret } = EditorSelection.getLinearSelection(root);
-        const match = /(^|[\s(])#(\d*)$/.exec(body.slice(0, caret));
-        if (!match) {
-            this.issueQuery.set(null);
-            return;
+        const query = this.issuePicker.detect(body.slice(0, caret));
+        if (query) {
+            this.placePicker(query.start);
         }
-        if (!this.issueQuery()) {
-            const idProject = scope.idProject();
-            if (idProject === null) {
-                this.issueStore.ensureAll();
-            } else {
-                this.issueStore.ensure(idProject);
-            }
-            this.activeIndex.set(0);
-        }
-        const start = caret - match[2].length - 1;
-        this.issueQuery.set({ start, query: match[2] });
-        this.placePicker(start);
     }
 
     private placePicker(offset: number): void {
@@ -740,6 +691,16 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         for (const part of AttachmentLink.parse(text)) {
             if (part.type === 'attachment') {
                 root.appendChild(EditorChip.buildAttachmentChip(part.markdown, part.name));
+            } else {
+                this.renderIssueLinks(root, part.text);
+            }
+        }
+    }
+
+    private renderIssueLinks(root: HTMLElement, text: string): void {
+        for (const part of IssueLinkConverter.toParts(text)) {
+            if (part.type === 'issue') {
+                root.appendChild(EditorChip.buildIssueLinkChip(part));
             } else if (part.text.length) {
                 root.appendChild(document.createTextNode(part.text));
             }

@@ -7,10 +7,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { UploadedAttachmentLink } from 'src/app/shared/attachment/entity/uploaded-attachment-link.entity';
 import { AttachmentUploader } from 'src/app/shared/attachment/service/attachment-uploader.service';
-import { IssueApi } from 'src/app/issue/api/issue.api.service';
-import { LinkScope } from 'src/app/link/service/link-scope.service';
+import { IssueLinkApi } from 'src/app/link/api/issue-link.api.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
-import { TablerIconStub, UiButtonStub, UiTooltipStub } from 'src/testing/stubs';
+import { TablerIconStub, UiButtonStub, UiLoaderStub, UiTooltipStub } from 'src/testing/stubs';
+import { IssueLinkPickerComponent } from 'src/app/link/components/issue-link-picker/issue-link-picker.component';
 import { WikiTablePickerComponent } from '../wiki-table-picker/wiki-table-picker.component';
 import { WikiEditorComponent } from './wiki-editor.component';
 
@@ -48,19 +48,19 @@ async function render(text: string, scope: AttachmentScope | null): Promise<Rend
         return response;
     });
     await TestBed.configureTestingModule({
-        declarations: [WikiEditorComponent, WikiTablePickerComponent],
+        declarations: [WikiEditorComponent, WikiTablePickerComponent, IssueLinkPickerComponent],
         imports: [
             TranslateModule.forRoot(),
             TablerIconStub,
             UiButtonStub,
             UiTooltipStub,
+            UiLoaderStub,
             UiPopoverStub,
             UiMenuStub
         ],
         providers: [
             { provide: AttachmentUploader, useValue: { upload$: upload } },
-            { provide: IssueApi, useValue: { load$: () => new Subject() } },
-            LinkScope
+            { provide: IssueLinkApi, useValue: { load$: () => new Subject() } }
         ]
     }).compileComponents();
     const fixture = TestBed.createComponent(WikiEditorComponent);

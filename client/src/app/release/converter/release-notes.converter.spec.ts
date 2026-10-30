@@ -1,7 +1,7 @@
 import { ReleaseNotesConverter } from './release-notes.converter';
 
 describe('ReleaseNotesConverter', () => {
-    it('writes one heading per section and one bullet per task with its number', () => {
+    it('writes one heading per section and one bullet per task with a link to it', () => {
         const markdown = ReleaseNotesConverter.toMarkdown(
             [
                 {
@@ -38,15 +38,16 @@ describe('ReleaseNotesConverter', () => {
                     ]
                 }
             ],
-            'Other'
+            'Other',
+            7
         );
 
         expect(markdown).toBe(
-            '## Feature\n\n- Release notes (#104)\n- Dark mode (#105)\n\n## Other\n\n- Bump deps (#7)\n'
+            '## Feature\n\n- Release notes ([#104](/project/7/issue/104))\n- Dark mode ([#105](/project/7/issue/105))\n\n## Other\n\n- Bump deps ([#7](/project/7/issue/7))\n'
         );
     });
 
     it('is empty when there is nothing to release', () => {
-        expect(ReleaseNotesConverter.toMarkdown([], 'Other')).toBe('');
+        expect(ReleaseNotesConverter.toMarkdown([], 'Other', 7)).toBe('');
     });
 });
