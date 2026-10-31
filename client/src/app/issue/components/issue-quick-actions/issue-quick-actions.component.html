@@ -164,7 +164,7 @@
                         inline
                         class="qap-datepicker-inline-host"
                         tabindex="-1"
-                        [ngModel]="issue()?.scheduledAt"
+                        [ngModel]="$safeNavigationMigration(issue()?.scheduledAt)"
                         (ngModelChange)="onPickDate($event)"
                         (ready)="onCalendarReady()"
                     />
