@@ -1,10 +1,10 @@
-FROM golang:1.25-alpine
+FROM golang:1.27.3-alpine
 
 # build-base provides gcc, which cgo (and therefore `go test -race`) requires.
 RUN apk add --no-cache build-base
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 
-# v2.12.2 is the last golangci-lint whose go.mod requires Go 1.25; v2.13+ needs
-# Go 1.26 and will not build on this image. Keep in sync with ci.yml.
-RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+# v2.15.0 is the current stable release; it requires Go 1.26+, so it builds on
+# this image (Go 1.27.3). Keep in sync with ci.yml.
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0

@@ -5,7 +5,7 @@ and an MCP server for LLM agents.
 
 ## Stack
 
-Go 1.25 · Gin (HTTP) · Gorilla WebSocket · pgx + GORM (PostgreSQL) ·
+Go 1.27 · Gin (HTTP) · Gorilla WebSocket · pgx + GORM (PostgreSQL) ·
 Goose (migrations) · Redis · Viper (config).
 
 ## Architecture
