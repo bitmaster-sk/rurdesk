@@ -5,7 +5,7 @@
 ################################################################
 # Stage 1 — build the Angular production bundle
 ################################################################
-FROM node:24.13-bookworm-slim AS client-build
+FROM node:24.22.2-bookworm-slim AS client-build
 
 WORKDIR /client
 

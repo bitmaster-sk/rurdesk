@@ -734,7 +734,10 @@
             . Selected value: date
             <code>{{ dateValue | date: 'medium' }}</code>
             , range
-            <code>{{ rangeValue?.[0] | date }} – {{ rangeValue?.[1] | date }}</code>
+            <code>
+                {{ $safeNavigationMigration(rangeValue?.[0]) | date }} – {{
+                $safeNavigationMigration(rangeValue?.[1]) | date }}
+            </code>
             .
         </p>
     </section>

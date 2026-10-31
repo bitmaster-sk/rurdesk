@@ -97,7 +97,7 @@ Pin a version tag (e.g. `:1.0.0`) instead of `latest` for deliberate upgrades.
 | Path                   | What                                                       | Setup docs                               |
 | ---------------------- | ---------------------------------------------------------- | ---------------------------------------- |
 | [`api/`](api/)         | Go backend, REST + WebSocket + MCP server                  | [`api/README.md`](api/README.md)         |
-| [`client/`](client/)   | Angular 21 frontend                                        | [`client/README.md`](client/README.md)   |
+| [`client/`](client/)   | Angular 22 frontend                                        | [`client/README.md`](client/README.md)   |
 | [`gateway/`](gateway/) | Stateless agent runner (goose + claude-code adapters)      | [`gateway/README.md`](gateway/README.md) |
 
 ## Documentation site

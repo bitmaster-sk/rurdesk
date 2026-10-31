@@ -83,7 +83,7 @@
             [tracker]="running"
             [idIssuePublic]="issue()!.idIssuePublic"
             [issueTitle]="issue()!.title"
-            [projectName]="project()?.name"
+            [projectName]="$safeNavigationMigration(project()?.name)"
             (confirmed)="onSwitchTracker()"
         ></app-tracker-switch-dialog>
     }
