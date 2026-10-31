@@ -174,12 +174,12 @@ func TestRenderPrompt_VocabSubstitution(t *testing.T) {
 			if err != nil {
 				t.Fatalf("RenderPrompt error: %v", err)
 			}
-			for _, want := range []string{"text_editor", "shell", "tracker__*"} {
+			for _, want := range []string{"`shell`", "`tree`", "`write`", "`edit`", "tracker__*"} {
 				if !strings.Contains(out, want) {
 					t.Errorf("goose %q prompt missing %q:\n%s", stage, want, out)
 				}
 			}
-			for _, bad := range []string{"`Bash`", "`Write`", "mcp__tracker__*", "run_shell_command", "mcp_tracker_*"} {
+			for _, bad := range []string{"text_editor", "`Bash`", "`Write`", "mcp__tracker__*", "run_shell_command", "mcp_tracker_*"} {
 				if strings.Contains(out, bad) {
 					t.Errorf("goose %q prompt leaks non-goose token %q:\n%s", stage, bad, out)
 				}

@@ -81,7 +81,7 @@ Pass ` + "`id_task={{.IdTask}}`" + ` to complete_stage. Once it returns, this st
 // ALLOWED / FORBIDDEN lists. Tool names belong to the harness, not the LLM —
 // goose driving Claude/Google/Ollama all call goose's own tools — so each
 // adapter selects its own vocab. Values carry their own backticks/qualifiers
-// so a token can read e.g. "`text_editor` (view)".
+// so a token can read e.g. "`shell` (`rg --files`)".
 type ToolVocab struct {
 	Grep      string // search file contents
 	ReadFile  string // read one file
@@ -107,18 +107,17 @@ var ToolVocabClaudeCode = ToolVocab{
 	Tracker:   "`mcp__tracker__*`",
 }
 
-// ToolVocabGoose is Block Goose's vocabulary. Goose collapses read+write onto
-// two multi-purpose tools — `text_editor` (view/write/str_replace) and
-// `shell` — so ALLOWED/FORBIDDEN is expressed with a mode qualifier instead
-// of distinct tool names. Tracker tools are namespaced `tracker__*` by the
-// streamable_http extension.
+// ToolVocabGoose is Block Goose's vocabulary. Goose's developer extension has
+// `shell`, `tree`, `write` and `edit` but no read tool, so reading goes
+// through `shell` and ALLOWED/FORBIDDEN carries a mode qualifier for it.
+// Tracker tools are namespaced `tracker__*` by the streamable_http extension.
 var ToolVocabGoose = ToolVocab{
 	Grep:      "`shell` (read-only `rg`/`grep`)",
-	ReadFile:  "`text_editor` (view)",
-	ListDir:   "`shell` (`ls`)",
+	ReadFile:  "`shell` (read-only `cat`/`sed -n`)",
+	ListDir:   "`tree`",
 	Glob:      "`shell` (`rg --files`)",
-	WriteFile: "`text_editor` (write)",
-	Replace:   "`text_editor` (str_replace)",
+	WriteFile: "`write`",
+	Replace:   "`edit`",
 	RunShell:  "`shell` (mutating commands — commits, builds, installs)",
 	Tracker:   "`tracker__*`",
 }

@@ -21,7 +21,7 @@ implement end-to-end). The in-API AI features (quality, kickstart, split) do
 
 ## The Goose agent
 
-The gateway drives [Goose](https://github.com/block/goose) — an open-source
+The gateway drives [Goose](https://github.com/aaif-goose/goose) — an open-source
 coding agent. It is **provider-agnostic**: each entry of the `MODELS` list
 names the provider it runs on. The same gateway image serves all four connection
 options below, and one gateway can offer models from several of them at once;
@@ -178,6 +178,9 @@ needs no repository.
   to the tracker itself: the live thinking stream and error details. Text the
   agent posts through its own MCP tools does not pass through the gateway and is
   not masked.
+- **Long commands.** One shell command of the agent may run for up to 30
+  minutes by default, enough for a full test suite. Goose stops it after that;
+  change the limit with `GOOSE_DEFAULT_EXTENSION_TIMEOUT`.
 
 The token needs to both open pull requests and push branches. See
 [token scopes](../using-the-tracker/git-integration.md#token-scopes).
@@ -221,6 +224,8 @@ If the certificate comes from an internal CA, point the tracker at it with
 | --------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `MODEL_DEFAULT`             | first of `MODELS` | The model a stage runs when the tracker names none. Must be listed in `MODELS`.                                                                                                                |
 | `MAX_TURNS_LIMIT`           | _no limit_       | Highest turn limit a stage may run with. The gateway reports it to the tracker, which caps every limit it sends at this value; a stage that still asks for more fails with `max_turns_over_limit` and the agent never starts. The limits themselves are set in the tracker, see [Turn limits](./agents.md#turn-limits). |
+| `GOOSE_DEFAULT_EXTENSION_TIMEOUT` | `1800`            | Seconds one shell command of the agent may run before Goose stops it. |
+| `GOOSE_STOP_HOOK_BLOCK_CAP`       | `3`               | How many times an agent that tries to stop without submitting its result is sent back to submit it. Each reminder uses a turn. |
 | `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                              |
 | `MAX_OUTPUT_LINE_MB`        | `4`              | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                   |
 | `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                          |

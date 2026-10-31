@@ -165,6 +165,7 @@
         "ERROR": {
             "PROVIDER_CREDIT_EXHAUSTED": "The model provider is out of credit or quota. Top up the provider account, then press Continue to resume.",
             "PROVIDER_RATE_LIMITED": "The model provider rate-limited the request. Wait a moment (or upgrade for higher limits), then press Continue to resume.",
+            "PROVIDER_AUTH_FAILED": "The model provider rejected the API key. Fix the key in the gateway configuration, then press Continue.",
             "PROVIDER_ERROR": "The model provider returned an error. Check the details below, then press Continue or Restart.",
             "AGENT_ERROR": "The agent failed during this stage. Press Continue to retry or Restart to begin again.",
             "AGENT_REPORTED_ERROR": "The agent reported an error it could not recover from. Press Continue to retry or Restart.",

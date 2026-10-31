@@ -1,0 +1,6 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261030_2 · /
+     L L     goose is ready
+{"type":"message","message":{"id":"msg_87b2709f-ea74-454c-a73b-cbcc6db22562","role":"assistant","created":1793344990,"content":[{"type":"systemNotification","notificationType":"creditsExhausted","msg":"Please check your account with your provider to add more credits, then resend your message to continue.","data":{"top_up_url":null}}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"complete","total_tokens":0,"input_tokens":0,"output_tokens":0,"cache_read_input_tokens":0,"cache_write_input_tokens":0}
