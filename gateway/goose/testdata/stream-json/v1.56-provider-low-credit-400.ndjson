@@ -1,0 +1,6 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261030_4 · /
+     L L     goose is ready
+{"type":"message","message":{"id":"msg_d69b2108-ff6e-4157-a9c5-c55690fc3c6a","role":"assistant","created":1793345005,"content":[{"type":"error","kind":"other","message":"Ran into this error: Request failed: Bad request (400): Your credit balance is too low to access the API.\n\nPlease retry if you think this is a transient or recoverable error."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"error","error":"Ran into this error: Request failed: Bad request (400): Your credit balance is too low to access the API.\n\nPlease retry if you think this is a transient or recoverable error."}

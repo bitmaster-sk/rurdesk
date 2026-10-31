@@ -76,7 +76,20 @@ Goose supports more providers natively; only these are presented/tested today.
 There is **no creds volume and no interactive auth** — the key is the billing
 path, and a bad/missing key fails the run rather than degrading.
 
-Pinned CLI version: **v1.38.0** (see [`Dockerfile`](goose/Dockerfile); `ARG GOOSE_VERSION`).
+Pinned CLI version: **v1.56.0** (see [`Dockerfile`](goose/Dockerfile); `ARG GOOSE_VERSION`
+plus one `ARG GOOSE_SHA256_*` per architecture). The image downloads the release
+tarball directly and checks its sha256; the upstream install script is not used
+because it falls back to the latest release when the pinned download fails.
+
+The adapter also sets these goose variables for every run (`childEnv`). The
+two with a default can be overridden in the gateway's environment:
+
+| Variable                          | Value        | Why                                                                                                              |
+| --------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `GOOSE_DEFAULT_EXTENSION_TIMEOUT` | default 1800 | goose kills a `shell` command after this many seconds (goose's own default 300 is too short for test suites)     |
+| `GOOSE_DISABLE_SESSION_NAMING`    | true         | skips an extra model call goose makes to title the session                                                       |
+| `GOOSE_STOP_HOOK_BLOCK_CAP`       | default 3    | how many times the Stop hook may send the agent back before goose ends the run anyway (goose's own default is 8) |
+| `RURDESK_STAGE_MARKER`            | path         | per-task file the Stop hook uses to see that `complete_stage` was accepted                                       |
 
 ### How the tracker MCP is wired
 
@@ -97,19 +110,37 @@ claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
 > (`Msg("goose stream")`): the agent's _thinking_ at `debug`, the visible _answer_
 > and _tool calls_ at `info` — so the operator can watch a run instead of seeing
 > only a final blob. It also accumulates the token total (from the terminal
-> `complete` event), the tool-call count, and a provider-error classification
-> (goose surfaces provider failures as exit-0 assistant text — block/goose#4612).
-> Run correctness still rides on the **exit code** + the agent's own MCP
-> `complete_stage`, not on parsing stdout. Set `LOG_LEVEL=debug` to see thinking.
+> `complete` event), the tool-call count, and the provider error. Goose reports
+> a provider failure as an `error` content block with a `kind`
+> (`authentication`, `creditsExhausted`, `other`, …) followed by a top-level
+> `{"type":"error"}` event and exit 1; exhausted credit (HTTP 402) comes as a
+> `systemNotification` instead, with exit 0. The adapter maps these to
+> `provider_auth_failed`, `provider_credit_exhausted`, `provider_rate_limited`
+> or `provider_error`, matching the text for `kind: other`. Run correctness
+> still rides on the **exit code** + the agent's own MCP `complete_stage`, not
+> on parsing stdout. Set `LOG_LEVEL=debug` to see thinking.
 >
 > **Missing-submission guard:** submission rides entirely on the agent calling
 > `complete_stage` — the gateway never posts the output itself. A weaker model
 > sometimes writes its result as a plain final message and exits 0 without
-> submitting, which would hang the run in that stage forever. The aggregator
-> tracks whether `complete_stage` was called; if goose exits 0 (no provider
-> error) but never called it, the adapter fails the stage with
-> `error_reason=stage_not_submitted` so the tracker fails the run and the user
-> gets Continue/Restart instead of a silent hang.
+> submitting, which would hang the run in that stage forever. Two layers catch it:
+>
+> 1. The image ships a goose plugin, [`rurdesk-guard`](goose/plugins/rurdesk-guard)
+>    in `/root/.agents/plugins`. Its `PostToolUse` hook creates
+>    `RURDESK_STAGE_MARKER` once the tracker accepted `complete_stage`, and its
+>    `Stop` hook blocks the end of the turn while the marker is missing, telling
+>    the agent to call `complete_stage`. A call the tracker rejected (`isError`)
+>    does not count. After `GOOSE_STOP_HOOK_BLOCK_CAP` blocks goose ends the run.
+> 2. The aggregator counts `complete_stage` only when its tool response came
+>    back without an error; if goose exits 0 (no provider error) without one, the
+>    adapter fails the stage with `error_reason=stage_not_submitted` so the
+>    tracker fails the run and the user gets Continue/Restart instead of a silent hang.
+>
+> **Repository plugins are ignored:** goose enables every plugin it finds in
+> `<worktree>/.agents/plugins`, and their hooks run shell commands without the
+> model deciding anything. `writeGooseConfig` lists each of them as
+> `enabled: false` under `plugins:` in `config.yaml`, which a repository cannot
+> override with its own `.config/goose/settings.json`.
 
 ### Required environment variables
 
@@ -146,6 +177,8 @@ contract.
 | `MAX_TURNS_LIMIT`                      | no limit         | Ceiling on the `maxTurns` the tracker sends. Reported in `ReportRecovered` so the tracker caps at it; a higher value still fails with `max_turns_over_limit`. Without `maxTurns` the gateway uses 250 / 500 (implementation), capped by this limit. |
 | `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the `anthropic` / `google` provider.                                                                             |
 | `OLLAMA_HOST`                          | unset            | For the `ollama` provider (keyless).                                                                                                 |
+| `GOOSE_DEFAULT_EXTENSION_TIMEOUT`      | `1800`           | Seconds one goose `shell` command may run before goose kills it. |
+| `GOOSE_STOP_HOOK_BLOCK_CAP`            | `3`              | How many times the `rurdesk-guard` Stop hook may send the agent back to call `complete_stage`. |
 
 ### docker-compose snippet
 

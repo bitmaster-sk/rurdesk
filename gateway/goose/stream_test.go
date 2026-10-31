@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"context"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
+	"github.com/bitmaster-sk/rurdesk/gateway/goose/entity"
 )
 
 // A real goose v1.38.0 stream-json capture (157 token events for a two-sentence
@@ -41,11 +44,11 @@ func TestStreamAggregator_RealCapture(t *testing.T) {
 	if len(*got) == 0 {
 		t.Fatal("no events emitted from real capture")
 	}
-	if res.tokens != 305 {
-		t.Errorf("tokens = %d, want 305 (from complete event)", res.tokens)
+	if res.Tokens != 305 {
+		t.Errorf("tokens = %d, want 305 (from complete event)", res.Tokens)
 	}
-	if res.provErr != nil {
-		t.Errorf("provErr = %v, want nil on a clean answer", res.provErr)
+	if res.ProviderError != nil {
+		t.Errorf("providerError = %v, want nil on a clean answer", res.ProviderError)
 	}
 	// The run went thinking→text; both phases must appear in the grouped output.
 	var sawThinking, sawText bool
@@ -60,9 +63,9 @@ func TestStreamAggregator_RealCapture(t *testing.T) {
 
 // collectEvents returns an emit func plus a pointer to the slice it appends to,
 // so a test can drive the aggregator and then assert on the grouped output.
-func collectEvents() (func(streamEvent), *[]streamEvent) {
-	var got []streamEvent
-	return func(ev streamEvent) { got = append(got, ev) }, &got
+func collectEvents() (func(entity.StreamEvent), *[]entity.StreamEvent) {
+	var got []entity.StreamEvent
+	return func(ev entity.StreamEvent) { got = append(got, ev) }, &got
 }
 
 // thinkingLine/textLine build one stream-json "message" event line carrying a
@@ -107,8 +110,8 @@ func TestStreamAggregator_CoalescesThinkingThenText(t *testing.T) {
 	if (*got)[1].Kind != "text" || (*got)[1].Text != "An MD5 hash" {
 		t.Errorf("event[1] = %+v, want text 'An MD5 hash'", (*got)[1])
 	}
-	if res.provErr != nil {
-		t.Errorf("provErr = %v, want nil on clean run", res.provErr)
+	if res.ProviderError != nil {
+		t.Errorf("providerError = %v, want nil on clean run", res.ProviderError)
 	}
 }
 
@@ -177,10 +180,10 @@ func TestStreamAggregator_CountsAndEmitsToolRequests(t *testing.T) {
 	)
 	res := a.finish()
 
-	if res.toolCalls != 1 {
-		t.Errorf("toolCalls = %d, want 1", res.toolCalls)
+	if res.ToolCalls != 1 {
+		t.Errorf("toolCalls = %d, want 1", res.ToolCalls)
 	}
-	var tool *streamEvent
+	var tool *entity.StreamEvent
 	for i := range *got {
 		if (*got)[i].Kind == "tool" {
 			tool = &(*got)[i]
@@ -197,26 +200,92 @@ func toolLine(name string) string {
 	return `{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":` + jsonStr(name) + `}}}]}}`
 }
 
-// The aggregator must record whether the agent called `complete_stage` — the
-// only real signal that the stage was submitted. The tracker namespaces it as
-// `tracker__complete_stage`, so a suffix match is required.
+// toolResponseLine builds the toolResponse block goose emits once the tool
+// with the given call id returned.
+func toolResponseLine(callId string, isError bool) string {
+	return `{"type":"message","message":{"role":"user","content":[{"type":"toolResponse","id":` + jsonStr(callId) + `,"toolResult":{"status":"success","value":{"content":[],"isError":` + strconv.FormatBool(isError) + `}}}]}}`
+}
+
+// The aggregator must record whether the tracker accepted `complete_stage` —
+// the only real signal that the stage was submitted. The tracker namespaces it
+// as `tracker__complete_stage`, so a suffix match is required, and a call the
+// tracker rejected does not count.
 func TestStreamAggregator_TracksCompleteStageCall(t *testing.T) {
-	t.Run("submitted", func(t *testing.T) {
-		emit, _ := collectEvents()
-		a := newStreamAggregator(1, emit)
-		feed(a, textLine("here is the design"), toolLine("tracker__complete_stage"))
-		if res := a.finish(); !res.completeStageCalled {
-			t.Error("completeStageCalled = false, want true when tracker__complete_stage was invoked")
-		}
-	})
-	t.Run("not submitted", func(t *testing.T) {
-		emit, _ := collectEvents()
-		a := newStreamAggregator(1, emit)
-		feed(a, textLine("here is the design"), toolLine("text_editor"), toolLine("shell"))
-		if res := a.finish(); res.completeStageCalled {
-			t.Error("completeStageCalled = true, want false when complete_stage was never called")
-		}
-	})
+	tests := []struct {
+		name  string
+		lines []string
+		want  bool
+	}{
+		{"accepted", []string{textLine("here is the design"), toolLine("tracker__complete_stage"), toolResponseLine("c1", false)}, true},
+		{"rejected by the tracker", []string{toolLine("tracker__complete_stage"), toolResponseLine("c1", true)}, false},
+		{"no response yet", []string{toolLine("tracker__complete_stage")}, false},
+		{"response to another tool", []string{toolLine("tracker__complete_stage"), toolResponseLine("other", false)}, false},
+		{"never called", []string{textLine("here is the design"), toolLine("edit"), toolLine("shell")}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			emit, _ := collectEvents()
+			a := newStreamAggregator(1, emit)
+			feed(a, tt.lines...)
+			if got := a.finish().CompleteStageCalled; got != tt.want {
+				t.Errorf("completeStageCalled = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// The tracker must learn about a submission as soon as the call is made, so its
+// heartbeat does not stop the agent while the tool result is still on its way.
+func TestStreamAggregator_ReportsCompleteStageOnRequest(t *testing.T) {
+	emit, _ := collectEvents()
+	a := newStreamAggregator(1, emit)
+	isReported := false
+	a.onCompleteStage = func() { isReported = true }
+
+	feed(a, toolLine("tracker__complete_stage"))
+
+	if !isReported {
+		t.Error("complete_stage request was not reported")
+	}
+}
+
+func feedFixture(t *testing.T, a *streamAggregator, name string) {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "stream-json", name))
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		a.line([]byte(line))
+	}
+}
+
+// Real goose v1.56.0 captures: the stage counts as submitted only when the
+// tracker accepted complete_stage, and the Stop hook notices in between are
+// ignored.
+func TestStreamAggregator_CompleteStageCaptures(t *testing.T) {
+	tests := []struct {
+		fixture string
+		want    bool
+	}{
+		{"v1.56-complete-stage-accepted.ndjson", true},
+		{"v1.56-complete-stage-rejected.ndjson", false},
+		{"v1.56-complete-stage-never-called.ndjson", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.fixture, func(t *testing.T) {
+			emit, _ := collectEvents()
+			a := newStreamAggregator(1, emit)
+			feedFixture(t, a, tt.fixture)
+			res := a.finish()
+			if res.CompleteStageCalled != tt.want {
+				t.Errorf("completeStageCalled = %v, want %v", res.CompleteStageCalled, tt.want)
+			}
+			if res.ProviderError != nil {
+				t.Errorf("providerError = %v, want nil", res.ProviderError)
+			}
+		})
+	}
 }
 
 // Token totals come from the terminal "complete" event, not from a messages[]
@@ -231,31 +300,64 @@ func TestStreamAggregator_ExtractsTokensFromComplete(t *testing.T) {
 	)
 	res := a.finish()
 
-	if res.tokens != 305 {
-		t.Errorf("tokens = %d, want 305", res.tokens)
+	if res.Tokens != 305 {
+		t.Errorf("tokens = %d, want 305", res.Tokens)
 	}
 }
 
-// Provider failures surface (exit 0) as assistant text; detection must work off
-// the streamed text fragments, classifying the credit-exhausted case.
-func TestStreamAggregator_DetectsProviderErrorFromStream(t *testing.T) {
-	emit, _ := collectEvents()
-	a := newStreamAggregator(1, emit)
-
-	// The error arrives fragmented across several text events, as it would live.
-	for _, frag := range []string{
-		"Ran into this error: ", "Request failed: Bad request (400): ",
-		"Your credit balance is too low", " to access the API.",
-	} {
-		a.line([]byte(textLine(frag)))
+// Real goose v1.56.0 captures of provider failures: each must map to the code
+// the UI translates, and a run that failed must keep goose's own error text.
+func TestStreamAggregator_ClassifiesProviderErrors(t *testing.T) {
+	tests := []struct {
+		fixture             string
+		wantCode            string
+		wantDetail          string
+		wantRunErrorMessage bool
+	}{
+		{"v1.56-provider-auth-401.ndjson", common.ErrCodeProviderAuthFailed, "Authentication failed", true},
+		{"v1.56-provider-credits-402.ndjson", common.ErrCodeProviderCreditExhausted, "add more credits", false},
+		{"v1.56-provider-rate-limit-429.ndjson", common.ErrCodeProviderRateLimited, "Rate limit exceeded", true},
+		{"v1.56-provider-low-credit-400.ndjson", common.ErrCodeProviderCreditExhausted, "credit balance is too low", true},
 	}
-	res := a.finish()
+	for _, tt := range tests {
+		t.Run(tt.fixture, func(t *testing.T) {
+			emit, _ := collectEvents()
+			a := newStreamAggregator(1, emit)
+			feedFixture(t, a, tt.fixture)
+			res := a.finish()
 
-	if res.provErr == nil {
-		t.Fatalf("expected a provider error, got nil")
+			if res.ProviderError == nil {
+				t.Fatal("expected a provider error, got nil")
+			}
+			if res.ProviderError.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", res.ProviderError.Code, tt.wantCode)
+			}
+			if !strings.Contains(res.ProviderError.Detail, tt.wantDetail) {
+				t.Errorf("detail = %q, want it to contain %q", res.ProviderError.Detail, tt.wantDetail)
+			}
+			if (res.RunErrorMessage != "") != tt.wantRunErrorMessage {
+				t.Errorf("runErrorMessage = %q, want present=%v", res.RunErrorMessage, tt.wantRunErrorMessage)
+			}
+		})
 	}
-	if res.provErr.Code != common.ErrCodeProviderCreditExhausted {
-		t.Errorf("code = %q, want %q", res.provErr.Code, common.ErrCodeProviderCreditExhausted)
+}
+
+func TestClassifyProviderErrorKind(t *testing.T) {
+	tests := []struct {
+		kind, message, want string
+	}{
+		{"authentication", "Authentication failed", common.ErrCodeProviderAuthFailed},
+		{"creditsExhausted", "no credit", common.ErrCodeProviderCreditExhausted},
+		{"contextLengthExceeded", "Context length exceeded", common.ErrCodeProviderError},
+		{"other", "Rate limit exceeded: slow down", common.ErrCodeProviderRateLimited},
+		{"other", "Server error (500)", common.ErrCodeProviderError},
+	}
+	for _, tt := range tests {
+		t.Run(tt.kind+"/"+tt.message, func(t *testing.T) {
+			if got := classifyProviderErrorKind(tt.kind, tt.message).Code; got != tt.want {
+				t.Errorf("code = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -279,7 +381,7 @@ func TestStreamAggregator_RelaysThinkingAndToolsOnly(t *testing.T) {
 	batcher := common.NewThinkingBatcher(sender, 42)
 	batcher.Start(context.Background())
 
-	a := newStreamAggregator(1, func(ev streamEvent) {
+	a := newStreamAggregator(1, func(ev entity.StreamEvent) {
 		logStreamEvent(ev, 1)
 		queueThinkingEvent(ev, batcher)
 	})
@@ -314,7 +416,7 @@ func TestQueueThinkingEvent_CarriesToolDetail(t *testing.T) {
 	batcher := common.NewThinkingBatcher(sender, 42)
 	batcher.Start(context.Background())
 
-	a := newStreamAggregator(1, func(ev streamEvent) { queueThinkingEvent(ev, batcher) })
+	a := newStreamAggregator(1, func(ev entity.StreamEvent) { queueThinkingEvent(ev, batcher) })
 	a.line([]byte(toolLineWithArgs("developer__shell", `{"command":"npm test"}`)))
 	a.finish()
 	batcher.Stop()

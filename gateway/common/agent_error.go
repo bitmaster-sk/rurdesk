@@ -14,6 +14,7 @@ const (
 	// ErrCodeProviderRateLimited: provider throttled the request (HTTP 429,
 	// "rate limit" / "usage limit" / "too many requests"). Transient.
 	ErrCodeProviderRateLimited = "provider_rate_limited"
+	ErrCodeProviderAuthFailed  = "provider_auth_failed"
 	// ErrCodeProviderError: some other unrecoverable provider error the agent
 	// surfaced ("Ran into this error: ...").
 	ErrCodeProviderError = "provider_error"

@@ -167,6 +167,33 @@ func TestLoadConfigGooseCredentialsFlowThrough(t *testing.T) {
 	}
 }
 
+func TestLoadConfigGooseRunLimits(t *testing.T) {
+	t.Run("defaults when unset", func(t *testing.T) {
+		setBaseEnv(t)
+
+		cfg, err := LoadConfig("goose")
+		if err != nil {
+			t.Fatalf("LoadConfig(goose) returned error: %v", err)
+		}
+		if cfg.Goose.DefaultExtensionTimeoutSeconds != 1800 || cfg.Goose.StopHookBlockCap != 3 {
+			t.Errorf("DefaultExtensionTimeoutSeconds = %d, StopHookBlockCap = %d, want 1800 and 3", cfg.Goose.DefaultExtensionTimeoutSeconds, cfg.Goose.StopHookBlockCap)
+		}
+	})
+	t.Run("env overrides", func(t *testing.T) {
+		setBaseEnv(t)
+		t.Setenv("GOOSE_DEFAULT_EXTENSION_TIMEOUT", "3600")
+		t.Setenv("GOOSE_STOP_HOOK_BLOCK_CAP", "5")
+
+		cfg, err := LoadConfig("goose")
+		if err != nil {
+			t.Fatalf("LoadConfig(goose) returned error: %v", err)
+		}
+		if cfg.Goose.DefaultExtensionTimeoutSeconds != 3600 || cfg.Goose.StopHookBlockCap != 5 {
+			t.Errorf("DefaultExtensionTimeoutSeconds = %d, StopHookBlockCap = %d, want 3600 and 5", cfg.Goose.DefaultExtensionTimeoutSeconds, cfg.Goose.StopHookBlockCap)
+		}
+	})
+}
+
 func TestIgnoredRepoEnv_ListsTheRepoVarsStillSet(t *testing.T) {
 	t.Setenv("REPO_URL", "https://github.com/org/repo.git")
 	t.Setenv("GIT_ACCESS_TOKEN", "")
