@@ -1,7 +1,7 @@
 version: "2"
 
-# Pinned to v2.12.2 on purpose: it is the last release whose go.mod requires
-# Go 1.25, so `go install` works under GOTOOLCHAIN=local. v2.13+ needs Go 1.26.
+# Pinned to v2.15.0: current stable release, requires Go 1.26+, so `go install`
+# works under GOTOOLCHAIN=local on Go 1.27. Keep in sync with ci.yml.
 linters:
   default: none
   enable:
