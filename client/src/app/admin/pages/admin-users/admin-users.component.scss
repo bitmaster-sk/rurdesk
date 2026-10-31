@@ -1,3 +1,9 @@
+/* A disabled account stays listed (history is preserved) but reads as inactive */
+.user-disabled {
+    color: var(--ui-color-text-muted);
+    opacity: 0.6;
+}
+
 /* same principle as the issue table drag handle */
 .drag-col {
     width: 2rem;

@@ -177,7 +177,7 @@ func (mc *ProjectMemberController) UpdateUserRole(c *gin.Context) {
 			return errs.ErrNotFound
 		}
 		if currentRole == model.RoleOwner && dto.Role != model.RoleOwner {
-			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
+			if txErr := mc.guardLastOwnerUser(ctx, idProject, idUser); txErr != nil {
 				return txErr
 			}
 		}
@@ -232,7 +232,7 @@ func (mc *ProjectMemberController) RemoveUser(c *gin.Context) {
 			return txErr
 		}
 		if currentRole == model.RoleOwner {
-			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
+			if txErr := mc.guardLastOwnerUser(ctx, idProject, idUser); txErr != nil {
 				return txErr
 			}
 		}
@@ -340,7 +340,7 @@ func (mc *ProjectMemberController) UpdateTeamRole(c *gin.Context) {
 			return errs.ErrNotFound
 		}
 		if currentRole == model.RoleOwner && dto.Role != model.RoleOwner {
-			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
+			if txErr := mc.guardLastOwnerTeam(ctx, idProject, idTeam); txErr != nil {
 				return txErr
 			}
 		}
@@ -395,7 +395,7 @@ func (mc *ProjectMemberController) RemoveTeam(c *gin.Context) {
 			return txErr
 		}
 		if currentRole == model.RoleOwner {
-			if txErr := mc.guardLastOwner(ctx, idProject); txErr != nil {
+			if txErr := mc.guardLastOwnerTeam(ctx, idProject, idTeam); txErr != nil {
 				return txErr
 			}
 		}
@@ -428,10 +428,41 @@ func (mc *ProjectMemberController) rejectIfAgent(ctx context.Context, idUser int
 	return nil
 }
 
-// guardLastOwner errors if removing or downgrading would leave the project without
-// an owner. Runs inside the caller's transaction; CountProjectOwnersLocked takes an
-// advisory lock so concurrent demote/remove on the same project serialize and can't
-// both pass the guard.
+// guardLastOwnerUser errors if demoting or removing idUser would leave the project
+// without an active owner. The guard only runs when the target itself is active: an
+// already-disabled owner no longer counts as an owner (GetProjectOwnerCount joins on
+// is_active), so demoting/removing them can never orphan the project. Runs inside
+// the caller's transaction; CountProjectOwnersLocked takes an advisory lock so
+// concurrent demote/remove on the same project serialize and can't both pass.
+func (mc *ProjectMemberController) guardLastOwnerUser(ctx context.Context, idProject, idUser int64) error {
+	active, err := mc.userRepo.IsActiveUser(ctx, idUser)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return nil
+	}
+	return mc.guardLastOwner(ctx, idProject)
+}
+
+// guardLastOwnerTeam is the team variant of guardLastOwnerUser: the guard only runs
+// when the team still has at least one active member — only an active member grants
+// owner access, so removing an owner team whose members are all disabled can never
+// orphan the project.
+func (mc *ProjectMemberController) guardLastOwnerTeam(ctx context.Context, idProject, idTeam int64) error {
+	activeMembers, err := mc.aclRepo.CountActiveTeamMembers(ctx, idTeam)
+	if err != nil {
+		return err
+	}
+	if activeMembers == 0 {
+		return nil
+	}
+	return mc.guardLastOwner(ctx, idProject)
+}
+
+// guardLastOwner errors if the action would leave the project without an owner.
+// Callers must only invoke it when the target (user or team) is itself active — see
+// guardLastOwnerUser / guardLastOwnerTeam.
 func (mc *ProjectMemberController) guardLastOwner(ctx context.Context, idProject int64) error {
 	count, err := mc.aclRepo.CountProjectOwnersLocked(ctx, idProject)
 	if err != nil {

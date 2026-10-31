@@ -75,19 +75,22 @@ func (r *AclRepository) GetProjectTeamRoles(ctx context.Context, idUser, idProje
 	return results, nil
 }
 
-// GetProjectOwnerCount returns the count of distinct users with owner-level
+// GetProjectOwnerCount returns the count of distinct ACTIVE users with owner-level
 // access (direct or via an owner-ranked team), so an empty team never counts
-// as an owner.
+// as an owner and a disabled user no longer counts either — a project whose only
+// owner is disabled must still be recognised as ownerless by the guard.
 func (r *AclRepository) GetProjectOwnerCount(ctx context.Context, idProject int64) (int, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var count int
 	err := db.QueryRow(ctx, `
 		SELECT COUNT(DISTINCT id_user) FROM (
-			SELECT id_user FROM projects.project_user
-			WHERE id_project = $1 AND role = 'owner'
+			SELECT pu.id_user FROM projects.project_user pu
+			INNER JOIN users.user u ON u.id_user = pu.id_user AND u.is_active = TRUE
+			WHERE pu.id_project = $1 AND pu.role = 'owner'
 			UNION ALL
 			SELECT ut.id_user FROM projects.project_team pt
 			INNER JOIN users.user_team ut ON ut.id_team = pt.id_team
+			INNER JOIN users.user u ON u.id_user = ut.id_user AND u.is_active = TRUE
 			WHERE pt.id_project = $1 AND pt.role = 'owner'
 		) owners
 	`, idProject).Scan(&count)
@@ -138,6 +141,23 @@ func (r *AclRepository) GetProjectTeamRoleById(ctx context.Context, idTeam, idPr
 		return "", false, fmt.Errorf("querying project team role: %w", err)
 	}
 	return role, true, nil
+}
+
+// CountActiveTeamMembers returns how many members of the team are active users.
+// The last-owner guard for team demote/remove must ignore disabled members: a
+// disabled member no longer grants owner access, so only active members count
+// when deciding whether removing the team would orphan the project.
+func (r *AclRepository) CountActiveTeamMembers(ctx context.Context, idTeam int64) (int, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var count int
+	err := db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM users.user_team ut
+		INNER JOIN users.user u ON u.id_user = ut.id_user AND u.is_active = TRUE
+		WHERE ut.id_team = $1`, idTeam).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting active team members: %w", err)
+	}
+	return count, nil
 }
 
 // GetTeamMemberIds returns the user IDs of all members of a team.
