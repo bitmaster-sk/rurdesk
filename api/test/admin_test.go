@@ -650,9 +650,23 @@ func (s *AdminSuite) Test_DisableAgent_CancelsNonTerminalRuns() {
 		INSERT INTO agent.run (id_issue, id_user_agent, id_project, phase, stage_plan)
 		VALUES ($1, $2, $3, 'in_progress', '{"stages":[]}'::jsonb) RETURNING id_run`,
 		idIss, agent.IdUser, idProject).Scan(&idRun))
+	// The task must carry id_user_agent: /agents/overview joins tasks onto
+	// users and scanning a NULL id_user_agent 500s every later suite that hits
+	// that endpoint, so the row is cleaned up again at the end of the test.
 	_, taskErr := s.App.Pool.Exec(ctx, `
-		INSERT INTO agent.task (id_run, stage, attempt_no, status) VALUES ($1, 'implementation', 1, 'active')`, idRun)
+		INSERT INTO agent.task (id_run, id_user_agent, stage, attempt_no, status)
+		VALUES ($1, $2, 'implementation', 1, 'active')`, idRun, agent.IdUser)
 	s.Require().Nil(taskErr)
+
+	// The fixture rows (issue, run, task, project) must not outlive this test:
+	// later suites share the DB and /agents/overview chokes on leftover tasks
+	// of unknown agents.
+	defer func() {
+		s.App.Pool.Exec(ctx, "DELETE FROM agent.task WHERE id_run = $1", idRun)
+		s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_run = $1", idRun)
+		s.App.Pool.Exec(ctx, "DELETE FROM issues.issue WHERE id_issue = $1", idIss)
+		s.App.Pool.Exec(ctx, "DELETE FROM projects.project WHERE id_project = $1", idProject)
+	}()
 
 	res := Request(s.T(), s.App, "PATCH",
 		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":false}`, s.AdminToken)
@@ -663,7 +677,7 @@ func (s *AdminSuite) Test_DisableAgent_CancelsNonTerminalRuns() {
 	s.Equal("cancelled", phase, "disabling an agent must cancel its non-terminal run")
 	var taskStatus string
 	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
-		SELECT status FROM agent.task WHERE id_run = $1`, idRun).Scan(&taskStatus))
+		SELECT status FROM agent.task WHERE id_run = $1 AND id_user_agent = $2`, idRun, agent.IdUser).Scan(&taskStatus))
 	s.Equal("cancelled", taskStatus, "the in-flight task must be cancelled too")
 	var events int
 	s.Require().Nil(s.App.Pool.QueryRow(ctx, `
