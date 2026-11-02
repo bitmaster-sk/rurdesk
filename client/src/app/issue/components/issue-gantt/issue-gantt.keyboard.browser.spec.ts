@@ -3,6 +3,7 @@ import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { createGanttFixture } from './gantt-testbed.helper';
 import { IssueGanttComponent } from './issue-gantt.component';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { ReadIssueRelationDto } from '../../model/issue-relation.model';
 
@@ -167,8 +168,12 @@ describe('IssueGanttComponent keyboard navigation (TestBed)', () => {
     // =========================================================================
 
     it('Enter navigates to the selected issue detail', () => {
+        // provideRouter([]) has no matching route, so the real navigate() promise
+        // would reject with NG04002 as an unhandled rejection; spy and assert args.
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
         comp.selectedTaskIndex.set(0);
-        expect(() => keyDown('Enter')).not.toThrow();
+        keyDown('Enter');
+        expect(navigate).toHaveBeenCalledWith(['/project', 10, 'issue', 1]);
     });
 
     it('Enter with null selection does nothing', () => {

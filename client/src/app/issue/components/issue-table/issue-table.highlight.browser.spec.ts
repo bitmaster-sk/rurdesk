@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { createTableFixture, makeIssue } from './table-testbed.helper';
 
 function makeRow(idIssuePublic: number) {
@@ -98,7 +100,11 @@ describe('IssueTableComponent highlight (TestBed)', () => {
     // =========================================================================
 
     it('navigates to the issue detail page', () => {
+        // provideRouter([]) has no matching route, so the real navigate() promise
+        // would reject with NG04002 as an unhandled rejection; spy and assert args.
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
         const issue = makeIssue({ idProject: 7, idIssuePublic: 42 });
-        expect(() => comp.onOpenHighlighted(issue)).not.toThrow();
+        comp.onOpenHighlighted(issue);
+        expect(navigate).toHaveBeenCalledWith(['/project', 7, 'issue', 42]);
     });
 });

@@ -105,7 +105,6 @@
         "type-fest": "^4.41.0",
         "typescript": "~6.0.0",
         "typescript-eslint": "^8.67.0",
-        "vitest": "^4.1.10",
-        "zone.js": "~0.15.0"
+        "vitest": "^4.1.10"
     }
 }
