@@ -1,4 +1,4 @@
-FROM golang:1.25-alpine AS gateway-builder
+FROM golang:1.27.3-alpine AS gateway-builder
 WORKDIR /build
 COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /gateway ./cmd/gateway/
