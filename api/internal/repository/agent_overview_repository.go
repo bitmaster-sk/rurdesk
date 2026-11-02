@@ -27,6 +27,7 @@ func (r *AgentOverviewRepository) Load(ctx context.Context, idProject int64) ([]
 		SELECT usr.id_user
 		FROM users.user usr
 		WHERE usr.is_agent
+		  AND usr.is_active
 		  AND (
 			usr.id_user IN (
 				SELECT pru.id_user 

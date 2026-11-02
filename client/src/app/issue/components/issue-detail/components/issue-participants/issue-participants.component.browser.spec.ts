@@ -146,3 +146,28 @@ describe('IssueParticipantsComponent — role badges', () => {
         expect(badge?.classList.contains('role-badge--agent')).toBe(true);
     });
 });
+
+describe('IssueParticipantsComponent — disabled users', () => {
+    it('marks a disabled participant', async () => {
+        const { fixture } = await setup({
+            participants: [
+                makeParticipant({ idUser: 1, name: 'Me' }),
+                makeParticipant({ idUser: 2, name: 'Gone', isActive: false })
+            ]
+        });
+        const rows = fixture.nativeElement.querySelectorAll('.participant-row');
+        expect(rows[0].querySelector('[data-testid="participant-disabled"]')).toBeNull();
+        expect(rows[1].querySelector('[data-testid="participant-disabled"]')).not.toBeNull();
+    });
+
+    it('does not offer a disabled member to add', async () => {
+        const { fixture, component } = await setup({ participants: [] });
+        fixture.componentRef.setInput('members', [
+            { idUser: 5, name: 'Active', email: '', colorAvatarBg: '#000' },
+            { idUser: 6, name: 'Gone', email: '', colorAvatarBg: '#000', isActive: false }
+        ]);
+        fixture.detectChanges();
+
+        expect(component.availableMembers().map(member => member.idUser)).toEqual([5]);
+    });
+});

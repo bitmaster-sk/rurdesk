@@ -493,7 +493,9 @@
         "AVATAR_COLOR": "Avatar color",
         "SHUFFLE_COLOR": "Random color",
         "AVATAR_INITIALS": "Avatar initials",
-        "AVATAR": "Avatar"
+        "AVATAR": "Avatar",
+        "DISABLED": "Disabled",
+        "DISABLED_CONVERSATION": "This account is disabled. You can read the history, but new messages cannot be sent."
     },
     "HOME": {
         "OVERVIEW": "Overview",
@@ -1196,7 +1198,7 @@
         "saved_view_bad_sort": "This view sorts by a column that no longer exists.",
         "last_admin": "Cannot remove the last instance admin.",
         "self_disable": "You cannot disable your own account.",
-        "user_disabled": "This account is disabled and cannot be assigned new work.",
+        "user_disabled": "This account is disabled.",
         "agent_admin": "Agents cannot be admins.",
         "user_has_agent_activity": "This user has agent history and cannot be deleted.",
         "user_has_authored_content": "This user created or edited issues and cannot be deleted.",

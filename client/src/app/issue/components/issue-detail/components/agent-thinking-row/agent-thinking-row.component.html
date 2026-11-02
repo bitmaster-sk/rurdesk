@@ -1,6 +1,7 @@
 <div class="activity-item" data-testid="agent-thinking-row">
     <div class="activity-marker">
         <app-avatar
+            [disabled]="creator()?.isActive === false"
             [name]="creator()?.name ?? ''"
             [bgColor]="creator()?.colorAvatarBg ?? ''"
             [manualInitials]="creator()?.avatarInitials"

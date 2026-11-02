@@ -17,6 +17,18 @@ describe('PeopleCommands.build', () => {
         cmds[0].run();
         expect(pick).toHaveBeenCalledWith(1);
     });
+    it('leaves out disabled members', () => {
+        const cmds = PeopleCommands.build(
+            { idProject: 4, issue: null },
+            [
+                { idUser: 1, name: 'Petra', email: 'p@x' },
+                { idUser: 2, name: 'Gone', email: 'g@x', isActive: false }
+            ] as any,
+            () => {},
+            t
+        );
+        expect(cmds.map(c => c.title)).toEqual(['Petra']);
+    });
     it('empty without a project', () => {
         expect(
             PeopleCommands.build({ idProject: null, issue: null }, [] as any, () => {}, t)

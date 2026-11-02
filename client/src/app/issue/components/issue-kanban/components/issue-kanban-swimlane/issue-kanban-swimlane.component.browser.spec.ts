@@ -116,4 +116,20 @@ describe('IssueKanbanSwimlaneComponent', () => {
         cells[0].triggerEventHandler('cdkDropListDropped', dropEvent);
         expect(emitted.length).toBe(1);
     });
+
+    it('accepts a tile into a disabled user lane only from that same lane', () => {
+        const canEnter = (
+            component as unknown as { canEnterCell: (drag: any, drop: any) => boolean }
+        ).canEnterCell;
+        const gone = { ...userAlice, idUser: 2, isActive: false };
+        const goneCell = { data: Fixtures.swimlaneCell({ state: stateB, user: gone }) };
+        const fromAlice = { dropContainer: { data: rows[1].cells[0] } };
+        const fromGone = {
+            dropContainer: { data: Fixtures.swimlaneCell({ state: stateA, user: gone }) }
+        };
+
+        expect(canEnter(fromAlice, goneCell)).toBe(false);
+        expect(canEnter(fromGone, goneCell)).toBe(true);
+        expect(canEnter(fromAlice, { data: rows[1].cells[1] })).toBe(true);
+    });
 });

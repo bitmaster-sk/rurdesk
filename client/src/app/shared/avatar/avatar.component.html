@@ -1,5 +1,7 @@
 <div
     class="initials-avatar"
+    [class.grayscale]="disabled()"
+    [class.opacity-60]="disabled()"
     [style.width.rem]="width()"
     [style.height.rem]="height()"
     [style.border-radius.rem]="radius()"

@@ -6,4 +6,5 @@ export interface User {
     avatarInitials?: string | null;
     isAgent?: boolean;
     isAdmin?: boolean;
+    isActive?: boolean;
 }

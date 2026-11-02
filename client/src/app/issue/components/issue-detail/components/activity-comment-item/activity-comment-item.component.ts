@@ -46,6 +46,10 @@ export class ActivityCommentItemComponent {
 
     protected readonly MessageKind = MessageKind;
 
+    protected readonly isCreatorDisabled = computed(
+        () => this.message().creator.isActive === false
+    );
+
     protected readonly attachmentScope = computed(() =>
         MessageConverter.toAttachmentScope(this.message())
     );

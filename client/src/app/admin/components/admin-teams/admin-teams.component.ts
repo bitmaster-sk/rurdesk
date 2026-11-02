@@ -44,7 +44,9 @@ export class AdminTeamsComponent implements OnInit {
         const memberIds = new Set(this.members().map(m => m.idUser));
         // AdminUser is the admin-list shape of User — safe to hand to the
         // selector, which renders name and avatar only.
-        return (this.users() as unknown as User[]).filter(u => !memberIds.has(u.idUser));
+        return (this.users() as unknown as User[]).filter(
+            u => u.isActive !== false && !memberIds.has(u.idUser)
+        );
     });
 
     public ngOnInit(): void {

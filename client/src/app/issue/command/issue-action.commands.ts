@@ -42,7 +42,7 @@ export abstract class IssueActionCommands {
                 run: () => patch({ assignedTo: me })
             });
         }
-        for (const user of data.users) {
+        for (const user of data.users.filter(u => u.isActive !== false)) {
             commands.push({
                 id: `issue.assign.${user.idUser}`,
                 title: t('COMMAND.ISSUE.ASSIGN_TO', { name: user.name }),

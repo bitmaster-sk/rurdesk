@@ -56,6 +56,34 @@ describe('MessageViewComponent', () => {
         expect(component).toBeTruthy();
     });
 
+    describe('disabled author', () => {
+        it('is marked when the creator is disabled', () => {
+            componentRef.setInput(
+                'message',
+                mockMessage({
+                    creator: {
+                        idUser: 42,
+                        name: 'Alice',
+                        colorAvatarBg: '#000',
+                        email: '',
+                        isActive: false
+                    }
+                })
+            );
+            fixture.detectChanges();
+            expect(
+                fixture.nativeElement.querySelector('[data-testid="author-disabled"]')
+            ).not.toBeNull();
+            expect(fixture.nativeElement.querySelector('.message-author--disabled')).not.toBeNull();
+        });
+
+        it('is not marked when the creator is active', () => {
+            expect(
+                fixture.nativeElement.querySelector('[data-testid="author-disabled"]')
+            ).toBeNull();
+        });
+    });
+
     describe('edit button', () => {
         it('is not rendered when isOwnMessage is false', () => {
             componentRef.setInput('isOwnMessage', false);

@@ -117,9 +117,9 @@ func (r *ProjectRepository) LoadProjectsIds(ctx context.Context, idUser int64) (
 func (r *ProjectRepository) LoadProjectsMembers(ctx context.Context, idsProject []int64) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT DISTINCT u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, u.is_agent
+		SELECT DISTINCT u.id_user, u.name, u.email, u.color_avatar_bg, u.avatar_initials, u.is_agent, u.is_active
 		FROM (
-			SELECT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.avatar_initials, usr.is_agent
+			SELECT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.avatar_initials, usr.is_agent, usr.is_active
 			FROM
 				projects.project prj
 				INNER JOIN projects.project_user pru ON prj.id_project = pru.id_project
@@ -127,7 +127,7 @@ func (r *ProjectRepository) LoadProjectsMembers(ctx context.Context, idsProject 
 			WHERE
 				prj.id_project = ANY($1)
 			UNION
-			SELECT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.avatar_initials, usr.is_agent
+			SELECT usr.id_user, usr.name, usr.email, usr.color_avatar_bg, usr.avatar_initials, usr.is_agent, usr.is_active
 			FROM
 				projects.project prj
 				INNER JOIN projects.project_team prt ON prj.id_project = prt.id_project

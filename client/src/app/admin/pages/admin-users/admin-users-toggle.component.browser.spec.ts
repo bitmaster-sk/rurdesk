@@ -134,8 +134,8 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
 
     it('disabling an active user PATCHes isActive:false after confirm', () => {
         const fixture = render();
-        // For a human user the actions are: promote, disable, edit, delete.
-        actionButtons(rows(fixture)[0])[1].click();
+        // For a human user the actions are: promote, edit, disable, delete.
+        actionButtons(rows(fixture)[0])[2].click();
         confirm(fixture);
 
         expect(setActive$).toHaveBeenCalledWith(7, false);
@@ -143,7 +143,7 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
 
     it('enabling a disabled user PATCHes isActive:true after confirm', () => {
         const fixture = render();
-        actionButtons(rows(fixture)[1])[1].click();
+        actionButtons(rows(fixture)[1])[2].click();
         confirm(fixture);
 
         expect(setActive$).toHaveBeenCalledWith(8, true);
@@ -162,7 +162,7 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
 
         // Own row: promote, edit, delete (no disable toggle).
         expect(actionButtons(ownRow).length).toBe(3);
-        // Other row: promote, disable, edit, delete.
+        // Other row: promote, edit, disable, delete.
         expect(actionButtons(otherRow).length).toBe(4);
     });
 

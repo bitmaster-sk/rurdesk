@@ -7,4 +7,5 @@ export interface Conversation {
     idCreator: number | null;
     url: (string | number)[];
     unreadKey: string;
+    isDisabled?: boolean;
 }

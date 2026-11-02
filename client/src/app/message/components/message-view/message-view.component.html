@@ -6,6 +6,7 @@
     <div class="message-avatar">
         @if (!isContinuation()) {
             <app-avatar
+                [disabled]="isCreatorDisabled()"
                 [name]="message().creator.name"
                 [bgColor]="message().creator.colorAvatarBg"
                 [manualInitials]="message().creator.avatarInitials"
@@ -18,7 +19,14 @@
     <div class="message-body">
         @if (!isContinuation()) {
             <div class="message-meta">
-                <span class="message-author">{{ message().creator.name }}</span>
+                <span class="message-author" [class.message-author--disabled]="isCreatorDisabled()">
+                    {{ message().creator.name }}
+                </span>
+                @if (isCreatorDisabled()) {
+                    <span class="text-xs ui-color-text-muted" data-testid="author-disabled">
+                        {{ 'USER.DISABLED' | translate }}
+                    </span>
+                }
                 <span class="message-date">{{ message().createdAt | date: 'shortTime' }}</span>
             </div>
         }

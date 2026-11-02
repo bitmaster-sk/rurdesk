@@ -32,6 +32,7 @@ export class AvatarStub {
     public readonly height = input<number>(0);
     public readonly width = input<number>(0);
     public readonly radius = input<number>(0);
+    public readonly disabled = input<boolean>(false);
 }
 
 @Component({ selector: 'app-message-editor', template: '', standalone: true })

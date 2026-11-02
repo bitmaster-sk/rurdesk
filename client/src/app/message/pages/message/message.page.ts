@@ -97,6 +97,12 @@ export class MessagePage implements OnInit, OnDestroy {
         }
     });
 
+    protected readonly isPeerDisabled = computed(
+        () =>
+            this.idActiveRecipientType() === MessageRecipientType.user &&
+            this.allUsers().some(u => u.idUser === this.idActiveRecipient() && u.isActive === false)
+    );
+
     protected readonly attachmentScope = computed<AttachmentScope | null>(() => {
         const idMessageRecipientType = this.idActiveRecipientType();
         return idMessageRecipientType === null
@@ -359,6 +365,7 @@ export class MessagePage implements OnInit, OnDestroy {
                 icon: 'user',
                 conversations: users
                     .filter(u => !u.isAgent)
+                    .sort((a, b) => Number(a.isActive === false) - Number(b.isActive === false))
                     .map(u => ({
                         idRecipient: currentUserId,
                         idCreator: u.idUser,
@@ -369,7 +376,8 @@ export class MessagePage implements OnInit, OnDestroy {
                             currentUserId,
                             u.idUser,
                             MessageRecipientType.user
-                        )
+                        ),
+                        isDisabled: u.isActive === false
                     }))
             }
         ];

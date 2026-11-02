@@ -16,6 +16,7 @@ export class AvatarComponent {
     public readonly name = input('');
     public readonly bgColor = input('');
     public readonly manualInitials = input<string | null | undefined>(null);
+    public readonly disabled = input(false);
 
     public readonly initials = computed(() => {
         const override = this.manualInitials()?.trim();

@@ -53,6 +53,16 @@ describe('IssueActionCommands.build', () => {
         expect(cmd.title).toContain('COMMAND.ISSUE.SET_STATE');
         expect(cmd.title).toContain('Done');
     });
+    it('does not offer a disabled member', () => {
+        const cmds = IssueActionCommands.build(
+            { idProject: 1, issue },
+            { ...data, users: [...data.users, { idUser: 8, name: 'Gone', isActive: false }] },
+            () => {},
+            t
+        );
+        expect(cmds.find(c => c.id === 'issue.assign.9')).toBeDefined();
+        expect(cmds.find(c => c.id === 'issue.assign.8')).toBeUndefined();
+    });
     it('omits assign-to-me when there is no current user id', () => {
         const cmds = IssueActionCommands.build(
             { idProject: 1, issue },

@@ -31,6 +31,21 @@ describe('AvatarComponent (browser)', () => {
         );
     });
 
+    it('greys out the avatar of a disabled account', () => {
+        const fixture = TestBed.createComponent(AvatarComponent);
+        fixture.componentRef.setInput('name', 'Ada Lovelace');
+        fixture.detectChanges();
+        const avatar: HTMLElement = fixture.nativeElement.querySelector('.initials-avatar');
+
+        expect(avatar.classList.contains('grayscale')).toBe(false);
+
+        fixture.componentRef.setInput('disabled', true);
+        fixture.detectChanges();
+
+        expect(avatar.classList.contains('grayscale')).toBe(true);
+        expect(avatar.classList.contains('opacity-60')).toBe(true);
+    });
+
     it('explicit initials win over the name-based computation', () => {
         const fixture = TestBed.createComponent(AvatarComponent);
         fixture.componentRef.setInput('name', 'Ada Lovelace');

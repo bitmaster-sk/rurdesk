@@ -7,7 +7,7 @@ import {
     output,
     signal
 } from '@angular/core';
-import { CdkDragDrop, CdkDragStart } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { SprintDragService } from '../../service/sprint-drag.service';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Issue } from '../../../../model/issue.model';
@@ -64,6 +64,13 @@ export class IssueKanbanSwimlaneComponent {
     // Tile that just landed after a drop — briefly gets a "settle" animation
     protected readonly landedTileId = signal<number | null>(null);
     private landTimer: ReturnType<typeof setTimeout> | null = null;
+
+    protected readonly canEnterCell = (drag: CdkDrag, drop: CdkDropList<SwimlaneCell>): boolean => {
+        const target = drop.data.user;
+        if (target?.isActive !== false) return true;
+        const source = (drag.dropContainer as CdkDropList<SwimlaneCell>).data.user;
+        return source?.idUser === target.idUser;
+    };
 
     protected onDropped(event: CdkDragDrop<SwimlaneCell>): void {
         const tile = event.previousContainer.data.tiles[event.previousIndex];

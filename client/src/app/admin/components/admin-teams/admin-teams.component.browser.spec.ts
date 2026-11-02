@@ -130,4 +130,16 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         expect(loadTeamMembers$).toHaveBeenCalledTimes(1);
         expect(loadTeamMembers$).toHaveBeenCalledWith(team.idTeam);
     });
+
+    it('does not offer a disabled user in the add-member picker', () => {
+        const fixture = TestBed.createComponent(AdminTeamsComponent);
+        fixture.componentRef.setInput('users', [user, { ...user, idUser: 8, isActive: false }]);
+        fixture.componentRef.setInput('draggedUser', null);
+        fixture.detectChanges();
+        const comp = fixture.componentInstance as unknown as {
+            availableUsers(): { idUser: number }[];
+        };
+
+        expect(comp.availableUsers().map(u => u.idUser)).toEqual([7]);
+    });
 });

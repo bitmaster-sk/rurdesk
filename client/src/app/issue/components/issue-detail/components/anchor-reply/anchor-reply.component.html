@@ -1,5 +1,10 @@
 <div class="anchor-reply-item">
-    <span class="anchor-reply-author">{{ reply().creator.name }}</span>
+    <span
+        class="anchor-reply-author"
+        [class.ui-color-text-muted]="reply().creator.isActive === false"
+    >
+        {{ reply().creator.name }}
+    </span>
     @if (reply().anchor?.isOutdated) {
         <ui-tag
             severity="secondary"

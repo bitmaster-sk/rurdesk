@@ -12,6 +12,7 @@ export interface IssueParticipantModel {
     colorAvatarBg: string;
     avatarInitials?: string | null;
     isAgent: boolean;
+    isActive?: boolean;
     source: ParticipantSource;
     hasNotificationsEnabled: boolean;
 }

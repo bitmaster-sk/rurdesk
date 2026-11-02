@@ -121,3 +121,39 @@ describe('UserDropdownComponent OnPush re-render (browser)', () => {
         expect(fixture.nativeElement.querySelector('.busy')!.textContent).toBe('true');
     });
 });
+
+describe('UserDropdownComponent disabled users (browser)', () => {
+    const GONE: User = Fixtures.user({ idUser: 3, name: 'Gone', isActive: false });
+
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule, TranslateModule.forRoot()],
+            declarations: [HostComponent, UserDropdownComponent],
+            providers: [{ provide: AgentRunApi, useValue: { loadAgentsOverview$: () => of([]) } }]
+        })
+            .overrideComponent(UserDropdownComponent, {
+                set: {
+                    template: `@for (user of sortedUsers(); track user.idUser) {<i>{{ user.idUser }}</i>}`
+                }
+            })
+            .compileComponents();
+    });
+
+    function offeredIds(selected: number | null): number[] {
+        const fixture = TestBed.createComponent(HostComponent);
+        fixture.componentInstance.users.set([ADA, GONE, ZOE]);
+        fixture.componentInstance.ctrl.setValue(selected);
+        fixture.detectChanges();
+        return Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('i')).map(el =>
+            Number(el.textContent)
+        );
+    }
+
+    it('does not offer a disabled user as a new assignee', () => {
+        expect(offeredIds(null)).toEqual([ADA.idUser, ZOE.idUser]);
+    });
+
+    it('keeps a disabled user who is the current assignee', () => {
+        expect(offeredIds(GONE.idUser)).toEqual([ADA.idUser, GONE.idUser, ZOE.idUser]);
+    });
+});

@@ -11,14 +11,22 @@ import (
 
 type NotificationService struct {
 	repo     *repository.NotificationRepository
+	userRepo *repository.UserRepository
 	notifier *notify.Notifier
 }
 
-func NewNotificationService(repo *repository.NotificationRepository, notifier *notify.Notifier) *NotificationService {
-	return &NotificationService{repo: repo, notifier: notifier}
+func NewNotificationService(repo *repository.NotificationRepository, userRepo *repository.UserRepository, notifier *notify.Notifier) *NotificationService {
+	return &NotificationService{repo: repo, userRepo: userRepo, notifier: notifier}
 }
 
 func (s *NotificationService) Notify(ctx context.Context, dto *model.CreateNotificationReq) error {
+	active, err := s.userRepo.IsActiveUser(ctx, dto.IdUser)
+	if err != nil {
+		return fmt.Errorf("checking notification recipient: %w", err)
+	}
+	if !active {
+		return nil
+	}
 	notification, err := s.repo.Insert(ctx, dto)
 	if err != nil {
 		return fmt.Errorf("inserting notification: %w", err)

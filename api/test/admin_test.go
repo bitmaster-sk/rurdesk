@@ -988,6 +988,174 @@ func (s *AdminSuite) Test_RemoveAllDisabledOwnerTeam_WithActiveOwnerRemaining_Su
 		"removing an owner team with only disabled members must not hit the last-owner guard")
 }
 
+func (s *AdminSuite) Test_DisableUser_MembersAndMessageAuthorsShowFlag() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-author-project")
+	tok := createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"disabled author","email":"disabled-author@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "disabled-author@test.sk")
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, id), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	res = Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/issue", idProject),
+		`{"title":"commented","description":"body","estimated":0}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var iss model.Issue
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&iss))
+
+	posted := postMessageWithTextOk(s.T(), s.App, tok, model.IssueRecipientType, iss.IdIssue, "issue comment")
+	s.True(posted.Creator.IsActive, "a freshly posted message must show an active author")
+	postMessageWithTextOk(s.T(), s.App, tok, model.ProjectRecipientType, idProject, "project message")
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	res = Request(s.T(), s.App, "GET", fmt.Sprintf("/api/private/project/%d/members", idProject), "", s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var members []model.User
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&members))
+	activeById := map[int64]bool{}
+	for _, m := range members {
+		activeById[m.IdUser] = m.IsActive
+	}
+	s.Require().Contains(activeById, id)
+	s.False(activeById[id], "a disabled member must be listed with isActive=false")
+	s.True(activeById[idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")], "an active member must be listed with isActive=true")
+
+	authorActive := func(recipientType model.MessageRecipientType, idRecipient int64) bool {
+		res := Request(s.T(), s.App, "GET",
+			fmt.Sprintf("/api/private/message?idRecipient=%d&idMessageRecipientType=%d", idRecipient, recipientType), "", s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode)
+		var msgs []model.Message
+		s.Require().NoError(json.NewDecoder(res.Body).Decode(&msgs))
+		for _, m := range msgs {
+			if m.Creator.IdUser == id {
+				return m.Creator.IsActive
+			}
+		}
+		s.Fail("message of the disabled author not listed")
+		return true
+	}
+	s.False(authorActive(model.IssueRecipientType, iss.IdIssue), "an issue comment must show its disabled author")
+	s.False(authorActive(model.ProjectRecipientType, idProject), "a project message must show its disabled author")
+}
+
+func (s *AdminSuite) Test_DisabledUser_CannotGetNewWork() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-work-project")
+	createUserAsAdmin(s.T(), s.App, s.AdminToken,
+		`{"name":"gone worker","email":"gone-worker@test.sk","password":"secret1"}`)
+	id := idOfUser(s.T(), s.App, s.AdminToken, "gone-worker@test.sk")
+	res := Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, id), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	createIssue := func(body string) *http.Response {
+		return Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/issue", idProject), body, s.AdminToken)
+	}
+	res = createIssue(fmt.Sprintf(`{"title":"kept","description":"x","estimated":0,"assignedTo":%d}`, id))
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var kept model.Issue
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&kept))
+	res = createIssue(`{"title":"open","description":"x","estimated":0}`)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var open model.Issue
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&open))
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", id), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	res = createIssue(fmt.Sprintf(`{"title":"new","description":"x","estimated":0,"assignedTo":%d}`, id))
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, "creating a task for a disabled user must be refused")
+	s.Equal("USER_DISABLED", errorCode(s.T(), res))
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/issue/%d", idProject, open.IdIssuePublic),
+		fmt.Sprintf(`{"assignedTo":%d}`, id), s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, "assigning a disabled user must be refused")
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/issue/batch", idProject),
+		fmt.Sprintf(`{"issues":[{"idIssuePublic":%d,"idUserAssigned":%d}]}`, open.IdIssuePublic, id), s.AdminToken)
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, "bulk-assigning a disabled user must be refused")
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/project/%d/issue/%d", idProject, kept.IdIssuePublic),
+		`{"title":"kept, renamed"}`, s.AdminToken)
+	s.Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res),
+		"a task already assigned to a disabled user must stay editable")
+
+	res = postMessageWithText(s.T(), s.App, s.AdminToken, model.TeammateRecipientType, id, "hello")
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode, "a direct message to a disabled user must be refused")
+
+	postMessageWithTextOk(s.T(), s.App, s.AdminToken, model.IssueRecipientType, kept.IdIssue,
+		fmt.Sprintf("ping @[gone worker](user:%d)", id))
+	var notifications int
+	s.Require().NoError(s.App.Pool.QueryRow(context.Background(),
+		`SELECT COUNT(*) FROM notification.notification WHERE id_user = $1`, id).Scan(&notifications))
+	s.Zero(notifications, "a disabled user must not receive notifications")
+
+	res = Request(s.T(), s.App, "GET",
+		fmt.Sprintf("/api/private/project/%d/issue/%d/participant", idProject, kept.IdIssuePublic), "", s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var participants []model.IssueParticipant
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&participants))
+	participantActive := map[int64]bool{}
+	for _, p := range participants {
+		participantActive[p.IdUser] = p.IsActive
+	}
+	s.Require().Contains(participantActive, id)
+	s.False(participantActive[id], "participants must expose isActive=false")
+
+	res = Request(s.T(), s.App, "GET", fmt.Sprintf("/api/private/project/%d/member", idProject), "", s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var members model.ProjectMembersRes
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&members))
+	memberActive := map[int64]bool{}
+	for _, m := range members.Users {
+		memberActive[m.IdUser] = m.IsActive
+	}
+	s.Require().Contains(memberActive, id)
+	s.False(memberActive[id], "project members must expose isActive=false")
+	s.True(memberActive[idOfUser(s.T(), s.App, s.AdminToken, "test@test.sk")])
+}
+
+func (s *AdminSuite) Test_DisabledAgent_LeavesAgentsOverview() {
+	idProject := createProject(s.T(), s.App, s.AdminToken, "disabled-overview-project")
+	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
+		`{"name":"overview gone bot","isAgent":true}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var agent model.AdminCreateUserRes
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))
+	res = Request(s.T(), s.App, "POST",
+		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+
+	listed := func() bool {
+		res := Request(s.T(), s.App, "GET",
+			fmt.Sprintf("/api/private/project/%d/agents/overview", idProject), "", s.AdminToken)
+		s.Require().Equal(http.StatusOK, res.StatusCode)
+		var all []model.AgentOverview
+		s.Require().NoError(json.NewDecoder(res.Body).Decode(&all))
+		for _, row := range all {
+			if row.IdUserAgent == agent.IdUser {
+				return true
+			}
+		}
+		return false
+	}
+	s.True(listed(), "an active agent must be in the overview")
+
+	res = Request(s.T(), s.App, "PATCH",
+		fmt.Sprintf("/api/private/admin/user/%d", agent.IdUser), `{"isActive":false}`, s.AdminToken)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+	s.False(listed(), "a disabled agent must leave the overview")
+}
+
 func Test_RunAdminSuite(t *testing.T) {
 	suite.Run(t, new(AdminSuite))
 }

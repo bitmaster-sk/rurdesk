@@ -287,6 +287,9 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 			if !ic.acl.CanReadProject(ctx, *dto.AssignedTo, dto.IdProject) {
 				return errs.ErrForbidden
 			}
+			if err := ic.rejectDisabledAssignee(ctx, *dto.AssignedTo); err != nil {
+				return err
+			}
 		}
 		if err := ic.validateIssueRefsInProject(ctx, dto.IdProject, dto.IdState, dto.IdSeverity, dto.IdIssueType); err != nil {
 			return err
@@ -381,6 +384,17 @@ func (ic *IssueController) CreateIssue(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func (ic *IssueController) rejectDisabledAssignee(ctx context.Context, idUser int64) error {
+	active, err := ic.userRepo.IsActiveUser(ctx, idUser)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return errs.ErrUserDisabled
+	}
+	return nil
+}
+
 func (ic *IssueController) EditIssue(c *gin.Context) {
 	idProject, err := strconv.ParseInt(c.Param("idProject"), 10, 64)
 	if err != nil {
@@ -458,13 +472,16 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 			}
 		}
 
+		if dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
+			if err := ic.rejectDisabledAssignee(ctx, *dto.AssignedTo.Value); err != nil {
+				return err
+			}
+		}
+
 		// An agent with no configured gateway can't be assigned.
 		if ic.agentGwRepo != nil && dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
 			assignee, loadErr := ic.userRepo.LoadUser(ctx, *dto.AssignedTo.Value)
 			if loadErr == nil && assignee.IsAgent {
-				if !assignee.IsActive {
-					return errs.ErrUserDisabled
-				}
 				gw, gwErr := ic.agentGwRepo.LoadByAgentUser(ctx, assignee.IdUser)
 				if gwErr != nil || gw == nil {
 					return errs.ErrAgentNoGateway
@@ -886,11 +903,8 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 				if !ic.acl.CanReadProject(ctx, *entry.IdUserAssigned, idProject) {
 					return fmt.Errorf("user %d is not a member of project %d", *entry.IdUserAssigned, idProject)
 				}
-				// A disabled agent must not be assigned: the scheduler would never
-				// dispatch its run and the assignee would get no feedback.
-				assignee, loadErr := ic.userRepo.LoadUser(ctx, *entry.IdUserAssigned)
-				if loadErr == nil && assignee != nil && assignee.IsAgent && !assignee.IsActive {
-					return errs.ErrUserDisabled
+				if err := ic.rejectDisabledAssignee(ctx, *entry.IdUserAssigned); err != nil {
+					return err
 				}
 			}
 		}

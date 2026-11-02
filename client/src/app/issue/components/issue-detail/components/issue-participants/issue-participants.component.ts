@@ -57,7 +57,10 @@ export class IssueParticipantsComponent {
         const participantIds = new Set(this.participants().map(p => p.idUser));
         const search = this.memberSearch().toLowerCase();
         return this.members().filter(
-            m => !participantIds.has(m.idUser) && m.name.toLowerCase().includes(search)
+            m =>
+                m.isActive !== false &&
+                !participantIds.has(m.idUser) &&
+                m.name.toLowerCase().includes(search)
         );
     });
 

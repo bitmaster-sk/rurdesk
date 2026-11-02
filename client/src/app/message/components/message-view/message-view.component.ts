@@ -27,6 +27,10 @@ export class MessageViewComponent {
     public readonly candidates = input<Map<number, User> | User[] | null>(null);
     public readonly mentionCandidates = input<User[]>([]);
 
+    protected readonly isCreatorDisabled = computed(
+        () => this.message().creator.isActive === false
+    );
+
     protected readonly attachmentScope = computed(() =>
         MessageConverter.toAttachmentScope(this.message())
     );

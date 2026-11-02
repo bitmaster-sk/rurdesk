@@ -127,7 +127,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         if (!q) return [];
         const needle = q.query.toLowerCase();
         return this.mentionCandidates()
-            .filter(u => u.name.toLowerCase().includes(needle))
+            .filter(u => u.isActive !== false && u.name.toLowerCase().includes(needle))
             .slice(0, 8);
     });
 

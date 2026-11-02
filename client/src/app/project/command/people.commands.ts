@@ -9,14 +9,16 @@ export abstract class PeopleCommands {
         t: Translator
     ): Command[] {
         if (ctx.idProject == null) return [];
-        return users.map(user => ({
-            id: `people.${user.idUser}`,
-            title: user.name,
-            subtitle: user.email,
-            group: t('COMMAND.GROUP.PEOPLE'),
-            icon: 'user',
-            modes: ['all', 'people'],
-            run: () => onPick(user.idUser)
-        }));
+        return users
+            .filter(user => user.isActive !== false)
+            .map(user => ({
+                id: `people.${user.idUser}`,
+                title: user.name,
+                subtitle: user.email,
+                group: t('COMMAND.GROUP.PEOPLE'),
+                icon: 'user',
+                modes: ['all', 'people'],
+                run: () => onPick(user.idUser)
+            }));
     }
 }

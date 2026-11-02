@@ -1074,7 +1074,7 @@ func GetNotificationRepository() *repository.NotificationRepository {
 
 func GetNotificationService() *service.NotificationService {
 	instance, _ := di.GetWithNew("notification-service", func() (any, error) {
-		return service.NewNotificationService(GetNotificationRepository(), GetNotifier()), nil
+		return service.NewNotificationService(GetNotificationRepository(), GetUserRepository(), GetNotifier()), nil
 	})
 	return instance.(*service.NotificationService)
 }

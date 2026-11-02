@@ -38,3 +38,27 @@ describe('IssueConverter.toParams — tags', () => {
         ).toBe('true');
     });
 });
+
+describe('IssueConverter.toCloneAssignee', () => {
+    const users = [
+        { idUser: 1, name: 'Ada', email: '', colorAvatarBg: '#000' },
+        { idUser: 2, name: 'Gone', email: '', colorAvatarBg: '#000', isActive: false }
+    ];
+
+    it('keeps an active assignee', () => {
+        expect(IssueConverter.toCloneAssignee(1, users)).toBe(1);
+    });
+
+    it('drops a disabled assignee', () => {
+        expect(IssueConverter.toCloneAssignee(2, users)).toBeNull();
+    });
+
+    it('keeps an assignee the member list does not know yet', () => {
+        expect(IssueConverter.toCloneAssignee(9, users)).toBe(9);
+    });
+
+    it('stays empty when there was no assignee', () => {
+        expect(IssueConverter.toCloneAssignee(null, users)).toBeNull();
+        expect(IssueConverter.toCloneAssignee(undefined, users)).toBeNull();
+    });
+});
