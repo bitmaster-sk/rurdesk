@@ -25,7 +25,7 @@ type IssueRelationController struct {
 	issueRepo    *repository.IssueRepository
 	projectRepo  *repository.ProjectRepository
 	acl          *service.AclService
-	notifier     *notify.Notifier
+	notifier     notify.INotifier
 	pool         *pgxpool.Pool
 }
 
@@ -34,7 +34,7 @@ func NewIssueRelationController(
 	ir *repository.IssueRepository,
 	pr *repository.ProjectRepository,
 	acl *service.AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	pool *pgxpool.Pool,
 ) *IssueRelationController {
 	return &IssueRelationController{relationRepo: rr, issueRepo: ir, projectRepo: pr, acl: acl, notifier: notifier, pool: pool}
@@ -251,12 +251,12 @@ func (ic *IssueRelationController) CreateRelation(c *gin.Context) {
 			if member.IdUser == user.IdUser {
 				continue
 			}
-			ic.notifier.Send <- &notify.Notice{
+			ic.notifier.Send(&notify.Notice{
 				IdUser:  member.IdUser,
 				Subject: notify.SubjectRelation,
 				Action:  notify.ActionCreate,
 				Payload: views,
-			}
+			})
 		}
 	}
 

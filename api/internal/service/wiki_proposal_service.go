@@ -811,38 +811,32 @@ func (s *WikiProposalService) notify(ctx context.Context, run *model.AgentRun, n
 }
 
 func (s *WikiProposalService) broadcast(ctx context.Context, idProject int64, idIssue *int64) {
-	if s.wiki.notifier == nil {
-		return
-	}
 	extctx.AfterCommit(ctx, func(ctx context.Context) {
 		idsUser, err := s.memberIds(ctx, idProject, 0)
 		if err != nil || len(idsUser) == 0 {
 			return
 		}
-		s.wiki.notifier.Send <- &notify.Notice{
+		s.wiki.notifier.Send(&notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectWikiProposal,
 			Action:  notify.ActionUpdate,
 			Payload: model.WikiProposalNotice{IdProject: idProject, IdIssue: idIssue},
-		}
+		})
 	})
 }
 
 func (s *WikiProposalService) broadcastMessage(ctx context.Context, idProject, idAuthor int64, message *model.Message) {
-	if s.wiki.notifier == nil {
-		return
-	}
 	extctx.AfterCommit(ctx, func(ctx context.Context) {
 		idsUser, err := s.memberIds(ctx, idProject, idAuthor)
 		if err != nil || len(idsUser) == 0 {
 			return
 		}
-		s.wiki.notifier.Send <- &notify.Notice{
+		s.wiki.notifier.Send(&notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
 			Payload: message,
-		}
+		})
 	})
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -56,9 +57,9 @@ func idPtr(id int64) *int64 { return &id }
 func newMirrorFixture(
 	mapping *model.WorkflowEventMapping,
 	state *model.State,
-) (*PhaseStateTransitioner, *fakeIssueStateStore, *notify.Notifier) {
+) (*PhaseStateTransitioner, *fakeIssueStateStore, *notifytest.Recorder) {
 	store := &fakeIssueStateStore{issue: &model.Issue{IdIssue: 42, IdProject: 7}}
-	notifier := newTestNotifier()
+	notifier := &notifytest.Recorder{}
 	mirror := NewPhaseStateTransitioner(
 		&fakeMappingLoader{mapping: mapping},
 		store,
@@ -80,8 +81,8 @@ func TestTransition_WritesStateAndBroadcasts(t *testing.T) {
 	require.NotNil(t, store.writtenState, "the mapped state must be written to the issue")
 	assert.Equal(t, int64(99), *store.writtenState)
 
-	require.Len(t, notifier.Send, 1, "a state change must reach the project over the websocket")
-	notice := <-notifier.Send
+	require.Len(t, notifier.Notices(), 1, "a state change must reach the project over the websocket")
+	notice := notifier.Notices()[0]
 	assert.Equal(t, notify.SubjectIssue, notice.Subject)
 	assert.Equal(t, []int64{10}, notice.IdsUser)
 }
@@ -92,7 +93,7 @@ func TestTransition_NoMappingChangesNothing(t *testing.T) {
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseQueued)
 
 	assert.Nil(t, store.writtenState, "an unmapped event must leave the issue state alone")
-	assert.Empty(t, notifier.Send, "an unmapped event must not broadcast")
+	assert.Empty(t, notifier.Notices(), "an unmapped event must not broadcast")
 }
 
 func TestTransition_NullMappedStateChangesNothing(t *testing.T) {
@@ -101,7 +102,7 @@ func TestTransition_NullMappedStateChangesNothing(t *testing.T) {
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseDone)
 
 	assert.Nil(t, store.writtenState)
-	assert.Empty(t, notifier.Send)
+	assert.Empty(t, notifier.Notices())
 }
 
 func TestTransition_MissingStateChangesNothing(t *testing.T) {
@@ -110,12 +111,12 @@ func TestTransition_MissingStateChangesNothing(t *testing.T) {
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseDone)
 
 	assert.Nil(t, store.writtenState, "a mapping pointing at a deleted state must not be applied")
-	assert.Empty(t, notifier.Send)
+	assert.Empty(t, notifier.Notices())
 }
 
 func TestTransition_MappingLoadErrorChangesNothing(t *testing.T) {
 	store := &fakeIssueStateStore{issue: &model.Issue{IdIssue: 42, IdProject: 7}}
-	notifier := newTestNotifier()
+	notifier := &notifytest.Recorder{}
 	mirror := NewPhaseStateTransitioner(
 		&fakeMappingLoader{err: errors.New("db down")},
 		store,
@@ -127,7 +128,7 @@ func TestTransition_MappingLoadErrorChangesNothing(t *testing.T) {
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseFailed)
 
 	assert.Nil(t, store.writtenState)
-	assert.Empty(t, notifier.Send)
+	assert.Empty(t, notifier.Notices())
 }
 
 func TestTransition_WriteFailureDoesNotBroadcast(t *testing.T) {
@@ -135,7 +136,7 @@ func TestTransition_WriteFailureDoesNotBroadcast(t *testing.T) {
 		issue:     &model.Issue{IdIssue: 42, IdProject: 7},
 		updateErr: errors.New("write failed"),
 	}
-	notifier := newTestNotifier()
+	notifier := &notifytest.Recorder{}
 	mirror := NewPhaseStateTransitioner(
 		&fakeMappingLoader{mapping: &model.WorkflowEventMapping{IdState: idPtr(99)}},
 		store,
@@ -146,7 +147,7 @@ func TestTransition_WriteFailureDoesNotBroadcast(t *testing.T) {
 
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseDone)
 
-	assert.Empty(t, notifier.Send, "a failed write must not announce a state it did not make")
+	assert.Empty(t, notifier.Notices(), "a failed write must not announce a state it did not make")
 }
 
 func TestTransition_LooksUpTheEventItWasGiven(t *testing.T) {
@@ -156,7 +157,7 @@ func TestTransition_LooksUpTheEventItWasGiven(t *testing.T) {
 		&fakeIssueStateStore{},
 		fakeStateLoader{},
 		fakeMemberLoader{},
-		newTestNotifier(),
+		&notifytest.Recorder{},
 	)
 
 	mirror.Transition(context.Background(), 7, 42, constants.PhaseAwaitingInput)

@@ -28,7 +28,7 @@ type MergePoller struct {
 	stateRepo        *repository.StateRepository
 	transitioner     *PhaseStateTransitioner
 	wikiProposals    *service.WikiProposalService
-	notifier         *notify.Notifier
+	notifier         notify.INotifier
 	lastMrStatus     map[int64]*githost.Status
 	lastMrStatusLock sync.Mutex
 }
@@ -42,7 +42,7 @@ func NewMergePoller(
 	stateRepo *repository.StateRepository,
 	transitioner *PhaseStateTransitioner,
 	wikiProposals *service.WikiProposalService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *MergePoller {
 	return &MergePoller{
 		agentRunRepo:     agentRunRepo,

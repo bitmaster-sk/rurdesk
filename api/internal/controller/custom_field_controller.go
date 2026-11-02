@@ -18,7 +18,7 @@ type CustomFieldController struct {
 	customFieldRepo  *repository.CustomFieldRepository
 	customFieldSvc   *service.CustomFieldService
 	acl              *service.AclService
-	notifier         *notify.Notifier
+	notifier         notify.INotifier
 	projectMemberSvc *service.ProjectMemberService
 }
 
@@ -26,7 +26,7 @@ func NewCustomFieldController(
 	customFieldRepo *repository.CustomFieldRepository,
 	customFieldSvc *service.CustomFieldService,
 	acl *service.AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectMemberSvc *service.ProjectMemberService,
 ) *CustomFieldController {
 	return &CustomFieldController{
@@ -45,19 +45,19 @@ func (cfc *CustomFieldController) BroadcastCustomField(
 	field *model.CustomField,
 	action notify.NoticeAction,
 ) {
-	if cfc.notifier == nil || field == nil {
+	if field == nil {
 		return
 	}
 	idsUser, err := cfc.projectMemberSvc.LoadMemberIds(ctx, field.IdProject)
 	if err != nil || len(idsUser) == 0 {
 		return
 	}
-	cfc.notifier.Send <- &notify.Notice{
+	cfc.notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectCustomField,
 		Action:  action,
 		Payload: field,
-	}
+	})
 }
 
 func (cfc *CustomFieldController) GetCustomFields(c *gin.Context) {

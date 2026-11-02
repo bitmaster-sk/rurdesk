@@ -38,7 +38,7 @@ type IssueController struct {
 	projectSkillService *service.ProjectSkillService
 	participantRepo     *repository.IssueParticipantRepository
 	dispatcher          *agent.Dispatcher
-	notifier            *notify.Notifier
+	notifier            notify.INotifier
 	acl                 *service.AclService
 	tagSvc              *service.TagService
 	stagePlan           *service.AgentStagePlanService
@@ -103,7 +103,7 @@ func (ic *IssueController) WithAgentRun(
 	stagePlan *service.AgentStagePlanService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *IssueController {
 	ic.agentRunRepo = agentRunRepo
 	ic.agentTaskRepo = agentTaskRepo

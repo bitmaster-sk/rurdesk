@@ -33,7 +33,7 @@ type MessageController struct {
 	agentGwRepo       *repository.AgentGatewayRepository
 	participantRepo   *repository.IssueParticipantRepository
 	dispatcher        *agent.Dispatcher
-	notifier          *notify.Notifier
+	notifier          notify.INotifier
 	acl               *service.AclService
 	messageAccess     *service.MessageAccessService
 	attachmentLinkSvc *service.AttachmentLinkService
@@ -47,7 +47,7 @@ func NewMessageController(
 	pr *repository.ProjectRepository,
 	ur *repository.UserRepository,
 	ir *repository.IssueRepository,
-	nf *notify.Notifier,
+	nf notify.INotifier,
 	acl *service.AclService,
 	messageAccess *service.MessageAccessService,
 	attachmentLinkSvc *service.AttachmentLinkService,
@@ -76,7 +76,7 @@ func (mc *MessageController) WithAgentRun(
 	agentTaskRepo *repository.AgentTaskRepository,
 	agentGwRepo *repository.AgentGatewayRepository,
 	dispatcher *agent.Dispatcher,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *MessageController {
 	mc.agentRunRepo = agentRunRepo
 	mc.agentTaskRepo = agentTaskRepo
@@ -305,13 +305,13 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 
 	switch dto.IdMessageRecipientType {
 	case model.TeammateRecipientType:
-		mc.notifier.Send <- &notify.Notice{
+		mc.notifier.Send(&notify.Notice{
 			IdUser:  dto.IdRecipient,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
 			Payload: msg,
 			Source:  source,
-		}
+		})
 	case model.TeamRecipientType:
 		users, err := mc.teamRepo.LoadTeamsMembers(ctx, []int64{dto.IdRecipient})
 		if err == nil {
@@ -319,13 +319,13 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 				if u.IdUser == user.IdUser {
 					continue
 				}
-				mc.notifier.Send <- &notify.Notice{
+				mc.notifier.Send(&notify.Notice{
 					IdUser:  u.IdUser,
 					Subject: notify.SubjectMessage,
 					Action:  notify.ActionCreate,
 					Payload: msg,
 					Source:  source,
-				}
+				})
 			}
 		}
 	case model.ProjectRecipientType:
@@ -335,13 +335,13 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 				if u.IdUser == user.IdUser {
 					continue
 				}
-				mc.notifier.Send <- &notify.Notice{
+				mc.notifier.Send(&notify.Notice{
 					IdUser:  u.IdUser,
 					Subject: notify.SubjectMessage,
 					Action:  notify.ActionCreate,
 					Payload: msg,
 					Source:  source,
-				}
+				})
 			}
 		}
 	case model.IssueRecipientType:
@@ -367,13 +367,13 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 					if member.IdUser == user.IdUser {
 						continue
 					}
-					mc.notifier.Send <- &notify.Notice{
+					mc.notifier.Send(&notify.Notice{
 						IdUser:  member.IdUser,
 						Subject: notify.SubjectMessage,
 						Action:  notify.ActionCreate,
 						Payload: msg,
 						Source:  source,
-					}
+					})
 				}
 			}
 
@@ -512,37 +512,37 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 
 	switch recipientType {
 	case model.TeammateRecipientType:
-		mc.notifier.Send <- &notify.Notice{
+		mc.notifier.Send(&notify.Notice{
 			IdUser:  idRecipient,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionUpdate,
 			Payload: updatedMsg,
 			Source:  updateSource,
-		}
+		})
 	case model.TeamRecipientType:
 		users, err := mc.teamRepo.LoadTeamsMembers(ctx, []int64{idRecipient})
 		if err == nil {
 			for _, u := range users {
-				mc.notifier.Send <- &notify.Notice{
+				mc.notifier.Send(&notify.Notice{
 					IdUser:  u.IdUser,
 					Subject: notify.SubjectMessage,
 					Action:  notify.ActionUpdate,
 					Payload: updatedMsg,
 					Source:  updateSource,
-				}
+				})
 			}
 		}
 	case model.ProjectRecipientType:
 		users, err := mc.projectRepo.LoadProjectsMembers(ctx, []int64{idRecipient})
 		if err == nil {
 			for _, u := range users {
-				mc.notifier.Send <- &notify.Notice{
+				mc.notifier.Send(&notify.Notice{
 					IdUser:  u.IdUser,
 					Subject: notify.SubjectMessage,
 					Action:  notify.ActionUpdate,
 					Payload: updatedMsg,
 					Source:  updateSource,
-				}
+				})
 			}
 		}
 	case model.IssueRecipientType:
@@ -551,13 +551,13 @@ func (mc *MessageController) UpdateMessage(c *gin.Context) {
 			users, err := mc.projectRepo.LoadProjectsMembers(ctx, []int64{project.IdProject})
 			if err == nil {
 				for _, u := range users {
-					mc.notifier.Send <- &notify.Notice{
+					mc.notifier.Send(&notify.Notice{
 						IdUser:  u.IdUser,
 						Subject: notify.SubjectMessage,
 						Action:  notify.ActionUpdate,
 						Payload: updatedMsg,
 						Source:  updateSource,
-					}
+					})
 				}
 			}
 		}

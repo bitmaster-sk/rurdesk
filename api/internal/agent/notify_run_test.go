@@ -7,6 +7,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,16 +31,9 @@ func (f fakeMemberLoader) LoadProjectsMembers(_ context.Context, _ []int64) ([]*
 	return f.members, f.err
 }
 
-// newTestNotifier returns a Notifier with a buffered Send channel but no
-// background listen loop, so tests can inspect the emitted notice directly
-// instead of it being consumed by broadcast().
-func newTestNotifier() *notify.Notifier {
-	return &notify.Notifier{Send: make(chan *notify.Notice, 1)}
-}
-
 func TestBroadcastIssueUpdate_ScopesToProjectMembers(t *testing.T) {
 	issue := &model.Issue{IdIssue: 42, IdProject: 7}
-	n := newTestNotifier()
+	n := &notifytest.Recorder{}
 
 	BroadcastIssueUpdate(
 		context.Background(),
@@ -49,8 +43,8 @@ func TestBroadcastIssueUpdate_ScopesToProjectMembers(t *testing.T) {
 		42,
 	)
 
-	require.Len(t, n.Send, 1, "expected exactly one notice to be emitted")
-	notice := <-n.Send
+	require.Len(t, n.Notices(), 1, "expected exactly one notice to be emitted")
+	notice := n.Notices()[0]
 	assert.Equal(t, []int64{10, 20}, notice.IdsUser, "notice must target project members only")
 	assert.Equal(t, notify.SubjectIssue, notice.Subject)
 	assert.Equal(t, notify.ActionUpdate, notice.Action)
@@ -58,7 +52,7 @@ func TestBroadcastIssueUpdate_ScopesToProjectMembers(t *testing.T) {
 }
 
 func TestBroadcastIssueUpdate_NoMembersSkipsToAvoidGlobalBroadcast(t *testing.T) {
-	n := newTestNotifier()
+	n := &notifytest.Recorder{}
 
 	BroadcastIssueUpdate(
 		context.Background(),
@@ -70,11 +64,11 @@ func TestBroadcastIssueUpdate_NoMembersSkipsToAvoidGlobalBroadcast(t *testing.T)
 
 	// An empty IdsUser would fall through to the notifier's IdUser==0 global
 	// fan-out, so the function must emit nothing.
-	assert.Empty(t, n.Send, "no notice may be sent when membership is unresolved")
+	assert.Empty(t, n.Notices(), "no notice may be sent when membership is unresolved")
 }
 
 func TestBroadcastIssueUpdate_MemberLoadErrorSkips(t *testing.T) {
-	n := newTestNotifier()
+	n := &notifytest.Recorder{}
 
 	BroadcastIssueUpdate(
 		context.Background(),
@@ -84,11 +78,11 @@ func TestBroadcastIssueUpdate_MemberLoadErrorSkips(t *testing.T) {
 		42,
 	)
 
-	assert.Empty(t, n.Send, "no notice may be sent when member load fails")
+	assert.Empty(t, n.Notices(), "no notice may be sent when member load fails")
 }
 
 func TestBroadcastIssueUpdate_IssueLoadFailureSkips(t *testing.T) {
-	n := newTestNotifier()
+	n := &notifytest.Recorder{}
 
 	BroadcastIssueUpdate(
 		context.Background(),
@@ -98,5 +92,5 @@ func TestBroadcastIssueUpdate_IssueLoadFailureSkips(t *testing.T) {
 		42,
 	)
 
-	assert.Empty(t, n.Send, "no notice may be sent when the issue cannot be loaded")
+	assert.Empty(t, n.Notices(), "no notice may be sent when the issue cannot be loaded")
 }

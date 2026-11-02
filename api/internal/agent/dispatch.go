@@ -33,7 +33,7 @@ type Dispatcher struct {
 	releases        *service.ReleaseService
 	agentTaskConfig *service.AgentTaskConfigService
 	gwClient        *GatewayClient
-	notifier        *notify.Notifier
+	notifier        notify.INotifier
 }
 
 func NewDispatcher(
@@ -52,7 +52,7 @@ func NewDispatcher(
 	releases *service.ReleaseService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	gwClient *GatewayClient,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *Dispatcher {
 	return &Dispatcher{
 		agentRunRepo:    agentRunRepo,
