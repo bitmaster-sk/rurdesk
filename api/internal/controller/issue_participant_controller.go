@@ -22,7 +22,7 @@ type IssueParticipantController struct {
 	issueRepo       *repository.IssueRepository
 	projectRepo     *repository.ProjectRepository
 	acl             *service.AclService
-	notifier        *notify.Notifier
+	notifier        notify.INotifier
 }
 
 // NewIssueParticipantController wires all dependencies.
@@ -31,7 +31,7 @@ func NewIssueParticipantController(
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
 	acl *service.AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *IssueParticipantController {
 	return &IssueParticipantController{
 		participantRepo: participantRepo,
@@ -197,7 +197,7 @@ func (pc *IssueParticipantController) broadcast(c *gin.Context, idProject, idIss
 // Best-effort: a load error is logged and skipped, never blocking the caller.
 func broadcastParticipants(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectRepo *repository.ProjectRepository,
 	participantRepo *repository.IssueParticipantRepository,
 	idProject, idIssue int64,
@@ -218,10 +218,10 @@ func broadcastParticipants(
 		return
 	}
 
-	notifier.Send <- &notify.Notice{
+	notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectIssueParticipant,
 		Action:  notify.ActionUpdate,
 		Payload: gin.H{"idIssue": idIssue, "participants": list},
-	}
+	})
 }

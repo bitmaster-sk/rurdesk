@@ -42,7 +42,7 @@ type AgentRunController struct {
 	dispatcher        *agent.Dispatcher
 	proposals         *service.WikiProposalService
 	releases          *service.ReleaseService
-	notifier          *notify.Notifier
+	notifier          notify.INotifier
 	pool              *pgxpool.Pool
 }
 
@@ -63,7 +63,7 @@ func NewAgentRunController(
 	dispatcher *agent.Dispatcher,
 	proposals *service.WikiProposalService,
 	releases *service.ReleaseService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	pool *pgxpool.Pool,
 ) *AgentRunController {
 	return &AgentRunController{
@@ -817,13 +817,13 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	}
 
 	if res.notifierMsg != nil {
-		ctrl.notifier.Send <- &notify.Notice{
+		ctrl.notifier.Send(&notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
 			Payload: res.notifierMsg,
 			Source:  "agent",
-		}
+		})
 	}
 	// The local `run` is the pre-transition snapshot; reload so the broadcast
 	// carries the phase applyCompleteStage set.
@@ -1039,12 +1039,12 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 						idsUser[i] = m.IdUser
 					}
 				}
-				ctrl.notifier.Send <- &notify.Notice{
+				ctrl.notifier.Send(&notify.Notice{
 					IdsUser: idsUser,
 					Subject: notify.SubjectAgentStats,
 					Action:  notify.ActionUpdate,
 					Payload: &model.AgentStatsNotice{IdRun: task.IdRun, Stats: stats},
-				}
+				})
 			}
 		}
 	}

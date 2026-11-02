@@ -3,7 +3,6 @@ package test
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -11,27 +10,19 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/stretchr/testify/require"
 )
 
-// A notifier without the listen loop, so the test drains what the broadcast sent.
-func captureNotifier() *notify.Notifier {
-	return &notify.Notifier{Send: make(chan *notify.Notice, 32)}
-}
-
-func broadcastController(notifier *notify.Notifier) *controller.CustomFieldController {
+func broadcastController(notifier *notifytest.Recorder) *controller.CustomFieldController {
 	return controller.NewCustomFieldController(nil, nil, nil, notifier, injector.GetProjectMemberService())
 }
 
-func drainNotice(t *testing.T, notifier *notify.Notifier) *notify.Notice {
+func drainNotice(t *testing.T, notifier *notifytest.Recorder) *notify.Notice {
 	t.Helper()
-	select {
-	case notice := <-notifier.Send:
-		return notice
-	case <-time.After(2 * time.Second):
-		t.Fatal("no notice was broadcast")
-		return nil
-	}
+	notices := notifier.Drain()
+	require.Len(t, notices, 1, "exactly one notice must be broadcast")
+	return notices[0]
 }
 
 func TestIssueUpdateNotice_CarriesCustomFields(t *testing.T) {
@@ -43,7 +34,7 @@ func TestIssueUpdateNotice_CarriesCustomFields(t *testing.T) {
 		IdProject: idProject, Key: "note", Name: "Note", FieldType: constants.CustomFieldTypeText})
 	created := createIssueWithCustomFields(t, app, token, idProject, "noticed", map[string]any{"note": "hello"})
 
-	notifier := captureNotifier()
+	notifier := &notifytest.Recorder{}
 	agent.BroadcastIssueUpdate(context.Background(), notifier,
 		injector.GetIssueRepository(), injector.GetProjectRepository(), created.IdIssue)
 
@@ -67,7 +58,7 @@ func TestCustomFieldNotice_ReachesProjectMembersOnly(t *testing.T) {
 	require.Nil(t, app.Pool.QueryRow(context.Background(),
 		`SELECT id_user FROM users.user WHERE email = 'cf-notice-stranger@test.sk'`).Scan(&idStranger))
 
-	notifier := captureNotifier()
+	notifier := &notifytest.Recorder{}
 	broadcastController(notifier).BroadcastCustomField(context.Background(), &field, notify.ActionCreate)
 
 	notice := drainNotice(t, notifier)
@@ -83,7 +74,7 @@ func TestCustomFieldDeleteNotice_CarriesTheDeletedDefinition(t *testing.T) {
 	field := createCustomField(t, app, token, model.CreateCustomFieldReq{
 		IdProject: idProject, Key: "gone", Name: "Gone", FieldType: constants.CustomFieldTypeText})
 
-	notifier := captureNotifier()
+	notifier := &notifytest.Recorder{}
 	broadcastController(notifier).BroadcastCustomField(context.Background(), &field, notify.ActionDelete)
 
 	notice := drainNotice(t, notifier)

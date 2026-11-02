@@ -39,7 +39,7 @@ type WikiService struct {
 	proposalRepo  *repository.WikiProposalRepository
 	projectRepo   *repository.ProjectRepository
 	acl           *AclService
-	notifier      *notify.Notifier
+	notifier      notify.INotifier
 	cache         *redis.Client
 	attachments   WikiAttachmentLinker
 }
@@ -62,7 +62,7 @@ func NewWikiService(
 	proposalRepo *repository.WikiProposalRepository,
 	projectRepo *repository.ProjectRepository,
 	acl *AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	cache *redis.Client,
 	attachments WikiAttachmentLinker,
 ) *WikiService {
@@ -643,9 +643,6 @@ func (s *WikiService) projectOfIssue(ctx context.Context, idIssue int64) (*model
 }
 
 func (s *WikiService) notifySaved(ctx context.Context, space *model.WikiSpace, page *model.WikiPage, user model.User) {
-	if s.notifier == nil {
-		return
-	}
 	notice := &notify.Notice{
 		Subject: notify.SubjectWikiPage,
 		Action:  notify.ActionUpdate,
@@ -669,7 +666,7 @@ func (s *WikiService) notifySaved(ctx context.Context, space *model.WikiSpace, p
 				notice.IdsUser[i] = member.IdUser
 			}
 		}
-		s.notifier.Send <- notice
+		s.notifier.Send(notice)
 	})
 }
 

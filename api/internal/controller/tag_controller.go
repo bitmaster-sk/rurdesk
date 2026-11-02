@@ -17,7 +17,7 @@ type TagController struct {
 	tagRepo          *repository.TagRepository
 	tagSvc           *service.TagService
 	acl              *service.AclService
-	notifier         *notify.Notifier
+	notifier         notify.INotifier
 	projectMemberSvc *service.ProjectMemberService
 }
 
@@ -25,7 +25,7 @@ func NewTagController(
 	tagRepo *repository.TagRepository,
 	tagSvc *service.TagService,
 	acl *service.AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectMemberSvc *service.ProjectMemberService,
 ) *TagController {
 	return &TagController{
@@ -38,19 +38,19 @@ func NewTagController(
 }
 
 func (tc *TagController) BroadcastTag(ctx context.Context, tag *model.Tag, action notify.NoticeAction) {
-	if tc.notifier == nil || tag == nil {
+	if tag == nil {
 		return
 	}
 	idsUser, err := tc.projectMemberSvc.LoadMemberIds(ctx, tag.IdProject)
 	if err != nil || len(idsUser) == 0 {
 		return
 	}
-	tc.notifier.Send <- &notify.Notice{
+	tc.notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectTag,
 		Action:  action,
 		Payload: tag,
-	}
+	})
 }
 
 func (tc *TagController) GetTags(c *gin.Context) {

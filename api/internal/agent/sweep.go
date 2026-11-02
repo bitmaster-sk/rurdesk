@@ -14,7 +14,7 @@ type Sweep struct {
 	agentRunRepo  *repository.AgentRunRepository
 	projectRepo   *repository.ProjectRepository
 	issueRepo     *repository.IssueRepository
-	notifier      *notify.Notifier
+	notifier      notify.INotifier
 }
 
 func NewSweep(
@@ -22,7 +22,7 @@ func NewSweep(
 	runRepo *repository.AgentRunRepository,
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *Sweep {
 	return &Sweep{
 		agentTaskRepo: taskRepo,

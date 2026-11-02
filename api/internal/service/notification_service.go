@@ -11,10 +11,10 @@ import (
 
 type NotificationService struct {
 	repo     *repository.NotificationRepository
-	notifier *notify.Notifier
+	notifier notify.INotifier
 }
 
-func NewNotificationService(repo *repository.NotificationRepository, notifier *notify.Notifier) *NotificationService {
+func NewNotificationService(repo *repository.NotificationRepository, notifier notify.INotifier) *NotificationService {
 	return &NotificationService{repo: repo, notifier: notifier}
 }
 
@@ -24,12 +24,12 @@ func (s *NotificationService) Notify(ctx context.Context, dto *model.CreateNotif
 		return fmt.Errorf("inserting notification: %w", err)
 	}
 
-	s.notifier.Send <- &notify.Notice{
+	s.notifier.Send(&notify.Notice{
 		IdUser:  dto.IdUser,
 		Subject: notify.SubjectNotification,
 		Action:  notify.ActionCreate,
 		Payload: notification,
 		Source:  dto.Source,
-	}
+	})
 	return nil
 }

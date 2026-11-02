@@ -13,6 +13,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/stretchr/testify/require"
 )
 
@@ -310,7 +311,7 @@ func TestTag_IssueUpdateNoticeCarriesTags(t *testing.T) {
 	next := createTag(t, app, token, idProject, "next")
 	created := createIssueWithTags(t, app, token, idProject, "noticed", []int64{next.IdTag})
 
-	notifier := captureNotifier()
+	notifier := &notifytest.Recorder{}
 	agent.BroadcastIssueUpdate(context.Background(), notifier,
 		injector.GetIssueRepository(), injector.GetProjectRepository(), created.IdIssue)
 
@@ -332,7 +333,7 @@ func TestTagNotice_ReachesProjectMembersOnly(t *testing.T) {
 	require.Nil(t, app.Pool.QueryRow(context.Background(),
 		`SELECT id_user FROM users.user WHERE email = 'tag-notice-stranger@test.sk'`).Scan(&idStranger))
 
-	notifier := captureNotifier()
+	notifier := &notifytest.Recorder{}
 	controller.NewTagController(nil, nil, nil, notifier, injector.GetProjectMemberService()).
 		BroadcastTag(context.Background(), &tag, notify.ActionDelete)
 

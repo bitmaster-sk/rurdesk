@@ -26,7 +26,7 @@ type ReleaseController struct {
 	projectMemberSvc *service.ProjectMemberService
 	thinking         *agent.ThinkingService
 	dispatcher       *agent.Dispatcher
-	notifier         *notify.Notifier
+	notifier         notify.INotifier
 }
 
 type ReleaseControllerDeps struct {
@@ -41,7 +41,7 @@ type ReleaseControllerDeps struct {
 	ProjectMemberSvc *service.ProjectMemberService
 	Thinking         *agent.ThinkingService
 	Dispatcher       *agent.Dispatcher
-	Notifier         *notify.Notifier
+	Notifier         notify.INotifier
 }
 
 func NewReleaseController(deps ReleaseControllerDeps) *ReleaseController {
@@ -301,7 +301,7 @@ func (rc *ReleaseController) sendRelease(ctx context.Context, idProject, idRelea
 	sendRelease(ctx, rc.notifier, rc.projectMemberSvc, idProject, release, action)
 }
 
-func BroadcastRelease(ctx context.Context, notifier *notify.Notifier, members *service.ProjectMemberService, releaseRepo *repository.ReleaseRepository, idProject, idRelease int64) {
+func BroadcastRelease(ctx context.Context, notifier notify.INotifier, members *service.ProjectMemberService, releaseRepo *repository.ReleaseRepository, idProject, idRelease int64) {
 	release, err := releaseRepo.LoadRelease(ctx, idProject, idRelease)
 	if err != nil {
 		return
@@ -309,20 +309,20 @@ func BroadcastRelease(ctx context.Context, notifier *notify.Notifier, members *s
 	sendRelease(ctx, notifier, members, idProject, release, notify.ActionUpdate)
 }
 
-func sendRelease(ctx context.Context, notifier *notify.Notifier, members *service.ProjectMemberService, idProject int64, payload any, action notify.NoticeAction) {
-	if notifier == nil || payload == nil {
+func sendRelease(ctx context.Context, notifier notify.INotifier, members *service.ProjectMemberService, idProject int64, payload any, action notify.NoticeAction) {
+	if payload == nil {
 		return
 	}
 	idsUser, err := members.LoadMemberIds(ctx, idProject)
 	if err != nil || len(idsUser) == 0 {
 		return
 	}
-	notifier.Send <- &notify.Notice{
+	notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectRelease,
 		Action:  action,
 		Payload: payload,
-	}
+	})
 }
 
 func parseReleaseParams(c *gin.Context) (int64, int64, bool) {

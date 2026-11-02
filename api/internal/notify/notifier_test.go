@@ -111,3 +111,18 @@ func TestBroadcast_ConcurrentAddRemoveNoRace(_ *testing.T) {
 
 	wg.Wait()
 }
+
+func TestSend_DeliversThroughListenLoop(t *testing.T) {
+	n := NewNotifier()
+	conn := &NotifyConnection{idUser: 1, send: make(chan []byte, 1)}
+	n.Add(conn)
+
+	n.Send(&Notice{IdUser: 1, Subject: SubjectIssue, Action: ActionUpdate})
+
+	select {
+	case b := <-conn.send:
+		assert.Contains(t, string(b), `"subject":"issue"`)
+	case <-time.After(2 * time.Second):
+		t.Fatal("a sent notice never reached the connected user")
+	}
+}

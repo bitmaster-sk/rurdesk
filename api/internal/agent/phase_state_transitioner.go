@@ -26,7 +26,7 @@ type PhaseStateTransitioner struct {
 	issueRepo            issueStateStore
 	stateRepo            stateLoader
 	projectRepo          projectMemberLoader
-	notifier             *notify.Notifier
+	notifier             notify.INotifier
 }
 
 func NewPhaseStateTransitioner(
@@ -34,7 +34,7 @@ func NewPhaseStateTransitioner(
 	issueRepo issueStateStore,
 	stateRepo stateLoader,
 	projectRepo projectMemberLoader,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *PhaseStateTransitioner {
 	return &PhaseStateTransitioner{
 		workflowEventMapRepo: workflowEventMapRepo,
@@ -102,9 +102,6 @@ func (t *PhaseStateTransitioner) Transition(ctx context.Context, idProject, idIs
 
 // broadcast must stay deferred: BroadcastIssueUpdate re-reads the issue on a pool connection after the request context is gone.
 func (t *PhaseStateTransitioner) broadcast(ctx context.Context, idIssue int64) {
-	if t.notifier == nil || t.projectRepo == nil {
-		return
-	}
 	extctx.AfterCommit(ctx, func(detached context.Context) {
 		BroadcastIssueUpdate(detached, t.notifier, t.issueRepo, t.projectRepo, idIssue)
 	})
