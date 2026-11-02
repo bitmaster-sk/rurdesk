@@ -7,7 +7,7 @@
             <ui-button
                 type="button"
                 tabindex="-1"
-                [routerLink]="['/project', project?.idProject, 'issue', 0]"
+                [routerLink]="['/project', $safeNavigationMigration(project?.idProject), 'issue', 0]"
                 severity="secondary"
                 variant="outlined"
                 size="small"

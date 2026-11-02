@@ -37,7 +37,9 @@
                     </td>
                     <td>
                         <span class="flex items-center gap-1">
-                            <app-severity-circle [color]="row.severity?.color" />
+                            <app-severity-circle
+                                [color]="$safeNavigationMigration(row.severity?.color)"
+                            />
                             <span>{{ row.severity?.title ?? ('NONE' | translate) }}</span>
                         </span>
                     </td>

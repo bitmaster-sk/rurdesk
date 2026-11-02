@@ -7,7 +7,12 @@ import { AuthInterceptor } from './auth/auth.interceptor';
 import { ErrorInterceptor } from './core/error.interceptor';
 import { DynamicImportErrorHandler } from './core/dynamic-import-error-handler';
 import { ErrorHandler } from '@angular/core';
-import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import {
+    HTTP_INTERCEPTORS,
+    provideHttpClient,
+    withInterceptorsFromDi,
+    withXhr
+} from '@angular/common/http';
 import { AuthModule } from './auth/auth.module';
 import { CoreModule } from './core/core.module';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
@@ -55,7 +60,7 @@ import { UiToastModule } from './ui/ui-toast.module';
         // withInterceptorsFromDi() is REQUIRED for the HTTP_INTERCEPTORS class
         // interceptors above (Auth/Error) to run — without it Angular silently
         // ignores them, so 401s never clear the token or redirect to /login.
-        provideHttpClient(withInterceptorsFromDi()),
+        provideHttpClient(withXhr(), withInterceptorsFromDi()),
         provideAnimationsAsync()
     ],
     bootstrap: [AppComponent]

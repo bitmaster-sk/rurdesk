@@ -20,7 +20,11 @@
                         <a
                             class="link"
                             data-testid="sidebar-link-overview"
-                            [routerLink]="['/project', project()?.idProject, 'view']"
+                            [routerLink]="[
+                                '/project',
+                                $safeNavigationMigration(project()?.idProject),
+                                'view'
+                            ]"
                             [routerLinkActiveOptions]="{ exact: true }"
                             routerLinkActive="active"
                         >
@@ -33,7 +37,11 @@
                             <div class="menu-item-border"></div>
                             <a
                                 class="link"
-                                [routerLink]="['/project', project()?.idProject, 'settings']"
+                                [routerLink]="[
+                                    '/project',
+                                    $safeNavigationMigration(project()?.idProject),
+                                    'settings'
+                                ]"
                                 routerLinkActive="active"
                             >
                                 <tabler-icon icon="settings" [size]="16" class="icon" />
@@ -46,7 +54,11 @@
                         <a
                             class="link"
                             data-testid="sidebar-link-wiki"
-                            [routerLink]="['/project', project()?.idProject, 'wiki']"
+                            [routerLink]="[
+                                '/project',
+                                $safeNavigationMigration(project()?.idProject),
+                                'wiki'
+                            ]"
                             routerLinkActive="active"
                         >
                             <tabler-icon icon="book-2" [size]="16" class="icon" />
@@ -58,7 +70,11 @@
                         <a
                             class="link"
                             data-testid="sidebar-link-release"
-                            [routerLink]="['/project', project()?.idProject, 'release']"
+                            [routerLink]="[
+                                '/project',
+                                $safeNavigationMigration(project()?.idProject),
+                                'release'
+                            ]"
                             routerLinkActive="active"
                         >
                             <tabler-icon icon="rocket" [size]="16" class="icon" />
@@ -73,7 +89,7 @@
                             data-testid="sidebar-link-table"
                             [routerLink]="[
                                 '/project',
-                                project()?.idProject,
+                                $safeNavigationMigration(project()?.idProject),
                                 'issue',
                                 'view',
                                 'table'
@@ -91,7 +107,7 @@
                             data-testid="sidebar-link-kanban"
                             [routerLink]="[
                                 '/project',
-                                project()?.idProject,
+                                $safeNavigationMigration(project()?.idProject),
                                 'issue',
                                 'view',
                                 'kanban'
@@ -108,7 +124,7 @@
                             class="link"
                             [routerLink]="[
                                 '/project',
-                                project()?.idProject,
+                                $safeNavigationMigration(project()?.idProject),
                                 'issue',
                                 'view',
                                 'calendar'
@@ -125,7 +141,7 @@
                             class="link"
                             [routerLink]="[
                                 '/project',
-                                project()?.idProject,
+                                $safeNavigationMigration(project()?.idProject),
                                 'issue',
                                 'view',
                                 'gantt'

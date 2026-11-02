@@ -1,7 +1,5 @@
 // Angular TestBed bootstrap for Vitest browser mode.
 import '@angular/compiler';
-import 'zone.js';
-import 'zone.js/testing';
 import { afterEach } from 'vitest';
 import { getTestBed } from '@angular/core/testing';
 import {

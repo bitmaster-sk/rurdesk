@@ -1,12 +1,13 @@
 import {
     ApplicationRef,
-    ComponentFactoryResolver,
     ComponentRef,
     EmbeddedViewRef,
+    EnvironmentInjector,
     Injectable,
     Injector,
     ProviderToken,
     Type,
+    createComponent,
     inject
 } from '@angular/core';
 import { tap } from 'rxjs/operators';
@@ -19,7 +20,7 @@ import cloneDeep from 'lodash-es/cloneDeep';
 
 @Injectable()
 export class WindowService {
-    private readonly componentFactoryResolver = inject(ComponentFactoryResolver);
+    private readonly environmentInjector = inject(EnvironmentInjector);
     private readonly appRef = inject(ApplicationRef);
     private readonly injector = inject(Injector);
 
@@ -46,8 +47,10 @@ export class WindowService {
         componentType: Type<unknown>,
         injectorExtension: WeakMap<ProviderToken<unknown>, unknown>
     ): ComponentRef<WindowComponent> {
-        const factory = this.componentFactoryResolver.resolveComponentFactory(WindowComponent);
-        const component = factory.create(new WindowInjector(this.injector, injectorExtension));
+        const component = createComponent(WindowComponent, {
+            environmentInjector: this.environmentInjector,
+            elementInjector: new WindowInjector(this.injector, injectorExtension)
+        });
 
         this.appRef.attachView(component.hostView);
         document.body.appendChild(

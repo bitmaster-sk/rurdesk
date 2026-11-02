@@ -200,7 +200,7 @@
                                 <td>
                                     <div class="flex items-center gap-1">
                                         <app-severity-circle
-                                            [color]="row.severity?.color"
+                                            [color]="$safeNavigationMigration(row.severity?.color)"
                                         ></app-severity-circle>
                                         <span>
                                             {{ row.severity?.title ?? ('NONE' | translate) }}

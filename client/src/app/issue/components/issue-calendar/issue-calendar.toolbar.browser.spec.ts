@@ -1,4 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { createCalendarFixture } from './calendar-testbed.helper';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 
@@ -146,11 +148,13 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
     // =========================================================================
 
     it('navigates to the issue detail page', () => {
+        // provideRouter([]) has no matching route, so the real navigate() promise
+        // would reject with NG04002 as an unhandled rejection; spy and assert args.
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
         const issue = { idProject: 5, idIssuePublic: 42 } as any;
         const evt = { event: { extendedProps: { issue } } } as any;
         comp.onCalendarEventClick(evt);
-        // Can't easily assert router.navigate without spy injection;
-        // verify it doesn't throw
+        expect(navigate).toHaveBeenCalledWith(['/project', 5, 'issue', 42]);
     });
 
     // =========================================================================
