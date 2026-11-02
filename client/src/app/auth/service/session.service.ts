@@ -4,6 +4,7 @@ import { SettingsStore } from '../../core/settings/settings.store';
 import { LicenseStore } from '../../core/license/license.store';
 import { NotificationStore } from '../../notification/store/notification.store';
 import { AttachmentStore } from '../../shared/attachment/store/attachment.store';
+import { NoticeService } from '../../shared/notice/notice.service';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 
@@ -16,9 +17,11 @@ export class SessionService {
     private readonly licenseStore = inject(LicenseStore);
     private readonly notificationStore = inject(NotificationStore);
     private readonly attachmentStore = inject(AttachmentStore);
+    private readonly noticeService = inject(NoticeService);
 
     public start(token: string): void {
         this.tokenStore.saveToken(token);
+        this.noticeService.reconnect();
         // App bootstrap skips the auth-gated settings load for anonymous visitors;
         // now that we have a token, load them (navigation does not re-bootstrap).
         this.settingsStore.load();
@@ -32,6 +35,7 @@ export class SessionService {
     public end(redirectTo?: string): void {
         const done = (): void => {
             this.tokenStore.clearToken();
+            this.noticeService.reconnect();
             this.attachmentStore.revokeAll();
             if (redirectTo !== undefined) {
                 void this.router.navigate([redirectTo]);

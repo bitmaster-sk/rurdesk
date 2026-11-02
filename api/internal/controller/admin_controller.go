@@ -466,6 +466,7 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 			}
 		}
 		if disableApplied {
+			ac.notifier.Disconnect(idUser)
 			// Fold the cancelled tasks' live thinking events, like
 			// AgentRunController.Cancel does. Must run after the tx committed so
 			// the rows it reads are visible; best-effort, never fails the request.
@@ -675,6 +676,7 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 			return
 		}
 		ac.apiKeySvc.PurgeCache(ctx, keyHashes)
+		ac.notifier.Disconnect(idUser)
 		c.Status(http.StatusOK)
 	}
 }

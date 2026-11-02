@@ -234,6 +234,19 @@ func (n *Notifier) Remove(nc *NotifyConnection) {
 	nc.mu.Unlock()
 }
 
+func (n *Notifier) Disconnect(idUser int64) {
+	n.RLock()
+	conns := make([]*NotifyConnection, 0, len(n.conns[idUser]))
+	for conn := range n.conns[idUser] {
+		conns = append(conns, conn)
+	}
+	n.RUnlock()
+
+	for _, conn := range conns {
+		conn.close()
+	}
+}
+
 func (n *Notifier) Add(nc *NotifyConnection) {
 	n.Lock()
 	defer n.Unlock()

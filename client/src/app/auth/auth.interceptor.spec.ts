@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { AuthInterceptor } from './auth.interceptor';
 import { AuthTokenStore } from './store/auth-token.store';
+import { NoticeService } from '../shared/notice/notice.service';
 
 // Node environment has no `window`; the interceptor reads window.location.origin
 // at construction time. Provide a minimal stub so the allowlist builds correctly.
@@ -23,11 +24,16 @@ function handlerReturning(obs: Observable<HttpEvent<unknown>>): HttpHandler {
     return { handle: vi.fn().mockReturnValue(obs) };
 }
 
-function buildInterceptor(tokenStore: AuthTokenStore, router: Router): AuthInterceptor {
+function buildInterceptor(
+    tokenStore: AuthTokenStore,
+    router: Router,
+    reconnect = vi.fn()
+): AuthInterceptor {
     const injector = Injector.create({
         providers: [
             { provide: AuthTokenStore, useValue: tokenStore },
-            { provide: Router, useValue: router }
+            { provide: Router, useValue: router },
+            { provide: NoticeService, useValue: { reconnect } }
         ]
     });
     return runInInjectionContext(injector, () => new AuthInterceptor());
@@ -240,11 +246,29 @@ describe('AuthInterceptor', () => {
         expect(navigateByUrl).not.toHaveBeenCalled();
     });
 
+    it('on 401 reconnects the notice socket so it stops listening as the old user', () => {
+        const reconnect = vi.fn();
+        const tokenStore = {
+            getToken: () => 't',
+            clearToken: vi.fn()
+        } as unknown as AuthTokenStore;
+        const router = { navigateByUrl: vi.fn(), url: '/x' } as unknown as Router;
+        const interceptor = buildInterceptor(tokenStore, router, reconnect);
+        const next = {
+            handle: () => throwError(() => new HttpErrorResponse({ status: 401 }))
+        } as unknown as HttpHandler;
+
+        interceptor.intercept(new HttpRequest('GET', '/x'), next).subscribe({ error: () => {} });
+
+        expect(reconnect).toHaveBeenCalled();
+    });
+
     it('does not touch auth on non-401 errors', () => {
         const clearToken = vi.fn();
+        const reconnect = vi.fn();
         const tokenStore = { getToken: () => 't', clearToken } as unknown as AuthTokenStore;
         const router = { navigateByUrl: vi.fn(), url: '/x' } as unknown as Router;
-        const interceptor = buildInterceptor(tokenStore, router);
+        const interceptor = buildInterceptor(tokenStore, router, reconnect);
         const next = {
             handle: () => throwError(() => new HttpErrorResponse({ status: 500 }))
         } as unknown as HttpHandler;
@@ -255,6 +279,7 @@ describe('AuthInterceptor', () => {
             .subscribe({ error: () => (errored = true) });
 
         expect(clearToken).not.toHaveBeenCalled();
+        expect(reconnect).not.toHaveBeenCalled();
         expect(errored).toBe(true);
     });
 });

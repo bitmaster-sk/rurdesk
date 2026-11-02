@@ -11,11 +11,13 @@ import { AuthTokenStore } from './store/auth-token.store';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { NoticeService } from '../shared/notice/notice.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
     private readonly tokenStore = inject(AuthTokenStore);
     private readonly router = inject(Router);
+    private readonly noticeService = inject(NoticeService);
 
     /**
      * Origins that are allowed to receive the JWT `Authorization` header.
@@ -68,6 +70,7 @@ export class AuthInterceptor implements HttpInterceptor {
             catchError((e: HttpErrorResponse) => {
                 if (e.status === 401) {
                     this.tokenStore.clearToken();
+                    this.noticeService.reconnect();
                     // A 401 means the server rejected the token (expired, or invalidated
                     // server-side while the FE still holds it). Always force login — deferred
                     // via microtask to break out of any in-progress navigation/resolver call

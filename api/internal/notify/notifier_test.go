@@ -1,11 +1,16 @@
 package notify
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // addConn registers a fake connection (no websocket) for idUser with a buffered
@@ -110,4 +115,51 @@ func TestBroadcast_ConcurrentAddRemoveNoRace(_ *testing.T) {
 	}()
 
 	wg.Wait()
+}
+
+func TestDisconnect_ClosesEveryConnectionOfTheUser(t *testing.T) {
+	n := &Notifier{conns: make(map[int64]map[*NotifyConnection]bool)}
+	upgrader := websocket.Upgrader{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ws, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		idUser := int64(1)
+		if r.URL.Query().Get("other") != "" {
+			idUser = 2
+		}
+		conn := NewNotifyConnection(idUser, n, ws)
+		n.Add(conn)
+		<-conn.Close
+	}))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	dial := func(query string) *websocket.Conn {
+		client, _, err := websocket.DefaultDialer.Dial(wsURL+query, nil)
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = client.Close() })
+		return client
+	}
+	first := dial("")
+	second := dial("")
+	dial("?other=1")
+	require.Eventually(t, func() bool {
+		n.RLock()
+		defer n.RUnlock()
+		return len(n.conns[1]) == 2 && len(n.conns[2]) == 1
+	}, 2*time.Second, 10*time.Millisecond)
+
+	n.Disconnect(1)
+
+	for _, client := range []*websocket.Conn{first, second} {
+		_ = client.SetReadDeadline(time.Now().Add(2 * time.Second))
+		_, _, err := client.ReadMessage()
+		assert.Error(t, err)
+	}
+	n.RLock()
+	assert.Empty(t, n.conns[1])
+	assert.Len(t, n.conns[2], 1)
+	n.RUnlock()
 }
