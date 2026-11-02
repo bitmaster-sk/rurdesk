@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -85,7 +86,7 @@ func newRunGitRepoFixture(t *testing.T) *runGitRepoFixture {
 	require.NoError(t, err)
 	fx.webhookSecret = webhookSecret
 
-	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(model.RunChoices{})
+	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(constants.RunKindIssue, model.RunChoices{})
 	require.NoError(t, err)
 	fx.stagePlan = stagePlan
 	return fx
@@ -118,7 +119,7 @@ func (fx *runGitRepoFixture) run(t *testing.T, idProject int64) *model.AgentRun 
 	require.Equal(t, http.StatusOK, issRes.StatusCode)
 	var iss model.Issue
 	require.NoError(t, json.NewDecoder(issRes.Body).Decode(&iss))
-	run, err := injector.GetAgentRunRepository().Insert(context.Background(), iss.IdIssue, fx.idAgent, idProject, fx.stagePlan)
+	run, err := injector.GetAgentRunRepository().InsertForIssue(context.Background(), iss.IdIssue, fx.idAgent, idProject, fx.stagePlan)
 	require.NoError(t, err)
 	return run
 }

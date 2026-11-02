@@ -7,6 +7,8 @@ desktop.ini
 docs/development/
 PROMOTE.md
 ROADMAP.md
+PRODUCT.md
+.impeccable/
 
 # Environment / secrets — never commit
 .env

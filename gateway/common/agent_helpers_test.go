@@ -22,6 +22,7 @@ func TestMCPURLForStage(t *testing.T) {
 		{"design uses plan subset", StageDesign, "http://issue.proxy/mcp/plan/sse"},
 		{"implementation_plan uses plan subset", StageImplementationPlan, "http://issue.proxy/mcp/plan/sse"},
 		{"pickup uses plan subset", StagePickup, "http://issue.proxy/mcp/plan/sse"},
+		{"release_notes uses plan subset", StageReleaseNotes, "http://issue.proxy/mcp/plan/sse"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -35,7 +36,7 @@ func TestMCPURLForStage(t *testing.T) {
 func TestSessionUUIDIsValidUUID(t *testing.T) {
 	stages := []string{
 		StagePickup, StageBrainstorming, StageDesign,
-		StageImplementationPlan, StageImplementation,
+		StageImplementationPlan, StageImplementation, StageReleaseNotes,
 	}
 	for _, stage := range stages {
 		for _, attempt := range []int{-1, 0, 1, 9, 42} {

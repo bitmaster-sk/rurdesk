@@ -44,7 +44,6 @@ import { QualityPanelComponent } from './components/quality-panel/quality-panel.
 import { IssueGanttComponent } from './components/issue-gantt/issue-gantt.component';
 import { IssueActivityFeedComponent } from './components/issue-detail/components/issue-activity-feed/issue-activity-feed.component';
 import { ActivityCommentItemComponent } from './components/issue-detail/components/activity-comment-item/activity-comment-item.component';
-import { AgentThinkingRowComponent } from './components/issue-detail/components/agent-thinking-row/agent-thinking-row.component';
 import { ActivityTimeItemComponent } from './components/issue-detail/components/activity-time-item/activity-time-item.component';
 import { WikiProposalCardComponent } from './components/issue-detail/components/wiki-proposal-card/wiki-proposal-card.component';
 import {
@@ -152,7 +151,6 @@ import { AgentModule } from '../agent/agent.module';
         IssueGanttComponent,
         IssueActivityFeedComponent,
         ActivityCommentItemComponent,
-        AgentThinkingRowComponent,
         ActivityTimeItemComponent,
         WikiProposalCardComponent,
         GanttTimelineHeaderComponent,

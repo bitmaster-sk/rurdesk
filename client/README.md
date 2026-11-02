@@ -4,7 +4,7 @@ Angular frontend for the issue tracker.
 
 ## Stack
 
-Angular 21 · custom `ui-*` design system (`src/app/ui/`, CDK Overlay) ·
+Angular 22 · custom `ui-*` design system (`src/app/ui/`, CDK Overlay) ·
 Tailwind CSS v4 · Tabler Icons · ngx-translate · FullCalendar. Uses NgModules
 (not standalone components).
 

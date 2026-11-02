@@ -63,6 +63,7 @@ import { UiMessageComponent } from './components/message/message.component';
 import { UiPopoverComponent } from './components/popover/popover.component';
 import { UiSaveStatusChipComponent } from './components/save-status/save-status-chip.component';
 import { UiSplitPaneComponent } from './components/split-pane/split-pane.component';
+import { UiStepperComponent } from './components/stepper/stepper.component';
 import { UiSaveStatusDirective } from './directives/save-status.directive';
 import { UiFlipListDirective } from './directives/flip-list.directive';
 import { UiListboxComponent } from './components/select/listbox.component';
@@ -113,6 +114,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiLightboxComponent,
         UiSaveStatusChipComponent,
         UiSplitPaneComponent,
+        UiStepperComponent,
         UiTableSortDirective,
         UiSortColumnDirective,
         UiConfirmDirective,
@@ -158,6 +160,7 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiDialogComponent,
         UiLightboxComponent,
         UiSplitPaneComponent,
+        UiStepperComponent,
         UiTableSortDirective,
         UiSortColumnDirective,
         UiSaveStatusDirective,

@@ -43,6 +43,8 @@ func stageCodeHex(stage string) string {
 		return "3"
 	case StageImplementation:
 		return "4"
+	case StageReleaseNotes:
+		return "5"
 	default:
 		return "0"
 	}

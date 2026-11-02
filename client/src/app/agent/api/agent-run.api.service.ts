@@ -8,6 +8,7 @@ import {
 } from '../model/agent-run-stage-plan.model';
 import { CreateAgentRunReq } from '../model/agent-run.model';
 import { AgentOverview } from '../model/agent-overview.model';
+import { RunKind } from '../model/run-kind.model';
 import { AgentRun, RunStats, UpdateAgentRunWorkflowReq } from '../model/agent-run.model';
 import { AgentRunWikiRead } from '../model/agent-run-wiki-read.model';
 
@@ -23,6 +24,10 @@ export class AgentRunApi {
 
     public loadByProject$(idProject: number): Observable<AgentRun[]> {
         return this.http.get<AgentRun[]>(`/api/private/project/${idProject}/agent/runs`);
+    }
+
+    public loadOne$(idRun: number): Observable<AgentRun> {
+        return this.http.get<AgentRun>(`/api/private/agent/run/${idRun}`);
     }
 
     public approve$(idRun: number, mockupRef?: string): Observable<AgentRun> {
@@ -83,6 +88,10 @@ export class AgentRunApi {
     public updateWorkflow$(idRun: number, isShortWorkflow: boolean): Observable<AgentRun> {
         const body: UpdateAgentRunWorkflowReq = { isShortWorkflow };
         return this.http.patch<AgentRun>(`/api/private/agent/run/${idRun}/workflow`, body);
+    }
+
+    public loadRunKinds$(): Observable<RunKind[]> {
+        return this.http.get<RunKind[]>('/api/private/agent/run-kinds');
     }
 
     public loadAgentsOverview$(idProject: number): Observable<AgentOverview[]> {

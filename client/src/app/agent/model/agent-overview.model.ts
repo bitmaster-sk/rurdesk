@@ -1,7 +1,8 @@
 import { AgentStage } from './agent-stage.enum';
 
 export interface AgentCurrentRun {
-    idIssuePublic: number;
+    idIssuePublic: number | null;
+    releaseName: string | null;
     stage: AgentStage;
 }
 

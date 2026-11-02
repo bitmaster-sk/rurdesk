@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 )
 
@@ -208,6 +209,24 @@ func TestDerivePrHostAndId(t *testing.T) {
 			}
 			if id != tc.wantPrId {
 				t.Errorf("prId: got %q, want %q", id, tc.wantPrId)
+			}
+		})
+	}
+}
+
+func TestDecideNextRunPhase(t *testing.T) {
+	tests := []struct {
+		stage, outcome, want string
+	}{
+		{constants.StageReleaseNotes, constants.StageOutcomeOutputSubmitted, constants.PhaseDone},
+		{constants.StageReleaseNotes, constants.StageOutcomeErrored, constants.PhaseFailed},
+		{constants.StageImplementation, constants.StageOutcomeOutputSubmitted, constants.PhasePrOpen},
+		{constants.StageDesign, constants.StageOutcomeOutputSubmitted, constants.PhaseAwaitingApproval},
+	}
+	for _, tt := range tests {
+		t.Run(tt.stage+"/"+tt.outcome, func(t *testing.T) {
+			if got := decideNextRunPhase(tt.stage, tt.outcome); got != tt.want {
+				t.Fatalf("decideNextRunPhase(%q, %q) = %q, want %q", tt.stage, tt.outcome, got, tt.want)
 			}
 		})
 	}

@@ -18,3 +18,8 @@ func TestCompleteStage_MessageKindSchemaListsTheAgentKinds(t *testing.T) {
 	require.ElementsMatch(t, constants.AgentMessageKinds, property["enum"])
 	require.NotContains(t, property["enum"], string(constants.MessageKindComment))
 }
+
+func TestPlanServer_StillCannotProposeWikiChanges(t *testing.T) {
+	server := buildMCPServer(NewDispatcher(gin.New()), StagePlan)
+	require.Nil(t, server.GetTool("suggest_wiki_change"))
+}

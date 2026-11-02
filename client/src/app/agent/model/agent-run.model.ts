@@ -2,7 +2,8 @@ import { AgentPhase } from './agent-phase.enum';
 
 export interface AgentRun {
     idRun: number;
-    idIssue: number;
+    idIssue: number | null;
+    idRelease: number | null;
     idProject: number;
     idUserAgent: number;
     idGitIntegration: number | null;

@@ -43,16 +43,19 @@ until you restore the original, which also opts it back into future updates.
 | **Verification rules** | implementation | Find the project's checks, run them in full, read the real output, and never push a branch whose tests, linter, formatter or build are failing. If a check cannot be made to pass, the stage ends with an error instead of a red branch. |
 | **Testing rules** | off | Write the failing test first, then the code that makes it pass. Opinionated — switch it on per project if that is how your team works. |
 | **PR rules** | off | Commit-message and pull-request-description conventions. |
+| **Release notes style** | release notes | How an agent turns the tasks of a release into [release notes](releases.md) for customers: a fixed structure (summary, Highlights, Breaking changes, Added, Changed, Removed, Fixed), plain words, facts from the tasks only, task numbers at the end of each bullet. |
 
-The two enabled-by-default skills are switched on for a project when the project
+The enabled-by-default skills are switched on for a project when the project
 is created. Turning one off is permanent for that project — an update will not
 switch it back on.
 
 ## Per-project defaults
 
 Every project decides which skills apply to which stage, in **Project settings →
-Agent skills**. The panel is a matrix: skills down the side, the four stages
-(brainstorming, design, implementation plan, implementation) across the top.
+Agent skills**. The panel is a matrix: skills down the side, the stages across
+the top, grouped by the kind of work. *Development* has brainstorming, design,
+implementation plan and implementation; *Release notes* has the one stage in
+which an agent writes [release notes](releases.md#letting-an-agent-write-the-release-notes).
 Ticking a cell saves immediately.
 
 Only project owners can change the matrix; any project member can read it,

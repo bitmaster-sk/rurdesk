@@ -18,7 +18,19 @@ describe('AppComponent', () => {
             providers: [
                 { provide: SettingsStore, useValue: { load: () => {} } },
                 { provide: LicenseStore, useValue: { load: () => {} } },
-                { provide: AuthTokenStore, useValue: { hasToken: () => false } },
+                // Complete the token-store contract: AppComponent only calls hasToken(),
+                // but the root-scoped NoticeService (via NotificationStore) reads getToken()
+                // when opening its WebSocket — a mock without it throws a TypeError that
+                // NoticeService logs via console.error into the otherwise clean stderr.
+                {
+                    provide: AuthTokenStore,
+                    useValue: {
+                        hasToken: () => false,
+                        getToken: () => null,
+                        clearToken: () => {},
+                        saveToken: () => {}
+                    }
+                },
                 { provide: HotkeyService, useValue: { start: () => {} } }
             ]
         }).compileComponents();

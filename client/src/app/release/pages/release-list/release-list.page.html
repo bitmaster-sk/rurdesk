@@ -1,0 +1,98 @@
+<div class="flex flex-col gap-4 p-4" data-testid="release-list">
+    <section class="panel">
+        <header class="panel-head">
+            <div class="panel-head-l">
+                <tabler-icon icon="rocket" [size]="16" class="panel-icon" />
+                <div class="panel-title">{{ 'RELEASE.TITLE' | translate }}</div>
+            </div>
+            @if (acl.canUpdateProject()) {
+            <ui-button
+                data-testid="release-new"
+                size="small"
+                [label]="'RELEASE.NEW' | translate"
+                [routerLink]="['/project', idProject, 'release', 'new']"
+            >
+                <tabler-icon icon="plus" [size]="16" />
+            </ui-button>
+            }
+        </header>
+        <div class="panel-body panel-body--flush">
+            <p class="m-0 p-4 ui-color-text-muted border-bottom">
+                {{ 'RELEASE.HINT' | translate }}
+            </p>
+            @if (releases(); as releases) { @if (releases.length === 0) {
+            <div class="p-4 text-center ui-color-text-muted" data-testid="release-empty-list">
+                {{ 'RELEASE.EMPTY' | translate }}
+            </div>
+            } @else {
+            <table class="ui-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'RELEASE.VERSION' | translate }}</th>
+                        <th scope="col">{{ 'RELEASE.STATE' | translate }}</th>
+                        <th scope="col">{{ 'RELEASE.WHO_WHEN' | translate }}</th>
+                        <th scope="col">{{ 'RELEASE.TASKS' | translate }}</th>
+                        <th scope="col">
+                            <span class="sr-only">{{ 'RELEASE.ACTIONS' | translate }}</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (release of releases; track release.idRelease) {
+                    <tr data-testid="release-row">
+                        <td class="font-semibold">
+                            <a
+                                data-testid="release-open"
+                                [routerLink]="['/project', idProject, 'release', release.idRelease]"
+                            >
+                                {{ release.name }}
+                            </a>
+                        </td>
+                        <td>
+                            @if (release.status === ReleaseStatus.Draft) {
+                            <span class="flex items-center gap-2">
+                                <ui-badge [value]="'RELEASE.STATUS.DRAFT' | translate" />
+                                @if (release.isNotesPending) {
+                                <span class="ui-field-hint">
+                                    {{ 'RELEASE.AGENT.WRITING_SHORT' | translate }}
+                                </span>
+                                }
+                            </span>
+                            } @else {
+                            <ui-badge
+                                severity="success"
+                                [value]="'RELEASE.STATUS.RELEASED' | translate"
+                            />
+                            }
+                        </td>
+                        <td>
+                            {{ authorName(release) }} · {{ release.releasedAt ?? release.createAt |
+                            date: 'short' }}
+                        </td>
+                        <td class="ui-color-text-muted">
+                            @if (release.status === ReleaseStatus.Released) { {{ release.issueCount
+                            }} } @else { — }
+                        </td>
+                        <td class="text-right">
+                            @if (release.status === ReleaseStatus.Draft && acl.canUpdateProject()) {
+                            <ui-button
+                                data-testid="release-continue"
+                                size="small"
+                                variant="outlined"
+                                [label]="'RELEASE.CONTINUE_DRAFT' | translate"
+                                [routerLink]="['/project', idProject, 'release', release.idRelease]"
+                            >
+                                <tabler-icon icon="arrow-right" [size]="16" />
+                            </ui-button>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+            } } @else {
+            <div class="p-4"><ui-loader [size]="32" [ariaLabel]="'UI.LOADING' | translate" /></div>
+            }
+        </div>
+    </section>
+</div>

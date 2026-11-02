@@ -89,10 +89,8 @@
                     [initialValue]="body()"
                     [placeholderText]="'WIKI.FIELD.BODY_PLACEHOLDER' | translate"
                     [pages]="pageOptions()"
-                    [issues]="issueOptions()"
                     [attachmentScope]="attachmentScope()"
                     (valueChange)="onBodyChange($event)"
-                    (issuesRequested)="onIssuesRequested()"
                 />
             </div>
             <div class="wiki-edit__pane">
@@ -103,6 +101,7 @@
                     appWikiMermaid
                     appWikiPlantUml
                     appAttachmentRender
+                    appIssueLinkRender
                     [mermaidDebounce]="300"
                     [plantUmlDebounce]="300"
                     ngPreserveWhitespaces
@@ -188,9 +187,9 @@
                     </span>
                 </button>
                 @if (!canManage()) {
-                <small class="wiki-edit__hint">{{ 'WIKI.ACCESS.MANAGE_ONLY' | translate }}</small>
+                <small class="ui-field-hint">{{ 'WIKI.ACCESS.MANAGE_ONLY' | translate }}</small>
                 }
-                <small class="wiki-edit__hint" [class.wiki-edit__hint--error]="isOverBudget()">
+                <small class="ui-field-hint" [class.ui-field-hint--error]="isOverBudget()">
                     {{ 'WIKI.ACCESS.BUDGET' | translate: { used: budgetTokens(), limit:
                     store.tree()?.tokenLimit ?? 0 } }}
                 </small>
@@ -213,7 +212,7 @@
                     [value]="summary()"
                     (input)="onTextInput($event, summary)"
                 ></textarea>
-                <small class="wiki-edit__hint">{{ 'WIKI.FIELD.SUMMARY_HINT' | translate }}</small>
+                <small class="ui-field-hint">{{ 'WIKI.FIELD.SUMMARY_HINT' | translate }}</small>
             </div>
 
             <div class="wiki-edit__field">

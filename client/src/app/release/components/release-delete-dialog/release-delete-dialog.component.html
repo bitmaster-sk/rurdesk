@@ -1,0 +1,87 @@
+<ui-dialog
+    [(visible)]="visible"
+    [header]="'RELEASE.DELETE.TITLE' | translate: { name: release().name }"
+    width="32rem"
+    (hide)="onHide()"
+>
+    <div class="flex flex-col gap-3" data-testid="release-delete-dialog" [formGroup]="form">
+        @if (isDraft()) {
+            <span data-testid="release-delete-draft">
+                {{ 'RELEASE.DELETE.DRAFT' | translate: { tag: release().tagName ?? '' } }}
+            </span>
+        } @else if (versionTag(); as tag) {
+            <span>
+                {{
+                    'RELEASE.DELETE.TAG_QUESTION'
+                        | translate: { tag: tag.name, count: tag.issueCount }
+                }}
+            </span>
+            <label class="flex cursor-pointer items-center gap-2">
+                <input
+                    type="radio"
+                    name="action"
+                    data-testid="release-delete-keep"
+                    formControlName="action"
+                    [value]="ReleaseTagAction.Keep"
+                />
+                <span>{{ 'RELEASE.DELETE.KEEP' | translate: { tag: tag.name } }}</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2">
+                <input
+                    type="radio"
+                    name="action"
+                    data-testid="release-delete-move-delete"
+                    formControlName="action"
+                    [value]="ReleaseTagAction.MoveDelete"
+                />
+                <span>{{ 'RELEASE.DELETE.MOVE_DELETE' | translate: { tag: tag.name } }}</span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-2">
+                <input
+                    type="radio"
+                    name="action"
+                    data-testid="release-delete-move-keep"
+                    formControlName="action"
+                    [value]="ReleaseTagAction.MoveKeep"
+                />
+                <span>{{ 'RELEASE.DELETE.MOVE_KEEP' | translate: { tag: tag.name } }}</span>
+            </label>
+            @if (isMove()) {
+                <ui-select
+                    class="w-full"
+                    inputId="release-delete-target"
+                    data-testid="release-delete-target"
+                    [options]="targets()"
+                    optionLabel="name"
+                    optionValue="idTag"
+                    formControlName="idTagTarget"
+                    [placeholder]="'RELEASE.DELETE.PICK_TARGET' | translate"
+                >
+                    <ng-template #item let-option>
+                        <app-tag-chip [name]="option.name" [color]="option.color" />
+                    </ng-template>
+                    <ng-template #selectedItem let-option>
+                        <app-tag-chip [name]="option.name" [color]="option.color" />
+                    </ng-template>
+                </ui-select>
+            }
+        }
+    </div>
+
+    <ng-template #footer>
+        <ui-button
+            severity="secondary"
+            variant="text"
+            [label]="'CANCEL' | translate"
+            (click)="onCancel()"
+        />
+        <ui-button
+            data-testid="release-delete-confirm"
+            severity="danger"
+            [label]="'RELEASE.DELETE.CONFIRM' | translate"
+            [disabled]="!isValid()"
+            [loading]="isBusy()"
+            (click)="onDelete()"
+        />
+    </ng-template>
+</ui-dialog>

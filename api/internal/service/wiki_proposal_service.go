@@ -73,7 +73,7 @@ func (s *WikiProposalService) Suggest(ctx context.Context, user model.User, idPr
 		if err != nil {
 			return nil, err
 		}
-		draft.IdRun, draft.IdIssue = &run.IdRun, &run.IdIssue
+		draft.IdRun, draft.IdIssue = &run.IdRun, run.IdIssue
 	}
 	instance, project, err := s.wiki.projectSpaces(ctx, user, idProject)
 	if err != nil {
@@ -302,7 +302,7 @@ func (s *WikiProposalService) RunFinished(ctx context.Context, run *model.AgentR
 		s.notifyReady(ctx, run, ready)
 		s.notifyUnresolved(ctx, run, unresolved)
 	}
-	s.broadcast(ctx, run.IdProject, &run.IdIssue)
+	s.broadcast(ctx, run.IdProject, run.IdIssue)
 }
 
 func (s *WikiProposalService) issueOf(ctx context.Context, idProject, idIssuePublic int64) (*int64, error) {
@@ -754,8 +754,7 @@ func (s *WikiProposalService) notifyUnresolved(ctx context.Context, run *model.A
 
 func (s *WikiProposalService) notify(ctx context.Context, run *model.AgentRun, notificationType string, recipientsOf func(issue *model.Issue, isPerson map[int64]bool) map[int64][]*model.WikiProposal) {
 	log := extctx.GetLogger(ctx).With().Int64("idRun", run.IdRun).Str("type", notificationType).Logger()
-	idIssue := run.IdIssue
-	issue, err := s.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &idIssue})
+	issue, err := s.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: run.IdIssue})
 	if err != nil || issue == nil {
 		log.Error().Err(err).Msg("wiki proposals: loading the issue to notify")
 		return
@@ -812,38 +811,32 @@ func (s *WikiProposalService) notify(ctx context.Context, run *model.AgentRun, n
 }
 
 func (s *WikiProposalService) broadcast(ctx context.Context, idProject int64, idIssue *int64) {
-	if s.wiki.notifier == nil {
-		return
-	}
 	extctx.AfterCommit(ctx, func(ctx context.Context) {
 		idsUser, err := s.memberIds(ctx, idProject, 0)
 		if err != nil || len(idsUser) == 0 {
 			return
 		}
-		s.wiki.notifier.Send <- &notify.Notice{
+		s.wiki.notifier.Send(&notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectWikiProposal,
 			Action:  notify.ActionUpdate,
 			Payload: model.WikiProposalNotice{IdProject: idProject, IdIssue: idIssue},
-		}
+		})
 	})
 }
 
 func (s *WikiProposalService) broadcastMessage(ctx context.Context, idProject, idAuthor int64, message *model.Message) {
-	if s.wiki.notifier == nil {
-		return
-	}
 	extctx.AfterCommit(ctx, func(ctx context.Context) {
 		idsUser, err := s.memberIds(ctx, idProject, idAuthor)
 		if err != nil || len(idsUser) == 0 {
 			return
 		}
-		s.wiki.notifier.Send <- &notify.Notice{
+		s.wiki.notifier.Send(&notify.Notice{
 			IdsUser: idsUser,
 			Subject: notify.SubjectMessage,
 			Action:  notify.ActionCreate,
 			Payload: message,
-		}
+		})
 	})
 }
 

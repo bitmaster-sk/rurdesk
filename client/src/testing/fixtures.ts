@@ -85,6 +85,7 @@ export abstract class Fixtures {
         return {
             idRun: 55,
             idIssue: 10,
+            idRelease: null,
             idProject: 7,
             idUserAgent: 8,
             idGitIntegration: null,

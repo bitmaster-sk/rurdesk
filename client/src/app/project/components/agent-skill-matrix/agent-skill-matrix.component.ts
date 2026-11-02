@@ -4,11 +4,15 @@ import {
     DestroyRef,
     OnInit,
     inject,
+    computed,
     input,
     signal
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { SKILL_STAGES } from '../../../agent/constants/skill-stages.enum';
+import { forkJoin } from 'rxjs';
+import { AgentRunApi } from '../../../agent/api/agent-run.api.service';
+import { RUN_KIND_LABELS } from '../../../agent/constants/run-kind.enum';
+import { RunKind } from '../../../agent/model/run-kind.model';
 import { AgentStage, STAGE_LABELS } from '../../../agent/model/agent-stage.enum';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { SkillApi } from '../../../shared/api/skill.api.service';
@@ -29,23 +33,33 @@ export class AgentSkillMatrixComponent implements OnInit {
     public readonly project = input.required<Project>();
 
     private readonly skillApi = inject(SkillApi);
+    private readonly agentRunApi = inject(AgentRunApi);
     private readonly projectSkillApi = inject(ProjectSkillApi);
     private readonly toast = inject(ToastNotificationService);
     private readonly destroyRef = inject(DestroyRef);
 
-    protected readonly stages = SKILL_STAGES;
+    protected readonly kinds = signal<RunKind[]>([]);
+    protected readonly kindColumns = computed(() =>
+        this.kinds()
+            .map(kind => ({
+                label: RUN_KIND_LABELS[kind.name] ?? kind.name,
+                stages: kind.stages.filter(stage => stage.hasSkills).map(stage => stage.name)
+            }))
+            .filter(kind => kind.stages.length > 0)
+    );
+    protected readonly stages = computed(() => this.kindColumns().flatMap(kind => kind.stages));
     protected readonly skills = signal<Skill[]>([]);
     protected readonly isLoading = signal(true);
     private readonly enabled = signal<Set<string>>(new Set());
     private readonly rowStatus = signal<Record<number, UiSaveState>>({});
 
     public ngOnInit(): void {
-        this.skillApi
-            .load$()
+        forkJoin({ skills: this.skillApi.load$(), kinds: this.agentRunApi.loadRunKinds$() })
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: all => {
-                    this.skills.set(all);
+                next: ({ skills, kinds }) => {
+                    this.skills.set(skills);
+                    this.kinds.set(kinds);
                     this.loadMatrix();
                 },
                 error: () => {

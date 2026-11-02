@@ -8,17 +8,17 @@ import (
 )
 
 type ThinkingNotifier struct {
-	notifier *notify.Notifier
+	notifier notify.INotifier
 	members  projectMemberLoader
 }
 
-func NewThinkingNotifier(notifier *notify.Notifier, members projectMemberLoader) *ThinkingNotifier {
+func NewThinkingNotifier(notifier notify.INotifier, members projectMemberLoader) *ThinkingNotifier {
 	return &ThinkingNotifier{notifier: notifier, members: members}
 }
 
 // Broadcast sends the thinking notice to every member of the project.
 func (n *ThinkingNotifier) Broadcast(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice) {
-	if n.notifier == nil || notice == nil {
+	if notice == nil {
 		return
 	}
 	members, err := n.members.LoadProjectsMembers(ctx, []int64{idProject})
@@ -31,10 +31,10 @@ func (n *ThinkingNotifier) Broadcast(ctx context.Context, idProject int64, notic
 	for index, member := range members {
 		idsUser[index] = member.IdUser
 	}
-	n.notifier.Send <- &notify.Notice{
+	n.notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectAgentThinking,
 		Action:  notify.ActionCreate,
 		Payload: notice,
-	}
+	})
 }

@@ -50,6 +50,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ElementRef, OnInit } from '@angular/core';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { Project } from 'src/app/project/model/project.model';
+import { User } from 'src/app/auth/model/user.model';
 import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
@@ -253,8 +254,13 @@ export class IssueInfoComponent implements OnInit {
     public readonly users = toSignal(this.projectMemberStore.users$, { initialValue: [] });
 
     public readonly usersMap = toSignal(this.projectMemberStore.usersMap$, {
-        initialValue: new Map()
+        initialValue: new Map<number, User>()
     });
+
+    /** Resolves a user's display name by id for the issue's create/update stamps. */
+    public userName(idUser: number | null | undefined): string | undefined {
+        return idUser == null ? undefined : this.usersMap().get(idUser)?.name;
+    }
 
     public readonly actions = computed<UiMenuItem[]>(() => {
         const items: UiMenuItem[] = [];

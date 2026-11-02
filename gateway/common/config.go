@@ -60,6 +60,13 @@ type GooseConfig struct {
 	AnthropicAPIKey string
 	GoogleAPIKey    string
 	OllamaHost      string
+
+	// DefaultExtensionTimeoutSeconds is how long one tool call (e.g. a shell
+	// command) may run before goose kills it.
+	DefaultExtensionTimeoutSeconds int
+	// StopHookBlockCap is how many times the Stop hook may send the agent back
+	// to call complete_stage before goose ends the run.
+	StopHookBlockCap int
 }
 
 var ignoredRepoEnv = []string{"REPO_URL", "GIT_ACCESS_TOKEN", "REPO_BRANCH_BASE"}
@@ -132,9 +139,11 @@ func LoadConfig(adapterType string) (*Config, error) {
 		// BYOK: the API key (or OLLAMA_HOST) is passed through to the goose
 		// subprocess.
 		cfg.Goose = &GooseConfig{
-			AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
-			GoogleAPIKey:    os.Getenv("GOOGLE_API_KEY"),
-			OllamaHost:      os.Getenv("OLLAMA_HOST"),
+			AnthropicAPIKey:                os.Getenv("ANTHROPIC_API_KEY"),
+			GoogleAPIKey:                   os.Getenv("GOOGLE_API_KEY"),
+			OllamaHost:                     os.Getenv("OLLAMA_HOST"),
+			DefaultExtensionTimeoutSeconds: envInt("GOOSE_DEFAULT_EXTENSION_TIMEOUT", 1800),
+			StopHookBlockCap:               envInt("GOOSE_STOP_HOOK_BLOCK_CAP", 3),
 		}
 	default:
 		return nil, fmt.Errorf("unknown adapter type: %q (must be 'claude-code' or 'goose')", adapterType)

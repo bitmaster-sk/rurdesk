@@ -1,0 +1,62 @@
+@use '../../../wiki/wiki-article';
+
+:host ::ng-deep .wiki-article {
+    @include wiki-article.article;
+
+    padding: 0;
+}
+
+.release-notes-edit {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 24rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+
+    &__pane {
+        min-height: 0;
+        overflow-y: auto;
+
+        &:first-child {
+            border-right: 1px solid var(--ui-color-border);
+        }
+
+        .wiki-article {
+            padding: var(--ui-space-m) var(--ui-space-l);
+        }
+    }
+}
+
+@media (max-width: 960px) {
+    .release-notes-edit {
+        grid-template-columns: 1fr;
+
+        &__pane:first-child {
+            border-right: 0;
+            border-bottom: 1px solid var(--ui-color-border);
+        }
+    }
+}
+
+.release-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: var(--ui-space-l) var(--ui-space-xl);
+    margin: 0;
+    padding-bottom: var(--ui-space-l);
+    border-bottom: 1px solid var(--ui-color-border);
+
+    dt {
+        color: var(--ui-color-text-muted);
+        font-size: var(--font-size-s);
+    }
+
+    dd {
+        margin: var(--ui-space-xs) 0 0;
+    }
+
+    &__action {
+        align-self: center;
+        justify-self: end;
+    }
+}

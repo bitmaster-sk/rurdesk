@@ -78,3 +78,9 @@
 </ui-popover>
 <ui-menu #calloutMenuRef [model]="calloutMenu" />
 <div #host class="wiki-editor" data-testid="wiki-editor"></div>
+<app-issue-link-picker
+    [style.position]="'fixed'"
+    [style.left]="issuePickerPosition().left"
+    [style.top]="issuePickerPosition().top"
+    (picked)="onIssuePicked($event)"
+/>

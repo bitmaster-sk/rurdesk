@@ -163,3 +163,18 @@ func TestDisconnect_ClosesEveryConnectionOfTheUser(t *testing.T) {
 	assert.Len(t, n.conns[2], 1)
 	n.RUnlock()
 }
+
+func TestSend_DeliversThroughListenLoop(t *testing.T) {
+	n := NewNotifier()
+	conn := &NotifyConnection{idUser: 1, send: make(chan []byte, 1)}
+	n.Add(conn)
+
+	n.Send(&Notice{IdUser: 1, Subject: SubjectIssue, Action: ActionUpdate})
+
+	select {
+	case b := <-conn.send:
+		assert.Contains(t, string(b), `"subject":"issue"`)
+	case <-time.After(2 * time.Second):
+		t.Fatal("a sent notice never reached the connected user")
+	}
+}

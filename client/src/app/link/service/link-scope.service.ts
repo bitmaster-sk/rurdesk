@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
 @Injectable()
-export class WikiLinkScope {
+export class LinkScope {
     public readonly idProject = signal<number | null>(null);
 }

@@ -3,7 +3,7 @@
         <app-avatar
             [name]="authorName()"
             [bgColor]="author()?.colorAvatarBg ?? ''"
-            [manualInitials]="author()?.avatarInitials"
+            [manualInitials]="$safeNavigationMigration(author()?.avatarInitials)"
             [height]="1.875"
             [width]="1.875"
             [radius]="0.9375"

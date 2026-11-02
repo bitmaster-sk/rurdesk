@@ -218,6 +218,14 @@ func GetIssueTypeRepository() *repository.IssueTypeRepository {
 	return instance.(*repository.IssueTypeRepository)
 }
 
+func GetReleaseRepository() *repository.ReleaseRepository {
+	instance, _ := di.GetWithNew("release-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewReleaseRepository(pool), nil
+	})
+	return instance.(*repository.ReleaseRepository)
+}
+
 func GetTagRepository() *repository.TagRepository {
 	instance, _ := di.GetWithNew("tag-repository", func() (any, error) {
 		pool := mustDb()
@@ -375,6 +383,57 @@ func GetProjectMemberService() *service.ProjectMemberService {
 		return service.NewProjectMemberService(GetProjectRepository()), nil
 	})
 	return instance.(*service.ProjectMemberService)
+}
+
+func GetReleaseService() *service.ReleaseService {
+	instance, _ := di.GetWithNew("release-service", func() (any, error) {
+		releases := service.NewReleaseService(service.ReleaseServiceDeps{
+			Pool:                mustDb(),
+			ReleaseRepo:         GetReleaseRepository(),
+			TagRepo:             GetTagRepository(),
+			IssueRepo:           GetIssueRepository(),
+			UserRepo:            GetUserRepository(),
+			AgentRunRepo:        GetAgentRunRepository(),
+			AgentTaskRepo:       GetAgentTaskRepository(),
+			AgentGwRepo:         GetAgentGatewayRepository(),
+			StagePlan:           GetAgentStagePlanService(),
+			ProjectSkillService: GetProjectSkillService(),
+			AgentTaskConfig:     GetAgentTaskConfigService(),
+			Acl:                 GetAclService(),
+		})
+		releases.OnReleaseChanged(func(ctx context.Context, idProject, idRelease int64) {
+			controller.BroadcastRelease(ctx, GetNotifier(), GetProjectMemberService(), GetReleaseRepository(), idProject, idRelease)
+		})
+		return releases, nil
+	})
+	return instance.(*service.ReleaseService)
+}
+
+func GetReleaseController() (*controller.ReleaseController, error) {
+	instance, err := di.GetWithNew("release-controller", func() (any, error) {
+		thinking, err := GetAgentThinkingService()
+		if err != nil {
+			return nil, err
+		}
+		return controller.NewReleaseController(controller.ReleaseControllerDeps{
+			ReleaseRepo:      GetReleaseRepository(),
+			Releases:         GetReleaseService(),
+			Acl:              GetAclService(),
+			TagCtrl:          GetTagController(),
+			AgentRunRepo:     GetAgentRunRepository(),
+			AgentTaskRepo:    GetAgentTaskRepository(),
+			IssueRepo:        GetIssueRepository(),
+			ProjectRepo:      GetProjectRepository(),
+			ProjectMemberSvc: GetProjectMemberService(),
+			Thinking:         thinking,
+			Dispatcher:       GetDispatcher(),
+			Notifier:         GetNotifier(),
+		}), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return instance.(*controller.ReleaseController), nil
 }
 
 func GetTagService() *service.TagService {
@@ -657,6 +716,7 @@ func GetDispatcher() *agent.Dispatcher {
 			GetAgentStagePlanService(),
 			GetWikiAgentService(),
 			GetWikiProposalService(),
+			GetReleaseService(),
 			GetAgentTaskConfigService(),
 			GetGatewayClient(),
 			GetNotifier(),
@@ -776,6 +836,8 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAgentStagePlanService(),
 			GetAgentTaskConfigService(),
 			GetDispatcher(),
+			GetWikiProposalService(),
+			GetReleaseService(),
 			GetNotifier(),
 			pool,
 		), nil
@@ -1116,6 +1178,35 @@ func GetMyIssuesController() *controller.MyIssuesController {
 	return instance.(*controller.MyIssuesController)
 }
 
+func GetIssueLinkRepository() *repository.IssueLinkRepository {
+	instance, _ := di.GetWithNew("issue-link-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewIssueLinkRepository(pool), nil
+	})
+	return instance.(*repository.IssueLinkRepository)
+}
+
+func GetIssueLinkController() *controller.IssueLinkController {
+	instance, _ := di.GetWithNew("issue-link-controller", func() (any, error) {
+		return controller.NewIssueLinkController(GetIssueLinkService()), nil
+	})
+	return instance.(*controller.IssueLinkController)
+}
+
+func GetIssueLinkService() *service.IssueLinkService {
+	instance, _ := di.GetWithNew("issue-link-service", func() (any, error) {
+		return service.NewIssueLinkService(
+			GetAclService(),
+			GetIssueLinkRepository(),
+			GetStateRepository(),
+			GetSeverityRepository(),
+			GetIssueTypeRepository(),
+			GetProjectRepository(),
+		), nil
+	})
+	return instance.(*service.IssueLinkService)
+}
+
 func GetGitIntegrationRepository() *repository.GitIntegrationRepository {
 	instance, _ := di.GetWithNew("git-integration-repository", func() (any, error) {
 		pool := mustDb()
@@ -1360,6 +1451,11 @@ func GetRouter() (*router.Router, error) {
 			return nil, err
 		}
 
+		releaseController, err := GetReleaseController()
+		if err != nil {
+			return nil, err
+		}
+
 		attachmentController, err := GetAttachmentController()
 		if err != nil {
 			return nil, err
@@ -1387,6 +1483,7 @@ func GetRouter() (*router.Router, error) {
 			GetIssueTypeController(),
 			GetCustomFieldController(),
 			GetTagController(),
+			releaseController,
 			GetWikiController(),
 			GetWikiAgentController(),
 			GetWikiProposalController(),
@@ -1404,6 +1501,7 @@ func GetRouter() (*router.Router, error) {
 			GetNotificationController(),
 			GetAdminController(),
 			GetMyIssuesController(),
+			GetIssueLinkController(),
 			GetGitIntegrationController(),
 			agentRunController,
 			agentThinkingController,

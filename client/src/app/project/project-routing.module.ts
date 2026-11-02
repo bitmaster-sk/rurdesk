@@ -29,6 +29,10 @@ const routes: Routes = [
                 loadChildren: () => import('../issue/issue.module').then(m => m.IssueModule)
             },
             {
+                path: 'release',
+                loadChildren: () => import('../release/release.module').then(m => m.ReleaseModule)
+            },
+            {
                 path: 'wiki',
                 data: { collapsedMenu: true },
                 loadChildren: () => import('../wiki/wiki.module').then(m => m.WikiModule)

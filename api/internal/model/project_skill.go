@@ -8,5 +8,5 @@ type ProjectSkill struct {
 
 type UpdateProjectSkillReq struct {
 	IdSkill int64  `json:"idSkill" binding:"required"`
-	Stage   string `json:"stage"   binding:"required,oneof=brainstorming design implementation_plan implementation"`
+	Stage   string `json:"stage"   binding:"required"`
 }

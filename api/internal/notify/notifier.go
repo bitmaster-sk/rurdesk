@@ -34,6 +34,7 @@ const (
 	SubjectTag              NoticeSubject = "tag"
 	SubjectWikiPage         NoticeSubject = "wiki_page"
 	SubjectWikiProposal     NoticeSubject = "wiki_proposal"
+	SubjectRelease          NoticeSubject = "release"
 )
 
 const (
@@ -64,9 +65,13 @@ type NotifyConnection struct {
 	closed    bool
 }
 
+type INotifier interface {
+	Send(notice *Notice)
+}
+
 type Notifier struct {
-	conns map[int64]map[*NotifyConnection]bool
-	Send  chan *Notice
+	conns   map[int64]map[*NotifyConnection]bool
+	notices chan *Notice
 	sync.RWMutex
 }
 
@@ -158,16 +163,20 @@ func (nc *NotifyConnection) trySend(b []byte) {
 
 func NewNotifier() *Notifier {
 	n := &Notifier{
-		conns: make(map[int64]map[*NotifyConnection]bool),
-		Send:  make(chan *Notice, mainBufferSize),
+		conns:   make(map[int64]map[*NotifyConnection]bool),
+		notices: make(chan *Notice, mainBufferSize),
 	}
 	go n.listen()
 	return n
 }
 
+func (n *Notifier) Send(notice *Notice) {
+	n.notices <- notice
+}
+
 func (n *Notifier) listen() {
 	for {
-		n.broadcast(<-n.Send)
+		n.broadcast(<-n.notices)
 	}
 }
 

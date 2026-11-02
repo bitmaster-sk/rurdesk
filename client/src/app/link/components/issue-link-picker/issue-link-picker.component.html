@@ -1,0 +1,37 @@
+@if (picker.isVisible()) {
+    <div class="issue-link-picker" role="listbox" data-testid="issue-link-picker">
+        @if (picker.isLoading()) {
+            <div class="issue-link-picker__item">
+                <ui-loader [size]="16" />
+            </div>
+        }
+        @for (
+            issue of picker.options();
+            track issue.idProject + '/' + issue.idIssuePublic;
+            let i = $index
+        ) {
+            <div
+                class="issue-link-picker__item"
+                data-testid="issue-link-option"
+                role="option"
+                [class.issue-link-picker__item--active]="i === picker.activeIndex()"
+                [attr.aria-selected]="i === picker.activeIndex()"
+                (pointermove)="onPointerMove($event, i)"
+                (mousedown)="$event.preventDefault(); picked.emit(issue)"
+            >
+                <tabler-icon icon="link" [size]="14" class="shrink-0" />
+                <span class="flex min-w-0 flex-col">
+                    <span
+                        class="issue-link-picker__project"
+                        data-testid="issue-link-option-project"
+                    >
+                        {{ issue.projectName }}
+                    </span>
+                    <span class="issue-link-picker__title" data-testid="issue-link-option-title">
+                        #{{ issue.idIssuePublic }} {{ issue.title }}
+                    </span>
+                </span>
+            </div>
+        }
+    </div>
+}

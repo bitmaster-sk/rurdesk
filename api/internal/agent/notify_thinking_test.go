@@ -6,6 +6,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,9 +25,9 @@ func (l *countingMemberLoader) LoadProjectsMembers(_ context.Context, _ []int64)
 var _ projectMemberLoader = (*countingMemberLoader)(nil)
 var _ projectMemberLoader = (*repository.ProjectRepository)(nil)
 
-func newTestThinkingNotifier(loader *countingMemberLoader) (*ThinkingNotifier, chan *notify.Notice) {
-	sent := make(chan *notify.Notice, 4)
-	return NewThinkingNotifier(&notify.Notifier{Send: sent}, loader), sent
+func newTestThinkingNotifier(loader *countingMemberLoader) (*ThinkingNotifier, *notifytest.Recorder) {
+	sent := &notifytest.Recorder{}
+	return NewThinkingNotifier(sent, loader), sent
 }
 
 func TestThinkingNotifier_SendsToProjectMembers(t *testing.T) {
@@ -35,7 +36,8 @@ func TestThinkingNotifier_SendsToProjectMembers(t *testing.T) {
 
 	notifier.Broadcast(context.Background(), 7, &model.AgentThinkingNotice{IdRun: 3})
 
-	notice := <-sent
+	require.Len(t, sent.Notices(), 1)
+	notice := sent.Notices()[0]
 	assert.Equal(t, []int64{1, 2}, notice.IdsUser)
 	assert.Equal(t, notify.SubjectAgentThinking, notice.Subject)
 }
@@ -45,12 +47,16 @@ func TestThinkingNotifier_ResolvesMembersPerBatch(t *testing.T) {
 	notifier, sent := newTestThinkingNotifier(loader)
 
 	notifier.Broadcast(context.Background(), 7, &model.AgentThinkingNotice{IdRun: 3})
-	require.Equal(t, []int64{1, 9}, (<-sent).IdsUser)
+	first := sent.Drain()
+	require.Len(t, first, 1)
+	require.Equal(t, []int64{1, 9}, first[0].IdsUser)
 
 	loader.members = []*model.User{{IdUser: 1}}
 	notifier.Broadcast(context.Background(), 7, &model.AgentThinkingNotice{IdRun: 3})
 
-	assert.Equal(t, []int64{1}, (<-sent).IdsUser)
+	second := sent.Drain()
+	require.Len(t, second, 1)
+	assert.Equal(t, []int64{1}, second[0].IdsUser)
 	assert.Equal(t, 2, loader.calls)
 }
 
@@ -60,5 +66,5 @@ func TestThinkingNotifier_SkipsWhenNoMembers(t *testing.T) {
 
 	notifier.Broadcast(context.Background(), 7, &model.AgentThinkingNotice{IdRun: 3})
 
-	assert.Empty(t, sent)
+	assert.Empty(t, sent.Notices())
 }

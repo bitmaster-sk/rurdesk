@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "complete_stage$",
+        "hooks": [{ "type": "command", "command": "sh ${PLUGIN_ROOT}/hooks/mark-submitted.sh" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "sh ${PLUGIN_ROOT}/hooks/require-submission.sh" }]
+      }
+    ]
+  }
+}

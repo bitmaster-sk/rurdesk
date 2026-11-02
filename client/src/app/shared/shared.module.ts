@@ -26,11 +26,15 @@ import { IssueTypeDropdownComponent } from './issue-type-dropdown/issue-type-dro
 import { TeammateSelectorComponent } from './teammate-selector/teammate-selector.component';
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
+import { AgentThinkingRowComponent } from './components/agent-thinking-row/agent-thinking-row.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
 import { PlantUmlDiagramComponent } from './plantuml/plantuml-diagram.component';
 import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
+import { IssueLinkCardComponent } from '../link/components/issue-link-card/issue-link-card.component';
+import { IssueLinkPickerComponent } from '../link/components/issue-link-picker/issue-link-picker.component';
+import { IssueLinkRenderDirective } from '../link/directives/issue-link-render.directive';
 import { AttachmentLightboxComponent } from './attachment/components/attachment-lightbox/attachment-lightbox.component';
 import { DiffViewerComponent } from './components/diff-viewer/diff-viewer.component';
 import { TagChipComponent } from './tag/tag-chip/tag-chip.component';
@@ -61,7 +65,14 @@ import {
     IconChevronDown,
     IconArrowDown,
     IconArrowRight,
-    IconPlus
+    IconPlus,
+    IconBrain,
+    IconChevronRight,
+    IconTerminal2,
+    IconPencil,
+    IconSearch,
+    IconHammer,
+    IconLink
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -87,10 +98,14 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,
+        IssueLinkRenderDirective,
+        IssueLinkCardComponent,
+        IssueLinkPickerComponent,
         AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,
@@ -130,7 +145,14 @@ import {
             IconChevronDown,
             IconArrowDown,
             IconArrowRight,
-            IconPlus
+            IconPlus,
+            IconBrain,
+            IconChevronRight,
+            IconTerminal2,
+            IconPencil,
+            IconSearch,
+            IconHammer,
+            IconLink
         })
     ],
     exports: [
@@ -157,10 +179,13 @@ import {
         TeammateSelectorComponent,
         StagedIssueComponent,
         MockupCardComponent,
+        AgentThinkingRowComponent,
         MessageBodyComponent,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,
+        IssueLinkRenderDirective,
+        IssueLinkPickerComponent,
         AttachmentLightboxComponent,
         DiffViewerComponent,
         DeleteMigrationDialogComponent,

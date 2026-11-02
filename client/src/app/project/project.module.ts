@@ -70,6 +70,7 @@ import { NavigationCommandProvider } from './command/navigation.command-provider
 import { SavedViewCommandProvider } from './command/saved-view.command-provider';
 import { PeopleCommandProvider } from './command/people.command-provider';
 import { WikiCommandProvider } from '../wiki/command/wiki.command-provider';
+import { ReleaseCommandProvider } from '../release/command/release.command-provider';
 
 @NgModule({
     declarations: [
@@ -152,11 +153,13 @@ export class ProjectModule {
         nav: NavigationCommandProvider,
         people: PeopleCommandProvider,
         savedViews: SavedViewCommandProvider,
-        wiki: WikiCommandProvider
+        wiki: WikiCommandProvider,
+        releases: ReleaseCommandProvider
     ) {
         registry.register(nav);
         registry.register(people);
         registry.register(savedViews);
         registry.register(wiki);
+        registry.register(releases);
     }
 }

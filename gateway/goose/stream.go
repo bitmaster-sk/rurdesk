@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
+	"github.com/bitmaster-sk/rurdesk/gateway/goose/entity"
+	"github.com/bitmaster-sk/rurdesk/gateway/goose/model"
 	"github.com/bitmaster-sk/rurdesk/gateway/goose/toolcall"
 	"github.com/rs/zerolog/log"
 )
@@ -21,7 +23,7 @@ func scanGooseStream(r io.Reader, maxLineBytes int, idRun int64, agg *streamAggr
 // logStreamEvent writes one grouped stream event to the gateway log. Thinking
 // goes to debug (only visible when LOG_LEVEL=debug); answer text and tool
 // calls go to info so an info-level log still shows the run's skeleton.
-func logStreamEvent(ev streamEvent, idRun int64) {
+func logStreamEvent(ev entity.StreamEvent, idRun int64) {
 	switch ev.Kind {
 	case "thinking":
 		log.Debug().Int64("idRun", idRun).Str("phase", "thinking").Int("chars", ev.Chars).Str("text", ev.Text).Msg("goose stream")
@@ -33,7 +35,7 @@ func logStreamEvent(ev streamEvent, idRun int64) {
 }
 
 // Answer text is skipped: it already becomes the stage's output message.
-func queueThinkingEvent(ev streamEvent, batcher *common.ThinkingBatcher) {
+func queueThinkingEvent(ev entity.StreamEvent, batcher *common.ThinkingBatcher) {
 	switch ev.Kind {
 	case "thinking":
 		batcher.Add(common.ThinkingEvent{Kind: common.ThinkingKindThinking, Text: ev.Text})
@@ -47,51 +49,30 @@ func queueThinkingEvent(ev streamEvent, batcher *common.ThinkingBatcher) {
 // line per token. Chosen for readability; no data is lost either way.
 const flushChars = 200
 
-// streamEvent is one grouped, human-facing unit the aggregator emits: a
-// coalesced run of thinking/answer text, or a discrete tool call. The
-// adapter's emit callback turns these into zerolog lines; tests collect them
-// to assert the grouping.
-type streamEvent struct {
-	Kind       string // "thinking" | "text" | "tool"
-	Text       string // coalesced text for thinking/text kinds
-	Chars      int    // len(Text), for the log
-	Tool       string // tool name for the "tool" kind
-	ToolDetail string // the argument that identifies the call (command, path, …)
-}
-
-// streamResult holds the run outcome (status, tokens, toolCalls, provErr)
-// built incrementally while scanning the stream. stream-json sends no
-// terminal status field, so status stays "" — treated as success unless the
-// exit code says otherwise.
-type streamResult struct {
-	status              string
-	tokens              int
-	toolCalls           int
-	provErr             *common.AgentError
-	turnLimitHit        bool
-	completeStageCalled bool
-}
-
 // streamAggregator consumes goose `--output-format stream-json` line by line:
 // coalesces thinking/answer fragments into grouped events (emitted live via
 // emit), counts tool calls, captures the token total from the terminal
-// "complete" event, and accumulates answer text so finish() can classify a
-// provider error (goose reports these as exit-0 text — block/goose#4612).
+// "complete" event, and records provider failures from goose's `error` and
+// `systemNotification` content blocks.
 type streamAggregator struct {
 	idRun int64
-	emit  func(streamEvent)
+	emit  func(entity.StreamEvent)
 
 	phase string          // current coalescing phase: "thinking" | "text" | ""
 	buf   strings.Builder // pending text for the current phase
 
-	answer  strings.Builder // all "text" fragments, for provider-error detection
 	tokens  int
 	toolCnt int
 
-	// sawCompleteStage tracks whether the agent invoked `complete_stage`.
-	// Submission rides entirely on that call; without it the adapter must fail
-	// the stage rather than report a silent success that hangs the run.
-	sawCompleteStage bool
+	// completeStageAccepted tracks whether a `complete_stage` call came back
+	// without an error. Submission rides entirely on that call; without it the
+	// adapter must fail the stage rather than report a silent success that
+	// hangs the run.
+	completeStageRequestIds map[string]bool
+	completeStageAccepted   bool
+
+	providerError   *common.AgentError
+	runErrorMessage string
 
 	// turnLimitHit is set when the agent's answer text contains goose's
 	// turn-limit sentinel ("reached the maximum number of actions").
@@ -100,27 +81,8 @@ type streamAggregator struct {
 	onCompleteStage func()
 }
 
-func newStreamAggregator(idRun int64, emit func(streamEvent)) *streamAggregator {
-	return &streamAggregator{idRun: idRun, emit: emit}
-}
-
-// streamLine is the decoded shape of one stream-json line we care about.
-// Fields not present on a given line stay zero — a "message" line fills
-// Message, a "complete" line fills the token counts.
-type streamLine struct {
-	Type    string `json:"type"`
-	Message struct {
-		Role    string `json:"role"`
-		Content []struct {
-			Type     string          `json:"type"`
-			Text     string          `json:"text"`
-			Thinking string          `json:"thinking"`
-			ToolCall json.RawMessage `json:"toolCall"`
-		} `json:"content"`
-	} `json:"message"`
-	TotalTokens  int `json:"total_tokens"`
-	InputTokens  int `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
+func newStreamAggregator(idRun int64, emit func(entity.StreamEvent)) *streamAggregator {
+	return &streamAggregator{idRun: idRun, emit: emit, completeStageRequestIds: map[string]bool{}}
 }
 
 // line feeds one raw stream-json line to the aggregator. Non-JSON banner lines
@@ -130,7 +92,7 @@ func (a *streamAggregator) line(raw []byte) {
 	if len(raw) == 0 || raw[0] != '{' {
 		return // goose banner / decoration
 	}
-	var sl streamLine
+	var sl model.StreamLine
 	if err := json.Unmarshal(raw, &sl); err != nil {
 		return
 	}
@@ -143,19 +105,32 @@ func (a *streamAggregator) line(raw []byte) {
 			"input_tokens":  float64(sl.InputTokens),
 			"output_tokens": float64(sl.OutputTokens),
 		})
+	case "error":
+		a.runErrorMessage = sl.Error
 	}
 }
 
-func (a *streamAggregator) handleMessage(sl streamLine) {
+func (a *streamAggregator) handleMessage(sl model.StreamLine) {
 	for _, block := range sl.Message.Content {
 		switch {
 		case block.Type == "thinking":
 			a.append("thinking", block.Thinking)
 		case block.Type == "text":
-			a.answer.WriteString(block.Text)
 			a.append("text", block.Text)
 			if isTurnLimitSentinel(block.Text) {
 				a.turnLimitHit = true
+			}
+		case block.Type == "error":
+			if a.providerError == nil {
+				a.providerError = classifyProviderErrorKind(block.Kind, block.Message)
+			}
+		case block.Type == "systemNotification" && block.NotificationType == "creditsExhausted":
+			if a.providerError == nil {
+				a.providerError = &common.AgentError{Code: common.ErrCodeProviderCreditExhausted, Detail: firstLine(block.Msg)}
+			}
+		case block.Type == "toolResponse":
+			if a.completeStageRequestIds[block.Id] && isSuccessfulToolResult(block.ToolResult) {
+				a.completeStageAccepted = true
 			}
 		case toolcall.IsToolCall(block.Type):
 			a.flush() // close the current text/thinking group first
@@ -164,14 +139,18 @@ func (a *streamAggregator) handleMessage(sl streamLine) {
 			// Tracker exposes the tool namespaced (e.g. `tracker__complete_stage`),
 			// so match on the suffix rather than an exact name.
 			if strings.Contains(call.Name, "complete_stage") {
-				a.sawCompleteStage = true
+				a.completeStageRequestIds[block.Id] = true
 				if a.onCompleteStage != nil {
 					a.onCompleteStage()
 				}
 			}
-			a.emit(streamEvent{Kind: "tool", Tool: call.Name, ToolDetail: call.Detail})
+			a.emit(entity.StreamEvent{Kind: "tool", Tool: call.Name, ToolDetail: call.Detail})
 		}
 	}
+}
+
+func isSuccessfulToolResult(result *model.ToolResult) bool {
+	return result != nil && result.Status == "success" && !result.Value.IsError
 }
 
 // append adds a fragment to the current phase buffer, flushing first on a
@@ -196,19 +175,21 @@ func (a *streamAggregator) flush() {
 		return
 	}
 	text := a.buf.String()
-	a.emit(streamEvent{Kind: a.phase, Text: text, Chars: len(text)})
+	a.emit(entity.StreamEvent{Kind: a.phase, Text: text, Chars: len(text)})
 	a.buf.Reset()
 }
 
-// finish flushes any trailing buffer and returns the accumulated result,
-// classifying a provider error from the answer text if one is present.
-func (a *streamAggregator) finish() streamResult {
+// finish flushes any trailing buffer and returns the accumulated result.
+func (a *streamAggregator) finish() entity.StreamResult {
 	a.flush()
-	res := streamResult{tokens: a.tokens, toolCalls: a.toolCnt, completeStageCalled: a.sawCompleteStage, turnLimitHit: a.turnLimitHit}
-	if text := a.answer.String(); isGooseErrorText(text) {
-		res.provErr = classifyProviderError(text)
+	return entity.StreamResult{
+		Tokens:              a.tokens,
+		ToolCalls:           a.toolCnt,
+		ProviderError:       a.providerError,
+		RunErrorMessage:     a.runErrorMessage,
+		CompleteStageCalled: a.completeStageAccepted,
+		TurnLimitHit:        a.turnLimitHit,
 	}
-	return res
 }
 
 // isTurnLimitSentinel returns true when text contains goose's turn-limit

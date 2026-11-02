@@ -31,11 +31,14 @@ import { EditorChip } from './editor-chip';
 import { EditorSelection } from './editor-selection';
 import { EditorText } from './editor-text';
 import { Mention } from 'src/app/shared/mention/mention';
+import { IssueLinkConverter } from 'src/app/link/converter/issue-link.converter';
+import { IssueLinkOption } from 'src/app/link/model/issue-link.model';
+import { IssueLinkPicker } from 'src/app/link/service/issue-link-picker.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
 import { WikiTreeConverter } from 'src/app/wiki/converter/wiki-tree.converter';
 import { WikiLinkCandidate } from 'src/app/wiki/entity/wiki-link-candidate.entity';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
 import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 
 type MessageChangeMode = 'onaction' | 'onchange' | 'onblur';
@@ -56,7 +59,8 @@ interface PickerPosition {
             provide: NG_VALUE_ACCESSOR,
             useExisting: forwardRef(() => MessageEditorComponent),
             multi: true
-        }
+        },
+        IssueLinkPicker
     ],
     standalone: false
 })
@@ -131,23 +135,25 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             .slice(0, 8);
     });
 
-    private readonly wikiScope = inject(WikiLinkScope, { optional: true });
+    private readonly linkScope = inject(LinkScope, { optional: true });
     private readonly wikiStore = inject(WikiLinkStore);
     protected readonly WikiSpaceKind = WikiSpaceKind;
     protected readonly wikiQuery = signal<{ start: number; query: string } | null>(null);
     protected readonly isWikiLoading = computed(() => {
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         return idProject !== null && this.wikiStore.tree(idProject) === null;
     });
     protected readonly wikiCandidates = computed<WikiLinkCandidate[]>(() => {
         const query = this.wikiQuery();
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         const tree = idProject === null ? null : this.wikiStore.tree(idProject);
         if (!query || !tree) {
             return [];
         }
         return WikiTreeConverter.toLinkCandidates(tree, query.query, 8);
     });
+
+    protected readonly issuePicker = inject(IssueLinkPicker);
 
     // Platform-aware shortcut hint for the send button tooltip.
     protected readonly isMac = computed(() =>
@@ -205,7 +211,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
     protected onEditorMousedown(evt: MouseEvent): void {
         const root = this.editorRef().nativeElement;
         const chip = (evt.target as HTMLElement | null)?.closest<HTMLElement>(
-            '.attachment-chip, .mention-chip'
+            '.attachment-chip, .mention-chip, .issue-link-chip'
         );
         if (!chip || !root.contains(chip)) {
             return;
@@ -269,10 +275,23 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return;
         }
 
+        const issueKey = this.issuePicker.onKey(evt.key);
+        if (issueKey.isHandled) {
+            evt.preventDefault();
+            if (issueKey.picked) {
+                this.selectIssue(issueKey.picked);
+            }
+            return;
+        }
+
         const isDelete = evt.key === 'Backspace' || evt.key === 'Delete';
         if (isDelete && !evt.ctrlKey && !evt.metaKey && !evt.altKey) {
             const root = this.editorRef().nativeElement;
-            if (EditorChip.deleteBesideChip(root, evt.key === 'Backspace')) {
+            const isBackward = evt.key === 'Backspace';
+            if (
+                EditorChip.deleteChip(root, isBackward) ||
+                EditorChip.deleteBesideChip(root, isBackward)
+            ) {
                 evt.preventDefault();
                 this.syncFromDom();
                 return;
@@ -302,6 +321,7 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
         this.detectMentionQuery(body);
         this.detectWikiQuery(body);
+        this.detectIssueQuery(body);
     }
 
     protected selectWikiPage(candidate: WikiLinkCandidate): void {
@@ -321,8 +341,21 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         this.onInput();
     }
 
+    protected selectIssue(issue: IssueLinkOption): void {
+        const query = this.issuePicker.query();
+        if (!query) {
+            return;
+        }
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        EditorSelection.setLinearSelection(root, query.start, caret);
+        EditorChip.insertIssueLinkChipAtCaret(root, issue, `${issue.projectName} · ${issue.title}`);
+        this.syncFromDom();
+        this.issuePicker.close();
+    }
+
     private detectWikiQuery(body: string): void {
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         if (idProject === null) {
             return;
         }
@@ -339,6 +372,15 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         }
         this.wikiQuery.set({ start: caret - match[0].length, query: match[1] });
         this.placePicker(caret - match[0].length);
+    }
+
+    private detectIssueQuery(body: string): void {
+        const root = this.editorRef().nativeElement;
+        const { start: caret } = EditorSelection.getLinearSelection(root);
+        const query = this.issuePicker.detect(body.slice(0, caret));
+        if (query) {
+            this.placePicker(query.start);
+        }
     }
 
     private placePicker(offset: number): void {
@@ -649,6 +691,16 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
         for (const part of AttachmentLink.parse(text)) {
             if (part.type === 'attachment') {
                 root.appendChild(EditorChip.buildAttachmentChip(part.markdown, part.name));
+            } else {
+                this.renderIssueLinks(root, part.text);
+            }
+        }
+    }
+
+    private renderIssueLinks(root: HTMLElement, text: string): void {
+        for (const part of IssueLinkConverter.toParts(text)) {
+            if (part.type === 'issue') {
+                root.appendChild(EditorChip.buildIssueLinkChip(part));
             } else if (part.text.length) {
                 root.appendChild(document.createTextNode(part.text));
             }

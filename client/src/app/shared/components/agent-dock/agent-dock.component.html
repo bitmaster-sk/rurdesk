@@ -110,7 +110,12 @@
                 <span class="ui-color-text-muted">{{ 'AGENT_DOCK.RUNNING' | translate }}</span>
                 <span data-testid="agent-dock-running">
                     @if (workload.current; as current) {
-                        #{{ current.idIssuePublic }} · {{ current.stage }}
+                        @if (current.idIssuePublic !== null) {
+                            #{{ current.idIssuePublic }}
+                        } @else {
+                            {{ current.releaseName }}
+                        }
+                        · {{ current.stage }}
                     } @else {
                         {{ 'AGENT_DOCK.NONE' | translate }}
                     }

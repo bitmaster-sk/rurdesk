@@ -1,0 +1,17 @@
+<ul class="release-issues">
+    @for (issue of issues(); track issue.idIssue) {
+        <li>
+            <a
+                class="release-issue"
+                data-testid="release-issue"
+                target="_blank"
+                rel="noopener"
+                [routerLink]="['/project', idProject(), 'issue', issue.idIssuePublic]"
+            >
+                <span class="release-issue__id">#{{ issue.idIssuePublic }}</span>
+                <span class="release-issue__title">{{ issue.title }}</span>
+                <tabler-icon class="release-issue__open" icon="external-link" [size]="14" />
+            </a>
+        </li>
+    }
+</ul>

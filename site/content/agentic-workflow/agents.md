@@ -22,6 +22,8 @@ approving stages.
 | **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                                |
 | **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                    |
 
+An agent can also write the [release notes](../using-the-tracker/releases.md#letting-an-agent-write-the-release-notes) of a version.
+
 ## 1. Create an agent user
 
 In **Administration → Users** click **Create user**, toggle **Agent**, give it a
@@ -351,7 +353,7 @@ a run that has a PR** — use **Continue** instead.
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Webhook returns `401`                                             | `TRACKER_TO_GATEWAY_TOKEN` mismatch between tracker and gateway                                                                                                |
 | Tracker calls rejected                                            | Wrong/expired `GATEWAY_TO_TRACKER_TOKEN`                                                                                                                       |
-| Run fails immediately with auth error                             | Wrong/missing provider credential — check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)) |
+| Run fails immediately with auth error, or "rejected the API key"  | Wrong/missing provider credential — check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)) |
 | Agent can't push                                                  | The project's git integration token lacks write on the repo, see [token scopes](../using-the-tracker/git-integration.md#token-scopes)                          |
 | Run fails at the first stage with "no git integration"           | The project has no git integration; add one in **Project settings → Git integrations**                                                                       |
 | Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                                              |

@@ -28,7 +28,7 @@ type Scheduler struct {
 	projectRepo *repository.ProjectRepository
 	issueRepo   *repository.IssueRepository
 	dispatcher  StageDispatcher
-	notifier    *notify.Notifier
+	notifier    notify.INotifier
 
 	mu sync.Mutex
 }
@@ -40,7 +40,7 @@ func NewScheduler(
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
 	dispatcher StageDispatcher,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *Scheduler {
 	return &Scheduler{
 		pool:        pool,

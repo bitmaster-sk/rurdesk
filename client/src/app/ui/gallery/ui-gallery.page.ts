@@ -8,6 +8,8 @@ import { UiMenuItem } from '../components/menu/menu-item.model';
 import { UiMessageSeverity } from '../components/message/message.component';
 import { UiTagSeverity } from '../components/tag/tag.component';
 import { UiDaySelectFormat } from '../components/day-select/day-select-label';
+import { UiHoverCard } from '../service/ui-hover-card.service';
+import { UiGalleryHoverCardComponent } from './ui-gallery-hover-card.component';
 
 type ButtonSeverity = 'primary' | 'secondary' | 'danger' | 'success' | 'info' | 'warn';
 type ButtonVariant = 'filled' | 'outlined' | 'text';
@@ -205,6 +207,17 @@ export class UiGalleryPage {
             detail: `This is a sample ${severity} toast message.`,
             life: severity === 'error' ? 4000 : 3000
         });
+    }
+
+    // hover card demo
+    private readonly hoverCard = inject(UiHoverCard);
+    protected onHoverCardEnter(event: PointerEvent): void {
+        this.hoverCard.show(event.currentTarget as HTMLElement, UiGalleryHoverCardComponent, ref =>
+            ref.setInput('text', 'Opens after a short rest and stays while the pointer is on it.')
+        );
+    }
+    protected onHoverCardLeave(event: PointerEvent): void {
+        this.hoverCard.hide(event.currentTarget as HTMLElement);
     }
 
     // table demo data

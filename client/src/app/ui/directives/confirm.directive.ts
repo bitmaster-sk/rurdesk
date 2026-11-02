@@ -1,4 +1,4 @@
-import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { ConnectedPosition, Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import {
     Directive,
@@ -68,20 +68,8 @@ export class UiConfirmDirective implements OnDestroy {
             .withGrowAfterOpen(false)
             .withPush(false)
             .withPositions([
-                {
-                    originX: 'center',
-                    originY: 'bottom',
-                    overlayX: 'center',
-                    overlayY: 'top',
-                    offsetY: 8
-                },
-                {
-                    originX: 'center',
-                    originY: 'top',
-                    overlayX: 'center',
-                    overlayY: 'bottom',
-                    offsetY: -8
-                },
+                ...this.verticalPositions('bottom', 'top', 8),
+                ...this.verticalPositions('top', 'bottom', -8),
                 {
                     originX: 'end',
                     originY: 'center',
@@ -131,6 +119,20 @@ export class UiConfirmDirective implements OnDestroy {
                 }
             })
         );
+    }
+
+    private verticalPositions(
+        originY: 'top' | 'bottom',
+        overlayY: 'top' | 'bottom',
+        offsetY: number
+    ): ConnectedPosition[] {
+        return (['center', 'end', 'start'] as const).map(x => ({
+            originX: x,
+            originY,
+            overlayX: x,
+            overlayY,
+            offsetY
+        }));
     }
 
     private close(): void {

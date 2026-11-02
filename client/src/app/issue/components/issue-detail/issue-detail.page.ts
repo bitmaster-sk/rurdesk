@@ -26,7 +26,7 @@ import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueDetailPageParams } from './entity/issue-detail-page-params';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 
 @Component({
     selector: 'app-issue-detail',
@@ -34,7 +34,7 @@ import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
     styleUrls: ['./issue-detail.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false,
-    providers: [AgentRunStore, WikiLinkScope]
+    providers: [AgentRunStore, LinkScope]
 })
 export class IssueDetailPage implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
@@ -52,7 +52,7 @@ export class IssueDetailPage implements OnDestroy {
     public readonly agentRunStore = inject(AgentRunStore);
     public readonly project = toSignal(this.projectStore.project$);
     private readonly members = toSignal(inject(ProjectMemberStore).users$, { initialValue: [] });
-    private readonly wikiScope = inject(WikiLinkScope);
+    private readonly linkScope = inject(LinkScope);
 
     public readonly splitPaneStorageKey = 'rurdesk.issueDetail.split';
 
@@ -96,7 +96,7 @@ export class IssueDetailPage implements OnDestroy {
     private lastLoadedIdIssue: number | null = null;
 
     public constructor() {
-        effect(() => this.wikiScope.idProject.set(this.project()?.idProject ?? null));
+        effect(() => this.linkScope.idProject.set(this.project()?.idProject ?? null));
 
         effect(() => {
             const issue = this.issue();

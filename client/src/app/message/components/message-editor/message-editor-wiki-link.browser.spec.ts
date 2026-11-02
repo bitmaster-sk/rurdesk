@@ -8,7 +8,7 @@ import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 import { WikiAgentAccess } from 'src/app/wiki/constants/wiki-agent-access.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiTree, WikiTreeNode } from 'src/app/wiki/model/wiki-tree.model';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageModule } from '../../message.module';
 import { EditorText } from './editor-text';
 
@@ -64,9 +64,9 @@ async function render(
     await TestBed.configureTestingModule({
         declarations: [HostComponent],
         imports: [MessageModule, NoopAnimationsModule, TranslateModule.forRoot()],
-        providers: [{ provide: WikiApi, useValue: { loadTree$: loadTree } }, WikiLinkScope]
+        providers: [{ provide: WikiApi, useValue: { loadTree$: loadTree } }, LinkScope]
     }).compileComponents();
-    TestBed.inject(WikiLinkScope).idProject.set(idProject);
+    TestBed.inject(LinkScope).idProject.set(idProject);
     const fixture = TestBed.createComponent(HostComponent);
     fixture.detectChanges();
     await fixture.whenStable();

@@ -182,15 +182,15 @@
             <div class="manipulation-details col-span-12">
                 <div class="px-0 py-2 col-span-6">
                     {{ 'ISSUE.CREATED.AT' | translate }}:
-                    {{ currentIssue()?.createAt | date: 'medium' }}
+                    {{ $safeNavigationMigration(currentIssue()?.createAt) | date: 'medium' }}
                     {{ 'ISSUE.BY.USER' | translate }}:
-                    {{ usersMapValue?.get(currentIssue()?.createBy)?.name }}
+                    {{ userName($safeNavigationMigration(currentIssue()?.createBy)) }}
                 </div>
                 <div class="px-0 py-2 col-span-6 text-right">
                     {{ 'ISSUE.LAST.UPDATE.AT' | translate }}:
-                    {{ currentIssue()?.updateAt | date: 'medium' }}
+                    {{ $safeNavigationMigration(currentIssue()?.updateAt) | date: 'medium' }}
                     {{ 'ISSUE.BY.USER' | translate }}:
-                    {{ usersMapValue?.get(currentIssue()?.updateBy)?.name }}
+                    {{ userName($safeNavigationMigration(currentIssue()?.updateBy)) }}
                 </div>
             </div>
         }
@@ -314,8 +314,8 @@
         @if (isMrLinkPickerOpen()) {
             <app-mr-link-picker
                 [idProject]="currentIssue()!.idProject"
-                [idGitIntegration]="currentIssue()?.idGitIntegration"
-                [mrId]="currentIssue()?.mrId"
+                [idGitIntegration]="$safeNavigationMigration(currentIssue()?.idGitIntegration)"
+                [mrId]="$safeNavigationMigration(currentIssue()?.mrId)"
                 (linked)="onMrLinked($event)"
                 (cancelled)="onMrLinkCancelled()"
             />

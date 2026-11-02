@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -129,7 +130,8 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 }
 
 func (o *Orchestrator) runStage(task Task) {
-	if !task.Repo.IsSet() {
+	isRepoless := task.Stage == StageReleaseNotes
+	if !isRepoless && !task.Repo.IsSet() {
 		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
 		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
 		return
@@ -140,15 +142,17 @@ func (o *Orchestrator) runStage(task Task) {
 		o.failTask(task, reason, detail)
 		return
 	}
-	token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
-	if err != nil {
-		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
-		o.failTask(task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
-		return
+	if !isRepoless {
+		token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
+		if err != nil {
+			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
+			o.failTask(task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
+			return
+		}
+		task.Repo.Token = token
+		o.trackerClient.RedactSecret(task.Repo.Token)
+		defer o.trackerClient.ForgetSecret(task.Repo.Token)
 	}
-	task.Repo.Token = token
-	o.trackerClient.RedactSecret(task.Repo.Token)
-	defer o.trackerClient.ForgetSecret(task.Repo.Token)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
 	o.mu.Lock()
@@ -185,28 +189,9 @@ func (o *Orchestrator) runStage(task Task) {
 	}
 	defer func() { <-o.sem }()
 
-	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
-	if err != nil {
-		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to prepare the repo")
-		o.failTask(task, "worktree_error", err.Error())
+	discardWorkspace, ok := o.prepareWorkspace(&task)
+	if !ok {
 		return
-	}
-
-	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
-	if WorktreeExists(repoPath, task.IdRun) {
-		task.WorktreePath = WorktreePath(repoPath, task.IdRun)
-		if branch, err := branchOfWorktree(task.WorktreePath); err == nil {
-			task.Branch = branch
-		}
-	} else {
-		path, branch, err := o.createRunWorktree(repoPath, task)
-		if err != nil {
-			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
-			o.failTask(task, "worktree_error", err.Error())
-			return
-		}
-		task.WorktreePath = path
-		task.Branch = branch
 	}
 
 	log.Info().
@@ -217,7 +202,7 @@ func (o *Orchestrator) runStage(task Task) {
 	start := time.Now()
 	stats, err := o.agent.Run(ctx, task)
 	if errors.Is(context.Cause(ctx), errTaskGone) {
-		_ = RemoveWorktree(repoPath, task.IdRun)
+		discardWorkspace()
 		return
 	}
 	if err != nil {
@@ -225,8 +210,11 @@ func (o *Orchestrator) runStage(task Task) {
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
 		// Worktree is removed on failure so the next attempt starts fresh.
-		_ = RemoveWorktree(repoPath, task.IdRun)
+		discardWorkspace()
 		return
+	}
+	if isRepoless {
+		discardWorkspace()
 	}
 	o.state.RecordRunDuration(time.Since(start))
 	// The agent already posted complete_stage via its MCP tool but rarely
@@ -237,6 +225,44 @@ func (o *Orchestrator) runStage(task Task) {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}
 	}
+}
+
+func (o *Orchestrator) prepareWorkspace(task *Task) (func(), bool) {
+	if task.Stage == StageReleaseNotes {
+		dir, err := os.MkdirTemp("", fmt.Sprintf("release-notes-%d-", task.IdRun))
+		if err != nil {
+			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the scratch directory")
+			o.failTask(*task, "worktree_error", err.Error())
+			return nil, false
+		}
+		task.WorktreePath = dir
+		return func() { _ = os.RemoveAll(dir) }, true
+	}
+
+	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
+	if err != nil {
+		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to prepare the repo")
+		o.failTask(*task, "worktree_error", err.Error())
+		return nil, false
+	}
+
+	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
+	if WorktreeExists(repoPath, task.IdRun) {
+		task.WorktreePath = WorktreePath(repoPath, task.IdRun)
+		if branch, err := branchOfWorktree(task.WorktreePath); err == nil {
+			task.Branch = branch
+		}
+	} else {
+		path, branch, err := o.createRunWorktree(repoPath, *task)
+		if err != nil {
+			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
+			o.failTask(*task, "worktree_error", err.Error())
+			return nil, false
+		}
+		task.WorktreePath = path
+		task.Branch = branch
+	}
+	return func() { _ = RemoveWorktree(repoPath, task.IdRun) }, true
 }
 
 func (o *Orchestrator) applyModelAndTurns(task *Task) error {
@@ -425,6 +451,7 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		}
 		task.Wiki = parseWiki(bundle.Wiki)
 		task.WikiProposals = parseWikiProposals(bundle.WikiProposals)
+		task.Release = parseRelease(bundle.Release)
 		for _, message := range decodeEach[model.Message](bundle.ReviewThread) {
 			creatorName := ""
 			if message.Creator != nil {
@@ -502,6 +529,28 @@ func parseWiki(promptContext *model.WikiPromptContext) *WikiContext {
 		return nil
 	}
 	return wiki
+}
+
+func parseRelease(promptContext *model.ReleasePromptContext) *ReleaseContext {
+	if promptContext == nil {
+		return nil
+	}
+	release := &ReleaseContext{Name: promptContext.Name, Tag: promptContext.Tag}
+	for _, issue := range promptContext.OpenIssues {
+		release.OpenIssues = append(release.OpenIssues, ReleaseIssue(issue))
+	}
+	for _, section := range promptContext.Sections {
+		name := ""
+		if section.Name != nil {
+			name = *section.Name
+		}
+		issues := make([]ReleaseIssue, len(section.Issues))
+		for i, issue := range section.Issues {
+			issues[i] = ReleaseIssue(issue)
+		}
+		release.Sections = append(release.Sections, ReleaseSection{Name: name, Issues: issues})
+	}
+	return release
 }
 
 func parseWikiProposals(rawProposals []json.RawMessage) []WikiProposal {

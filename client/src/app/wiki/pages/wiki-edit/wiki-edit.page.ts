@@ -15,7 +15,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, filter, interval, map, of, take } from 'rxjs';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
-import { IssueApi } from 'src/app/issue/api/issue.api.service';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { ApiError } from 'src/app/shared/model/api-error.model';
@@ -24,10 +23,10 @@ import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/att
 import { AttachmentScope } from 'src/app/shared/attachment/entity/attachment-scope.entity';
 import { AttachmentGallery } from 'src/app/shared/attachment/service/attachment-gallery.service';
 import { AttachmentLink } from 'src/app/shared/attachment/util/attachment-link';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiApi } from '../../api/wiki.api.service';
 import {
     WikiEditorComponent,
-    WikiEditorIssueOption,
     WikiEditorPageOption
 } from '../../components/wiki-editor/wiki-editor.component';
 import { WikiAgentAccess } from '../../constants/wiki-agent-access.enum';
@@ -76,14 +75,14 @@ const HEARTBEAT_INTERVAL_MS = 15000;
     changeDetection: ChangeDetectionStrategy.OnPush,
     standalone: false,
     host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
-    providers: [AttachmentGallery]
+    providers: [AttachmentGallery, LinkScope]
 })
 export class WikiEditPage implements OnDestroy {
     private readonly route = inject(ActivatedRoute);
     private readonly router = inject(Router);
     private readonly api = inject(WikiApi);
-    private readonly issueApi = inject(IssueApi);
     private readonly toast = inject(ToastNotificationService);
+    private readonly linkScope = inject(LinkScope);
     private readonly authStore = inject(AuthStore);
     private readonly destroyRef = inject(DestroyRef);
     private readonly i18n = inject(I18nService);
@@ -124,13 +123,11 @@ export class WikiEditPage implements OnDestroy {
     protected readonly editors = signal<WikiEditor[]>([]);
     protected readonly incoming = signal<WikiSavedNotice | null>(null);
     protected readonly conflict = signal<WikiConflictState | null>(null);
-    protected readonly issueOptions = signal<WikiEditorIssueOption[]>([]);
 
     private lastDraft = '';
     private savedContent = '';
     private leaveDecision: Subject<boolean> | null = null;
     protected readonly isLeaveOpen = signal(false);
-    private isIssuesRequested = false;
 
     private readonly usersMap = toSignal(inject(ProjectMemberStore).usersMap$, {
         initialValue: new Map<number, User>()
@@ -273,6 +270,7 @@ export class WikiEditPage implements OnDestroy {
     });
 
     public constructor() {
+        this.linkScope.idProject.set(this.idProject);
         if (this.isCreate && this.idProposal) {
             this.initCreateFromProposal(this.idProposal);
         } else if (this.isCreate) {
@@ -354,23 +352,6 @@ export class WikiEditPage implements OnDestroy {
 
     protected onBodyChange(body: string): void {
         this.body.set(body);
-    }
-
-    protected onIssuesRequested(): void {
-        if (this.isIssuesRequested) {
-            return;
-        }
-        this.isIssuesRequested = true;
-        this.issueApi
-            .load$({ idProject: this.idProject, orderColumn: 'createAt', orderDirection: 'desc' })
-            .subscribe(issues =>
-                this.issueOptions.set(
-                    issues.map(issue => ({
-                        idIssuePublic: issue.idIssuePublic,
-                        title: issue.title
-                    }))
-                )
-            );
     }
 
     protected onContinueDraft(): void {

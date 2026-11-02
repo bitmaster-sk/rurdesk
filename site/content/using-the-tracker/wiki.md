@@ -77,7 +77,7 @@ the same way on GitHub:
 | `[[Page title#Heading]]` | a link to a heading on another page |
 | `[[#Heading]]` | a link to a heading on the same page; the editor suggests headings |
 | `[text](#heading)` | a plain Markdown link to a heading on the same page |
-| `#123` | a link to task #123; the editor suggests tasks as you type |
+| `#` | a link to a task picked from the suggestions, from any project you can see; see [task references](features.md#task-references) |
 
 Every heading gets an anchor made from its text the same way as page URLs
 (`## Rollback plan` → `#rollback-plan`; repeated headings get `-1`, `-2`).

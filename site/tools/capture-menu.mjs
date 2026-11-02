@@ -16,6 +16,8 @@
  *   CAPTURE_PASSWORD  login password        (default kreslo)
  *   CAPTURE_PROJECT   project id            (default 1)
  *   CAPTURE_ISSUE     public issue id for the detail shot (optional)
+ *   CAPTURE_RELEASE_PROJECT  project id for the release shots (default CAPTURE_PROJECT)
+ *   CAPTURE_RELEASE   release id for the release notes shot (default: newest released)
  *
  * NOT INCLUDED (do these by hand — they need real AI runs or mutate data in
  * ways better done manually): Project Kickstart / AI import, the agent-run
@@ -48,6 +50,8 @@ const USER2_NAME = process.env.CAPTURE_USER2_NAME || "Robert Stark";
 const DEMO_ISSUE = process.env.CAPTURE_DEMO_ISSUE || "20";
 const SPLIT_ISSUE = process.env.CAPTURE_SPLIT_ISSUE || DEMO_ISSUE;
 const TAG_QUERY = process.env.CAPTURE_TAG_QUERY || "ne";
+const RELEASE_PROJECT = process.env.CAPTURE_RELEASE_PROJECT || PROJECT;
+const RELEASE = process.env.CAPTURE_RELEASE || "";
 
 const VW = 1600,
     VH = 1000;
@@ -1245,6 +1249,46 @@ const SHOTS = [
             await page.waitForTimeout(500);
             await comp.screenshot({ path: path.join(IMG, "project-tags.png") });
             await page.setViewportSize({ width: VW, height: VH });
+        },
+    },
+
+    {
+        id: "release-list",
+        file: "release-list.png",
+        kind: "png",
+        desc: "Releases page: drafts and released versions",
+        run: async (page) => {
+            await page.setViewportSize({ width: 1100, height: VH });
+            await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release`);
+            await page.getByTestId("release-row").first().waitFor({ timeout: 15000 });
+            await settle(page);
+            await page.locator('[data-testid="release-list"] .panel').screenshot({
+                path: path.join(IMG, "release-list.png"),
+            });
+            await page.setViewportSize({ width: VW, height: VH });
+        },
+    },
+
+    {
+        id: "release-notes",
+        file: "release-notes.png",
+        kind: "png",
+        desc: "A released version: its release notes and the tasks in it",
+        run: async (page) => {
+            if (RELEASE) {
+                await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release/${RELEASE}`);
+            } else {
+                await gotoApp(page, `${BASE}/project/${RELEASE_PROJECT}/release`);
+                const released = page
+                    .getByTestId("release-row")
+                    .filter({ hasNot: page.getByTestId("release-continue") })
+                    .first();
+                await released.waitFor({ timeout: 15000 });
+                await released.getByTestId("release-open").click();
+            }
+            await page.locator(".wiki-article").first().waitFor({ timeout: 15000 });
+            await settle(page);
+            await shoot(page, "release-notes.png");
         },
     },
 

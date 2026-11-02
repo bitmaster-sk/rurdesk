@@ -7,6 +7,7 @@ function makeRun(phase: AgentPhase, stages: Partial<AgentStageProgress>[] = []):
     return {
         idRun: 5,
         idIssue: 1,
+        idRelease: null,
         idProject: 10,
         idUserAgent: 7,
         idGitIntegration: null,

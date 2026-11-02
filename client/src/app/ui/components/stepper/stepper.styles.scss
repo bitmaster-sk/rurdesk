@@ -1,0 +1,110 @@
+ui-stepper {
+    display: block;
+}
+
+.ui-stepper__list {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ui-stepper__item {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    min-width: 0;
+
+    &:not(:last-child) {
+        flex: 1;
+    }
+}
+
+.ui-stepper__step {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space);
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 0;
+    border-radius: var(--ui-radius-md);
+    background: none;
+    color: var(--ui-color-text-muted);
+    font: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 150ms ease-out;
+
+    &:hover:not(:disabled) {
+        background: var(--ui-color-surface-hover);
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ui-color-primary);
+        outline-offset: 2px;
+    }
+}
+
+.ui-stepper__marker {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: 50%;
+    background: var(--ui-color-surface);
+    font-size: var(--font-size-s);
+    font-variant-numeric: tabular-nums;
+    transition:
+        background-color 200ms ease-out,
+        border-color 200ms ease-out;
+}
+
+.ui-stepper__line {
+    flex: 1;
+    min-width: var(--ui-space-l);
+    height: 1px;
+    background: var(--ui-color-border);
+    transition: background-color 200ms ease-out;
+}
+
+.ui-stepper__item--done {
+    .ui-stepper__step {
+        color: var(--ui-color-text);
+    }
+
+    .ui-stepper__marker {
+        border-color: var(--ui-color-primary);
+        background: var(--ui-color-primary);
+        color: var(--ui-color-primary-contrast);
+    }
+
+    .ui-stepper__line {
+        background: var(--ui-color-primary);
+    }
+}
+
+.ui-stepper__item--current {
+    .ui-stepper__step {
+        color: var(--ui-color-text);
+        font-weight: 600;
+    }
+
+    .ui-stepper__marker {
+        border: 2px solid var(--ui-color-primary);
+        color: var(--ui-color-primary);
+    }
+}
+
+@media (max-width: 640px) {
+    .ui-stepper__item:not(.ui-stepper__item--current) .ui-stepper__label {
+        display: none;
+    }
+}

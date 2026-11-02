@@ -200,6 +200,7 @@ ui-multiselect {
 }
 
 .ui-select-panel__option {
+    flex-shrink: 0;
     padding: var(--ui-input-padding-y) var(--ui-input-padding-x);
     border-radius: var(--ui-input-radius);
     cursor: pointer;

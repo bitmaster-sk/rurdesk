@@ -20,16 +20,23 @@ type assigneeLoader interface {
 	LoadAssignee(ctx context.Context, idIssue int64) (*int64, error)
 }
 
+func LoadRunAssignee(ctx context.Context, issueRepo assigneeLoader, run *model.AgentRun) (*int64, error) {
+	if run.IdIssue == nil {
+		return &run.IdUserAgent, nil
+	}
+	return issueRepo.LoadAssignee(ctx, *run.IdIssue)
+}
+
 func BroadcastRunUpdate(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectRepo *repository.ProjectRepository,
 	issueRepo assigneeLoader,
 	runRepo *repository.AgentRunRepository,
 	taskRepo *repository.AgentTaskRepository,
 	run *model.AgentRun,
 ) {
-	if notifier == nil || run == nil {
+	if run == nil {
 		return
 	}
 	events, err := runRepo.LoadEvents(ctx, run.IdRun)
@@ -42,29 +49,27 @@ func BroadcastRunUpdate(
 		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: tasks load failed, sending without")
 		tasks = nil
 	}
-	idAssignee, err := issueRepo.LoadAssignee(ctx, run.IdIssue)
+	idAssignee, err := LoadRunAssignee(ctx, issueRepo, run)
 	if err != nil {
 		log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("BroadcastRunUpdate: assignee load failed, sending as not parked")
 		idAssignee = &run.IdUserAgent
 	}
 
 	var idsUser []int64
-	if projectRepo != nil {
-		members, err := projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
-		if err == nil {
-			idsUser = make([]int64, len(members))
-			for i, m := range members {
-				idsUser[i] = m.IdUser
-			}
+	members, err := projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
+	if err == nil {
+		idsUser = make([]int64, len(members))
+		for i, m := range members {
+			idsUser[i] = m.IdUser
 		}
 	}
 
-	notifier.Send <- &notify.Notice{
+	notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectAgentRun,
 		Action:  notify.ActionUpdate,
 		Payload: BuildRunSnapshot(run, events, tasks, idAssignee),
-	}
+	})
 }
 
 // issueLoader / projectMemberLoader are the narrow seams BroadcastIssueUpdate
@@ -91,7 +96,7 @@ type projectMemberLoader interface {
 // notice already went out).
 func BroadcastIssueUpdate(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	issueRepo issueLoader,
 	projectRepo projectMemberLoader,
 	idIssue int64,
@@ -104,15 +109,12 @@ func BroadcastIssueUpdate(
 // open views live (table row wash, kanban card fly).
 func BroadcastIssueNotice(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	issueRepo issueLoader,
 	projectRepo projectMemberLoader,
 	idIssue int64,
 	action notify.NoticeAction,
 ) {
-	if notifier == nil {
-		return
-	}
 	issue, err := issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &idIssue})
 	if err != nil || issue == nil {
 		log.Debug().Err(err).Int64("idIssue", idIssue).Msg("BroadcastIssueNotice: issue load failed, skipping")
@@ -126,12 +128,12 @@ func BroadcastIssueNotice(
 // goes out and only the pre-delete snapshot remains.
 func BroadcastIssueSnapshot(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectRepo projectMemberLoader,
 	issue *model.Issue,
 	action notify.NoticeAction,
 ) {
-	if notifier == nil || issue == nil {
+	if issue == nil {
 		return
 	}
 	members, err := projectRepo.LoadProjectsMembers(ctx, []int64{issue.IdProject})
@@ -144,12 +146,12 @@ func BroadcastIssueSnapshot(
 	for i, m := range members {
 		idsUser[i] = m.IdUser
 	}
-	notifier.Send <- &notify.Notice{
+	notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectIssue,
 		Action:  action,
 		Payload: issue,
-	}
+	})
 }
 
 // BroadcastMrStatusUpdate sends a SubjectMrStatus notice to project members
@@ -158,12 +160,12 @@ func BroadcastIssueSnapshot(
 // refetches the status.
 func BroadcastMrStatusUpdate(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectRepo projectMemberLoader,
 	issue *model.Issue,
 	status *githost.Status,
 ) {
-	if notifier == nil || issue == nil || status == nil {
+	if issue == nil || status == nil {
 		return
 	}
 	if issue.IdGitIntegration == nil || issue.MrId == nil {
@@ -182,7 +184,7 @@ func BroadcastMrStatusUpdate(
 		idsUser[i] = m.IdUser
 	}
 
-	notifier.Send <- &notify.Notice{
+	notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
 		Subject: notify.SubjectMrStatus,
 		Action:  notify.ActionUpdate,
@@ -196,7 +198,7 @@ func BroadcastMrStatusUpdate(
 			WebUrl:           status.WebUrl,
 			HeadSHA:          status.HeadSHA,
 		},
-	}
+	})
 }
 
 // FailRun transitions a non-terminal run to failed and broadcasts the
@@ -205,7 +207,7 @@ func BroadcastMrStatusUpdate(
 // heartbeat, crash) where an in-flight stage was orphaned.
 func FailRun(
 	ctx context.Context,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 	projectRepo *repository.ProjectRepository,
 	issueRepo assigneeLoader,
 	runRepo *repository.AgentRunRepository,

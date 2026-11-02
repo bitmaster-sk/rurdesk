@@ -6,14 +6,23 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
+	"github.com/bitmaster-sk/rurdesk/gateway/goose/entity"
 	"github.com/rs/zerolog/log"
 )
 
 const defaultGooseBinary = "goose"
+
+// stageMarkerEnv must match the variable the rurdesk-guard hooks read.
+const stageMarkerEnv = "RURDESK_STAGE_MARKER"
+
+func stageMarkerPath(idTask int64) string {
+	return filepath.Join(os.TempDir(), fmt.Sprintf("rurdesk-stage-%d.submitted", idTask))
+}
 
 // GooseAdapter implements common.Agent by driving Block's Goose agent
 // (`goose run`, a pinned Rust binary) headlessly. Unlike the claude adapter it
@@ -53,9 +62,15 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// ${ENV} substitution, which goose doesn't apply to the extension uri).
 	// The config path is shared, which is safe only because the orchestrator
 	// runs one stage at a time.
-	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.AgentApiKey, task.IdRun); err != nil {
+	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.AgentApiKey, task.IdRun, repoPluginDirs(task.WorktreePath)); err != nil {
 		return stats, fmt.Errorf("writing goose config: %w", err)
 	}
+
+	stageMarker := stageMarkerPath(task.IdTask)
+	if err := os.Remove(stageMarker); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return stats, fmt.Errorf("clearing stage marker: %w", err)
+	}
+	defer func() { _ = os.Remove(stageMarker) }()
 
 	runCtx, cancel := context.WithCancel(ctx)
 	session := &common.ProcessSession{Cancel: cancel}
@@ -90,7 +105,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Repo.Token)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Repo.Token, stageMarker)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -122,7 +137,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// and accumulates the terminal stats (tokens, tool count, provider error).
 	thinking := common.NewThinkingBatcher(a.thinkingSender, task.IdTask)
 	thinking.Start(runCtx)
-	agg := newStreamAggregator(task.IdRun, func(ev streamEvent) {
+	agg := newStreamAggregator(task.IdRun, func(ev entity.StreamEvent) {
 		logStreamEvent(ev, task.IdRun)
 		queueThinkingEvent(ev, thinking)
 	})
@@ -152,8 +167,8 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	if dropped := thinking.DroppedCount(); dropped > 0 {
 		log.Warn().Int64("idTask", task.IdTask).Int("dropped", dropped).Msg("thinking events dropped on overflow")
 	}
-	status, tokensUsed, toolCalls, provErr := result.status, result.tokens, result.toolCalls, result.provErr
-	turnLimitHit := result.turnLimitHit
+	status, tokensUsed, toolCalls, providerError := result.Status, result.Tokens, result.ToolCalls, result.ProviderError
+	turnLimitHit := result.TurnLimitHit
 	stats.TokensUsed = tokensUsed
 	stats.ToolCallsCount = toolCalls
 	stats.DurationMs = int(time.Since(start) / time.Millisecond)
@@ -162,13 +177,12 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		return stats, fmt.Errorf("goose cancelled")
 	}
 
-	// Goose reports provider failures (low credit, bad request) as in-band
-	// assistant text with exit 0 (block/goose#4612), so the exit code alone
-	// can't be trusted. A detected provider error takes precedence and carries
-	// a stable code the UI translates.
-	if provErr != nil {
-		log.Warn().Int64("idRun", task.IdRun).Str("code", provErr.Code).Str("detail", provErr.Detail).Msg("goose provider error")
-		return stats, provErr
+	// Goose reports exhausted credit (HTTP 402) as a notification with exit 0,
+	// so the exit code alone can't be trusted. A detected provider error takes
+	// precedence and carries a stable code the UI translates.
+	if providerError != nil {
+		log.Warn().Int64("idRun", task.IdRun).Str("code", providerError.Code).Str("detail", providerError.Detail).Msg("goose provider error")
+		return stats, providerError
 	}
 
 	exitCode := 0
@@ -180,6 +194,9 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 			return stats, fmt.Errorf("goose wait failed: %w", waitErr)
 		}
 	}
+	if exitCode != 0 && result.RunErrorMessage != "" {
+		return stats, fmt.Errorf("goose exited with code %d: %s", exitCode, firstLine(result.RunErrorMessage))
+	}
 
 	// Success rides entirely on the agent calling the `complete_stage` MCP
 	// tool — the gateway never posts output itself. A weaker model sometimes
@@ -189,7 +206,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	if termErr := mapTerminalStatus(exitCode, status); termErr != nil {
 		return stats, termErr
 	}
-	if turnLimitHit && !result.completeStageCalled {
+	if turnLimitHit && !result.CompleteStageCalled {
 		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
 			Msg("goose reached --max-turns before calling complete_stage")
 		return stats, &common.AgentError{
@@ -197,7 +214,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 			Detail: "agent reached --max-turns before calling complete_stage",
 		}
 	}
-	if !result.completeStageCalled {
+	if !result.CompleteStageCalled {
 		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
 			Msg("goose exited 0 without calling complete_stage — failing stage")
 		return stats, &common.AgentError{
@@ -233,10 +250,18 @@ func isSuccessStatus(status string) bool {
 	}
 }
 
-func isGooseErrorText(text string) bool {
-	lower := strings.ToLower(text)
-	return strings.Contains(lower, "ran into this error") ||
-		strings.Contains(lower, "session ended with error")
+// classifyProviderErrorKind maps the kind of a goose `error` content block to
+// a stable code. Rate limits and Anthropic's low-credit 400 arrive as "other",
+// so that kind still falls back to the message text.
+func classifyProviderErrorKind(kind, message string) *common.AgentError {
+	switch kind {
+	case "authentication":
+		return &common.AgentError{Code: common.ErrCodeProviderAuthFailed, Detail: firstLine(message)}
+	case "creditsExhausted":
+		return &common.AgentError{Code: common.ErrCodeProviderCreditExhausted, Detail: firstLine(message)}
+	default:
+		return classifyProviderError(message)
+	}
 }
 
 // classifyProviderError maps error text to a stable code: credit/quota
@@ -317,12 +342,16 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // The tracker MCP URL + bearer are NOT set here — writeGooseConfig writes
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
-func childEnv(cfg *common.GooseConfig, provider, gitToken string) []string {
+func childEnv(cfg *common.GooseConfig, provider, gitToken, stageMarker string) []string {
 	out := append([]string{}, os.Environ()...)
 	out = append(out,
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",
 		"GOOSE_PROVIDER="+provider,
+		"GOOSE_DISABLE_SESSION_NAMING=true",
+		fmt.Sprintf("GOOSE_DEFAULT_EXTENSION_TIMEOUT=%d", cfg.DefaultExtensionTimeoutSeconds),
+		fmt.Sprintf("GOOSE_STOP_HOOK_BLOCK_CAP=%d", cfg.StopHookBlockCap),
+		stageMarkerEnv+"="+stageMarker,
 		common.GitTokenEnv(gitToken),
 	)
 	if cfg.AnthropicAPIKey != "" {

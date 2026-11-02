@@ -14,7 +14,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { DEFAULT_TITLE } from 'src/app/core/browser-title.service';
 import { AgentRunStore } from 'src/app/agent/store/agent-run.store';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { Issue } from '../../model/issue.model';
 import { Fixtures } from 'src/testing/fixtures';
 import { UiModule } from 'src/app/ui/ui.module';
@@ -56,7 +56,7 @@ describe('IssueDetailPage title', () => {
                 template: '',
                 providers: [
                     { provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } },
-                    WikiLinkScope
+                    LinkScope
                 ]
             }
         });
@@ -144,7 +144,7 @@ describe('IssueDetailPage clone pre-fill', () => {
                 template: '',
                 providers: [
                     { provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } },
-                    WikiLinkScope
+                    LinkScope
                 ]
             }
         });
@@ -238,7 +238,7 @@ describe('IssueDetailPage delete and redirect', () => {
                 template: '',
                 providers: [
                     { provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } },
-                    WikiLinkScope
+                    LinkScope
                 ]
             }
         });
@@ -330,7 +330,7 @@ describe('IssueDetailPage delete and redirect', () => {
                     template: DIALOG_TEMPLATE,
                     providers: [
                         { provide: AgentRunStore, useValue: { loadForIssue: vi.fn() } },
-                        WikiLinkScope
+                        LinkScope
                     ]
                 }
             });

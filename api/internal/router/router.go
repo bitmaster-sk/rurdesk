@@ -32,6 +32,7 @@ func New(
 	itCtrl *controller.IssueTypeController,
 	cfCtrl *controller.CustomFieldController,
 	tagCtrl *controller.TagController,
+	releaseCtrl *controller.ReleaseController,
 	wikiCtrl *controller.WikiController,
 	wikiAgentCtrl *controller.WikiAgentController,
 	wikiProposalCtrl *controller.WikiProposalController,
@@ -49,6 +50,7 @@ func New(
 	notifCtrl *controller.NotificationController,
 	adminCtrl *controller.AdminController,
 	myIssuesCtrl *controller.MyIssuesController,
+	issueLinkCtrl *controller.IssueLinkController,
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
 	agentThinkingCtrl *controller.AgentThinkingController,
@@ -108,6 +110,7 @@ func New(
 	pri.GET("/license", licenseCtrl.Get)
 
 	pri.GET("/skills", skillCtrl.List)
+	pri.GET("/agent/run-kinds", skillCtrl.RunKinds)
 
 	// Admin (global instance admin only)
 	admin := pri.Group("/admin", middleware.AdminOnly())
@@ -246,6 +249,16 @@ func New(
 	pri.PATCH("/tag/:idTag", tagCtrl.EditTag)
 	pri.DELETE("/tag/:idTag/project/:idProject", tagCtrl.DeleteTag)
 
+	pri.GET("/project/:idProject/release", releaseCtrl.GetReleases)
+	pri.GET("/project/:idProject/release/draft", releaseCtrl.GetDraft)
+	pri.POST("/project/:idProject/release", releaseCtrl.CreateRelease)
+	pri.GET("/project/:idProject/release/:idRelease", releaseCtrl.GetRelease)
+	pri.PUT("/project/:idProject/release/:idRelease", releaseCtrl.UpdateRelease)
+	pri.POST("/project/:idProject/release/:idRelease/agent", releaseCtrl.StartAgent)
+	pri.POST("/project/:idProject/release/:idRelease/publish", releaseCtrl.PublishRelease)
+	pri.PUT("/project/:idProject/release/:idRelease/notes", releaseCtrl.UpdateNotes)
+	pri.DELETE("/project/:idProject/release/:idRelease", releaseCtrl.DeleteRelease)
+
 	pri.GET("/custom-field", cfCtrl.GetCustomFields)
 	pri.POST("/custom-field", cfCtrl.CreateCustomField)
 	pri.PATCH("/custom-field/:idCustomField", cfCtrl.EditCustomField)
@@ -310,6 +323,8 @@ func New(
 
 	// My Issues
 	pri.GET("/my-issues", myIssuesCtrl.GetMyIssues)
+	pri.GET("/issue-link/search", issueLinkCtrl.Search)
+	pri.POST("/issue-link/info", issueLinkCtrl.Info)
 
 	// Git integration CRUD
 	pri.GET("/project/:idProject/git-integration", gitIntCtrl.List)

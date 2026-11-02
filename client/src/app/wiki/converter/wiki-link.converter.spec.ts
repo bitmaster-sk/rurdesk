@@ -56,14 +56,17 @@ describe('WikiLinkConverter', () => {
         );
     });
 
-    it('links task references but not headings', () => {
-        expect(WikiLinkConverter.toMarkdown('# Title\nfixed in #11 (and #12)', context)).toBe(
-            '# Title\nfixed in [#11](/project/7/issue/11) (and [#12](/project/7/issue/12))'
-        );
+    it('leaves a typed task number as text and keeps a stored task link as it is', () => {
+        expect(
+            WikiLinkConverter.toMarkdown(
+                '# Title\nfixed in #11 and [#12](/project/9/issue/12)',
+                context
+            )
+        ).toBe('# Title\nfixed in #11 and [#12](/project/9/issue/12)');
     });
 
-    it('leaves links and task references inside code untouched', () => {
-        const body = 'Use `[[prehlad-systemu]]` and\n```\n[[prehlad-systemu]] #5\n```';
+    it('leaves links inside code untouched', () => {
+        const body = 'Use `[[prehlad-systemu]]` and\n```\n[[prehlad-systemu]]\n```';
         expect(WikiLinkConverter.toMarkdown(body, context)).toBe(body);
     });
 
@@ -97,17 +100,6 @@ describe('WikiLinkConverter', () => {
     it('does not turn a numeric heading anchor into a task link', () => {
         expect(WikiLinkConverter.toMarkdown('[[#2026]] and [year](#2026)', context)).toBe(
             '[2026](#2026) and [year](#2026)'
-        );
-    });
-
-    it('links only wiki pages in a comment and leaves task refs, checklists and code alone', () => {
-        expect(
-            WikiLinkConverter.toPageLinksMarkdown(
-                'see [[Prehľad systému]] for #11\n- [ ] todo\n`[[commits]]`',
-                context
-            )
-        ).toBe(
-            'see [Prehľad systému](/project/7/wiki/project/prehlad-systemu) for #11\n- [ ] todo\n`[[commits]]`'
         );
     });
 

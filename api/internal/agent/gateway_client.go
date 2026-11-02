@@ -16,7 +16,7 @@ import (
 type WebhookEvent struct {
 	IdRun       int64          `json:"idRun"`
 	IdProject   int64          `json:"idProject"`
-	IdIssue     int64          `json:"idIssue"`
+	IdIssue     *int64         `json:"idIssue,omitempty"`
 	IdUserAgent int64          `json:"idUserAgent"`
 	Event       string         `json:"event"`
 	Payload     map[string]any `json:"payload"`

@@ -3,7 +3,9 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { Fixtures } from 'src/testing/fixtures';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AgentRunApi } from '../../../agent/api/agent-run.api.service';
 import { AgentStage } from '../../../agent/model/agent-stage.enum';
+import { RunKind } from '../../../agent/model/run-kind.model';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { SkillApi } from '../../../shared/api/skill.api.service';
 import { Skill } from '../../../shared/model/skill.model';
@@ -19,6 +21,25 @@ const SKILLS: Skill[] = [
 ];
 const SAVED: ProjectSkill[] = [{ idProject: 7, idSkill: 1, stage: AgentStage.Implementation }];
 const PROJECT: Project = { idProject: 7, name: 'p', color: '#123456' };
+const RUN_KINDS: RunKind[] = [
+    {
+        name: 'issue',
+        stages: [
+            { name: AgentStage.Pickup, hasSkills: false },
+            { name: AgentStage.Brainstorming, hasSkills: true },
+            { name: AgentStage.Design, hasSkills: true },
+            { name: AgentStage.ImplementationPlan, hasSkills: true },
+            { name: AgentStage.Implementation, hasSkills: true }
+        ]
+    },
+    {
+        name: 'release_notes',
+        stages: [
+            { name: AgentStage.Pickup, hasSkills: false },
+            { name: AgentStage.ReleaseNotes, hasSkills: true }
+        ]
+    }
+];
 
 abstract class Dom {
     public static cell(fixture: { nativeElement: HTMLElement }, key: string): HTMLElement {
@@ -33,6 +54,7 @@ describe('AgentSkillMatrixComponent (browser)', () => {
         replace$: ReturnType<typeof vi.fn>;
     };
     let toast: { showError: ReturnType<typeof vi.fn> };
+    let agentRunApi: { loadRunKinds$: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
         skillApi = { load$: vi.fn().mockReturnValue(of(SKILLS)) };
@@ -41,6 +63,7 @@ describe('AgentSkillMatrixComponent (browser)', () => {
             replace$: vi.fn().mockReturnValue(of(SAVED))
         };
         toast = { showError: vi.fn() };
+        agentRunApi = { loadRunKinds$: vi.fn().mockReturnValue(of(RUN_KINDS)) };
     });
 
     async function setup() {
@@ -50,16 +73,20 @@ describe('AgentSkillMatrixComponent (browser)', () => {
             providers: [
                 { provide: SkillApi, useValue: skillApi },
                 { provide: ProjectSkillApi, useValue: projectSkillApi },
-                { provide: ToastNotificationService, useValue: toast }
+                { provide: ToastNotificationService, useValue: toast },
+                { provide: AgentRunApi, useValue: agentRunApi }
             ]
         })
             .overrideComponent(AgentSkillMatrixComponent, {
                 set: {
                     template: `
+                        @for (kind of kindColumns(); track kind.label) {
+                            <span class="kind" [attr.data-stages]="kind.stages.join(',')">{{ kind.label }}</span>
+                        }
                         @for (skill of skills(); track skill.idSkill) {
                             <div class="row">
                                 <span class="name">{{ skill.name }}</span>
-                                @for (stage of stages; track stage) {
+                                @for (stage of stages(); track stage) {
                                     <button
                                         class="cell"
                                         [class.on]="isEnabled(skill.idSkill, stage)"
@@ -81,13 +108,25 @@ describe('AgentSkillMatrixComponent (browser)', () => {
         return fixture;
     }
 
-    it('renders a row per skill with one cell per non-pickup stage', async () => {
+    it('renders a row per skill with one cell per non-pickup stage of every run kind', async () => {
         const fixture = await setup();
 
         expect(fixture.nativeElement.querySelectorAll('.row').length).toBe(2);
         expect(
             fixture.nativeElement.querySelectorAll('.row')[0].querySelectorAll('.cell').length
-        ).toBe(4);
+        ).toBe(5);
+        expect(Dom.cell(fixture, '1:release_notes')).not.toBeNull();
+    });
+
+    it('groups the stage columns under their run kind', async () => {
+        const fixture = await setup();
+
+        const kinds = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('.kind'));
+        expect(kinds.map(kind => kind.textContent)).toEqual([
+            'AGENT.RUN_KIND.ISSUE',
+            'AGENT.RUN_KIND.RELEASE_NOTES'
+        ]);
+        expect(kinds[1].dataset['stages']).toBe('release_notes');
     });
 
     it('pre-checks the cells the project already has enabled', async () => {

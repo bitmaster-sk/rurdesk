@@ -41,3 +41,11 @@ func TestStagedCannedBody_ScriptLeavesUnsetFieldsAtTheDefault(t *testing.T) {
 	assert.Equal(t, "https://github.com/example/repo/pull/1", body["prUrl"],
 		"an unset script field must fall through to the canned default")
 }
+
+func TestStagedCannedBody_ReleaseNotesSubmitsTheNotesWithoutAMessageKind(t *testing.T) {
+	body := stagedCannedBody(&configuredAgent{}, "release_notes")
+
+	assert.Equal(t, "output_submitted", body["outcome"])
+	assert.NotEmpty(t, body["message"])
+	assert.NotContains(t, body, "messageKind")
+}

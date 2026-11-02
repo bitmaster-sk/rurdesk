@@ -1,0 +1,79 @@
+<div class="flex flex-col gap-4" data-testid="release-agent-form">
+    <div class="ui-field m-0">
+        <label for="release-agent">
+            {{ 'RELEASE.AGENT.AGENT' | translate }}
+        </label>
+        <ui-select
+            class="w-full"
+            inputId="release-agent"
+            data-testid="release-agent"
+            optionLabel="name"
+            optionValue="idUser"
+            [options]="agents()"
+            [formControl]="idUserAgent"
+        >
+            <ng-template #item let-user>
+                <span class="flex items-center gap-2">
+                    <app-avatar
+                        [name]="user.name"
+                        [bgColor]="user.colorAvatarBg"
+                        [manualInitials]="user.avatarInitials"
+                        [width]="1.5"
+                        [height]="1.5"
+                        [radius]="0.75"
+                    />
+                    <span>{{ user.name }}</span>
+                </span>
+            </ng-template>
+            <ng-template #selectedItem let-user>
+                <span class="flex items-center gap-2">
+                    <app-avatar
+                        [name]="user.name"
+                        [bgColor]="user.colorAvatarBg"
+                        [manualInitials]="user.avatarInitials"
+                        [width]="1.25"
+                        [height]="1.25"
+                        [radius]="0.625"
+                    />
+                    <span>{{ user.name }}</span>
+                </span>
+            </ng-template>
+        </ui-select>
+    </div>
+
+    <app-agent-stage-plan-form
+        [row]="row()"
+        [skills]="skills()"
+        [models]="models()"
+        size="medium"
+        modelPlaceholder="RELEASE.AGENT.MODEL_DEFAULT"
+        [maxTurnsLimit]="overview()?.maxTurnsLimit ?? null"
+        (skillToggled)="onSkillToggled($event.idSkill)"
+        (modelPicked)="onModelPicked($event.model)"
+        (maxTurnsChanged)="onMaxTurns($event.maxTurns)"
+    />
+
+    @if (hasNotes()) {
+        <ui-message severity="warn" data-testid="release-agent-overwrite">
+            {{ 'RELEASE.AGENT.OVERWRITE' | translate }}
+        </ui-message>
+    }
+
+    <div class="flex justify-end gap-2">
+        <ui-button
+            severity="secondary"
+            variant="text"
+            [label]="'CANCEL' | translate"
+            (click)="onCancel()"
+        />
+        <ui-button
+            data-testid="release-agent-start"
+            [label]="'RELEASE.AGENT.START' | translate"
+            [disabled]="idUserAgent.value === null"
+            [loading]="isBusy()"
+            (click)="onStart()"
+        >
+            <tabler-icon icon="robot" [size]="16" />
+        </ui-button>
+    </div>
+</div>

@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -19,6 +18,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -33,7 +33,7 @@ type MergePollerTransitionSuite struct {
 	IdGitIntegration int64
 	AgentUserID      int64
 	poller           *agent.MergePoller
-	pollerNotifier   *notify.Notifier
+	pollerNotifier   *notifytest.Recorder
 	gitHub           *httptest.Server
 	// prState is what the fake GitHub serves, keyed by pull request id.
 	prState map[string]string
@@ -98,11 +98,7 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 		"UPDATE users.user SET is_agent = TRUE WHERE id_user = $1", s.AgentUserID)
 	s.Require().NoError(err)
 
-	// Use a dedicated notifier for the poller in tests. The global notifier's
-	// background listener immediately drains its Send channel, making it
-	// impossible to assert on queued notices. A plain channel lets the test
-	// drain what the poller produced.
-	s.pollerNotifier = &notify.Notifier{Send: make(chan *notify.Notice, 1024)}
+	s.pollerNotifier = &notifytest.Recorder{}
 
 	s.poller = agent.NewMergePoller(
 		injector.GetAgentRunRepository(),
@@ -163,16 +159,12 @@ func (s *MergePollerTransitionSuite) serveGitHub(w http.ResponseWriter, r *http.
 // drainMrStatusNotices pulls all currently queued notices and returns those whose subject is mr_status.
 func (s *MergePollerTransitionSuite) drainMrStatusNotices() []*notify.Notice {
 	var out []*notify.Notice
-	for {
-		select {
-		case n := <-s.pollerNotifier.Send:
-			if n.Subject == notify.SubjectMrStatus {
-				out = append(out, n)
-			}
-		case <-time.After(500 * time.Millisecond):
-			return out
+	for _, n := range s.pollerNotifier.Drain() {
+		if n.Subject == notify.SubjectMrStatus {
+			out = append(out, n)
 		}
 	}
+	return out
 }
 
 func (s *MergePollerTransitionSuite) Test_OpenManualMr_CiChange_EmitsMrStatus() {

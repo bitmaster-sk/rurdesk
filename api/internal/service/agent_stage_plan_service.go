@@ -24,15 +24,16 @@ func NewAgentStagePlanService(pool *pgxpool.Pool, agentRunRepo *repository.Agent
 	return &AgentStagePlanService{pool: pool, agentRunRepo: agentRunRepo, agentTaskRepo: agentTaskRepo}
 }
 
-func (s *AgentStagePlanService) BuildFromChoices(choices model.RunChoices) (json.RawMessage, error) {
-	plan := newPlan(choices.IdsSkillByStage, choices.IsShortWorkflow)
+func (s *AgentStagePlanService) BuildFromChoices(kind string, choices model.RunChoices) (json.RawMessage, error) {
+	plan := newPlan(kind, choices.IdsSkillByStage, choices.IsShortWorkflow)
 	applyModelChoices(&plan, nil, choices)
 	return marshalPlan(plan)
 }
 
-func newPlan(idsSkillByStage map[string][]int64, isShortWorkflow bool) model.AgentStagePlan {
-	plan := model.AgentStagePlan{Stages: make([]model.AgentStagePlanEntry, len(constants.StageDefinitions))}
-	for i, def := range constants.StageDefinitions {
+func newPlan(kind string, idsSkillByStage map[string][]int64, isShortWorkflow bool) model.AgentStagePlan {
+	stages := constants.StagesOfKind(kind)
+	plan := model.AgentStagePlan{Stages: make([]model.AgentStagePlanEntry, len(stages))}
+	for i, def := range stages {
 		plan.Stages[i] = model.AgentStagePlanEntry{
 			Name:      def.Name,
 			Skippable: def.Skippable,

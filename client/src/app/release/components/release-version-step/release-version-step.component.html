@@ -1,0 +1,46 @@
+<div class="flex flex-col gap-5" data-testid="release-version-step" [formGroup]="form()">
+    <div class="ui-field m-0">
+        <label>{{ 'TAG.SINGULAR' | translate }}</label>
+        <div><app-tag-chip [name]="tagName()" [color]="tagColor()" /></div>
+        <span class="ui-field-hint">{{ 'RELEASE.VERSION_STEP.TAG_HINT' | translate }}</span>
+    </div>
+    <div class="ui-field m-0">
+        <label class="required" for="release-name">
+            {{ 'RELEASE.VERSION' | translate }}
+        </label>
+        <input
+            id="release-name"
+            data-testid="release-name"
+            uiInput
+            type="text"
+            class="w-full"
+            placeholder="v1.0.4"
+            formControlName="name"
+            [maxlength]="maxLength"
+        />
+        <span class="ui-field-hint">
+            {{ 'RELEASE.VERSION_STEP.NAME_HINT' | translate: { tag: tagName() } }}
+        </span>
+    </div>
+    <label class="flex cursor-pointer items-start gap-3">
+        <input
+            type="checkbox"
+            uiToggle
+            data-testid="release-recreate-tag"
+            formControlName="recreateTag"
+        />
+        <span class="flex flex-col gap-1">
+            <span>
+                {{ 'RELEASE.VERSION_STEP.RECREATE_TAG' | translate: { name: tagName() } }}
+            </span>
+            <span class="ui-field-hint">
+                {{ 'RELEASE.VERSION_STEP.RECREATE_TAG_HINT' | translate }}
+            </span>
+        </span>
+    </label>
+    @if (isNameSameAsTag()) {
+        <ui-message severity="warn" data-testid="release-same-name">
+            {{ 'RELEASE.VERSION_STEP.SAME_NAME' | translate }}
+        </ui-message>
+    }
+</div>

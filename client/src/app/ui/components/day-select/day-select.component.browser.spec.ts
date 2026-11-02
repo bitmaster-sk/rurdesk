@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -13,7 +13,7 @@ import { UiDaySelectFormat } from './day-select-label';
         <ui-day-select
             [maxDate]="today"
             [format]="format"
-            [fluid]="fluid"
+            [fluid]="fluid()"
             [formControl]="control"
         />
     `,
@@ -23,7 +23,7 @@ class HostComponent {
     public readonly control = new FormControl<Date | null>(startOfDay(new Date()));
     public readonly today = new Date();
     public format = UiDaySelectFormat.Short;
-    public fluid = false;
+    public fluid = signal(false);
 }
 
 describe('UiDaySelectComponent (browser)', () => {
@@ -128,8 +128,7 @@ describe('UiDaySelectComponent (browser)', () => {
 
         expect(trigger().classList).not.toContain('ui-day-select--fluid');
 
-        fixture.componentInstance.fluid = true;
-        fixture.changeDetectorRef.markForCheck();
+        fixture.componentInstance.fluid.set(true);
         fixture.detectChanges();
 
         expect(trigger().classList).toContain('ui-day-select--fluid');

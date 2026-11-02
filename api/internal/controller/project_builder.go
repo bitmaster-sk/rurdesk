@@ -31,7 +31,7 @@ type ProjectBuilderController struct {
 	issueRepo    *repository.IssueRepository
 	relationRepo *repository.IssueRelationRepository
 	acl          *service.AclService
-	notifier     *notify.Notifier
+	notifier     notify.INotifier
 }
 
 // NewProjectBuilderController creates a new ProjectBuilderController.
@@ -42,7 +42,7 @@ func NewProjectBuilderController(
 	issueRepo *repository.IssueRepository,
 	relationRepo *repository.IssueRelationRepository,
 	acl *service.AclService,
-	notifier *notify.Notifier,
+	notifier notify.INotifier,
 ) *ProjectBuilderController {
 	return &ProjectBuilderController{
 		pool:         pool,
@@ -268,12 +268,12 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 	}
 
 	for _, iss := range result {
-		pc.notifier.Send <- &notify.Notice{
+		pc.notifier.Send(&notify.Notice{
 			IdUser:  user.IdUser,
 			Subject: notify.SubjectIssue,
 			Action:  notify.ActionCreate,
 			Payload: iss.IdIssuePublic,
-		}
+		})
 	}
 
 	c.JSON(http.StatusOK, model.ProjectBuilderAcceptRes{Issues: result})

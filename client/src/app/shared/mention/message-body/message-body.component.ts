@@ -14,8 +14,8 @@ import { AttachmentLinkConverter } from 'src/app/shared/attachment/converter/att
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
 import { MENTION_TOKEN_RE } from 'src/app/shared/mention/mention';
+import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { WikiLinkConverter } from 'src/app/wiki/converter/wiki-link.converter';
-import { WikiLinkScope } from 'src/app/wiki/service/wiki-link-scope.service';
 import { WikiLinkStore } from 'src/app/wiki/store/wiki-link.store';
 
 export type RenderSegment =
@@ -53,11 +53,11 @@ export class MessageBodyComponent {
 
     protected readonly gallery = inject(AttachmentGallery);
     private readonly router = inject(Router);
-    private readonly wikiScope = inject(WikiLinkScope, { optional: true });
+    private readonly linkScope = inject(LinkScope, { optional: true });
     private readonly wikiStore = inject(WikiLinkStore);
 
     private readonly wikiContext = computed(() => {
-        const idProject = this.wikiScope?.idProject() ?? null;
+        const idProject = this.linkScope?.idProject() ?? null;
         const tree = idProject === null ? null : this.wikiStore.tree(idProject);
         return idProject !== null && tree ? WikiLinkConverter.toContext(idProject, tree) : null;
     });
@@ -81,7 +81,7 @@ export class MessageBodyComponent {
 
     public constructor() {
         effect(() => {
-            const idProject = this.wikiScope?.idProject() ?? null;
+            const idProject = this.linkScope?.idProject() ?? null;
             if (idProject !== null && this.body().includes('[[')) {
                 this.wikiStore.ensure(idProject);
             }
