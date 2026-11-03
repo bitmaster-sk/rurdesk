@@ -10,7 +10,7 @@ FROM node:24.22.2-bookworm-slim AS client-build
 WORKDIR /client
 
 # Install deps against the lockfile first for layer caching.
-COPY client/package*.json ./
+COPY client/package*.json client/.npmrc ./
 RUN npm ci
 
 COPY client .
