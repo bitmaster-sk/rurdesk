@@ -18,6 +18,7 @@
             <div class="swimlane-user-cell">
                 @if (row.user) {
                     <app-avatar
+                        [disabled]="row.user.isActive === false"
                         [name]="row.user.name"
                         [bgColor]="row.user.colorAvatarBg"
                         [manualInitials]="row.user.avatarInitials"
@@ -25,7 +26,9 @@
                         [width]="1.75"
                         [radius]="1"
                     ></app-avatar>
-                    <span>{{ row.user.name }}</span>
+                    <span [class.ui-color-text-muted]="row.user.isActive === false">
+                        {{ row.user.name }}
+                    </span>
                 } @else {
                     <div class="swimlane-user-cell--avatar-unassigned">?</div>
                     <span>{{ 'KANBAN.UNASSIGNED' | translate }}</span>
@@ -38,6 +41,7 @@
                     cdkDropList
                     [cdkDropListData]="cell"
                     [cdkDropListConnectedTo]="connectedTo()"
+                    [cdkDropListEnterPredicate]="canEnterCell"
                     (cdkDropListDropped)="onDropped($event)"
                 >
                     @for (tile of cell.tiles; track tile.idIssue) {

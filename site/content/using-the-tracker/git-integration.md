@@ -66,6 +66,12 @@ branch, so it needs **write** access to both pull requests and contents:
 > not enough: diffs and status will load, but pushing the branch or opening a
 > PR/MR fails and the agent run is marked failed with the host's error message.
 
+> On GitHub, the scopes above don't let the agent change CI workflows. GitHub
+> rejects any push that touches `.github/workflows/` unless the token also has
+> _Workflows: read & write_ (fine-grained PAT) or the `workflow` scope (classic
+> token). Add it if agents should be able to edit workflows. Without it, a task
+> that has to change a workflow can't push its branch.
+
 > The agent sees the token of the run it works on, so scope it to this one
 > repository. The gateway never writes it to disk, see
 > [Repositories](../agentic-workflow/gateway.md#repositories).
@@ -180,4 +186,5 @@ request that meets its approval rules but that nobody approved shows no tag.
 | `403` on the settings page             | You're a member, not an owner                                                                                                |
 | Agent run fails right at the start     | The project has no git integration, so the tracker does not know which repository to send to the gateway                    |
 | Agent can't push its branch            | The token lacks _Contents: write_ (GitHub) or write access to the repository                                                |
+| Push rejected "without `workflow` scope" | The branch changes `.github/workflows/`; the GitHub token needs _Workflows: write_ or the classic `workflow` scope         |
 | **New integration** is disabled        | The project already has its one integration                                                                                  |

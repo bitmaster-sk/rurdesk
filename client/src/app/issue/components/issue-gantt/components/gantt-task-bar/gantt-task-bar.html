@@ -28,11 +28,15 @@
                 <app-state-badge [state]="task().state" size="xs" />
             </div>
             <div class="gantt-bar--user">
-                <span class="gantt-bar--user-name">
+                <span
+                    class="gantt-bar--user-name"
+                    [class.ui-color-text-muted]="task().assignedToUser?.isActive === false"
+                >
                     {{ task().assignedToUser?.name ?? 'Unassigned' }}
                 </span>
                 @if (task().assignedToUser; as assignedToUser) {
                 <app-avatar
+                    [disabled]="assignedToUser.isActive === false"
                     [name]="assignedToUser.name"
                     [bgColor]="assignedToUser.colorAvatarBg"
                     [manualInitials]="assignedToUser.avatarInitials"
@@ -49,6 +53,7 @@
             <app-state-badge [state]="task().state" size="xs" />
             @if (task().assignedToUser; as assignedToUser) {
             <app-avatar
+                [disabled]="assignedToUser.isActive === false"
                 [name]="assignedToUser.name"
                 [bgColor]="assignedToUser.colorAvatarBg"
                 [manualInitials]="assignedToUser.avatarInitials"

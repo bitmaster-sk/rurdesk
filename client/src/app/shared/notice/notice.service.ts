@@ -80,10 +80,22 @@ export class NoticeService {
     public release$: Observable<Notice<Release>> = this.releaseSubject.asObservable();
 
     private socket: WebSocket | null = null;
+    private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     private readonly RECONNECT_DELAY = 60 * 1000;
 
     public constructor() {
+        this.openSocket();
+    }
+
+    public reconnect(): void {
+        if (this.retryTimer !== null) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+        }
+        const previous = this.socket;
+        this.socket = null;
+        previous?.close();
         this.openSocket();
     }
 
@@ -107,8 +119,8 @@ export class NoticeService {
                 ['Authorization', token]
             );
             socket.addEventListener('open', this.onOpen.bind(this));
-            socket.addEventListener('close', this.onClose.bind(this));
-            socket.addEventListener('message', this.onMessage.bind(this));
+            socket.addEventListener('close', () => this.onClose(socket));
+            socket.addEventListener('message', evt => this.onMessage(socket, evt));
             socket.addEventListener('error', this.onError.bind(this));
             this.socket = socket;
         } catch (error) {
@@ -118,7 +130,10 @@ export class NoticeService {
     }
 
     private openSocketWithDelay(): void {
-        setTimeout(() => this.openSocket(), this.RECONNECT_DELAY);
+        this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            this.openSocket();
+        }, this.RECONNECT_DELAY);
     }
 
     private onOpen(): void {}
@@ -127,11 +142,18 @@ export class NoticeService {
         console.error(evt);
     }
 
-    private onClose(): void {
+    private onClose(socket: WebSocket): void {
+        if (socket !== this.socket) {
+            return;
+        }
+        this.socket = null;
         this.openSocketWithDelay();
     }
 
-    private onMessage(evt: MessageEvent): void {
+    private onMessage(socket: WebSocket, evt: MessageEvent): void {
+        if (socket !== this.socket) {
+            return;
+        }
         const data: unknown = evt.data;
         if (typeof data !== 'string') {
             console.warn('unsupported notice');

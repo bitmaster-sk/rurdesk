@@ -7,6 +7,7 @@ type IssueParticipant struct {
 	ColorAvatarBg           string  `json:"colorAvatarBg"           db:"color_avatar_bg"`
 	AvatarInitials          *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
 	IsAgent                 bool    `json:"isAgent"                   db:"is_agent"`
+	IsActive                bool    `json:"isActive"                db:"is_active"`
 	Source                  string  `json:"source"                  db:"source"`
 	HasNotificationsEnabled bool    `json:"hasNotificationsEnabled" db:"has_notifications_enabled"`
 }

@@ -32,6 +32,7 @@
                             <td>
                                 <div class="flex items-center gap-2">
                                     <app-avatar
+                                        [disabled]="user.isActive === false"
                                         [name]="user.name"
                                         [bgColor]="user.colorAvatarBg"
                                         [manualInitials]="user.avatarInitials"
@@ -39,7 +40,16 @@
                                         [height]="1.75"
                                         [radius]="0.875"
                                     />
-                                    <span>{{ user.name }}</span>
+                                    <span [class.ui-color-text-muted]="user.isActive === false">
+                                        {{ user.name }}
+                                    </span>
+                                    @if (user.isActive === false) {
+                                        <ui-tag
+                                            severity="danger"
+                                            [value]="'USER.DISABLED' | translate"
+                                            data-testid="member-disabled"
+                                        />
+                                    }
                                     @if (isLastOwner(user)) {
                                         <tabler-icon
                                             icon="lock"

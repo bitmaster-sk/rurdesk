@@ -294,6 +294,24 @@ describe('MessageEditorComponent (contenteditable)', () => {
         expect(enterEvt.defaultPrevented).toBe(true);
     });
 
+    it('does not suggest a disabled user', async () => {
+        host.mentionCandidates = [makeUser(1, 'Jan'), { ...makeUser(2, 'Janko'), isActive: false }];
+        await initFixture();
+
+        const el = editorEl(fixture);
+        el.textContent = '@Jan';
+        placeCaretAtLinear(el, 4);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const items = fixture.nativeElement.querySelectorAll('.mention-picker__item');
+        expect(items.length).toBe(1);
+        expect(items[0].textContent).toContain('Jan');
+        expect(items[0].textContent).not.toContain('Janko');
+    });
+
     it('plain Enter is NOT swallowed when @query has zero matching candidates', async () => {
         host.mentionCandidates = [makeUser(1, 'Jan')];
         await initFixture();

@@ -128,6 +128,27 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
         expect(cards.length).toBe(0);
     });
 
+    it('marks a comment whose author is disabled', () => {
+        const fixture = TestBed.createComponent(ActivityCommentItemComponent);
+        const message = plainMessage('hello');
+        message.creator = { ...message.creator, isActive: false };
+        fixture.componentRef.setInput('message', message);
+        fixture.detectChanges();
+
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="author-disabled"]')
+        ).not.toBeNull();
+        expect(fixture.nativeElement.querySelector('.author--disabled')).not.toBeNull();
+    });
+
+    it('does not mark a comment whose author is active', () => {
+        const fixture = TestBed.createComponent(ActivityCommentItemComponent);
+        fixture.componentRef.setInput('message', plainMessage('hello'));
+        fixture.detectChanges();
+
+        expect(fixture.nativeElement.querySelector('[data-testid="author-disabled"]')).toBeNull();
+    });
+
     it('hides the global approve and re-emits approveMockup for a design message with mockups', () => {
         const fixture = TestBed.createComponent(ActivityCommentItemComponent);
         fixture.componentRef.setInput(

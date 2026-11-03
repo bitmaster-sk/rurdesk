@@ -61,7 +61,7 @@ export class ProjectMembersComponent implements OnInit {
         const m = this.members();
         if (!m) return this.allUsers();
         const assignedIds = new Set(m.users.map(u => u.idUser));
-        return this.allUsers().filter(u => !assignedIds.has(u.idUser));
+        return this.allUsers().filter(u => u.isActive !== false && !assignedIds.has(u.idUser));
     });
 
     protected readonly availableTeams = computed(() => {
@@ -74,13 +74,17 @@ export class ProjectMembersComponent implements OnInit {
     protected get hasOneOwner(): boolean {
         const m = this.members();
         if (!m) return false;
-        const ownerUsers = m.users.filter(u => u.role === Role.Owner && u.isDirect).length;
+        const ownerUsers = m.users.filter(
+            u => u.role === Role.Owner && u.isDirect && u.isActive !== false
+        ).length;
         const ownerTeams = m.teams.filter(t => t.role === Role.Owner).length;
         return ownerUsers + ownerTeams === 1;
     }
 
     protected isLastOwner(user: AroUser): boolean {
-        return this.hasOneOwner && user.role === Role.Owner && user.isDirect;
+        return (
+            this.hasOneOwner && user.role === Role.Owner && user.isDirect && user.isActive !== false
+        );
     }
 
     public ngOnInit(): void {

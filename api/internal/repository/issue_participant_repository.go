@@ -37,7 +37,7 @@ func (r *IssueParticipantRepository) Add(ctx context.Context, idIssue, idUser in
 func (r *IssueParticipantRepository) List(ctx context.Context, idIssue int64) ([]*model.IssueParticipant, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT p.id_user, u.name, u.color_avatar_bg, u.avatar_initials, u.is_agent,
+		SELECT p.id_user, u.name, u.color_avatar_bg, u.avatar_initials, u.is_agent, u.is_active,
 		       p.source, p.has_notifications_enabled
 		FROM issues.issue_participant p
 		JOIN users.user u ON u.id_user = p.id_user
@@ -66,6 +66,7 @@ func (r *IssueParticipantRepository) NotifiableUserIds(ctx context.Context, idIs
 		WHERE p.id_issue = $1
 		  AND p.has_notifications_enabled = TRUE
 		  AND NOT u.is_agent
+		  AND u.is_active
 	`, idIssue)
 	if err != nil {
 		return nil, fmt.Errorf("listing notifiable participants issue=%d: %w", idIssue, err)

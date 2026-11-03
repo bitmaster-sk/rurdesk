@@ -11,6 +11,7 @@ import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { Observable, concat, of } from 'rxjs';
 import { filter, map, shareReplay, switchMap } from 'rxjs/operators';
 import { ProjectStore } from 'src/app/project/project.store';
+import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { BrowserTitleService } from 'src/app/core/browser-title.service';
 import { toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
@@ -50,6 +51,7 @@ export class IssueDetailPage implements OnDestroy {
 
     public readonly agentRunStore = inject(AgentRunStore);
     public readonly project = toSignal(this.projectStore.project$);
+    private readonly members = toSignal(inject(ProjectMemberStore).users$, { initialValue: [] });
     private readonly linkScope = inject(LinkScope);
 
     public readonly splitPaneStorageKey = 'rurdesk.issueDetail.split';
@@ -198,7 +200,10 @@ export class IssueDetailPage implements OnDestroy {
                   idIssueType: cloneSource.idIssueType,
                   title: this.i18n.instant('ISSUE.COPY_SUFFIX', { title: cloneSource.title }),
                   description: cloneSource.description,
-                  assignedTo: cloneSource.assignedTo,
+                  assignedTo: IssueConverter.toCloneAssignee(
+                      cloneSource.assignedTo,
+                      this.members() ?? []
+                  ),
                   estimated: cloneSource.estimated,
                   points: cloneSource.points,
                   scheduledAt: cloneSource.scheduledAt,

@@ -86,6 +86,7 @@
                                     <td>
                                         <div class="flex items-center gap-2">
                                             <app-avatar
+                                                [disabled]="mem.isActive === false"
                                                 [name]="mem.name"
                                                 [bgColor]="mem.colorAvatarBg"
                                                 [manualInitials]="mem.avatarInitials"
@@ -93,7 +94,17 @@
                                                 [height]="1.75"
                                                 [radius]="0.875"
                                             />
-                                            <span>{{ mem.name }}</span>
+                                            <span
+                                                [class.ui-color-text-muted]="mem.isActive === false"
+                                            >
+                                                {{ mem.name }}
+                                            </span>
+                                            @if (mem.isActive === false) {
+                                                <ui-tag
+                                                    severity="danger"
+                                                    [value]="'USER.DISABLED' | translate"
+                                                />
+                                            }
                                         </div>
                                     </td>
                                     <td class="ui-color-text-muted">{{ mem.email }}</td>

@@ -25,6 +25,7 @@
                         uiTooltipPosition="top"
                     >
                         <app-avatar
+                            [disabled]="participant.isActive === false"
                             [name]="participant.name"
                             [bgColor]="participant.colorAvatarBg"
                             [manualInitials]="participant.avatarInitials"
@@ -100,6 +101,7 @@
             @for (participant of participants(); track participant.idUser) {
                 <div class="participant-row">
                     <app-avatar
+                        [disabled]="participant.isActive === false"
                         [name]="participant.name"
                         [bgColor]="participant.colorAvatarBg"
                         [manualInitials]="participant.avatarInitials"
@@ -107,7 +109,20 @@
                         [width]="1.75"
                         [radius]="0.875"
                     ></app-avatar>
-                    <span class="participant-row__name">{{ participant.name }}</span>
+                    <span
+                        class="participant-row__name"
+                        [class.ui-color-text-muted]="participant.isActive === false"
+                    >
+                        {{ participant.name }}
+                    </span>
+                    @if (participant.isActive === false) {
+                        <span
+                            class="text-xs ui-color-text-muted"
+                            data-testid="participant-disabled"
+                        >
+                            {{ 'USER.DISABLED' | translate }}
+                        </span>
+                    }
                     <span [class]="getRoleBadgeClass(participant)">
                         {{ getRoleLabelKey(participant) | translate }}
                     </span>

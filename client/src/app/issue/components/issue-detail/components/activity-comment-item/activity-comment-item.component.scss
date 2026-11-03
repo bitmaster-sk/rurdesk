@@ -112,6 +112,10 @@
             font-weight: 700;
             font-size: var(--font-size-s);
             color: var(--ui-color-text);
+
+            &.author--disabled {
+                color: var(--ui-color-text-muted);
+            }
         }
 
         .comment-header-right {

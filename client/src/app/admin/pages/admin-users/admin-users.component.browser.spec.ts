@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { AdminUsersComponent } from './admin-users.component';
@@ -19,7 +20,8 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
         email: 'ada@x.io',
         colorAvatarBg: '#123456',
         isAgent: false,
-        isAdmin: false
+        isAdmin: false,
+        isActive: true
     };
 
     beforeEach(async () => {
@@ -27,7 +29,8 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
             declarations: [AdminUsersComponent],
             providers: [
                 { provide: AdminUserApi, useValue: { load$: () => of([user]) } },
-                { provide: ToastNotificationService, useValue: {} }
+                { provide: ToastNotificationService, useValue: {} },
+                { provide: AuthStore, useValue: { user: () => ({ idUser: 1 }) } }
             ]
         })
             .overrideComponent(AdminUsersComponent, {

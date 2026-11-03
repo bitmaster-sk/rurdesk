@@ -57,7 +57,8 @@ describe('EditUserDialogComponent — gateway turn limits (browser)', () => {
             email: '',
             colorAvatarBg: '#123456',
             isAgent: true,
-            isAdmin: false
+            isAdmin: false,
+            isActive: true
         });
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();
@@ -148,7 +149,8 @@ describe('EditUserDialogComponent — avatar initials (browser)', () => {
             colorAvatarBg: '#123456',
             avatarInitials: 'MB',
             isAgent: true,
-            isAdmin: false
+            isAdmin: false,
+            isActive: true
         });
         fixture.componentRef.setInput('visible', true);
         fixture.detectChanges();

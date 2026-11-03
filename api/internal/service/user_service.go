@@ -82,6 +82,12 @@ func (s *UserService) Login(ctx context.Context, email, plainPassword string, ha
 		_ = password.Compare(password.Dummy(), plainPassword)
 		return "", ErrInvalidPassword
 	}
+	// A disabled account is rejected with the same error as a wrong password:
+	// no account-state leak, and the timing matches the compare below.
+	if !user.IsActive {
+		_ = password.Compare(password.Dummy(), plainPassword)
+		return "", ErrInvalidPassword
+	}
 	if err := password.Compare(user.Password, plainPassword); err != nil {
 		return "", ErrInvalidPassword
 	}

@@ -166,9 +166,28 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         return [
             {
                 labelKey: 'DIRECT.CHATS',
-                items: users.map(u => this.toTeammatesChatMenuItem(u, unreadMap, currentUserId))
+                items: users
+                    .filter(
+                        u =>
+                            u.isActive !== false ||
+                            this.unreadCountOf(u, unreadMap, currentUserId) > 0
+                    )
+                    .map(u => this.toTeammatesChatMenuItem(u, unreadMap, currentUserId))
             }
         ];
+    }
+
+    private unreadCountOf(
+        user: User,
+        unreadMap: Map<string, Message[]>,
+        currentUserId: number
+    ): number {
+        const key = MessageKeyConverter.toUnreadKey(
+            currentUserId,
+            user.idUser,
+            MessageRecipientType.user
+        );
+        return unreadMap.get(key)?.length ?? 0;
     }
 
     private toTeammatesChatMenuItem(
@@ -176,12 +195,7 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         unreadMap: Map<string, Message[]>,
         currentUserId: number
     ): UiMenuItem {
-        const key = MessageKeyConverter.toUnreadKey(
-            currentUserId,
-            user.idUser,
-            MessageRecipientType.user
-        );
-        const count = unreadMap.get(key)?.length ?? 0;
+        const count = this.unreadCountOf(user, unreadMap, currentUserId);
         return {
             label: user.name,
             icon: 'user',

@@ -586,6 +586,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         const userChanged = tile.assignedTo !== newUser?.idUser;
 
         if (!stateChanged && !userChanged) return;
+        if (userChanged && newUser?.isActive === false) return;
 
         const updated: KanbanTile = {
             ...tile,

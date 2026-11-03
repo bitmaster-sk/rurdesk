@@ -9,6 +9,7 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthInterceptor } from './auth.interceptor';
 import { AuthTokenStore } from './store/auth-token.store';
+import { NoticeService } from '../shared/notice/notice.service';
 
 /**
  * Regression guard for the app-module HTTP wiring: the class interceptors are
@@ -32,7 +33,8 @@ describe('AuthInterceptor wiring (browser)', () => {
                     provide: AuthTokenStore,
                     useValue: { getToken: () => 'my-token', clearToken }
                 },
-                { provide: Router, useValue: { navigateByUrl, url: '/project/1' } }
+                { provide: Router, useValue: { navigateByUrl, url: '/project/1' } },
+                { provide: NoticeService, useValue: { reconnect: () => {} } }
             ]
         });
     });

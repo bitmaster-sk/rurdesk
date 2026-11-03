@@ -24,8 +24,8 @@ your admin for an account instead.
 Users log in at **`/login`**. A session lasts **24 hours** by default; ticking
 **Stay signed in for 30 days** on the login form issues a session that lasts
 **30 days** instead. Either way the session ends immediately on logout, on a
-password change (all other sessions), and on an admin-flag change or account
-deletion.
+password change (all other sessions), and on an admin-flag change, when the
+account is disabled, or when it is deleted.
 
 Avatars are generated from the user's initials on a colour they pick in their
 profile — nothing is fetched from a third party. An administrator can override
@@ -49,11 +49,36 @@ From the Users panel an admin can:
 - **Create agents** — see below.
 - **Promote / demote admins** — the **last admin can never be demoted or
   deleted** (guarded server-side), and **agents can never be admins**.
+- **Disable / enable users and agents** — see [Disabling accounts](#disabling-accounts).
 - **Delete users** — refused while the user has agent activity (runs,
-  provenance records), so history stays attributable.
+  provenance records) or has created or edited tasks, so history stays
+  attributable. Disable such accounts instead.
 
-> Changing a user's admin flag or deleting a user **invalidates their active
-> sessions** immediately — no stale privileges survive.
+> Changing a user's admin flag, disabling or deleting a user **invalidates their
+> active sessions** immediately — no stale privileges survive.
+
+### Disabling accounts
+
+Disabling keeps the account and all its history but takes it out of use:
+
+- A disabled user **cannot sign in**, and a disabled agent's **API tokens stop
+  working**.
+- Disabling an agent **cancels its unfinished runs**, and it can no longer be
+  assigned to a task.
+- A disabled account **cannot be assigned** a task (in the UI, the API or over
+  MCP), is not suggested for **@mentions**, and is not offered when adding
+  participants, project members or team members. Tasks already assigned to
+  it keep the assignment until someone changes it.
+- It **receives no notifications**, and new direct messages to it are refused.
+  The existing conversation stays readable.
+- Its comments, messages and avatars stay, shown greyed out and marked
+  **Disabled** wherever the account appears. In the user list the row is muted
+  with a **Disabled** label.
+
+An admin cannot disable their own account, the last active admin, or the last
+active owner of a project (the error names the project — give someone else the
+owner role first). **Enabling** the account again restores sign-in and API
+tokens; cancelled runs are not restarted.
 
 ![Create user dialog](../../site/assets/img/create-user-dialog.png)
 

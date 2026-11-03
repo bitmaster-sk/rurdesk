@@ -18,6 +18,7 @@ import { AclStore } from '../../project/store/acl.store';
 import { AuthStore } from '../../auth/store/auth.store';
 import { NoticeService } from '../../shared/notice/notice.service';
 import { UpdateIssueReq } from '../model/issue.model';
+import { IssueConverter } from '../converter/issue.converter';
 
 @Injectable({ providedIn: 'root' })
 export class IssueActionCommandProvider implements CommandProvider {
@@ -85,7 +86,10 @@ export class IssueActionCommandProvider implements CommandProvider {
                         idState: src.idState,
                         idSeverity: src.idSeverity,
                         idIssueType: src.idIssueType,
-                        assignedTo: src.assignedTo,
+                        assignedTo: IssueConverter.toCloneAssignee(
+                            src.assignedTo,
+                            this.users() ?? []
+                        ),
                         tracked: 0,
                         estimated: src.estimated,
                         scheduledAt: src.scheduledAt,

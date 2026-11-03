@@ -231,6 +231,13 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		var err error
 		switch dto.IdMessageRecipientType {
 		case model.TeammateRecipientType:
+			active, activeErr := mc.userRepo.IsActiveUser(ctx, dto.IdRecipient)
+			if activeErr != nil {
+				return activeErr
+			}
+			if !active {
+				return errs.ErrUserDisabled
+			}
 			msg, err = mc.messageRepo.InsertTeammateMessage(ctx, dto.Message, &user, dto.IdRecipient)
 
 		case model.TeamRecipientType:

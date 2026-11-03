@@ -5,11 +5,13 @@ import { subSeconds } from 'date-fns';
 import { SharedModule } from 'src/app/shared/shared.module';
 import { Tracker } from '../model/tracker.model';
 
+const NOW = new Date('2026-01-15T10:00:00Z');
+
 const RUNNING: Tracker = {
     idTracker: 7,
     idUser: 1,
     idIssue: 42,
-    startAt: subSeconds(new Date(), 65),
+    startAt: subSeconds(NOW, 65),
     pausedAt: null,
     pausedSeconds: 0,
     duration: {},
@@ -40,11 +42,15 @@ class HostComponent {
 
 describe('TrackerSwitchDialogComponent (browser)', () => {
     beforeEach(async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(NOW);
         await TestBed.configureTestingModule({
             declarations: [HostComponent],
             imports: [SharedModule, TranslateModule.forRoot()]
         }).compileComponents();
     });
+
+    afterEach(() => vi.useRealTimers());
 
     function setup() {
         const fixture = TestBed.createComponent(HostComponent);

@@ -1,8 +1,16 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    OnInit,
+    computed,
+    inject,
+    signal
+} from '@angular/core';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AdminUser, UserCreatedEvent } from '../../model/admin-user.model';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ApiError } from 'src/app/shared/model/api-error.model';
+import { AuthStore } from 'src/app/auth/store/auth.store';
 
 @Component({
     selector: 'app-admin-users',
@@ -14,6 +22,7 @@ import { ApiError } from 'src/app/shared/model/api-error.model';
 export class AdminUsersComponent implements OnInit {
     private readonly adminUserApi = inject(AdminUserApi);
     private readonly sToast = inject(ToastNotificationService);
+    private readonly authStore = inject(AuthStore);
 
     protected readonly users = signal<AdminUser[]>([]);
     protected readonly draggedUser = signal<AdminUser | null>(null);
@@ -26,6 +35,9 @@ export class AdminUsersComponent implements OnInit {
     // they are revealed once; null when managing an existing agent.
     protected readonly keysPresetKey = signal<string | null>(null);
     protected readonly keysPresetGatewayToken = signal<string | null>(null);
+    // The acting admin's own row hides the disable button (the backend also
+    // rejects self-disable with 422).
+    protected readonly currentUserId = computed(() => this.authStore.user()?.idUser ?? null);
 
     public ngOnInit(): void {
         this.loadUsers();
@@ -62,6 +74,14 @@ export class AdminUsersComponent implements OnInit {
 
     protected onToggleAdmin(user: AdminUser): void {
         this.adminUserApi.setAdmin$(user.idUser, !user.isAdmin).subscribe({
+            next: () => this.loadUsers(),
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
+        });
+    }
+
+    protected onToggleActive(user: AdminUser): void {
+        this.adminUserApi.setActive$(user.idUser, !user.isActive).subscribe({
             next: () => this.loadUsers(),
             error: (err: unknown) =>
                 this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')

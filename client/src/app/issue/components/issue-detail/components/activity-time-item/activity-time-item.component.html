@@ -43,6 +43,7 @@
             <div class="time-body">
                 @if (user(); as u) {
                     <app-avatar
+                        [disabled]="u.isActive === false"
                         [name]="u.name"
                         [bgColor]="u.colorAvatarBg"
                         [manualInitials]="u.avatarInitials"

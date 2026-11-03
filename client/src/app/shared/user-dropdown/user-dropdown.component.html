@@ -13,7 +13,10 @@
         (optionPicked)="onOptionPicked($event)"
     >
         <ng-template #selectedItem let-user>
-            <div class="dropdown-item selected flex flex-row items-center">
+            <div
+                class="dropdown-item selected flex flex-row items-center"
+                [class.opacity-60]="user.isActive === false"
+            >
                 <div class="avatar">
                     <app-avatar
                         [name]="user.name"
@@ -116,6 +119,7 @@
             <div class="dropdown-item flex flex-row items-center">
                 <div class="avatar">
                     <app-avatar
+                        [disabled]="member.isActive === false"
                         [name]="member.name"
                         [bgColor]="member.colorAvatarBg"
                         [manualInitials]="member.avatarInitials"
@@ -124,7 +128,9 @@
                         [radius]="0.75"
                     ></app-avatar>
                 </div>
-                <div class="ml-2">{{ member.name }}</div>
+                <div class="ml-2" [class.ui-color-text-muted]="member.isActive === false">
+                    {{ member.name }}
+                </div>
             </div>
         </ng-template>
     </ui-multiselect>

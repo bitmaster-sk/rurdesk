@@ -36,7 +36,7 @@ func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*mod
 func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
 		FROM users.user
 		WHERE id_user = $1
 	`, idUser)
@@ -53,7 +53,7 @@ func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.Use
 func (r *UserRepository) LoadUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
 		FROM users.user
 		WHERE email = $1
 	`, email)
@@ -149,7 +149,7 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin
+		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
 		FROM users.user
 		ORDER BY id_user
 	`)
@@ -173,10 +173,13 @@ func (r *UserRepository) CountUsers(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
+// CountAdmins counts active admins only: a disabled admin cannot sign in, so
+// they must not count toward the last-admin guard (demote/disable/delete).
 func (r *UserRepository) CountAdmins(ctx context.Context) (int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	var count int64
-	err := db.QueryRow(ctx, `SELECT COUNT(*) FROM users.user WHERE is_admin = TRUE`).Scan(&count)
+	err := db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM users.user WHERE is_admin = TRUE AND is_active = TRUE`).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("counting admins: %w", err)
 	}
@@ -194,6 +197,36 @@ func (r *UserRepository) SetAdmin(ctx context.Context, idUser int64, isAdmin boo
 		return ErrUserNotFound
 	}
 	return nil
+}
+
+// SetActive enables/disables a user. A disabled user cannot log in, their API
+// keys stop authenticating, and the scheduler stops dispatching their runs; all
+// authored content and history is preserved.
+func (r *UserRepository) SetActive(ctx context.Context, idUser int64, isActive bool) error {
+	db := extctx.GetDb(ctx, r.pool)
+	tag, err := db.Exec(ctx,
+		`UPDATE users.user SET is_active = $1 WHERE id_user = $2`, isActive, idUser)
+	if err != nil {
+		return fmt.Errorf("setting user active: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+// IsActiveUser reports the account's is_active flag (missing user → ErrUserNotFound).
+func (r *UserRepository) IsActiveUser(ctx context.Context, idUser int64) (bool, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var isActive bool
+	err := db.QueryRow(ctx, `SELECT is_active FROM users.user WHERE id_user = $1`, idUser).Scan(&isActive)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrUserNotFound
+	}
+	if err != nil {
+		return false, fmt.Errorf("querying user active: %w", err)
+	}
+	return isActive, nil
 }
 
 func (r *UserRepository) IsAdminUser(ctx context.Context, idUser int64) (bool, error) {

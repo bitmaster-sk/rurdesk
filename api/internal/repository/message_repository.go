@@ -40,6 +40,7 @@ func (r *MessageRepository) LoadTeammateMessages(ctx context.Context, idRecipien
 				usr.name,
 				usr.color_avatar_bg,
 				usr.avatar_initials,
+				usr.is_active,
 				CASE WHEN msg.created_at > COALESCE(ure.read_at, '1900-1-1') AND msg.id_user_from != $1 THEN FALSE ELSE TRUE END AS read,
 				umg.id_user_to
 			FROM
@@ -65,6 +66,7 @@ func (r *MessageRepository) LoadTeammateMessages(ctx context.Context, idRecipien
 				usr.name,
 				usr.color_avatar_bg,
 				usr.avatar_initials,
+				usr.is_active,
 				CASE WHEN msg.created_at > COALESCE(ure.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 				umg.id_user_to
 			FROM
@@ -106,6 +108,7 @@ func (r *MessageRepository) LoadTeamMessages(ctx context.Context, idsTeam []int6
 			usr.name,
 			usr.color_avatar_bg,
 			usr.avatar_initials,
+			usr.is_active,
 			CASE WHEN msg.created_at > COALESCE(tre.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			tmm.id_team_to
 		FROM
@@ -145,6 +148,7 @@ func (r *MessageRepository) LoadProjectMessages(ctx context.Context, idsProject 
 			usr.name,
 			usr.color_avatar_bg,
 			usr.avatar_initials,
+			usr.is_active,
 			CASE WHEN msg.created_at > COALESCE(pre.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			prm.id_project_to
 		FROM
@@ -179,6 +183,7 @@ func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64
 			usr.name,
 			usr.color_avatar_bg,
 			usr.avatar_initials,
+			usr.is_active,
 			true AS read,
 			ism.id_issue_to,
 			a.id_parent_message,
@@ -323,7 +328,10 @@ func (r *MessageRepository) InsertIssueMessage(ctx context.Context, message stri
 
 func (r *MessageRepository) insertMessage(ctx context.Context, message string, creator *model.User, kind constants.MessageKind) (*model.Message, error) {
 	db := extctx.GetDb(ctx, r.pool)
-	msg := &model.Message{Message: message, Creator: creator, MessageKind: kind}
+	// Only an active account can post, but a session snapshot from before the is_active column says false.
+	author := *creator
+	author.IsActive = true
+	msg := &model.Message{Message: message, Creator: &author, MessageKind: kind}
 	err := db.QueryRow(ctx,
 		`INSERT INTO messages.message(message, id_user_from, message_kind) VALUES ($1, $2, $3) RETURNING id_message, created_at, version`,
 		message, creator.IdUser, string(kind),
@@ -346,12 +354,12 @@ func (r *MessageRepository) UpdateMessage(ctx context.Context, idMessage int64, 
 			RETURNING id_message, message, created_at, updated_at, id_user_from, version, message_kind
 		)
 		SELECT u.id_message, u.message, u.created_at, u.updated_at, u.version, u.message_kind,
-		       usr.id_user, usr.name, usr.color_avatar_bg, usr.avatar_initials
+		       usr.id_user, usr.name, usr.color_avatar_bg, usr.avatar_initials, usr.is_active
 		FROM updated u
 		INNER JOIN users.user usr ON usr.id_user = u.id_user_from
 	`, idMessage, idUserFrom, newMessage).Scan(
 		&msg.IdMessage, &msg.Message, &msg.CreatedAt, &msg.UpdatedAt, &msg.Version, &msg.MessageKind,
-		&creator.IdUser, &creator.Name, &creator.ColorAvatarBg, &creator.AvatarInitials,
+		&creator.IdUser, &creator.Name, &creator.ColorAvatarBg, &creator.AvatarInitials, &creator.IsActive,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -429,7 +437,7 @@ func scanMessages(rows pgx.Rows, recipientType model.MessageRecipientType) ([]*m
 	for rows.Next() {
 		m := &model.Message{}
 		u := &model.User{}
-		if err := rows.Scan(&m.IdMessage, &m.Message, &m.CreatedAt, &m.UpdatedAt, &m.Version, &u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &m.IsRead, &m.IdRecipient); err != nil {
+		if err := rows.Scan(&m.IdMessage, &m.Message, &m.CreatedAt, &m.UpdatedAt, &m.Version, &u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &u.IsActive, &m.IsRead, &m.IdRecipient); err != nil {
 			return nil, fmt.Errorf("scanning message: %w", err)
 		}
 		m.Creator = u
@@ -458,7 +466,7 @@ func scanIssueMessages(rows pgx.Rows) ([]*model.Message, error) {
 		)
 		if err := rows.Scan(
 			&m.IdMessage, &m.Message, &kind, &m.CreatedAt, &m.UpdatedAt, &m.Version,
-			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials,
+			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &u.IsActive,
 			&m.IsRead, &m.IdRecipient,
 			&idParentMessage, &parentVersion, &anchorLineStart, &anchorLineEnd, &parentCurrentVer,
 		); err != nil {

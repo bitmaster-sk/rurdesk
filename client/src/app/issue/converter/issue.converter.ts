@@ -1,5 +1,6 @@
 import { HttpParams } from '@angular/common/http';
 import { IssuesFilter } from '../components/filter/issue-filter.entity';
+import { User } from '../../auth/model/user.model';
 import { Issue } from '../model/issue.model';
 
 export abstract class IssueConverter {
@@ -85,5 +86,16 @@ export abstract class IssueConverter {
             updateAt: issue.updateAt ? new Date(issue.updateAt) : undefined,
             scheduledAt: issue.scheduledAt ? new Date(issue.scheduledAt) : null
         };
+    }
+
+    public static toCloneAssignee(
+        assignedTo: number | null | undefined,
+        users: User[]
+    ): number | null {
+        if (assignedTo == null) return null;
+        const isDisabled = users.some(
+            user => user.idUser === assignedTo && user.isActive === false
+        );
+        return isDisabled ? null : assignedTo;
     }
 }

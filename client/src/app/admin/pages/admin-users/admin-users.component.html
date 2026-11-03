@@ -24,16 +24,18 @@
                     </thead>
                     <tbody>
                         @for (user of users(); track user.idUser) {
-                            <tr>
+                            <tr [class.user-disabled]="!user.isActive">
                                 <td class="drag-col">
-                                    <span
-                                        class="drag-handle"
-                                        draggable="true"
-                                        (dragstart)="onUserDragStart($event, user)"
-                                        (dragend)="onUserDragEnd()"
-                                    >
-                                        <tabler-icon icon="grip-vertical" [size]="16" />
-                                    </span>
+                                    @if (user.isActive) {
+                                        <span
+                                            class="drag-handle"
+                                            draggable="true"
+                                            (dragstart)="onUserDragStart($event, user)"
+                                            (dragend)="onUserDragEnd()"
+                                        >
+                                            <tabler-icon icon="grip-vertical" [size]="16" />
+                                        </span>
+                                    }
                                 </td>
                                 <td>
                                     <div class="flex items-center gap-2">
@@ -50,24 +52,32 @@
                                 </td>
                                 <td>{{ user.email }}</td>
                                 <td>
-                                    @if (user.isAgent) {
-                                        <ui-tag
-                                            [value]="'ADMIN.AGENT' | translate"
-                                            severity="info"
-                                        />
-                                    }
-                                    @if (user.isAdmin) {
-                                        <ui-tag
-                                            [value]="'ADMIN.ADMIN' | translate"
-                                            severity="success"
-                                        />
-                                    }
-                                    @if (!user.isAgent && !user.isAdmin) {
-                                        <ui-tag
-                                            [value]="'ADMIN.USER' | translate"
-                                            severity="secondary"
-                                        />
-                                    }
+                                    <div class="flex items-center gap-1">
+                                        @if (user.isAgent) {
+                                            <ui-tag
+                                                [value]="'ADMIN.AGENT' | translate"
+                                                severity="info"
+                                            />
+                                        }
+                                        @if (user.isAdmin) {
+                                            <ui-tag
+                                                [value]="'ADMIN.ADMIN' | translate"
+                                                severity="success"
+                                            />
+                                        }
+                                        @if (!user.isAgent && !user.isAdmin) {
+                                            <ui-tag
+                                                [value]="'ADMIN.USER' | translate"
+                                                severity="secondary"
+                                            />
+                                        }
+                                        @if (!user.isActive) {
+                                            <ui-tag
+                                                [value]="'ADMIN.DISABLED' | translate"
+                                                severity="danger"
+                                            />
+                                        }
+                                    </div>
                                 </td>
                                 <td class="flex gap-1 justify-end pr-2">
                                     @if (!user.isAgent) {
@@ -75,6 +85,7 @@
                                             variant="text"
                                             severity="secondary"
                                             size="small"
+                                            [disabled]="!user.isActive"
                                             [uiTooltip]="
                                                 (user.isAdmin ? 'ADMIN.DEMOTE' : 'ADMIN.PROMOTE')
                                                     | translate
@@ -93,6 +104,7 @@
                                             variant="text"
                                             severity="secondary"
                                             size="small"
+                                            [disabled]="!user.isActive"
                                             [uiTooltip]="'AGENT_API_KEY.TITLE' | translate"
                                             uiTooltipPosition="top"
                                             (click)="onOpenKeys(user)"
@@ -110,6 +122,33 @@
                                     >
                                         <tabler-icon icon="pencil" [size]="14" />
                                     </ui-button>
+                                    @if (user.idUser !== currentUserId()) {
+                                        <ui-button
+                                            variant="text"
+                                            [severity]="user.isActive ? 'warn' : 'success'"
+                                            size="small"
+                                            uiConfirm
+                                            [confirmText]="
+                                                (user.isActive
+                                                    ? user.isAgent
+                                                        ? 'ADMIN.CONFIRM_DISABLE_AGENT'
+                                                        : 'ADMIN.CONFIRM_DISABLE_USER'
+                                                    : 'ADMIN.CONFIRM_ENABLE'
+                                                ) | translate
+                                            "
+                                            (confirmed)="onToggleActive(user)"
+                                            [uiTooltip]="
+                                                (user.isActive ? 'ADMIN.DISABLE' : 'ADMIN.ENABLE')
+                                                    | translate
+                                            "
+                                            uiTooltipPosition="top"
+                                        >
+                                            <tabler-icon
+                                                [icon]="user.isActive ? 'user-off' : 'user-check'"
+                                                [size]="14"
+                                            />
+                                        </ui-button>
+                                    }
                                     <ui-button
                                         variant="text"
                                         severity="danger"

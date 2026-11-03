@@ -27,6 +27,10 @@ export class AdminUserApi {
         return this.http.patch<void>(`/api/private/admin/user/${idUser}`, { isAdmin });
     }
 
+    public setActive$(idUser: number, isActive: boolean): Observable<void> {
+        return this.http.patch<void>(`/api/private/admin/user/${idUser}`, { isActive });
+    }
+
     public update$(idUser: number, req: AdminUpdateUserReq): Observable<void> {
         return this.http.patch<void>(`/api/private/admin/user/${idUser}`, req, {
             context: RequestContext.disableErrorToast()

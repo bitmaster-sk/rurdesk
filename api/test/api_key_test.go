@@ -12,6 +12,7 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -254,6 +255,42 @@ func (s *ApiKeySuite) Test_AgentCannotBeOwner() {
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
 		fmt.Sprintf(`{"idUser":%d,"role":"owner"}`, agent), s.AdminToken)
 	s.Equal(http.StatusUnprocessableEntity, addOwnerRes.StatusCode)
+}
+
+// A session snapshot cached BEFORE the is_active column existed unmarshals
+// with IsActive=false. LookupSession must drop such a legacy entry and fall
+// through to the DB lookup instead of failing the request with 401 — otherwise
+// every agent would lose one request right after the deploy (possibly a
+// complete/heartbeat callback). A snapshot is only written from an active DB
+// lookup, so an active user hit by a legacy cache entry must still authenticate.
+func (s *ApiKeySuite) Test_LegacyCachedSnapshot_WithIsActiveFalse_FallsThroughToDB() {
+	id, raw := s.newAgent("legacybot")
+
+	// Authenticate once to populate the Redis session snapshot.
+	s.Require().Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", raw).StatusCode)
+
+	// Simulate a pre-deploy cache entry: rewrite the cached snapshot with
+	// is_active=false (the zero value a legacy JSON blob unmarshals to).
+	hash := service.HashApiKey(raw)
+	cacheKey := "auth:apikey:" + hash
+	var session model.ApiKeySession
+	s.Require().NoError(s.App.Cache.Get(context.Background(), cacheKey).Scan(&session))
+	s.Require().NotZero(session.User.IdUser, "the first request must have cached the snapshot")
+	session.User.IsActive = false
+	s.Require().NoError(s.App.Cache.Set(context.Background(), cacheKey, session, 5*time.Minute).Err())
+
+	// The key must still authenticate: the stale entry is dropped and the DB
+	// lookup (which sees is_active=TRUE) resolves the session.
+	s.Equal(http.StatusOK,
+		Request(s.T(), s.App, "GET", "/api/private/user", "", raw).StatusCode,
+		"a legacy cached snapshot with is_active=false must fall through to the DB, not 401")
+
+	// And the entry must have been replaced by a fresh snapshot with is_active=true.
+	var refreshed model.ApiKeySession
+	s.Require().NoError(s.App.Cache.Get(context.Background(), cacheKey).Scan(&refreshed))
+	s.True(refreshed.User.IsActive, "after the fall-through the cache must hold a fresh active snapshot")
+	s.Equal(id, refreshed.User.IdUser)
 }
 
 func Test_RunApiKeySuite(t *testing.T) {

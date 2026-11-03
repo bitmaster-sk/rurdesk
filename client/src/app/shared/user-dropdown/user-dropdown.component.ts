@@ -57,7 +57,10 @@ export class UserDropdownComponent implements ControlValueAccessor {
     protected readonly overviewByAgent = signal<Map<number, AgentOverview>>(new Map());
 
     protected readonly sortedUsers = computed(() => {
-        const users = this.users();
+        const selected = this.valueSignal();
+        const users = this.users().filter(
+            user => user.isActive !== false || user.idUser === selected
+        );
         if (!this.hasAgentFeatures()) {
             return users;
         }

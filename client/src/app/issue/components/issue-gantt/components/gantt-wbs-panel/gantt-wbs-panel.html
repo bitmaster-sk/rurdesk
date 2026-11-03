@@ -49,6 +49,7 @@
                 <app-state-badge [state]="task.state" size="xs" />
                 @if (task.assignedToUser) {
                 <app-avatar
+                    [disabled]="task.assignedToUser.isActive === false"
                     [name]="task.assignedToUser.name"
                     [bgColor]="task.assignedToUser.colorAvatarBg"
                     [manualInitials]="task.assignedToUser.avatarInitials"
@@ -82,6 +83,7 @@
                 <app-state-badge [state]="task.state" size="xs" />
                 @if (task.assignedToUser) {
                 <app-avatar
+                    [disabled]="task.assignedToUser.isActive === false"
                     [name]="task.assignedToUser.name"
                     [bgColor]="task.assignedToUser.colorAvatarBg"
                     [manualInitials]="task.assignedToUser.avatarInitials"
