@@ -29,7 +29,9 @@ export class AuthApi {
     }
 
     public register$(register: Register): Observable<void> {
-        return this.http.post<void>('/api/public/register', register);
+        return this.http.post<void>('/api/public/register', register, {
+            context: RequestContext.disableErrorToast()
+        });
     }
 
     public changePassword$(currentPassword: string, newPassword: string): Observable<void> {

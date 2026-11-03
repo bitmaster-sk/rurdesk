@@ -22,10 +22,9 @@ export abstract class ApiError {
     }
 
     /**
-     * Reads the body off its carrier — both `HttpErrorResponse` and the plain object
-     * `ErrorInterceptor` re-throws (a spread of one, so `instanceof` no longer holds there).
-     * All three fields are validated so a future consumer that needs the full body
-     * gets a trustworthy `Partial<ApiErrorBody>`. `translateKeyOf` does NOT use this —
+     * Reads the body off its carrier — an `HttpErrorResponse` or any plain object shaped
+     * like one. All three fields are validated so a future consumer that needs the full
+     * body gets a trustworthy `Partial<ApiErrorBody>`. `translateKeyOf` does NOT use this —
      * it reads `translateKey` directly so a bad `code`/`message` can never block the key.
      */
     public static bodyOf(error: unknown): Partial<ApiErrorBody> | null {

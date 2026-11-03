@@ -13,8 +13,8 @@ const VALID_FORM = {
     credentials: { password: 'secret', password2: 'secret' }
 };
 
-function httpError(status: number, url: string): HttpErrorResponse {
-    return new HttpErrorResponse({ status, url });
+function httpError(status: number, url: string, error?: unknown): HttpErrorResponse {
+    return new HttpErrorResponse({ status, url, error });
 }
 
 describe('RegisterComponent', () => {
@@ -59,12 +59,29 @@ describe('RegisterComponent', () => {
     });
 
     it('shows the closed message when the server returns 403', () => {
-        authApi.register$.mockReturnValue(throwError(() => httpError(403, '/api/public/register')));
+        authApi.register$.mockReturnValue(
+            throwError(() =>
+                httpError(403, '/api/public/register', {
+                    code: 'REGISTRATION_CLOSED',
+                    translateKey: 'error.registration_closed'
+                })
+            )
+        );
         component.form.setValue(VALID_FORM);
         component.onRegister();
 
         expect(component.errorKey()).toBe('REGISTER.CLOSED');
         expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('shows a generic message when the body carries another code', () => {
+        authApi.register$.mockReturnValue(
+            throwError(() => httpError(500, '/api/public/register', { code: 'INTERNAL' }))
+        );
+        component.form.setValue(VALID_FORM);
+        component.onRegister();
+
+        expect(component.errorKey()).toBe('REGISTER.FAILED');
     });
 
     it('shows a generic message on other server errors', () => {

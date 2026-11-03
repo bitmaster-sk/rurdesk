@@ -7,15 +7,13 @@ import {
     HttpErrorResponse
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError, switchMap } from 'rxjs/operators';
-import { I18nService } from '../shared/i18n/i18n.service';
+import { catchError } from 'rxjs/operators';
 import { ToastNotificationService } from './toast-notification.service';
 import { SILENCE_ERROR_TOAST } from './request-context';
 import { ApiError } from '../shared/model/api-error.model';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
-    private readonly i18n = inject(I18nService);
     private readonly toast = inject(ToastNotificationService);
 
     public intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -25,22 +23,16 @@ export class ErrorInterceptor implements HttpInterceptor {
                 // failure (see the backend ErrorRenderer middleware), so notifying here
                 // reaches every caller — most subscribe without an error branch and would
                 // otherwise fail silently. Callers that expect the failure, or show a more
-                // specific message, opt out with SILENCE_ERROR_TOAST. The message is still
-                // attached to the re-thrown error either way.
+                // specific message, opt out with SILENCE_ERROR_TOAST. The original
+                // HttpErrorResponse is re-thrown either way.
                 const notify = !req.context.get(SILENCE_ERROR_TOAST) && this.shouldNotify(error);
                 const key = ApiError.translateKeyOf(error);
 
                 if (key) {
-                    return this.i18n.get$(key).pipe(
-                        switchMap(msg => {
-                            if (notify) {
-                                this.toast.showError(key);
-                            }
-                            return throwError(() => ({ ...error, message: msg }));
-                        })
-                    );
-                }
-                if (notify) {
+                    if (notify) {
+                        this.toast.showError(key);
+                    }
+                } else if (notify) {
                     this.toast.showError(this.fallbackKey(error));
                 }
                 return throwError(() => error);

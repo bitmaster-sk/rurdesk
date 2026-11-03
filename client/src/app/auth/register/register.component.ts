@@ -10,6 +10,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import { switchMap } from 'rxjs/operators';
+import { ApiError } from 'src/app/shared/model/api-error.model';
 import { AuthApi } from '../api/auth.api.service';
 import { SessionService } from '../service/session.service';
 
@@ -85,7 +86,7 @@ export class RegisterComponent implements OnInit {
             void this.router.navigate(['/login']);
             return;
         }
-        if (err instanceof HttpErrorResponse && err.status === 403) {
+        if (ApiError.bodyOf(err)?.code === 'REGISTRATION_CLOSED') {
             // Registration is a one-time bootstrap; after the first user it is closed.
             this.errorKey.set('REGISTER.CLOSED');
             return;

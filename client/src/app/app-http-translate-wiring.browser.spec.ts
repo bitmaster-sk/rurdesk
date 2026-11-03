@@ -11,12 +11,13 @@ import { ErrorInterceptor } from './core/error.interceptor';
 
 /**
  * Bootstrap wiring guard: withInterceptorsFromDi() makes ErrorInterceptor part of
- * the HttpClient chain, and ErrorInterceptor injects TranslateService. If the
- * translate loader also used that HttpClient (useHttpBackend:false) the loader
- * request would re-enter ErrorInterceptor → TranslateService mid-construction —
- * a DI cycle that silently stops translations from loading. Loading via
- * HttpBackend (useHttpBackend:true) breaks the cycle. This test proves the real
- * interceptors + TranslateService coexist and translations actually load.
+ * the HttpClient chain, and the chain reaches TranslateService through
+ * ToastNotificationService → I18nService. If the translate loader also used that
+ * HttpClient (useHttpBackend:false) the loader request would re-enter the
+ * interceptor chain mid-construction — a DI cycle that silently stops
+ * translations from loading. Loading via HttpBackend (useHttpBackend:true)
+ * breaks the cycle. This test proves the real interceptors + TranslateService
+ * coexist and translations actually load.
  */
 describe('HttpClient + interceptors + TranslateService wiring (browser)', () => {
     beforeEach(() => {
