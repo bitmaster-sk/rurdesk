@@ -14,6 +14,8 @@ const (
 	SettingAgentMaxTurnsPlan        = "agent.max_turns_plan"
 	SettingAgentMaxTurnsImplement   = "agent.max_turns_implement"
 
+	SettingWikiAlwaysTokenLimit = "wiki.always_token_limit"
+
 	SettingPlantUmlServerUrl = "plantuml.server_url"
 )
 
@@ -35,6 +37,9 @@ var KnownAppNumericSettings = map[string]AppNumericSettingsSpec{
 	SettingAttachmentMaxSizeMb:    {Default: 25, Min: 1, Max: 100},
 	SettingAgentMaxTurnsPlan:      {Default: 250, Min: 1, Max: MaxAgentTurns},
 	SettingAgentMaxTurnsImplement: {Default: 500, Min: 1, Max: MaxAgentTurns},
+	// Max 60000 mirrors wikiPromptMaxTokens (service/wiki_prompt.go): a larger
+	// limit could never reach an agent prompt anyway.
+	SettingWikiAlwaysTokenLimit: {Default: 12000, Min: 0, Max: 60000},
 }
 
 // KnownAppBoolSettings maps each known boolean setting to its default.

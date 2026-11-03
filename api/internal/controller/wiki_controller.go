@@ -332,23 +332,6 @@ func (wc *WikiController) UpdateHome(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-func (wc *WikiController) UpdateSettings(c *gin.Context) {
-	idProject, ok := wc.idParam(c, "idProject")
-	if !ok {
-		return
-	}
-	var req model.WikiSettingsReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
-		return
-	}
-	if err := wc.wiki.UpdateSettings(c.Request.Context(), wc.user(c), idProject, req); err != nil {
-		ResponseErr(c, err)
-		return
-	}
-	c.Status(http.StatusNoContent)
-}
-
 func (wc *WikiController) GetIssueLinks(c *gin.Context) {
 	idIssue, ok := wc.idParam(c, "idIssue")
 	if !ok {

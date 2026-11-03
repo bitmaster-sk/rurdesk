@@ -90,8 +90,6 @@ func TestWiki_PermissionsFollowProjectRoles(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, res.StatusCode)
 	res, _ = f.create(t, member, model.CreateWikiPageReq{Space: "instance", Title: uniqueWikiTitle("Shared always"), AgentAccess: "always"})
 	require.Equal(t, http.StatusForbidden, res.StatusCode, "only an admin manages agent access of shared pages")
-
-	require.Equal(t, http.StatusForbidden, Request(t, f.app, "PUT", fmt.Sprintf("/api/private/project/%d/wiki/settings", f.idProject), `{"alwaysTokenLimit":100}`, member).StatusCode)
 }
 
 func TestWiki_ConcurrentSavesOfDifferentPartsMergeWithoutError(t *testing.T) {
@@ -239,7 +237,8 @@ func TestWiki_ExpiredTrashIsPurged(t *testing.T) {
 
 func TestWiki_AlwaysPagesRespectTheTokenLimit(t *testing.T) {
 	f := newWikiFixture(t, "wiki-budget")
-	require.Equal(t, http.StatusNoContent, Request(t, f.app, "PUT", fmt.Sprintf("/api/private/project/%d/wiki/settings", f.idProject), `{"alwaysTokenLimit":50}`, f.adminToken).StatusCode)
+	other := f.otherProject(t, "wiki-budget-other")
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 50)
 
 	res, small := f.create(t, f.adminToken, model.CreateWikiPageReq{Space: "project", Title: "Small", Body: strings.Repeat("a", 100), AgentAccess: "always"})
 	require.Equal(t, http.StatusOK, res.StatusCode)
@@ -254,6 +253,13 @@ func TestWiki_AlwaysPagesRespectTheTokenLimit(t *testing.T) {
 	tree := f.tree(t, f.adminToken)
 	require.Equal(t, 50, tree.TokenLimit)
 	require.Greater(t, tree.AlwaysTokens, 25)
+	require.Equal(t, 50, other.tree(t, f.adminToken).TokenLimit, "one global limit applies to every project")
+}
+
+func TestWiki_TheOldProjectWikiSettingsEndpointIsGone(t *testing.T) {
+	f := newWikiFixture(t, "wiki-settings-gone")
+	res := Request(t, f.app, "PUT", fmt.Sprintf("/api/private/project/%d/wiki/settings", f.idProject), `{"alwaysTokenLimit":100}`, f.adminToken)
+	require.Equal(t, http.StatusNotFound, res.StatusCode)
 }
 
 func TestWiki_MoveRejectsCyclesAndReorders(t *testing.T) {
@@ -388,15 +394,14 @@ func TestWiki_RestoringAnAlwaysPageNeedsTheOwnerAndFreeBudget(t *testing.T) {
 	member := f.userWithRole(t, "wiki-restore-member@test.sk", "member")
 	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: "Always restored", Body: strings.Repeat("a", 400), AgentAccess: "always"})
 	restoreUrl := fmt.Sprintf("/api/private/wiki/page/%d/restore", page.IdPage)
-	settingsUrl := fmt.Sprintf("/api/private/project/%d/wiki/settings", f.idProject)
 
 	require.Equal(t, http.StatusNoContent, Request(t, f.app, "DELETE", fmt.Sprintf("/api/private/wiki/page/%d", page.IdPage), "", member).StatusCode)
 	require.Equal(t, http.StatusForbidden, Request(t, f.app, "POST", restoreUrl, "", member).StatusCode)
 
-	require.Equal(t, http.StatusNoContent, Request(t, f.app, "PUT", settingsUrl, `{"alwaysTokenLimit":10}`, f.adminToken).StatusCode)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 10)
 	require.Equal(t, http.StatusUnprocessableEntity, Request(t, f.app, "POST", restoreUrl, "", f.adminToken).StatusCode)
 
-	require.Equal(t, http.StatusNoContent, Request(t, f.app, "PUT", settingsUrl, `{"alwaysTokenLimit":200000}`, f.adminToken).StatusCode)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 60000)
 	require.Equal(t, http.StatusOK, Request(t, f.app, "POST", restoreUrl, "", f.adminToken).StatusCode)
 }
 
@@ -444,14 +449,9 @@ func TestWiki_SharedPageBacklinksOnlyComeFromSpacesTheReaderSees(t *testing.T) {
 
 func TestWiki_TokenLimitNeverBlocksShrinkingAndZeroOptsOutOfShared(t *testing.T) {
 	f := newWikiFixture(t, "wiki-budget-shrink")
-	optedOut := f.otherProject(t, "wiki-budget-zero")
-	settings := func(fixture *wikiFixture, limit int) {
-		require.Equal(t, http.StatusNoContent, Request(t, fixture.app, "PUT", fmt.Sprintf("/api/private/project/%d/wiki/settings", fixture.idProject),
-			fmt.Sprintf(`{"alwaysTokenLimit":%d}`, limit), fixture.adminToken).StatusCode)
-	}
-	settings(f, 200000)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 60000)
 	page := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: "Big always", Body: strings.Repeat("a", 4000), AgentAccess: "always"})
-	settings(f, 10)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 10)
 
 	require.Equal(t, http.StatusOK, f.save(t, f.adminToken, page.IdPage, model.SaveWikiPageReq{
 		BaseVersion: 1, Title: "Big always", Body: strings.Repeat("a", 3000), AgentAccess: "always",
@@ -459,13 +459,13 @@ func TestWiki_TokenLimitNeverBlocksShrinkingAndZeroOptsOutOfShared(t *testing.T)
 	require.Equal(t, http.StatusUnprocessableEntity, f.save(t, f.adminToken, page.IdPage, model.SaveWikiPageReq{
 		BaseVersion: 2, Title: "Big always", Body: strings.Repeat("a", 3500), AgentAccess: "always",
 	}).StatusCode)
-	settings(f, 200000)
 
-	settings(optedOut, 0)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 0)
 	res, shared := f.create(t, f.adminToken, model.CreateWikiPageReq{Space: "instance", Title: uniqueWikiTitle("Shared always"), Body: "short", AgentAccess: "always"})
-	require.Equal(t, http.StatusOK, res.StatusCode, "a project with limit 0 does not block shared always pages")
+	require.Equal(t, http.StatusOK, res.StatusCode, "a global limit of 0 does not block shared always pages")
 	require.Equal(t, http.StatusNoContent, Request(t, f.app, "DELETE", fmt.Sprintf("/api/private/wiki/page/%d", shared.IdPage), "", f.adminToken).StatusCode)
-	settings(optedOut, 12000)
+	res, _ = f.create(t, f.adminToken, model.CreateWikiPageReq{Space: "project", Title: "Always no more", Body: "short", AgentAccess: "always"})
+	require.Equal(t, http.StatusUnprocessableEntity, res.StatusCode, "but a project always page still fails against a limit of 0")
 }
 
 func TestWiki_OwnerPicksTheWikiHomePage(t *testing.T) {
@@ -666,6 +666,21 @@ func (f *wikiFixture) projectNodes(t *testing.T) []*model.WikiTreeNode {
 		}
 	}
 	return nodes
+}
+
+// setWikiAlwaysTokenLimit changes the one global always-read token limit and
+// restores the 12000 default when the test ends: the setting is persisted in
+// projects.app_settings and would leak into every later test's fresh services.
+func setWikiAlwaysTokenLimit(t *testing.T, app *issue.Application, adminToken string, limit int) {
+	t.Helper()
+	res := Request(t, app, http.MethodPatch, "/api/private/admin/settings",
+		fmt.Sprintf(`{"wikiAlwaysTokenLimit":%d}`, limit), adminToken)
+	require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+	t.Cleanup(func() {
+		res := Request(t, app, http.MethodPatch, "/api/private/admin/settings",
+			`{"wikiAlwaysTokenLimit":12000}`, adminToken)
+		require.Equal(t, http.StatusOK, res.StatusCode, readBody(t, res))
+	})
 }
 
 func uniqueWikiTitle(prefix string) string {

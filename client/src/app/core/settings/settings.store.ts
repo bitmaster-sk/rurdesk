@@ -14,6 +14,7 @@ const FALLBACK: AppSettings = {
     attachmentMaxSizeMb: 25,
     agentMaxTurnsPlan: 250,
     agentMaxTurnsImplement: 500,
+    wikiAlwaysTokenLimit: 12000,
     plantUmlServerUrl: ''
 };
 

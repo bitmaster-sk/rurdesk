@@ -157,6 +157,30 @@ func TestAppSettings_AttachmentMaxSizeMb(t *testing.T) {
 	}
 }
 
+func TestAppSettings_WikiAlwaysTokenLimit(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.WikiAlwaysTokenLimit(); got != 12000 {
+		t.Fatalf("want default 12000, got %d", got)
+	}
+
+	for _, allowed := range []int{0, 60000} {
+		if err := svc.Update(context.Background(), map[string]int{constants.SettingWikiAlwaysTokenLimit: allowed}, nil, nil); err != nil {
+			t.Fatalf("expected %d to be accepted: %v", allowed, err)
+		}
+		if got := svc.WikiAlwaysTokenLimit(); got != allowed {
+			t.Fatalf("want %d after update, got %d", allowed, got)
+		}
+	}
+	for _, rejected := range []int{-1, 60001} {
+		if err := svc.Update(context.Background(), map[string]int{constants.SettingWikiAlwaysTokenLimit: rejected}, nil, nil); err == nil {
+			t.Fatalf("expected out-of-range error for %d", rejected)
+		}
+	}
+}
+
 func TestAppSettings_UpdateRejectsUnknownBoolSetting(t *testing.T) {
 	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
 	if err := svc.Update(context.Background(), nil, map[string]bool{"agent.bogus": true}, nil); err == nil {

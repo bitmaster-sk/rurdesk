@@ -204,7 +204,6 @@ func TestWikiSpaces_BudgetsCoverAllProjectsWhenNoFilterIsGiven(t *testing.T) {
 	require.NotNil(t, byProject[first].IdSpace)
 	require.NotNil(t, byProject[second])
 	require.Nil(t, byProject[second].IdSpace)
-	require.Equal(t, 12000, byProject[second].Limit)
 
 	one, err := repo.LoadProjectBudgets(ctx, []int64{second})
 	require.Nil(t, err)

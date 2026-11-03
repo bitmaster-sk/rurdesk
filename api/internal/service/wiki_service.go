@@ -38,6 +38,7 @@ type WikiService struct {
 	issuePageRepo *repository.WikiIssuePageRepository
 	proposalRepo  *repository.WikiProposalRepository
 	projectRepo   *repository.ProjectRepository
+	appSettings   *AppSettingsService
 	acl           *AclService
 	notifier      notify.INotifier
 	cache         *redis.Client
@@ -61,6 +62,7 @@ func NewWikiService(
 	issuePageRepo *repository.WikiIssuePageRepository,
 	proposalRepo *repository.WikiProposalRepository,
 	projectRepo *repository.ProjectRepository,
+	appSettings *AppSettingsService,
 	acl *AclService,
 	notifier notify.INotifier,
 	cache *redis.Client,
@@ -76,6 +78,7 @@ func NewWikiService(
 		issuePageRepo: issuePageRepo,
 		proposalRepo:  proposalRepo,
 		projectRepo:   projectRepo,
+		appSettings:   appSettings,
 		acl:           acl,
 		notifier:      notifier,
 		cache:         cache,
@@ -96,14 +99,7 @@ func (s *WikiService) LoadTree(ctx context.Context, user model.User, idProject i
 	if err != nil {
 		return nil, err
 	}
-	budgets, err := s.spaceRepo.LoadProjectBudgets(ctx, []int64{idProject})
-	if err != nil {
-		return nil, err
-	}
-	limit := 0
-	if len(budgets) > 0 {
-		limit = budgets[0].Limit
-	}
+	limit := s.appSettings.WikiAlwaysTokenLimit()
 	instanceAccess := s.spaceAccess(ctx, user, instance)
 	projectAccess := s.spaceAccess(ctx, user, project)
 	idHomePage, err := s.spaceRepo.LoadHomePage(ctx, project.IdSpace)
@@ -283,13 +279,6 @@ func (s *WikiService) LoadPageBacklinks(ctx context.Context, user model.User, id
 		return nil, errs.ErrNotFound
 	}
 	return s.loadBacklinks(ctx, user, page, []int64{instance.IdSpace, project.IdSpace}, clampListPageSize(limit), max(offset, 0))
-}
-
-func (s *WikiService) UpdateSettings(ctx context.Context, user model.User, idProject int64, req model.WikiSettingsReq) error {
-	if user.IsAgent || !s.acl.CanManageWiki(ctx, user.IdUser, idProject) {
-		return errs.ErrForbidden
-	}
-	return s.spaceRepo.UpdateTokenLimit(ctx, idProject, req.AlwaysTokenLimit)
 }
 
 func (s *WikiService) UpdateHomePage(ctx context.Context, user model.User, idProject int64, req model.WikiHomeReq) error {
@@ -723,16 +712,19 @@ func (s *WikiService) checkBudget(ctx context.Context, space *model.WikiSpace, i
 	if err != nil {
 		return err
 	}
+	limit := s.appSettings.WikiAlwaysTokenLimit()
+	// A global limit of 0 keeps the old opt-out: it never blocks a shared
+	// always page. Project pages still fail against it below.
+	if space.Kind == constants.WikiSpaceInstance && limit == 0 {
+		return nil
+	}
 	for _, budget := range budgets {
-		if space.Kind == constants.WikiSpaceInstance && budget.Limit == 0 {
-			continue
-		}
 		used := sums[instance.IdSpace] + ownChars
 		if budget.IdSpace != nil {
 			used += sums[*budget.IdSpace]
 		}
-		if tokensOfChars(used) > budget.Limit {
-			return errs.ErrWikiTokenLimit.WithMessage(fmt.Sprintf("always-read wiki pages would use %d of %d tokens", tokensOfChars(used), budget.Limit))
+		if tokensOfChars(used) > limit {
+			return errs.ErrWikiTokenLimit.WithMessage(fmt.Sprintf("always-read wiki pages would use %d of %d tokens", tokensOfChars(used), limit))
 		}
 	}
 	return nil

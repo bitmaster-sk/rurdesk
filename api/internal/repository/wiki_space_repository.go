@@ -20,7 +20,6 @@ const wikiBudgetLockKey = 176_001
 type WikiProjectBudget struct {
 	IdProject int64  `db:"id_project"`
 	IdSpace   *int64 `db:"id_space"`
-	Limit     int    `db:"wiki_always_token_limit"`
 }
 
 func NewWikiSpaceRepository(pool *pgxpool.Pool) *WikiSpaceRepository {
@@ -100,7 +99,7 @@ func (r *WikiSpaceRepository) LoadSpace(ctx context.Context, idSpace int64) (*mo
 func (r *WikiSpaceRepository) LoadProjectBudgets(ctx context.Context, idsProject []int64) ([]*WikiProjectBudget, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT p.id_project, s.id_space, p.wiki_always_token_limit
+		SELECT p.id_project, s.id_space
 		FROM projects.project p
 		LEFT JOIN wiki.space s ON s.id_project = p.id_project
 		WHERE $1::bigint[] IS NULL OR p.id_project = ANY($1)
@@ -139,15 +138,6 @@ func (r *WikiSpaceRepository) UpdateHomePage(ctx context.Context, idSpace int64,
 	db := extctx.GetDb(ctx, r.pool)
 	if _, err := db.Exec(ctx, `UPDATE wiki.space SET id_home_page = $2 WHERE id_space = $1`, idSpace, idPage); err != nil {
 		return fmt.Errorf("updating wiki home page: %w", err)
-	}
-	return nil
-}
-
-func (r *WikiSpaceRepository) UpdateTokenLimit(ctx context.Context, idProject int64, limit int) error {
-	db := extctx.GetDb(ctx, r.pool)
-	_, err := db.Exec(ctx, `UPDATE projects.project SET wiki_always_token_limit = $2 WHERE id_project = $1`, idProject, limit)
-	if err != nil {
-		return fmt.Errorf("updating wiki token limit: %w", err)
 	}
 	return nil
 }

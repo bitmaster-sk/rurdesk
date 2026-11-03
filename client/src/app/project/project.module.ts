@@ -7,7 +7,6 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { SharedModule } from '../shared/shared.module';
 import { ProjectFormWindowComponent } from './components/project-form-window/project-form-window.component';
 import { ProjectSettingsPage } from './pages/project-settings/project-settings.page';
-import { ProjectWikiSettingsComponent } from './components/project-wiki-settings/project-wiki-settings.component';
 import { StateModule } from '../state/state.module';
 import { SeverityModule } from '../severity/severity.module';
 import { IssueTypeModule } from '../issue-type/issue-type.module';
@@ -78,7 +77,6 @@ import { ReleaseCommandProvider } from '../release/command/release.command-provi
         ProjectFormComponent,
         ProjectFormWindowComponent,
         ProjectSettingsPage,
-        ProjectWikiSettingsComponent,
         ProjectBuilderComponent,
         ProjectBuilderStepInputComponent,
         ProjectBuilderStepStagingComponent,

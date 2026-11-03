@@ -34,6 +34,7 @@ describe('SettingsStore', () => {
             attachmentMaxSizeMb: 40,
             agentMaxTurnsPlan: 300,
             agentMaxTurnsImplement: 600,
+            wikiAlwaysTokenLimit: 12000,
             plantUmlServerUrl: 'http://puml:8080'
         });
         store.load();
@@ -55,6 +56,7 @@ describe('SettingsStore', () => {
             attachmentMaxSizeMb: 25,
             agentMaxTurnsPlan: 250,
             agentMaxTurnsImplement: 500,
+            wikiAlwaysTokenLimit: 12000,
             plantUmlServerUrl: ''
         };
         const off = build(settings);

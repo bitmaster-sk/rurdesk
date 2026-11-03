@@ -161,10 +161,6 @@ type WikiHomeReq struct {
 	IdPage *int64 `json:"idPage"`
 }
 
-type WikiSettingsReq struct {
-	AlwaysTokenLimit int `json:"alwaysTokenLimit" binding:"min=0,max=200000"`
-}
-
 type WikiIssuePageReq struct {
 	IdPage int64 `json:"idPage" binding:"required"`
 }

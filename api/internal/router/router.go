@@ -270,7 +270,6 @@ func New(
 	pri.POST("/project/:idProject/wiki/page", wikiCtrl.CreatePage)
 	pri.GET("/project/:idProject/wiki/trash", wikiCtrl.GetTrash)
 	pri.GET("/project/:idProject/wiki/search", wikiCtrl.Search)
-	pri.PUT("/project/:idProject/wiki/settings", wikiCtrl.UpdateSettings)
 	pri.PUT("/project/:idProject/wiki/home", wikiCtrl.UpdateHome)
 	pri.GET("/project/:idProject/wiki/agent/search", wikiAgentCtrl.Search)
 	pri.GET("/project/:idProject/wiki/agent/page/:slug", wikiAgentCtrl.GetPage)
