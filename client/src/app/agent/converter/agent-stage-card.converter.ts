@@ -7,6 +7,7 @@ import {
 } from '../entity/agent-stage-card.entity';
 import { AgentStageProgress, AgentStageStatus } from '../model/agent-run.model';
 import { STAGE_LABELS } from '../model/agent-stage.enum';
+import { CostFormatter } from '../entity/cost.formatter';
 
 const STAGE_STATUS_KEY: Record<AgentStageStatus, string> = {
     pending: 'AGENT.TIMELINE.STATUS.PENDING',
@@ -68,6 +69,8 @@ export abstract class AgentStageCardConverter {
             tokensUsed: progress.tokensUsed,
             toolCallsCount: progress.toolCallsCount,
             durationMs: progress.durationMs,
+            cost: CostFormatter.format(progress.costUsd, progress.costEstimated),
+            costEstimated: progress.costEstimated,
             model: progress.model ?? null,
             modelFallbackFrom: progress.modelFallbackFrom ?? null,
             maxTurns: progress.maxTurns ?? null,

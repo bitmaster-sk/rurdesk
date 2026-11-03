@@ -22,6 +22,11 @@ type StreamResult struct {
 	Status              string
 	Tokens              int
 	ToolCalls           int
+	InputTokens         int
+	OutputTokens        int
+	CacheReadTokens     int
+	CacheWriteTokens    int
+	CostUsd             *float64
 	ProviderError       *common.AgentError
 	RunErrorMessage     string
 	TurnLimitHit        bool

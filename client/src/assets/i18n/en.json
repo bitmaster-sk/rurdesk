@@ -185,7 +185,13 @@
             "TOKENS": "Tokens",
             "TOKENS_BY_MODEL": "Tokens by model",
             "DURATION": "Duration",
-            "TOOL_CALLS": "Tool calls"
+            "TOOL_CALLS": "Tool calls",
+            "COST": "Cost",
+            "COST_ESTIMATED_HINT": "Estimate. Claude Code runs on a subscription, so this is not what you pay.",
+            "INPUT_TOKENS": "Input",
+            "OUTPUT_TOKENS": "Output",
+            "CACHE_READ_TOKENS": "Cache read",
+            "CACHE_WRITE_TOKENS": "Cache write"
         },
         "WIKI": {
             "TITLE": "Wiki",

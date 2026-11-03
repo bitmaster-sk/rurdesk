@@ -46,6 +46,35 @@ func TestMapTerminalStatus(t *testing.T) {
 	}
 }
 
+func TestExtractResultUsage(t *testing.T) {
+	ev := func(line string) map[string]any {
+		var m map[string]any
+		if err := json.Unmarshal([]byte(line), &m); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		return m
+	}
+
+	withCost := extractResultUsage(ev(
+		`{"type":"result","subtype":"success","is_error":false,"total_cost_usd":0.4213,` +
+			`"usage":{"input_tokens":12,"output_tokens":3456,"cache_creation_input_tokens":20000,"cache_read_input_tokens":150000}}`,
+	))
+	if withCost.InputTokens != 12 || withCost.OutputTokens != 3456 ||
+		withCost.CacheReadTokens != 150000 || withCost.CacheWriteTokens != 20000 {
+		t.Errorf("usage = %+v, want 12/3456/150000/20000", withCost)
+	}
+	if withCost.CostUsd == nil || *withCost.CostUsd != 0.4213 {
+		t.Errorf("costUsd = %v, want 0.4213", withCost.CostUsd)
+	}
+
+	withoutCost := extractResultUsage(ev(
+		`{"type":"result","subtype":"success","is_error":false,"usage":{"input_tokens":1,"output_tokens":2}}`,
+	))
+	if withoutCost.CostUsd != nil {
+		t.Errorf("costUsd = %v, want nil when total_cost_usd is absent", *withoutCost.CostUsd)
+	}
+}
+
 func TestDrainEventsExtractsStatsFromStreamJSON(t *testing.T) {
 	// An assistant turn with two tool_use blocks and a usage record, followed by
 	// a final result event carrying a larger usage total.
@@ -69,6 +98,7 @@ func TestDrainEventsExtractsStatsFromStreamJSON(t *testing.T) {
 				tokens = tk
 			}
 		},
+		nil,
 	)
 
 	if toolCalls != 2 {
@@ -119,6 +149,7 @@ func TestDrainEventsDetectsCompleteStage(t *testing.T) {
 						saw = true
 					}
 				},
+				nil,
 				nil,
 			)
 			if saw != tt.want {
@@ -420,6 +451,7 @@ func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
 	var subtype string
 	drainEvents(strings.NewReader(input), 1024, 42,
 		func(s string, _ bool) { subtype = s },
+		nil,
 		nil,
 		nil,
 	)

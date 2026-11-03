@@ -75,7 +75,30 @@
                 {{ totals ? (totals.totalToolCallsCount | number) : '—' }}
             </span>
         </div>
+        <div class="run-summary__kpi flex min-w-0 flex-col">
+            <span class="run-summary__label">{{ 'AGENT.STATS.COST' | translate }}</span>
+            <span
+                class="run-summary__value"
+                data-testid="run-cost"
+                [uiTooltip]="
+                    totals?.costEstimated ? ('AGENT.STATS.COST_ESTIMATED_HINT' | translate) : ''
+                "
+            >
+                {{ cost() ?? '—' }}
+            </span>
+        </div>
     </div>
+    @if (tokenBreakdown(); as breakdown) {
+        <div class="run-summary__models" data-testid="run-token-breakdown">
+            {{ 'AGENT.STATS.INPUT_TOKENS' | translate }} {{ breakdown.totalInputTokens | number }} ·
+            {{ 'AGENT.STATS.OUTPUT_TOKENS' | translate }}
+            {{ breakdown.totalOutputTokens | number }} ·
+            {{ 'AGENT.STATS.CACHE_READ_TOKENS' | translate }}
+            {{ breakdown.totalCacheReadTokens | number }}
+            · {{ 'AGENT.STATS.CACHE_WRITE_TOKENS' | translate }}
+            {{ breakdown.totalCacheWriteTokens | number }}
+        </div>
+    }
     @if (modelRows().length > 0) {
         <div class="run-summary__models" data-testid="run-tokens-by-model">
             <span class="run-summary__label">{{ 'AGENT.STATS.TOKENS_BY_MODEL' | translate }}</span>

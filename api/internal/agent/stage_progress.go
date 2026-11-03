@@ -74,6 +74,12 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		prog.TokensUsed = usage.TokensUsed
 		prog.ToolCallsCount = usage.ToolCallsCount
 		prog.DurationMs = usage.DurationMs
+		prog.InputTokens = usage.InputTokens
+		prog.OutputTokens = usage.OutputTokens
+		prog.CacheReadTokens = usage.CacheReadTokens
+		prog.CacheWriteTokens = usage.CacheWriteTokens
+		prog.CostUsd = usage.CostUsd
+		prog.CostEstimated = usage.CostEstimated
 
 		task := latestByStage[entry.Name]
 		if task == nil {
@@ -151,6 +157,19 @@ func stageUsage(tasks []*model.AgentTask) map[string]model.AgentStageProgress {
 		usage.TokensUsed += intOrZero(task.TokensUsed)
 		usage.ToolCallsCount += intOrZero(task.ToolCallsCount)
 		usage.DurationMs += intOrZero(task.DurationMs)
+		usage.InputTokens += intOrZero(task.InputTokens)
+		usage.OutputTokens += intOrZero(task.OutputTokens)
+		usage.CacheReadTokens += intOrZero(task.CacheReadTokens)
+		usage.CacheWriteTokens += intOrZero(task.CacheWriteTokens)
+		if task.CostUsd != nil {
+			if usage.CostUsd == nil {
+				usage.CostUsd = new(float64)
+			}
+			*usage.CostUsd += *task.CostUsd
+		}
+		if task.CostEstimated {
+			usage.CostEstimated = true
+		}
 		byStage[task.Stage] = usage
 	}
 	return byStage

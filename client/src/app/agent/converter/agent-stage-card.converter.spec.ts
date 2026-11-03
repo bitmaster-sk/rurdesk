@@ -130,8 +130,42 @@ describe('AgentStageCardConverter.toViews', () => {
             toolCallsCount: 9,
             model: 'openai/kimi',
             maxTurns: 40,
-            skillNames: ['angular-client']
+            skillNames: ['angular-client'],
+            cost: null,
+            costEstimated: false
         });
+    });
+
+    it('formats the stage cost, marking estimates with ≈', () => {
+        const views = AgentStageCardConverter.toViews(
+            source({
+                stages: [
+                    Fixtures.stageProgress({
+                        stage: 'design',
+                        status: 'done',
+                        costUsd: 0.4213,
+                        costEstimated: true
+                    }),
+                    Fixtures.stageProgress({
+                        stage: 'implementation',
+                        status: 'done',
+                        costUsd: 1.5,
+                        costEstimated: false
+                    }),
+                    Fixtures.stageProgress({
+                        stage: 'implementation_plan',
+                        status: 'done',
+                        costUsd: null
+                    })
+                ]
+            })
+        );
+
+        const byStage = new Map(views.map(view => [view.stage, view]));
+        expect(byStage.get('design')?.cost).toBe('≈ $0.42');
+        expect(byStage.get('design')?.costEstimated).toBe(true);
+        expect(byStage.get('implementation')?.cost).toBe('$1.50');
+        expect(byStage.get('implementation_plan')?.cost).toBeNull();
     });
 
     it('lets the user edit a stage again after its only attempt was cancelled', () => {

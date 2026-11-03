@@ -10,6 +10,12 @@ const STATS: RunStats = {
     totalTokensUsed: 206493,
     totalDurationMs: 99000,
     totalToolCallsCount: 26,
+    totalInputTokens: 150000,
+    totalOutputTokens: 56493,
+    totalCacheReadTokens: 0,
+    totalCacheWriteTokens: 0,
+    totalCostUsd: null,
+    costEstimated: false,
     attemptsPerStage: { design: 1 },
     failedAttempts: 0,
     tokensByModel: { 'openai/kimi': 206493 }
@@ -76,6 +82,51 @@ describe('AgentRunSummaryComponent (browser)', () => {
         (root.querySelector('[data-testid="run-short-workflow"]') as HTMLInputElement).click();
 
         expect(toggled).toHaveBeenCalled();
+    });
+
+    it('shows — for the cost when no task reported a price', () => {
+        render({ stats: STATS });
+        expect(text('run-cost')).toBe('—');
+    });
+
+    it('shows the exact cost and the token breakdown when the run has them', () => {
+        render({
+            stats: {
+                ...STATS,
+                totalInputTokens: 12,
+                totalOutputTokens: 3456,
+                totalCacheReadTokens: 150000,
+                totalCacheWriteTokens: 20000,
+                totalCostUsd: 0.4213,
+                costEstimated: false
+            }
+        });
+
+        expect(text('run-cost')).toBe('$0.42');
+        const breakdown =
+            root.querySelector('[data-testid="run-token-breakdown"]')?.textContent ?? '';
+        expect(breakdown).toContain('AGENT.STATS.INPUT_TOKENS 12');
+        expect(breakdown).toContain('AGENT.STATS.OUTPUT_TOKENS 3,456');
+        expect(breakdown).toContain('AGENT.STATS.CACHE_READ_TOKENS 150,000');
+        expect(breakdown).toContain('AGENT.STATS.CACHE_WRITE_TOKENS 20,000');
+    });
+
+    it('marks an estimated cost with ≈', () => {
+        render({ stats: { ...STATS, totalCostUsd: 0.4213, costEstimated: true } });
+        expect(text('run-cost')).toBe('≈ $0.42');
+    });
+
+    it('hides the token breakdown when all four counts are zero', () => {
+        render({
+            stats: {
+                ...STATS,
+                totalInputTokens: 0,
+                totalOutputTokens: 0,
+                totalCacheReadTokens: 0,
+                totalCacheWriteTokens: 0
+            }
+        });
+        expect(root.querySelector('[data-testid="run-token-breakdown"]')).toBeNull();
     });
 
     it('shows the workflow with a lock once it can no longer change', () => {
