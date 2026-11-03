@@ -5,6 +5,100 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-11-03
+
+Tags and releases for tasks, task links that work across projects, and users and agents
+you can switch off without losing their history.
+
+### Highlights
+
+- **Tags** — project owners manage tags in the project settings. Members put them on
+  tasks from the detail, see them in the table and on Kanban cards, filter by them and
+  use them over MCP.
+- **Releases** — a release turns a tag into a version. A draft collects the closed tasks
+  of the tag, the release notes are written by hand or by an agent, and releasing renames
+  the tag and moves the open tasks to a new one. The notes live on the release, and the
+  Releases page keeps the history.
+- **Task links across projects** — typing `#` opens a picker over every project you can
+  see. The picked task is stored as a Markdown link, so it works in chats, comments,
+  descriptions, wiki pages and release notes. Links to closed tasks are struck through,
+  and resting the mouse on a link shows the task.
+- **Disable a user or an agent** — an account that has written anything can now be
+  disabled instead of deleted. It cannot sign in, its API keys stop working, an agent gets
+  no new runs and its running ones are cancelled. Its comments and history stay, shown
+  muted. Enabling it again restores everything.
+- **Goose 1.56** — the gateway runs Goose v1.56.0, sends an agent that tries to stop
+  without submitting its result back to submit it, and reports a rejected provider key
+  as `provider_auth_failed`.
+
+### Breaking changes
+
+- **A typed `#123` is no longer a link.** In wiki pages and messages a task link is now
+  picked with `#` and stored as a Markdown link with its project. The text of older wiki
+  pages stays as it was, so an old `#123` is plain text until it is picked again.
+- **Release notes by an agent need a 1.7.0 gateway.** An older gateway refuses the stage
+  with `tracker_missing_repo`. Development work runs on either gateway, but update the
+  tracker and every gateway together.
+
+### Added
+
+- Per-project task tags with a color, on the task detail, the table, Kanban cards, the
+  filters and the MCP tools.
+- Releases: the Releases page, release drafts in three steps, a _Release notes_ agent
+  stage with the builtin **Release notes style** skill, and _Release a version_ in the
+  command palette.
+- A task picker on `#` in the wiki editor, comments, descriptions and every chat,
+  including chats without a project, and a hover card on task links.
+- A **Disable** and **Enable** action in the admin users table, and `isActive` on
+  `PATCH /admin/user/:idUser`. Disabling yourself or the last active admin is refused.
+- Avatar initials an admin can set when creating or editing a user, shown on every
+  avatar.
+- The `GOOSE_DEFAULT_EXTENSION_TIMEOUT` (one shell command of the agent, 30 minutes by
+  default) and `GOOSE_STOP_HOOK_BLOCK_CAP` gateway settings.
+
+### Changed
+
+- Disabled users are left out of assignee, mention and member pickers, and get no
+  notifications or messages.
+- The last-owner checks count only active owners, so a disabled owner can be removed or
+  demoted while another active owner remains.
+- The client runs on Angular 22 without zone.js, and the backend and gateway build with
+  Go 1.27.3.
+
+### Fixed
+
+- After logging out and in as another user in the same tab, notices of the previous user
+  kept arriving and your own comments showed twice until a reload.
+- Editing a task whose assignee has no access to the project failed with 403.
+- The confirm popup next to a button at the edge of the screen was cut off.
+- The state badge in the task table broke into two lines when the assignee wrapped.
+- Screen readers announced the clear button of selects as `UI.CLEAR`.
+
+### Database
+
+Four migrations, applied automatically on startup:
+
+| Migration                            | Purpose                                                     |
+| ------------------------------------ | ----------------------------------------------------------- |
+| `20261023120000_tag.sql`             | project tags and the tags of each task                      |
+| `20261026120000_avatar_initials.sql` | avatar initials of users and of the actor of a notification |
+| `20261027120000_release.sql`         | releases, and agent runs that write release notes           |
+| `20261029120000_user_is_active.sql`  | the active flag of users                                    |
+
+Rolling back to 1.6.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. Upgrade the tracker and every gateway together. See
+[Upgrading](https://rurdesk.com/docs/upgrading.html) for the details.
+
+[1.7.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.6.0...v1.7.0
+
 ## [1.6.0] - 2026-10-23
 
 One gateway for every project, a model of your choice for every stage, and time entries
