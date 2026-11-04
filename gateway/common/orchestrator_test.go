@@ -246,6 +246,51 @@ func (a *submittingAgent) Run(ctx context.Context, task Task) (RunStats, error) 
 
 func (a *submittingAgent) Cancel(_ context.Context, _ RunID) error { return nil }
 
+// Stats are posted to /agent/task/:id/stats even when the cost is the only
+// non-zero field (local models report duration zeroed by a fast stub).
+func TestRunStage_SendsStatsWhenOnlyCostIsSet(t *testing.T) {
+	var statsBody atomic.Value
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/agent/task/100/stats" {
+			var body map[string]any
+			_ = json.NewDecoder(request.Body).Decode(&body)
+			statsBody.Store(body)
+		}
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	workspaceBase, repo := stageTestWorkspace(t)
+	cfg := &Config{TrackerAPIUrl: server.URL, WebhookSecret: testWebhookSecret, WorkspaceBase: workspaceBase}
+	cost := 0.42
+	agent := &stubAgent{stats: RunStats{CostUsd: &cost, CostEstimated: true}}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+
+	done := make(chan struct{})
+	go func() {
+		orchestrator.runStage(Task{Repo: repo, IdTask: 100, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("runStage did not finish within timeout")
+	}
+	body, _ := statsBody.Load().(map[string]any)
+	if body == nil {
+		t.Fatal("stats were not sent although CostUsd was set")
+	}
+	if body["costUsd"] != 0.42 || body["costEstimated"] != true {
+		t.Errorf("stats body = %v, want costUsd 0.42 and costEstimated true", body)
+	}
+}
+
+type stubAgent struct{ stats RunStats }
+
+func (a *stubAgent) Run(_ context.Context, _ Task) (RunStats, error) { return a.stats, nil }
+
+func (a *stubAgent) Cancel(_ context.Context, _ RunID) error { return nil }
+
 func TestRunStage_KeepsAStageThatAlreadyCalledCompleteStage(t *testing.T) {
 	var isStatsSent atomic.Bool
 	agent := &submittingAgent{entered: make(chan struct{}), release: make(chan struct{}), cancelled: make(chan struct{})}

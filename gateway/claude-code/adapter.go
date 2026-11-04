@@ -124,6 +124,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	finalIsError := false
 	var toolCalls int
 	var tokensUsed int
+	var usage resultUsage
 	completeStageCalled := false
 
 	done := make(chan struct{})
@@ -151,6 +152,11 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 				}
 				statsMu.Unlock()
 			},
+			func(u resultUsage) {
+				statsMu.Lock()
+				usage = u
+				statsMu.Unlock()
+			},
 		)
 		close(done)
 	}()
@@ -171,6 +177,14 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	stats.ToolCallsCount = toolCalls
 	stats.TokensUsed = tokensUsed
 	stats.DurationMs = int(time.Since(start) / time.Millisecond)
+	stats.InputTokens = usage.InputTokens
+	stats.OutputTokens = usage.OutputTokens
+	stats.CacheReadTokens = usage.CacheReadTokens
+	stats.CacheWriteTokens = usage.CacheWriteTokens
+	stats.CostUsd = usage.CostUsd
+	if usage.CostUsd != nil {
+		stats.CostEstimated = true
+	}
 	subtype := finalSubtype
 	isError := finalIsError
 	submitted := completeStageCalled
@@ -238,6 +252,7 @@ func drainEvents(
 	onFinal func(subtype string, isError bool),
 	onToolCalls func(count int, sawCompleteStage bool),
 	onTokens func(int),
+	onUsage func(resultUsage),
 ) {
 	skipped, err := common.ReadLines(r, maxLineBytes, func(line []byte) {
 		if len(line) == 0 {
@@ -274,6 +289,9 @@ func drainEvents(
 				if t := extractTotalTokens(ev); t > 0 {
 					onTokens(t)
 				}
+			}
+			if onUsage != nil {
+				onUsage(extractResultUsage(ev))
 			}
 		}
 		log.Info().
@@ -330,6 +348,33 @@ func extractTotalTokens(ev map[string]any) int {
 		}
 	}
 	return tokensFromMap(ev)
+}
+
+type resultUsage struct {
+	InputTokens      int
+	OutputTokens     int
+	CacheReadTokens  int
+	CacheWriteTokens int
+	CostUsd          *float64
+}
+
+func extractResultUsage(ev map[string]any) resultUsage {
+	usage, _ := ev["usage"].(map[string]any)
+	in, _ := common.NumberField(usage, "input_tokens")
+	out, _ := common.NumberField(usage, "output_tokens")
+	cacheRead, _ := common.NumberField(usage, "cache_read_input_tokens")
+	cacheWrite, _ := common.NumberField(usage, "cache_creation_input_tokens")
+	var cost *float64
+	if c, ok := ev["total_cost_usd"].(float64); ok {
+		cost = &c
+	}
+	return resultUsage{
+		InputTokens:      in,
+		OutputTokens:     out,
+		CacheReadTokens:  cacheRead,
+		CacheWriteTokens: cacheWrite,
+		CostUsd:          cost,
+	}
 }
 
 func tokensFromMap(m map[string]any) int {

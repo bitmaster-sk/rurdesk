@@ -61,8 +61,13 @@ type streamAggregator struct {
 	phase string          // current coalescing phase: "thinking" | "text" | ""
 	buf   strings.Builder // pending text for the current phase
 
-	tokens  int
-	toolCnt int
+	tokens       int
+	toolCnt      int
+	inputTokens  int
+	outputTokens int
+	cacheRead    int
+	cacheWrite   int
+	costUsd      *float64
 
 	// completeStageAccepted tracks whether a `complete_stage` call came back
 	// without an error. Submission rides entirely on that call; without it the
@@ -105,6 +110,11 @@ func (a *streamAggregator) line(raw []byte) {
 			"input_tokens":  float64(sl.InputTokens),
 			"output_tokens": float64(sl.OutputTokens),
 		})
+		a.inputTokens = sl.InputTokens
+		a.outputTokens = sl.OutputTokens
+		a.cacheRead = sl.CacheReadInputTokens
+		a.cacheWrite = sl.CacheWriteInputTokens
+		a.costUsd = sl.CostUsd
 	case "error":
 		a.runErrorMessage = sl.Error
 	}
@@ -185,6 +195,11 @@ func (a *streamAggregator) finish() entity.StreamResult {
 	return entity.StreamResult{
 		Tokens:              a.tokens,
 		ToolCalls:           a.toolCnt,
+		InputTokens:         a.inputTokens,
+		OutputTokens:        a.outputTokens,
+		CacheReadTokens:     a.cacheRead,
+		CacheWriteTokens:    a.cacheWrite,
+		CostUsd:             a.costUsd,
 		ProviderError:       a.providerError,
 		RunErrorMessage:     a.runErrorMessage,
 		CompleteStageCalled: a.completeStageAccepted,

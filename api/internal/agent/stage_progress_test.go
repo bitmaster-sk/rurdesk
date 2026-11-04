@@ -267,6 +267,56 @@ func TestIsParked(t *testing.T) {
 	}
 }
 
+func TestStageUsage_SumsCostAndCacheTokens(t *testing.T) {
+	costA, costB := 0.10, 0.05
+	tasks := []*model.AgentTask{
+		{
+			Stage: constants.StageDesign, AttemptNo: 1,
+			InputTokens: intPtr(10), OutputTokens: intPtr(20),
+			CacheReadTokens: intPtr(100), CacheWriteTokens: intPtr(200),
+			CostUsd: &costA, CostEstimated: true,
+		},
+		{
+			Stage: constants.StageDesign, AttemptNo: 2,
+			InputTokens: intPtr(5), OutputTokens: intPtr(6),
+			CacheReadTokens: intPtr(1), CacheWriteTokens: intPtr(2),
+			CostUsd: &costB,
+		},
+		{
+			Stage: constants.StageImplementationPlan, AttemptNo: 1,
+			InputTokens: intPtr(7), OutputTokens: intPtr(8),
+		},
+	}
+
+	byStage := stageUsage(tasks)
+
+	design := byStage[constants.StageDesign]
+	if design.InputTokens != 15 || design.OutputTokens != 26 ||
+		design.CacheReadTokens != 101 || design.CacheWriteTokens != 202 {
+		t.Errorf("design tokens = %d/%d/%d/%d, want 15/26/101/202",
+			design.InputTokens, design.OutputTokens, design.CacheReadTokens, design.CacheWriteTokens)
+	}
+	if design.CostUsd == nil || *design.CostUsd > 0.1500001 || *design.CostUsd < 0.1499999 {
+		t.Errorf("design cost = %v, want 0.15", design.CostUsd)
+	}
+	if !design.CostEstimated {
+		t.Error("design costEstimated = false, want true (one attempt was estimated)")
+	}
+
+	plan := byStage[constants.StageImplementationPlan]
+	if plan.CostUsd != nil {
+		t.Errorf("plan cost = %v, want nil when no task has a price", *plan.CostUsd)
+	}
+	if plan.CostEstimated {
+		t.Error("plan costEstimated = true, want false")
+	}
+	if plan.InputTokens != 7 || plan.OutputTokens != 8 {
+		t.Errorf("plan tokens = %d/%d, want 7/8", plan.InputTokens, plan.OutputTokens)
+	}
+}
+
+func intPtr(v int) *int { return &v }
+
 func withUsage(task *model.AgentTask, tokens, toolCalls, durationMs int) *model.AgentTask {
 	task.TokensUsed = &tokens
 	task.ToolCallsCount = &toolCalls

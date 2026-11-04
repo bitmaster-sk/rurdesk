@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
+import { SILENCE_ERROR_TOAST } from 'src/app/core/request-context';
 import { Register } from '../model/register.model';
 import { AuthApi } from './auth.api.service';
 
@@ -50,13 +51,20 @@ describe('AuthApi', () => {
         });
     });
 
-    it('posts the registration payload to the public register endpoint', () => {
+    it('posts the registration payload with the error toast silenced', () => {
         const { api, http } = build();
         const register: Register = { name: 'Admin', email: 'a@a.com', password: 'secret' };
 
         api.register$(register).subscribe();
 
-        expect(http.post).toHaveBeenCalledWith('/api/public/register', register);
+        const [url, body, options] = http.post.mock.calls[0] as [
+            string,
+            Register,
+            { context: { get: (token: unknown) => boolean } }
+        ];
+        expect(url).toBe('/api/public/register');
+        expect(body).toEqual(register);
+        expect(options.context.get(SILENCE_ERROR_TOAST)).toBe(true);
     });
 
     it('sends the current and the new password to the password endpoint', () => {

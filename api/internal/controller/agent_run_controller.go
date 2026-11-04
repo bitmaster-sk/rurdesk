@@ -1008,9 +1008,15 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 		return
 	}
 	var body struct {
-		TokensUsed     *int `json:"tokensUsed"`
-		DurationMs     *int `json:"durationMs"`
-		ToolCallsCount *int `json:"toolCallsCount"`
+		TokensUsed       *int     `json:"tokensUsed"`
+		DurationMs       *int     `json:"durationMs"`
+		ToolCallsCount   *int     `json:"toolCallsCount"`
+		InputTokens      *int     `json:"inputTokens"`
+		OutputTokens     *int     `json:"outputTokens"`
+		CacheReadTokens  *int     `json:"cacheReadTokens"`
+		CacheWriteTokens *int     `json:"cacheWriteTokens"`
+		CostUsd          *float64 `json:"costUsd"`
+		CostEstimated    bool     `json:"costEstimated"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
@@ -1021,7 +1027,11 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	if !ctrl.requireAssignedAgent(c, idTask, user.IdUser) {
 		return
 	}
-	if err := ctrl.agentTaskRepo.UpdateStats(ctx, idTask, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
+	if err := ctrl.agentTaskRepo.UpdateStats(ctx, idTask,
+		body.TokensUsed, body.DurationMs, body.ToolCallsCount,
+		body.InputTokens, body.OutputTokens, body.CacheReadTokens, body.CacheWriteTokens,
+		body.CostUsd, body.CostEstimated,
+	); err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
 		return

@@ -25,6 +25,54 @@ func TestTrackerClientSendsAgentKeyAsBearer(t *testing.T) {
 	}
 }
 
+func TestUpdateTaskStatsSendsAllUsageFields(t *testing.T) {
+	var path string
+	var body map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		path = request.URL.Path
+		_ = json.NewDecoder(request.Body).Decode(&body)
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+	client := NewTrackerClient(&Config{TrackerAPIUrl: server.URL, WebhookSecret: []byte("secret"), AgentApiKey: "agent-key"})
+
+	cost := 0.42
+	err := client.UpdateTaskStats(context.Background(), 7, RunStats{
+		TokensUsed: 30, DurationMs: 1200, ToolCallsCount: 2,
+		InputTokens: 12, OutputTokens: 3456, CacheReadTokens: 150000, CacheWriteTokens: 20000,
+		CostUsd: &cost, CostEstimated: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateTaskStats: %v", err)
+	}
+	if path != "/agent/task/7/stats" {
+		t.Errorf("path = %q, want /agent/task/7/stats", path)
+	}
+	want := map[string]any{
+		"tokensUsed": 30.0, "durationMs": 1200.0, "toolCallsCount": 2.0,
+		"inputTokens": 12.0, "outputTokens": 3456.0,
+		"cacheReadTokens": 150000.0, "cacheWriteTokens": 20000.0,
+		"costUsd": 0.42, "costEstimated": true,
+	}
+	for key, val := range want {
+		if body[key] != val {
+			t.Errorf("body[%q] = %v, want %v", key, body[key], val)
+		}
+	}
+
+	body = nil
+	err = client.UpdateTaskStats(context.Background(), 8, RunStats{TokensUsed: 5})
+	if err != nil {
+		t.Fatalf("UpdateTaskStats: %v", err)
+	}
+	if raw, ok := body["costUsd"]; !ok || raw != nil {
+		t.Errorf("body[costUsd] = %v (present=%v), want explicit null", raw, ok)
+	}
+	if body["costEstimated"] != false {
+		t.Errorf("body[costEstimated] = %v, want false", body["costEstimated"])
+	}
+}
+
 func TestReportRecoveredSendsTheModelCatalog(t *testing.T) {
 	var path string
 	var body map[string]any

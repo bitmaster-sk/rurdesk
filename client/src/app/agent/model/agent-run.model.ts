@@ -47,6 +47,12 @@ export interface AgentStageProgress {
     tokensUsed: number;
     toolCallsCount: number;
     durationMs: number;
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheWriteTokens: number;
+    costUsd: number | null;
+    costEstimated: boolean;
 }
 
 export interface AgentStagePlan {
@@ -79,6 +85,12 @@ export interface RunStats {
     totalTokensUsed: number;
     totalDurationMs: number;
     totalToolCallsCount: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    totalCacheReadTokens: number;
+    totalCacheWriteTokens: number;
+    totalCostUsd: number | null;
+    costEstimated: boolean;
     attemptsPerStage: Record<string, number>;
     failedAttempts: number;
     tokensByModel: Record<string, number>;

@@ -38,6 +38,12 @@ const STATS: RunStats = {
     totalTokensUsed: 206493,
     totalDurationMs: 99000,
     totalToolCallsCount: 26,
+    totalInputTokens: 0,
+    totalOutputTokens: 0,
+    totalCacheReadTokens: 0,
+    totalCacheWriteTokens: 0,
+    totalCostUsd: null,
+    costEstimated: false,
     attemptsPerStage: {},
     failedAttempts: 0,
     tokensByModel: { 'openai/kimi': 206493 }

@@ -305,6 +305,74 @@ func TestStreamAggregator_ExtractsTokensFromComplete(t *testing.T) {
 	}
 }
 
+// The terminal "complete" event carries the cost and cache breakdown: a line
+// with cost_usd fills CostUsd, one without it leaves it nil.
+func TestStreamAggregator_ExtractsCostAndCacheFromComplete(t *testing.T) {
+	emit, _ := collectEvents()
+	withCost := newStreamAggregator(1, emit)
+	feed(withCost,
+		`{"type":"complete","total_tokens":30,"input_tokens":20,"output_tokens":10,"cache_read_input_tokens":150000,"cache_write_input_tokens":20000,"cost_usd":0.00015}`,
+	)
+	res := withCost.finish()
+	if res.CostUsd == nil || *res.CostUsd != 0.00015 {
+		t.Errorf("costUsd = %v, want 0.00015", res.CostUsd)
+	}
+	if res.InputTokens != 20 || res.OutputTokens != 10 {
+		t.Errorf("tokens = %d/%d, want 20/10", res.InputTokens, res.OutputTokens)
+	}
+	if res.CacheReadTokens != 150000 || res.CacheWriteTokens != 20000 {
+		t.Errorf("cache = %d/%d, want 150000/20000", res.CacheReadTokens, res.CacheWriteTokens)
+	}
+
+	withoutCost := newStreamAggregator(1, emit)
+	feed(withoutCost,
+		`{"type":"complete","total_tokens":30,"input_tokens":20,"output_tokens":10,"cache_read_input_tokens":0,"cache_write_input_tokens":0}`,
+	)
+	res = withoutCost.finish()
+	if res.CostUsd != nil {
+		t.Errorf("costUsd = %v, want nil when cost_usd is absent", *res.CostUsd)
+	}
+}
+
+// Real goose v1.56.0 captures: the accepted run reports its cost, the
+// credits-exhausted run (Ollama-style, no cost_usd) reports none.
+func TestStreamAggregator_RealCaptureUsage(t *testing.T) {
+	tests := []struct {
+		fixture        string
+		wantCost       *float64
+		wantInput      int
+		wantOutput     int
+		wantCacheRead  int
+		wantCacheWrite int
+	}{
+		{"v1.56-complete-stage-accepted.ndjson", ptr(0.00015), 20, 10, 0, 0},
+		{"v1.56-provider-credits-402.ndjson", nil, 0, 0, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.fixture, func(t *testing.T) {
+			emit, _ := collectEvents()
+			a := newStreamAggregator(1, emit)
+			feedFixture(t, a, tt.fixture)
+			res := a.finish()
+			if tt.wantCost == nil {
+				if res.CostUsd != nil {
+					t.Errorf("costUsd = %v, want nil", *res.CostUsd)
+				}
+			} else if res.CostUsd == nil || *res.CostUsd != *tt.wantCost {
+				t.Errorf("costUsd = %v, want %v", res.CostUsd, *tt.wantCost)
+			}
+			if res.InputTokens != tt.wantInput || res.OutputTokens != tt.wantOutput ||
+				res.CacheReadTokens != tt.wantCacheRead || res.CacheWriteTokens != tt.wantCacheWrite {
+				t.Errorf("usage = %d/%d/%d/%d, want %d/%d/%d/%d",
+					res.InputTokens, res.OutputTokens, res.CacheReadTokens, res.CacheWriteTokens,
+					tt.wantInput, tt.wantOutput, tt.wantCacheRead, tt.wantCacheWrite)
+			}
+		})
+	}
+}
+
+func ptr(f float64) *float64 { return &f }
+
 // Real goose v1.56.0 captures of provider failures: each must map to the code
 // the UI translates, and a run that failed must keep goose's own error text.
 func TestStreamAggregator_ClassifiesProviderErrors(t *testing.T) {

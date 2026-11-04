@@ -172,6 +172,12 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	stats.TokensUsed = tokensUsed
 	stats.ToolCallsCount = toolCalls
 	stats.DurationMs = int(time.Since(start) / time.Millisecond)
+	stats.InputTokens = result.InputTokens
+	stats.OutputTokens = result.OutputTokens
+	stats.CacheReadTokens = result.CacheReadTokens
+	stats.CacheWriteTokens = result.CacheWriteTokens
+	stats.CostUsd = result.CostUsd
+	stats.CostEstimated = false
 
 	if runCtx.Err() != nil {
 		return stats, fmt.Errorf("goose cancelled")

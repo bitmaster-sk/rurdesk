@@ -153,6 +153,24 @@ describe('AgentStageCardComponent (browser)', () => {
         expect(text('run-wiki-stage')).toContain('Commit messages');
     });
 
+    it('labels the stage cost after its value, like the other numbers', () => {
+        render(
+            view({
+                stage: 'design',
+                status: 'awaiting_approval',
+                attempts: 1,
+                toolCallsCount: 7,
+                tokensUsed: 12000,
+                costUsd: 0.0123,
+                costEstimated: false
+            })
+        );
+
+        expect(text('stage-card-usage-design')).toBe(
+            '1 AGENT.STAGE_CARD.ATTEMPTS.SINGULAR · 7 AGENT.STAGE_CARD.TOOL_CALLS.PLURAL · 12,000 AGENT.STAGE_CARD.TOKENS.PLURAL · $0.01 AGENT.STAGE_CARD.COST'
+        );
+    });
+
     it('keeps a finished stage closed until the user opens it', () => {
         render(view({ stage: 'brainstorming', status: 'done', attempts: 1 }));
         expect(byTestId('stage-card-body-brainstorming')).toBeNull();

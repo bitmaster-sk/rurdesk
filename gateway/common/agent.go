@@ -179,9 +179,15 @@ type RunStatus struct {
 // final `result` token usage) plus wall-clock duration, reported via /stats
 // after Run.
 type RunStats struct {
-	TokensUsed     int
-	DurationMs     int
-	ToolCallsCount int
+	TokensUsed       int
+	DurationMs       int
+	ToolCallsCount   int
+	InputTokens      int
+	OutputTokens     int
+	CacheReadTokens  int
+	CacheWriteTokens int
+	CostUsd          *float64
+	CostEstimated    bool
 }
 
 // Agent is implemented by each adapter (Claude Code, Goose). Each Run is
