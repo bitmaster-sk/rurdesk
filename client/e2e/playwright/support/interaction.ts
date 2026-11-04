@@ -126,15 +126,42 @@ export abstract class Interaction {
         token: string,
         idProject: number,
         idState: number,
-        titles: string[]
+        titles: string[],
+        assignedTo?: number
     ): Promise<void> {
         for (const title of titles) {
             const res = await request.post(`${baseURL}/api/private/project/${idProject}/issue`, {
                 headers: authHeaders(token),
-                data: { title, idState, description: 'Created by an e2e test.' }
+                data: { title, idState, assignedTo, description: 'Created by an e2e test.' }
             });
             expect(res.status(), await res.text()).toBe(200);
         }
+    }
+
+    public static async currentUserId(
+        request: APIRequestContext,
+        baseURL: string,
+        token: string
+    ): Promise<number> {
+        const res = await request.get(`${baseURL}/api/private/user`, {
+            headers: authHeaders(token)
+        });
+        expect(res.status(), await res.text()).toBe(200);
+        return ((await res.json()) as { idUser: number }).idUser;
+    }
+
+    public static async createTagViaApi(
+        request: APIRequestContext,
+        baseURL: string,
+        token: string,
+        idProject: number,
+        name: string
+    ): Promise<void> {
+        const res = await request.post(`${baseURL}/api/private/tag`, {
+            headers: authHeaders(token),
+            data: { idProject, name, color: '#22c55e' }
+        });
+        expect(res.status(), await res.text()).toBe(200);
     }
 
     public static async setCustomFieldValues(
