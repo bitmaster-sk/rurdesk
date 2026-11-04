@@ -229,6 +229,8 @@ In the table and on the Kanban board you can change many tasks at once.
 - You can edit up to **100 tasks** at once. Loading more rows keeps the selection;
   changing the filter, the sprint, or the view clears it, and so does <kbd>esc</kbd>.
 
+![Bulk edit dialog for three selected tasks: a new state picked, one tag added, the other fields at No change](../../site/assets/img/bulk-edit.png)
+
 #### Kanban
 
 A drag-and-drop board grouped by state. Move a card between columns to change its
