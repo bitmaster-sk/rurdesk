@@ -4,30 +4,55 @@
 
 .run-summary {
     border: 1px solid var(--ui-surface-200);
+    overflow: hidden;
     border-radius: 0.5rem;
     background: var(--ui-surface-50);
 }
 
 .run-summary__kpis {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--ui-surface-200);
 }
 
 .run-summary__kpi {
     padding: 0.5rem 0.75rem;
-    border-right: 1px solid var(--ui-surface-200);
+    background: var(--ui-surface-50);
+}
 
-    &:nth-child(3n) {
-        border-right: 0;
+.run-summary__kpi--wide {
+    grid-column: span 2;
+}
+
+.run-summary__breakdown {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--ui-surface-200);
+    font-size: 0.8rem;
+}
+
+.run-summary__part {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0 0.75rem;
+
+    dt {
+        color: var(--ui-color-text-muted);
     }
 
-    &:nth-child(-n + 3) {
-        border-bottom: 1px solid var(--ui-surface-200);
+    dd {
+        margin: 0;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
     }
 }
 
 .run-summary__label {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--ui-color-text-muted);

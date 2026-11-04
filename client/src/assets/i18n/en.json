@@ -266,7 +266,8 @@
             "TOKENS": {
                 "SINGULAR": "token",
                 "PLURAL": "tokens"
-            }
+            },
+            "COST": "cost"
         },
         "CLARIFICATION": {
             "BADGE": "Question from agent"

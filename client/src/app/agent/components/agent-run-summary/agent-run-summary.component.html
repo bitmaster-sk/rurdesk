@@ -1,7 +1,7 @@
 @let totals = stats();
 <div class="run-summary" data-testid="run-summary">
     <div class="run-summary__kpis">
-        <div class="run-summary__kpi flex min-w-0 flex-col">
+        <div class="run-summary__kpi run-summary__kpi--wide flex min-w-0 flex-col">
             <span class="run-summary__label">{{ 'AGENT.SIDEBAR.MODEL' | translate }}</span>
             <span class="run-summary__value" data-testid="run-model">
                 {{ model() ?? ('AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT' | translate) }}
@@ -89,15 +89,24 @@
         </div>
     </div>
     @if (tokenBreakdown(); as breakdown) {
-        <div class="run-summary__models" data-testid="run-token-breakdown">
-            {{ 'AGENT.STATS.INPUT_TOKENS' | translate }} {{ breakdown.totalInputTokens | number }} ·
-            {{ 'AGENT.STATS.OUTPUT_TOKENS' | translate }}
-            {{ breakdown.totalOutputTokens | number }} ·
-            {{ 'AGENT.STATS.CACHE_READ_TOKENS' | translate }}
-            {{ breakdown.totalCacheReadTokens | number }}
-            · {{ 'AGENT.STATS.CACHE_WRITE_TOKENS' | translate }}
-            {{ breakdown.totalCacheWriteTokens | number }}
-        </div>
+        <dl class="run-summary__breakdown" data-testid="run-token-breakdown">
+            <div class="run-summary__part">
+                <dt>{{ 'AGENT.STATS.INPUT_TOKENS' | translate }}</dt>
+                <dd>{{ breakdown.totalInputTokens | number }}</dd>
+            </div>
+            <div class="run-summary__part">
+                <dt>{{ 'AGENT.STATS.OUTPUT_TOKENS' | translate }}</dt>
+                <dd>{{ breakdown.totalOutputTokens | number }}</dd>
+            </div>
+            <div class="run-summary__part">
+                <dt>{{ 'AGENT.STATS.CACHE_READ_TOKENS' | translate }}</dt>
+                <dd>{{ breakdown.totalCacheReadTokens | number }}</dd>
+            </div>
+            <div class="run-summary__part">
+                <dt>{{ 'AGENT.STATS.CACHE_WRITE_TOKENS' | translate }}</dt>
+                <dd>{{ breakdown.totalCacheWriteTokens | number }}</dd>
+            </div>
+        </dl>
     }
     @if (modelRows().length > 0) {
         <div class="run-summary__models" data-testid="run-tokens-by-model">

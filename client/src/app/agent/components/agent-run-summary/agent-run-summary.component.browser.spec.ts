@@ -103,12 +103,18 @@ describe('AgentRunSummaryComponent (browser)', () => {
         });
 
         expect(text('run-cost')).toBe('$0.42');
-        const breakdown =
-            root.querySelector('[data-testid="run-token-breakdown"]')?.textContent ?? '';
-        expect(breakdown).toContain('AGENT.STATS.INPUT_TOKENS 12');
-        expect(breakdown).toContain('AGENT.STATS.OUTPUT_TOKENS 3,456');
-        expect(breakdown).toContain('AGENT.STATS.CACHE_READ_TOKENS 150,000');
-        expect(breakdown).toContain('AGENT.STATS.CACHE_WRITE_TOKENS 20,000');
+        const parts = Array.from(
+            root.querySelectorAll('[data-testid="run-token-breakdown"] > div')
+        ).map(part => [
+            part.querySelector('dt')?.textContent?.trim(),
+            part.querySelector('dd')?.textContent?.trim()
+        ]);
+        expect(parts).toEqual([
+            ['AGENT.STATS.INPUT_TOKENS', '12'],
+            ['AGENT.STATS.OUTPUT_TOKENS', '3,456'],
+            ['AGENT.STATS.CACHE_READ_TOKENS', '150,000'],
+            ['AGENT.STATS.CACHE_WRITE_TOKENS', '20,000']
+        ]);
     });
 
     it('marks an estimated cost with ≈', () => {
