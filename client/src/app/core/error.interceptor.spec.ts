@@ -1,20 +1,15 @@
 import { HttpErrorResponse, HttpHandler, HttpRequest } from '@angular/common/http';
 import { Injector, runInInjectionContext } from '@angular/core';
-import { I18nService } from 'src/app/shared/i18n/i18n.service';
-import { of, throwError } from 'rxjs';
+import { throwError } from 'rxjs';
 import { ErrorInterceptor } from './error.interceptor';
 import { RequestContext } from './request-context';
 import { ToastNotificationService } from './toast-notification.service';
 
 function build() {
     const showError = vi.fn();
-    const translate = { get$: (k: string) => of(`t:${k}`) } as unknown as I18nService;
     const toast = { showError } as unknown as ToastNotificationService;
     const injector = Injector.create({
-        providers: [
-            { provide: I18nService, useValue: translate },
-            { provide: ToastNotificationService, useValue: toast }
-        ]
+        providers: [{ provide: ToastNotificationService, useValue: toast }]
     });
     const interceptor = runInInjectionContext(injector, () => new ErrorInterceptor());
     return { interceptor, showError };
@@ -33,14 +28,16 @@ function run(interceptor: ErrorInterceptor, error: HttpErrorResponse, silent = f
 }
 
 describe('ErrorInterceptor', () => {
-    it('translates the message and toasts the key the API sent', () => {
+    it('re-throws a translateKey error as the same instance and toasts the key', () => {
         const { interceptor, showError } = build();
-        const caught = run(
-            interceptor,
-            new HttpErrorResponse({ status: 503, error: { translateKey: 'error.x' } })
-        );
+        const error = new HttpErrorResponse({
+            status: 503,
+            error: { translateKey: 'error.x' }
+        });
+        const caught = run(interceptor, error);
+        expect(caught).toBe(error);
+        expect(caught).toBeInstanceOf(HttpErrorResponse);
         expect(showError).toHaveBeenCalledWith('error.x');
-        expect((caught as { message: string }).message).toBe('t:error.x');
     });
 
     // Most callers subscribe without an error branch, so the interceptor is the
@@ -83,12 +80,12 @@ describe('ErrorInterceptor', () => {
 
     it('stays quiet for a caller that opted out, but still re-throws', () => {
         const { interceptor, showError } = build();
-        const caught = run(
-            interceptor,
-            new HttpErrorResponse({ status: 404, error: { translateKey: 'error.not_found' } }),
-            true
-        );
+        const error = new HttpErrorResponse({
+            status: 404,
+            error: { translateKey: 'error.not_found' }
+        });
+        const caught = run(interceptor, error, true);
         expect(showError).not.toHaveBeenCalled();
-        expect((caught as { message: string }).message).toBe('t:error.not_found');
+        expect(caught).toBe(error);
     });
 });

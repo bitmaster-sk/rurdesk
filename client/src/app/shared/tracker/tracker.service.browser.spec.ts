@@ -139,4 +139,35 @@ describe('TrackerService (browser)', () => {
 
         expect(currentTracker(service)?.idTracker).toBe(99);
     });
+
+    it('emits a tracker change exactly once even with a tracks filter set', () => {
+        const service = TestBed.inject(TrackerService);
+        service.setTrackFilter({ idProject: 2 });
+        let emissions = 0;
+        service.tracker$.subscribe(() => emissions++);
+
+        service.insertTracker$(2, 142).subscribe();
+
+        expect(emissions).toBe(1);
+    });
+
+    it('does not re-emit the tracker when the tracks filter changes', () => {
+        const service = TestBed.inject(TrackerService);
+        service.insertTracker$(2, 142).subscribe();
+        let emissions = 0;
+        service.tracker$.subscribe(() => emissions++);
+        expect(emissions).toBe(1);
+
+        service.setTrackFilter({ idProject: 2 });
+        service.setTrackFilter({ idProject: 3 });
+
+        expect(emissions).toBe(1);
+    });
+
+    it('replays the last tracker to a new subscriber', () => {
+        const service = TestBed.inject(TrackerService);
+        service.insertTracker$(2, 142).subscribe();
+
+        expect(currentTracker(service)?.idTracker).toBe(2);
+    });
 });

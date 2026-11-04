@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, combineLatest, merge, Observable, ReplaySubject, Subject } from 'rxjs';
+import { BehaviorSubject, combineLatest, Observable, ReplaySubject, Subject } from 'rxjs';
 import { filter, map, shareReplay, startWith, switchMap, tap } from 'rxjs/operators';
 import { TrackFilter } from './entity/track-filter.entity';
 import { TrackApi } from './api/track.api.service';
@@ -27,10 +27,7 @@ export class TrackerService {
 
     public tracksFilter$ = this._tracksFilter$.asObservable();
 
-    public tracker$ = merge(
-        this.localTracker$,
-        this.tracksFilter$.pipe(switchMap(() => this.localTracker$))
-    ).pipe(shareReplay(1));
+    public tracker$ = this.localTracker$.pipe(shareReplay(1));
 
     public isTracking$ = this.tracker$.pipe(map(tracker => tracker?.idTracker));
 
