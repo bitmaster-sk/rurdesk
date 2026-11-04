@@ -115,6 +115,24 @@
                 />
             </div>
             <div class="flex flex-col gap-1">
+                <label for="wikiAlwaysTokenLimit">
+                    {{ 'SETTINGS.WIKI_ALWAYS_TOKEN_LIMIT' | translate }}
+                </label>
+                <input
+                    id="wikiAlwaysTokenLimit"
+                    uiInput
+                    type="number"
+                    min="0"
+                    max="60000"
+                    step="1000"
+                    formControlName="wikiAlwaysTokenLimit"
+                    data-testid="settings-wiki-token-limit"
+                />
+                <small class="ui-color-text-muted text-xs">
+                    {{ 'SETTINGS.WIKI_ALWAYS_TOKEN_LIMIT_HINT' | translate }}
+                </small>
+            </div>
+            <div class="flex flex-col gap-1">
                 <label for="plantUmlServerUrl">
                     {{ 'SETTINGS.PLANTUML_SERVER_URL' | translate }}
                 </label>

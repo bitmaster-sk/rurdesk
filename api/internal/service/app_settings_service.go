@@ -138,6 +138,10 @@ func (s *AppSettingsService) AgentMaxTurnsImplement() int {
 	return s.getNumeric(constants.SettingAgentMaxTurnsImplement)
 }
 
+func (s *AppSettingsService) WikiAlwaysTokenLimit() int {
+	return s.getNumeric(constants.SettingWikiAlwaysTokenLimit)
+}
+
 func (s *AppSettingsService) PlantUmlServerUrl() string {
 	return s.getString(constants.SettingPlantUmlServerUrl)
 }

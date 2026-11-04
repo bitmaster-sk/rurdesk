@@ -172,6 +172,56 @@ describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
     });
 });
 
+describe('AdminSettingsComponent — wiki always token limit (browser)', () => {
+    const loaded = {
+        tablePageSize: 50,
+        kanbanPageSize: 20,
+        ganttBacklogPageSize: 30,
+        sprintVelocityLimit: 10,
+        userApiKeyLimit: 10,
+        isAgentThinkingPersisted: true,
+        agentThinkingMaxKb: 1024,
+        attachmentMaxSizeMb: 25,
+        agentMaxTurnsPlan: 250,
+        agentMaxTurnsImplement: 500,
+        wikiAlwaysTokenLimit: 12000,
+        plantUmlServerUrl: ''
+    };
+
+    it('saves a changed limit on blur', async () => {
+        const update$ = vi.fn().mockReturnValue(of({ ...loaded, wikiAlwaysTokenLimit: 8000 }));
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [AdminSettingsComponent],
+            providers: [
+                { provide: SettingsApi, useValue: { load$: () => of(loaded), update$ } },
+                {
+                    provide: VersionApi,
+                    useValue: { load$: () => of({ version: 'dev', commit: 'unknown' }) }
+                }
+            ]
+        })
+            .overrideComponent(AdminSettingsComponent, {
+                set: {
+                    template: `<form [formGroup]="form"><input class="limit" type="number" formControlName="wikiAlwaysTokenLimit" /></form>`
+                }
+            })
+            .compileComponents();
+        const fixture = TestBed.createComponent(AdminSettingsComponent);
+        fixture.detectChanges();
+        const input = fixture.nativeElement.querySelector('.limit') as HTMLInputElement;
+
+        expect(input.value).toBe('12000');
+        input.value = '8000';
+        input.dispatchEvent(new Event('input'));
+        input.dispatchEvent(new Event('blur'));
+        fixture.detectChanges();
+
+        expect(update$).toHaveBeenCalledTimes(1);
+        expect(update$.mock.calls[0][0]).toMatchObject({ wikiAlwaysTokenLimit: 8000 });
+    });
+});
+
 describe('AdminSettingsComponent — plantuml server url (browser)', () => {
     const loaded = {
         tablePageSize: 50,

@@ -9,6 +9,7 @@ export interface AppSettings {
     attachmentMaxSizeMb: number;
     agentMaxTurnsPlan: number;
     agentMaxTurnsImplement: number;
+    wikiAlwaysTokenLimit: number;
     plantUmlServerUrl: string;
 }
 

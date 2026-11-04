@@ -229,9 +229,11 @@ Each page has one of three access levels for AI agents:
 | **On demand** (default) | the title and summary in the wiki index of the prompt; the agent opens the page when it needs it |
 | **Hidden** | nothing: not in the prompt, not in the index, and not when the agent searches or opens pages |
 
-Pages marked **Always reads** share a token budget per project (12 000 by
-default). The editor shows how much of it is used and does not let you go over.
-A project owner changes the budget in **Project settings → Wiki**.
+Pages marked **Always reads** share one token budget for the whole instance
+(12 000 by default): the shared **Always reads** pages plus the project's own
+must fit it together, in every project. The editor shows how much of it is used
+and does not let you go over. An admin changes the budget in **Admin →
+Settings**, not per project.
 
 ### What goes into an agent's prompt
 
@@ -246,7 +248,7 @@ this order:
 summary is what makes an **On demand** page useful: it is all the agent sees of
 the page until it decides to open it.
 
-All of it together stays within the project's token budget, counted as about
+All of it together stays within the token budget, counted as about
 four characters per token. A page that does not fit is not sent; it goes to the
 top of the index marked as not loaded, so the agent can still open it. When the
 index does not fit either, the prompt says how many more pages there are. However
@@ -363,6 +365,6 @@ inside a run.
 | --- | --- | --- |
 | Read and search | viewer and up | everyone |
 | Create, edit, move, delete to trash, restore | member and up | member and up in any project |
-| Set **Always reads**, change the token budget, delete for good | owner | admin |
+| Set **Always reads**, delete for good | owner | admin |
 | Propose a change with a personal API key | viewer and up | viewer and up in the project |
 | Approve, publish or reject a proposal | member and up | member and up in any project |

@@ -144,7 +144,7 @@ func TestWikiAgent_PromptStaysWithinATinyTokenLimit(t *testing.T) {
 	f := newWikiAgentFixture(t, "wiki-agent-limit")
 	big := strings.Repeat("lorem ipsum ", 3000)
 	linked := f.mustCreate(t, model.CreateWikiPageReq{Space: "project", Title: uniqueWikiTitle("Huge"), Body: big})
-	require.Equal(t, http.StatusNoContent, Request(t, f.app, "PUT", fmt.Sprintf("/api/private/project/%d/wiki/settings", f.idProject), `{"alwaysTokenLimit":50}`, f.adminToken).StatusCode)
+	setWikiAlwaysTokenLimit(t, f.app, f.adminToken, 50)
 
 	iss := createIssue(t, f.app, f.adminToken, f.idProject, "wiki limit")
 	f.linkPage(t, iss.IdIssue, linked.IdPage)

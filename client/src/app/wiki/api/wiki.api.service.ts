@@ -159,12 +159,6 @@ export class WikiApi {
         });
     }
 
-    public updateSettings$(idProject: number, alwaysTokenLimit: number): Observable<void> {
-        return this.http.put<void>(`/api/private/project/${idProject}/wiki/settings`, {
-            alwaysTokenLimit
-        });
-    }
-
     public updateHome$(idProject: number, idPage: number | null): Observable<void> {
         return this.http.put<void>(`/api/private/project/${idProject}/wiki/home`, { idPage });
     }

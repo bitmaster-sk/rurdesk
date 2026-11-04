@@ -66,6 +66,10 @@ export class AdminSettingsComponent {
                 500,
                 [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
             ],
+            wikiAlwaysTokenLimit: [
+                12000,
+                [Validators.required, Validators.min(0), Validators.max(60000)]
+            ],
             plantUmlServerUrl: ['', [Validators.maxLength(500)]]
         },
         { updateOn: 'blur' }

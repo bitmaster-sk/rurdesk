@@ -12,6 +12,7 @@ type AppSettingsRes struct {
 	AttachmentMaxSizeMb      int    `json:"attachmentMaxSizeMb"`
 	AgentMaxTurnsPlan        int    `json:"agentMaxTurnsPlan"`
 	AgentMaxTurnsImplement   int    `json:"agentMaxTurnsImplement"`
+	WikiAlwaysTokenLimit     int    `json:"wikiAlwaysTokenLimit"`
 	PlantUmlServerUrl        string `json:"plantUmlServerUrl"`
 }
 
@@ -27,5 +28,6 @@ type UpdateAppSettingsReq struct {
 	AttachmentMaxSizeMb      *int    `json:"attachmentMaxSizeMb"`
 	AgentMaxTurnsPlan        *int    `json:"agentMaxTurnsPlan"`
 	AgentMaxTurnsImplement   *int    `json:"agentMaxTurnsImplement"`
+	WikiAlwaysTokenLimit     *int    `json:"wikiAlwaysTokenLimit"`
 	PlantUmlServerUrl        *string `json:"plantUmlServerUrl"`
 }

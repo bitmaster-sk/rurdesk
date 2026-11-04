@@ -34,6 +34,7 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		AttachmentMaxSizeMb:      sc.settings.AttachmentMaxSizeMb(),
 		AgentMaxTurnsPlan:        sc.settings.AgentMaxTurnsPlan(),
 		AgentMaxTurnsImplement:   sc.settings.AgentMaxTurnsImplement(),
+		WikiAlwaysTokenLimit:     sc.settings.WikiAlwaysTokenLimit(),
 		PlantUmlServerUrl:        sc.settings.PlantUmlServerUrl(),
 	})
 }
@@ -73,6 +74,9 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	}
 	if req.AgentMaxTurnsImplement != nil {
 		numericChanges[constants.SettingAgentMaxTurnsImplement] = *req.AgentMaxTurnsImplement
+	}
+	if req.WikiAlwaysTokenLimit != nil {
+		numericChanges[constants.SettingWikiAlwaysTokenLimit] = *req.WikiAlwaysTokenLimit
 	}
 	boolChanges := map[string]bool{}
 	if req.IsAgentThinkingPersisted != nil {

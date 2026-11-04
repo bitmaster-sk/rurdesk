@@ -67,14 +67,7 @@ func (s *WikiAgentService) BuildPromptContext(ctx context.Context, run *model.Ag
 	if err != nil {
 		return nil, nil, err
 	}
-	budgets, err := s.wiki.spaceRepo.LoadProjectBudgets(ctx, []int64{run.IdProject})
-	if err != nil {
-		return nil, nil, err
-	}
-	limit := 0
-	if len(budgets) > 0 {
-		limit = budgets[0].Limit
-	}
+	limit := s.wiki.appSettings.WikiAlwaysTokenLimit()
 
 	prompt, promptReads := buildWikiPrompt(wikiPromptInput{
 		Pages:           pages,

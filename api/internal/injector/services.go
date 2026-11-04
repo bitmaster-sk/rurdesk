@@ -1590,9 +1590,13 @@ func GetWikiService() *service.WikiService {
 		if err != nil {
 			return nil, err
 		}
+		settings, err := GetAppSettingsService()
+		if err != nil {
+			return nil, err
+		}
 		return service.NewWikiService(pool, GetWikiSpaceRepository(), GetWikiPageRepository(),
 			GetWikiPageVersionRepository(), GetWikiPageDraftRepository(), GetWikiPageLinkRepository(), GetWikiIssuePageRepository(),
-			GetWikiProposalRepository(), GetProjectRepository(), GetAclService(), GetNotifier(), cache, GetAttachmentLinkService()), nil
+			GetWikiProposalRepository(), GetProjectRepository(), settings, GetAclService(), GetNotifier(), cache, GetAttachmentLinkService()), nil
 	})
 	return instance.(*service.WikiService)
 }
