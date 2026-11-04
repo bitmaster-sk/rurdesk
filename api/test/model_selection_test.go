@@ -393,8 +393,8 @@ func (s *ModelSelectionSuite) TestRunStatsSplitTokensByModel() {
 	brainstorming, _ := s.dispatch(run, "brainstorming")
 	ctx := context.Background()
 	tokens := func(count int) *int { return &count }
-	s.Require().NoError(injector.GetAgentTaskRepository().UpdateStats(ctx, design.IdTask, tokens(100), nil, nil))
-	s.Require().NoError(injector.GetAgentTaskRepository().UpdateStats(ctx, brainstorming.IdTask, tokens(30), nil, nil))
+	s.Require().NoError(injector.GetAgentTaskRepository().UpdateStats(ctx, design.IdTask, tokens(100), nil, nil, nil, nil, nil, nil, nil, false))
+	s.Require().NoError(injector.GetAgentTaskRepository().UpdateStats(ctx, brainstorming.IdTask, tokens(30), nil, nil, nil, nil, nil, nil, nil, false))
 
 	res := Request(s.T(), s.App, "GET", fmt.Sprintf("/api/private/agent/run/%d/stats", run.IdRun), "", s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)

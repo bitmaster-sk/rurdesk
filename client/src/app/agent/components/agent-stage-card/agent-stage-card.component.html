@@ -85,6 +85,19 @@
                         ·
                         <b>{{ card.tokensUsed | number }}</b>
                         {{ pluralKey('AGENT.STAGE_CARD.TOKENS', card.tokensUsed) | translate }}
+                        @if (card.cost !== null) {
+                            ·
+                            <b
+                                [uiTooltip]="
+                                    card.costEstimated
+                                        ? ('AGENT.STATS.COST_ESTIMATED_HINT' | translate)
+                                        : ''
+                                "
+                            >
+                                {{ card.cost }}
+                            </b>
+                            {{ 'AGENT.STAGE_CARD.COST' | translate }}
+                        }
                     </div>
                     @if (card.agentName || card.approvedAt) {
                         <div class="ui-color-text-muted">

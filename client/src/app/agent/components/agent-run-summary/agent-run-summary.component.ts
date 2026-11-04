@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RunStats } from '../../model/agent-run.model';
+import { CostFormatter } from '../../entity/cost.formatter';
 import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
 
 @Component({
@@ -30,5 +31,27 @@ export class AgentRunSummaryComponent {
             .map(([model, tokens]) => ({ model, tokens }))
             .sort((left, right) => right.tokens - left.tokens);
         return rows.length > 1 ? rows : [];
+    });
+
+    protected readonly cost = computed(() => {
+        const stats = this.stats();
+        if (!stats) {
+            return null;
+        }
+        return CostFormatter.format(stats.totalCostUsd, stats.costEstimated);
+    });
+
+    protected readonly tokenBreakdown = computed(() => {
+        const stats = this.stats();
+        if (!stats) {
+            return null;
+        }
+        const parts = [
+            stats.totalInputTokens,
+            stats.totalOutputTokens,
+            stats.totalCacheReadTokens,
+            stats.totalCacheWriteTokens
+        ];
+        return parts.some(value => value > 0) ? stats : null;
     });
 }

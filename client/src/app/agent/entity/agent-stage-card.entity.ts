@@ -25,6 +25,8 @@ export interface AgentStageCardView {
     tokensUsed: number;
     toolCallsCount: number;
     durationMs: number;
+    cost: string | null;
+    costEstimated: boolean;
     model: string | null;
     modelFallbackFrom: string | null;
     maxTurns: number | null;

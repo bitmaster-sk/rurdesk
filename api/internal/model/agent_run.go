@@ -57,18 +57,24 @@ type AgentStageProgress struct {
 	ApprovedAt  *time.Time `json:"approvedAt,omitempty"`  // user approval waypoint
 	// ErrorReason is a stable code (e.g. provider_credit_exhausted) translated via
 	// i18n; ErrorDetail is the raw provider/agent message. Set only on failure.
-	ErrorReason       *string `json:"errorReason,omitempty"`
-	ErrorDetail       *string `json:"errorDetail,omitempty"`
-	IdResultMessage   *int64  `json:"idResultMessage,omitempty"`
-	ThinkingTail      *string `json:"thinkingTail,omitempty"`
-	HasThinking       bool    `json:"hasThinking,omitempty"`
-	Model             *string `json:"model,omitempty"`
-	MaxTurns          *int    `json:"maxTurns,omitempty"`
-	ModelFallbackFrom *string `json:"modelFallbackFrom,omitempty"`
-	Attempts          int     `json:"attempts"`
-	TokensUsed        int     `json:"tokensUsed"`
-	ToolCallsCount    int     `json:"toolCallsCount"`
-	DurationMs        int     `json:"durationMs"`
+	ErrorReason       *string  `json:"errorReason,omitempty"`
+	ErrorDetail       *string  `json:"errorDetail,omitempty"`
+	IdResultMessage   *int64   `json:"idResultMessage,omitempty"`
+	ThinkingTail      *string  `json:"thinkingTail,omitempty"`
+	HasThinking       bool     `json:"hasThinking,omitempty"`
+	Model             *string  `json:"model,omitempty"`
+	MaxTurns          *int     `json:"maxTurns,omitempty"`
+	ModelFallbackFrom *string  `json:"modelFallbackFrom,omitempty"`
+	Attempts          int      `json:"attempts"`
+	TokensUsed        int      `json:"tokensUsed"`
+	ToolCallsCount    int      `json:"toolCallsCount"`
+	DurationMs        int      `json:"durationMs"`
+	InputTokens       int      `json:"inputTokens"`
+	OutputTokens      int      `json:"outputTokens"`
+	CacheReadTokens   int      `json:"cacheReadTokens"`
+	CacheWriteTokens  int      `json:"cacheWriteTokens"`
+	CostUsd           *float64 `json:"costUsd"`
+	CostEstimated     bool     `json:"costEstimated"`
 }
 
 type AgentRunEvent struct {
@@ -90,26 +96,32 @@ type ModelFallbackPayload struct {
 }
 
 type AgentTask struct {
-	IdTask          int64      `json:"idTask"          db:"id_task"`
-	IdRun           int64      `json:"idRun"           db:"id_run"`
-	IdUserAgent     *int64     `json:"idUserAgent"       db:"id_user_agent"`
-	Stage           string     `json:"stage"           db:"stage"`
-	AttemptNo       int        `json:"attemptNo"       db:"attempt_no"`
-	Status          string     `json:"status"          db:"status"`
-	IdResultMessage *int64     `json:"idResultMessage" db:"id_result_message"`
-	ErrorReason     *string    `json:"errorReason"     db:"error_reason"`
-	ErrorDetail     *string    `json:"errorDetail"     db:"error_detail"`
-	TokensUsed      *int       `json:"tokensUsed"      db:"tokens_used"`
-	DurationMs      *int       `json:"durationMs"      db:"duration_ms"`
-	ToolCallsCount  *int       `json:"toolCallsCount"  db:"tool_calls_count"`
-	StartedAt       *time.Time `json:"startedAt"       db:"started_at"`
-	FinishedAt      *time.Time `json:"finishedAt"      db:"finished_at"`
-	LastHeartbeatAt *time.Time `json:"lastHeartbeatAt" db:"last_heartbeat_at"`
-	CreatedAt       time.Time  `json:"createdAt"       db:"created_at"`
-	ThinkingTail    *string    `json:"thinkingTail"  db:"thinking_tail"`
-	HasThinking     bool       `json:"hasThinking"     db:"-"`
-	Model           *string    `json:"model"           db:"model"`
-	MaxTurns        *int       `json:"maxTurns"        db:"max_turns"`
+	IdTask           int64      `json:"idTask"          db:"id_task"`
+	IdRun            int64      `json:"idRun"           db:"id_run"`
+	IdUserAgent      *int64     `json:"idUserAgent"       db:"id_user_agent"`
+	Stage            string     `json:"stage"           db:"stage"`
+	AttemptNo        int        `json:"attemptNo"       db:"attempt_no"`
+	Status           string     `json:"status"          db:"status"`
+	IdResultMessage  *int64     `json:"idResultMessage" db:"id_result_message"`
+	ErrorReason      *string    `json:"errorReason"     db:"error_reason"`
+	ErrorDetail      *string    `json:"errorDetail"     db:"error_detail"`
+	TokensUsed       *int       `json:"tokensUsed"      db:"tokens_used"`
+	DurationMs       *int       `json:"durationMs"      db:"duration_ms"`
+	ToolCallsCount   *int       `json:"toolCallsCount"  db:"tool_calls_count"`
+	InputTokens      *int       `json:"inputTokens"     db:"input_tokens"`
+	OutputTokens     *int       `json:"outputTokens"    db:"output_tokens"`
+	CacheReadTokens  *int       `json:"cacheReadTokens" db:"cache_read_tokens"`
+	CacheWriteTokens *int       `json:"cacheWriteTokens" db:"cache_write_tokens"`
+	CostUsd          *float64   `json:"costUsd"         db:"cost_usd"`
+	CostEstimated    bool       `json:"costEstimated"   db:"cost_estimated"`
+	StartedAt        *time.Time `json:"startedAt"       db:"started_at"`
+	FinishedAt       *time.Time `json:"finishedAt"      db:"finished_at"`
+	LastHeartbeatAt  *time.Time `json:"lastHeartbeatAt" db:"last_heartbeat_at"`
+	CreatedAt        time.Time  `json:"createdAt"       db:"created_at"`
+	ThinkingTail     *string    `json:"thinkingTail"  db:"thinking_tail"`
+	HasThinking      bool       `json:"hasThinking"     db:"-"`
+	Model            *string    `json:"model"           db:"model"`
+	MaxTurns         *int       `json:"maxTurns"        db:"max_turns"`
 }
 
 type AgentStagePlan struct {
@@ -150,12 +162,18 @@ type CompleteStageRes struct {
 }
 
 type RunStatsRes struct {
-	TotalTokensUsed     int            `json:"totalTokensUsed"`
-	TotalDurationMs     int            `json:"totalDurationMs"`
-	TotalToolCallsCount int            `json:"totalToolCallsCount"`
-	AttemptsPerStage    map[string]int `json:"attemptsPerStage"`
-	FailedAttempts      int            `json:"failedAttempts"`
-	TokensByModel       map[string]int `json:"tokensByModel"`
+	TotalTokensUsed       int            `json:"totalTokensUsed"`
+	TotalDurationMs       int            `json:"totalDurationMs"`
+	TotalToolCallsCount   int            `json:"totalToolCallsCount"`
+	TotalInputTokens      int            `json:"totalInputTokens"`
+	TotalOutputTokens     int            `json:"totalOutputTokens"`
+	TotalCacheReadTokens  int            `json:"totalCacheReadTokens"`
+	TotalCacheWriteTokens int            `json:"totalCacheWriteTokens"`
+	TotalCostUsd          *float64       `json:"totalCostUsd"`
+	CostEstimated         bool           `json:"costEstimated"`
+	AttemptsPerStage      map[string]int `json:"attemptsPerStage"`
+	FailedAttempts        int            `json:"failedAttempts"`
+	TokensByModel         map[string]int `json:"tokensByModel"`
 }
 
 // AgentStatsNotice is the SubjectAgentStats broadcast payload: pushes

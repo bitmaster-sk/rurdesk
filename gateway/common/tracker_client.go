@@ -90,11 +90,28 @@ func (tc *TrackerClient) ReportRecovered(ctx context.Context) error {
 // these via complete_stage, so without this call they stay zero.
 func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stats RunStats) error {
 	type body struct {
-		TokensUsed     int `json:"tokensUsed"`
-		DurationMs     int `json:"durationMs"`
-		ToolCallsCount int `json:"toolCallsCount"`
+		TokensUsed       int      `json:"tokensUsed"`
+		DurationMs       int      `json:"durationMs"`
+		ToolCallsCount   int      `json:"toolCallsCount"`
+		InputTokens      int      `json:"inputTokens"`
+		OutputTokens     int      `json:"outputTokens"`
+		CacheReadTokens  int      `json:"cacheReadTokens"`
+		CacheWriteTokens int      `json:"cacheWriteTokens"`
+		CostUsd          *float64 `json:"costUsd"`
+		CostEstimated    bool     `json:"costEstimated"`
 	}
-	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/stats", idTask), body(stats))
+	statsBody := body{ //nolint:staticcheck
+		TokensUsed:       stats.TokensUsed,
+		DurationMs:       stats.DurationMs,
+		ToolCallsCount:   stats.ToolCallsCount,
+		InputTokens:      stats.InputTokens,
+		OutputTokens:     stats.OutputTokens,
+		CacheReadTokens:  stats.CacheReadTokens,
+		CacheWriteTokens: stats.CacheWriteTokens,
+		CostUsd:          stats.CostUsd,
+		CostEstimated:    stats.CostEstimated,
+	}
+	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/stats", idTask), statsBody)
 }
 
 // SendThinking posts one batch of the task's thinking events to the tracker.

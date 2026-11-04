@@ -176,12 +176,21 @@ A run advances through **phases**:
 Each **stage** carries its own status: `pending`, `active`, `done`,
 `awaiting_approval`, `failed`, or `skipped`. The run card starts with a block
 for the whole run: its model, workflow and start time, and its total tokens,
-duration and tool calls. Below it, every stage has its own card. The header of
-the card shows the stage's status, when it finished and how long it took. Open
-a stage that ran to see its attempts, tool calls and tokens, the model, skills
-and turn limit it ran with, and which agent executed it after a hand-off. The
+duration, tool calls and cost in USD, plus a breakdown of the token use into
+input, output, cache read and cache write. Below it, every stage has its own
+card. The header of the card shows the stage's status, when it finished and
+how long it took. Open a stage that ran to see its attempts, tool calls,
+tokens and cost, the model, skills and turn limit it ran with, and which
+agent executed it after a hand-off. The
 stage waiting for your review and the next stage to start are open from the
 start. A skipped stage is struck through and has nothing to open.
+
+The cost is the price computed from the provider's rate card when the agent
+runs on an API key (shown as `$0.42`). Claude Code always runs on a
+subscription, so its reported `total_cost_usd` is only an estimate — it is
+shown with an `≈` prefix (`≈ $0.42`) and a tooltip explains it is not what you
+actually pay. When the agent runs on a local model (for example Ollama), no
+price is reported and the cost shows as `—` instead of `$0.00`.
 
 ![Agent run card — run block, stage cards and phase badge](../../site/assets/img/run-card.png)
 

@@ -220,7 +220,7 @@ func (o *Orchestrator) runStage(task Task) {
 	// The agent already posted complete_stage via its MCP tool but rarely
 	// includes tokens/tool-calls/duration — backfill from what the adapter
 	// measured so the stats panel isn't all zeros.
-	if stats.TokensUsed > 0 || stats.DurationMs > 0 || stats.ToolCallsCount > 0 {
+	if stats.TokensUsed > 0 || stats.DurationMs > 0 || stats.ToolCallsCount > 0 || stats.CostUsd != nil {
 		if err := o.trackerClient.UpdateTaskStats(context.Background(), task.IdTask, stats); err != nil {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}

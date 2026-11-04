@@ -11,10 +11,13 @@ type StreamLine struct {
 		Role    string         `json:"role"`
 		Content []ContentBlock `json:"content"`
 	} `json:"message"`
-	Error        string `json:"error"`
-	TotalTokens  int    `json:"total_tokens"`
-	InputTokens  int    `json:"input_tokens"`
-	OutputTokens int    `json:"output_tokens"`
+	Error                 string   `json:"error"`
+	TotalTokens           int      `json:"total_tokens"`
+	InputTokens           int      `json:"input_tokens"`
+	OutputTokens          int      `json:"output_tokens"`
+	CacheReadInputTokens  int      `json:"cache_read_input_tokens"`
+	CacheWriteInputTokens int      `json:"cache_write_input_tokens"`
+	CostUsd               *float64 `json:"cost_usd"`
 }
 
 type ContentBlock struct {

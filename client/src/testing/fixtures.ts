@@ -112,6 +112,12 @@ export abstract class Fixtures {
             tokensUsed: 0,
             toolCallsCount: 0,
             durationMs: 0,
+            inputTokens: 0,
+            outputTokens: 0,
+            cacheReadTokens: 0,
+            cacheWriteTokens: 0,
+            costUsd: null,
+            costEstimated: false,
             ...overrides
         };
     }

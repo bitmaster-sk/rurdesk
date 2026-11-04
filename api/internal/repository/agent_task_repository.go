@@ -25,6 +25,8 @@ const agentTaskColumns = `
 	id_task, id_run, id_user_agent, stage, attempt_no, status, id_result_message,
 	error_reason, error_detail,
 	tokens_used, duration_ms, tool_calls_count,
+	input_tokens, output_tokens, cache_read_tokens, cache_write_tokens,
+	cost_usd, cost_estimated,
 	started_at, finished_at, last_heartbeat_at, created_at,
 	thinking_tail, thinking_blob IS NOT NULL,
 	model, max_turns`
@@ -35,6 +37,8 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 		&task.IdTask, &task.IdRun, &task.IdUserAgent, &task.Stage, &task.AttemptNo, &task.Status, &task.IdResultMessage,
 		&task.ErrorReason, &task.ErrorDetail,
 		&task.TokensUsed, &task.DurationMs, &task.ToolCallsCount,
+		&task.InputTokens, &task.OutputTokens, &task.CacheReadTokens, &task.CacheWriteTokens,
+		&task.CostUsd, &task.CostEstimated,
 		&task.StartedAt, &task.FinishedAt, &task.LastHeartbeatAt, &task.CreatedAt,
 		&task.ThinkingTail, &task.HasThinking,
 		&task.Model, &task.MaxTurns,
@@ -214,15 +218,25 @@ func (r *AgentTaskRepository) UpdateStats(
 	ctx context.Context,
 	idTask int64,
 	tokensUsed, durationMs, toolCallsCount *int,
+	inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens *int,
+	costUsd *float64, costEstimated bool,
 ) error {
 	db := extctx.GetDb(ctx, r.pool)
 	_, err := db.Exec(ctx, `
 		UPDATE agent.task
-		SET tokens_used      = COALESCE($2, tokens_used),
-		    duration_ms      = COALESCE($3, duration_ms),
-		    tool_calls_count = COALESCE($4, tool_calls_count)
+		SET tokens_used        = COALESCE($2, tokens_used),
+		    duration_ms        = COALESCE($3, duration_ms),
+		    tool_calls_count   = COALESCE($4, tool_calls_count),
+		    input_tokens       = COALESCE($5, input_tokens),
+		    output_tokens      = COALESCE($6, output_tokens),
+		    cache_read_tokens  = COALESCE($7, cache_read_tokens),
+		    cache_write_tokens = COALESCE($8, cache_write_tokens),
+		    cost_usd           = COALESCE($9, cost_usd),
+		    cost_estimated     = $10
 		WHERE id_task = $1`,
 		idTask, tokensUsed, durationMs, toolCallsCount,
+		inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens,
+		costUsd, costEstimated,
 	)
 	if err != nil {
 		return fmt.Errorf("updating task stats: %w", err)
@@ -380,7 +394,13 @@ func (r *AgentTaskRepository) StatsForRun(ctx context.Context, idRun int64) (*mo
 		SELECT stage, status, COUNT(*),
 		       COALESCE(SUM(tokens_used), 0),
 		       COALESCE(SUM(duration_ms), 0),
-		       COALESCE(SUM(tool_calls_count), 0)
+		       COALESCE(SUM(tool_calls_count), 0),
+		       COALESCE(SUM(input_tokens), 0),
+		       COALESCE(SUM(output_tokens), 0),
+		       COALESCE(SUM(cache_read_tokens), 0),
+		       COALESCE(SUM(cache_write_tokens), 0),
+		       SUM(cost_usd),
+		       BOOL_OR(cost_estimated)
 		FROM agent.task
 		WHERE id_run = $1
 		GROUP BY stage, status`,
@@ -395,12 +415,29 @@ func (r *AgentTaskRepository) StatsForRun(ctx context.Context, idRun int64) (*mo
 	for rows.Next() {
 		var stage, status string
 		var count, tokens, duration, toolCalls int
-		if scanErr := rows.Scan(&stage, &status, &count, &tokens, &duration, &toolCalls); scanErr != nil {
+		var inputTokens, outputTokens, cacheRead, cacheWrite int
+		var costUsd *float64
+		var costEstimated bool
+		if scanErr := rows.Scan(&stage, &status, &count, &tokens, &duration, &toolCalls,
+			&inputTokens, &outputTokens, &cacheRead, &cacheWrite, &costUsd, &costEstimated); scanErr != nil {
 			return nil, fmt.Errorf("scanning run stats: %w", scanErr)
 		}
 		stats.TotalTokensUsed += tokens
 		stats.TotalDurationMs += duration
 		stats.TotalToolCallsCount += toolCalls
+		stats.TotalInputTokens += inputTokens
+		stats.TotalOutputTokens += outputTokens
+		stats.TotalCacheReadTokens += cacheRead
+		stats.TotalCacheWriteTokens += cacheWrite
+		if costUsd != nil {
+			if stats.TotalCostUsd == nil {
+				stats.TotalCostUsd = new(float64)
+			}
+			*stats.TotalCostUsd += *costUsd
+		}
+		if costEstimated {
+			stats.CostEstimated = true
+		}
 		stats.AttemptsPerStage[stage] += count
 		if status == constants.TaskStatusFailed {
 			stats.FailedAttempts += count
