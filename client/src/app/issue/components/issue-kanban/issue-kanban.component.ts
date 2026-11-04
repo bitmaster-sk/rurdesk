@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
     AfterViewInit,
     afterNextRender,
@@ -35,11 +36,16 @@ import { IssueListStateStore } from '../../store/issue-list-state.store';
 import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { KanbanColumn } from './entity/kanban-column.entity';
 import { KanbanTile } from './entity/kanban-tile.entity';
+import { KanbanSelectionClick } from './entity/kanban-selection-click.entity';
+import { IssueSelectionStore } from '../../store/issue-selection.store';
+import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
+import { HotkeyService } from 'src/app/core/command/hotkey.service';
 import { SwimlaneCell } from './entity/swimlane-cell.entity';
 import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
 import { SavedViewStore } from 'src/app/project/store/saved-view.store';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { Issue } from '../../model/issue.model';
+import { KanbanCursor, KanbanGrid } from '../../util/kanban-cursor';
 import { SprintStore } from '../../store/sprint.store';
 import { SprintAnalyticsStore } from '../../store/sprint-analytics.store';
 import { SprintApi } from '../../api/sprint.api.service';
@@ -56,7 +62,7 @@ import { IssueQuickActionsComponent } from '../issue-quick-actions/issue-quick-a
     selector: 'app-issue-kanban',
     templateUrl: './issue-kanban.component.html',
     styleUrls: ['./issue-kanban.component.scss'],
-    providers: [IssueKanbanService, SprintAnalyticsStore],
+    providers: [IssueKanbanService, SprintAnalyticsStore, IssueSelectionStore],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -86,6 +92,10 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly noticeService = inject(NoticeService);
 
     private readonly destroyRef = inject(DestroyRef);
+    private readonly hotkeys = inject(HotkeyService);
+    private readonly limitToast = inject(SelectionLimitToastService);
+    protected readonly selection = inject(IssueSelectionStore);
+    private readonly document = inject(DOCUMENT);
 
     private readonly listState = inject(IssueListStateStore);
 
@@ -114,6 +124,10 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         viewChild.required<IssueQuickActionsComponent>('quickActions');
 
     protected readonly columns$ = this.issueKanbanService.columns$.pipe(
+        tap(columns => {
+            this.grid = [columns.map(column => column.tiles)];
+            this.selection.refresh(columns.flatMap(column => column.tiles));
+        }),
         tap(() => this.restoreScrollAfterRender())
     );
 
@@ -131,6 +145,10 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.issueKanbanService.states$
     ]).pipe(
         map(([rows, states]) => ({ rows, states })),
+        tap(({ rows }) => {
+            this.grid = rows.map(row => row.cells.map(cell => cell.tiles));
+            this.selection.refresh(rows.flatMap(row => row.cells.flatMap(cell => cell.tiles)));
+        }),
         tap(() => this.restoreScrollAfterRender())
     );
 
@@ -224,7 +242,13 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     protected readonly dialogOpen = signal(false);
     protected readonly editingSprint = signal<Sprint | null>(null);
 
-    private readonly idProject = signal(0);
+    protected readonly idProject = signal(0);
+
+    protected readonly bulkEditIssues = signal<readonly Issue[] | null>(null);
+
+    protected readonly highlightedId = signal<number | null>(null);
+
+    private grid: KanbanGrid<KanbanTile> = [];
 
     protected readonly isSplitDialogOpen = signal(false);
 
@@ -284,11 +308,28 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         this.noticeService.issue$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(notice => this.onRemoteIssueNotice(notice));
+
+        this.issueFilterStore.actualFilter$
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(filter => this.selection.clearOnScopeChange(filter));
+        this.hotkeys.registerListHandler({
+            move: delta =>
+                this.highlight(KanbanCursor.vertical(this.grid, this.highlightedId(), delta)),
+            moveAcross: delta =>
+                this.highlight(KanbanCursor.across(this.grid, this.highlightedId(), delta))
+        });
+        this.hotkeys.registerSelectionHandler({
+            extend: delta => this.extendSelection(delta),
+            toggle: () => this.toggleHighlighted(),
+            edit: () => this.openBulkEdit(),
+            clear: () => this.clearSelection()
+        });
     }
 
     private onRemoteIssueNotice(notice: Notice<Issue>): void {
         const issue = notice.payload;
         if (issue?.idProject !== this.idProject()) return;
+        if (notice.action === NoticeAction.Delete) this.forgetDeleted(issue.idIssuePublic);
         this.analytics.reloadStatsAfterNotice();
         if (this.showCharts() && this.selectedIdSprint() !== null) {
             this.analytics.reloadBurndownAfterNotice();
@@ -385,6 +426,8 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
     public ngOnDestroy(): void {
         this.listState.unregisterPosition(this.readPosition);
         this.issueToolbarService.clear();
+        this.hotkeys.registerListHandler(null);
+        this.hotkeys.registerSelectionHandler(null);
         // left behind, it would land in a view saved from the table or the calendar
         this.savedViewStore.setLiveKanbanLayout(null);
     }
@@ -409,6 +452,69 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     protected onContextMenuRequested({ event, issue }: { event: MouseEvent; issue: Issue }): void {
         this.quickActionsRef().show(event, issue);
+    }
+
+    protected onSelectionClicked({ click, siblings }: KanbanSelectionClick): void {
+        this.highlightedId.set(click.issue.idIssuePublic);
+        this.limitToast.notify(
+            click.mode === 'range'
+                ? this.selection.selectRange(click.issue, siblings)
+                : this.selection.toggle(click.issue)
+        );
+    }
+
+    protected openBulkEdit(): boolean {
+        if (this.selection.count() === 0 || this.idProject() === 0) return false;
+        this.bulkEditIssues.set(this.selection.selected());
+        return true;
+    }
+
+    protected onBulkEditClosed(): void {
+        this.bulkEditIssues.set(null);
+    }
+
+    protected onBulkEditApplied(): void {
+        this.bulkEditIssues.set(null);
+        this.selection.clear();
+        this.issueFilterStore.refresh();
+    }
+
+    private forgetDeleted(idIssuePublic: number): void {
+        this.selection.remove(idIssuePublic);
+        this.bulkEditIssues.update(issues => {
+            const left = issues?.filter(issue => issue.idIssuePublic !== idIssuePublic) ?? [];
+            return left.length > 0 ? left : null;
+        });
+    }
+
+    private highlight(tile: KanbanTile | null): void {
+        if (!tile) return;
+        this.highlightedId.set(tile.idIssuePublic);
+        this.document.querySelector<HTMLElement>(`[data-tile-id="${tile.idIssue}"]`)?.focus();
+    }
+
+    private toggleHighlighted(): void {
+        const tile = KanbanCursor.laneOf(this.grid, this.highlightedId()).find(
+            candidate => candidate.idIssuePublic === this.highlightedId()
+        );
+        if (tile) this.limitToast.notify(this.selection.toggle(tile));
+    }
+
+    private extendSelection(delta: 1 | -1): void {
+        const from = this.highlightedId();
+        const lane = KanbanCursor.laneOf(this.grid, from);
+        const target = KanbanCursor.vertical(this.grid, from, delta, true);
+        if (!target) return;
+        this.highlight(target);
+        this.limitToast.notify(
+            this.selection.extendTo(target, lane.length ? lane : [target], from)
+        );
+    }
+
+    private clearSelection(): boolean {
+        if (this.selection.count() === 0) return false;
+        this.selection.clear();
+        return true;
     }
 
     protected onSplitRequested(issue: Issue): void {
@@ -598,6 +704,7 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
         evt.previousContainer.data.tiles.splice(evt.previousIndex, 1);
         evt.container.data.tiles.unshift(updated);
+        this.selection.refresh([updated]);
         this.shiftTotals(evt);
         this.refreshBurndown();
         this.issueApi

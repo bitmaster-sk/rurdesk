@@ -57,4 +57,10 @@ export type HotkeyAction =
     | { type: 'close' }
     | { type: 'help' }
     | { type: 'list-move'; delta: 1 | -1 }
+    | { type: 'list-move-across'; delta: 1 | -1 }
+    | { type: 'list-extend'; delta: 1 | -1 }
+    | { type: 'list-toggle' }
+    | { type: 'list-toggle-all' }
+    | { type: 'list-edit' }
+    | { type: 'list-clear' }
     | { type: 'none' };

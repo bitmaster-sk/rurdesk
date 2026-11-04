@@ -1,5 +1,6 @@
 <!-- Toolbar portal — rendered in the page header via IssueToolbarService -->
 <ng-template #toolbar>
+    <app-bulk-edit-button (editRequested)="openBulkEdit()" />
     <ui-toggle-button
         [ngModel]="showFilter$ | async"
         (ngModelChange)="onToggleFilter()"
@@ -130,9 +131,11 @@
                 @if (columns$ | async; as columns) {
                     <app-issue-kanban-columns
                         [columns]="columns"
+                        [highlightedId]="highlightedId()"
                         [connectedTo]="sprintTabListIds()"
                         (stateChange)="onStateChange($event)"
                         (contextMenuRequested)="onContextMenuRequested($event)"
+                        (selectionClicked)="onSelectionClicked($event)"
                         (loadMore)="onColumnLoadMore($event)"
                     ></app-issue-kanban-columns>
                 }
@@ -140,10 +143,12 @@
                 @if (swimlaneData$ | async; as data) {
                     <app-issue-kanban-swimlane
                         [rows]="data.rows"
+                        [highlightedId]="highlightedId()"
                         [states]="data.states"
                         [connectedTo]="sprintTabListIds()"
                         (cardDrop)="onSwimlaneCardDrop($event)"
                         (contextMenuRequested)="onContextMenuRequested($event)"
+                        (selectionClicked)="onSelectionClicked($event)"
                         (cellLoadMore)="onCellLoadMore($event)"
                     ></app-issue-kanban-swimlane>
                 }
@@ -165,6 +170,15 @@
         (accepted)="onSplitAccepted()"
         (cancelled)="onSplitCancelled()"
     ></app-split-dialog>
+}
+
+@if (bulkEditIssues(); as issues) {
+    <app-bulk-edit-dialog
+        [idProject]="idProject()"
+        [issues]="issues"
+        (closed)="onBulkEditClosed()"
+        (applied)="onBulkEditApplied()"
+    />
 }
 
 <ui-menu #sortMenu [model]="sortMenuItems()"></ui-menu>

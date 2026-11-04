@@ -110,6 +110,35 @@
 
                     <!-- Actions footer -->
                     <div class="qap--actions">
+                        <button
+                            class="qap--action"
+                            (click)="onOpen()"
+                            [title]="'ISSUE.QUICK_ACTIONS.OPEN_IN_NEW_TAB' | translate"
+                        >
+                            <tabler-icon icon="external-link" [size]="14" />
+                            <span>{{ 'ISSUE.QUICK_ACTIONS.OPEN' | translate }}</span>
+                        </button>
+                        @if (canSelect) {
+                            <button
+                                class="qap--action"
+                                data-testid="quick-action-select"
+                                (click)="onToggleSelect()"
+                                [title]="'ISSUE.QUICK_ACTIONS.SELECT_HINT' | translate"
+                            >
+                                <tabler-icon
+                                    [icon]="isSelected() ? 'square-minus' : 'square-check'"
+                                    [size]="14"
+                                />
+                                <span>
+                                    {{
+                                        (isSelected()
+                                            ? 'ISSUE.QUICK_ACTIONS.DESELECT'
+                                            : 'ISSUE.QUICK_ACTIONS.SELECT'
+                                        ) | translate
+                                    }}
+                                </span>
+                            </button>
+                        }
                         @if (showTime()) {
                             <app-tracker-start-button
                                 [isCompact]="true"
@@ -125,14 +154,6 @@
                         >
                             <tabler-icon icon="git-branch" [size]="14" />
                             <span>{{ 'SPLIT.SINGULAR' | translate }}</span>
-                        </button>
-                        <button
-                            class="qap--action"
-                            (click)="onOpen()"
-                            [title]="'ISSUE.QUICK_ACTIONS.OPEN_IN_NEW_TAB' | translate"
-                        >
-                            <tabler-icon icon="external-link" [size]="14" />
-                            <span>{{ 'ISSUE.QUICK_ACTIONS.OPEN' | translate }}</span>
                         </button>
                         <button
                             class="qap--action"

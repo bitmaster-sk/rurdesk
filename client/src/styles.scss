@@ -521,6 +521,7 @@ tabler-icon {
     --ui-color-primary-strong: var(--ui-brand-700);
     --ui-color-primary-strongest: var(--ui-brand-800);
     --ui-color-primary-active: var(--ui-brand-700);
+    --ui-color-selected-bg: color-mix(in srgb, var(--ui-color-primary) 7%, transparent);
 
     // Content / highlight backgrounds (cards, hover rows, selected/highlight).
     --ui-color-content: var(--ui-surface-0);

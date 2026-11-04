@@ -140,9 +140,12 @@
     flex-shrink: 0;
 }
 
+tr.row--selected {
+    background: var(--ui-color-selected-bg);
+}
+
 // Keyboard row highlight (list j/k/↑↓ navigation via the command palette's HotkeyService).
 tr.row--active {
-    background: color-mix(in srgb, var(--ui-color-primary) 12%, transparent);
     box-shadow: inset 3px 0 0 0 var(--ui-color-primary);
     outline: none;
 }

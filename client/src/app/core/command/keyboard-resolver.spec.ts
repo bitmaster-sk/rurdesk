@@ -107,5 +107,45 @@ describe('KeyboardResolver.resolveHotkey', () => {
             type: 'list-move',
             delta: -1
         });
+        expect(KeyboardResolver.resolveHotkey(key({ key: 'ArrowLeft' }), ctx(false))).toEqual({
+            type: 'list-move-across',
+            delta: -1
+        });
+        expect(KeyboardResolver.resolveHotkey(key({ key: 'l' }), ctx(false))).toEqual({
+            type: 'list-move-across',
+            delta: 1
+        });
+        expect(
+            KeyboardResolver.resolveHotkey(key({ key: 'ArrowLeft', metaKey: true }), ctx(false))
+        ).toEqual({ type: 'none' });
+    });
+    it('shift+arrow and J/K extend the selection, x/X/e/esc drive it', () => {
+        const resolve = (init: Partial<KeyboardEvent> & { key: string }) =>
+            KeyboardResolver.resolveHotkey(key(init), ctx(false));
+        expect(resolve({ key: 'ArrowDown', shiftKey: true })).toEqual({
+            type: 'list-extend',
+            delta: 1
+        });
+        expect(resolve({ key: 'K', shiftKey: true })).toEqual({ type: 'list-extend', delta: -1 });
+        expect(resolve({ key: 'x' })).toEqual({ type: 'list-toggle' });
+        expect(resolve({ key: 'X', shiftKey: true })).toEqual({ type: 'list-toggle-all' });
+        expect(resolve({ key: 'e' })).toEqual({ type: 'list-edit' });
+        expect(resolve({ key: 'Escape' })).toEqual({ type: 'list-clear' });
+    });
+    it('never treats Cmd/Ctrl shortcuts such as cut as selection keys', () => {
+        expect(
+            KeyboardResolver.resolveHotkey(key({ key: 'x', metaKey: true }), ctx(false))
+        ).toEqual({ type: 'none' });
+        expect(
+            KeyboardResolver.resolveHotkey(key({ key: 'e', ctrlKey: true }), ctx(false))
+        ).toEqual({ type: 'none' });
+    });
+    it('ignores selection keys while typing', () => {
+        expect(
+            KeyboardResolver.resolveHotkey(
+                key({ key: 'x', target: target({ tagName: 'INPUT' }) }),
+                ctx(false)
+            )
+        ).toEqual({ type: 'none' });
     });
 });

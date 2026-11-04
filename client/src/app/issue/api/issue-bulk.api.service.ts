@@ -2,14 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Issue } from '../model/issue.model';
-import { BulkEditIssueEntry, BulkEditIssues } from '../model/bulk-edit-issues.model';
+import { BulkEditIssueEntryReq, BulkEditIssuesReq } from '../model/bulk-edit-issues.model';
 
 @Injectable({ providedIn: 'root' })
 export class IssueBulkApi {
     private readonly http = inject(HttpClient);
 
-    public update$(idProject: number, entries: BulkEditIssueEntry[]): Observable<Issue[]> {
-        const body: BulkEditIssues = { issues: entries };
+    public update$(idProject: number, entries: BulkEditIssueEntryReq[]): Observable<Issue[]> {
+        const body: BulkEditIssuesReq = { issues: entries };
         return this.http.patch<Issue[]>(`/api/private/project/${idProject}/issue/batch`, body).pipe(
             map(issues =>
                 issues.map(issue => ({

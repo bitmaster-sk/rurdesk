@@ -46,4 +46,68 @@ describe('HotkeyService', () => {
         expect(open).not.toHaveBeenCalled();
         i.remove();
     });
+    it('routes selection keys to the registered selection handler', () => {
+        const handler = {
+            toggle: vi.fn(),
+            edit: vi.fn(() => true),
+            clear: vi.fn(() => false)
+        };
+        TestBed.inject(HotkeyService).registerSelectionHandler(handler);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+        const edit = new KeyboardEvent('keydown', { key: 'e', cancelable: true });
+        document.dispatchEvent(edit);
+        const esc = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+        document.dispatchEvent(esc);
+
+        expect(handler.toggle).toHaveBeenCalledTimes(1);
+        expect(handler.edit).toHaveBeenCalledTimes(1);
+        expect(edit.defaultPrevented).toBe(true);
+        expect(handler.clear).toHaveBeenCalledTimes(1);
+        expect(esc.defaultPrevented).toBe(false);
+        TestBed.inject(HotkeyService).registerSelectionHandler(null);
+    });
+
+    it('ignores list and selection keys while a dialog or popover is open', () => {
+        const service = TestBed.inject(HotkeyService);
+        const move = vi.fn();
+        const handler = { toggle: vi.fn(), edit: vi.fn(() => true), clear: vi.fn(() => true) };
+        service.registerListHandler({ move });
+        service.registerSelectionHandler(handler);
+        const container = document.createElement('div');
+        container.className = 'cdk-overlay-container';
+        container.innerHTML = '<div role="dialog" aria-modal="true"></div>';
+        document.body.appendChild(container);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+        expect(move).not.toHaveBeenCalled();
+        expect(handler.toggle).not.toHaveBeenCalled();
+        expect(handler.clear).not.toHaveBeenCalled();
+
+        container.remove();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'x' }));
+        expect(handler.toggle).toHaveBeenCalled();
+        service.registerListHandler(null);
+        service.registerSelectionHandler(null);
+    });
+
+    it('routes left/right to moveAcross only when the list supports it', () => {
+        const service = TestBed.inject(HotkeyService);
+        const move = vi.fn();
+        const moveAcross = vi.fn();
+        service.registerListHandler({ move });
+        const plain = new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true });
+        document.dispatchEvent(plain);
+        expect(plain.defaultPrevented).toBe(false);
+
+        service.registerListHandler({ move, moveAcross });
+        const across = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+        document.dispatchEvent(across);
+        expect(moveAcross).toHaveBeenCalledWith(-1);
+        expect(across.defaultPrevented).toBe(true);
+        service.registerListHandler(null);
+    });
 });

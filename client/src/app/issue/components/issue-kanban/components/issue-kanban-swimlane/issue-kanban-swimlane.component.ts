@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { CdkDrag, CdkDragDrop, CdkDragStart, CdkDropList } from '@angular/cdk/drag-drop';
 import { SprintDragService } from '../../service/sprint-drag.service';
+import { KanbanSelectionClick } from '../../entity/kanban-selection-click.entity';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { Issue } from '../../../../model/issue.model';
 import { SwimlaneCell } from '../../entity/swimlane-cell.entity';
@@ -25,12 +26,14 @@ export class IssueKanbanSwimlaneComponent {
     protected readonly dragSvc = inject(SprintDragService);
 
     public readonly rows = input.required<SwimlaneRow[]>();
+    public readonly highlightedId = input<number | null>(null);
     public readonly states = input.required<IssueState[]>();
     /** Extra drop-list ids (sprint tabs) each cell connects to, for drag-to-sprint. */
     public readonly connectedTo = input<string[]>([]);
 
     public readonly cardDrop = output<CdkDragDrop<SwimlaneCell>>();
     public readonly contextMenuRequested = output<{ event: MouseEvent; issue: Issue }>();
+    public readonly selectionClicked = output<KanbanSelectionClick>();
     public readonly cellLoadMore = output<SwimlaneCell>();
 
     protected readonly sortedRows = computed(() =>

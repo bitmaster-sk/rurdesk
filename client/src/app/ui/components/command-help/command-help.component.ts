@@ -42,7 +42,15 @@ export class UiCommandHelpComponent {
         },
         {
             headingKey: 'COMMAND.HELP.SECTION.LIST',
-            rows: [{ labelKey: 'COMMAND.HELP.LIST_MOVE', keys: ['j', 'k'] }]
+            rows: [
+                { labelKey: 'COMMAND.HELP.LIST_MOVE', keys: ['j', 'k'] },
+                { labelKey: 'COMMAND.HELP.LIST_MOVE_ACROSS', keys: ['h', 'l'] },
+                { labelKey: 'COMMAND.HELP.LIST_SELECT', keys: ['x'] },
+                { labelKey: 'COMMAND.HELP.LIST_SELECT_RANGE', keys: ['⇧', '↑', '↓'] },
+                { labelKey: 'COMMAND.HELP.LIST_SELECT_ALL', keys: ['⇧', 'X'] },
+                { labelKey: 'COMMAND.HELP.LIST_BULK_EDIT', keys: ['e'] },
+                { labelKey: 'COMMAND.HELP.LIST_CLEAR_SELECTION', keys: ['esc'] }
+            ]
         },
         {
             headingKey: 'COMMAND.HELP.SECTION.TIMELINE',

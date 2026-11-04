@@ -11,6 +11,7 @@ import { CdkDragDrop, CdkDragStart } from '@angular/cdk/drag-drop';
 import { KanbanColumn } from '../../entity/kanban-column.entity';
 import { Issue } from '../../../../model/issue.model';
 import { SprintDragService } from '../../service/sprint-drag.service';
+import { KanbanSelectionClick } from '../../entity/kanban-selection-click.entity';
 
 @Component({
     selector: 'app-issue-kanban-columns',
@@ -23,11 +24,13 @@ export class IssueKanbanColumnsComponent {
     protected readonly dragSvc = inject(SprintDragService);
 
     public readonly columns = input.required<KanbanColumn[]>();
+    public readonly highlightedId = input<number | null>(null);
     /** Extra drop-list ids (sprint tabs) each column connects to, for drag-to-sprint. */
     public readonly connectedTo = input<string[]>([]);
 
     public readonly stateChange = output<CdkDragDrop<KanbanColumn>>();
     public readonly contextMenuRequested = output<{ event: MouseEvent; issue: Issue }>();
+    public readonly selectionClicked = output<KanbanSelectionClick>();
     public readonly loadMore = output<KanbanColumn>();
 
     protected readonly gridTemplateColumns = computed(

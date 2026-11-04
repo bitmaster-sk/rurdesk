@@ -1,3 +1,7 @@
+import { DOCUMENT } from '@angular/common';
+import { HotkeyService } from 'src/app/core/command/hotkey.service';
+import { IssueSelectionStore } from '../../store/issue-selection.store';
+import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
 import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { SprintState } from '../../constants/sprint-state.enum';
 import { EMPTY, NEVER, Observable, of, Subject, throwError } from 'rxjs';
@@ -159,6 +163,10 @@ interface Harness {
     velocity: ReturnType<typeof vi.fn>;
     langChange$: Subject<LangChangeEvent>;
     injector: Injector;
+    hotkeys: {
+        registerListHandler: ReturnType<typeof vi.fn>;
+        registerSelectionHandler: ReturnType<typeof vi.fn>;
+    };
 }
 
 function makeStats(overrides: Partial<SprintStats> = {}): SprintStats {
@@ -181,7 +189,8 @@ function setup(
     project: { idProject: number } | null = { idProject: 1 },
     issueNotices: Observable<Notice<Issue>> = EMPTY,
     restoredFilter: IssuesFilter | null = null,
-    restoredPosition: IssueListPosition | null = null
+    restoredPosition: IssueListPosition | null = null,
+    columns: KanbanColumn[] = []
 ): Harness {
     const update$ = vi.fn().mockReturnValue(of(undefined as never));
     const assignIssue = vi.fn().mockReturnValue(of(undefined));
@@ -194,6 +203,7 @@ function setup(
     const velocity = vi.fn().mockReturnValue(of([]));
 
     const langChange$ = new Subject<LangChangeEvent>();
+    const hotkeys = { registerListHandler: vi.fn(), registerSelectionHandler: vi.fn() };
 
     const injector = Injector.create({
         providers: [
@@ -202,7 +212,7 @@ function setup(
             {
                 provide: IssueKanbanService,
                 useValue: {
-                    columns$: of([]),
+                    columns$: of(columns),
                     swimlaneRows$: of([]),
                     states$: of([]),
                     restoreLoadedCount: () => undefined
@@ -229,6 +239,7 @@ function setup(
                 useValue: {
                     showFilter$: of(false),
                     initialFilter$: EMPTY,
+                    actualFilter$: EMPTY,
                     setInitialFilter,
                     setSprint,
                     refresh
@@ -242,6 +253,10 @@ function setup(
                 }
             },
             { provide: ToastNotificationService, useValue: { showError } },
+            { provide: HotkeyService, useValue: hotkeys },
+            { provide: DOCUMENT, useValue: { querySelector: () => null } },
+            { provide: SelectionLimitToastService, useValue: { notify: () => undefined } },
+            IssueSelectionStore,
             { provide: NoticeService, useValue: { issue$: issueNotices } },
             {
                 provide: I18nService,
@@ -284,7 +299,8 @@ function setup(
         backlogStats,
         velocity,
         langChange$,
-        injector
+        injector,
+        hotkeys
     };
 }
 
@@ -966,5 +982,67 @@ describe('IssueKanbanComponent — last viewed view persistence', () => {
     it('persists the kanban view as the last visited issue list view', () => {
         setup();
         expect(storage.get('rurdesk.issue.lastView.1')).toBe(IssueViewMode.KANBAN);
+    });
+});
+
+describe('IssueKanbanComponent — bulk edit selection', () => {
+    it('keeps the selected task in sync after a swimlane drop', () => {
+        const h = setup();
+        const selection = h.injector.get(IssueSelectionStore);
+        const tile = makeTile({ idState: 1, state: stateA });
+        selection.toggle(tile);
+        const toCell: SwimlaneCell = Fixtures.swimlaneCell({ state: stateB, user: alice });
+
+        handlers(h.component).onSwimlaneCardDrop(makeCellDropEvent(tile, [tile], toCell));
+
+        expect(selection.selected()[0].idState).toBe(stateB.idState);
+    });
+
+    it('drops a task deleted in this project from the selection', () => {
+        const notices = new Subject<Notice<Issue>>();
+        const h = setupWithNotices(notices);
+        const selection = h.injector.get(IssueSelectionStore);
+        selection.toggle(Fixtures.issue({ idIssuePublic: 5, idProject: 1 }));
+        selection.toggle(Fixtures.issue({ idIssuePublic: 6, idProject: 1 }));
+
+        notices.next({ ...issueNotice(1, 5), action: NoticeAction.Delete });
+        notices.next({ ...issueNotice(2, 6), action: NoticeAction.Delete });
+
+        expect(selection.selected().map(issue => issue.idIssuePublic)).toEqual([6]);
+    });
+});
+
+describe('IssueKanbanComponent — keyboard', () => {
+    it('moves the highlight across and down the board and selects with the keyboard', () => {
+        const todo = [
+            makeTile({ idIssue: 1, idIssuePublic: 1 }),
+            makeTile({ idIssue: 2, idIssuePublic: 2 })
+        ];
+        const done = [
+            makeTile({ idIssue: 3, idIssuePublic: 3, state: stateB, idState: stateB.idState })
+        ];
+        const h = setup([], { idProject: 1 }, EMPTY, null, null, [
+            makeColumn(stateA, todo),
+            makeColumn(stateB, done)
+        ]);
+        const board = h.component as unknown as {
+            columns$: Observable<KanbanColumn[]>;
+            highlightedId: () => number | null;
+        };
+        board.columns$.subscribe();
+        const nav = h.hotkeys.registerListHandler.mock.calls[0][0];
+        const select = h.hotkeys.registerSelectionHandler.mock.calls[0][0];
+        const selection = h.injector.get(IssueSelectionStore);
+
+        nav.move(1);
+        expect(board.highlightedId()).toBe(1);
+        select.extend(1);
+        expect(board.highlightedId()).toBe(2);
+        expect(selection.selected().map(issue => issue.idIssuePublic)).toEqual([1, 2]);
+
+        nav.moveAcross(1);
+        expect(board.highlightedId()).toBe(3);
+        select.toggle();
+        expect(selection.isSelected(3)).toBe(true);
     });
 });

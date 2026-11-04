@@ -1,0 +1,13 @@
+@if (selection.count() > 0) {
+    <ui-button
+        severity="secondary"
+        variant="outlined"
+        size="small"
+        data-testid="bulk-edit-open"
+        [label]="'ISSUE.BULK_EDIT.BUTTON' | translate: { count: selection.count() }"
+        [title]="'ISSUE.BULK_EDIT.BUTTON_HINT' | translate"
+        (click)="editRequested.emit()"
+    >
+        <tabler-icon icon="pencil" [size]="14" />
+    </ui-button>
+}

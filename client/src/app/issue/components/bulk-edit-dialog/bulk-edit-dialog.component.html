@@ -1,0 +1,216 @@
+<ui-dialog
+    [visible]="true"
+    [header]="
+        (step() === 'edit'
+            ? plural('ISSUE.BULK_EDIT.TITLE', count())
+            : plural('ISSUE.BULK_EDIT.REVIEW_TITLE', count())
+        ) | translate: { count: count() }
+    "
+    [closable]="!isSaving()"
+    [closeOnEscape]="!isSaving()"
+    width="38rem"
+    (hide)="onCancel()"
+>
+    <p class="bulk-intro">
+        {{
+            (step() === 'edit' ? 'ISSUE.BULK_EDIT.INTRO' : 'ISSUE.BULK_EDIT.REVIEW_INTRO')
+                | translate
+        }}
+    </p>
+    <ol class="bulk-steps" [attr.aria-label]="'ISSUE.BULK_EDIT.STEP_REVIEW' | translate">
+        <li [class.bulk-steps__item--active]="step() === 'edit'">
+            1 · {{ 'ISSUE.BULK_EDIT.STEP_CHANGES' | translate }}
+        </li>
+        <li [class.bulk-steps__item--active]="step() === 'review'">
+            2 · {{ 'ISSUE.BULK_EDIT.STEP_REVIEW' | translate }}
+        </li>
+    </ol>
+
+    @if (step() === 'edit') {
+        <div class="bulk-fields">
+            <label class="bulk-field__label" for="bulk-state">
+                {{ 'ISSUE.QUICK_ACTIONS.STATE' | translate }}
+            </label>
+            <app-state-dropdown
+                inputId="bulk-state"
+                data-testid="bulk-state"
+                [states]="states()"
+                [placeholder]="'ISSUE.BULK_EDIT.NO_CHANGE' | translate"
+                [ngModel]="idState()"
+                (ngModelChange)="idState.set($event)"
+            />
+
+            <label class="bulk-field__label" for="bulk-severity">
+                {{ 'ISSUE.QUICK_ACTIONS.SEVERITY' | translate }}
+            </label>
+            <app-severity-dropdown
+                inputId="bulk-severity"
+                data-testid="bulk-severity"
+                [severities]="severities()"
+                [placeholder]="'ISSUE.BULK_EDIT.NO_CHANGE' | translate"
+                [ngModel]="idSeverity()"
+                (ngModelChange)="idSeverity.set($event)"
+            />
+
+            <label class="bulk-field__label" for="bulk-type">
+                {{ 'ISSUE.QUICK_ACTIONS.ISSUE_TYPE' | translate }}
+            </label>
+            <app-issue-type-dropdown
+                inputId="bulk-type"
+                data-testid="bulk-type"
+                [issueTypes]="issueTypes()"
+                [placeholder]="'ISSUE.BULK_EDIT.NO_CHANGE' | translate"
+                [ngModel]="idIssueType()"
+                (ngModelChange)="idIssueType.set($event)"
+            />
+
+            <span class="bulk-field__label">
+                {{ 'ISSUE.QUICK_ACTIONS.ASSIGNEE' | translate }}
+            </span>
+            <app-user-dropdown
+                data-testid="bulk-assignee"
+                [users]="assigneeOptions()"
+                [filter]="true"
+                [placeholder]="'ISSUE.BULK_EDIT.NO_CHANGE' | translate"
+                [ngModel]="assigneeValue()"
+                (ngModelChange)="onAssigneePicked($event)"
+            />
+
+            <span class="bulk-field__label bulk-field__label--top" id="bulk-tags-label">
+                {{ 'ISSUE.BULK_EDIT.TAGS' | translate }}
+            </span>
+            <div>
+                @if (tags().length === 0) {
+                    <p class="bulk-hint">{{ 'ISSUE.BULK_EDIT.NO_TAGS' | translate }}</p>
+                } @else {
+                    <div class="bulk-tags" role="group" aria-labelledby="bulk-tags-label">
+                        @for (tag of tags(); track tag.idTag) {
+                            <div
+                                class="bulk-tag"
+                                role="checkbox"
+                                tabindex="0"
+                                [attr.data-testid]="'bulk-tag-' + tag.idTag"
+                                [attr.aria-checked]="
+                                    presenceOf(tag.idTag) === Presence.All
+                                        ? 'true'
+                                        : presenceOf(tag.idTag) === Presence.Some
+                                          ? 'mixed'
+                                          : 'false'
+                                "
+                                (click)="onTagToggle(tag.idTag)"
+                                (keydown)="onTagKeydown($event, tag.idTag)"
+                            >
+                                <span
+                                    class="bulk-tag__box"
+                                    [class.bulk-tag__box--all]="
+                                        presenceOf(tag.idTag) === Presence.All
+                                    "
+                                    [class.bulk-tag__box--some]="
+                                        presenceOf(tag.idTag) === Presence.Some
+                                    "
+                                ></span>
+                                <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                                @switch (tagChange(tag.idTag)) {
+                                    @case ('add') {
+                                        <span class="bulk-tag__change bulk-tag__change--add">
+                                            {{ 'ISSUE.BULK_EDIT.TAG_ADD' | translate }}
+                                        </span>
+                                    }
+                                    @case ('remove') {
+                                        <span class="bulk-tag__change bulk-tag__change--remove">
+                                            {{ 'ISSUE.BULK_EDIT.TAG_REMOVE' | translate }}
+                                        </span>
+                                    }
+                                    @default {
+                                        @if (tagCount(tag.idTag) > 0) {
+                                            <span class="bulk-tag__count">
+                                                {{
+                                                    'ISSUE.BULK_EDIT.TAG_COUNT'
+                                                        | translate
+                                                            : {
+                                                                  count: tagCount(tag.idTag),
+                                                                  total: count()
+                                                              }
+                                                }}
+                                            </span>
+                                        }
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                    <p class="bulk-hint">{{ 'ISSUE.BULK_EDIT.TAGS_HELP' | translate }}</p>
+                }
+            </div>
+        </div>
+    } @else {
+        <dl class="bulk-summary" data-testid="bulk-summary">
+            @for (row of changeRows(); track row.labelKey) {
+                <dt>{{ row.labelKey | translate }}</dt>
+                <dd>→ {{ row.value }}</dd>
+            }
+        </dl>
+
+        <details class="bulk-affected">
+            <summary>
+                {{ plural('ISSUE.BULK_EDIT.SHOW_TASKS', count()) | translate: { count: count() } }}
+            </summary>
+            <ul>
+                @for (issue of issues(); track issue.idIssuePublic) {
+                    <li>#{{ issue.idIssuePublic }} {{ issue.title }}</li>
+                }
+            </ul>
+        </details>
+    }
+
+    <ng-template #footer>
+        @if (step() === 'edit') {
+            <span class="bulk-footer__count">
+                @if (changeCount() > 0) {
+                    {{
+                        plural('ISSUE.BULK_EDIT.CHANGE_COUNT', changeCount())
+                            | translate: { count: changeCount() }
+                    }}
+                } @else {
+                    {{ 'ISSUE.BULK_EDIT.NO_CHANGES' | translate }}
+                }
+            </span>
+            <ui-button
+                severity="secondary"
+                variant="outlined"
+                [label]="'CANCEL' | translate"
+                (click)="onCancel()"
+            />
+            <ui-button
+                data-testid="bulk-review"
+                [label]="'ISSUE.BULK_EDIT.REVIEW' | translate"
+                [disabled]="changeCount() === 0"
+                (click)="onReview()"
+            />
+        } @else {
+            <ui-button
+                class="mr-auto"
+                severity="secondary"
+                variant="text"
+                [label]="'ISSUE.BULK_EDIT.BACK' | translate"
+                [disabled]="isSaving()"
+                (click)="onBack()"
+            >
+                <tabler-icon icon="arrow-left" [size]="14" />
+            </ui-button>
+            <ui-button
+                severity="secondary"
+                variant="outlined"
+                [label]="'CANCEL' | translate"
+                [disabled]="isSaving()"
+                (click)="onCancel()"
+            />
+            <ui-button
+                data-testid="bulk-apply"
+                [label]="plural('ISSUE.BULK_EDIT.APPLY', count()) | translate: { count: count() }"
+                [loading]="isSaving()"
+                (click)="onApply()"
+            />
+        }
+    </ng-template>
+</ui-dialog>
