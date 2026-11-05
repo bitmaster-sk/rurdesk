@@ -7,6 +7,16 @@
     cursor: move;
     min-height: 7rem;
 
+    &--selected,
+    &--highlighted {
+        border-color: var(--ui-color-primary);
+        box-shadow: 0 0 0 1px var(--ui-color-primary);
+    }
+
+    &--selected {
+        background-image: linear-gradient(var(--ui-color-selected-bg), var(--ui-color-selected-bg));
+    }
+
     &--id {
         font-size: var(--font-size-s);
         font-weight: 600;
@@ -83,4 +93,8 @@
             text-decoration: underline;
         }
     }
+}
+
+:host(:focus) {
+    outline: none;
 }

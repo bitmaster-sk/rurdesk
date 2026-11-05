@@ -1,9 +1,18 @@
-export interface BulkEditIssueEntry {
-    idIssuePublic: number;
+export interface BulkEditIssueChangesReq {
     scheduledAt?: string;
     estimated?: number;
+    idState?: number;
+    idSeverity?: number;
+    idIssueType?: number;
+    idUserAssigned?: number | null;
+    addIdsTag?: number[];
+    removeIdsTag?: number[];
 }
 
-export interface BulkEditIssues {
-    issues: BulkEditIssueEntry[];
+export interface BulkEditIssueEntryReq extends BulkEditIssueChangesReq {
+    idIssuePublic: number;
+}
+
+export interface BulkEditIssuesReq {
+    issues: BulkEditIssueEntryReq[];
 }

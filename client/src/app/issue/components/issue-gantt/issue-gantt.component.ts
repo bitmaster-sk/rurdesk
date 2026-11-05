@@ -38,7 +38,7 @@ import { GanttWbsPanelComponent } from './components/gantt-wbs-panel/gantt-wbs-p
 import { GanttTimelineBodyComponent } from './components/gantt-timeline-body/gantt-timeline-body';
 import { Issue } from '../../model/issue.model';
 import { IssueBulkApi } from '../../api/issue-bulk.api.service';
-import { BulkEditIssueEntry } from '../../model/bulk-edit-issues.model';
+import { BulkEditIssueEntryReq } from '../../model/bulk-edit-issues.model';
 import { IssueApi } from '../../api/issue.api.service';
 import { IssueRelationType } from '../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../constants/issue-relation-subtype.enum';
@@ -594,7 +594,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             this.relations()
         );
 
-        const entries: BulkEditIssueEntry[] = [
+        const entries: BulkEditIssueEntryReq[] = [
             { idIssuePublic: event.taskId, estimated: event.newEstimated }
         ];
         for (const [taskId, change] of cascade.affectedTasks) {
@@ -663,7 +663,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 this.relations()
             );
 
-            const entries: BulkEditIssueEntry[] = [
+            const entries: BulkEditIssueEntryReq[] = [
                 {
                     idIssuePublic: dragState.taskId,
                     scheduledAt: moveResult.newScheduledAt.toISOString()

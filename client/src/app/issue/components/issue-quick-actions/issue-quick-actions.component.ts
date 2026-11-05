@@ -31,6 +31,8 @@ import { Initials } from 'src/app/shared/avatar/initials';
 import { IssueApi } from '../../api/issue.api.service';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { ClipboardService } from 'src/app/core/clipboard.service';
+import { IssueSelectionStore } from '../../store/issue-selection.store';
+import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
 
 @Component({
     selector: 'app-issue-quick-actions',
@@ -52,6 +54,14 @@ export class IssueQuickActionsComponent implements OnDestroy {
     private readonly toast = inject(ToastNotificationService);
     private readonly issueFilterStore = inject(IssueFilterStore);
     private readonly clipboard = inject(ClipboardService);
+    private readonly selection = inject(IssueSelectionStore, { optional: true });
+    private readonly limitToast = inject(SelectionLimitToastService);
+
+    protected readonly canSelect = this.selection !== null;
+    protected readonly isSelected = computed(() => {
+        const issue = this.issue();
+        return !!issue && !!this.selection?.isSelected(issue.idIssuePublic);
+    });
 
     private readonly popoverRef = viewChild.required<UiPopoverComponent>('popover');
 
@@ -256,6 +266,13 @@ export class IssueQuickActionsComponent implements OnDestroy {
         this.hide();
     }
 
+    protected onToggleSelect(): void {
+        const issue = this.issue();
+        if (!issue || !this.selection) return;
+        this.limitToast.notify(this.selection.toggle(issue));
+        this.hide();
+    }
+
     protected onCopyId(): void {
         const issue = this.issue();
         if (!issue) return;
@@ -270,6 +287,7 @@ export class IssueQuickActionsComponent implements OnDestroy {
         const issue = this.issue();
         if (!issue) return;
         this.issueApi.delete$(issue.idProject, issue.idIssuePublic).subscribe(() => {
+            this.selection?.remove(issue.idIssuePublic);
             this.issueFilterStore.refresh();
         });
         this.hide();

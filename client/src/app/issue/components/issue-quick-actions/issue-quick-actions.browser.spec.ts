@@ -22,6 +22,7 @@ import { IssueState } from 'src/app/state/model/issue-state.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { User } from 'src/app/auth/model/user.model';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { IssueSelectionStore } from '../../store/issue-selection.store';
 
 export function mockSub<T = unknown>() {
     const handlers: { next?: (v: T) => void; error?: (e: unknown) => void } = {};
@@ -179,6 +180,7 @@ async function createFixture(
         severities?: IssueSeverity[];
         users?: User[];
         issueApi?: any;
+        selection?: IssueSelectionStore;
     } = {}
 ) {
     const states = overrides.states ?? [stateA, stateB];
@@ -243,6 +245,9 @@ async function createFixture(
             { provide: IssueApi, useValue: issueApiMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },
             { provide: ToastNotificationService, useValue: toastMock },
+            ...(overrides.selection
+                ? [{ provide: IssueSelectionStore, useValue: overrides.selection }]
+                : []),
             provideRouter([]),
             provideLocationMocks(),
             provideNoopAnimations()
@@ -721,5 +726,53 @@ describe('IssueQuickActionsComponent — context-menu open/close (browser)', () 
         document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
         fixture.detectChanges();
         expect(panel()).toBeNull();
+    });
+});
+
+describe('IssueQuickActionsComponent — Select action (browser)', () => {
+    const selectButton = (): HTMLButtonElement | null =>
+        document.querySelector('[data-testid="quick-action-select"]');
+
+    async function open(selection?: IssueSelectionStore) {
+        const { fixture, comp } = await createFixture({ selection });
+        const issue = makeIssue({ idIssuePublic: 42 });
+        comp.show(
+            { clientY: 100, clientX: 200, target: document.body, preventDefault: () => {} } as any,
+            issue
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+        return { fixture, comp };
+    }
+
+    afterEach(() => {
+        document.querySelectorAll('.ui-popover').forEach(el => el.remove());
+    });
+
+    it('adds the task to the selection and closes the popover', async () => {
+        const selection = new IssueSelectionStore();
+        const { fixture } = await open(selection);
+
+        expect(selectButton()?.textContent).toContain('ISSUE.QUICK_ACTIONS.SELECT');
+        selectButton()!.click();
+        fixture.detectChanges();
+
+        expect(selection.isSelected(42)).toBe(true);
+        expect(document.querySelector('.ui-popover')).toBeNull();
+    });
+
+    it('offers Deselect for a task that is already selected', async () => {
+        const selection = new IssueSelectionStore();
+        selection.toggle(makeIssue({ idIssuePublic: 42 }));
+        await open(selection);
+
+        expect(selectButton()?.textContent).toContain('ISSUE.QUICK_ACTIONS.DESELECT');
+        selectButton()!.click();
+        expect(selection.isSelected(42)).toBe(false);
+    });
+
+    it('is hidden in views without a selection, such as gantt and calendar', async () => {
+        await open();
+        expect(selectButton()).toBeNull();
     });
 });

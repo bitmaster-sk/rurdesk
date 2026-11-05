@@ -71,15 +71,15 @@ func (r *EditIssueReq) Validate() error {
 }
 
 type BulkEditIssueEntryReq struct {
-	IdIssuePublic  int64      `json:"idIssuePublic"  binding:"required"`
-	ScheduledAt    *time.Time `json:"scheduledAt"`
-	Estimated      *int64     `json:"estimated"`
-	IdState        *int64     `json:"idState"`
-	IdSeverity     *int64     `json:"idSeverity"`
-	IdIssueType    *int64     `json:"idIssueType"`
-	IdUserAssigned *int64     `json:"idUserAssigned"` // explicit null clears assignment
-	AddIdsTag      []int64    `json:"addIdsTag"`
-	RemoveIdsTag   []int64    `json:"removeIdsTag"`
+	IdIssuePublic  int64           `json:"idIssuePublic"  binding:"required"`
+	ScheduledAt    *time.Time      `json:"scheduledAt"`
+	Estimated      *int64          `json:"estimated"`
+	IdState        *int64          `json:"idState"`
+	IdSeverity     *int64          `json:"idSeverity"`
+	IdIssueType    *int64          `json:"idIssueType"`
+	IdUserAssigned Optional[int64] `json:"idUserAssigned,omitzero"` // explicit null clears assignment
+	AddIdsTag      []int64         `json:"addIdsTag"`
+	RemoveIdsTag   []int64         `json:"removeIdsTag"`
 }
 
 type BulkEditIssuesReq struct {

@@ -49,6 +49,8 @@ import { WikiProposalCardComponent } from './components/issue-detail/components/
 import {
     TablerIconComponent,
     provideTablerIcons,
+    IconSquareCheck,
+    IconSquareMinus,
     IconCheck,
     IconAlertTriangle,
     IconChartLine,
@@ -121,6 +123,8 @@ import { IssueWikiPanelComponent } from './components/issue-detail/components/is
 import { BaseChartDirective } from 'ng2-charts';
 import { SprintChartsBandComponent } from './components/sprint-charts-band/sprint-charts-band.component';
 import { UiModule } from '../ui/ui.module';
+import { BulkEditButtonComponent } from './components/bulk-edit-button/bulk-edit-button.component';
+import { BulkEditDialogComponent } from './components/bulk-edit-dialog/bulk-edit-dialog.component';
 import { AgentModule } from '../agent/agent.module';
 
 @NgModule({
@@ -166,6 +170,8 @@ import { AgentModule } from '../agent/agent.module';
         IssueParticipantsComponent,
         IssueWikiPanelComponent,
         SavedViewMenuComponent,
+        BulkEditButtonComponent,
+        BulkEditDialogComponent,
         SavedViewDialogComponent
     ],
     imports: [
@@ -191,6 +197,8 @@ import { AgentModule } from '../agent/agent.module';
         IssueToolbarService,
         SavedViewApplyService,
         provideTablerIcons({
+            IconSquareCheck,
+            IconSquareMinus,
             IconCheck,
             IconAlertTriangle,
             IconChartLine,

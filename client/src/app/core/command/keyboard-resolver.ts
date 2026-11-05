@@ -31,6 +31,8 @@ export abstract class KeyboardResolver {
         ) {
             return { type: 'none' };
         }
+        const selection = KeyboardResolver.resolveSelection(event);
+        if (selection) return selection;
         switch (event.key) {
             case '/':
                 return { type: 'open', mode: 'navigation' };
@@ -42,8 +44,44 @@ export abstract class KeyboardResolver {
             case 'k':
             case 'ArrowUp':
                 return { type: 'list-move', delta: -1 };
+            case 'h':
+            case 'ArrowLeft':
+                return KeyboardResolver.hasModifier(event)
+                    ? { type: 'none' }
+                    : { type: 'list-move-across', delta: -1 };
+            case 'l':
+            case 'ArrowRight':
+                return KeyboardResolver.hasModifier(event)
+                    ? { type: 'none' }
+                    : { type: 'list-move-across', delta: 1 };
             default:
                 return { type: 'none' };
+        }
+    }
+
+    private static hasModifier(event: KeyboardEvent): boolean {
+        return event.metaKey || event.ctrlKey || event.altKey;
+    }
+
+    private static resolveSelection(event: KeyboardEvent): HotkeyAction | null {
+        if (KeyboardResolver.hasModifier(event)) return null;
+        if (event.shiftKey && (event.key === 'ArrowDown' || event.key === 'J')) {
+            return { type: 'list-extend', delta: 1 };
+        }
+        if (event.shiftKey && (event.key === 'ArrowUp' || event.key === 'K')) {
+            return { type: 'list-extend', delta: -1 };
+        }
+        switch (event.key) {
+            case 'x':
+                return { type: 'list-toggle' };
+            case 'X':
+                return { type: 'list-toggle-all' };
+            case 'e':
+                return { type: 'list-edit' };
+            case 'Escape':
+                return { type: 'list-clear' };
+            default:
+                return null;
         }
     }
 }

@@ -872,15 +872,12 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	var results []*model.Issue
 	// Issues whose participant list changed (assignee added) — broadcast after commit.
 	var participantChangedIssueIds []int64
-	// Old assignee per issue, captured before the update so post-commit agent
-	// routing sees a truthful "old" side (re-specifying the same agent must not
-	// spawn a new run).
-	oldAssignedByPublic := make(map[int64]*int64)
+	// Issues as they were before the update, for post-commit notifications and
+	// agent routing (re-specifying the same agent must not spawn a new run).
+	oldByPublic := make(map[int64]*model.Issue)
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		participantChangedIssueIds = nil // reset if the tx body re-runs
-		for k := range oldAssignedByPublic {
-			delete(oldAssignedByPublic, k)
-		}
+		clear(oldByPublic)
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
 			return errs.ErrForbidden
 		}
@@ -899,34 +896,36 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			}
 			dto.Issues[i].AddIdsTag = addIdsTag
 			dto.Issues[i].RemoveIdsTag = removeIdsTag
-			if entry.IdUserAssigned != nil {
-				if !ic.acl.CanReadProject(ctx, *entry.IdUserAssigned, idProject) {
-					return fmt.Errorf("user %d is not a member of project %d", *entry.IdUserAssigned, idProject)
+			if entry.IdUserAssigned.Value != nil {
+				if !ic.acl.CanReadProject(ctx, *entry.IdUserAssigned.Value, idProject) {
+					return fmt.Errorf("user %d is not a member of project %d", *entry.IdUserAssigned.Value, idProject)
 				}
-				if err := ic.rejectDisabledAssignee(ctx, *entry.IdUserAssigned); err != nil {
+				if err := ic.rejectDisabledAssignee(ctx, *entry.IdUserAssigned.Value); err != nil {
 					return err
+				}
+				isAgent, agentErr := ic.userRepo.IsAgentUser(ctx, *entry.IdUserAssigned.Value)
+				if agentErr != nil {
+					return fmt.Errorf("checking bulk assignee: %w", agentErr)
+				}
+				if isAgent {
+					return errs.ErrBulkAgentAssignment
 				}
 			}
 		}
 
-		// Capture current assignees for issues about to be reassigned.
-		assignPublicIds := make([]int64, 0, len(dto.Issues))
+		publicIds := make([]int64, 0, len(dto.Issues))
 		for _, entry := range dto.Issues {
-			if entry.IdUserAssigned != nil {
-				assignPublicIds = append(assignPublicIds, entry.IdIssuePublic)
-			}
+			publicIds = append(publicIds, entry.IdIssuePublic)
 		}
-		if len(assignPublicIds) > 0 {
-			current, loadErr := ic.issueRepo.LoadIssues(ctx, &model.LoadIssuesFilter{
-				IdProject:      idProject,
-				IdsIssuePublic: assignPublicIds,
-			})
-			if loadErr != nil {
-				return fmt.Errorf("loading issues for bot-assignment routing: %w", loadErr)
-			}
-			for _, issue := range current {
-				oldAssignedByPublic[issue.IdIssuePublic] = issue.AssignedTo
-			}
+		current, loadErr := ic.issueRepo.LoadIssues(ctx, &model.LoadIssuesFilter{
+			IdProject:      idProject,
+			IdsIssuePublic: publicIds,
+		})
+		if loadErr != nil {
+			return fmt.Errorf("loading issues before bulk edit: %w", loadErr)
+		}
+		for _, issue := range current {
+			oldByPublic[issue.IdIssuePublic] = issue
 		}
 
 		var txErr error
@@ -940,14 +939,14 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			issueIdByPublic[updatedIssue.IdIssuePublic] = updatedIssue.IdIssue
 		}
 		for _, entry := range dto.Issues {
-			if entry.IdUserAssigned == nil {
+			if entry.IdUserAssigned.Value == nil {
 				continue
 			}
 			idIssue, ok := issueIdByPublic[entry.IdIssuePublic]
 			if !ok {
 				continue
 			}
-			if addErr := ic.participantRepo.Add(ctx, idIssue, *entry.IdUserAssigned, "assignee", &user.IdUser); addErr != nil {
+			if addErr := ic.participantRepo.Add(ctx, idIssue, *entry.IdUserAssigned.Value, "assignee", &user.IdUser); addErr != nil {
 				return fmt.Errorf("auto-adding assignee as participant (bulk edit issue=%d): %w", idIssue, addErr)
 			}
 			participantChangedIssueIds = append(participantChangedIssueIds, idIssue)
@@ -960,8 +959,8 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errs.ErrUserDisabled {
-		_ = c.Error(errs.ErrUserDisabled)
+	if err == errs.ErrUserDisabled || err == errs.ErrBulkAgentAssignment {
+		_ = c.Error(err)
 		c.Status(http.StatusUnprocessableEntity)
 		return
 	}
@@ -985,18 +984,21 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		agent.BroadcastIssueSnapshot(ctx, ic.notifier, ic.projectRepo, updatedIssue, notify.ActionUpdate)
 	}
 
+	if project, projErr := ic.projectRepo.LoadProject(ctx, idProject); projErr == nil {
+		for _, newIssue := range results {
+			if oldIssue, ok := oldByPublic[newIssue.IdIssuePublic]; ok {
+				ic.sendIssueNotifications(ctx, user, oldIssue, newIssue, project)
+			}
+		}
+	}
+
 	// Reuses single-issue routing with the captured old assignee so an
 	// unchanged agent assignment is a no-op rather than a duplicate run.
 	if ic.dispatcher != nil {
 		for _, newIssue := range results {
-			oldAssigned, changed := oldAssignedByPublic[newIssue.IdIssuePublic]
-			if !changed {
+			oldIssue, ok := oldByPublic[newIssue.IdIssuePublic]
+			if !ok || int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) {
 				continue
-			}
-			oldIssue := &model.Issue{
-				IdIssue:    newIssue.IdIssue,
-				IdProject:  newIssue.IdProject,
-				AssignedTo: oldAssigned,
 			}
 			ic.handleAgentAssignment(ctx, oldIssue, newIssue)
 		}

@@ -189,7 +189,8 @@ the task:
   calendar
 - An action row along the bottom: start **tracking** time on the task, **split**
   it with AI (see [Task Split](#task-split)), **open** it, **copy its ID**, or
-  **delete** it
+  **delete** it. In the table and on the Kanban board the row also has **Select**,
+  which adds the task to the selection for [bulk edit](#bulk-edit).
 
 On the Kanban board the reschedule section is hidden — drag the card instead.
 
@@ -200,6 +201,35 @@ On the Kanban board the reschedule section is hidden — drag the card instead.
 A fast, filterable grid. Sort and filter across task fields.
 
 ![Task table with filters](../../site/assets/img/view-table.png)
+
+#### Bulk edit
+
+In the table and on the Kanban board you can change many tasks at once.
+
+- **Select tasks**: <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click a row or card to add or remove
+  it, <kbd>Shift</kbd>+click to select everything between it and the last one you
+  picked (on the board, within one column), or use **Select** in the right-click menu.
+  With the keyboard, <kbd>x</kbd> selects the highlighted row or card and
+  <kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> extends the selection (on the board, within
+  one column). In the table <kbd>Shift</kbd>+<kbd>X</kbd> selects all loaded rows.
+  Clicking a task title still opens it, and <kbd>⌘</kbd>+click on the title still opens
+  it in a new tab.
+- **Edit**: while tasks are selected, the toolbar shows a **Bulk edit (N)** button.
+  It (or <kbd>e</kbd>) opens one dialog with the **state**, **severity**, **type** and
+  **assignee** dropdowns from the task detail, plus **tags**. Every field starts at
+  _No change_, and × puts a field back to _No change_. To unassign the tasks, pick
+  **Unassigned** at the top of the assignee list. Agents are not offered: each agent
+  run is started on its own task, so assign agents one task at a time. Each tag shows
+  how many of the selected tasks have it; click it to cycle between leaving it as it
+  is, adding it to all, and removing it from all.
+- **Review**: before anything is written, a review step lists the changes. **Apply**
+  writes all tasks in one transaction: either every task changes or none does. People
+  get the same notifications as for a single edit (assigned, state and severity
+  changes), one per task.
+- You can edit up to **100 tasks** at once. Loading more rows keeps the selection;
+  changing the filter, the sprint, or the view clears it, and so does <kbd>esc</kbd>.
+
+![Bulk edit dialog for three selected tasks: a new state picked, one tag added, the other fields at No change](../../site/assets/img/bulk-edit.png)
 
 #### Kanban
 
@@ -479,8 +509,13 @@ Type a **prefix** to scope the search, or jump straight in with a dedicated shor
 Searching in the _all_ scope with no results offers a **Create task “…”** action that
 files a new task titled with what you typed and drops you on its detail to flesh it out.
 Actions that change data respect your project role — a viewer sees navigation and search
-but not create/edit commands. In the task list, <kbd>j</kbd>/<kbd>k</kbd> move the
-highlight and <kbd>↵</kbd> opens the highlighted task. The Gantt and the Calendar share
+but not create/edit commands. In the task list and on the Kanban board,
+<kbd>j</kbd>/<kbd>k</kbd> (or <kbd>↓</kbd>/<kbd>↑</kbd>) move the highlight and <kbd>↵</kbd>
+opens the highlighted task. On the board <kbd>h</kbd>/<kbd>l</kbd> (or <kbd>←</kbd>/<kbd>→</kbd>)
+move between columns, and in swimlanes <kbd>↓</kbd>/<kbd>↑</kbd> continue into the next lane;
+<kbd>x</kbd>,
+<kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Shift</kbd>+<kbd>X</kbd>, <kbd>e</kbd> and
+<kbd>esc</kbd> drive the [bulk edit](#bulk-edit) selection. The Gantt and the Calendar share
 the same bindings: <kbd>t</kbd> (or <kbd>Home</kbd>) jumps to today,
 <kbd>+</kbd>/<kbd>-</kbd> change zoom/granularity and <kbd>←</kbd>/<kbd>→</kbd> pan the
 timeline or step between periods. Shortcuts never fire while you are typing in a text

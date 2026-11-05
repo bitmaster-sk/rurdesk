@@ -19,6 +19,7 @@ import {
 import { Router } from '@angular/router';
 import { HotkeyService } from 'src/app/core/command/hotkey.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { first, map, switchMap } from 'rxjs/operators';
@@ -43,13 +44,16 @@ import { IssueListStateStore } from '../../store/issue-list-state.store';
 import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
+import { IssueSelectionStore, SelectionResult } from '../../store/issue-selection.store';
+import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
+import { SelectionClick } from '../../util/selection-click';
 
 @Component({
     selector: 'app-issue-table',
     templateUrl: './issue-table.component.html',
     styleUrls: ['./issue-table.component.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    providers: [IssueTableService],
+    providers: [IssueTableService, IssueSelectionStore],
     standalone: false
 })
 export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
@@ -72,6 +76,10 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
     private readonly listState = inject(IssueListStateStore);
     private readonly injector = inject(Injector);
+    private readonly limitToast = inject(SelectionLimitToastService);
+    protected readonly selection = inject(IssueSelectionStore);
+
+    public readonly bulkEditIssues = signal<readonly Issue[] | null>(null);
 
     private readonly tableScrollRef = viewChild<ElementRef<HTMLElement>>('tableScroll');
 
@@ -149,6 +157,10 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public readonly hasLoaded = this.issueTableService.hasLoaded;
 
+    private readonly loadedIssues = computed(() => this.rows().map(row => row.issue));
+
+    private readonly syncSelection = effect(() => this.selection.refresh(this.loadedIssues()));
+
     // Drag state
     public isDragging = signal(false);
 
@@ -211,6 +223,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.issueFilterStore.actualFilter$
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(filter => {
+                this.selection.clearOnScopeChange(filter);
                 this.sortField.set(filter.orderColumn);
                 this.sortOrder.set(filter.orderDirection === 'asc' ? 1 : -1);
             });
@@ -219,11 +232,24 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
             IssueLastViewStorage.save(p.idProject, IssueViewMode.TABLE);
         });
         // Wire list-mode j/k/↑↓ (gated + dispatched by HotkeyService) to row highlight.
-        this.hotkeys.registerListHandler(delta => this.moveHighlight(delta));
+        this.hotkeys.registerListHandler({ move: delta => this.moveHighlight(delta) });
+        this.hotkeys.registerSelectionHandler({
+            extend: delta => this.extendSelection(delta),
+            toggle: () => this.toggleHighlighted(),
+            toggleAll: () => this.notifyLimit(this.selection.toggleAll(this.loadedIssues())),
+            edit: () => this.openBulkEdit(),
+            clear: () => this.clearSelection()
+        });
         // Palette actions (set state/severity, assign, clone) push the saved task onto the notice
         // stream — reflect those (and any live change) in the list. The changed row
         // pulses once so the update is visible without a toast.
         this.noticeService.issue$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(notice => {
+            if (
+                notice.action === NoticeAction.Delete &&
+                notice.payload?.idProject === this.idProject
+            ) {
+                this.forgetDeleted(notice.payload.idIssuePublic);
+            }
             this.markPulsed(notice.payload?.idIssuePublic);
             this.issueFilterStore.refresh();
         });
@@ -279,6 +305,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.pulseTimers.clear();
         this.issueToolbarService.clear();
         this.hotkeys.registerListHandler(null);
+        this.hotkeys.registerSelectionHandler(null);
         // Stop palette `>` actions targeting a row that's no longer on screen.
         this.commandPalette.setContext({ idProject: this.idProject ?? null, issue: null });
     }
@@ -298,6 +325,72 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
         this.highlightedId.set(rows[next]?.issue.idIssuePublic ?? null);
         // Focus the row so the browser scrolls it into view; Enter on it opens the issue.
         this.rowRefs()[next]?.nativeElement.focus();
+    }
+
+    // --- Selection ---
+
+    public onRowClick(event: MouseEvent, issue: Issue): void {
+        const mode = SelectionClick.modeOf(event);
+        if (!mode) return;
+        SelectionClick.clearTextSelection();
+        this.highlightedId.set(issue.idIssuePublic);
+        this.notifyLimit(
+            mode === 'toggle'
+                ? this.selection.toggle(issue)
+                : this.selection.selectRange(issue, this.loadedIssues())
+        );
+    }
+
+    public onRowMouseDown(event: MouseEvent): void {
+        if (event.shiftKey && SelectionClick.modeOf(event)) event.preventDefault();
+    }
+
+    public openBulkEdit(): boolean {
+        if (this.selection.count() === 0 || this.idProject === null) return false;
+        this.bulkEditIssues.set(this.selection.selected());
+        return true;
+    }
+
+    public onBulkEditClosed(): void {
+        this.bulkEditIssues.set(null);
+    }
+
+    public onBulkEditApplied(updated: Issue[]): void {
+        this.bulkEditIssues.set(null);
+        this.selection.clear();
+        updated.forEach(issue => this.markPulsed(issue.idIssuePublic));
+        this.issueFilterStore.refresh();
+    }
+
+    private forgetDeleted(idIssuePublic: number): void {
+        this.selection.remove(idIssuePublic);
+        this.bulkEditIssues.update(issues => {
+            const left = issues?.filter(issue => issue.idIssuePublic !== idIssuePublic) ?? [];
+            return left.length > 0 ? left : null;
+        });
+    }
+
+    private clearSelection(): boolean {
+        if (this.selection.count() === 0) return false;
+        this.selection.clear();
+        return true;
+    }
+
+    private toggleHighlighted(): void {
+        const issue = this.highlightedIssue();
+        if (issue) this.notifyLimit(this.selection.toggle(issue));
+    }
+
+    private extendSelection(delta: 1 | -1): void {
+        const from = this.highlightedId();
+        this.moveHighlight(delta);
+        const target = this.highlightedIssue();
+        if (!target) return;
+        this.notifyLimit(this.selection.extendTo(target, this.loadedIssues(), from));
+    }
+
+    private notifyLimit(result: SelectionResult): void {
+        this.limitToast.notify(result);
     }
 
     public onOpenHighlighted(issue: Issue): void {

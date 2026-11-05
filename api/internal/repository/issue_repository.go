@@ -1012,11 +1012,7 @@ func (r *IssueRepository) BulkUpdateIssues(
 			issueTypeValues = append(issueTypeValues, issue.IdIssueType)
 		}
 
-		if entry.IdUserAssigned != nil {
-			assignedToValues = append(assignedToValues, entry.IdUserAssigned)
-		} else {
-			assignedToValues = append(assignedToValues, issue.AssignedTo)
-		}
+		assignedToValues = append(assignedToValues, entry.IdUserAssigned.PtrOrElse(issue.AssignedTo))
 	}
 
 	_, err = db.Exec(ctx, `

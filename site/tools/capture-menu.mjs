@@ -1381,6 +1381,57 @@ const SHOTS = [
     },
 
     {
+        id: "quick-actions",
+        file: "quick-actions.png",
+        kind: "png",
+        desc: "Quick-actions menu (right-click a table row), Select in the action row",
+        run: async (page) => {
+            await gotoApp(page, `${BASE}/project/${PROJECT}/issue/view/table`);
+            await settle(page);
+            const row = page.locator("tbody tr[data-flip-id]").first();
+            await row.waitFor({ state: "visible", timeout: 15000 });
+            await row.click({ button: "right" });
+            await page
+                .locator(".qap")
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(500);
+            await shoot(page, "quick-actions.png");
+            await page.keyboard.press("Escape");
+        },
+    },
+
+    {
+        id: "bulk-edit",
+        file: "bulk-edit.png",
+        kind: "png",
+        desc: "Bulk edit dialog for three selected rows, a state and a tag picked (nothing saved)",
+        run: async (page) => {
+            await gotoApp(page, `${BASE}/project/${PROJECT}/issue/view/table`);
+            await settle(page);
+            const rows = page.locator("tbody tr[data-flip-id]");
+            await rows.first().waitFor({ state: "visible", timeout: 15000 });
+            for (let i = 0; i < 3; i++) {
+                await rows
+                    .nth(i)
+                    .locator("td.id-col")
+                    .click({ modifiers: ["ControlOrMeta"] });
+            }
+            await page.getByTestId("bulk-edit-open").click();
+            const dialog = page.locator('.cdk-overlay-container [aria-modal="true"]');
+            await dialog.waitFor({ state: "visible", timeout: 10000 });
+            await page.locator("#bulk-state").click();
+            await page.getByRole("option").nth(1).click();
+            const tag = dialog.locator('[data-testid^="bulk-tag-"]').first();
+            if (await tag.count()) await tag.click();
+            await page.mouse.move(0, 0);
+            await page.waitForTimeout(500);
+            await dialog.screenshot({ path: path.join(IMG, "bulk-edit.png") });
+            await page.keyboard.press("Escape");
+            await page.keyboard.press("Escape");
+        },
+    },
+
+    {
         id: "git-integration-settings",
         file: "git-integration-settings.png",
         kind: "png",

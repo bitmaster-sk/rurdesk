@@ -6,6 +6,7 @@
 
     <!-- Toolbar portal — rendered in the page header via IssueToolbarService -->
     <ng-template #toolbar>
+        <app-bulk-edit-button (editRequested)="openBulkEdit()" />
         <ui-toggle-button [ngModel]="showFilter()" (ngModelChange)="onToggleFilter()" size="small">
             <tabler-icon icon="filter" [size]="14" />
             {{ 'FILTER.SINGULAR' | translate }}
@@ -126,6 +127,12 @@
                                 [tabindex]="highlightedIndex() === i ? 0 : -1"
                                 [class.row--active]="highlightedIndex() === i"
                                 [class.row--pulsed]="pulsedIds().has(row.issue.idIssuePublic)"
+                                [class.row--selected]="
+                                    selection.isSelected(row.issue.idIssuePublic)
+                                "
+                                [attr.aria-selected]="selection.isSelected(row.issue.idIssuePublic)"
+                                (click)="onRowClick($event, row.issue)"
+                                (mousedown)="onRowMouseDown($event)"
                                 (keydown.enter)="onOpenHighlighted(row.issue)"
                                 (contextmenu)="onContextMenu($event, row.issue)"
                                 (dragenter)="onDragEnter($event, row.issue)"
@@ -403,6 +410,15 @@
             (accepted)="onSplitAccepted($event)"
             (cancelled)="onSplitCancelled()"
         ></app-split-dialog>
+    }
+
+    @if (bulkEditIssues(); as issues) {
+        <app-bulk-edit-dialog
+            [idProject]="idProject!"
+            [issues]="issues"
+            (closed)="onBulkEditClosed()"
+            (applied)="onBulkEditApplied($event)"
+        />
     }
 
     <!-- Lag dialog -->

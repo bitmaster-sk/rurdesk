@@ -47,10 +47,14 @@
                     @for (tile of cell.tiles; track tile.idIssue) {
                         <app-issue-kanban-tile
                             [tile]="tile"
+                            [isHighlighted]="tile.idIssuePublic === highlightedId()"
                             cdkDrag
                             [class.tile-landed]="tile.idIssue === landedTileId()"
                             (cdkDragStarted)="onTileDragStarted($event)"
                             (contextMenuRequested)="contextMenuRequested.emit($event)"
+                            (selectionClicked)="
+                                selectionClicked.emit({ click: $event, siblings: cell.tiles })
+                            "
                         >
                             <div
                                 *cdkDragPreview

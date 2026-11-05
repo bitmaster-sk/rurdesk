@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { of, EMPTY } from 'rxjs';
+import { of, EMPTY, Subject } from 'rxjs';
 import { Component, input, output } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
-import { provideRouter } from '@angular/router';
+import { provideRouter, RouterLink } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 
 import { IssueTableComponent } from './issue-table.component';
@@ -12,6 +12,7 @@ import { IssueFilterStore } from '../filter/issue-filter.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { IssueToolbarService } from '../../issue-toolbar.service';
+import { IssueSelectionStore } from '../../store/issue-selection.store';
 import { HotkeyService } from 'src/app/core/command/hotkey.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -93,6 +94,19 @@ export class SplitDialogStub {
     public readonly cancelled = output<void>();
 }
 
+@Component({ selector: 'app-bulk-edit-button', template: '', standalone: true })
+export class BulkEditButtonStub {
+    public readonly editRequested = output<void>();
+}
+
+@Component({ selector: 'app-bulk-edit-dialog', template: '', standalone: true })
+export class BulkEditDialogStub {
+    public readonly idProject = input<number>(0);
+    public readonly issues = input<readonly Issue[]>([]);
+    public readonly closed = output<void>();
+    public readonly applied = output<Issue[]>();
+}
+
 export interface TableMocks {
     issueTableServiceMock: any;
     issueFilterStoreMock: any;
@@ -101,6 +115,7 @@ export interface TableMocks {
     commandPaletteMock: any;
     hotkeysMock: any;
     listStateMock: any;
+    issueNotice$: Subject<any>;
 }
 
 export function configureTableTestBed(): TableMocks {
@@ -126,6 +141,8 @@ export function configureTableTestBed(): TableMocks {
         actualFilterChange$: of({ filter: { idProject: 10 }, refresh: false })
     };
 
+    const issueNotice$ = new Subject<any>();
+
     const projectStoreMock = {
         project$: of({ idProject: 10 })
     };
@@ -148,7 +165,8 @@ export function configureTableTestBed(): TableMocks {
     };
 
     const hotkeysMock = {
-        registerListHandler: vi.fn()
+        registerListHandler: vi.fn(),
+        registerSelectionHandler: vi.fn()
     };
 
     TestBed.configureTestingModule({
@@ -165,7 +183,10 @@ export function configureTableTestBed(): TableMocks {
             QualityBadgeStub,
             DropZoneStub,
             SplitDialogStub,
-            IssueTagsStub
+            IssueTagsStub,
+            BulkEditButtonStub,
+            BulkEditDialogStub,
+            RouterLink
         ],
         declarations: [IssueTableComponent],
         providers: [
@@ -179,7 +200,7 @@ export function configureTableTestBed(): TableMocks {
             { provide: CommandPaletteService, useValue: commandPaletteMock },
             {
                 provide: NoticeService,
-                useValue: { show: vi.fn(), relation$: EMPTY, issue$: EMPTY }
+                useValue: { show: vi.fn(), relation$: EMPTY, issue$: issueNotice$ }
             },
             { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
             // The real root-scoped SavedViewStore is used, so its api needs a stub.
@@ -191,7 +212,10 @@ export function configureTableTestBed(): TableMocks {
 
     TestBed.overrideComponent(IssueTableComponent, {
         set: {
-            providers: [{ provide: IssueTableService, useValue: issueTableServiceMock }]
+            providers: [
+                { provide: IssueTableService, useValue: issueTableServiceMock },
+                IssueSelectionStore
+            ]
         }
     });
 
@@ -202,7 +226,8 @@ export function configureTableTestBed(): TableMocks {
         stateStoreMock,
         commandPaletteMock,
         hotkeysMock,
-        listStateMock
+        listStateMock,
+        issueNotice$
     };
 }
 

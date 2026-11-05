@@ -2,7 +2,7 @@ import { Injector, runInInjectionContext } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { of } from 'rxjs';
 import { IssueBulkApi } from './issue-bulk.api.service';
-import { BulkEditIssueEntry } from '../model/bulk-edit-issues.model';
+import { BulkEditIssueEntryReq } from '../model/bulk-edit-issues.model';
 
 describe('IssueBulkApi', () => {
     let patch: ReturnType<typeof vi.fn>;
@@ -17,7 +17,7 @@ describe('IssueBulkApi', () => {
     });
 
     it('update$ sends PATCH to the batch endpoint with the entries wrapped in { issues }', () => {
-        const entries: BulkEditIssueEntry[] = [
+        const entries: BulkEditIssueEntryReq[] = [
             { idIssuePublic: 42, scheduledAt: '2026-04-15T09:00:00Z' },
             { idIssuePublic: 43, estimated: 7200 }
         ];

@@ -121,19 +121,18 @@ func (s *AgentAutoRunSuite) TestCreateAssignedToAgentStartsRun() {
 		"creating an issue assigned to a bot must start exactly one run")
 }
 
-// Assigning an agent via bulk-edit starts a run.
-func (s *AgentAutoRunSuite) TestBulkAssignToAgentStartsRun() {
+// Bulk edit refuses agent assignees, so it never starts runs.
+func (s *AgentAutoRunSuite) TestBulkAssignToAgentIsRejected() {
 	iss := s.createIssue(`{"title":"bulk-bot","description":"body","estimated":0}`)
-	s.Require().Equal(0, s.runCountForIssue(iss.IdIssuePublic), "unassigned issue must start with no run")
 
 	res := Request(s.T(), s.App, "PATCH",
 		fmt.Sprintf("/api/private/project/%d/issue/batch", s.IdProject),
 		fmt.Sprintf(`{"issues":[{"idIssuePublic":%d,"idUserAssigned":%d}]}`, iss.IdIssuePublic, s.AgentUserID),
 		s.Token)
-	s.Require().Equal(http.StatusOK, res.StatusCode)
+	s.Require().Equal(http.StatusUnprocessableEntity, res.StatusCode)
 
-	s.Equal(1, s.runCountForIssue(iss.IdIssuePublic),
-		"bulk-assigning a bot must start exactly one run")
+	s.Equal(0, s.runCountForIssue(iss.IdIssuePublic),
+		"a rejected bulk assignment must not start a run")
 }
 
 // Control: assigning a human (not an agent) must never start a run.
