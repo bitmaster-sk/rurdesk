@@ -141,11 +141,8 @@
             "STARTED": "Started",
             "MODEL": "Model",
             "MODEL_GATEWAY_DEFAULT": "Gateway default",
-            "ELAPSED": "{{time}} elapsed",
             "CANCEL_RUN": "Cancel run",
-            "VIEW_HISTORY": "View history",
-            "PR_LINK": "View PR",
-            "PULL_REQUEST": "Pull request"
+            "PR_LINK": "View PR"
         },
         "ACTIONS": {
             "APPROVE": "Approve",
@@ -227,10 +224,7 @@
             "IMPLEMENTATION_DONE": "Implementation done",
             "REVIEW_REPLY": "Review reply"
         },
-        "BANNER": {
-            "FAILED_TITLE": "Agent run failed",
-            "CONTINUE_HINT": "Click Continue to redo the current stage"
-        },
+        "BANNER": {},
         "CARD": {
             "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below.",
             "PARKED_UNASSIGNED": "The task has no agent assigned. Assign the agent back to continue.",
@@ -269,9 +263,7 @@
             },
             "COST": "cost"
         },
-        "CLARIFICATION": {
-            "BADGE": "Question from agent"
-        },
+        "CLARIFICATION": {},
         "SKILLS": {
             "TITLE": "Agent skills",
             "DESCRIPTION": "Pick which instructions each stage of an agent run gets. Skills are injected into the agent's prompt; the catalog is managed by an instance admin.",
@@ -327,11 +319,9 @@
     },
     "QUALITY": {
         "TITLE": "Task quality",
-        "SCORE": "Quality Score",
         "SINGULAR": "Quality",
         "CHECK": "Check Quality",
         "RECHECK": "Re-check",
-        "CHECKING": "Checking...",
         "NOT_CHECKED": "Not yet checked",
         "EMPTY_HINT": "This task hasn't been quality-checked yet. Running the check evaluates clarity, completeness, actionability, scope, and metadata, and surfaces concrete problems and suggestions you can act on.",
         "POOR": "Poor",
@@ -378,26 +368,11 @@
             "UNAVAILABLE": "Diagram server is unavailable"
         }
     },
-    "LOGIN": "Login",
-    "LOGIN.WELCOME": "Welcome back",
-    "LOGIN.SUBTITLE": "Sign in to continue",
-    "LOGIN.FAILED": "Incorrect email or password",
-    "LOGIN.EXTENDED_SESSION": "Stay signed in for 30 days",
     "LOGOUT": "Log out",
-    "REGISTER": "Register",
-    "REGISTER.WELCOME": "Welcome to Rurdesk",
-    "REGISTER.SUBTITLE": "Create the first admin account",
-    "REGISTER.FAILED": "Registration failed, please try again",
-    "REGISTER.CLOSED": "Registration is closed — ask your admin for an account",
-    "REGISTER.INVALID": "Please fill in all fields correctly",
-    "REGISTER.PASSWORD.MISMATCH": "Passwords do not match",
     "EMAIL": "Email",
-    "PASSWORD": "Password",
-    "PASSWORD.CONFIRMATION": "Password confirmation",
     "NAME": "Name",
     "ACTIONS": "Actions",
     "NEW": "New",
-    "DIRECT.CHATS": "Direct messages",
     "TITLE": "Title",
     "DESCRIPTION": "Description",
     "DESCRIPTION_EDIT": "Edit description",
@@ -425,8 +400,6 @@
     "SEARCH": "Search",
     "NO_DATA": "No data",
     "NO_DATA_YET": "No data yet",
-    "UPDATED.AT": "Updated at",
-    "CREATED.AT": "Created at",
     "AI": {
         "SINGULAR": "AI"
     },
@@ -446,12 +419,20 @@
         "END": "End state",
         "NEW": "New state",
         "EDIT": "Edit state",
-        "DEFAULT.FOR.NEW.ISSUE": "Default state for new tasks",
-        "DELETE_USAGE.ONE": "1 task still uses this state.",
-        "DELETE_USAGE.MANY": "{{count}} tasks still use this state.",
-        "DELETE_USAGE.DEFAULT": "It is the project's default state.",
-        "DELETE_USAGE.PHASES_ONE": "1 agent workflow phase is mapped to this state.",
-        "DELETE_USAGE.PHASES_MANY": "{{count}} agent workflow phases are mapped to this state."
+        "DEFAULT": {
+            "FOR": {
+                "NEW": {
+                    "ISSUE": "Default state for new tasks"
+                }
+            }
+        },
+        "DELETE_USAGE": {
+            "ONE": "1 task still uses this state.",
+            "MANY": "{{count}} tasks still use this state.",
+            "DEFAULT": "It is the project's default state.",
+            "PHASES_ONE": "1 agent workflow phase is mapped to this state.",
+            "PHASES_MANY": "{{count}} agent workflow phases are mapped to this state."
+        }
     },
     "SEVERITY": {
         "SINGULAR": "Severity",
@@ -459,41 +440,54 @@
         "NEW": "New severity",
         "EDIT": "Edit severity",
         "COLOR": "Color",
-        "DEFAULT.FOR.NEW.ISSUE": "Default severity for new tasks",
-        "DELETE_USAGE.ONE": "1 task still uses this severity.",
-        "DELETE_USAGE.MANY": "{{count}} tasks still use this severity.",
-        "DELETE_USAGE.DEFAULT": "It is the project's default severity."
+        "DEFAULT": {
+            "FOR": {
+                "NEW": {
+                    "ISSUE": "Default severity for new tasks"
+                }
+            }
+        },
+        "DELETE_USAGE": {
+            "ONE": "1 task still uses this severity.",
+            "MANY": "{{count}} tasks still use this severity.",
+            "DEFAULT": "It is the project's default severity."
+        }
     },
     "PROJECT": {
         "SINGULAR": "Project",
-        "PLURAL": "Projects",
         "CHATS": "Project chats",
         "NEW": "New project",
         "SETTINGS": "Project settings",
         "GENERAL": "General",
         "SAVE_ERROR": "Failed to save project settings.",
-        "MEMBERS": "Members",
-        "MEMBERS.USERS": "Users",
-        "MEMBERS.TEAMS": "Teams",
-        "MEMBERS.ADD_USER": "Add user",
-        "MEMBERS.ADD_TEAM": "Add team",
-        "MEMBERS.ROLE": "Role",
-        "MEMBERS.SOURCE": "Source",
-        "MEMBERS.LAST_OWNER_WARNING": "This project has only one owner. Promote another member before removing or demoting this owner.",
-        "MEMBERS.TEAM_NOTE": "Team members inherit the team's role unless they have a direct assignment.",
         "AI_TOOLS": "AI Tools",
-        "MEMBERS.OVERRIDE_ADD": "+ override"
+        "MEMBERS": {
+            "USERS": "Users",
+            "TEAMS": "Teams",
+            "ADD_USER": "Add user",
+            "ADD_TEAM": "Add team",
+            "ROLE": "Role",
+            "SOURCE": "Source",
+            "LAST_OWNER_WARNING": "This project has only one owner. Promote another member before removing or demoting this owner.",
+            "TEAM_NOTE": "Team members inherit the team's role unless they have a direct assignment.",
+            "OVERRIDE_ADD": "+ override",
+            "TITLE": "Members"
+        }
     },
     "TEAM": {
-        "PLURAL": "Teams",
         "SINGULAR": "Team",
         "CHATS": "Team chats",
         "MEMBERS": "Team members",
-        "NO.TEAMMATES.TO.ADD": "No users to add",
-        "NO_TEAMMATES_TO_ADD": "No teammates to add"
+        "NO_TEAMMATES_TO_ADD": "No teammates to add",
+        "NO": {
+            "TEAMMATES": {
+                "TO": {
+                    "ADD": "No users to add"
+                }
+            }
+        }
     },
     "USER": {
-        "SINGULAR": "User",
         "MANAGEMENT": "User management",
         "SETTINGS": "User settings",
         "MY_PAGE": "My page",
@@ -914,8 +908,10 @@
                 "SCOPE_CHANGE_DETAIL_LATE": "on {{date}}, after the sprint window",
                 "PLANNED": "Planned"
             },
-            "LAYOUT.COLUMNS": "Columns",
-            "LAYOUT.SWIMLANE": "Swimlane"
+            "LAYOUT": {
+                "COLUMNS": "Columns",
+                "SWIMLANE": "Swimlane"
+            }
         },
         "CARD_MODE": {
             "COMFORTABLE": "Comfortable",
@@ -976,15 +972,6 @@
         },
         "ADD": "Add task",
         "MOVE_FAILED": "Failed to move the card. The board has been refreshed.",
-        "UPDATE_FAILED": "Failed to save the change. The task has been restored.",
-        "CREATED.AT": "Created at",
-        "LAST.UPDATE.AT": "Last update at",
-        "SCHEDULED.AT": "Scheduled at",
-        "BY.USER": "by user",
-        "ASSIGNED.TO": "Assigned to",
-        "TIME.TRACKER": "Time tracker",
-        "TIME.TRACKED": "Tracked time",
-        "TIME.ESTIMATED": "Estimated time",
         "DISPLAY": {
             "UNSET": {
                 "SEVERITIES": "Display tasks with unset severities",
@@ -997,12 +984,17 @@
             }
         },
         "PINNED": "Pinned tasks",
-        "COMMENTS": "Comments",
         "PIN": {
             "SINGULAR": "Pin",
-            "TO.PROJECT.PAGE": "To project page",
-            "TO.MY.PAGE": "To my page",
-            "DELETE": "Remove pin"
+            "DELETE": "Remove pin",
+            "TO": {
+                "PROJECT": {
+                    "PAGE": "To project page"
+                },
+                "MY": {
+                    "PAGE": "To my page"
+                }
+            }
         },
         "GANTT": {
             "TODAY": "Today",
@@ -1060,7 +1052,29 @@
             "FAILED": "Could not delete the task. Please try again.",
             "CONFIRM": "Delete"
         },
-        "COPY_SUFFIX": "{{title}} (copy)"
+        "COPY_SUFFIX": "{{title}} (copy)",
+        "CREATED": {
+            "AT": "Created at"
+        },
+        "LAST": {
+            "UPDATE": {
+                "AT": "Last update at"
+            }
+        },
+        "SCHEDULED": {
+            "AT": "Scheduled at"
+        },
+        "BY": {
+            "USER": "by user"
+        },
+        "ASSIGNED": {
+            "TO": "Assigned to"
+        },
+        "TIME": {
+            "TRACKER": "Time tracker",
+            "TRACKED": "Tracked time",
+            "ESTIMATED": "Estimated time"
+        }
     },
     "CONFIRM": "Confirm",
     "RELATION": {
@@ -1085,8 +1099,7 @@
         "TRIGGERS_END_OF": "triggers end of",
         "END_TRIGGERED_BY": "end triggered by",
         "ADD_LAG": "Add lag (optional)",
-        "LAG_MINUTES": "Lag minutes",
-        "TABLE_SETTINGS": "Table settings"
+        "LAG_MINUTES": "Lag minutes"
     },
     "SPLIT": {
         "SINGULAR": "Split",
@@ -1098,13 +1111,9 @@
         "ADD_CHILD": "Add child",
         "ACCEPT_BUTTON": "Accept ({{count}})",
         "CANCEL": "Cancel",
-        "LOADING": "Generating child tasks…",
-        "SAVING": "Creating tasks…",
         "DONE": "{{count}} tasks created",
         "ERROR_AI": "Could not generate tasks. Please try again.",
-        "ERROR_RATE_LIMIT": "Please wait a moment before splitting again.",
-        "ERROR_EMPTY": "Add at least one child task.",
-        "CHILD_TITLE_PLACEHOLDER": "Task title"
+        "ERROR_RATE_LIMIT": "Please wait a moment before splitting again."
     },
     "PROJECT_BUILDER": {
         "TITLE": "AI Project Builder",
@@ -1150,17 +1159,20 @@
     "NONE": "None",
     "STATISTICS": "Statistics",
     "STATS": {
-        "ISSUES.BY.SEVERITY": "Tasks by severity",
-        "ISSUES.BY.STATE": "Tasks by state",
         "ESTIMATED": "Estimated",
         "TRACKED": "Tracked",
         "ESTIMATED_VS_TRACKED": "Estimated vs Tracked",
         "WORKLOAD_BY_ASSIGNEE": "Workload by Assignee",
         "UNASSIGNED": "Unassigned",
-        "OPEN_SUFFIX": "open"
+        "OPEN_SUFFIX": "open",
+        "ISSUES": {
+            "BY": {
+                "SEVERITY": "Tasks by severity",
+                "STATE": "Tasks by state"
+            }
+        }
     },
     "TRACK": {
-        "CONFIRM.DELETE": "Do you really want to delete this track record?",
         "TIME": "Tracked time",
         "RANGE_LABEL": "{{ from }} – {{ to }}",
         "SUBMIT": "Submit tracked time",
@@ -1179,8 +1191,6 @@
         "DELETE_SHORT": "Delete",
         "PAUSE": "Pause",
         "RESUME": "Resume",
-        "PAUSED": "Paused",
-        "RUNNING": "Running",
         "DETAILS": "Show timer details",
         "DISCARD": "Discard",
         "NOTE": "Note",
@@ -1191,7 +1201,6 @@
         "TODAY_TOTAL": "Today",
         "RUNAWAY_WARNING": "This timer has been running for a long time. Entries are capped at 24 hours.",
         "SWITCH_TITLE": "Another timer is running",
-        "SWITCH_MESSAGE": "Submit the time on {{ issue }} and start tracking this issue?",
         "SWITCH_RUNNING": "Running now",
         "SWITCH_NEXT": "Start next",
         "SWITCH_EXPLAIN": "The time tracked so far is submitted to #{{ issue }}, then the new timer starts.",
@@ -1199,11 +1208,12 @@
         "START_HERE": "Start tracking this issue",
         "TODAY_ISSUES": "{{ count }} tasks",
         "SUBMIT_SHORT": "Submit",
-        "START_SHORT": "Track"
+        "START_SHORT": "Track",
+        "CONFIRM": {
+            "DELETE": "Do you really want to delete this track record?"
+        }
     },
     "TIME": {
-        "START": "Start time",
-        "END": "End time",
         "HOURS": "Hours"
     },
     "NOT_FOUND": {
@@ -1310,7 +1320,6 @@
         "FILTER": {
             "ALL": "All",
             "MENTIONS": "Mentions",
-            "INVITATIONS": "Invitations",
             "GENERAL": "General"
         },
         "ACTION": {
@@ -1346,7 +1355,6 @@
     "AGENT_API_KEY": {
         "TITLE": "Agent credentials",
         "KEYS_SECTION": "Gateway → Tracker token",
-        "NAME": "Token name",
         "CREATE": "Create token",
         "REVOKE": "Revoke",
         "DELETE": "Delete",
@@ -1359,7 +1367,6 @@
         "KEY_SHOWN_ONCE": "This token will only be shown once. Copy it now and set it as GATEWAY_TO_TRACKER_TOKEN in the gateway environment.",
         "CREATED_AT": "Created",
         "LAST_USED": "Last used",
-        "EXPIRES_AT": "Expires",
         "NEVER": "Never",
         "NO_KEYS": "No tokens yet",
         "CREATE_FAILED": "Creating the token failed",
@@ -1400,7 +1407,6 @@
         "IS_ADMIN": "Is admin",
         "PROMOTE": "Make admin",
         "DEMOTE": "Remove admin",
-        "DELETE": "Delete",
         "CONFIRM_DELETE": "Delete this user? This cannot be undone.",
         "DISABLED": "Disabled",
         "DISABLE": "Disable",
@@ -1413,10 +1419,6 @@
         "CREATE": "Create",
         "SAVE": "Save",
         "CANCEL": "Cancel",
-        "CLOSE": "Close",
-        "COPY_KEY": "Copy",
-        "API_KEY": "Gateway → Tracker token",
-        "KEY_SHOWN_ONCE": "This token will only be shown once. Copy it now and set it as GATEWAY_TO_TRACKER_TOKEN in the gateway environment.",
         "TEAMS": "Teams",
         "CREATE_TEAM": "Create team",
         "EDIT_TEAM": "Edit team",
@@ -1463,7 +1465,6 @@
             "UNREACHABLE": "Could not reach the git host API. Check the base URL."
         },
         "SELECT": "Select integration",
-        "MR": "Merge request",
         "PR_MR": {
             "BY_HOST": {
                 "GITHUB": "Pull request",
@@ -1495,9 +1496,7 @@
         },
         "APPROVED": "Approved",
         "ID": "Number",
-        "LINK": {
-            "TITLE": "Link change request"
-        },
+        "LINK": {},
         "UNLINK": "Unlink",
         "NOT_LINKED": "No change request linked yet."
     },
@@ -1540,7 +1539,6 @@
         },
         "NAV": {
             "OVERVIEW": "Overview",
-            "ISSUES": "Tasks",
             "TABLE": "Table",
             "BOARD": "Board",
             "CALENDAR": "Calendar",
@@ -1642,10 +1640,18 @@
         "PLURAL": "Types",
         "NEW": "New type",
         "EDIT": "Edit type",
-        "DEFAULT.FOR.NEW.ISSUE": "Default type for new tasks",
-        "DELETE_USAGE.ONE": "1 task still uses this type.",
-        "DELETE_USAGE.MANY": "{{count}} tasks still use this type.",
-        "DELETE_USAGE.DEFAULT": "It is the project's default type."
+        "DEFAULT": {
+            "FOR": {
+                "NEW": {
+                    "ISSUE": "Default type for new tasks"
+                }
+            }
+        },
+        "DELETE_USAGE": {
+            "ONE": "1 task still uses this type.",
+            "MANY": "{{count}} tasks still use this type.",
+            "DEFAULT": "It is the project's default type."
+        }
     },
     "CUSTOM_FIELD": {
         "SINGULAR": "Custom field",
@@ -1832,5 +1838,36 @@
         "LOADING": "Loading API keys…",
         "RETRY": "Try again",
         "EXPIRY_IN_PAST": "Pick a date in the future, or leave it empty for a key that never expires."
+    },
+    "LOGIN": {
+        "WELCOME": "Welcome back",
+        "SUBTITLE": "Sign in to continue",
+        "FAILED": "Incorrect email or password",
+        "EXTENDED_SESSION": "Stay signed in for 30 days",
+        "LABEL": "Login"
+    },
+    "REGISTER": {
+        "WELCOME": "Welcome to Rurdesk",
+        "SUBTITLE": "Create the first admin account",
+        "FAILED": "Registration failed, please try again",
+        "CLOSED": "Registration is closed — ask your admin for an account",
+        "INVALID": "Please fill in all fields correctly",
+        "PASSWORD": {
+            "MISMATCH": "Passwords do not match"
+        },
+        "LABEL": "Register"
+    },
+    "PASSWORD": {
+        "CONFIRMATION": "Password confirmation",
+        "LABEL": "Password"
+    },
+    "DIRECT": {
+        "CHATS": "Direct messages"
+    },
+    "UPDATED": {
+        "AT": "Updated at"
+    },
+    "CREATED": {
+        "AT": "Created at"
     }
 }
