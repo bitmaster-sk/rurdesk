@@ -1,6 +1,26 @@
 <div class="flex flex-col">
     <div class="col-span-12 p-0">
-        <table class="ui-table" cdkDropList (cdkDropListDropped)="onReorder($event)">
+        <div class="flex items-center justify-end px-3 py-2">
+            <label for="custom-field-show-archived" class="flex cursor-pointer items-center gap-2">
+                <input
+                    type="checkbox"
+                    uiCheckbox
+                    id="custom-field-show-archived"
+                    data-testid="custom-field-show-archived"
+                    [checked]="isShowArchived()"
+                    (change)="onToggleShowArchived($event)"
+                />
+                <span>
+                    {{ 'CUSTOM_FIELD.SHOW_ARCHIVED' | translate: { count: archivedCount() } }}
+                </span>
+            </label>
+        </div>
+        <table
+            class="ui-table"
+            cdkDropList
+            [cdkDropListDisabled]="isReorderDisabled()"
+            (cdkDropListDropped)="onReorder($event)"
+        >
             <thead>
                 <tr>
                     <th scope="col" style="width: 2rem"></th>
@@ -11,10 +31,11 @@
                 </tr>
             </thead>
             <tbody>
-                @for (customField of customFields(); track customField.idCustomField) {
+                @for (customField of visibleCustomFields(); track customField.idCustomField) {
                     <tr
                         data-testid="custom-field-row"
                         cdkDrag
+                        [cdkDragDisabled]="isReorderDisabled()"
                         [class.custom-field-row--archived]="!!customField.archivedAt"
                         (pointerdown)="onRowPointerDown($event)"
                         (pointerup)="onRowPointerUp($event)"
@@ -25,6 +46,7 @@
                                 icon="grip-vertical"
                                 [size]="16"
                                 cdkDragHandle
+                                [cdkDragHandleDisabled]="isReorderDisabled()"
                                 class="drag-handle"
                             />
                         </td>
@@ -99,12 +121,32 @@
                     </tr>
                 } @empty {
                     <tr>
-                        <td
-                            colspan="5"
-                            class="text-center ui-color-text-muted"
-                            data-testid="custom-field-empty"
-                        >
-                            {{ 'CUSTOM_FIELD.EMPTY' | translate }}
+                        <td colspan="5" class="text-center">
+                            @if (archivedCount() > 0) {
+                                <div
+                                    class="flex flex-col items-center gap-1 py-2 ui-color-text-muted"
+                                    data-testid="custom-field-archived-empty"
+                                >
+                                    <span>
+                                        {{
+                                            'CUSTOM_FIELD.ONLY_ARCHIVED'
+                                                | translate: { count: archivedCount() }
+                                        }}
+                                    </span>
+                                    <ui-button
+                                        variant="text"
+                                        severity="info"
+                                        size="small"
+                                        data-testid="custom-field-show-archived-cta"
+                                        [label]="'CUSTOM_FIELD.SHOW_ARCHIVED_CTA' | translate"
+                                        (click)="isShowArchived.set(true)"
+                                    />
+                                </div>
+                            } @else {
+                                <span class="ui-color-text-muted" data-testid="custom-field-empty">
+                                    {{ 'CUSTOM_FIELD.EMPTY' | translate }}
+                                </span>
+                            }
                         </td>
                     </tr>
                 }

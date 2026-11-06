@@ -1,5 +1,5 @@
-import { Component, input, model, output } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { Component, Directive, input, model, output } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
@@ -27,6 +27,9 @@ class DeleteMigrationDialogStub {
     public readonly isLoading = input(false);
     public readonly confirmed = output<unknown>();
 }
+
+@Directive({ selector: 'input[uiCheckbox]', standalone: true, host: { class: 'ui-checkbox' } })
+class UiCheckboxStub {}
 
 describe('ProjectCustomFieldComponent (browser)', () => {
     const field = (id: number, rank: number, archivedAt: string | null = null): CustomField => ({
@@ -58,6 +61,7 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         archive$: any;
     };
     let customFieldStore: { load: any; customFieldsByProject$: any };
+    let renderApi: { load$: any; update$: any; delete$: any; archive$: any };
 
     function setup(usage = { issues: 0, optionUsage: {} }, fields = [field(1, 1), field(2, 2)]) {
         customFieldApi = {
@@ -90,6 +94,12 @@ describe('ProjectCustomFieldComponent (browser)', () => {
     }
 
     function render(fields: CustomField[]) {
+        renderApi = {
+            load$: vi.fn().mockReturnValue(of(fields)),
+            update$: vi.fn().mockReturnValue(of(fields[0])),
+            delete$: vi.fn().mockReturnValue(of(undefined)),
+            archive$: vi.fn().mockReturnValue(of(fields[0]))
+        };
         TestBed.configureTestingModule({
             declarations: [ProjectCustomFieldComponent],
             imports: [
@@ -98,13 +108,11 @@ describe('ProjectCustomFieldComponent (browser)', () => {
                 TablerIconStub,
                 UiButtonStub,
                 UiTagStub,
+                UiCheckboxStub,
                 DeleteMigrationDialogStub
             ],
             providers: [
-                {
-                    provide: CustomFieldApi,
-                    useValue: { load$: vi.fn().mockReturnValue(of(fields)) }
-                },
+                { provide: CustomFieldApi, useValue: renderApi },
                 {
                     provide: CustomFieldStore,
                     useValue: {
@@ -115,12 +123,28 @@ describe('ProjectCustomFieldComponent (browser)', () => {
             ]
         });
         const translate = TestBed.inject(TranslateService);
-        translate.setTranslation('en', { CUSTOM_FIELD: { EMPTY: 'No custom fields yet' } });
+        translate.setTranslation('en', {
+            CUSTOM_FIELD: {
+                EMPTY: 'No custom fields yet',
+                SHOW_ARCHIVED: 'Show archived ({{count}})',
+                ONLY_ARCHIVED: 'All {{count}} custom fields are archived.',
+                SHOW_ARCHIVED_CTA: 'Show archived fields'
+            }
+        });
         translate.use('en');
         const fixture = TestBed.createComponent(ProjectCustomFieldComponent);
         fixture.componentRef.setInput('project', { idProject: 10, name: 'P' });
         fixture.detectChanges();
         return fixture;
+    }
+
+    function clickShowArchivedToggle(fixture: ComponentFixture<ProjectCustomFieldComponent>): void {
+        (
+            fixture.nativeElement.querySelector(
+                '[data-testid="custom-field-show-archived"]'
+            ) as HTMLInputElement
+        ).click();
+        fixture.detectChanges();
     }
 
     it('tells the user the project has no fields yet', () => {
@@ -139,6 +163,87 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         expect(
             fixture.nativeElement.querySelectorAll('[data-testid="custom-field-row"]').length
         ).toBe(1);
+    });
+
+    it('keeps the archived rows out of the table while the toggle is off', () => {
+        const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
+        const rows = () =>
+            fixture.nativeElement.querySelectorAll('[data-testid="custom-field-row"]');
+
+        expect(rows().length).toBe(2);
+        expect(
+            (
+                fixture.nativeElement.querySelector(
+                    '[data-testid="custom-field-show-archived"]'
+                ) as HTMLInputElement
+            ).closest('label')?.textContent
+        ).toContain('Show archived (1)');
+
+        clickShowArchivedToggle(fixture);
+
+        expect(rows().length).toBe(1);
+        expect(rows()[0].textContent).toContain('F1');
+        expect(rows()[0].textContent).not.toContain('F2');
+
+        clickShowArchivedToggle(fixture);
+
+        expect(rows().length).toBe(2);
+    });
+
+    it('sends no request while only the visibility changes', () => {
+        const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
+
+        clickShowArchivedToggle(fixture);
+        clickShowArchivedToggle(fixture);
+
+        expect(renderApi.update$).not.toHaveBeenCalled();
+        expect(renderApi.delete$).not.toHaveBeenCalled();
+        expect(renderApi.archive$).not.toHaveBeenCalled();
+    });
+
+    it('offers to show the archived rows when hiding them empties the table', () => {
+        const fixture = render([
+            field(1, 1, '2026-01-01T00:00:00Z'),
+            field(2, 2, '2026-01-01T00:00:00Z')
+        ]);
+
+        clickShowArchivedToggle(fixture);
+
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="custom-field-archived-empty"]')
+                ?.textContent
+        ).toContain('All 2 custom fields are archived.');
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="custom-field-empty"]')
+        ).toBeNull();
+
+        (
+            fixture.nativeElement.querySelector(
+                '[data-testid="custom-field-show-archived-cta"]'
+            ) as HTMLElement
+        ).click();
+        fixture.detectChanges();
+
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="custom-field-archived-empty"]')
+        ).toBeNull();
+        expect(
+            fixture.nativeElement.querySelectorAll('[data-testid="custom-field-row"]').length
+        ).toBe(2);
+    });
+
+    it('switches dragging off while the archived rows are hidden', () => {
+        const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
+        const table = fixture.nativeElement.querySelector('table');
+        const row = () => fixture.nativeElement.querySelector('[data-testid="custom-field-row"]');
+
+        expect(table.classList).not.toContain('cdk-drop-list-disabled');
+        expect(row().classList).not.toContain('cdk-drag-disabled');
+
+        clickShowArchivedToggle(fixture);
+
+        expect(table.classList).toContain('cdk-drop-list-disabled');
+        expect(row().classList).toContain('cdk-drag-disabled');
     });
 
     it('shows the fields of the bound project', () => {
@@ -304,5 +409,48 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         component.onReorder({ previousIndex: 0, currentIndex: 1 });
 
         expect(component.customFields().map((f: CustomField) => f.key)).toEqual(['k1', 'k2']);
+    });
+
+    it('derives the visible rows from the full list', () => {
+        const component = setup({ issues: 0, optionUsage: {} }, [
+            field(1, 1),
+            field(2, 2, '2026-01-01T00:00:00Z')
+        ]).componentInstance as any;
+
+        expect(component.visibleCustomFields().map((f: CustomField) => f.key)).toEqual([
+            'k1',
+            'k2'
+        ]);
+        expect(component.archivedCount()).toBe(1);
+
+        component.isShowArchived.set(false);
+
+        expect(component.visibleCustomFields().map((f: CustomField) => f.key)).toEqual(['k1']);
+        // The archived definition stays in customFields, so a restore (a fresh
+        // store snapshot) reappears without touching the toggle again.
+        expect(component.customFields().length).toBe(2);
+        component.customFields.set([field(1, 1), field(2, 2)]);
+        expect(component.visibleCustomFields().map((f: CustomField) => f.key)).toEqual([
+            'k1',
+            'k2'
+        ]);
+    });
+
+    it('ignores a reorder while the archived rows are hidden', () => {
+        const component = setup().componentInstance as any;
+        component.isShowArchived.set(false);
+
+        component.onReorder({ previousIndex: 0, currentIndex: 1 });
+
+        expect(customFieldApi.update$).not.toHaveBeenCalled();
+        expect(component.customFields().map((f: CustomField) => f.key)).toEqual(['k1', 'k2']);
+
+        component.isShowArchived.set(true);
+        component.onReorder({ previousIndex: 0, currentIndex: 1 });
+
+        expect(customFieldApi.update$).toHaveBeenCalledWith(
+            expect.objectContaining({ key: 'k1', orderRank: 2 })
+        );
+        expect(component.customFields().map((f: CustomField) => f.key)).toEqual(['k2', 'k1']);
     });
 });

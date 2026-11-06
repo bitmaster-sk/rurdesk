@@ -25,7 +25,10 @@ for:
   below. Optional, and independent of *Required*.
 - **Required** — see *What required means* below.
 
-Fields are shown in the order of the list; drag a row to change it.
+Fields are shown in the order of the list; drag a row to change it. A *Show
+archived* checkbox above the list hides the archived definitions — while it is
+off, dragging is disabled too, because the order belongs to the full list,
+hidden rows included.
 
 ## The five types
 
@@ -126,6 +129,11 @@ field.
 tasks that never had a value, and stays visible — read-only — on tasks that do.
 This is what you want when a field falls out of use but its history still
 matters.
+
+The definition stays in the settings list, marked *Archived*, with a *Restore*
+action next to it. The *Show archived* checkbox above the list hides those rows;
+when hiding them leaves the list empty, it says that every field is archived and
+offers to show them again.
 
 **Deleting** removes the definition and every value with it, permanently. The
 tracker tells you how many tasks are affected and asks for confirmation before
