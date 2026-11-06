@@ -311,12 +311,13 @@ export function cursorState() {
       }
       st.x = x; st.y = y;
     },
-    async dragTo(page, x, y, steps = 30) {
+    async dragTo(page, x, y, steps = 30, hold = 0) {
       await page.mouse.move(st.x, st.y);
       await page.mouse.down();
       for (let k = 1; k <= 6; k++) { const ny = st.y - k * 2; await page.mouse.move(st.x, ny); await page.evaluate(([px, py]) => window.__setCur && window.__setCur(px, py), [st.x, ny]); await page.waitForTimeout(22); }
       const sx = st.x, sy = st.y - 12;
       for (let i = 1; i <= steps; i++) { const t = i / steps; const nx = sx + (x - sx) * t, ny = sy + (y - sy) * t; await page.mouse.move(nx, ny); await page.evaluate(([px, py]) => window.__setCur && window.__setCur(px, py), [nx, ny]); await page.waitForTimeout(18); }
+      if (hold) await page.waitForTimeout(hold);
       await page.mouse.up();
       st.x = x; st.y = y;
     },
