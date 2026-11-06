@@ -1153,6 +1153,8 @@ body {
     //## Use .panel-body--flush for tables that should touch
     //## the panel edges. Sub-blocks (panel-subblock) split
     //## the body into labelled segments (e.g. Users / Teams).
+    //## Filters sit behind a Filter toggle in .panel-head-r
+    //## that reveals .panel-toolbar, never loose in the body.
     //####################################################
     .panel {
         display: flex;
@@ -1219,6 +1221,23 @@ body {
 
     .panel-body--flush {
         padding: 0;
+    }
+
+    .panel-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--ui-space) var(--ui-space-m);
+        padding: var(--ui-space) var(--ui-space-l);
+        background: var(--ui-surface-50);
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    @media (max-width: 640px) {
+        .panel-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
     }
 
     .panel-subblock + .panel-subblock {
