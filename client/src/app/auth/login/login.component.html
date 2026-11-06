@@ -13,7 +13,7 @@
         </div>
 
         <div class="login__field">
-            <label for="password">{{ 'PASSWORD' | translate }}</label>
+            <label for="password">{{ 'PASSWORD.LABEL' | translate }}</label>
             <input
                 id="password"
                 formControlName="password"
@@ -39,7 +39,7 @@
 
         <ui-button
             type="submit"
-            [label]="'LOGIN' | translate"
+            [label]="'LOGIN.LABEL' | translate"
             [disabled]="form.invalid"
             [fluid]="true"
             class="login__btn"

@@ -8,6 +8,6 @@ export class TranslateResolver implements Resolve<void> {
     private readonly i18n = inject(I18nService);
 
     public resolve(): Observable<void> {
-        return this.i18n.get$('LOGIN').pipe(map((): void => undefined));
+        return this.i18n.get$('LOGIN.LABEL').pipe(map((): void => undefined));
     }
 }
