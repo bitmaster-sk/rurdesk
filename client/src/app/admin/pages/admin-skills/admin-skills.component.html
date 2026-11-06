@@ -93,26 +93,22 @@
                 <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('content')">
                     <div class="flex items-center justify-between gap-2">
                         <label for="skillContent">{{ 'SKILL.CONTENT' | translate }}</label>
-                        <div class="flex items-center gap-1">
-                            <ui-button
-                                size="small"
-                                [variant]="isPreview() ? 'text' : 'outlined'"
-                                [severity]="isPreview() ? 'secondary' : 'primary'"
-                                (click)="setMode('text')"
-                                data-testid="skill-mode-text"
-                            >
-                                {{ 'SKILL.TEXT' | translate }}
-                            </ui-button>
-                            <ui-button
-                                size="small"
-                                [variant]="isPreview() ? 'outlined' : 'text'"
-                                [severity]="isPreview() ? 'primary' : 'secondary'"
-                                (click)="setMode('preview')"
-                                data-testid="skill-mode-preview"
-                            >
-                                {{ 'SKILL.PREVIEW' | translate }}
-                            </ui-button>
-                        </div>
+                        <ui-choice
+                            [options]="modeOptions"
+                            optionLabel="labelKey"
+                            optionValue="value"
+                            size="small"
+                            [allowEmpty]="false"
+                            [ngModel]="isPreview() ? 'preview' : 'text'"
+                            (ngModelChange)="setMode($event)"
+                            [ngModelOptions]="{ standalone: true }"
+                        >
+                            <ng-template #item let-item>
+                                <span [attr.data-testid]="'skill-mode-' + item.value">
+                                    {{ item.labelKey | translate }}
+                                </span>
+                            </ng-template>
+                        </ui-choice>
                     </div>
                     <textarea
                         id="skillContent"

@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MarkdownModule } from 'ngx-markdown';
 import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
@@ -99,6 +99,7 @@ describe('AdminSkillsComponent (browser)', () => {
         await TestBed.configureTestingModule({
             imports: [
                 UiModule,
+                FormsModule,
                 ReactiveFormsModule,
                 MarkdownModule.forRoot({
                     markedOptions: MARKDOWN_MARKED_OPTIONS,

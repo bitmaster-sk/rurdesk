@@ -36,6 +36,11 @@ export class AdminSkillsComponent {
 
     protected readonly isPreview = signal(false);
 
+    protected readonly modeOptions = [
+        { labelKey: 'SKILL.TEXT', value: 'text' },
+        { labelKey: 'SKILL.PREVIEW', value: 'preview' }
+    ];
+
     protected readonly form = this.formBuilder.nonNullable.group({
         name: '',
         description: '',
@@ -63,7 +68,7 @@ export class AdminSkillsComponent {
         return this.fieldStatus()[field];
     }
 
-    protected setMode(mode: 'text' | 'preview'): void {
+    protected setMode(mode: string): void {
         this.isPreview.set(mode === 'preview');
     }
 

@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UiModule } from '../ui/ui.module';
-import { ReactiveFormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { MarkdownModule } from 'ngx-markdown';
 import {
@@ -52,6 +52,7 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
     ],
     imports: [
         CommonModule,
+        FormsModule,
         ReactiveFormsModule,
         TranslateModule,
         AdminRoutingModule,
