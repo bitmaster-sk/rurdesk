@@ -42,6 +42,37 @@ export class ProjectCustomFieldComponent implements OnInit {
 
     protected readonly customFields = signal<CustomField[]>([]);
 
+    /**
+     * Archived definitions never leave `customFields` or the store — the toggle
+     * only changes which of them the table shows. On by default, so the list
+     * keeps showing everything it showed before the toggle existed.
+     */
+    protected readonly isShowArchived = signal(true);
+
+    protected readonly archivedCount = computed(
+        () => this.customFields().filter(field => !!field.archivedAt).length
+    );
+
+    protected readonly visibleCustomFields = computed(() => {
+        const fields = this.customFields();
+        return this.isShowArchived() ? fields : fields.filter(field => !field.archivedAt);
+    });
+
+    /**
+     * CDK drop indices address the visible rows while `onReorder` renumbers
+     * the full list. While archived rows are hidden the two no longer line up,
+     * so dragging is switched off instead of renumbering the wrong fields.
+     */
+    protected readonly isReorderDisabled = computed(() => !this.isShowArchived());
+
+    private readonly isFilterOpen = signal(false);
+
+    public readonly filterCount = computed(() => (this.isShowArchived() ? 0 : 1));
+
+    public readonly isFilterBarVisible = computed(
+        () => this.isFilterOpen() || this.filterCount() > 0
+    );
+
     protected readonly isDeleteDialogVisible = signal(false);
     protected readonly isDeleting = signal(false);
     protected readonly deleteTarget = signal<CustomField | null>(null);
@@ -90,6 +121,15 @@ export class ProjectCustomFieldComponent implements OnInit {
                     this.customFieldStore.load();
                 }
             });
+    }
+
+    public onToggleFilter(): void {
+        if (this.isFilterBarVisible()) {
+            this.isFilterOpen.set(false);
+            this.isShowArchived.set(true);
+            return;
+        }
+        this.isFilterOpen.set(true);
     }
 
     protected onEditCustomField(customField: CustomField): void {
@@ -194,6 +234,10 @@ export class ProjectCustomFieldComponent implements OnInit {
             });
     }
 
+    protected onToggleShowArchived(event: Event): void {
+        this.isShowArchived.set((event.target as HTMLInputElement).checked);
+    }
+
     protected onArchive(customField: CustomField, isArchived: boolean): void {
         this.customFieldApi
             .archive$(customField, isArchived)
@@ -230,6 +274,9 @@ export class ProjectCustomFieldComponent implements OnInit {
     }
 
     protected onReorder(evt: CdkDragDrop<CustomField[]>): void {
+        if (this.isReorderDisabled()) {
+            return;
+        }
         const before = this.customFields();
         const reordered = [...before];
         moveItemInArray(reordered, evt.previousIndex, evt.currentIndex);
