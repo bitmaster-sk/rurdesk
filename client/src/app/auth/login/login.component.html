@@ -12,14 +12,31 @@
             <input id="email" formControlName="email" type="text" autocomplete="email" />
         </div>
 
-        <div class="login__field">
+        <div class="login__field login__field--password">
             <label for="password">{{ 'PASSWORD.LABEL' | translate }}</label>
-            <input
-                id="password"
-                formControlName="password"
-                type="password"
-                autocomplete="current-password"
-            />
+            <div class="login__password-wrap">
+                <input
+                    id="password"
+                    formControlName="password"
+                    [type]="passwordVisible() ? 'text' : 'password'"
+                    autocomplete="current-password"
+                />
+                <ui-button
+                    type="button"
+                    [ariaLabel]="
+                        (passwordVisible() ? 'LOGIN.HIDE_PASSWORD' : 'LOGIN.SHOW_PASSWORD')
+                            | translate
+                    "
+                    [isIconOnly]="true"
+                    variant="text"
+                    size="small"
+                    (click)="togglePasswordVisibility()"
+                    class="login__password-toggle"
+                    data-testid="login-password-toggle"
+                >
+                    <tabler-icon [icon]="passwordVisible() ? 'eye-off' : 'eye'"></tabler-icon>
+                </ui-button>
+            </div>
         </div>
 
         <div class="ui-field-checkbox">

@@ -6,6 +6,12 @@ import { of, throwError } from 'rxjs';
 import { UiModule } from '../../ui/ui.module';
 import { AuthRobotStub } from 'src/testing/stubs';
 import { AuthApi } from '../api/auth.api.service';
+import {
+    IconEye,
+    IconEyeOff,
+    TablerIconComponent,
+    provideTablerIcons
+} from '@tabler/icons-angular';
 import { SessionService } from '../service/session.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 import { LoginComponent } from './login.component';
@@ -31,12 +37,14 @@ describe('LoginComponent (browser)', () => {
                 RouterTestingModule,
                 TranslateModule.forRoot(),
                 UiModule,
+                TablerIconComponent,
                 AuthRobotStub
             ],
             providers: [
                 { provide: AuthApi, useValue: authApi },
                 { provide: AuthTokenStore, useValue: tokenStore },
-                { provide: SessionService, useValue: session }
+                { provide: SessionService, useValue: session },
+                provideTablerIcons({ IconEye, IconEyeOff })
             ]
         }).compileComponents();
     });
@@ -115,6 +123,53 @@ describe('LoginComponent (browser)', () => {
         fixture.componentInstance.onLogin();
 
         expect(authApi.login$).toHaveBeenCalledWith('a@b.sk', 'secret', true);
+    });
+
+    it('toggles the password field type without changing its value or submitting', () => {
+        authApi.login$.mockReturnValue(of('a-token'));
+        const fixture = setup();
+        fixture.componentInstance.form.patchValue({ password: 'secret' });
+        fixture.detectChanges();
+
+        const input = fixture.nativeElement.querySelector('#password') as HTMLInputElement;
+        const toggle = fixture.nativeElement.querySelector(
+            '[data-testid="login-password-toggle"] button'
+        ) as HTMLButtonElement | null;
+        expect(toggle).not.toBeNull();
+
+        expect(input.type).toBe('password');
+        expect(input.value).toBe('secret');
+
+        toggle!.click();
+        fixture.detectChanges();
+
+        expect(input.type).toBe('text');
+        expect(input.value).toBe('secret');
+        expect(authApi.login$).not.toHaveBeenCalled();
+
+        toggle!.click();
+        fixture.detectChanges();
+
+        expect(input.type).toBe('password');
+        expect(input.value).toBe('secret');
+    });
+
+    it('offers an accessible name that depends on the toggle state', () => {
+        authApi.login$.mockReturnValue(of('a-token'));
+        const fixture = setup();
+        fixture.componentInstance.form.patchValue({ password: 'secret' });
+        fixture.detectChanges();
+
+        const toggle = fixture.nativeElement.querySelector(
+            '[data-testid="login-password-toggle"] button'
+        ) as HTMLButtonElement;
+
+        expect(toggle.getAttribute('aria-label')).toBe('LOGIN.SHOW_PASSWORD');
+
+        toggle.click();
+        fixture.detectChanges();
+
+        expect(toggle.getAttribute('aria-label')).toBe('LOGIN.HIDE_PASSWORD');
     });
 
     it('clears the error once the user edits the form', () => {
