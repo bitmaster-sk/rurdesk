@@ -5,6 +5,8 @@
         "NAME": "Name",
         "DESCRIPTION": "Description",
         "CONTENT": "Content (Markdown)",
+        "TEXT": "Text",
+        "PREVIEW": "Preview",
         "RESTORE": "Restore original",
         "RESTORE_CONFIRM": "Restore the shipped content? Your edits will be discarded.",
         "DELETE": "Delete",

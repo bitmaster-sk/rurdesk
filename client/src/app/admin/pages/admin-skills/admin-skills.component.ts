@@ -34,6 +34,8 @@ export class AdminSkillsComponent {
         content: UiSaveState.Idle
     });
 
+    protected readonly isPreview = signal(false);
+
     protected readonly form = this.formBuilder.nonNullable.group({
         name: '',
         description: '',
@@ -59,6 +61,10 @@ export class AdminSkillsComponent {
 
     protected fieldSaveStatus(field: SkillField): UiSaveState {
         return this.fieldStatus()[field];
+    }
+
+    protected setMode(mode: 'text' | 'preview'): void {
+        this.isPreview.set(mode === 'preview');
     }
 
     protected onSelect(skill: Skill): void {

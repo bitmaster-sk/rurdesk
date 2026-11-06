@@ -1,8 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { MarkdownModule } from 'ngx-markdown';
 import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { Fixtures } from 'src/testing/fixtures';
+import { MARKDOWN_MARKED_OPTIONS } from '../../../shared/markdown/marked-options';
+import { MARKDOWN_MENTION_EXTENSION } from '../../../shared/markdown/mention-extension';
 import { TablerIconStub } from 'src/testing/stubs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
@@ -11,18 +14,24 @@ import { Skill } from '../../../shared/model/skill.model';
 import { UiModule } from '../../../ui/ui.module';
 import { AdminSkillsComponent } from './admin-skills.component';
 
-const BUILTIN: Skill = Fixtures.skill({ idSkill: 1, name: 'Verification rules' });
+const BUILTIN: Skill = Fixtures.skill({
+    idSkill: 1,
+    name: 'Verification rules',
+    content: '# Verification\n\nBuilt-in content.'
+});
 const EDITED: Skill = Fixtures.skill({
     idSkill: 2,
     name: 'Repository rules',
     description: 'agents.md',
+    content: '## Repository\n\nCustom edited content.',
     isEdited: true
 });
 const CUSTOM: Skill = Fixtures.skill({
     idSkill: 3,
     name: 'House style',
     description: 'ours',
-    isBuiltin: false
+    isBuiltin: false,
+    content: '### House\n\n- one\n- two'
 });
 
 abstract class Dom {
@@ -44,6 +53,20 @@ abstract class Dom {
             document.querySelectorAll<HTMLElement>('.ui-confirm-panel button')
         );
         buttons[buttons.length - 1].click();
+    }
+
+    public static setTextArea(root: HTMLElement, value: string): void {
+        const textarea = root.querySelector('#skillContent') as HTMLTextAreaElement;
+        textarea.value = value;
+        textarea.dispatchEvent(new Event('input'));
+    }
+
+    public static clickMode(root: HTMLElement, mode: 'text' | 'preview'): void {
+        Dom.byTestId(root, `skill-mode-${mode}`)!.click();
+    }
+
+    public static preview(root: HTMLElement): HTMLElement {
+        return Dom.byTestId(root, 'skill-preview') as HTMLElement;
     }
 }
 
@@ -74,7 +97,16 @@ describe('AdminSkillsComponent (browser)', () => {
 
     async function setup() {
         await TestBed.configureTestingModule({
-            imports: [UiModule, ReactiveFormsModule, TranslateModule.forRoot(), TablerIconStub],
+            imports: [
+                UiModule,
+                ReactiveFormsModule,
+                MarkdownModule.forRoot({
+                    markedOptions: MARKDOWN_MARKED_OPTIONS,
+                    markedExtensions: [MARKDOWN_MENTION_EXTENSION]
+                }),
+                TranslateModule.forRoot(),
+                TablerIconStub
+            ],
             declarations: [AdminSkillsComponent],
             providers: [
                 { provide: SkillApi, useValue: api },
@@ -184,5 +216,72 @@ describe('AdminSkillsComponent (browser)', () => {
 
         expect(api.delete$).toHaveBeenCalledWith(3);
         expect(Dom.byTestId(root, 'skill-editor')).toBeNull();
+    });
+
+    it('renders Markdown headings, lists and code blocks in preview mode', async () => {
+        const fixture = await setup();
+        const root = fixture.nativeElement as HTMLElement;
+        Dom.rows(root)[0].click();
+        fixture.detectChanges();
+
+        Dom.setTextArea(root, '# Heading\n\n- item 1\n- item 2\n\n```\ncode block\n```\n');
+        fixture.detectChanges();
+        Dom.clickMode(root, 'preview');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const preview = Dom.preview(root);
+        expect(preview.querySelector('h1')?.textContent).toContain('Heading');
+        const listItems = preview.querySelectorAll('li');
+        expect(listItems.length).toBe(2);
+        expect(listItems[0]?.textContent).toContain('item 1');
+        expect(listItems[1]?.textContent).toContain('item 2');
+        expect(preview.querySelector('pre')?.textContent).toContain('code block');
+    });
+
+    it('switching to preview before autosave shows the latest content without saving', async () => {
+        const fixture = await setup();
+        const root = fixture.nativeElement as HTMLElement;
+        Dom.rows(root)[0].click();
+        fixture.detectChanges();
+
+        Dom.setTextArea(root, 'draft markdown');
+        fixture.detectChanges();
+        Dom.clickMode(root, 'preview');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(Dom.preview(root).textContent).toContain('draft markdown');
+        expect(api.update$).not.toHaveBeenCalled();
+
+        Dom.clickMode(root, 'text');
+        fixture.detectChanges();
+        expect((root.querySelector('#skillContent') as HTMLTextAreaElement).value).toBe(
+            'draft markdown'
+        );
+    });
+
+    it('selecting another skill refreshes the preview without showing the previous content', async () => {
+        const fixture = await setup();
+        const root = fixture.nativeElement as HTMLElement;
+        Dom.rows(root)[0].click();
+        fixture.detectChanges();
+        Dom.clickMode(root, 'preview');
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(Dom.preview(root).textContent).toContain('Built-in content');
+
+        Dom.rows(root)[1].click();
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const preview = Dom.preview(root);
+        expect(preview.textContent).toContain('Custom edited content');
+        expect(preview.textContent).not.toContain('Built-in content');
     });
 });

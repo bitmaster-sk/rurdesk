@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { UiModule } from '../ui/ui.module';
 import { ReactiveFormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
+import { MarkdownModule } from 'ngx-markdown';
 import {
     TablerIconComponent,
     provideTablerIcons,
@@ -56,6 +57,7 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
         AdminRoutingModule,
         SharedModule,
         UiModule,
+        MarkdownModule.forChild(),
         TablerIconComponent
     ],
     providers: [

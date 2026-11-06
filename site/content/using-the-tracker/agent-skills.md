@@ -22,7 +22,8 @@ instructions you would give a new colleague.
 
 The catalog is global to the instance and managed by an admin under
 **Administration → Agent skills**. Each skill has a name, a short description
-and its Markdown content.
+and its Markdown content. Use the **Text / Preview** switch next to the content
+editor to check how the instructions will render before they autosave.
 
 Some skills ship with the application (**builtin**). You can edit a builtin —
 it is then marked **edited** — and **Restore original** puts the shipped text
