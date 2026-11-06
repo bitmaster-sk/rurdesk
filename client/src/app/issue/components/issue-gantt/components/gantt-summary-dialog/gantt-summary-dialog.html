@@ -1,0 +1,31 @@
+<ui-dialog
+    [visible]="true"
+    [header]="'ISSUE.GANTT.MAKE_SUMMARY.TITLE' | translate: { title: title() }"
+    width="30rem"
+    (hide)="cancelled.emit()"
+>
+    <p data-testid="gantt-summary-dialog-text">
+        {{ 'ISSUE.GANTT.MAKE_SUMMARY.TEXT' | translate: { estimate: estimated() | secDuration } }}
+    </p>
+    <ng-template #footer>
+        <ui-button
+            severity="secondary"
+            variant="text"
+            data-testid="gantt-summary-dialog-cancel"
+            [label]="'CANCEL' | translate"
+            (click)="cancelled.emit()"
+        />
+        <ui-button
+            severity="secondary"
+            variant="outlined"
+            data-testid="gantt-summary-dialog-discard"
+            [label]="'ISSUE.GANTT.MAKE_SUMMARY.DISCARD' | translate"
+            (click)="chosen.emit(choice.Discard)"
+        />
+        <ui-button
+            data-testid="gantt-summary-dialog-move"
+            [label]="'ISSUE.GANTT.MAKE_SUMMARY.MOVE' | translate: { estimate: estimated() | secDuration }"
+            (click)="chosen.emit(choice.MoveToSubtask)"
+        />
+    </ng-template>
+</ui-dialog>

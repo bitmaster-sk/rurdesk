@@ -408,7 +408,7 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public onContextMenu(event: MouseEvent, issue: Issue): void {
         event.preventDefault();
-        this.quickActionsRef().show(event, issue);
+        this.quickActionsRef().show(event, issue, { showReschedule: !issue.isSummary });
     }
 
     // --- Filter ---

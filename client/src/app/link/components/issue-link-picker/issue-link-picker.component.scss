@@ -34,7 +34,7 @@
     }
 
     &__project {
-        font-size: calc(var(--font-size-xs) + 1px);
+        font-size: var(--font-size-xs);
         color: var(--ui-color-text-muted);
         white-space: nowrap;
         overflow: hidden;

@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/bitmaster-sk/rurdesk/api/internal/timeutil"
+)
 
 type Issue struct {
 	IdIssue          int64          `json:"idIssue" db:"id_issue"`
@@ -28,8 +32,23 @@ type Issue struct {
 	IdSprint         *int64         `json:"idSprint"                  db:"id_sprint"`
 	Points           *int           `json:"points"                    db:"points"`
 	CarryoverCount   int            `json:"carryoverCount"            db:"carryover_count"`
+	IsSummary        bool           `json:"isSummary"                 db:"is_summary"`
+	RollupEstimated  *int64         `json:"rollupEstimated"           db:"rollup_estimated"`
+	RollupTracked    *int64         `json:"rollupTracked"             db:"rollup_tracked"`
+	BacklogChildren  int            `json:"backlogChildren"           db:"backlog_children"`
 	IdsTag           []int64        `json:"idsTag"                    db:"ids_tag"`
 	CustomFields     map[string]any `json:"customFields,omitempty" db:"-"`
+}
+
+func (i *Issue) ChangesSchedule(scheduledAt Optional[time.Time], estimated Optional[int64]) bool {
+	if scheduledAt.IsDefined && !timeutil.PtrEqual(scheduledAt.Value, i.ScheduledAt) {
+		return true
+	}
+	return estimated.IsDefined && estimated.OrElse(0) != i.Estimated
+}
+
+func (i *Issue) RollupInputsDiffer(other *Issue) bool {
+	return !timeutil.PtrEqual(i.ScheduledAt, other.ScheduledAt) || i.Estimated != other.Estimated || i.Tracked != other.Tracked
 }
 
 type LoadIssuesFilter struct {

@@ -9,15 +9,7 @@ import { IssueState } from '../state/model/issue-state.model';
 import { StateStore } from '../state/store/state.store';
 import { Project } from './model/project.model';
 import { ProjectStore } from './project.store';
-
-interface ProjectStats {
-    totalIssues: number;
-    totalEstimatedSeconds: number;
-    totalTrackedSeconds: number;
-    issuesByState: Map<number, [IssueState, number]>;
-    issuesBySeverity: Map<number, [IssueSeverity, number]>;
-    openIssuesByAssignee: Map<number | null, number>;
-}
+import { ProjectStats } from './entity/project-stats.entity';
 
 @Injectable({
     providedIn: 'root'
@@ -133,7 +125,7 @@ export class ProjectStatStore {
     private issueToStats(stats: ProjectStats, issue: Issue): ProjectStats {
         stats.totalIssues++;
 
-        if ((issue.estimated ?? 0) > 0) {
+        if (!issue.isSummary && (issue.estimated ?? 0) > 0) {
             stats.totalEstimatedSeconds += issue.estimated ?? 0;
         }
 

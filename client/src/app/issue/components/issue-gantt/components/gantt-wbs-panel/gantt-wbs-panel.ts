@@ -9,14 +9,20 @@ import {
     signal,
     viewChild
 } from '@angular/core';
-import { CdkDragDrop } from '@angular/cdk/drag-drop';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 import { ExtendedIssue, ScheduledIssue } from '../../../../model/extended-issue.model';
 import { STORAGE_KEY_WBS_WIDTH } from '../../constants/gantt-storage-keys';
-
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 180;
-const MAX_WIDTH = 600;
+import {
+    DEFAULT_WIDTH,
+    DROP_TIP_GAP_PX,
+    MAX_WIDTH,
+    MIN_WIDTH,
+    OUTLINE_DRAG_PX
+} from './constants/gantt-wbs-panel.constants';
+import { GanttTreeRow, ParentMap } from '../../entity/gantt-tree.entity';
+import { GanttWbsDrop, GanttWbsDropKind } from '../../entity/gantt-wbs-drop.entity';
+import { GanttRowDragMove, GanttWbsDropTarget } from './entity/gantt-wbs-panel.entity';
+import { GanttTreeConverter } from '../../converter/gantt-tree.converter';
 
 @Component({
     selector: 'app-gantt-wbs-panel',
@@ -30,13 +36,16 @@ export class GanttWbsPanelComponent {
 
     private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
-    public readonly scheduledTasks = input.required<ScheduledIssue[]>();
+    public readonly rows = input.required<GanttTreeRow<ScheduledIssue>[]>();
+    public readonly parents = input<ParentMap>(new Map());
     public readonly backlogTasks = input.required<ExtendedIssue[]>();
     public readonly backlogHasMore = input<boolean>(false);
     public readonly backlogLoading = input<boolean>(false);
     public readonly isCollapsed = input<boolean>(false);
     public readonly hoveredTaskId = input<number | null>(null);
     public readonly selectedTaskId = input<number | null>(null);
+    public readonly hasHierarchy = input<boolean>(false);
+    public readonly outlineLevel = input<number | null>(0);
 
     public readonly scrolled = output<number>();
     public readonly taskClicked = output<{
@@ -49,7 +58,16 @@ export class GanttWbsPanelComponent {
         event: MouseEvent;
     }>();
     public readonly loadMoreBacklog = output<void>();
-    public readonly reordered = output<{ movedId: number; order: number[] }>();
+    public readonly treeDropped = output<GanttWbsDrop>();
+    public readonly collapseToggled = output<number>();
+    public readonly outlineLevelChange = output<number>();
+
+    public readonly outlineOptions = [
+        { label: '1', value: 1 },
+        { label: '2', value: 2 },
+        { label: '3', value: 3 },
+        { label: 'ISSUE.GANTT.OUTLINE_ALL', value: 0 }
+    ];
 
     public readonly panelWidth = signal<number>(this.loadWidth());
     public readonly activeTab = signal<'scheduled' | 'backlog'>('scheduled');
@@ -57,11 +75,30 @@ export class GanttWbsPanelComponent {
     private isSyncingScroll = false;
     private isDragging = false;
 
+    public readonly dropTarget = signal<GanttWbsDropTarget | null>(null);
+    public readonly dropTipAt = signal<{ x: number; y: number } | null>(null);
+    private draggedId: number | null = null;
+
     public readonly hasNoIssues = computed(
-        () => this.scheduledTasks().length === 0 && this.backlogTasks().length === 0
+        () => this.rows().length === 0 && this.backlogTasks().length === 0
     );
 
     public readonly rowHeight = computed(() => this.timelineService.rowHeight());
+
+    public readonly newSummary = computed(() => {
+        const drop = this.dropTarget();
+        if (!drop?.isAllowed) return null;
+        const order = this.rows().map(r => r.task.idIssuePublic);
+        const idParent =
+            drop.kind === 'into'
+                ? drop.targetId
+                : drop.kind === 'indent'
+                  ? GanttTreeConverter.indentTarget(drop.movedId, order, this.parents())
+                  : null;
+        const parent = this.rows().find(r => r.task.idIssuePublic === idParent)?.task;
+        if (!parent || parent.isSummary || !(parent.estimated ?? 0)) return null;
+        return parent;
+    });
 
     public onScroll(): void {
         if (this.isSyncingScroll) {
@@ -108,33 +145,117 @@ export class GanttWbsPanelComponent {
         this.taskClicked.emit({ taskId, isBacklog });
     }
 
-    public static buildReorder(
-        idsBefore: number[],
-        previousIndex: number,
-        currentIndex: number
-    ): { movedId: number; order: number[] } {
-        const order = [...idsBefore];
-        const [movedId] = order.splice(previousIndex, 1);
-        order.splice(currentIndex, 0, movedId);
-        return { movedId, order };
+    public onToggleCollapse(event: Event, taskId: number): void {
+        event.stopPropagation();
+        this.collapseToggled.emit(taskId);
     }
 
-    public onScheduledDrop(event: CdkDragDrop<unknown>): void {
-        if (event.previousIndex === event.currentIndex) return;
-        const ids = this.scheduledTasks().map(t => t.idIssuePublic);
-        this.reordered.emit(
-            GanttWbsPanelComponent.buildReorder(ids, event.previousIndex, event.currentIndex)
-        );
+    public static resolveDrop(
+        movedId: number,
+        targetId: number,
+        fraction: number,
+        dx: number,
+        parents: ParentMap,
+        order: number[]
+    ): GanttWbsDropTarget {
+        if (targetId === movedId) {
+            const kind: GanttWbsDropKind | null =
+                dx >= OUTLINE_DRAG_PX ? 'indent' : dx <= -OUTLINE_DRAG_PX ? 'outdent' : null;
+            const isAllowed =
+                kind === 'indent'
+                    ? GanttTreeConverter.indentTarget(movedId, order, parents) !== null
+                    : kind === 'outdent' && parents.has(movedId);
+            return { movedId, targetId, kind: kind ?? 'into', isAllowed };
+        }
+        return {
+            movedId,
+            targetId,
+            kind: GanttTreeConverter.dropZone(fraction),
+            isAllowed: GanttTreeConverter.canDrop(movedId, targetId, parents)
+        };
     }
 
-    public onRowDragStarted(): void {
+    public onRowDragStarted(taskId: number): void {
         this.isDragging = true;
+        this.draggedId = taskId;
+    }
+
+    public onRowDragMoved(event: GanttRowDragMove): void {
+        if (this.draggedId === null) return;
+        const { x, y } = event.pointerPosition;
+        const placeholder = event.source.getPlaceholderElement();
+        const own = placeholder.getBoundingClientRect();
+        this.dropTipAt.set({ x, y: own.bottom + event.distance.y + DROP_TIP_GAP_PX });
+        const overOwnRow = y >= own.top && y < own.bottom;
+        // The CDK placeholder has pointer-events: none, so elementsFromPoint never returns the own row.
+        const rowEl = overOwnRow
+            ? placeholder
+            : document
+                  .elementsFromPoint(x, y)
+                  .find(
+                      (el): el is HTMLElement =>
+                          el instanceof HTMLElement &&
+                          el.classList.contains('wbs-row') &&
+                          !el.classList.contains('cdk-drag-preview') &&
+                          el.dataset['taskId'] !== undefined
+                  );
+        if (!rowEl) {
+            this.dropTarget.set(null);
+            return;
+        }
+        const targetId = Number(rowEl.dataset['taskId']);
+        const isContext = rowEl.classList.contains('wbs-row--context');
+        const rect = rowEl.getBoundingClientRect();
+        const target = GanttWbsPanelComponent.resolveDrop(
+            this.draggedId,
+            targetId,
+            (y - rect.top) / rect.height,
+            event.distance.x,
+            this.parents(),
+            this.rows().map(r => r.task.idIssuePublic)
+        );
+        this.dropTarget.set(isContext ? { ...target, isAllowed: false } : target);
+    }
+
+    public onScheduledDrop(): void {
+        const target = this.dropTarget();
+        this.dropTarget.set(null);
+        this.dropTipAt.set(null);
+        this.draggedId = null;
+        if (target?.isAllowed) {
+            this.treeDropped.emit({
+                movedId: target.movedId,
+                targetId: target.targetId,
+                kind: target.kind
+            });
+        }
     }
 
     public onRowDragEnded(): void {
+        this.dropTipAt.set(null);
         // Clear on the next tick so the click CDK synthesizes right after the drop
         // is still suppressed by onTaskClick.
         setTimeout(() => (this.isDragging = false));
+    }
+
+    public dropLabelKey(target: GanttWbsDropTarget): string {
+        if (!target.isAllowed) return 'ISSUE.GANTT.DROP_NOT_ALLOWED';
+        switch (target.kind) {
+            case 'before':
+                return 'ISSUE.GANTT.DROP_BEFORE';
+            case 'after':
+                return 'ISSUE.GANTT.DROP_AFTER';
+            case 'indent':
+                return 'ISSUE.GANTT.INDENT';
+            case 'outdent':
+                return 'ISSUE.GANTT.OUTDENT';
+            default:
+                return 'ISSUE.GANTT.DROP_INTO';
+        }
+    }
+
+    public titleOf(taskId: number): string {
+        return this.rows().find(r => r.task.idIssuePublic === taskId)?.task.title ?? '';
     }
 
     public onTaskMouseEnter(taskId: number): void {

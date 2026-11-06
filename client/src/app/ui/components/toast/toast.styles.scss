@@ -54,8 +54,17 @@
     line-height: 1;
 }
 
-.ui-toast__detail {
+.ui-toast__body {
     flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.ui-toast__detail {
+    align-self: stretch;
     line-height: 1.4;
     word-break: break-word;
     // Long translated messages stay bounded rather than growing arbitrarily tall.

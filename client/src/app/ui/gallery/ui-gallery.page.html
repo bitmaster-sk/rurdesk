@@ -823,6 +823,12 @@
             <ui-button label="Show success" severity="success" (click)="showToast('success')" />
             <ui-button label="Show info" severity="info" (click)="showToast('info')" />
             <ui-button label="Show error" severity="danger" (click)="showToast('error')" />
+            <ui-button
+                label="Show info with action"
+                severity="info"
+                variant="outlined"
+                (click)="showToastWithAction()"
+            />
         </div>
     </section>
 

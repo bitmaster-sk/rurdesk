@@ -266,7 +266,9 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                     const issueId = Number(el.getAttribute('data-issue-id'));
                     const issue = this.issueMap.get(issueId);
                     if (!issue) return;
-                    this.zone.run(() => this.quickActionsRef()?.show(e, issue));
+                    this.zone.run(() =>
+                        this.quickActionsRef()?.show(e, issue, { showReschedule: !issue.isSummary })
+                    );
                 },
                 true
             );

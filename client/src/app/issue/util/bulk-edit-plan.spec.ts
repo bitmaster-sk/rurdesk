@@ -79,4 +79,22 @@ describe('BulkEditPlan', () => {
             { idIssuePublic: 2, idState: 4, idUserAssigned: null, addIdsTag: [30] }
         ]);
     });
+
+    it('leaves the computed dates of a summary task out', () => {
+        const summary = { ...issues[0], isSummary: true };
+        const entries = BulkEditPlan.toEntries([summary, issues[1]], {
+            scheduledAt: '2026-11-02T08:00:00.000Z',
+            idState: 4
+        });
+        expect(entries).toEqual([
+            { idIssuePublic: 1, idState: 4 },
+            { idIssuePublic: 2, scheduledAt: '2026-11-02T08:00:00.000Z', idState: 4 }
+        ]);
+    });
+
+    it('drops a summary task whose only change is its dates', () => {
+        const summary = { ...issues[0], isSummary: true };
+        const entries = BulkEditPlan.toEntries([summary], { estimated: 3600 });
+        expect(entries).toEqual([]);
+    });
 });

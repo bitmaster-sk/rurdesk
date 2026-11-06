@@ -123,6 +123,22 @@ func BroadcastIssueNotice(
 	BroadcastIssueSnapshot(ctx, notifier, projectRepo, issue, action)
 }
 
+func BroadcastIssueNotices(
+	ctx context.Context,
+	notifier notify.INotifier,
+	issueRepo issueLoader,
+	projectRepo projectMemberLoader,
+	idsIssue []int64,
+	action notify.NoticeAction,
+) {
+	if notifier == nil {
+		return
+	}
+	for _, idIssue := range idsIssue {
+		BroadcastIssueNotice(ctx, notifier, issueRepo, projectRepo, idIssue, action)
+	}
+}
+
 // BroadcastIssueSnapshot broadcasts an already-loaded issue to the project's
 // members. Used for deletes, where the row is gone by the time the notice
 // goes out and only the pre-delete snapshot remains.

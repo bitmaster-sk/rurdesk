@@ -88,8 +88,9 @@ var (
 
 	// ── Issue relations ────────────────────────────────────────────────────
 
-	ErrCycle         = newErr("CYCLE", "relation would create a cycle", "error.relation_cycle", http.StatusUnprocessableEntity)
-	ErrInvalidWithin = newErr("INVALID_WITHIN", `createAtWithin/updateAtWithin must be a positive duration, e.g. "30d", "2h" or "1d8h6m"`, "error.invalid_within", http.StatusUnprocessableEntity)
+	ErrCycle           = newErr("CYCLE", "relation would create a cycle", "error.relation_cycle", http.StatusUnprocessableEntity)
+	ErrSummaryComputed = newErr("SUMMARY_COMPUTED", "dates and estimate of a summary task are computed from its subtasks", "error.summary_computed", http.StatusUnprocessableEntity)
+	ErrInvalidWithin   = newErr("INVALID_WITHIN", `createAtWithin/updateAtWithin must be a positive duration, e.g. "30d", "2h" or "1d8h6m"`, "error.invalid_within", http.StatusUnprocessableEntity)
 
 	// ── AI / rate limiting ──────────────────────────────────────────────────
 

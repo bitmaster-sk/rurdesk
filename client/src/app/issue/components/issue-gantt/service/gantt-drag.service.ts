@@ -64,8 +64,12 @@ export class GanttDragService {
     public readonly tooltipText = computed(() => {
         const current = this.state().currentDate;
         if (!current) return '';
-        return format(current, 'EEE d MMM, HH:mm');
+        return this.formatTooltip(current);
     });
+
+    public formatTooltip(date: Date): string {
+        return format(date, 'EEE d MMM, HH:mm');
+    }
 
     /**
      * @param canvasOffsetX The X offset of the timeline canvas relative to viewport.

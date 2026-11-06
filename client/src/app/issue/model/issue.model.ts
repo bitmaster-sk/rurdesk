@@ -18,6 +18,10 @@ export type UpdateIssueReq = Partial<
         | 'ganttRank'
         | 'idSprint'
         | 'carryoverCount'
+        | 'isSummary'
+        | 'rollupEstimated'
+        | 'rollupTracked'
+        | 'backlogChildren'
     >
 >;
 
@@ -46,6 +50,10 @@ export interface Issue {
     idSprint?: number | null;
     points?: number | null;
     carryoverCount?: number;
+    isSummary?: boolean;
+    rollupEstimated?: number | null;
+    rollupTracked?: number | null;
+    backlogChildren?: number;
     customFields?: Record<string, string | number | boolean | null>;
     idsTag?: number[];
 }

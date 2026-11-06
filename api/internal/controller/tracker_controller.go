@@ -7,9 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
+	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -77,7 +79,18 @@ type TrackerController struct {
 	trackerRepo *repository.TrackerRepository
 	projectRepo *repository.ProjectRepository
 	issueRepo   *repository.IssueRepository
+	hierarchy   *service.HierarchyRollupService
+	notifier    notify.INotifier
 	pool        *pgxpool.Pool
+}
+
+func (tc *TrackerController) updateTracked(ctx context.Context, idIssue int64, recomputed *[]int64) error {
+	if err := tc.trackerRepo.UpdateIssueTracked(ctx, idIssue); err != nil {
+		return err
+	}
+	ids, err := tc.hierarchy.RecomputeSelfAndAncestors(ctx, idIssue)
+	*recomputed = ids
+	return err
 }
 
 func NewTrackerController(
@@ -85,6 +98,8 @@ func NewTrackerController(
 	tr *repository.TrackerRepository,
 	pr *repository.ProjectRepository,
 	ir *repository.IssueRepository,
+	hierarchy *service.HierarchyRollupService,
+	notifier notify.INotifier,
 	pool *pgxpool.Pool,
 ) *TrackerController {
 	return &TrackerController{
@@ -92,6 +107,8 @@ func NewTrackerController(
 		trackerRepo: tr,
 		projectRepo: pr,
 		issueRepo:   ir,
+		hierarchy:   hierarchy,
+		notifier:    notifier,
 		pool:        pool,
 	}
 }
@@ -283,6 +300,7 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	var track *model.Track
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, tc.pool, func(ctx context.Context) error {
 		tracker, err := tc.trackerRepo.LoadTracker(ctx, user.IdUser)
 		if err != nil {
@@ -310,7 +328,7 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-		if err := tc.trackerRepo.UpdateIssueTracked(ctx, tracker.IdIssue); err != nil {
+		if err := tc.updateTracked(ctx, tracker.IdIssue, &recomputed); err != nil {
 			return err
 		}
 		return tc.trackerRepo.DeleteTracker(ctx, tracker.IdTracker)
@@ -325,6 +343,7 @@ func (tc *TrackerController) SubmitTracker(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	agent.BroadcastIssueNotices(ctx, tc.notifier, tc.issueRepo, tc.projectRepo, recomputed, notify.ActionUpdate)
 	c.JSON(http.StatusOK, track)
 }
 
@@ -407,6 +426,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	var track *model.Track
+	var recomputed []int64
 	err := extctx.RunInTx(ctx, tc.pool, func(ctx context.Context) error {
 		issueProject, projectErr := tc.projectRepo.LoadProjectByIssue(ctx, dto.IdIssue)
 		if projectErr != nil {
@@ -432,7 +452,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
+		return tc.updateTracked(ctx, track.IdIssue, &recomputed)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -444,6 +464,7 @@ func (tc *TrackerController) CreateTrack(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	agent.BroadcastIssueNotices(ctx, tc.notifier, tc.issueRepo, tc.projectRepo, recomputed, notify.ActionUpdate)
 	c.JSON(http.StatusOK, track)
 }
 
@@ -473,6 +494,7 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 	user, _ := extctx.GetUser(ctx)
 
 	var track *model.Track
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, tc.pool, func(ctx context.Context) error {
 		t, err := tc.trackerRepo.LoadTrack(ctx, dto.IdTrack)
 		if err != nil {
@@ -500,7 +522,7 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 		if err != nil {
 			return err
 		}
-		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
+		return tc.updateTracked(ctx, track.IdIssue, &recomputed)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -512,6 +534,7 @@ func (tc *TrackerController) EditTrack(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	agent.BroadcastIssueNotices(ctx, tc.notifier, tc.issueRepo, tc.projectRepo, recomputed, notify.ActionUpdate)
 	c.JSON(http.StatusOK, track)
 }
 
@@ -536,6 +559,7 @@ func (tc *TrackerController) DeleteTrack(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, tc.pool, func(ctx context.Context) error {
 		track, err := tc.trackerRepo.LoadTrack(ctx, idTrack)
 		if err != nil {
@@ -554,7 +578,7 @@ func (tc *TrackerController) DeleteTrack(c *gin.Context) {
 		if err := tc.trackerRepo.DeleteTrack(ctx, idTrack); err != nil {
 			return err
 		}
-		return tc.trackerRepo.UpdateIssueTracked(ctx, track.IdIssue)
+		return tc.updateTracked(ctx, track.IdIssue, &recomputed)
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -566,5 +590,6 @@ func (tc *TrackerController) DeleteTrack(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+	agent.BroadcastIssueNotices(ctx, tc.notifier, tc.issueRepo, tc.projectRepo, recomputed, notify.ActionUpdate)
 	c.Status(http.StatusOK)
 }

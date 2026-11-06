@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { BehaviorSubject, combineLatest, switchMap, map, shareReplay } from 'rxjs';
+import { BehaviorSubject, combineLatest, switchMap, map, shareReplay, of, catchError } from 'rxjs';
 import { IssueFilterStore } from '../../filter/issue-filter.store';
 import { IssuesFilter } from '../../filter/issue-filter.entity';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
@@ -19,6 +19,7 @@ import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
 import { IssueRelationType } from 'src/app/issue/constants/issue-relation-type.enum';
 import { GanttOrderUtil } from './gantt-order.util';
+import { IssueRelationDirection } from 'src/app/issue/constants/issue-relation-direction.enum';
 
 @Injectable()
 export class IssueGanttService {
@@ -170,6 +171,48 @@ export class IssueGanttService {
         );
     }
 
+    private readonly contextIssues$ = combineLatest([
+        this.scheduledIssues$,
+        this.relations$,
+        this.issueFilterStore.actualFilter$
+    ]).pipe(
+        switchMap(([scheduled, relations, filter]) => {
+            const missing = IssueGanttService.missingAncestors(scheduled, relations);
+            if (missing.length === 0) return of<Issue[]>([]);
+            return this.issueApi
+                .load$({
+                    idProject: filter.idProject,
+                    idsIssuePublic: missing,
+                    orderColumn: 'scheduledAt',
+                    orderDirection: 'asc'
+                })
+                .pipe(catchError(() => of<Issue[]>([])));
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+    );
+
+    public static missingAncestors(
+        scheduled: Issue[],
+        relations: ReadIssueRelationDto[]
+    ): number[] {
+        const parentOf = new Map<number, number>();
+        for (const r of relations) {
+            if (r.relationType !== IssueRelationType.Hierarchy) continue;
+            if (r.direction !== IssueRelationDirection.Outbound) continue;
+            parentOf.set(r.to.idIssuePublic, r.from.idIssuePublic);
+        }
+        const loaded = new Set(scheduled.map(i => i.idIssuePublic));
+        const missing = new Set<number>();
+        for (const issue of scheduled) {
+            let idParent = parentOf.get(issue.idIssuePublic);
+            while (idParent !== undefined && !missing.has(idParent)) {
+                if (!loaded.has(idParent)) missing.add(idParent);
+                idParent = parentOf.get(idParent);
+            }
+        }
+        return [...missing];
+    }
+
     // Metadata maps
     private readonly metadata$ = this.issueFilterStore.actualFilter$.pipe(
         switchMap(filter =>
@@ -188,11 +231,15 @@ export class IssueGanttService {
         this.scheduledIssues$,
         this.backlogIssues$,
         this.relations$,
+        this.contextIssues$,
         this.metadata$
     ]).pipe(
-        map(([scheduled, backlog, relations, [severities, issueTypes, states, users]]) => {
+        map(([scheduled, backlog, relations, context, [severities, issueTypes, states, users]]) => {
             const scheduleRelations = relations.filter(
                 r => r.relationType === IssueRelationType.Schedule
+            );
+            const hierarchyRelations = relations.filter(
+                r => r.relationType === IssueRelationType.Hierarchy
             );
             const scheduledOnly = scheduled.filter(IssueGuard.isScheduled);
             const sortedScheduled = GanttOrderUtil.orderScheduled(scheduledOnly, scheduleRelations);
@@ -204,7 +251,13 @@ export class IssueGanttService {
                 backlogTasks: backlog.map(issue =>
                     this.buildExtendedIssue(issue, severities, issueTypes, states, users)
                 ),
-                relations: scheduleRelations
+                contextTasks: context
+                    .filter(IssueGuard.isScheduled)
+                    .map(issue =>
+                        this.buildExtendedIssue(issue, severities, issueTypes, states, users)
+                    ),
+                relations: scheduleRelations,
+                hierarchyRelations
             };
         }),
         shareReplay({ bufferSize: 1, refCount: true })

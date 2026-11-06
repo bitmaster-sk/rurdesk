@@ -151,8 +151,6 @@
         color: var(--ui-color-text-muted);
         white-space: nowrap;
         pointer-events: none;
-        display: flex;
-        align-items: center;
     }
 
     &--unknown-avatar {
@@ -231,4 +229,49 @@
     &:hover &--resize-handle::after {
         opacity: 0.7;
     }
+}
+
+.gantt-bar--summary {
+    padding: 0;
+    border: 1px solid var(--ui-brand-500);
+    border-radius: 999px;
+    background: var(--ui-color-surface);
+    cursor: grab;
+}
+
+.gantt-bar--summary-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px 0 0 999px;
+    border-right: 1px solid var(--ui-brand-500);
+    background: repeating-linear-gradient(
+        135deg,
+        var(--ui-surface-200),
+        var(--ui-surface-200) 5px,
+        var(--ui-surface-100) 5px,
+        var(--ui-surface-100) 10px
+    );
+
+    &--full {
+        border-right: none;
+        border-radius: inherit;
+    }
+}
+
+.gantt-bar--context {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.gantt-bar--summary-progress {
+    margin-left: var(--ui-space-xs);
+    font-size: 0.75rem;
+}
+
+.gantt-bar--summary-overrun {
+    margin-left: var(--ui-space-xs);
+    color: var(--ui-color-danger);
+    font-weight: 700;
 }

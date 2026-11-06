@@ -87,7 +87,32 @@
             </div>
 
             <div class="ui-field flex flex-col">
-                <label for="issue-estimated">{{ 'ISSUE.TIME.ESTIMATED' | translate }}</label>
+                <label for="issue-estimated" class="flex items-center gap-1">
+                    {{ 'ISSUE.TIME.ESTIMATED' | translate }}
+                    @if (isSummary()) {
+                        @let rollup = rollupProgress();
+                        @let estimateHint =
+                            rollup
+                                ? ('ISSUE.COMPUTED_ESTIMATE_HINT'
+                                  | translate
+                                      : {
+                                            tracked: (rollup.tracked | secDuration),
+                                            estimated: (rollup.estimated | secDuration),
+                                            percent: rollup.percent + rollup.overrun
+                                        })
+                                : ('ISSUE.COMPUTED_SPAN_HINT' | translate);
+                        <tabler-icon
+                            icon="help-circle"
+                            [size]="14"
+                            class="computed-hint"
+                            data-testid="computed-estimate-hint"
+                            tabindex="0"
+                            role="img"
+                            [attr.aria-label]="estimateHint"
+                            [uiTooltip]="estimateHint"
+                        />
+                    }
+                </label>
                 <input id="issue-estimated" formControlName="estimated" type="text" uiInput />
             </div>
 
@@ -97,7 +122,20 @@
             </div>
 
             <div class="ui-field flex flex-col">
-                <label for="issue-scheduled-at">{{ 'ISSUE.SCHEDULED.AT' | translate }}</label>
+                <label for="issue-scheduled-at" class="flex items-center gap-1">
+                    {{ 'ISSUE.SCHEDULED.AT' | translate }}
+                    @if (isSummary()) {
+                        <tabler-icon
+                            icon="help-circle"
+                            [size]="14"
+                            class="computed-hint"
+                            tabindex="0"
+                            role="img"
+                            [attr.aria-label]="'ISSUE.COMPUTED_START_HINT' | translate"
+                            [uiTooltip]="'ISSUE.COMPUTED_START_HINT' | translate"
+                        />
+                    }
+                </label>
                 <input
                     uiDatepicker
                     mode="datetime"
@@ -112,12 +150,20 @@
                     <div class="tracker-field__head">
                         <label for="issue-tracker">{{ 'ISSUE.TIME.TRACKER' | translate }}</label>
                         <span class="tracker-field__total">
-                            @if (currentIssue()?.tracked) {
+                            @if (currentIssue()?.tracked || isSummary()) {
                                 {{ 'ISSUE.TIME.TRACKED' | translate }}
                             }
                             <strong id="issue-tracked">
-                                {{ currentIssue()?.tracked ?? 0 | secDuration }}
+                                {{ (currentIssue()?.tracked ?? 0 | secDuration) || '0h' }}
                             </strong>
+                            @if (isSummary() && currentIssue()?.rollupTracked) {
+                                <span data-testid="issue-tracked-rollup">
+                                    · {{ 'ISSUE.TRACKED_WITH_SUBTASKS' | translate }}
+                                    <strong>
+                                        {{ currentIssue()?.rollupTracked ?? 0 | secDuration }}
+                                    </strong>
+                                </span>
+                            }
                         </span>
                     </div>
                     <app-tracker

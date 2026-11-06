@@ -52,7 +52,8 @@ export function mockSub<T = unknown>() {
 
 @Component({ selector: 'app-gantt-wbs-panel', template: '', standalone: true })
 export class WbsPanelStub {
-    public readonly scheduledTasks = input.required<any[]>();
+    public readonly rows = input.required<any[]>();
+    public readonly parents = input<any>(new Map());
     public readonly backlogTasks = input.required<any[]>();
     public readonly backlogHasMore = input<boolean>(false);
     public readonly backlogLoading = input<boolean>(false);
@@ -64,12 +65,14 @@ export class WbsPanelStub {
     public readonly taskHovered = output<number | null>();
     public readonly backlogDragStarted = output<any>();
     public readonly loadMoreBacklog = output<void>();
-    public readonly reordered = output<any>();
+    public readonly treeDropped = output<any>();
+    public readonly collapseToggled = output<number>();
 }
 
 @Component({ selector: 'app-gantt-timeline-body', template: '', standalone: true })
 export class TimelineBodyStub {
     public readonly tasks = input.required<any[]>();
+    public readonly contextTaskIds = input<any>(new Set());
     public readonly columns = input.required<any[]>();
     public readonly headerRows = input.required<any[]>();
     public readonly cardMode = input.required<any>();
@@ -149,6 +152,8 @@ export function configureGanttTestBed(
     overrides: {
         tasks?: ExtendedIssue[];
         relations?: ReadIssueRelationDto[];
+        hierarchyRelations?: ReadIssueRelationDto[];
+        contextTasks?: ExtendedIssue[];
     } = {}
 ): GanttMocks {
     const tasks = overrides.tasks ?? [
@@ -159,7 +164,13 @@ export function configureGanttTestBed(
     const relations = overrides.relations ?? [];
 
     const ganttServiceMock = {
-        data$: of({ scheduledTasks: tasks, backlogTasks: [] as ExtendedIssue[], relations }),
+        data$: of({
+            scheduledTasks: tasks,
+            backlogTasks: [] as ExtendedIssue[],
+            contextTasks: overrides.contextTasks ?? [],
+            relations,
+            hierarchyRelations: overrides.hierarchyRelations ?? []
+        }),
         backlogHasMore: vi.fn(() => false),
         backlogLoading: vi.fn(() => false),
         loadMoreBacklog: vi.fn(),
@@ -203,11 +214,16 @@ export function configureGanttTestBed(
         startBacklogSchedule: vi.fn(),
         startRelationDraw: vi.fn(),
         setCanvasOffset: vi.fn(),
-        tooltipText: vi.fn(() => null)
+        tooltipText: vi.fn(() => null),
+        formatTooltip: vi.fn((date: Date) => date.toISOString())
     };
 
     const cascadeServiceMock = {
-        computeCascade: vi.fn(() => ({ affectedTasks: new Map() }))
+        computeCascade: vi.fn(() => ({ affectedTasks: new Map() })),
+        computeTreeCascade: vi.fn((changes: Map<number, { scheduledAt: Date }>) => ({
+            affectedTasks: new Map(changes)
+        })),
+        summaryMoveFloor: vi.fn(() => -Infinity)
     };
 
     const criticalPathServiceMock = {
@@ -235,8 +251,16 @@ export function configureGanttTestBed(
     };
 
     const bulkApiMock = { update$: vi.fn(() => mockSub()) };
-    const issueApiMock = { update$: vi.fn(() => mockSub()) };
-    const relationApiMock = { insert$: vi.fn(() => mockSub()), delete$: vi.fn(() => mockSub()) };
+    const issueApiMock = {
+        update$: vi.fn(() => mockSub()),
+        load$: vi.fn(() => of([])),
+        insert$: vi.fn(() => mockSub())
+    };
+    const relationApiMock = {
+        insert$: vi.fn(() => mockSub()),
+        delete$: vi.fn(() => mockSub()),
+        setParent$: vi.fn(() => mockSub())
+    };
     const ganttOrderApiMock = { reorder$: vi.fn(() => mockSub()) };
     const toastMock = { showError: vi.fn() };
     const noticeServiceMock = { show: vi.fn(), relation$: EMPTY, issue$: EMPTY };
@@ -321,6 +345,8 @@ export async function createGanttFixture(
     overrides: {
         tasks?: ExtendedIssue[];
         relations?: ReadIssueRelationDto[];
+        hierarchyRelations?: ReadIssueRelationDto[];
+        contextTasks?: ExtendedIssue[];
     } = {}
 ): Promise<{ fixture: any; comp: IssueGanttComponent; mocks: GanttMocks }> {
     const mocks = configureGanttTestBed(overrides);

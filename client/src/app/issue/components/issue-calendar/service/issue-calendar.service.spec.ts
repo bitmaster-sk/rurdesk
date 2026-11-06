@@ -80,3 +80,24 @@ describe('IssueCalendarService — events$', () => {
         expect(events).toHaveLength(0);
     });
 });
+
+describe('IssueCalendarService — summary tasks', () => {
+    it('keeps a summary task from being dragged or resized', () => {
+        const svc = buildService([
+            makeIssue({
+                idIssue: 1,
+                scheduledAt: new Date('2026-01-01T08:00:00Z'),
+                estimated: 3600,
+                isSummary: true
+            }),
+            makeIssue({
+                idIssue: 2,
+                scheduledAt: new Date('2026-01-01T08:00:00Z'),
+                estimated: 3600
+            })
+        ]);
+        const [summary, leaf] = firstEmit(svc);
+        expect(summary.editable).toBe(false);
+        expect(leaf.editable).toBe(true);
+    });
+});

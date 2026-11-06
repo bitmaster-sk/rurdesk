@@ -1,28 +1,7 @@
 import { LiveAnnouncer } from '@angular/cdk/a11y';
 import { Injectable, inject, signal } from '@angular/core';
-
-export type UiToastSeverity = 'success' | 'info' | 'error';
-
-/** A visible toast. `remaining`/timer state is NOT here — it lives in the service's
- *  internal timer map (mutating a field on an item in a `signal<readonly []>`
- *  would not change the array reference, so OnPush would not re-render). */
-export interface UiToastItem {
-    readonly id: number;
-    readonly severity: UiToastSeverity;
-    readonly detail: string;
-    readonly life: number;
-}
-
-/** Per-toast timer bookkeeping. `paused` is the single source of truth driving
- *  both the JS auto-dismiss timeout and the CSS progress-bar `.is-paused` class. */
-interface TimerEntry {
-    handle: ReturnType<typeof setTimeout>;
-    startedAt: number;
-    remaining: number;
-    paused: boolean;
-}
-
-const DEFAULT_LIFE_MS = 3000;
+import { DEFAULT_LIFE_MS } from '../constants/ui-toast.constants';
+import { TimerEntry, UiToastAction, UiToastItem, UiToastSeverity } from '../entity/ui-toast.entity';
 
 /**
  * Root store + lifecycle for product toasts (`ui-toast`). Holds the visible
@@ -43,7 +22,12 @@ export class UiToastService {
     private readonly timers = new Map<number, TimerEntry>();
     private idSeq = 0;
 
-    public show(input: { severity: UiToastSeverity; detail: string; life?: number }): number {
+    public show(input: {
+        severity: UiToastSeverity;
+        detail: string;
+        life?: number;
+        action?: UiToastAction;
+    }): number {
         const id = ++this.idSeq;
         const life = input.life ?? DEFAULT_LIFE_MS;
 
@@ -55,7 +39,7 @@ export class UiToastService {
         });
         this.toasts.update(prev => [
             ...prev,
-            { id, severity: input.severity, detail: input.detail, life }
+            { id, severity: input.severity, detail: input.detail, life, action: input.action }
         ]);
 
         // Single SR channel: LiveAnnouncer keeps a persistent hidden aria-live region,
@@ -65,6 +49,12 @@ export class UiToastService {
             input.severity === 'error' ? 'assertive' : 'polite'
         );
         return id;
+    }
+
+    public runAction(id: number): void {
+        const item = this.toasts().find(t => t.id === id);
+        this.dismiss(id);
+        item?.action?.run();
     }
 
     public dismiss(id: number): void {

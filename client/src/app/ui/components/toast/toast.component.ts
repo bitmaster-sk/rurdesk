@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ViewEncapsulation, inject } from '@angular/core';
-import { UiToastSeverity, UiToastService } from '../../service/ui-toast.service';
+import { UiToastService } from '../../service/ui-toast.service';
+import { UiToastSeverity } from '../../entity/ui-toast.entity';
 
 /**
  * Fixed top-right stack of product toasts. Reads the visible list from

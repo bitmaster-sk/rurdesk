@@ -14,36 +14,7 @@ import {
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-
-type IssueFormValues = Pick<
-    Issue,
-    | 'idState'
-    | 'idSeverity'
-    | 'idIssueType'
-    | 'title'
-    | 'description'
-    | 'assignedTo'
-    | 'estimated'
-    | 'points'
-    | 'scheduledAt'
-    | 'idsTag'
->;
-
-interface IssueInfoForm {
-    idIssue: FormControl<number | null>;
-    idIssuePublic: FormControl<number | null>;
-    idProject: FormControl<number | null>;
-    idState: FormControl<number | null>;
-    idSeverity: FormControl<number | null>;
-    idIssueType: FormControl<number | null>;
-    title: FormControl<string | null>;
-    description: FormControl<string | null>;
-    assignedTo: FormControl<number | null>;
-    estimated: FormControl<string | null>;
-    points: FormControl<number | null>;
-    scheduledAt: FormControl<Date | null>;
-    idsTag: FormControl<number[]>;
-}
+import { IssueFormValues, IssueInfoForm } from './entity/issue-info-form.entity';
 
 import { filter, map, switchMap, takeUntil } from 'rxjs/operators';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
@@ -681,7 +652,31 @@ export class IssueInfoComponent implements OnInit {
         );
     }
 
+    public readonly isSummary = computed(() => this.currentIssue()?.isSummary === true);
+
+    public readonly rollupProgress = computed(() => {
+        const issue = this.currentIssue();
+        const estimated = issue?.rollupEstimated ?? 0;
+        if (!issue?.isSummary || !estimated) return null;
+        const percent = Math.round(((issue.rollupTracked ?? 0) / estimated) * 100);
+        return {
+            tracked: issue.rollupTracked ?? 0,
+            estimated,
+            percent: Math.min(100, percent),
+            overrun: Math.max(0, percent - 100)
+        };
+    });
+
     private issueToForm(): FormGroup<IssueInfoForm> {
+        const form = this.buildForm();
+        if (this.currentIssue()?.isSummary) {
+            form.controls.estimated.disable({ emitEvent: false });
+            form.controls.scheduledAt.disable({ emitEvent: false });
+        }
+        return form;
+    }
+
+    private buildForm(): FormGroup<IssueInfoForm> {
         const issue = this.currentIssue();
         const project = this.project();
         // The create form is saved by the manual save button bound to form.valid,
@@ -743,6 +738,15 @@ export class IssueInfoComponent implements OnInit {
     }
 
     private formToChanges(): IssueFormValues {
+        const changes = this.formValues();
+        if (!this.currentIssue()?.isSummary) return changes;
+        const rest = { ...changes };
+        delete rest.estimated;
+        delete rest.scheduledAt;
+        return rest;
+    }
+
+    private formValues(): IssueFormValues {
         const v = this.form.getRawValue();
         return {
             idState: v.idState,

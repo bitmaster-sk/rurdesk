@@ -64,6 +64,8 @@ export class IssueCalendarService {
                 end: isAllDay
                     ? undefined
                     : add(issue.scheduledAt, { seconds: issue.estimated ?? 0 }).toISOString(),
+                editable: !issue.isSummary,
+                classNames: issue.isSummary ? ['cal-event--summary'] : [],
                 extendedProps: { severity, assigned, state, issue }
             };
         });

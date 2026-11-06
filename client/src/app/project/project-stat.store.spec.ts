@@ -68,6 +68,15 @@ describe('ProjectStatStore', () => {
         expect(latest(store.totalTrackedSeconds$)).toBe(1800);
     });
 
+    it('leaves out the estimate of a summary, which is only the span of its subtasks', () => {
+        const store = build([
+            issue({ estimated: 8 * 3600 }),
+            issue({ estimated: 8 * 3600 }),
+            issue({ estimated: 104 * 3600, isSummary: true })
+        ]);
+        expect(latest(store.totalEstimatedSeconds$)).toBe(16 * 3600);
+    });
+
     it('counts issues per state and per severity', () => {
         const store = build([issue({ idState: 1 }), issue({ idState: 1 }), issue({ idState: 2 })]);
         const byState = latest(store.issuesByState$);

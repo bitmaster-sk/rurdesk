@@ -27,11 +27,7 @@ import { TagPresence } from '../../constants/tag-presence.enum';
 import { Issue } from '../../model/issue.model';
 import { BulkEditIssueChangesReq } from '../../model/bulk-edit-issues.model';
 import { BulkEditPlan } from '../../util/bulk-edit-plan';
-
-interface ChangeRow {
-    labelKey: string;
-    value: string;
-}
+import { ChangeRow } from './entity/bulk-edit-change-row.entity';
 
 @Component({
     selector: 'app-bulk-edit-dialog',
@@ -242,6 +238,10 @@ export class BulkEditDialogComponent {
         if (this.isSaving()) return;
         const issues = this.issues();
         const entries = BulkEditPlan.toEntries(issues, this.changes());
+        if (entries.length === 0) {
+            this.closed.emit();
+            return;
+        }
         this.isSaving.set(true);
         this.bulkApi
             .update$(this.idProject(), entries)

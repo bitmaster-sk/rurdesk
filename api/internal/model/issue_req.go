@@ -83,7 +83,7 @@ type BulkEditIssueEntryReq struct {
 }
 
 type BulkEditIssuesReq struct {
-	Issues []BulkEditIssueEntryReq `json:"issues" binding:"required,min=1,max=100"`
+	Issues []BulkEditIssueEntryReq `json:"issues" binding:"required,min=1,max=1000"`
 }
 
 type LoadIssuesReq struct {

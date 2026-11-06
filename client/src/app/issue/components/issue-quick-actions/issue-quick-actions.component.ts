@@ -33,6 +33,7 @@ import { ToastNotificationService } from 'src/app/core/toast-notification.servic
 import { ClipboardService } from 'src/app/core/clipboard.service';
 import { IssueSelectionStore } from '../../store/issue-selection.store';
 import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
+import { IssueQuickActionsVisibility } from './entity/issue-quick-actions-visibility.entity';
 
 @Component({
     selector: 'app-issue-quick-actions',
@@ -77,6 +78,24 @@ export class IssueQuickActionsComponent implements OnDestroy {
     public readonly showAssignee = input(true);
     public readonly showReschedule = input(true);
     public readonly showTime = input(true);
+
+    private readonly visibility = signal<IssueQuickActionsVisibility>({});
+    protected readonly isStateShown = computed(
+        () => this.visibility().showState ?? this.showState()
+    );
+    protected readonly isSeverityShown = computed(
+        () => this.visibility().showSeverity ?? this.showSeverity()
+    );
+    protected readonly isIssueTypeShown = computed(
+        () => this.visibility().showIssueType ?? this.showIssueType()
+    );
+    protected readonly isAssigneeShown = computed(
+        () => this.visibility().showAssignee ?? this.showAssignee()
+    );
+    protected readonly isRescheduleShown = computed(
+        () => this.visibility().showReschedule ?? this.showReschedule()
+    );
+    protected readonly isTimeShown = computed(() => this.visibility().showTime ?? this.showTime());
 
     public readonly splitRequested = output<Issue>();
 
@@ -124,8 +143,13 @@ export class IssueQuickActionsComponent implements OnDestroy {
         this.anchor = null;
     }
 
-    public show(event: MouseEvent, issue: Issue): void {
+    public show(
+        event: MouseEvent,
+        issue: Issue,
+        visibility: IssueQuickActionsVisibility = {}
+    ): void {
         this.issue.set({ ...issue });
+        this.visibility.set(visibility);
         this.view.set('actions');
         this.cdr.detectChanges();
 

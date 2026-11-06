@@ -289,7 +289,7 @@ tabler-icon {
         ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
     --font-size-2xs: 0.5rem;
-    --font-size-xs: 0.6rem;
+    --font-size-xs: 0.7rem;
     --font-size-s: 0.875rem;
     --font-size: 1rem;
     --font-size-m: 1.1rem;
@@ -1492,6 +1492,17 @@ body {
         &:hover {
             filter: brightness(0.96);
         }
+    }
+
+    .cal-event--summary .cal-event-c {
+        background: repeating-linear-gradient(
+            135deg,
+            var(--ui-surface-200),
+            var(--ui-surface-200) 5px,
+            var(--ui-surface-100) 5px,
+            var(--ui-surface-100) 10px
+        );
+        cursor: default;
     }
 
     .cal-event-c__title {

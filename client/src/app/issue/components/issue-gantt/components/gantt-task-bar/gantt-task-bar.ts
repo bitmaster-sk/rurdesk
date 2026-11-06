@@ -21,17 +21,19 @@ import {
     IssueCardViewMode
 } from '../../../../constants/issue-card-view-type.constant';
 import { addSeconds } from 'date-fns';
-import { HORIZONTAL_OFFSET } from '../../service/gantt-arrow-routing';
 import { UiMotion, UI_SETTLE_DURATION_MS, UI_SETTLE_EASING } from 'src/app/ui/util/ui-motion';
-
-export const MIN_BAR_WIDTH_PX = 4;
-export const SMALL_BAR_THRESHOLD_PX = 24;
-const BAR_GAP = 12;
-export const BAR_BORDER = 1;
-export const BAR_PADDING_COMFORTABLE = 8;
-export const BAR_PADDING_COMPACT = 6;
-// Must exceed HORIZONTAL_OFFSET so the label clears the arrow stub extending past the bar edge
-const OVERFLOW_LABEL_GAP = HORIZONTAL_OFFSET + 4;
+import {
+    BAR_BORDER,
+    BAR_PADDING_COMFORTABLE,
+    BAR_PADDING_COMPACT,
+    MIN_BAR_WIDTH_PX,
+    SMALL_BAR_THRESHOLD_PX
+} from '../../constants/gantt-bar.constants';
+import {
+    BAR_GAP,
+    OVERFLOW_LABEL_GAP,
+    SUMMARY_BAR_HEIGHT
+} from './constants/gantt-task-bar.constants';
 
 @Component({
     selector: 'app-gantt-task-bar',
@@ -58,6 +60,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
     public readonly relationDropSide = input<HandleSide | null>(null);
     /** Stagger delay for the post-drop domino settle; null = don't animate moves. */
     public readonly cascadeSlideDelayMs = input<number | null>(null);
+    public readonly isContext = input<boolean>(false);
 
     public readonly hovered = output<number | null>();
     public readonly dragStarted = output<{ taskId: number; event: MouseEvent }>();
@@ -127,12 +130,27 @@ export class GanttTaskBarComponent implements AfterViewChecked {
         return Math.max(MIN_BAR_WIDTH_PX, endPixel - this.barLeft());
     });
 
+    public readonly isSummary = computed(() => this.task().isSummary === true);
+
     public readonly barTop = computed(() => {
         const rowHeight = this.timelineService.rowHeight();
-        return this.rowIndex() * rowHeight + BAR_GAP / 2;
+        const top = this.rowIndex() * rowHeight + BAR_GAP / 2;
+        if (!this.isSummary()) return top;
+        return top + (rowHeight - BAR_GAP - SUMMARY_BAR_HEIGHT) / 2;
     });
 
-    public readonly barHeight = computed(() => this.timelineService.rowHeight() - BAR_GAP);
+    public readonly barHeight = computed(() =>
+        this.isSummary() ? SUMMARY_BAR_HEIGHT : this.timelineService.rowHeight() - BAR_GAP
+    );
+
+    public readonly summaryProgress = computed(() => {
+        const issue = this.task();
+        const estimated = issue.rollupEstimated ?? 0;
+        if (!estimated) return 0;
+        return Math.round(((issue.rollupTracked ?? 0) / estimated) * 100);
+    });
+
+    public readonly summaryOverrun = computed(() => Math.max(0, this.summaryProgress() - 100));
 
     public readonly isSmallBar = computed(() => this.barWidth() < SMALL_BAR_THRESHOLD_PX);
 
@@ -157,6 +175,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
     });
 
     public readonly overflowLabel = computed(() => {
+        if (this.isSummary()) return this.task().title;
         const padding = IssueCardViewMode.isComfortable(this.cardMode())
             ? BAR_PADDING_COMFORTABLE
             : BAR_PADDING_COMPACT;
@@ -183,7 +202,7 @@ export class GanttTaskBarComponent implements AfterViewChecked {
     }
 
     public onMouseDown(event: MouseEvent): void {
-        if (event.button !== 0) return;
+        if (event.button !== 0 || this.isContext()) return;
         event.preventDefault(); // prevent text selection during drag
         this._dragMoved = false;
         const onFirstMove = (): void => {
