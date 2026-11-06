@@ -52,7 +52,7 @@ The editor shows Markdown on the left and a live preview on the right.
 The toolbar above the text adds headings, bold, italic, strikethrough, code,
 links, lists, checklists, quotes and code blocks. It wraps the selected text,
 or inserts the markup at the cursor; pressing a button again removes it.
-**Ctrl/⌘+B**, **Ctrl/⌘+I** and **Ctrl/⌘+K** make text bold, italic or a link.
+{{keys: Mod+B}}, {{keys: Mod+I}} and {{keys: Mod+K}} make text bold, italic or a link.
 
 ![The wiki editor: toolbar, Markdown on the left, live preview in the middle and agent access, summary and change note on the right](../../site/assets/img/wiki-editor.png)
 
@@ -193,7 +193,7 @@ delete them sooner.
 The search box at the top of the tree looks through titles, summaries and
 text of both spaces. The start of a word is enough: `depl runb` finds
 "Deploy runbook". Results show the matching passage.
-Wiki pages also appear in the command palette (<kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>).
+Wiki pages also appear in the command palette ({{keys: Mod+K}}).
 
 ## Wiki pages on a task
 

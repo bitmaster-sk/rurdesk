@@ -236,6 +236,40 @@ function stackTable(table) {
     return labelled;
 }
 
+const KEY_VARIANTS = {
+    mod: { pc: 'Ctrl', mac: '⌘' },
+    ctrl: { pc: 'Ctrl', mac: '⌃' },
+    alt: { pc: 'Alt', mac: '⌥' },
+    shift: { pc: 'Shift', mac: '⇧' },
+    enter: { pc: 'Enter', mac: '↵' }
+};
+
+const KEY_WORDS = new Set(['click']);
+
+function keyVariant(keys, os) {
+    const parts = keys.map((key) => {
+        const name = KEY_WORDS.has(key.toLowerCase()) ? key : `<kbd>${KEY_VARIANTS[key.toLowerCase()]?.[os] ?? key}</kbd>`;
+        return { name, isWord: KEY_WORDS.has(key.toLowerCase()) };
+    });
+    return parts
+        .map((part, i) => {
+            if (i === 0) return part.name;
+            if (os === 'mac' && !part.isWord) return part.name;
+            return `${os === 'mac' ? ' ' : '+'}${part.name}`;
+        })
+        .join('');
+}
+
+export function renderKeys(html) {
+    return html.replace(/\{\{keys:\s*([^}]+?)\s*\}\}/g, (whole, spec) => {
+        const keys = spec.split(/\s*\+\s*(?=.)/).filter(Boolean);
+        return '<span class="keys">' +
+            `<span class="keys-os"><span class="keys-os-label">Win / Linux</span>${keyVariant(keys, 'pc')}</span>` +
+            `<span class="keys-os"><span class="keys-os-label">Mac</span>${keyVariant(keys, 'mac')}</span>` +
+            '</span>';
+    });
+}
+
 function addHeadingIds(html) {
     return html.replace(/<h([23])>([\s\S]*?)<\/h\1>/g, (whole, level, inner) =>
         `<h${level} id="${slugify(inner)}">${inner}</h${level}>`);
@@ -270,6 +304,7 @@ export function build() {
             html = processImages(html, '../assets/img/');
             html = wrapTables(html, meta.stackTables === 'true');
             html = addHeadingIds(html);
+            html = renderKeys(html);
             const title = meta.title || page.nav;
             const out = layout
                 .replaceAll('{{ROOT}}', '../')

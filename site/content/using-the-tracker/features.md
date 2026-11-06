@@ -154,11 +154,11 @@ chip. It shows only the comments that carry an attachment.
 
 The composer turns common ASCII smileys into emoji as you type: write `:)`, `:D`,
 `;)`, `:(`, `:P`, `:O`, `>:)` or `<3`, then press space, and the shortcut becomes
-the emoji character. Undo (`Ctrl+Z` / `Cmd+Z`) brings the shortcut back.
+the emoji character. Undo ({{keys: Mod+Z}}) brings the shortcut back.
 
 For anything beyond these shortcuts, open the emoji picker in the composer
-toolbar, or use your operating system's picker (`Ctrl+Cmd+Space` on macOS,
-`Win+.` on Windows) — the composer accepts any emoji character you type.
+toolbar, or use your operating system's picker (<kbd>⌃</kbd><kbd>⌘</kbd><kbd>Space</kbd> on macOS,
+<kbd>Win</kbd>+<kbd>.</kbd> on Windows) — the composer accepts any emoji character you type.
 
 ![The emoji picker open from the composer toolbar, grouped into reactions, people, objects and symbols](../../site/assets/img/emoji-picker.png)
 
@@ -206,13 +206,13 @@ A fast, filterable grid. Sort and filter across task fields.
 
 In the table and on the Kanban board you can change many tasks at once.
 
-- **Select tasks**: <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click a row or card to add or remove
+- **Select tasks**: {{keys: Mod+click}} a row or card to add or remove
   it, <kbd>Shift</kbd>+click to select everything between it and the last one you
   picked (on the board, within one column), or use **Select** in the right-click menu.
   With the keyboard, <kbd>x</kbd> selects the highlighted row or card and
   <kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> extends the selection (on the board, within
   one column). In the table <kbd>Shift</kbd>+<kbd>X</kbd> selects all loaded rows.
-  Clicking a task title still opens it, and <kbd>⌘</kbd>+click on the title still opens
+  Clicking a task title still opens it, and {{keys: Mod+click}} on the title still opens
   it in a new tab.
 - **Edit**: while tasks are selected, the toolbar shows a **Bulk edit (N)** button.
   It (or <kbd>e</kbd>) opens one dialog with the **state**, **severity**, **type** and
@@ -491,10 +491,10 @@ today's date. A value that cannot be parsed is rejected with **422**.
 
 ## Command palette & keyboard shortcuts
 
-Press <kbd>⌘</kbd><kbd>K</kbd> (or <kbd>Ctrl</kbd><kbd>K</kbd>) anywhere to open the
+Press {{keys: Mod+K}} anywhere to open the
 **command palette** — one keyboard-driven entry point for navigation, task actions,
 and search. Start typing to fuzzy-match; use <kbd>↑</kbd>/<kbd>↓</kbd> to move,
-<kbd>↵</kbd> to run, <kbd>⌘</kbd><kbd>↵</kbd> to run without closing, <kbd>⇥</kbd> to
+<kbd>↵</kbd> to run, {{keys: Mod+Enter}} to run without closing, <kbd>⇥</kbd> to
 complete the highlighted item into the input, and <kbd>esc</kbd> to clear or close.
 
 Type a **prefix** to scope the search, or jump straight in with a dedicated shortcut:
