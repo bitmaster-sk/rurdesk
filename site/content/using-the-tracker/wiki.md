@@ -87,7 +87,12 @@ A link to a page that does not exist yet is shown in red. Clicking it opens the
 form for a new page with that title.
 
 The panel on the right holds the page's **parent**, **agent access**, a short
-**summary** and a **change note** that ends up in the history.
+**summary** and a **change note** that ends up in the history. On a narrow
+screen the panel hides behind the **Settings** button in the toolbar instead of
+squeezing the editor: tap it and the settings take the editor's place, tap it
+again to go back — nothing you wrote is lost. When the page goes over the agent
+token budget, the button is outlined in red: the budget bar behind it explains
+why **Save** stays disabled until the page fits again.
 
 ## Images and files
 

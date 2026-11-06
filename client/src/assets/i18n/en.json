@@ -536,6 +536,9 @@
             "HIDE": "Hide page tree",
             "SHOW": "Show page tree"
         },
+        "SETTINGS": {
+            "TOGGLE": "Settings"
+        },
         "SEARCH": {
             "PLACEHOLDER": "Search the wiki",
             "EMPTY": "Nothing found"

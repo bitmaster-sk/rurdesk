@@ -124,6 +124,14 @@ export class WikiEditPage implements OnDestroy {
     protected readonly incoming = signal<WikiSavedNotice | null>(null);
     protected readonly conflict = signal<WikiConflictState | null>(null);
 
+    /**
+     * Mobile-only view switch: below the layout's narrow breakpoint the settings
+     * panel takes the editor's place instead of squeezing beside it. On desktop
+     * the panel is always rendered beside the split and this signal has no
+     * effect — the editor, upload and draft are never destroyed either way.
+     */
+    protected readonly isSettingsOpen = signal(false);
+
     private lastDraft = '';
     private savedContent = '';
     private leaveDecision: Subject<boolean> | null = null;

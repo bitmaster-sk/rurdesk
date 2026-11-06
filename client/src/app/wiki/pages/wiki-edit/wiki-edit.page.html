@@ -2,6 +2,16 @@
 <div class="wiki-edit" data-testid="wiki-edit">
     <div class="wiki-edit__bar">
         <app-wiki-tree-show />
+        <ui-toggle-button
+            class="wiki-edit__settings-toggle"
+            data-testid="wiki-edit-settings-toggle"
+            [ngModel]="isSettingsOpen()"
+            (ngModelChange)="isSettingsOpen.set($event)"
+            [class.wiki-edit__settings-toggle--over]="isOverBudget()"
+        >
+            <tabler-icon icon="settings" [size]="14" />
+            {{ 'WIKI.SETTINGS.TOGGLE' | translate }}
+        </ui-toggle-button>
         <input
             uiInput
             class="wiki-edit__title"
@@ -81,8 +91,8 @@
         (cancelled)="onConflictCancelled()"
     />
     } @else {
-    <div class="wiki-edit__main">
-        <div class="wiki-edit__split">
+    <div class="wiki-edit__main" [class.wiki-edit__main--settings]="isSettingsOpen()">
+        <div class="wiki-edit__split" data-testid="wiki-edit-split">
             <div class="wiki-edit__pane wiki-edit__pane--source">
                 <app-wiki-editor
                     #editor
@@ -110,7 +120,7 @@
             </div>
         </div>
 
-        <aside class="wiki-edit__settings">
+        <aside class="wiki-edit__settings" data-testid="wiki-edit-settings">
             @if (isCreate && !idProposal && canChooseShared()) {
             <div class="wiki-edit__field">
                 <label for="wiki-space">{{ 'WIKI.FIELD.SPACE' | translate }}</label>
