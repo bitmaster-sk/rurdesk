@@ -65,6 +65,14 @@ export class ProjectCustomFieldComponent implements OnInit {
      */
     protected readonly isReorderDisabled = computed(() => !this.isShowArchived());
 
+    private readonly isFilterOpen = signal(false);
+
+    public readonly filterCount = computed(() => (this.isShowArchived() ? 0 : 1));
+
+    public readonly isFilterBarVisible = computed(
+        () => this.isFilterOpen() || this.filterCount() > 0
+    );
+
     protected readonly isDeleteDialogVisible = signal(false);
     protected readonly isDeleting = signal(false);
     protected readonly deleteTarget = signal<CustomField | null>(null);
@@ -113,6 +121,15 @@ export class ProjectCustomFieldComponent implements OnInit {
                     this.customFieldStore.load();
                 }
             });
+    }
+
+    public onToggleFilter(): void {
+        if (this.isFilterBarVisible()) {
+            this.isFilterOpen.set(false);
+            this.isShowArchived.set(true);
+            return;
+        }
+        this.isFilterOpen.set(true);
     }
 
     protected onEditCustomField(customField: CustomField): void {

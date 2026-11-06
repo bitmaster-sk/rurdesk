@@ -135,6 +135,18 @@
                         <div class="panel-title">{{ 'CUSTOM_FIELD.PLURAL' | translate }}</div>
                     </div>
                     <div class="panel-head-r">
+                        <ui-toggle-button
+                            size="small"
+                            data-testid="custom-field-filter"
+                            [ngModel]="projectCustomField.isFilterBarVisible()"
+                            (ngModelChange)="projectCustomField.onToggleFilter()"
+                        >
+                            <tabler-icon icon="filter" [size]="14" />
+                            {{ 'FILTER.SINGULAR' | translate }} @if
+                            (projectCustomField.filterCount() > 0) {
+                            <ui-badge [value]="projectCustomField.filterCount()" />
+                            }
+                        </ui-toggle-button>
                         <ui-button
                             size="small"
                             [label]="'CUSTOM_FIELD.NEW' | translate"

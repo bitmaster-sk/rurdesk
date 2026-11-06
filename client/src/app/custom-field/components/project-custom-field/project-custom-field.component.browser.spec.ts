@@ -28,8 +28,8 @@ class DeleteMigrationDialogStub {
     public readonly confirmed = output<unknown>();
 }
 
-@Directive({ selector: 'input[uiCheckbox]', standalone: true, host: { class: 'ui-checkbox' } })
-class UiCheckboxStub {}
+@Directive({ selector: 'input[uiToggle]', standalone: true, host: { class: 'ui-toggle' } })
+class UiToggleStub {}
 
 describe('ProjectCustomFieldComponent (browser)', () => {
     const field = (id: number, rank: number, archivedAt: string | null = null): CustomField => ({
@@ -108,7 +108,7 @@ describe('ProjectCustomFieldComponent (browser)', () => {
                 TablerIconStub,
                 UiButtonStub,
                 UiTagStub,
-                UiCheckboxStub,
+                UiToggleStub,
                 DeleteMigrationDialogStub
             ],
             providers: [
@@ -138,6 +138,11 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         return fixture;
     }
 
+    function openFilterBar(fixture: ComponentFixture<ProjectCustomFieldComponent>): void {
+        fixture.componentInstance.onToggleFilter();
+        fixture.detectChanges();
+    }
+
     function clickShowArchivedToggle(fixture: ComponentFixture<ProjectCustomFieldComponent>): void {
         (
             fixture.nativeElement.querySelector(
@@ -165,10 +170,52 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         ).toBe(1);
     });
 
+    it('keeps the filter bar closed until the Filter toggle opens it', () => {
+        const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
+        const bar = () =>
+            fixture.nativeElement.querySelector('[data-testid="custom-field-filter-bar"]');
+
+        expect(bar()).toBeNull();
+        expect(fixture.componentInstance.filterCount()).toBe(0);
+
+        openFilterBar(fixture);
+
+        expect(bar()).not.toBeNull();
+        expect(fixture.componentInstance.filterCount()).toBe(0);
+
+        openFilterBar(fixture);
+
+        expect(bar()).toBeNull();
+    });
+
+    it('shows the archived rows again when the filter bar closes', () => {
+        const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
+        const rows = () =>
+            fixture.nativeElement.querySelectorAll('[data-testid="custom-field-row"]');
+
+        openFilterBar(fixture);
+        clickShowArchivedToggle(fixture);
+
+        expect(rows().length).toBe(1);
+        expect(fixture.componentInstance.filterCount()).toBe(1);
+        expect(fixture.componentInstance.isFilterBarVisible()).toBe(true);
+
+        fixture.componentInstance.onToggleFilter();
+        fixture.detectChanges();
+
+        expect(rows().length).toBe(2);
+        expect(fixture.componentInstance.filterCount()).toBe(0);
+        expect(
+            fixture.nativeElement.querySelector('[data-testid="custom-field-filter-bar"]')
+        ).toBeNull();
+    });
+
     it('keeps the archived rows out of the table while the toggle is off', () => {
         const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
         const rows = () =>
             fixture.nativeElement.querySelectorAll('[data-testid="custom-field-row"]');
+
+        openFilterBar(fixture);
 
         expect(rows().length).toBe(2);
         expect(
@@ -193,6 +240,7 @@ describe('ProjectCustomFieldComponent (browser)', () => {
     it('sends no request while only the visibility changes', () => {
         const fixture = render([field(1, 1), field(2, 2, '2026-01-01T00:00:00Z')]);
 
+        openFilterBar(fixture);
         clickShowArchivedToggle(fixture);
         clickShowArchivedToggle(fixture);
 
@@ -207,6 +255,7 @@ describe('ProjectCustomFieldComponent (browser)', () => {
             field(2, 2, '2026-01-01T00:00:00Z')
         ]);
 
+        openFilterBar(fixture);
         clickShowArchivedToggle(fixture);
 
         expect(
@@ -240,6 +289,7 @@ describe('ProjectCustomFieldComponent (browser)', () => {
         expect(table.classList).not.toContain('cdk-drop-list-disabled');
         expect(row().classList).not.toContain('cdk-drag-disabled');
 
+        openFilterBar(fixture);
         clickShowArchivedToggle(fixture);
 
         expect(table.classList).toContain('cdk-drop-list-disabled');

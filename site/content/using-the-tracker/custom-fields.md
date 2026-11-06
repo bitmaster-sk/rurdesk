@@ -25,10 +25,11 @@ for:
   below. Optional, and independent of *Required*.
 - **Required** — see *What required means* below.
 
-Fields are shown in the order of the list; drag a row to change it. A *Show
-archived* checkbox above the list hides the archived definitions — while it is
-off, dragging is disabled too, because the order belongs to the full list,
-hidden rows included.
+Fields are shown in the order of the list; drag a row to change it. The
+*Filter* button in the panel header opens a bar with a *Show archived* switch
+that hides the archived definitions — while it is off, dragging is disabled too,
+because the order belongs to the full list, hidden rows included. Closing the
+bar shows every definition again.
 
 ## The five types
 
@@ -131,7 +132,7 @@ This is what you want when a field falls out of use but its history still
 matters.
 
 The definition stays in the settings list, marked *Archived*, with a *Restore*
-action next to it. The *Show archived* checkbox above the list hides those rows;
+action next to it. The *Show archived* switch under *Filter* hides those rows;
 when hiding them leaves the list empty, it says that every field is archived and
 offers to show them again.
 
