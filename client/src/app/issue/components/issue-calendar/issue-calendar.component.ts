@@ -4,7 +4,6 @@ import {
     Component,
     DestroyRef,
     HostListener,
-    NgZone,
     OnDestroy,
     TemplateRef,
     effect,
@@ -69,7 +68,6 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     private readonly i18n = inject(I18nService);
 
-    private readonly zone = inject(NgZone);
     private readonly router = inject(Router);
     private readonly issueApi = inject(IssueApi);
     private readonly projectStore = inject(ProjectStore);
@@ -266,9 +264,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                     const issueId = Number(el.getAttribute('data-issue-id'));
                     const issue = this.issueMap.get(issueId);
                     if (!issue) return;
-                    this.zone.run(() =>
-                        this.quickActionsRef()?.show(e, issue, { showReschedule: !issue.isSummary })
-                    );
+                    this.quickActionsRef()?.show(e, issue, { showReschedule: !issue.isSummary });
                 },
                 true
             );
