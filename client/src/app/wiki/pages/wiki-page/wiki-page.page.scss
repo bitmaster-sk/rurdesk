@@ -13,6 +13,11 @@
 }
 
 .wiki-page {
+    // Anchor for the layout's container query: the page reacts to the width it
+    // actually gets (viewport minus the app menu and the wiki tree), so hiding
+    // the tree reflows it without any JavaScript.
+    container-type: inline-size;
+
     &__head {
         display: flex;
         flex-wrap: wrap;
@@ -91,6 +96,27 @@
         background: var(--ui-color-canvas);
         font-size: var(--font-size-s);
         min-height: calc(100vh - 12rem);
+    }
+
+    // Below this width a 16rem panel beside the text leaves an unreadable
+    // measure: stack it under the full-width article instead of squeezing it.
+    @container (width < 48rem) {
+        &__layout {
+            flex-direction: column;
+
+            .wiki-article {
+                // The cross-axis auto margin would defeat stretch and leave
+                // short articles narrower than the column.
+                margin-right: 0;
+            }
+        }
+
+        &__aside {
+            flex: 0 0 auto;
+            min-height: 0;
+            border-left: none;
+            border-top: 1px solid var(--ui-color-border);
+        }
     }
 
     &__missing {
