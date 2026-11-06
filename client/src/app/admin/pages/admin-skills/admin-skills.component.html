@@ -91,14 +91,41 @@
                     />
                 </div>
                 <div class="flex flex-col gap-1" [uiSaveStatus]="fieldSaveStatus('content')">
-                    <label for="skillContent">{{ 'SKILL.CONTENT' | translate }}</label>
+                    <div class="flex items-center justify-between gap-2">
+                        <label for="skillContent">{{ 'SKILL.CONTENT' | translate }}</label>
+                        <ui-choice
+                            [options]="modeOptions"
+                            optionLabel="labelKey"
+                            optionValue="value"
+                            size="small"
+                            [allowEmpty]="false"
+                            [ngModel]="isPreview() ? 'preview' : 'text'"
+                            (ngModelChange)="setMode($event)"
+                            [ngModelOptions]="{ standalone: true }"
+                        >
+                            <ng-template #item let-item>
+                                <span [attr.data-testid]="'skill-mode-' + item.value">
+                                    {{ item.labelKey | translate }}
+                                </span>
+                            </ng-template>
+                        </ui-choice>
+                    </div>
                     <textarea
                         id="skillContent"
                         uiTextarea
                         rows="18"
                         class="skill-content"
+                        [class.skill-content--hidden]="isPreview()"
                         formControlName="content"
                     ></textarea>
+                    <article
+                        class="skill-preview ui-input wiki-article"
+                        [class.skill-preview--hidden]="!isPreview()"
+                        data-testid="skill-preview"
+                        markdown
+                        ngPreserveWhitespaces
+                        [data]="form.controls.content.value"
+                    ></article>
                 </div>
             </div>
         </section>
