@@ -84,6 +84,37 @@
         }
     }
 
+    // Wrapper the wiki code-copy directive puts around a code block, with the
+    // copy button in its own row above the block: the button never sits over
+    // the code viewport, so the horizontal scroll and text selection stay
+    // uncovered. A plain button is reachable by mouse, touch and keyboard.
+    .wiki-code {
+        margin: 1em 0;
+
+        > pre {
+            margin: 0;
+        }
+    }
+
+    .wiki-code__copy {
+        display: block;
+        margin: 0 0 var(--ui-space-xs) auto;
+        padding: var(--ui-space-xs) var(--ui-space-s);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-sm);
+        background: none;
+        color: var(--ui-color-text-muted);
+        font-family: inherit;
+        font-size: var(--font-size-xs);
+        line-height: 1.5;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--ui-color-primary);
+            border-color: var(--ui-color-primary);
+        }
+    }
+
     blockquote {
         margin: 0;
         padding-left: var(--ui-space-m);
