@@ -27,6 +27,7 @@ class TaskBarStub {
     public readonly relationDropSide = input<any>(null);
     public readonly isSelected = input<boolean>(false);
     public readonly cascadeSlideDelayMs = input<number | null>(null);
+    public readonly isContext = input<boolean>(false);
     public readonly hovered = output<number | null>();
     public readonly dragStarted = output<any>();
     public readonly resizeEnded = output<any>();

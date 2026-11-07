@@ -62,6 +62,7 @@
             "
             [isSelected]="selectedTaskIndex() === i"
             [cascadeSlideDelayMs]="cascadeSlide().get(task.idIssuePublic) ?? null"
+            [isContext]="contextTaskIds().has(task.idIssuePublic)"
             (hovered)="taskHovered.emit($event)"
             (dragStarted)="barDragStarted.emit($event)"
             (resizeEnded)="barResizeEnded.emit($event)"

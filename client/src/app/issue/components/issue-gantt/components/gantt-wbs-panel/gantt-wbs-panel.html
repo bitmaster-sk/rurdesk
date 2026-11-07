@@ -18,9 +18,25 @@
             <span class="wbs-panel--tab-count">{{ backlogTasks().length }}</span>
             }
         </button>
+        @if (activeTab() === 'scheduled' && hasHierarchy()) {
+        <ui-choice
+            class="wbs-panel--outline"
+            [attr.aria-label]="'ISSUE.GANTT.OUTLINE_LEVEL' | translate"
+            [title]="'ISSUE.GANTT.OUTLINE_LEVEL' | translate"
+            [options]="outlineOptions"
+            [ngModel]="outlineLevel()"
+            (ngModelChange)="outlineLevelChange.emit($event)"
+            optionLabel="label"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+        >
+            <ng-template #item let-item>{{ item.label | translate }}</ng-template>
+        </ui-choice>
+        }
     </div>
 
-    @if (activeTab() === 'scheduled') { @if (scheduledTasks().length === 0) {
+    @if (activeTab() === 'scheduled') { @if (rows().length === 0) {
     <div class="wbs-panel--empty">{{ 'ISSUE.GANTT.NO_ISSUES' | translate }}</div>
     } @else {
     <div
@@ -28,23 +44,71 @@
         class="wbs-panel--scroll"
         (scroll)="onScroll()"
         cdkDropList
-        (cdkDropListDropped)="onScheduledDrop($event)"
+        cdkDropListSortingDisabled
+        (cdkDropListDropped)="onScheduledDrop()"
     >
-        @for (task of scheduledTasks(); track task.idIssuePublic) {
+        @for (row of rows(); track row.task.idIssuePublic) { @let task = row.task; @let drop =
+        dropTarget()?.targetId === task.idIssuePublic ? dropTarget() : null;
         <div
             class="wbs-row"
             cdkDrag
-            (cdkDragStarted)="onRowDragStarted()"
+            [cdkDragDisabled]="row.isContext"
+            [attr.data-task-id]="task.idIssuePublic"
+            (cdkDragStarted)="onRowDragStarted(task.idIssuePublic)"
+            (cdkDragMoved)="onRowDragMoved($event)"
             (cdkDragEnded)="onRowDragEnded()"
             [class.wbs-row--hovered]="hoveredTaskId() === task.idIssuePublic"
             [class.wbs-row--selected]="selectedTaskId() === task.idIssuePublic"
+            [class.wbs-row--summary]="task.isSummary"
+            [class.wbs-row--context]="row.isContext"
+            [class.wbs-row--drop-before]="drop?.isAllowed && drop?.kind === 'before'"
+            [class.wbs-row--drop-after]="drop?.isAllowed && drop?.kind === 'after'"
+            [class.wbs-row--drop-into]="drop?.isAllowed && drop?.kind === 'into'"
+            [class.wbs-row--drop-denied]="drop && !drop.isAllowed"
             [style.height.px]="rowHeight()"
+            [style.padding-left.px]="8 + row.depth * 16"
             (click)="onTaskClick(task.idIssuePublic, false)"
             (mouseenter)="onTaskMouseEnter(task.idIssuePublic)"
             (mouseleave)="onTaskMouseLeave()"
         >
+            @if (row.hasChildren) {
+            <button
+                type="button"
+                class="wbs-row--chevron"
+                [attr.aria-expanded]="!row.isCollapsed"
+                [attr.aria-label]="(row.isCollapsed ? 'ISSUE.GANTT.EXPAND' : 'ISSUE.GANTT.COLLAPSE') | translate"
+                (mousedown)="$event.stopPropagation()"
+                (click)="onToggleCollapse($event, task.idIssuePublic)"
+            >
+                <tabler-icon
+                    [icon]="row.isCollapsed ? 'chevron-right' : 'chevron-down'"
+                    [size]="14"
+                />
+            </button>
+            } @else {
+            <span class="wbs-row--chevron-spacer"></span>
+            }
+            <span class="wbs-row--code">{{ row.wbsCode }}</span>
             <span class="wbs-row--severity" [style.--row-sev-color]="task.severity?.color"></span>
             <span class="wbs-row--title">{{ task.title }}</span>
+            @if (row.isCollapsed) {
+            <span
+                class="wbs-row--count wbs-row--count--hidden"
+                [title]="'ISSUE.GANTT.HIDDEN_SUBTASKS' | translate: { count: row.hiddenCount }"
+            >
+                <tabler-icon icon="subtask" [size]="14" />
+                {{ row.hiddenCount }}
+            </span>
+            } @if (task.isSummary && (task.backlogChildren ?? 0) > 0) {
+            <button
+                type="button"
+                class="wbs-row--count wbs-row--count--backlog"
+                (mousedown)="$event.stopPropagation()"
+                (click)="$event.stopPropagation(); activeTab.set('backlog')"
+            >
+                {{ 'ISSUE.GANTT.IN_BACKLOG' | translate: { count: task.backlogChildren } }}
+            </button>
+            }
             <div class="wbs-row--meta">
                 <app-state-badge [state]="task.state" size="xs" />
                 @if (task.assignedToUser) {
@@ -63,6 +127,22 @@
         </div>
         }
     </div>
+    } } @if (dropTarget(); as drop) { @if (dropTipAt(); as at) {
+    <span
+        class="wbs-panel--drop-tip"
+        [class.wbs-panel--drop-tip--denied]="!drop.isAllowed"
+        [class.wbs-panel--drop-tip--warn]="newSummary()"
+        [style.left.px]="at.x"
+        [style.top.px]="at.y"
+    >
+        {{ dropLabelKey(drop) | translate: { moved: titleOf(drop.movedId), target:
+        titleOf(drop.targetId) } }} @if (newSummary(); as summary) {
+        <span class="wbs-panel--drop-tip-note">
+            {{ 'ISSUE.GANTT.DROP_MAKES_SUMMARY' | translate: { target: summary.title, estimate:
+            summary.estimated ?? 0 | secDuration } }}
+        </span>
+        }
+    </span>
     } } @if (activeTab() === 'backlog') { @if (backlogTasks().length === 0) {
     <div class="wbs-panel--empty">{{ 'ISSUE.GANTT.NO_BACKLOG' | translate }}</div>
     } @else {

@@ -16,7 +16,7 @@ import { IssueRelationType } from '../../../../constants/issue-relation-type.enu
 import { IssueRelationSubType } from '../../../../constants/issue-relation-subtype.enum';
 import { IssueRelationDirection } from '../../../../constants/issue-relation-direction.enum';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
-import { MIN_BAR_WIDTH_PX, SMALL_BAR_THRESHOLD_PX } from '../gantt-task-bar/gantt-task-bar';
+import { MIN_BAR_WIDTH_PX, SMALL_BAR_THRESHOLD_PX } from '../../constants/gantt-bar.constants';
 import { addSeconds } from 'date-fns';
 import { ArrowDirection, GanttArrowRouting } from '../../service/gantt-arrow-routing';
 

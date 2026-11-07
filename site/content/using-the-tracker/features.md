@@ -154,11 +154,11 @@ chip. It shows only the comments that carry an attachment.
 
 The composer turns common ASCII smileys into emoji as you type: write `:)`, `:D`,
 `;)`, `:(`, `:P`, `:O`, `>:)` or `<3`, then press space, and the shortcut becomes
-the emoji character. Undo (`Ctrl+Z` / `Cmd+Z`) brings the shortcut back.
+the emoji character. Undo ({{keys: Mod+Z}}) brings the shortcut back.
 
 For anything beyond these shortcuts, open the emoji picker in the composer
-toolbar, or use your operating system's picker (`Ctrl+Cmd+Space` on macOS,
-`Win+.` on Windows) — the composer accepts any emoji character you type.
+toolbar, or use your operating system's picker (<kbd>⌃</kbd><kbd>⌘</kbd><kbd>Space</kbd> on macOS,
+<kbd>Win</kbd>+<kbd>.</kbd> on Windows) — the composer accepts any emoji character you type.
 
 ![The emoji picker open from the composer toolbar, grouped into reactions, people, objects and symbols](../../site/assets/img/emoji-picker.png)
 
@@ -206,13 +206,13 @@ A fast, filterable grid. Sort and filter across task fields.
 
 In the table and on the Kanban board you can change many tasks at once.
 
-- **Select tasks**: <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+click a row or card to add or remove
+- **Select tasks**: {{keys: Mod+click}} a row or card to add or remove
   it, <kbd>Shift</kbd>+click to select everything between it and the last one you
   picked (on the board, within one column), or use **Select** in the right-click menu.
   With the keyboard, <kbd>x</kbd> selects the highlighted row or card and
   <kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> extends the selection (on the board, within
   one column). In the table <kbd>Shift</kbd>+<kbd>X</kbd> selects all loaded rows.
-  Clicking a task title still opens it, and <kbd>⌘</kbd>+click on the title still opens
+  Clicking a task title still opens it, and {{keys: Mod+click}} on the title still opens
   it in a new tab.
 - **Edit**: while tasks are selected, the toolbar shows a **Bulk edit (N)** button.
   It (or <kbd>e</kbd>) opens one dialog with the **state**, **severity**, **type** and
@@ -268,7 +268,51 @@ A full project timeline:
 - **Keyboard**: <kbd>t</kbd> or <kbd>Home</kbd> jumps to today (also a **Today**
   toolbar button), <kbd>+</kbd>/<kbd>-</kbd> zoom, <kbd>←</kbd>/<kbd>→</kbd> pan
 
+##### Summary tasks and the outline
+
+A task with at least one scheduled subtask (a Parent / Child relation) is a
+**summary task**:
+
+- Its **start and end are computed** from its subtasks: the earliest start and
+  the latest end below it. They are stored on the task, so the detail, calendar,
+  table and the API all show the same dates. They are read-only everywhere and
+  marked **Computed from subtasks**.
+- Its **progress** is the time tracked on all its subtasks plus its own, against
+  the estimate of its leaf subtasks (a subtask without an estimate counts as one
+  hour). The bar stops at 100 % and shows how far it is over.
+- On the timeline it is a thin dark bar with pointed ends and no resize handle.
+  **Dragging it moves every scheduled subtask** by the same amount, and the
+  usual cascade then moves whatever depends on them. It will not move earlier
+  than a subtask's own predecessor outside the group allows.
+- A **dependency on a summary** applies to its whole group.
+- A parent whose subtasks are all in the backlog stays a normal task. When some
+  subtasks are still unscheduled, the row shows **+N in backlog**.
+- Before a task with its own estimate becomes a summary, the drag hint warns
+  about it and a dialog asks whether to **move the estimate to a new subtask**,
+  drop it, or cancel the move.
+
+The WBS panel shows the tree:
+
+- Rows are **indented** and **numbered** (1, 1.1, 1.2.1). The chevron collapses
+  a group and shows how many rows it hides. **1 / 2 / 3 / All** in the panel
+  header fold the whole plan to that level; once you fold rows by hand, none of
+  them is highlighted. What you collapse is remembered per project.
+- **Indent** the selected task under the row above it with <kbd>Tab</kbd> or
+  {{keys: Alt+Shift+→}},
+  **outdent** it with <kbd>Shift</kbd>+<kbd>Tab</kbd> or
+  {{keys: Alt+Shift+←}}. An outdented task
+  moves right after its old parent's group; the rows below it stay where they were.
+- **Drag a row**: drop it on the top or bottom edge of another row to place it
+  before or after, or on the middle of a row to make that row its parent. A
+  hint under the dragged row says what the drop will do. Dragging a row sideways by
+  about two characters indents or outdents it. A group moves with its parent,
+  and a task cannot be dropped into its own group.
+- When a filter hides a task's parent, the parent is still shown as a greyed
+  **context row** above it.
+
 ![Gantt timeline with dependency arrows](../../site/assets/img/view-gantt.png)
+
+![Dragging a subtask before its sibling in the WBS panel](../../site/assets/img/gantt-reorder.webm)
 
 ### States, severities & task types
 
@@ -354,7 +398,7 @@ Link tasks to express how work connects:
 
 | Relation       | Meaning                                                           |
 | -------------- | ----------------------------------------------------------------- |
-| **Hierarchy**  | Parent / child breakdown                                          |
+| **Hierarchy**  | Parent / child breakdown; the parent becomes a summary task       |
 | **Schedule**   | One task must come before another (drives Gantt arrows & cascade) |
 | **Duplicate**  | Marks duplicates                                                  |
 | **Relates-to** | Loose association                                                 |
@@ -364,7 +408,10 @@ handle** on a task bar onto another bar (the side you connect — start vs.
 finish — picks the sub-type: finish-to-start, start-to-start, etc.). While
 dragging, the target handle lights up and the line snaps onto it — that's the
 "release here to connect" cue; dropping anywhere on the bar connects to its
-nearer side. Cycles are rejected. Relation validity is also enforced at the database level. Relations
+nearer side. Cycles are rejected, including ones that go through a parent and its
+subtasks: a schedule relation and the parent / child tree may not form a loop.
+A schedule relation between a summary and one of its own subtasks is refused too.
+Relation validity is also enforced at the database level. Relations
 can likewise be added and removed from the task itself.
 
 ![Dragging to create a relation](../../site/assets/img/relation-drag.webm)
@@ -476,6 +523,10 @@ The API exposes its operations as **MCP tools** (`create_issue`, `list_issues`,
 `update_issue`, `add_relation`, …), so MCP-capable clients (Claude Code, Cursor)
 can drive the backlog natively.
 
+The dates and estimate of a summary task are computed, so `update_issue` and
+`bulk_update_issues` refuse to change them with `SUMMARY_COMPUTED`. Move the
+subtasks instead, and leave summary tasks out of a bulk date change.
+
 Tags have their own tools (`list_tags`, `create_tag`, `update_tag`,
 `delete_tag`) and a `tag_ids` argument on the issue tools — see
 [Tags](tags.md#api-and-agents).
@@ -491,10 +542,10 @@ today's date. A value that cannot be parsed is rejected with **422**.
 
 ## Command palette & keyboard shortcuts
 
-Press <kbd>⌘</kbd><kbd>K</kbd> (or <kbd>Ctrl</kbd><kbd>K</kbd>) anywhere to open the
+Press {{keys: Mod+K}} anywhere to open the
 **command palette** — one keyboard-driven entry point for navigation, task actions,
 and search. Start typing to fuzzy-match; use <kbd>↑</kbd>/<kbd>↓</kbd> to move,
-<kbd>↵</kbd> to run, <kbd>⌘</kbd><kbd>↵</kbd> to run without closing, <kbd>⇥</kbd> to
+<kbd>↵</kbd> to run, {{keys: Mod+Enter}} to run without closing, <kbd>⇥</kbd> to
 complete the highlighted item into the input, and <kbd>esc</kbd> to clear or close.
 
 Type a **prefix** to scope the search, or jump straight in with a dedicated shortcut:

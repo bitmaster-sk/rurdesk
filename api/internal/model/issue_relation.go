@@ -68,3 +68,13 @@ type CreateIssueRelationReq struct {
 	RelationSubType *string `json:"relationSubType" binding:"omitempty,oneof=finish_to_start start_to_start finish_to_finish start_to_finish"`
 	LagMinutes      *int64  `json:"lagMinutes"      binding:"omitempty"`
 }
+
+type SetParentReq struct {
+	IdParent      *int64            `json:"idParent"`
+	RemainingWork *RemainingWorkReq `json:"remainingWork" binding:"omitempty"`
+}
+
+type RemainingWorkReq struct {
+	Title       string `json:"title"       binding:"required,max=100"`
+	Description string `json:"description"`
+}

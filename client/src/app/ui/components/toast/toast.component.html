@@ -14,7 +14,18 @@
             (focusout)="toast.resume(t.id)"
         >
             <tabler-icon class="ui-toast__icon" [icon]="icon(t.severity)" aria-hidden="true" />
-            <div class="ui-toast__detail">{{ t.detail }}</div>
+            <div class="ui-toast__body">
+                <div class="ui-toast__detail">{{ t.detail }}</div>
+                @if (t.action; as action) {
+                    <button
+                        type="button"
+                        class="ui-toast__action ui-button ui-button--info ui-button--outlined ui-button--small"
+                        (click)="toast.runAction(t.id)"
+                    >
+                        {{ action.label }}
+                    </button>
+                }
+            </div>
             <button
                 type="button"
                 class="ui-toast__close"

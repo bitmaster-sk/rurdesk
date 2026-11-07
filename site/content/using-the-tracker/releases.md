@@ -19,7 +19,7 @@ you work on it; only **Release** does that, all at once.
 ## Starting a draft
 
 Open **Releases** in the project menu and click **New release**, or run
-*Release a version* from the command palette (<kbd>Ctrl</kbd>+<kbd>K</kbd>).
+*Release a version* from the command palette ({{keys: Mod+K}}).
 Pick the tag that holds the release and type the version name, then **Start the
 draft**. A tag has at most one draft; when you pick a tag that already has one,
 the page links to it instead.

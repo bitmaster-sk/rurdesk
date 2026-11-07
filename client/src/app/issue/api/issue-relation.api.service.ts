@@ -1,7 +1,12 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateIssueRelationDto, ReadIssueRelationDto } from '../model/issue-relation.model';
+import {
+    CreateIssueRelationDto,
+    ReadIssueRelationDto,
+    SetParentDto,
+    SetParentRes
+} from '../model/issue-relation.model';
 
 @Injectable({ providedIn: 'root' })
 export class IssueRelationApi {
@@ -35,6 +40,17 @@ export class IssueRelationApi {
         return this.http.post<ReadIssueRelationDto[]>(
             `/api/private/project/${idProject}/issue/${idIssuePublic}/relation`,
             dto
+        );
+    }
+
+    public setParent$(
+        idProject: number,
+        idIssuePublic: number,
+        body: SetParentDto
+    ): Observable<SetParentRes> {
+        return this.http.put<SetParentRes>(
+            `/api/private/project/${idProject}/issue/${idIssuePublic}/parent`,
+            body
         );
     }
 

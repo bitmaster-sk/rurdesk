@@ -770,6 +770,9 @@
     },
     "ISSUE": {
         "POINTS": "Points",
+        "COMPUTED_ESTIMATE_HINT": "Computed from subtasks: the time from the earliest start to the latest end. Tracked {{tracked}} of {{estimated}} ({{percent}} %).",
+        "COMPUTED_SPAN_HINT": "Computed from subtasks: the time from the earliest start to the latest end.",
+        "COMPUTED_START_HINT": "Computed from subtasks: the start of the earliest subtask.",
         "SPLIT_PANE": {
             "LABEL": "Issue detail panel width",
             "COLLAPSE_INFO": "Collapse issue info",
@@ -974,6 +977,8 @@
         },
         "ADD": "Add task",
         "MOVE_FAILED": "Failed to move the card. The board has been refreshed.",
+        "UPDATE_FAILED": "Failed to save the change. The task has been restored.",
+        "TRACKED_WITH_SUBTASKS": "with subtasks",
         "DISPLAY": {
             "UNSET": {
                 "SEVERITIES": "Display tasks with unset severities",
@@ -1019,7 +1024,30 @@
             "NO_ISSUES": "No tasks to display",
             "NO_BACKLOG": "No backlog items",
             "SCHEDULED": "Scheduled",
-            "BACKLOG": "Backlog"
+            "BACKLOG": "Backlog",
+            "EXPAND": "Expand subtasks",
+            "COLLAPSE": "Collapse subtasks",
+            "EXPAND_ALL": "Expand all",
+            "COLLAPSE_ALL": "Collapse all",
+            "OUTLINE_LEVEL": "Outline level",
+            "OUTLINE_ALL": "All",
+            "INDENT": "Indent",
+            "OUTDENT": "Outdent",
+            "HIDDEN_SUBTASKS": "{{count}} hidden subtasks",
+            "IN_BACKLOG": "+{{count}} in backlog",
+            "DROP_BEFORE": "↑ before “{{target}}”",
+            "DROP_AFTER": "↓ after “{{target}}”",
+            "DROP_INTO": "⤵ “{{moved}}” becomes a subtask of “{{target}}”",
+            "DROP_NOT_ALLOWED": "✕ not allowed here",
+            "PROGRESS_OVER": "Tracked time is {{percent}} % over the estimate",
+            "DROP_MAKES_SUMMARY": "“{{target}}” becomes a summary task, you will choose what happens to its own estimate of {{estimate}}",
+            "MAKE_SUMMARY": {
+                "TITLE": "“{{title}}” becomes a summary task",
+                "TEXT": "A summary task takes its dates and estimate from its subtasks, so its own estimate of {{estimate}} would no longer count. You can keep it as a new subtask.",
+                "MOVE": "Move {{estimate}} to a subtask",
+                "DISCARD": "Drop the estimate"
+            },
+            "REMAINING_WORK": "remaining work"
         },
         "PARTICIPANTS": {
             "TITLE": "Participants",
@@ -1231,6 +1259,7 @@
         "task_not_running_by_agent": "No agent is working on this task right now.",
         "implementation_no_branch": "The agent finished the implementation without pushing a branch, so no pull request could be opened.",
         "relation_cycle": "This relation would create a cycle.",
+        "summary_computed": "Dates and estimate of a summary task are computed from its subtasks.",
         "sprint_window": "A cycle must end after it starts.",
         "custom_field_in_use": "The field still has values. Confirm the deletion to remove them.",
         "custom_field_option_in_use": "The option still has values. Migrate them to another option or delete them.",

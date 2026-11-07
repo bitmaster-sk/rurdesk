@@ -32,6 +32,7 @@ type ProjectBuilderController struct {
 	relationRepo *repository.IssueRelationRepository
 	acl          *service.AclService
 	notifier     notify.INotifier
+	hierarchy    *service.HierarchyRollupService
 }
 
 // NewProjectBuilderController creates a new ProjectBuilderController.
@@ -43,6 +44,7 @@ func NewProjectBuilderController(
 	relationRepo *repository.IssueRelationRepository,
 	acl *service.AclService,
 	notifier notify.INotifier,
+	hierarchy *service.HierarchyRollupService,
 ) *ProjectBuilderController {
 	return &ProjectBuilderController{
 		pool:         pool,
@@ -52,6 +54,7 @@ func NewProjectBuilderController(
 		relationRepo: relationRepo,
 		acl:          acl,
 		notifier:     notifier,
+		hierarchy:    hierarchy,
 	}
 }
 
@@ -256,11 +259,22 @@ func (pc *ProjectBuilderController) Accept(c *gin.Context) {
 			}
 		}
 
+		if err := pc.hierarchy.RejectScheduleCycle(ctx, idProject, idsIssue); err != nil {
+			return err
+		}
+		if _, err := pc.hierarchy.RecomputeFrom(ctx, idsIssue); err != nil {
+			return err
+		}
+
 		filter := &model.LoadIssuesFilter{IdProject: idProject, IdsIssue: idsIssue}
 		result, err = pc.issueRepo.LoadIssuesByIds(ctx, filter)
 		return err
 	})
 
+	if txErr == errs.ErrCycle {
+		c.JSON(errs.ErrCycle.HttpStatus(), errs.ErrCycle)
+		return
+	}
 	if txErr != nil {
 		_ = c.Error(txErr)
 		c.Status(http.StatusInternalServerError)

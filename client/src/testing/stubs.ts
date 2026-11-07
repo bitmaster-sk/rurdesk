@@ -68,6 +68,9 @@ export class UiToastStub {}
 @Component({ selector: 'ui-button', template: '<ng-content></ng-content>', standalone: true })
 export class UiButtonStub {
     public readonly label = input<string>('');
+    public readonly severity = input<string>('');
+    public readonly variant = input<string>('');
+    public readonly size = input<string>('');
     public readonly loading = input<boolean>(false);
     public readonly disabled = input<boolean>(false);
     public readonly ariaLabel = input<string>('');

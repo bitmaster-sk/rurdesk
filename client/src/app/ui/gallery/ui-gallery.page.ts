@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { UiDateRangeValue } from '../components/date-range-select/date-range-select.component';
 import { CdkDragDrop, CdkDragEnd, moveItemInArray } from '@angular/cdk/drag-drop';
 import { UiTableSortEvent } from '../components/table/table-sort.directive';
-import { UiToastSeverity, UiToastService } from '../service/ui-toast.service';
+import { UiToastService } from '../service/ui-toast.service';
+import { UiToastSeverity } from '../entity/ui-toast.entity';
 import { UiBadgeSeverity } from '../components/badge/badge.component';
 import { UiMenuItem } from '../components/menu/menu-item.model';
 import { UiMessageSeverity } from '../components/message/message.component';
@@ -206,6 +207,22 @@ export class UiGalleryPage {
             severity,
             detail: `This is a sample ${severity} toast message.`,
             life: severity === 'error' ? 4000 : 3000
+        });
+    }
+    protected showToastWithAction(): void {
+        this.toastService.show({
+            severity: 'info',
+            detail: 'Task moved under "Backend".',
+            life: 30000,
+            action: {
+                label: 'Undo',
+                run: () =>
+                    this.toastService.show({
+                        severity: 'success',
+                        detail: 'Move undone.',
+                        life: 3000
+                    })
+            }
         });
     }
 

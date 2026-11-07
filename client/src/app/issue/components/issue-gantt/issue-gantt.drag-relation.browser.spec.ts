@@ -276,7 +276,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             const sub = mockSub();
             mocks.ganttOrderApiMock.reorder$.mockReturnValue(sub);
 
-            comp.onScheduledReorder({ movedId: 2, order: [1, 3, 2] });
+            comp.onScheduledReorder({ movedId: 2, order: [1, 3, 2] }, [1, 3, 2]);
 
             sub.handlers.next?.(undefined);
             expect(mocks.issueFilterStoreMock.refresh).toHaveBeenCalled();
@@ -286,7 +286,7 @@ describe('IssueGanttComponent drag/relation/resize/reorder (TestBed)', () => {
             const sub = mockSub();
             mocks.ganttOrderApiMock.reorder$.mockReturnValue(sub);
 
-            comp.onScheduledReorder({ movedId: 2, order: [1, 3, 2] });
+            comp.onScheduledReorder({ movedId: 2, order: [1, 3, 2] }, [1, 3, 2]);
             sub.handlers.error?.(new Error('fail'));
 
             expect(mocks.issueFilterStoreMock.refresh).toHaveBeenCalled();

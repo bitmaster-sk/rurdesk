@@ -197,3 +197,145 @@ describe('GanttCascadeService', () => {
         );
     });
 });
+
+describe('GanttCascadeService tree cascade', () => {
+    const service = new GanttCascadeService();
+    const emptyRef: ReadIssueRelationDto['from'] = {
+        idIssuePublic: 0,
+        title: '',
+        idSeverity: null,
+        idState: null,
+        assignedTo: null,
+        updateAt: '',
+        qualityScore: null
+    };
+    const hour = 3600;
+    const day = 24 * hour;
+    const at = (d: number): string => new Date(Date.UTC(2026, 10, 2 + d, 8)).toISOString();
+    const issue = (id: number, d: number, estimated: number): Issue =>
+        Fixtures.issue({
+            idIssue: id,
+            idIssuePublic: id,
+            title: `Issue ${id}`,
+            estimated,
+            scheduledAt: new Date(at(d))
+        });
+    const schedule = (fromId: number, toId: number): ReadIssueRelationDto => ({
+        idIssueRelation: fromId * 100 + toId,
+        relationType: IssueRelationType.Schedule,
+        relationSubType: IssueRelationSubType.FinishToStart,
+        lagMinutes: null,
+        direction: IssueRelationDirection.Outbound,
+        label: '',
+        inverseLabel: '',
+        from: { ...emptyRef, idIssuePublic: fromId },
+        to: { ...emptyRef, idIssuePublic: toId },
+        createdAt: '',
+        createdBy: 0
+    });
+
+    const summary = issue(1, 0, 3 * day);
+    const childA = issue(2, 0, day);
+    const childB = issue(3, 2, day);
+    const successor = issue(4, 3, day);
+    const parents = new Map([
+        [2, 1],
+        [3, 1]
+    ]);
+
+    it('pushes the successor of a summary when one of its leaves grows', () => {
+        const result = service.computeTreeCascade(
+            new Map([[3, { scheduledAt: new Date(at(2)), estimated: 2 * day }]]),
+            [summary, childA, childB, successor],
+            [schedule(1, 4)],
+            parents
+        );
+        expect(result.affectedTasks.get(4)?.scheduledAt.toISOString()).toBe(at(4));
+    });
+
+    it('shifts every leaf of a summary that its predecessor pushes', () => {
+        const predecessor = issue(5, -1, day);
+        const result = service.computeTreeCascade(
+            new Map([[5, { scheduledAt: new Date(at(0)) }]]),
+            [predecessor, summary, childA, childB],
+            [schedule(5, 1)],
+            parents
+        );
+        expect(result.affectedTasks.get(2)?.scheduledAt.toISOString()).toBe(at(1));
+        expect(result.affectedTasks.get(3)?.scheduledAt.toISOString()).toBe(at(3));
+        expect(result.affectedTasks.has(1)).toBe(false);
+        expect(result.shiftedSummaries?.get(1)).toBe(day * 1000);
+    });
+
+    it('stops a summary moving earlier than a leaf predecessor outside its subtree allows', () => {
+        const predecessor = issue(5, -2, day);
+        const floor = service.summaryMoveFloor(
+            1,
+            [predecessor, summary, childA, childB],
+            [schedule(5, 3)],
+            parents
+        );
+        expect(floor).toBe(-3 * day * 1000);
+    });
+
+    it('ignores a schedule link between a summary and its own subtask', () => {
+        const result = service.computeTreeCascade(
+            new Map([[2, { scheduledAt: new Date(at(1)) }]]),
+            [summary, childA, childB],
+            [schedule(1, 2), schedule(2, 1)],
+            parents
+        );
+        expect([...result.affectedTasks.keys()]).toEqual([2]);
+        expect(
+            service.summaryMoveFloor(2, [summary, childA, childB], [schedule(1, 2)], parents)
+        ).toBe(-Infinity);
+    });
+
+    it('reports the shift of a summary whose subtasks are not loaded, without moving any task', () => {
+        const predecessor = issue(5, -1, day);
+        const unloadedSummary = { ...issue(6, 0, day), isSummary: true };
+        const result = service.computeTreeCascade(
+            new Map([[5, { scheduledAt: new Date(at(0)) }]]),
+            [predecessor, unloadedSummary],
+            [schedule(5, 6)],
+            new Map()
+        );
+        expect([...result.affectedTasks.keys()]).toEqual([5]);
+        expect(result.shiftedSummaries?.get(6)).toBe(day * 1000);
+    });
+
+    it('measures a summary with hidden subtasks by its own bar as well', () => {
+        const shortLeaf = issue(2, 0, day);
+        const result = service.computeTreeCascade(
+            new Map([[2, { scheduledAt: new Date(at(0)) }]]),
+            [summary, shortLeaf, successor],
+            [schedule(1, 4)],
+            new Map([[2, 1]]),
+            new Set([1])
+        );
+        expect(result.affectedTasks.has(4)).toBe(false);
+
+        const grown = service.computeTreeCascade(
+            new Map([[2, { scheduledAt: new Date(at(0)), estimated: 4 * day }]]),
+            [summary, shortLeaf, successor],
+            [schedule(1, 4)],
+            new Map([[2, 1]]),
+            new Set([1])
+        );
+        expect(grown.affectedTasks.get(4)?.scheduledAt.toISOString()).toBe(at(4));
+    });
+
+    it('moves the own bar of a pushed summary with hidden subtasks along with its leaves', () => {
+        const predecessor = issue(5, -1, day);
+        const tail = issue(7, 3, day);
+        const result = service.computeTreeCascade(
+            new Map([[5, { scheduledAt: new Date(at(0)) }]]),
+            [predecessor, summary, childA, tail],
+            [schedule(5, 1), schedule(1, 7)],
+            new Map([[2, 1]]),
+            new Set([1])
+        );
+        expect(result.affectedTasks.get(2)?.scheduledAt.toISOString()).toBe(at(1));
+        expect(result.affectedTasks.get(7)?.scheduledAt.toISOString()).toBe(at(4));
+    });
+});

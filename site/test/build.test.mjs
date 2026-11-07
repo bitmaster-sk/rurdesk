@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { marked } from 'marked';
-import { build, SIDEBAR, NAV, wrapTables } from '../tools/build.mjs';
+import { build, SIDEBAR, NAV, wrapTables, renderKeys } from '../tools/build.mjs';
 
 const SITE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(SITE, 'dist');
@@ -197,4 +197,19 @@ test('a single table opts in with a stack-table comment', () => {
     assert.ok(!out.includes('stack-table'), 'marker comment should not survive into the HTML');
     // Only the marked table stacks; the next one is untouched.
     assert.match(out, /<div class="table-scroll"><table>[\s\S]*?<td>b<\/td>/);
+});
+
+test('a shortcut renders its Windows/Linux and Mac variant side by side', () => {
+    const html = renderKeys('<p>Press {{keys: Mod+Shift+K}} or {{keys: Alt+click}}.</p>');
+    assert.match(html, /<span class="keys"><span class="keys-os"><span class="keys-os-label">Win \/ Linux<\/span><kbd>Ctrl<\/kbd>\+<kbd>Shift<\/kbd>\+<kbd>K<\/kbd><\/span><span class="keys-os"><span class="keys-os-label">Mac<\/span><kbd>⌘<\/kbd><kbd>⇧<\/kbd><kbd>K<\/kbd><\/span><\/span>/);
+    assert.match(html, /<kbd>Alt<\/kbd>\+click/);
+    assert.match(html, /<kbd>⌥<\/kbd> click/);
+});
+
+test('no generated page leaves a keys shorthand unrendered', () => {
+    for (const group of SIDEBAR) {
+        for (const page of group.pages) {
+            assert.ok(!read(path.join('docs', page.out)).includes('{{keys'), `${page.out} has a raw {{keys}}`);
+        }
+    }
 });

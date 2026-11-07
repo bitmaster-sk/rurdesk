@@ -236,6 +236,87 @@ describe('IssueInfoComponent — live MR status notice (browser)', () => {
     });
 });
 
+describe('IssueInfoComponent — summary task', () => {
+    let mrStatus$: Subject<unknown>;
+    let tracksChanged$: Subject<boolean>;
+    let tracksForIssue: Track[];
+    let loadStatus$: ReturnType<typeof vi.fn>;
+    let getIntegration$: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        mrStatus$ = new Subject<unknown>();
+        tracksChanged$ = new Subject<boolean>();
+        tracksForIssue = [];
+        loadStatus$ = vi.fn(() => NEVER);
+        getIntegration$ = vi.fn(() => NEVER);
+        await TestBed.configureTestingModule({
+            declarations: [IssueInfoComponent],
+            providers: [
+                {
+                    provide: IssueApi,
+                    useValue: { update$: vi.fn().mockReturnValue(of(ISSUE)) }
+                },
+                { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
+                { provide: SeverityStore, useValue: { severitiesByProject$: () => of([]) } },
+                { provide: IssueTypeStore, useValue: { issueTypesByProject$: () => of([]) } },
+                {
+                    provide: TagStore,
+                    useValue: { tagsByProject$: () => of([]), isDeleted: () => false }
+                },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { users$: of([]), usersMap$: of(new Map()) }
+                },
+                { provide: ProjectStore, useValue: { project$: of({ idProject: 7, name: 'p' }) } },
+                { provide: AuthStore, useValue: { getUser: () => ({ idUser: 1 }) } },
+                { provide: PinApi, useValue: { insert$: () => NEVER } },
+                {
+                    provide: AclStore,
+                    useValue: { canCreateIssue: () => true }
+                },
+                {
+                    provide: MrDiffApi,
+                    useValue: { loadStatus$, load$: () => NEVER }
+                },
+                { provide: GitIntegrationApi, useValue: { loadOne$: getIntegration$ } },
+                { provide: Router, useValue: { navigate: vi.fn() } },
+                { provide: NoticeService, useValue: { mrStatus$: mrStatus$.asObservable() } },
+                {
+                    provide: TrackerService,
+                    useValue: {
+                        tracksChanged$: tracksChanged$.asObservable(),
+                        loadTracks$: () => of(tracksForIssue)
+                    }
+                }
+            ]
+        })
+            .overrideComponent(IssueInfoComponent, { set: { template: '' } })
+            .compileComponents();
+    });
+
+    it('locks the computed dates and leaves them out of a save', () => {
+        const summary: Issue = {
+            ...ISSUE,
+            isSummary: true,
+            estimated: 7200,
+            scheduledAt: new Date()
+        };
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', summary);
+        fixture.detectChanges();
+        const cmp = fixture.componentInstance;
+        expect(cmp.form.controls.scheduledAt.disabled).toBe(true);
+        expect(cmp.form.controls.estimated.disabled).toBe(true);
+
+        cmp.onSave();
+
+        const update$ = TestBed.inject(IssueApi).update$ as ReturnType<typeof vi.fn>;
+        const changes = update$.mock.calls.at(-1)![2];
+        expect(changes).not.toHaveProperty('scheduledAt');
+        expect(changes).not.toHaveProperty('estimated');
+    });
+});
+
 describe('IssueInfoComponent — "New task" menu action', () => {
     let navigate: ReturnType<typeof vi.fn>;
     let canCreateIssue: ReturnType<typeof signal<boolean>>;

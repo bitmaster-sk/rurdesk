@@ -18,6 +18,13 @@ func NewOptionalPtr[T any](value *T) Optional[T] {
 	return Optional[T]{IsDefined: true, Value: value}
 }
 
+func NewOptionalIfSet[T any](value *T) Optional[T] {
+	if value == nil {
+		return Optional[T]{}
+	}
+	return NewOptionalPtr(value)
+}
+
 func NewOptionalNull[T any]() Optional[T] {
 	return Optional[T]{IsDefined: true}
 }

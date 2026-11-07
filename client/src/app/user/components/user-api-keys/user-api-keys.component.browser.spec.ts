@@ -1,4 +1,4 @@
-import { Component, Directive, forwardRef, input, output } from '@angular/core';
+import { Directive, forwardRef, input, output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import {
     ControlValueAccessor,
@@ -42,13 +42,6 @@ class UiConfirmStub {
     public readonly confirmed = output<void>();
 }
 
-@Component({ selector: 'ui-button', template: '<ng-content></ng-content>', standalone: true })
-class UiButtonWithSeverityStub extends UiButtonStub {
-    public readonly severity = input<string>('');
-    public readonly variant = input<string>('');
-    public readonly size = input<string>('');
-}
-
 const existing: UserApiKey = {
     idApiKey: 1,
     idUser: 7,
@@ -88,7 +81,7 @@ describe('UserApiKeysComponent (browser)', () => {
                 FormsModule,
                 TranslateModule.forRoot(),
                 TablerIconStub,
-                UiButtonWithSeverityStub,
+                UiButtonStub,
                 UiTooltipStub,
                 UiInputStub,
                 UiDatepickerStub,

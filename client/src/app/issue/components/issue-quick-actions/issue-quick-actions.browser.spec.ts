@@ -776,3 +776,51 @@ describe('IssueQuickActionsComponent — Select action (browser)', () => {
         expect(selectButton()).toBeNull();
     });
 });
+
+describe('IssueQuickActionsComponent — Reschedule (browser)', () => {
+    const rescheduleButtons = (): NodeListOf<HTMLButtonElement> =>
+        document.querySelectorAll('.reschedule-btn');
+
+    async function open(issue: Issue, visibility = {}): Promise<void> {
+        const { fixture, comp } = await createFixture();
+        comp.show(
+            { clientY: 100, clientX: 200, target: document.body, preventDefault: () => {} } as any,
+            issue,
+            visibility
+        );
+        fixture.detectChanges();
+        await fixture.whenStable();
+    }
+
+    afterEach(() => {
+        document.querySelectorAll('.ui-popover').forEach(el => el.remove());
+    });
+
+    it('offers rescheduling for a regular task', async () => {
+        await open(makeIssue({ scheduledAt: new Date('2025-01-15T08:00:00Z') }));
+        expect(rescheduleButtons().length).toBeGreaterThan(0);
+    });
+
+    it('hides rescheduling when the caller turns it off for this issue', async () => {
+        await open(makeIssue({ scheduledAt: new Date('2025-01-15T08:00:00Z') }), {
+            showReschedule: false
+        });
+        expect(rescheduleButtons().length).toBe(0);
+    });
+
+    it('falls back to the inputs again on the next show without overrides', async () => {
+        const { fixture, comp } = await createFixture();
+        const event = {
+            clientY: 100,
+            clientX: 200,
+            target: document.body,
+            preventDefault: () => {}
+        } as any;
+        const issue = makeIssue({ scheduledAt: new Date('2025-01-15T08:00:00Z') });
+        comp.show(event, issue, { showReschedule: false });
+        comp.show(event, issue);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(rescheduleButtons().length).toBeGreaterThan(0);
+    });
+});

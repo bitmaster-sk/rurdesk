@@ -86,6 +86,7 @@ import {
     IconHelpCircle,
     IconChevronDown,
     IconChevronRight,
+    IconSubtask,
     IconBrain,
     IconHammer,
     IconTerminal2,
@@ -112,6 +113,7 @@ import { GanttTimelineHeaderComponent } from './components/issue-gantt/component
 import { GanttTaskBarComponent } from './components/issue-gantt/components/gantt-task-bar/gantt-task-bar';
 import { GanttTimelineBodyComponent } from './components/issue-gantt/components/gantt-timeline-body/gantt-timeline-body';
 import { GanttWbsPanelComponent } from './components/issue-gantt/components/gantt-wbs-panel/gantt-wbs-panel';
+import { GanttSummaryDialogComponent } from './components/issue-gantt/components/gantt-summary-dialog/gantt-summary-dialog';
 import { GanttArrowLayerComponent } from './components/issue-gantt/components/gantt-arrow-layer/gantt-arrow-layer.component';
 import { GanttConnectionHandleComponent } from './components/issue-gantt/components/gantt-connection-handle/gantt-connection-handle.component';
 import { GanttMinimapComponent } from './components/issue-gantt/components/gantt-minimap/gantt-minimap.component';
@@ -161,6 +163,7 @@ import { AgentModule } from '../agent/agent.module';
         GanttTaskBarComponent,
         GanttTimelineBodyComponent,
         GanttWbsPanelComponent,
+        GanttSummaryDialogComponent,
         GanttArrowLayerComponent,
         GanttConnectionHandleComponent,
         GanttMinimapComponent,
@@ -235,6 +238,7 @@ import { AgentModule } from '../agent/agent.module';
             IconHelpCircle,
             IconChevronDown,
             IconChevronRight,
+            IconSubtask,
             IconBrain,
             IconHammer,
             IconTerminal2,

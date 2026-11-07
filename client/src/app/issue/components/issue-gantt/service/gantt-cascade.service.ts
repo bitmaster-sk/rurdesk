@@ -5,16 +5,9 @@ import { IssueRelationType } from '../../../constants/issue-relation-type.enum';
 import { IssueRelationSubType } from '../../../constants/issue-relation-subtype.enum';
 import { IssueRelationDirection } from '../../../constants/issue-relation-direction.enum';
 import { addSeconds } from 'date-fns';
-
-export interface CascadeResult {
-    affectedTasks: Map<number, { scheduledAt: Date }>;
-}
-
-interface TaskSnapshot {
-    idIssuePublic: number;
-    scheduledAt: Date;
-    estimated: number;
-}
+import type { ParentMap } from '../entity/gantt-tree.entity';
+import { CascadeResult, TaskSnapshot } from '../entity/gantt-cascade.entity';
+import { GanttTreeSnapshot } from './gantt-tree-snapshot';
 
 @Injectable()
 export class GanttCascadeService {
@@ -108,6 +101,103 @@ export class GanttCascadeService {
         }
 
         return { affectedTasks: affected };
+    }
+
+    public computeTreeCascade(
+        changes: Map<number, { scheduledAt: Date; estimated?: number }>,
+        allTasks: Issue[],
+        relations: GanttRelation[],
+        parents: ParentMap,
+        partial?: ReadonlySet<number>
+    ): CascadeResult {
+        const tree = new GanttTreeSnapshot(allTasks, parents, partial);
+        for (const [id, change] of changes) {
+            const snapshot = tree.tasks.get(id);
+            if (!snapshot) continue;
+            snapshot.scheduledAt = new Date(change.scheduledAt);
+            if (change.estimated !== undefined) snapshot.estimated = change.estimated;
+        }
+
+        const outbound = this.outboundEdges(relations);
+        const queue: number[] = [];
+        for (const id of changes.keys()) queue.push(id, ...tree.ancestors(id));
+
+        // Guards against a cycle the server would have refused anyway.
+        for (let steps = 0; queue.length > 0 && steps < 10000; steps++) {
+            const currentId = queue.shift()!;
+            const current = tree.span(currentId);
+            if (!current) continue;
+            for (const edge of outbound.get(currentId) ?? []) {
+                if (tree.onSameBranch(currentId, edge.toId)) continue;
+                const dependent = tree.span(edge.toId);
+                if (!dependent) continue;
+                const requiredStart = this.computeConstraint(
+                    current,
+                    dependent,
+                    edge.subType,
+                    edge.lagMinutes
+                );
+                if (!requiredStart || dependent.scheduledAt >= requiredStart) continue;
+                const shift = requiredStart.getTime() - dependent.scheduledAt.getTime();
+                const moved = tree.shift(edge.toId, shift);
+                queue.push(edge.toId, ...moved, ...tree.ancestors(edge.toId));
+            }
+        }
+
+        return { affectedTasks: tree.changedLeaves(), shiftedSummaries: tree.summaryShifts };
+    }
+
+    public summaryMoveFloor(
+        idSummary: number,
+        allTasks: Issue[],
+        relations: GanttRelation[],
+        parents: ParentMap,
+        partial?: ReadonlySet<number>
+    ): number {
+        const tree = new GanttTreeSnapshot(allTasks, parents, partial);
+        const subtree = new Set([idSummary, ...tree.descendants(idSummary)]);
+        let floor = -Infinity;
+        for (const [fromId, edges] of this.outboundEdges(relations)) {
+            if (subtree.has(fromId) || tree.ancestors(idSummary).includes(fromId)) continue;
+            const from = tree.span(fromId);
+            if (!from) continue;
+            for (const edge of edges) {
+                if (!subtree.has(edge.toId)) continue;
+                const to = tree.span(edge.toId);
+                if (!to) continue;
+                const requiredStart = this.computeConstraint(
+                    from,
+                    to,
+                    edge.subType,
+                    edge.lagMinutes
+                );
+                if (requiredStart) {
+                    floor = Math.max(floor, requiredStart.getTime() - to.scheduledAt.getTime());
+                }
+            }
+        }
+        return floor;
+    }
+
+    private outboundEdges(
+        relations: GanttRelation[]
+    ): Map<number, { toId: number; subType: IssueRelationSubType; lagMinutes: number }[]> {
+        const outbound = new Map<
+            number,
+            { toId: number; subType: IssueRelationSubType; lagMinutes: number }[]
+        >();
+        for (const relation of relations) {
+            if (relation.relationType !== IssueRelationType.Schedule) continue;
+            if (relation.direction !== IssueRelationDirection.Outbound) continue;
+            const list = outbound.get(relation.from.idIssuePublic) ?? [];
+            list.push({
+                toId: relation.to.idIssuePublic,
+                subType: relation.relationSubType ?? IssueRelationSubType.FinishToStart,
+                lagMinutes: relation.lagMinutes ?? 0
+            });
+            outbound.set(relation.from.idIssuePublic, list);
+        }
+        return outbound;
     }
 
     /**

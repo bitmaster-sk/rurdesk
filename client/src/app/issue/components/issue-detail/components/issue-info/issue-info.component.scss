@@ -167,3 +167,13 @@
         }
     }
 }
+
+.computed-hint {
+    color: var(--ui-color-text-muted);
+    cursor: help;
+
+    &:hover,
+    &:focus-visible {
+        color: var(--ui-color-text);
+    }
+}

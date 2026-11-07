@@ -70,7 +70,7 @@ func (r *IssueRepository) LoadIssues(ctx context.Context, f *model.LoadIssuesFil
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, ` + issueTagIdsSelect + `,
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, ` + issueTagIdsSelect + `,
 			(SELECT count(*) FROM issues.issue_relation r
 			   WHERE r.id_issue_from = iss.id_issue OR r.id_issue_to = iss.id_issue) AS relation_count
 		FROM issues.issue iss
@@ -334,7 +334,7 @@ func (r *IssueRepository) LoadIssuesPage(ctx context.Context, f *model.LoadIssue
 		SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`,
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`,
 			(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
 			%s AS __sort_val
 		FROM issues.issue iss
@@ -484,7 +484,7 @@ func (r *IssueRepository) LoadIssuesGrouped(ctx context.Context, f *model.LoadIs
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 				iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 				iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`,
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`,
 				(SELECT count(*) FROM issues.issue_relation rr WHERE rr.id_issue_from = iss.id_issue OR rr.id_issue_to = iss.id_issue) AS relation_count,
 				%s AS __sort_val,
 				ROW_NUMBER() OVER (PARTITION BY %s ORDER BY %s) AS __rn,
@@ -581,7 +581,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
 				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`
 			FROM issues.issue iss
 			LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 			WHERE iss.id_project = $1 AND iss.id_issue_public = $2
@@ -591,7 +591,7 @@ func (r *IssueRepository) LoadIssue(ctx context.Context, filter *LoadIssueFilter
 			SELECT iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state, iss.id_severity,
 				iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at, iss.create_by, iss.update_by,
 				iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
+				iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`
 			FROM issues.issue iss
 			LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 			WHERE iss.id_issue = $1
@@ -681,7 +681,7 @@ func (r *IssueRepository) FindByIdempotencyKey(ctx context.Context, idUser int64
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
+			iq.score AS quality_score, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`
 		FROM issues.issue iss
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 		WHERE iss.create_by = $1 AND iss.idempotency_key = $2
@@ -891,7 +891,7 @@ func (r *IssueRepository) LoadIssuesByIds(ctx context.Context, f *model.LoadIssu
 			iss.id_issue, iss.id_issue_public, iss.id_project, iss.id_state,
 			iss.id_severity, iss.id_issue_type, iss.title, iss.description, iss.create_at, iss.update_at,
 			iss.create_by, iss.update_by, iss.assigned_to, iss.tracked, iss.estimated, iss.scheduled_at,
-			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, `+issueTagIdsSelect+`
+			iq.score AS quality_score, iss.id_git_integration, iss.mr_id, iss.gantt_rank, iss.id_sprint, iss.points, iss.carryover_count, iss.is_summary, iss.rollup_estimated, iss.rollup_tracked, iss.backlog_children, `+issueTagIdsSelect+`
 		FROM issues.issue iss
 		LEFT JOIN issues.issue_quality iq ON iq.id_issue = iss.id_issue
 		WHERE iss.id_issue = ANY($1)

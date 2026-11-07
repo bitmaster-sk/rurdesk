@@ -6,6 +6,8 @@
     [class.gantt-bar--dimmed]="isDimmed()"
     [class.gantt-bar--selected]="isSelected()"
     [class.gantt-bar--small]="isSmallBar()"
+    [class.gantt-bar--summary]="isSummary()"
+    [class.gantt-bar--context]="isContext()"
     [style.left.px]="barLeft()"
     [style.top.px]="barTop()"
     [style.width.px]="barWidth()"
@@ -18,6 +20,13 @@
     (mousedown)="onMouseDown($event)"
     (contextmenu)="onContextMenu($event)"
 >
+    @if (isSummary()) { @if (summaryProgress() > 0) {
+    <div
+        class="gantt-bar--summary-fill"
+        [class.gantt-bar--summary-fill--full]="summaryProgress() >= 100"
+        [style.width.%]="summaryProgress() > 100 ? 100 : summaryProgress()"
+    ></div>
+    } } @else {
     <!-- Bar body -->
     <div class="gantt-bar--body">
         <span class="gantt-bar--title">{{ task().title }}</span>
@@ -76,6 +85,7 @@
 
     <!-- Resize handle (right edge) -->
     <div class="gantt-bar--resize-handle" (mousedown)="onResizeMouseDown($event)"></div>
+    }
 
     <!-- Connection handles -->
     <app-gantt-connection-handle
@@ -100,7 +110,19 @@
     [style.left.px]="overflowLabelLeft()"
     [style.top.px]="barTop()"
     [style.height.px]="barHeight()"
+    [style.line-height.px]="barHeight()"
 >
-    {{ overflowLabel() }}
+    {{ overflowLabel() }} @if (isSummary()) {
+    <span class="gantt-bar--summary-progress">
+        ({{ summaryProgress() > 100 ? 100 : summaryProgress() }} %@if (summaryOverrun() > 0) {
+        <span
+            class="gantt-bar--summary-overrun"
+            [title]="'ISSUE.GANTT.PROGRESS_OVER' | translate: { percent: summaryOverrun() }"
+        >
+            ⚠ +{{ summaryOverrun() }} %
+        </span>
+        })
+    </span>
+    }
 </span>
 }

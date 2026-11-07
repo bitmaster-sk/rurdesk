@@ -947,6 +947,7 @@ func GetIssueController() *controller.IssueController {
 			GetTagService(),
 			GetNotificationService(),
 			GetCustomFieldValueService(),
+			GetHierarchyRollupService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).WithWiki(GetWikiService()).
 			WithAttachments(GetAttachmentLinkService()).
@@ -1013,6 +1014,8 @@ func GetTrackerController() *controller.TrackerController {
 			GetTrackerRepository(),
 			GetProjectRepository(),
 			GetIssueRepository(),
+			GetHierarchyRollupService(),
+			GetNotifier(),
 			pool,
 		), nil
 	})
@@ -1077,6 +1080,7 @@ func GetProjectBuilderController() *controller.ProjectBuilderController {
 			GetIssueRelationRepository(),
 			GetAclService(),
 			GetNotifier(),
+			GetHierarchyRollupService(),
 		), nil
 	})
 	return instance.(*controller.ProjectBuilderController)
@@ -1104,16 +1108,33 @@ func GetIssueRelationController() *controller.IssueRelationController {
 			GetProjectRepository(),
 			GetAclService(),
 			GetNotifier(),
+			GetHierarchyRollupService(),
+			GetIssueHierarchyRepository(),
+			GetCustomFieldValueRepository(),
 			pool,
 		), nil
 	})
 	return instance.(*controller.IssueRelationController)
 }
 
+func GetIssueHierarchyRepository() *repository.IssueHierarchyRepository {
+	instance, _ := di.GetWithNew("issue-hierarchy-repository", func() (any, error) {
+		return repository.NewIssueHierarchyRepository(mustDb()), nil
+	})
+	return instance.(*repository.IssueHierarchyRepository)
+}
+
+func GetHierarchyRollupService() *service.HierarchyRollupService {
+	instance, _ := di.GetWithNew("hierarchy-rollup-service", func() (any, error) {
+		return service.NewHierarchyRollupService(GetIssueHierarchyRepository()), nil
+	})
+	return instance.(*service.HierarchyRollupService)
+}
+
 func GetSplitService() *service.SplitService {
 	instance, _ := di.GetWithNew("split-service", func() (any, error) {
 		pool := mustDb()
-		return service.NewSplitService(pool, GetAIProvider(), GetIssueRepository(), GetIssueRelationRepository(), GetStateRepository(), GetCustomFieldValueRepository()), nil
+		return service.NewSplitService(pool, GetAIProvider(), GetIssueRepository(), GetIssueRelationRepository(), GetStateRepository(), GetCustomFieldValueRepository(), GetHierarchyRollupService()), nil
 	})
 	return instance.(*service.SplitService)
 }

@@ -32,3 +32,18 @@ export interface CreateIssueRelationDto {
     relationSubType?: IssueRelationSubType | null;
     lagMinutes?: number | null;
 }
+
+export interface RemainingWorkDto {
+    title: string;
+    description: string;
+}
+
+export interface SetParentDto {
+    idParent: number | null;
+    remainingWork?: RemainingWorkDto;
+}
+
+export interface SetParentRes {
+    relations: ReadIssueRelationDto[];
+    idRelationRemoved: number | null;
+}

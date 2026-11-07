@@ -22,6 +22,7 @@ type SplitService struct {
 	relRepo              *repository.IssueRelationRepository
 	stateRepo            *repository.StateRepository
 	customFieldValueRepo *repository.CustomFieldValueRepository
+	hierarchy            *HierarchyRollupService
 }
 
 func NewSplitService(
@@ -31,6 +32,7 @@ func NewSplitService(
 	relRepo *repository.IssueRelationRepository,
 	stateRepo *repository.StateRepository,
 	valueRepo *repository.CustomFieldValueRepository,
+	hierarchy *HierarchyRollupService,
 ) *SplitService {
 	return &SplitService{
 		pool:                 pool,
@@ -39,6 +41,7 @@ func NewSplitService(
 		relRepo:              relRepo,
 		stateRepo:            stateRepo,
 		customFieldValueRepo: valueRepo,
+		hierarchy:            hierarchy,
 	}
 }
 
@@ -146,7 +149,8 @@ func (s *SplitService) Accept(ctx context.Context, idProject, idIssue int64, chi
 
 			created = append(created, inserted)
 		}
-		return nil
+		_, err := s.hierarchy.RecomputeFrom(ctx, []int64{parent.IdIssue})
+		return err
 	})
 
 	if txErr != nil {

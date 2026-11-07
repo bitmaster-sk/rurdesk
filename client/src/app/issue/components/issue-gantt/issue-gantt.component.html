@@ -101,7 +101,8 @@
         <!-- WBS Panel (scheduled tasks only, scroll-synced) -->
         <app-gantt-wbs-panel
             #wbsPanel
-            [scheduledTasks]="scheduledTasks()"
+            [rows]="treeRows()"
+            [parents]="parents()"
             [backlogTasks]="backlogTasks()"
             [backlogHasMore]="backlogHasMore()"
             [backlogLoading]="backlogLoading()"
@@ -113,14 +114,19 @@
             (taskHovered)="onTaskHovered($event)"
             (backlogDragStarted)="onBacklogDragStarted($event)"
             (loadMoreBacklog)="onLoadMoreBacklog()"
-            (reordered)="onScheduledReorder($event)"
+            (treeDropped)="onTreeDropped($event)"
+            (collapseToggled)="onToggleCollapse($event)"
+            [hasHierarchy]="parents().size > 0"
+            [outlineLevel]="activeOutlineLevel()"
+            (outlineLevelChange)="onOutlineLevelChange($event)"
         />
 
         <!-- Timeline -->
         <div class="gantt-host--timeline">
             <app-gantt-timeline-body
                 #timelineBody
-                [tasks]="scheduledTasks()"
+                [tasks]="visibleTasks()"
+                [contextTaskIds]="contextTaskIds()"
                 [columns]="columns()"
                 [headerRows]="headerRows()"
                 [cardMode]="cardMode()"
@@ -151,7 +157,7 @@
 
     @if (isMinimapVisible()) {
         <app-gantt-minimap
-            [tasks]="scheduledTasks()"
+            [tasks]="visibleTasks()"
             [viewportScrollLeft]="viewportScrollLeft()"
             [viewportWidth]="viewportWidth()"
             (navigated)="timelineBodyRef()?.scrollToPixel($event)"
@@ -176,6 +182,15 @@
     #quickActions
     (splitRequested)="onSplitRequested($event)"
 ></app-issue-quick-actions>
+
+@if (pendingParent(); as pending) {
+    <app-gantt-summary-dialog
+        [title]="pending.parent.title"
+        [estimated]="pending.estimated"
+        (chosen)="onSummaryChosen($event)"
+        (cancelled)="onSummaryCancelled()"
+    />
+}
 
 @if (isSplitDialogOpen() && splitIssue(); as issue) {
     <app-split-dialog

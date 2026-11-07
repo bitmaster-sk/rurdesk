@@ -211,6 +211,7 @@ func New(
 	pri.POST("/project/:idProject/issue/:idIssuePublic/relation", irc.CreateRelation)
 	pri.PATCH("/project/:idProject/issue/:idIssuePublic/relation/:idRelation", irc.UpdateRelation)
 	pri.DELETE("/project/:idProject/issue/:idIssuePublic/relation/:idRelation", irc.DeleteRelation)
+	pri.PUT("/project/:idProject/issue/:idIssuePublic/parent", irc.SetParent)
 
 	// Issue participants
 	pri.GET("/project/:idProject/issue/:idIssuePublic/participant", participantCtrl.GetParticipants)

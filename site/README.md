@@ -48,6 +48,18 @@ Media convention in markdown: a normal image reference whose filename exists in
 `.webm`/`.mp4` files become autoplaying looped videos. Missing files become
 placeholders showing the expected filename.
 
+Describe RuRdesk on its own terms. Never name other products or compare with
+them ("like Microsoft Project", "as in Jira"), neither in the docs nor on the
+landing page.
+
+Write a shortcut that differs between systems once, as `{{keys: Mod+Shift+K}}`.
+The build renders it as one chip with the Windows/Linux and the Mac variant
+side by side: `Mod` becomes Ctrl / ⌘, `Alt` Alt / ⌥, `Shift` Shift / ⇧,
+`Ctrl` Ctrl / ⌃, `Enter` Enter / ↵, and `click` stays a word
+(`{{keys: Mod+click}}`). Keys that are the same everywhere (<kbd>Tab</kbd>,
+<kbd>esc</kbd>, <kbd>j</kbd>) stay plain `<kbd>`. Never write only the Mac or
+only the Windows form of a shortcut.
+
 ## Tables on mobile
 
 By default a wide table scrolls sideways inside its own container. A table can

@@ -56,6 +56,14 @@ export abstract class BulkEditPlan {
         issues: readonly Issue[],
         changes: BulkEditIssueChangesReq
     ): BulkEditIssueEntryReq[] {
-        return issues.map(issue => ({ idIssuePublic: issue.idIssuePublic, ...changes }));
+        return issues.flatMap(issue => {
+            if (!issue.isSummary) return [{ idIssuePublic: issue.idIssuePublic, ...changes }];
+            const rest = { ...changes };
+            delete rest.scheduledAt;
+            delete rest.estimated;
+            return Object.keys(rest).length > 0
+                ? [{ idIssuePublic: issue.idIssuePublic, ...rest }]
+                : [];
+        });
     }
 }

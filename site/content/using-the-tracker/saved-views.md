@@ -88,7 +88,7 @@ applied on arrival. Applying a view also puts that parameter in your address bar
 copying the URL out of the browser works just as well. A link to a view that no longer
 exists (or belongs to another project) reports that and drops the parameter.
 
-Saved views also appear in the command palette (`⌘K` / `Ctrl+K`) under a **Views**
+Saved views also appear in the command palette ({{keys: Mod+K}}) under a **Views**
 heading in the `/` navigation list — there is no separate prefix to learn. They are
 there even if you have not opened the task list yet in this session.
 

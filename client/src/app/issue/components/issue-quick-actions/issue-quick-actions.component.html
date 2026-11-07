@@ -10,7 +10,7 @@
                     </div>
 
                     <!-- State -->
-                    @if (showState()) {
+                    @if (isStateShown()) {
                         <div class="qap--section">
                             <div class="qap--section-label">
                                 {{ 'ISSUE.QUICK_ACTIONS.STATE' | translate }}
@@ -24,7 +24,7 @@
                     }
 
                     <!-- Severity -->
-                    @if (showSeverity()) {
+                    @if (isSeverityShown()) {
                         <div class="qap--section">
                             <div class="qap--section-label">
                                 {{ 'ISSUE.QUICK_ACTIONS.SEVERITY' | translate }}
@@ -38,7 +38,7 @@
                     }
 
                     <!-- Issue type -->
-                    @if (showIssueType()) {
+                    @if (isIssueTypeShown()) {
                         <div class="qap--section">
                             <div class="qap--section-label">
                                 {{ 'ISSUE.QUICK_ACTIONS.ISSUE_TYPE' | translate }}
@@ -52,7 +52,7 @@
                     }
 
                     <!-- Assignee -->
-                    @if (showAssignee()) {
+                    @if (isAssigneeShown()) {
                         <div class="qap--section">
                             <div class="qap--section-label">
                                 {{ 'ISSUE.QUICK_ACTIONS.ASSIGNEE' | translate }}
@@ -67,7 +67,7 @@
                     }
 
                     <!-- Reschedule -->
-                    @if (showReschedule()) {
+                    @if (isRescheduleShown()) {
                         <div class="qap--section">
                             <div class="qap--section-label">
                                 {{ 'ISSUE.QUICK_ACTIONS.RESCHEDULE' | translate }}
@@ -139,7 +139,7 @@
                                 </span>
                             </button>
                         }
-                        @if (showTime()) {
+                        @if (isTimeShown()) {
                             <app-tracker-start-button
                                 [isCompact]="true"
                                 [idProject]="issue()!.idProject"

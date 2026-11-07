@@ -4,17 +4,58 @@ import { Component } from '@angular/core';
 import { GanttWbsPanelComponent } from './gantt-wbs-panel';
 import { GanttTimelineService } from '../../service/gantt-timeline.service';
 
-// buildReorder is pure — no DOM needed. Neighbours are derived server-side, so
-// only { movedId, order } is emitted.
-describe('GanttWbsPanelComponent.buildReorder', () => {
-    it('moves item to the end', () => {
-        const result = GanttWbsPanelComponent.buildReorder([10, 20, 30], 0, 2);
-        expect(result).toEqual({ movedId: 10, order: [20, 30, 10] });
+describe('GanttWbsPanelComponent.resolveDrop', () => {
+    const parents = new Map([
+        [2, 1],
+        [3, 2],
+        [5, 2]
+    ]);
+    const order = [1, 2, 3, 5, 4];
+
+    it('drops between rows near the edges and into a row in the middle', () => {
+        expect(GanttWbsPanelComponent.resolveDrop(4, 1, 0.1, 0, parents, order)).toMatchObject({
+            kind: 'before',
+            isAllowed: true
+        });
+        expect(GanttWbsPanelComponent.resolveDrop(4, 1, 0.5, 0, parents, order)).toMatchObject({
+            kind: 'into',
+            isAllowed: true
+        });
+        expect(GanttWbsPanelComponent.resolveDrop(4, 1, 0.9, 0, parents, order)).toMatchObject({
+            kind: 'after',
+            isAllowed: true
+        });
     });
 
-    it('moves item into the middle', () => {
-        const result = GanttWbsPanelComponent.buildReorder([10, 20, 30], 2, 1);
-        expect(result).toEqual({ movedId: 30, order: [10, 30, 20] });
+    it('refuses a drop into the own subtree', () => {
+        expect(GanttWbsPanelComponent.resolveDrop(1, 3, 0.5, 0, parents, order).isAllowed).toBe(
+            false
+        );
+    });
+
+    it('turns a sideways drag on the own row into indent or outdent', () => {
+        expect(GanttWbsPanelComponent.resolveDrop(5, 5, 0.5, 30, parents, order)).toMatchObject({
+            kind: 'indent',
+            isAllowed: true
+        });
+        expect(GanttWbsPanelComponent.resolveDrop(3, 3, 0.5, -30, parents, order)).toMatchObject({
+            kind: 'outdent',
+            isAllowed: true
+        });
+        expect(GanttWbsPanelComponent.resolveDrop(3, 3, 0.5, 5, parents, order).isAllowed).toBe(
+            false
+        );
+    });
+
+    it('refuses indent without a previous sibling and outdent of a root task', () => {
+        expect(GanttWbsPanelComponent.resolveDrop(3, 3, 0.5, 30, parents, order)).toMatchObject({
+            kind: 'indent',
+            isAllowed: false
+        });
+        expect(GanttWbsPanelComponent.resolveDrop(1, 1, 0.5, -30, parents, order)).toMatchObject({
+            kind: 'outdent',
+            isAllowed: false
+        });
     });
 });
 
@@ -33,7 +74,7 @@ describe('GanttWbsPanelComponent — click-vs-drag guard', () => {
         const clicks: unknown[] = [];
         cmp.taskClicked.subscribe(e => clicks.push(e));
 
-        cmp.onRowDragStarted();
+        cmp.onRowDragStarted(10);
         cmp.onTaskClick(10, false);
         expect(clicks).toEqual([]); // click during/after drag swallowed
 

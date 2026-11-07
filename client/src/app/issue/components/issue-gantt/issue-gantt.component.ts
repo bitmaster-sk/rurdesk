@@ -12,12 +12,14 @@ import {
     signal,
     viewChild,
     computed,
-    DestroyRef
+    DestroyRef,
+    linkedSignal,
+    untracked
 } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { first, filter } from 'rxjs/operators';
+import { Observable, Subscription, of } from 'rxjs';
+import { first, filter, switchMap } from 'rxjs/operators';
 import { startOfMonth, subMonths, endOfMonth, addMonths } from 'date-fns';
 import { ProjectStore } from 'src/app/project/project.store';
 import { SavedViewConfigConverter } from 'src/app/project/model/saved-view.converter';
@@ -28,7 +30,8 @@ import { IssueListPosition } from '../../entity/issue-list-position.entity';
 import { IssueGanttService } from './service/issue-gantt.service';
 import { GanttTimelineService } from './service/gantt-timeline.service';
 import { GanttDragService, DragMode } from './service/gantt-drag.service';
-import { GanttCascadeService, CascadeResult } from './service/gantt-cascade.service';
+import { GanttCascadeService } from './service/gantt-cascade.service';
+import { CascadeResult } from './entity/gantt-cascade.entity';
 import { GanttCriticalPathService } from './service/gantt-critical-path.service';
 import { GanttZoomLevel } from './constants/gantt-zoom-config';
 import { HandleSide } from './constants/gantt-handle-side.enum';
@@ -49,7 +52,7 @@ import {
     BAR_BORDER,
     BAR_PADDING_COMFORTABLE,
     BAR_PADDING_COMPACT
-} from './components/gantt-task-bar/gantt-task-bar';
+} from './constants/gantt-bar.constants';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 import { GanttOrderApi } from '../../api/gantt-order.api.service';
@@ -62,13 +65,23 @@ import {
     IssueCardViewMode
 } from '../../constants/issue-card-view-type.constant';
 import { ZOOM_LEVELS, ZOOM_OPTIONS } from './constants/gantt-zoom-options';
-import { STORAGE_KEY_CARD_MODE, STORAGE_KEY_MINIMAP } from './constants/gantt-storage-keys';
+import {
+    STORAGE_KEY_CARD_MODE,
+    STORAGE_KEY_MINIMAP,
+    STORAGE_KEY_WBS_COLLAPSED
+} from './constants/gantt-storage-keys';
+import { GanttTreeConverter } from './converter/gantt-tree.converter';
+import { GanttSummaryChoice } from './constants/gantt-summary-choice.enum';
+import { GanttPendingParent } from './entity/gantt-pending-parent.entity';
+import { RemainingWorkDto } from '../../model/issue-relation.model';
+import { ParentMap } from './entity/gantt-tree.entity';
+import { GanttWbsDrop } from './entity/gantt-wbs-drop.entity';
+import { ScheduledIssue } from '../../model/extended-issue.model';
+import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { UiMotion } from 'src/app/ui/util/ui-motion';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
-
-const ROW_HEIGHT_COMFORTABLE = 72;
-const ROW_HEIGHT_COMPACT = 38;
+import { ROW_HEIGHT_COMFORTABLE, ROW_HEIGHT_COMPACT } from './constants/gantt-row-height.constants';
 
 @Component({
     selector: 'app-issue-gantt',
@@ -110,6 +123,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     private readonly destroyRef = inject(DestroyRef);
     private readonly listState = inject(IssueListStateStore);
     private readonly injector = inject(Injector);
+    private readonly i18n = inject(I18nService);
 
     private pendingScroll: { top: number; left: number } | null = null;
 
@@ -146,6 +160,55 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         )
     );
     public readonly backlogTasks = computed(() => this.ganttData()?.backlogTasks ?? []);
+    public readonly contextTasks = computed<ScheduledIssue[]>(
+        () => this.ganttData()?.contextTasks ?? []
+    );
+    private readonly hierarchyRelations = computed(
+        () => this.ganttData()?.hierarchyRelations ?? []
+    );
+
+    public readonly allScheduled = computed<ScheduledIssue[]>(() => [
+        ...this.scheduledTasks(),
+        ...this.contextTasks()
+    ]);
+    public readonly contextTaskIds = computed<ReadonlySet<number>>(
+        () => new Set(this.contextTasks().map(t => t.idIssuePublic))
+    );
+    public readonly parents = computed<ParentMap>(() =>
+        GanttTreeConverter.parentMap(
+            this.hierarchyRelations(),
+            new Set(this.allScheduled().map(t => t.idIssuePublic))
+        )
+    );
+    private readonly treeOrder = computed(() =>
+        GanttTreeConverter.withContextBeforeDescendants(
+            this.scheduledTasks().map(t => t.idIssuePublic),
+            this.contextTasks().map(t => t.idIssuePublic),
+            this.parents()
+        )
+    );
+
+    public readonly collapsedIds = signal<ReadonlySet<number>>(new Set());
+    public readonly outlineLevel = signal<number>(0);
+    private idProjectForCollapse: number | null = null;
+
+    public readonly activeOutlineLevel = computed<number | null>(() => {
+        if (this.outlineLevel()) return this.outlineLevel();
+        return this.treeRows().some(row => row.isCollapsed) ? null : 0;
+    });
+
+    public readonly treeRows = computed(() => {
+        const byId = new Map(this.allScheduled().map(t => [t.idIssuePublic, t]));
+        const ordered = this.treeOrder()
+            .map(id => byId.get(id))
+            .filter((t): t is ScheduledIssue => t !== undefined);
+        return GanttTreeConverter.visibleRows(ordered, this.parents(), {
+            collapsed: this.collapsedIds(),
+            outlineLevel: this.outlineLevel() || null,
+            contextIds: this.contextTaskIds()
+        });
+    });
+    public readonly visibleTasks = computed(() => this.treeRows().map(r => r.task));
 
     public readonly backlogHasMore = this.ganttService.backlogHasMore;
     public readonly backlogLoading = this.ganttService.backlogLoading;
@@ -169,7 +232,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public readonly headerRows = computed(() => this.timelineService.getHeaderRows());
     public readonly totalWidth = computed(() => this.timelineService.getTotalWidth());
     public readonly totalHeight = computed(
-        () => this.scheduledTasks().length * this.timelineService.rowHeight()
+        () => this.visibleTasks().length * this.timelineService.rowHeight()
     );
 
     // Viewport state (for minimap)
@@ -192,7 +255,18 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public readonly hoveredTaskId = signal<number | null>(null);
 
     // Selection state (for keyboard navigation)
-    public readonly selectedTaskIndex = signal<number | null>(null);
+    public readonly selectedTaskIndex = linkedSignal<ScheduledIssue[], number | null>({
+        source: () => this.visibleTasks(),
+        computation: (tasks, previous) => {
+            const id =
+                previous?.value != null
+                    ? previous.source[previous.value]?.idIssuePublic
+                    : undefined;
+            if (id === undefined) return null;
+            const index = tasks.findIndex(t => t.idIssuePublic === id);
+            return index >= 0 ? index : null;
+        }
+    });
     public readonly selectedRelationId = signal<number | null>(null);
 
     // The selected task's public id (derived from index) — consumed by the WBS
@@ -200,7 +274,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public readonly selectedTaskId = computed(() => {
         const idx = this.selectedTaskIndex();
         if (idx === null) return null;
-        return this.scheduledTasks()[idx]?.idIssuePublic ?? null;
+        return this.visibleTasks()[idx]?.idIssuePublic ?? null;
     });
 
     // The selected issue object — fed to the command palette so `>` actions
@@ -208,7 +282,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public readonly selectedIssue = computed<Issue | null>(() => {
         const idx = this.selectedTaskIndex();
         if (idx === null) return null;
-        return this.scheduledTasks()[idx] ?? null;
+        return this.visibleTasks()[idx] ?? null;
     });
 
     // Critical path
@@ -248,7 +322,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     // Issues by ID for quick actions
     private readonly issueMap = computed(() => {
         const map = new Map<number, Issue>();
-        for (const t of [...this.scheduledTasks(), ...this.backlogTasks()]) {
+        for (const t of [...this.allScheduled(), ...this.backlogTasks()]) {
             map.set(t.idIssuePublic, t);
         }
         return map;
@@ -260,19 +334,153 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         if (dragState.mode !== DragMode.Moving || !dragState.currentDate || !dragState.taskId)
             return null;
 
-        const tasks = this.scheduledTasks();
-        const relations = this.relations();
-        const task = tasks.find(t => t.idIssuePublic === dragState.taskId);
+        const task = this.allScheduled().find(t => t.idIssuePublic === dragState.taskId);
         if (!task) return null;
 
-        return this.cascadeService.computeCascade(
-            dragState.taskId,
-            dragState.currentDate,
-            task.estimated ?? 3600,
-            tasks,
-            relations
+        return this.cascadeService.computeTreeCascade(
+            this.moveChanges(task, dragState.currentDate, this.allScheduled(), this.parents()),
+            this.allScheduled(),
+            this.relations(),
+            this.parents(),
+            this.partialSummaries()
         );
     });
+
+    private readonly partialSummaries = computed(() =>
+        this.summariesWithHidden(new Set(this.allScheduled().map(t => t.idIssuePublic)))
+    );
+
+    private moveChanges(
+        task: ScheduledIssue,
+        newScheduledAt: Date,
+        tasks: Issue[],
+        parents: ParentMap
+    ): Map<number, { scheduledAt: Date }> {
+        if (!task.isSummary) {
+            return new Map([[task.idIssuePublic, { scheduledAt: newScheduledAt }]]);
+        }
+        const delta = this.summaryDelta(task, newScheduledAt, tasks, parents);
+        const children = GanttTreeConverter.childrenMap(
+            tasks.map(t => t.idIssuePublic),
+            parents
+        );
+        const byId = new Map(tasks.map(t => [t.idIssuePublic, t]));
+        const changes = new Map<number, { scheduledAt: Date }>();
+        for (const id of [
+            task.idIssuePublic,
+            ...GanttTreeConverter.descendants(task.idIssuePublic, children)
+        ]) {
+            const node = byId.get(id);
+            if (!node?.scheduledAt) continue;
+            changes.set(id, { scheduledAt: new Date(node.scheduledAt.getTime() + delta) });
+        }
+        return changes;
+    }
+
+    private summaryDelta(
+        task: ScheduledIssue,
+        newScheduledAt: Date,
+        tasks: Issue[],
+        parents: ParentMap
+    ): number {
+        const delta = newScheduledAt.getTime() - task.scheduledAt.getTime();
+        if (delta >= 0) return delta;
+        const floor = this.cascadeService.summaryMoveFloor(
+            task.idIssuePublic,
+            tasks,
+            this.relations(),
+            parents,
+            this.summariesWithHidden(new Set(tasks.map(t => t.idIssuePublic)))
+        );
+        return Math.max(delta, Math.min(0, floor));
+    }
+
+    private hierarchyChildren(): Map<number, number[]> {
+        const children = new Map<number, number[]>();
+        for (const r of this.hierarchyRelations()) {
+            if (r.direction !== IssueRelationDirection.Outbound) continue;
+            const list = children.get(r.from.idIssuePublic) ?? [];
+            list.push(r.to.idIssuePublic);
+            children.set(r.from.idIssuePublic, list);
+        }
+        return children;
+    }
+
+    private summariesWithHidden(loaded: ReadonlySet<number>): Set<number> {
+        const parentOf = new Map<number, number>();
+        for (const [idParent, ids] of this.hierarchyChildren()) {
+            for (const id of ids) parentOf.set(id, idParent);
+        }
+        const result = new Set<number>();
+        for (const [id, idParent] of parentOf) {
+            if (loaded.has(id)) continue;
+            const seen = new Set<number>();
+            for (
+                let at: number | undefined = idParent;
+                at !== undefined && !seen.has(at);
+                at = parentOf.get(at)
+            ) {
+                seen.add(at);
+                if (loaded.has(at)) result.add(at);
+            }
+        }
+        return result;
+    }
+
+    private unloadedDescendants(idSummary: number, loaded: ReadonlySet<number>): number[] {
+        const children = this.hierarchyChildren();
+        const seen = new Set<number>([idSummary]);
+        const missing: number[] = [];
+        const stack = [idSummary];
+        while (stack.length > 0) {
+            for (const id of children.get(stack.pop()!) ?? []) {
+                if (seen.has(id)) continue;
+                seen.add(id);
+                if (!loaded.has(id)) missing.push(id);
+                stack.push(id);
+            }
+        }
+        return missing;
+    }
+
+    // Loads the hidden subtasks of every summary the cascade moves and runs it again, until none is left.
+    private cascadeWithHidden$(
+        idProject: number,
+        changesFor: (
+            tasks: Issue[],
+            parents: ParentMap
+        ) => Map<number, { scheduledAt: Date; estimated?: number }>,
+        idsRoot: number[]
+    ): Observable<CascadeResult> {
+        const requested = new Set<number>();
+        const run = (extra: Issue[]): Observable<CascadeResult> => {
+            const tasks = [...this.allScheduled(), ...extra];
+            const loaded = new Set(tasks.map(t => t.idIssuePublic));
+            const parents = GanttTreeConverter.parentMap(this.hierarchyRelations(), loaded);
+            const cascade = this.cascadeService.computeTreeCascade(
+                changesFor(tasks, parents),
+                tasks,
+                this.relations(),
+                parents,
+                this.summariesWithHidden(loaded)
+            );
+            const roots = [...idsRoot, ...(cascade.shiftedSummaries?.keys() ?? [])];
+            const missing = [
+                ...new Set(roots.flatMap(id => this.unloadedDescendants(id, loaded)))
+            ].filter(id => !requested.has(id));
+            if (missing.length === 0) return of(cascade);
+            missing.forEach(id => requested.add(id));
+            return this.issueApi
+                .load$({
+                    idProject,
+                    idsIssuePublic: missing,
+                    orderColumn: 'scheduledAt',
+                    orderDirection: 'asc'
+                })
+                .pipe(switchMap(issues => run([...extra, ...issues.filter(i => i.scheduledAt)])));
+        };
+        return run([]);
+    }
 
     // Ghost bars for drag preview
     public readonly ghostBars = computed(() => {
@@ -295,7 +503,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             const right = this.timelineService.toPixel(
                 new Date(dragState.currentDate.getTime() + estimated * 1000)
             );
-            const rowIdx = this.scheduledTasks().length; // will be appended at end of list
+            const rowIdx = this.visibleTasks().length; // will be appended at end of list
             return [
                 {
                     taskId: dragState.taskId,
@@ -311,8 +519,8 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         const preview = this.cascadePreview();
         if (!preview) return [];
 
-        const tasks = this.scheduledTasks();
-        const taskIndexMap = new Map(tasks.map((t, i) => [t.idIssuePublic, i]));
+        const tasks = this.allScheduled();
+        const taskIndexMap = new Map(this.visibleTasks().map((t, i) => [t.idIssuePublic, i]));
         const bars: {
             taskId: number;
             left: number;
@@ -324,9 +532,20 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         const draggedTask = tasks.find(t => t.idIssuePublic === dragState.taskId);
         if (draggedTask) {
             const estimated = draggedTask.estimated ?? 3600;
-            const left = this.timelineService.toPixel(dragState.currentDate);
+            const start = draggedTask.isSummary
+                ? new Date(
+                      draggedTask.scheduledAt.getTime() +
+                          this.summaryDelta(
+                              draggedTask,
+                              dragState.currentDate,
+                              tasks,
+                              this.parents()
+                          )
+                  )
+                : dragState.currentDate;
+            const left = this.timelineService.toPixel(start);
             const right = this.timelineService.toPixel(
-                new Date(dragState.currentDate.getTime() + estimated * 1000)
+                new Date(start.getTime() + estimated * 1000)
             );
             const rowIdx = taskIndexMap.get(dragState.taskId) ?? 0;
             bars.push({
@@ -334,13 +553,16 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 left,
                 top: rowIdx * rowHeight + 2,
                 width: Math.max(minWidth, right - left),
-                tooltipText
+                tooltipText: draggedTask.isSummary
+                    ? this.dragService.formatTooltip(start)
+                    : tooltipText
             });
         }
 
         for (const [taskId, change] of preview.affectedTasks) {
+            if (taskId === dragState.taskId) continue;
             const task = tasks.find(t => t.idIssuePublic === taskId);
-            if (!task) continue;
+            if (!task || !taskIndexMap.has(taskId)) continue;
             const estimated = task.estimated ?? 3600;
             const left = this.timelineService.toPixel(change.scheduledAt);
             const right = this.timelineService.toPixel(
@@ -380,7 +602,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         effect(() => {
             const completedMode = this.dragService.completed();
             if (completedMode) {
-                this.onDragCompleted(completedMode);
+                untracked(() => this.onDragCompleted(completedMode));
             }
         });
 
@@ -393,13 +615,15 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
 
         // Clear the optimistic overlay once the refreshed server order (already
         // rank-sorted by the service) matches it — bounds the overlay's lifetime.
+        // Must compare tree pre-orders: after a sibling-only reorder the flat orders never match.
         effect(() => {
-            const serverIds = (this.ganttData()?.scheduledTasks ?? []).map(t => t.idIssuePublic);
             const pending = this.pendingOrder();
-            if (
-                serverIds.length === pending?.length &&
-                serverIds.every((id, i) => id === pending[i])
-            ) {
+            if (!pending) return;
+            const parents = this.parents();
+            const serverIds = (this.ganttData()?.scheduledTasks ?? []).map(t => t.idIssuePublic);
+            const server = GanttTreeConverter.preorder(serverIds, parents);
+            const overlay = GanttTreeConverter.preorder(pending, parents);
+            if (server.length === overlay.length && server.every((id, i) => id === overlay[i])) {
                 this.pendingOrder.set(null);
             }
         });
@@ -436,6 +660,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         this.restorePosition();
         this.listState.registerPosition(this.readPosition);
         this.setInitialFilter();
+        this.projectStore.project$.pipe(first()).subscribe(p => this.loadCollapsed(p.idProject));
         this.projectStore.project$
             .pipe(first())
             .subscribe(p => IssueLastViewStorage.save(p.idProject, IssueViewMode.GANTT));
@@ -571,7 +796,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public onBarContextMenu(event: { taskId: number; event: MouseEvent }): void {
         const issue = this.issueMap().get(event.taskId);
         if (!issue) return;
-        this.quickActionsRef()?.show(event.event, issue);
+        this.quickActionsRef()?.show(event.event, issue, { showReschedule: !issue.isSummary });
     }
 
     // --- Drag handlers ---
@@ -585,33 +810,55 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     public onBarResizeEnded(event: { taskId: number; newEstimated: number }): void {
         const task = this.issueMap().get(event.taskId);
         if (!task?.scheduledAt) return;
+        const scheduledAt = task.scheduledAt;
+        const changesFor = (): Map<number, { scheduledAt: Date; estimated: number }> =>
+            new Map([[event.taskId, { scheduledAt, estimated: event.newEstimated }]]);
 
-        const cascade = this.cascadeService.computeCascade(
-            event.taskId,
-            task.scheduledAt,
-            event.newEstimated,
-            this.scheduledTasks(),
-            this.relations()
+        this.startCascadeSlide(
+            null,
+            this.cascadeService.computeTreeCascade(
+                changesFor(),
+                this.allScheduled(),
+                this.relations(),
+                this.parents(),
+                this.partialSummaries()
+            )
         );
 
-        const entries: BulkEditIssueEntryReq[] = [
-            { idIssuePublic: event.taskId, estimated: event.newEstimated }
-        ];
-        for (const [taskId, change] of cascade.affectedTasks) {
-            entries.push({ idIssuePublic: taskId, scheduledAt: change.scheduledAt.toISOString() });
-        }
-        this.startCascadeSlide(null, cascade);
-
-        this.bulkApi.update$(task.idProject, entries).subscribe({
-            next: () => this.issueFilterStore.refresh(),
-            error: () => this.issueFilterStore.refresh()
-        });
+        this.cascadeWithHidden$(task.idProject, changesFor, [])
+            .pipe(
+                switchMap(cascade =>
+                    this.bulkApi.update$(task.idProject, [
+                        { idIssuePublic: event.taskId, estimated: event.newEstimated },
+                        ...this.cascadeEntries(cascade, event.taskId)
+                    ])
+                )
+            )
+            .subscribe({
+                next: () => this.issueFilterStore.refresh(),
+                error: () => this.onCascadeSaveFailed()
+            });
     }
 
-    public onScheduledReorder(evt: { movedId: number; order: number[] }): void {
+    private cascadeEntries(cascade: CascadeResult, idSkipped?: number): BulkEditIssueEntryReq[] {
+        return [...cascade.affectedTasks]
+            .filter(([id]) => id !== idSkipped)
+            .map(([id, change]) => ({
+                idIssuePublic: id,
+                scheduledAt: change.scheduledAt.toISOString()
+            }));
+    }
+
+    private onCascadeSaveFailed(): void {
+        this.issueFilterStore.refresh();
+        this.dragService.reset();
+        this.toast.showError('ISSUE.UPDATE_FAILED');
+    }
+
+    public onScheduledReorder(evt: { movedId: number; order: number[] }, overlay: number[]): void {
         const idProject = this.scheduledTasks()[0]?.idProject;
         if (!idProject) return;
-        this.pendingOrder.set(evt.order); // synchronous → no snap-back frame
+        this.pendingOrder.set(overlay); // synchronous → no snap-back frame
         this.ganttOrderApi.reorder$(idProject, evt).subscribe({
             next: () => this.issueFilterStore.refresh(), // refreshed rank order == overlay → effect clears it
             error: () => {
@@ -654,45 +901,48 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
                 return;
             }
 
-            const tasks = this.scheduledTasks();
-            const cascade = this.cascadeService.computeCascade(
-                dragState.taskId,
-                moveResult.newScheduledAt,
-                tasks.find(t => t.idIssuePublic === dragState.taskId)?.estimated ?? 3600,
+            const tasks = this.allScheduled();
+            const moved = tasks.find(t => t.idIssuePublic === dragState.taskId);
+            if (!moved) {
+                this.dragService.reset();
+                return;
+            }
+            const target = moveResult.newScheduledAt;
+            const preview = this.cascadeService.computeTreeCascade(
+                this.moveChanges(moved, target, tasks, this.parents()),
                 tasks,
-                this.relations()
+                this.relations(),
+                this.parents(),
+                this.partialSummaries()
             );
 
-            const entries: BulkEditIssueEntryReq[] = [
-                {
-                    idIssuePublic: dragState.taskId,
-                    scheduledAt: moveResult.newScheduledAt.toISOString()
-                }
-            ];
-            for (const [taskId, change] of cascade.affectedTasks) {
-                entries.push({
-                    idIssuePublic: taskId,
-                    scheduledAt: change.scheduledAt.toISOString()
-                });
-            }
-
             const idProject = tasks[0]?.idProject;
-            if (!idProject) {
+            if (!idProject || (preview.affectedTasks.size === 0 && !moved.isSummary)) {
                 this.dragService.reset();
                 return;
             }
 
-            this.startCascadeSlide(dragState.taskId, cascade);
-            this.bulkApi.update$(idProject, entries).subscribe({
-                next: () => {
-                    this.issueFilterStore.refresh();
-                    this.dragService.reset();
-                },
-                error: () => {
-                    this.issueFilterStore.refresh();
-                    this.dragService.reset();
-                }
-            });
+            this.startCascadeSlide(dragState.taskId, preview);
+            this.cascadeWithHidden$(
+                idProject,
+                (all, parents) => this.moveChanges(moved, target, all, parents),
+                moved.isSummary ? [moved.idIssuePublic] : []
+            )
+                .pipe(
+                    switchMap(cascade => {
+                        const entries = this.cascadeEntries(cascade);
+                        return entries.length === 0
+                            ? of(null)
+                            : this.bulkApi.update$(idProject, entries);
+                    })
+                )
+                .subscribe({
+                    next: () => {
+                        this.issueFilterStore.refresh();
+                        this.dragService.reset();
+                    },
+                    error: () => this.onCascadeSaveFailed()
+                });
             return;
         }
 
@@ -766,6 +1016,32 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
         // Never steal keys from text inputs (filter fields etc.)
         const target = event.target as HTMLElement | null;
         if (target?.closest('input, textarea, select, [contenteditable]')) return;
+        if (
+            event.altKey &&
+            event.shiftKey &&
+            (event.key === 'ArrowRight' || event.key === 'ArrowLeft')
+        ) {
+            event.preventDefault();
+            const id = this.selectedTaskId();
+            if (id === null) return;
+            if (event.key === 'ArrowRight') this.indent(id);
+            else this.outdent(id);
+            return;
+        }
+        if (
+            event.key === 'Tab' &&
+            !event.altKey &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !target?.closest('button, a, [tabindex]')
+        ) {
+            const id = this.selectedTaskId();
+            if (id === null) return;
+            event.preventDefault();
+            if (event.shiftKey) this.outdent(id);
+            else this.indent(id);
+            return;
+        }
         switch (event.key) {
             case 't':
             case 'Home':
@@ -787,7 +1063,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             }
             case 'ArrowDown': {
                 event.preventDefault();
-                const tasks = this.scheduledTasks();
+                const tasks = this.visibleTasks();
                 const current = this.selectedTaskIndex() ?? -1;
                 const next = Math.min(tasks.length - 1, current + 1);
                 this.selectedTaskIndex.set(next);
@@ -802,7 +1078,7 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             case 'Enter': {
                 const idx = this.selectedTaskIndex();
                 if (idx !== null) {
-                    const task = this.scheduledTasks()[idx];
+                    const task = this.visibleTasks()[idx];
                     if (task) {
                         void this.router.navigate([
                             '/project',
@@ -881,11 +1157,181 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
 
     public onWbsTaskClicked(event: { taskId: number; isBacklog: boolean }): void {
         if (!event.isBacklog) {
-            const task = this.scheduledTasks().find(t => t.idIssuePublic === event.taskId);
+            const index = this.visibleTasks().findIndex(t => t.idIssuePublic === event.taskId);
+            if (index >= 0) this.selectedTaskIndex.set(index);
+            const task = this.allScheduled().find(t => t.idIssuePublic === event.taskId);
             if (task?.scheduledAt) {
                 const px = this.timelineService.toPixel(task.scheduledAt);
                 this.timelineBodyRef()?.scrollToPixel(px);
             }
+        }
+    }
+
+    // --- Outline ---
+
+    public onToggleCollapse(id: number): void {
+        const next = new Set(this.collapsedIds());
+        if (this.outlineLevel()) {
+            for (const row of this.treeRows()) {
+                if (row.isCollapsed) next.add(row.task.idIssuePublic);
+            }
+            this.outlineLevel.set(0);
+        }
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        this.setCollapsed(next);
+    }
+
+    public onOutlineLevelChange(level: number): void {
+        this.outlineLevel.set(level);
+        this.setCollapsed(new Set());
+    }
+
+    public indent(id: number): void {
+        if (this.contextTaskIds().has(id)) return;
+        const idParent = GanttTreeConverter.indentTarget(id, this.treeOrder(), this.parents());
+        if (idParent === null) return;
+        this.changeParent(id, idParent, null);
+    }
+
+    public outdent(id: number): void {
+        if (this.contextTaskIds().has(id)) return;
+        const target = GanttTreeConverter.outdentTarget(id, this.parents());
+        if (!target) return;
+        this.changeParent(id, target.idParent, { targetId: target.afterId, zone: 'after' });
+    }
+
+    public onTreeDropped(drop: GanttWbsDrop): void {
+        if (drop.kind === 'indent') return this.indent(drop.movedId);
+        if (drop.kind === 'outdent') return this.outdent(drop.movedId);
+        if (drop.kind === 'into') return this.changeParent(drop.movedId, drop.targetId, null);
+        const targetParent = this.parents().get(drop.targetId) ?? null;
+        const placement = { targetId: drop.targetId, zone: drop.kind };
+        if ((this.parents().get(drop.movedId) ?? null) !== targetParent) {
+            this.changeParent(drop.movedId, targetParent, placement);
+            return;
+        }
+        this.placeAmongSiblings(drop.movedId, placement, this.parents());
+    }
+
+    private changeParent(
+        id: number,
+        idParent: number | null,
+        placement: { targetId: number; zone: 'before' | 'after' } | null
+    ): void {
+        const parent = idParent !== null ? this.issueMap().get(idParent) : undefined;
+        const estimated = parent && !parent.isSummary ? (parent.estimated ?? 0) : 0;
+        if (parent && idParent !== null && estimated > 0) {
+            this.pendingParent.set({ id, idParent, placement, parent, estimated });
+            return;
+        }
+        this.applyParent(id, idParent, placement);
+    }
+
+    public onSummaryChosen(choice: GanttSummaryChoice): void {
+        const pending = this.pendingParent();
+        this.pendingParent.set(null);
+        if (!pending) return;
+        const remainingWork =
+            choice === GanttSummaryChoice.MoveToSubtask
+                ? this.remainingWorkFor(pending.parent)
+                : undefined;
+        this.applyParent(pending.id, pending.idParent, pending.placement, remainingWork);
+    }
+
+    public onSummaryCancelled(): void {
+        this.pendingParent.set(null);
+    }
+
+    private applyParent(
+        id: number,
+        idParent: number | null,
+        placement: { targetId: number; zone: 'before' | 'after' } | null,
+        remainingWork?: RemainingWorkDto
+    ): void {
+        const task = this.issueMap().get(id);
+        if (!task) return;
+        const parentsAfter = new Map(this.parents());
+        if (idParent === null) parentsAfter.delete(id);
+        else parentsAfter.set(id, idParent);
+
+        this.relationApi.setParent$(task.idProject, id, { idParent, remainingWork }).subscribe({
+            next: res => {
+                if (res.idRelationRemoved !== null) {
+                    this.ganttService.removeRelation(res.idRelationRemoved);
+                }
+                this.ganttService.addRelations(res.relations);
+                if (placement) this.placeAmongSiblings(id, placement, parentsAfter);
+                else this.issueFilterStore.refresh();
+            },
+            error: () => this.issueFilterStore.refresh()
+        });
+    }
+
+    // Without any rank yet the server needs the whole tree in pre-order, not just the siblings.
+    private placeAmongSiblings(
+        id: number,
+        placement: { targetId: number; zone: 'before' | 'after' },
+        parents: ParentMap
+    ): void {
+        const flat = this.scheduledTasks().map(t => t.idIssuePublic);
+        if (!flat.includes(id)) return;
+        const { ids: siblings } = GanttTreeConverter.siblings(
+            placement.targetId,
+            this.treeOrder(),
+            parents
+        );
+        const ordered = GanttTreeConverter.reorderSiblings(
+            siblings,
+            id,
+            placement.targetId,
+            placement.zone
+        ).filter(sibling => flat.includes(sibling));
+        const firstSibling = flat.findIndex(f => ordered.includes(f));
+        const overlay = flat.filter(f => !ordered.includes(f));
+        overlay.splice(Math.max(0, firstSibling), 0, ...ordered);
+        const hasRank = this.scheduledTasks().some(t => t.ganttRank);
+        const order = hasRank ? ordered : this.preorderWithContext(ordered, parents, flat);
+        this.onScheduledReorder({ movedId: id, order }, overlay);
+    }
+
+    private preorderWithContext(ordered: number[], parents: ParentMap, flat: number[]): number[] {
+        const full = this.treeOrder().filter(id => !ordered.includes(id));
+        const anchor = this.treeOrder().findIndex(id => ordered.includes(id));
+        full.splice(Math.max(0, anchor), 0, ...ordered);
+        const loaded = new Set(flat);
+        return GanttTreeConverter.preorder(full, parents).filter(id => loaded.has(id));
+    }
+
+    private remainingWorkFor(parent: Issue): RemainingWorkDto {
+        const suffix = this.i18n.instant('ISSUE.GANTT.REMAINING_WORK');
+        return { title: `${parent.title} – ${suffix}`.slice(0, 100), description: suffix };
+    }
+
+    private setCollapsed(ids: ReadonlySet<number>): void {
+        this.collapsedIds.set(ids);
+        if (this.idProjectForCollapse === null) return;
+        const stored = this.readCollapsedStore();
+        stored[this.idProjectForCollapse] = [...ids];
+        localStorage.setItem(STORAGE_KEY_WBS_COLLAPSED, JSON.stringify(stored));
+    }
+
+    private loadCollapsed(idProject: number): void {
+        this.idProjectForCollapse = idProject;
+        const ids = this.readCollapsedStore()[idProject];
+        if (Array.isArray(ids)) {
+            this.collapsedIds.set(new Set(ids.filter(id => typeof id === 'number')));
+        }
+    }
+
+    private readCollapsedStore(): Record<number, unknown> {
+        try {
+            const parsed: unknown = JSON.parse(
+                localStorage.getItem(STORAGE_KEY_WBS_COLLAPSED) ?? '{}'
+            );
+            return parsed && typeof parsed === 'object' ? (parsed as Record<number, unknown>) : {};
+        } catch {
+            return {};
         }
     }
 
@@ -1093,6 +1539,8 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
     }
 
     protected readonly isSplitDialogOpen = signal(false);
+
+    public readonly pendingParent = signal<GanttPendingParent | null>(null);
 
     protected readonly splitIssue = signal<Issue | null>(null);
 

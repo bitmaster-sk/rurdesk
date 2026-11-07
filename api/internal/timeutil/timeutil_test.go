@@ -49,3 +49,24 @@ func TestTruncateClockOnUtcGivesTheUtcDay(t *testing.T) {
 		t.Fatalf("TruncateClock(t).UTC() must not equal the UTC day, got %v", got)
 	}
 }
+
+func TestPtrEqual(t *testing.T) {
+	at := time.Date(2026, 8, 10, 8, 0, 0, 0, time.UTC)
+	sameInOtherZone := at.In(time.FixedZone("UTC+2", 2*60*60))
+	later := at.Add(time.Hour)
+	cases := []struct {
+		a, b *time.Time
+		want bool
+	}{
+		{nil, nil, true},
+		{&at, nil, false},
+		{nil, &at, false},
+		{&at, &sameInOtherZone, true},
+		{&at, &later, false},
+	}
+	for i, c := range cases {
+		if got := PtrEqual(c.a, c.b); got != c.want {
+			t.Fatalf("case %d: got %v, want %v", i, got, c.want)
+		}
+	}
+}

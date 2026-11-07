@@ -47,6 +47,7 @@ type IssueController struct {
 	customFieldValueSvc *service.CustomFieldValueService
 	wikiSvc             *service.WikiService
 	attachmentLinkSvc   *service.AttachmentLinkService
+	hierarchy           *service.HierarchyRollupService
 	pool                *pgxpool.Pool
 }
 
@@ -62,6 +63,7 @@ func NewIssueController(
 	tagSvc *service.TagService,
 	notifSvc *service.NotificationService,
 	customFieldValueSvc *service.CustomFieldValueService,
+	hierarchy *service.HierarchyRollupService,
 	pool *pgxpool.Pool,
 ) *IssueController {
 	return &IssueController{
@@ -76,6 +78,7 @@ func NewIssueController(
 		tagSvc:              tagSvc,
 		notifSvc:            notifSvc,
 		customFieldValueSvc: customFieldValueSvc,
+		hierarchy:           hierarchy,
 		pool:                pool,
 	}
 }
@@ -428,7 +431,9 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 
 	var result *model.Issue
 	var oldIssue *model.Issue
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
+		recomputed = nil
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, dto.IdProject) {
 			return errs.ErrForbidden
 		}
@@ -449,6 +454,9 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		}
 		snapshot := *issue
 		oldIssue = &snapshot
+		if issue.IsSummary && issue.ChangesSchedule(dto.ScheduledAt, dto.Estimated) {
+			return errs.ErrSummaryComputed
+		}
 
 		isAssigneeChanged := dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value)
 		if isAssigneeChanged && !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
@@ -523,6 +531,13 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 		if err := ic.syncWikiLinks(ctx, issue); err != nil {
 			return err
 		}
+		if snapshot.RollupInputsDiffer(issue) {
+			var rollupErr error
+			recomputed, rollupErr = ic.hierarchy.RecomputeAncestors(ctx, []int64{issue.IdIssue})
+			if rollupErr != nil {
+				return rollupErr
+			}
+		}
 		if issue.Description == snapshot.Description {
 			return nil
 		}
@@ -589,6 +604,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 	}
 
 	agent.BroadcastIssueUpdate(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, result.IdIssue)
+	agent.BroadcastIssueNotices(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, recomputed, notify.ActionUpdate)
 
 	c.JSON(http.StatusOK, result)
 }
@@ -824,7 +840,9 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 
 	// Snapshot before it disappears — the delete notice carries it.
 	var deletedIssue *model.Issue
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
+		recomputed = nil
 		if !ic.acl.CanDeleteIssue(ctx, user.IdUser, idProject) {
 			return errs.ErrForbidden
 		}
@@ -832,7 +850,23 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 		if loadErr == nil {
 			deletedIssue = issue
 		}
-		return ic.issueRepo.DeleteIssue(ctx, idProject, idIssuePublic)
+		var parents []int64
+		if deletedIssue != nil {
+			var parentErr error
+			parents, parentErr = ic.hierarchy.ParentIds(ctx, []int64{deletedIssue.IdIssue})
+			if parentErr != nil {
+				return parentErr
+			}
+		}
+		if err := ic.issueRepo.DeleteIssue(ctx, idProject, idIssuePublic); err != nil {
+			return err
+		}
+		if len(parents) == 0 {
+			return nil
+		}
+		var rollupErr error
+		recomputed, rollupErr = ic.hierarchy.RecomputeFrom(ctx, parents)
+		return rollupErr
 	})
 	if err == errs.ErrForbidden {
 		_ = c.Error(errs.ErrForbidden)
@@ -847,6 +881,7 @@ func (ic *IssueController) DeleteIssue(c *gin.Context) {
 	}
 
 	agent.BroadcastIssueSnapshot(ctx, ic.notifier, ic.projectRepo, deletedIssue, notify.ActionDelete)
+	agent.BroadcastIssueNotices(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, recomputed, notify.ActionUpdate)
 
 	c.Status(http.StatusOK)
 }
@@ -875,8 +910,10 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	// Issues as they were before the update, for post-commit notifications and
 	// agent routing (re-specifying the same agent must not spawn a new run).
 	oldByPublic := make(map[int64]*model.Issue)
+	var recomputed []int64
 	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
 		participantChangedIssueIds = nil // reset if the tx body re-runs
+		recomputed = nil
 		clear(oldByPublic)
 		if !ic.acl.CanUpdateIssue(ctx, user.IdUser, idProject) {
 			return errs.ErrForbidden
@@ -917,6 +954,9 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		for _, entry := range dto.Issues {
 			publicIds = append(publicIds, entry.IdIssuePublic)
 		}
+		if err := ic.hierarchy.LockIssuesInOrder(ctx, idProject, publicIds); err != nil {
+			return err
+		}
 		current, loadErr := ic.issueRepo.LoadIssues(ctx, &model.LoadIssuesFilter{
 			IdProject:      idProject,
 			IdsIssuePublic: publicIds,
@@ -926,6 +966,12 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		}
 		for _, issue := range current {
 			oldByPublic[issue.IdIssuePublic] = issue
+		}
+		for _, entry := range dto.Issues {
+			old, ok := oldByPublic[entry.IdIssuePublic]
+			if ok && old.IsSummary && old.ChangesSchedule(model.NewOptionalIfSet(entry.ScheduledAt), model.NewOptionalIfSet(entry.Estimated)) {
+				return errs.ErrSummaryComputed
+			}
 		}
 
 		var txErr error
@@ -951,7 +997,15 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			}
 			participantChangedIssueIds = append(participantChangedIssueIds, idIssue)
 		}
-		return nil
+		var touched []int64
+		for _, updated := range results {
+			if old, ok := oldByPublic[updated.IdIssuePublic]; ok && old.RollupInputsDiffer(updated) {
+				touched = append(touched, updated.IdIssue)
+			}
+		}
+		var rollupErr error
+		recomputed, rollupErr = ic.hierarchy.RecomputeAncestors(ctx, touched)
+		return rollupErr
 	})
 
 	if err == errs.ErrForbidden {
@@ -959,7 +1013,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 		c.Status(http.StatusForbidden)
 		return
 	}
-	if err == errs.ErrUserDisabled || err == errs.ErrBulkAgentAssignment {
+	if err == errs.ErrUserDisabled || err == errs.ErrBulkAgentAssignment || err == errs.ErrSummaryComputed {
 		_ = c.Error(err)
 		c.Status(http.StatusUnprocessableEntity)
 		return
@@ -983,6 +1037,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	for _, updatedIssue := range results {
 		agent.BroadcastIssueSnapshot(ctx, ic.notifier, ic.projectRepo, updatedIssue, notify.ActionUpdate)
 	}
+	agent.BroadcastIssueNotices(ctx, ic.notifier, ic.issueRepo, ic.projectRepo, recomputed, notify.ActionUpdate)
 
 	if project, projErr := ic.projectRepo.LoadProject(ctx, idProject); projErr == nil {
 		for _, newIssue := range results {

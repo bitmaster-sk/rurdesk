@@ -1809,10 +1809,12 @@ const STEPS = [
         id: "view-calendar",
         type: "screenshot",
         file: "view-calendar.png",
-        title: "Issue calendar view",
+        title: "Issue calendar view (Compact)",
         run: async ({ page }) => {
             const P = await getProject(page);
             await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/calendar`);
+            await L.settle(page);
+            await page.getByText("Compact", { exact: true }).first().click();
             await L.settle(page);
             await L.shootPage(page, "view-calendar.png");
         },
@@ -1851,7 +1853,7 @@ const STEPS = [
         id: "gantt-reorder",
         type: "video",
         file: "gantt-reorder.webm",
-        title: "Drag a WBS Scheduled row (Day+Compact) — MUTATES order",
+        title: "Drag a subtask before its sibling in the WBS (Day+Compact) — MUTATES order",
         run: async ({ page, cursor, mark }) => {
             const P = await getProject(page);
             await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/gantt`);
@@ -1871,11 +1873,12 @@ const STEPS = [
             await rows.first().waitFor({ state: "visible", timeout: 10000 });
             if ((await rows.count()) < 3)
                 throw new Error("need ≥3 scheduled rows");
+            // Rows 1 and 2 must be siblings under row 0; dropping above row 0 would move the subtask out of its parent.
             const [srcX, srcY] = await L.centerOf(rows.nth(2));
-            const dstBox = await rows.nth(0).boundingBox();
+            const dstBox = await rows.nth(1).boundingBox();
             await cursor.moveTo(page, srcX, srcY, 30);
             await page.waitForTimeout(450);
-            await cursor.dragTo(page, srcX, Math.round(dstBox.y + 6), 30);
+            await cursor.dragTo(page, srcX, Math.round(dstBox.y + 4), 30, 1200);
             await page.waitForTimeout(900);
             await page.reload({ waitUntil: "networkidle" });
             await L.settle(page);

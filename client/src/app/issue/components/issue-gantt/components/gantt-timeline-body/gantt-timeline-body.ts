@@ -15,12 +15,7 @@ import {
     AfterViewInit
 } from '@angular/core';
 
-import {
-    ConnectedPosition,
-    FlexibleConnectedPositionStrategy,
-    Overlay,
-    OverlayRef
-} from '@angular/cdk/overlay';
+import { FlexibleConnectedPositionStrategy, Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { UiTooltipComponent } from '../../../../../ui/components/tooltip/tooltip.component';
 import {
@@ -33,11 +28,7 @@ import { IssueCardViewType } from '../../../../constants/issue-card-view-type.co
 import { GanttRelation } from '../../model/gantt-relation.model';
 import { HandleSide } from '../../constants/gantt-handle-side.enum';
 import { RelationDropTarget } from '../../service/gantt-drag.service';
-
-const DRAG_TOOLTIP_POSITIONS: ConnectedPosition[] = [
-    { originX: 'center', originY: 'top', overlayX: 'center', overlayY: 'bottom', offsetY: -8 },
-    { originX: 'center', originY: 'bottom', overlayX: 'center', overlayY: 'top', offsetY: 8 }
-];
+import { DRAG_TOOLTIP_POSITIONS } from './constants/gantt-timeline-body.constants';
 
 @Component({
     selector: 'app-gantt-timeline-body',
@@ -56,6 +47,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
     private readonly canvas = viewChild.required<ElementRef<HTMLDivElement>>('canvas');
 
     public readonly tasks = input.required<ScheduledIssue[]>();
+    public readonly contextTaskIds = input<ReadonlySet<number>>(new Set());
     public readonly columns = input.required<GanttColumn[]>();
     public readonly headerRows = input.required<GanttHeaderRow[]>();
     public readonly cardMode = input.required<IssueCardViewType>();
