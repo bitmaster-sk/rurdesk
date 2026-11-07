@@ -2,16 +2,6 @@
 <div class="wiki-edit" data-testid="wiki-edit">
     <div class="wiki-edit__bar">
         <app-wiki-tree-show />
-        <ui-toggle-button
-            class="wiki-edit__settings-toggle"
-            data-testid="wiki-edit-settings-toggle"
-            [ngModel]="isSettingsOpen()"
-            (ngModelChange)="isSettingsOpen.set($event)"
-            [class.wiki-edit__settings-toggle--over]="isOverBudget()"
-        >
-            <tabler-icon icon="settings" [size]="14" />
-            {{ 'WIKI.SETTINGS.TOGGLE' | translate }}
-        </ui-toggle-button>
         <input
             uiInput
             class="wiki-edit__title"
@@ -91,7 +81,27 @@
         (cancelled)="onConflictCancelled()"
     />
     } @else {
-    <div class="wiki-edit__main" [class.wiki-edit__main--settings]="isSettingsOpen()">
+    <div class="wiki-edit__tabs" role="tablist" data-testid="wiki-edit-tabs">
+        @for (tab of editViews; track tab.view) {
+        <button
+            type="button"
+            role="tab"
+            class="wiki-edit__tab"
+            [attr.data-testid]="'wiki-edit-tab-' + tab.view"
+            [attr.aria-selected]="editView() === tab.view"
+            [class.wiki-edit__tab--on]="editView() === tab.view"
+            [class.wiki-edit__tab--over]="tab.view === EditView.Settings && isOverBudget()"
+            (click)="editView.set(tab.view)"
+        >
+            {{ tab.label | translate }}
+        </button>
+        }
+    </div>
+    <div
+        class="wiki-edit__main"
+        [class.wiki-edit__main--preview]="editView() === EditView.Preview"
+        [class.wiki-edit__main--settings]="editView() === EditView.Settings"
+    >
         <div class="wiki-edit__split" data-testid="wiki-edit-split">
             <div class="wiki-edit__pane wiki-edit__pane--source">
                 <app-wiki-editor
@@ -103,7 +113,7 @@
                     (valueChange)="onBodyChange($event)"
                 />
             </div>
-            <div class="wiki-edit__pane">
+            <div class="wiki-edit__pane wiki-edit__pane--preview">
                 <div class="wiki-edit__pane-label">{{ 'WIKI.FIELD.PREVIEW' | translate }}</div>
                 <article
                     class="wiki-article"

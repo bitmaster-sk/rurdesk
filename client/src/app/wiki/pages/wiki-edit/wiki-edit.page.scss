@@ -13,9 +13,6 @@
 }
 
 .wiki-edit {
-    // Anchor for the layout's container query: the editor reacts to the width
-    // it actually gets (viewport minus the app menu and the wiki tree), so
-    // resizing or hiding the tree reflows it without any JavaScript.
     container-type: inline-size;
 
     display: flex;
@@ -45,17 +42,31 @@
         gap: var(--ui-space);
     }
 
-    // Mobile switch for the settings panel. Desktop keeps the panel beside the
-    // split, so the toggle is hidden there (see the container query below).
-    &__settings-toggle {
+    &__tabs {
         display: none;
+        border-bottom: 1px solid var(--ui-color-border);
     }
 
-    // Over-budget marker on the toggle: Save is disabled meanwhile and the
-    // reason (the token budget) sits behind this button in the settings panel.
-    // Only visible where the panel is hidden — desktop shows the budget bar.
-    &__settings-toggle--over {
-        box-shadow: 0 0 0 1px var(--ui-red-600);
+    &__tab {
+        flex: 1;
+        min-height: 2.5rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: none;
+        color: var(--ui-color-text-muted);
+        font: inherit;
+        font-size: var(--font-size-s);
+        cursor: pointer;
+
+        &--on {
+            border-bottom-color: var(--ui-color-primary);
+            color: var(--ui-color-primary);
+            font-weight: 600;
+        }
+
+        &--over {
+            color: var(--ui-red-600);
+        }
     }
 
     &__presence {
@@ -209,37 +220,55 @@
         }
     }
 
-    // Below this width the fixed 18rem panel beside the split would leave the
-    // editor an unreadable measure. The panel moves behind the Settings toggle
-    // in the bar instead: closed it takes no width, open it replaces the split
-    // full-width. Both stay in the DOM (display only), so the editor, upload
-    // and draft are never destroyed. Above the breakpoint nothing changes:
-    // toggle hidden, panel beside the split, as before.
     @container (width < 48rem) {
         &__bar {
             flex-wrap: wrap;
+            gap: var(--ui-space-s);
             padding: var(--ui-space-s) var(--ui-space-m);
         }
 
-        &__settings-toggle {
-            display: inline-flex;
+        &__title {
+            flex: 1 1 0;
+            max-width: none;
+            min-width: 0;
         }
 
-        &__title {
-            // Prefer a wider title so the action cluster wraps to its own row.
-            flex-basis: 12rem;
-            min-width: 0;
+        &__bar-end {
+            flex: 1 0 100%;
+            justify-content: flex-end;
         }
 
         &__presence,
         &__draft-state {
-            // Presence is duplicated by the live-editing banner; the autosave
-            // chip is a nicety — at phone widths the row needs the space.
             display: none;
         }
 
+        &__tabs {
+            display: flex;
+        }
+
+        &__split {
+            grid-template-columns: 1fr;
+        }
+
+        &__pane--source {
+            border-right: none;
+        }
+
+        &__pane--preview,
+        &__pane-label,
         &__settings {
             display: none;
+        }
+
+        &__main--preview {
+            .wiki-edit__pane--source {
+                display: none;
+            }
+
+            .wiki-edit__pane--preview {
+                display: block;
+            }
         }
 
         &__main--settings {

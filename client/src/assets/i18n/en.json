@@ -536,8 +536,10 @@
             "HIDE": "Hide page tree",
             "SHOW": "Show page tree"
         },
-        "SETTINGS": {
-            "TOGGLE": "Settings"
+        "EDIT_VIEW": {
+            "WRITE": "Write",
+            "PREVIEW": "Preview",
+            "SETTINGS": "Settings"
         },
         "SEARCH": {
             "PLACEHOLDER": "Search the wiki",

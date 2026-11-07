@@ -183,12 +183,8 @@ function byTestId(el: HTMLElement, testId: string): HTMLElement {
     return found;
 }
 
-function toggleHost(el: HTMLElement): HTMLElement {
-    return byTestId(el, 'wiki-edit-settings-toggle');
-}
-
-function toggleButton(el: HTMLElement): HTMLButtonElement {
-    return toggleHost(el).querySelector('button') as HTMLButtonElement;
+function tab(el: HTMLElement, view: 'write' | 'preview' | 'settings'): HTMLButtonElement {
+    return byTestId(el, `wiki-edit-tab-${view}`) as HTMLButtonElement;
 }
 
 function saveButton(el: HTMLElement): HTMLButtonElement {
@@ -197,6 +193,14 @@ function saveButton(el: HTMLElement): HTMLButtonElement {
 
 function splitPane(el: HTMLElement): HTMLElement {
     return byTestId(el, 'wiki-edit-split');
+}
+
+function sourcePane(el: HTMLElement): HTMLElement {
+    return el.querySelector<HTMLElement>('.wiki-edit__pane--source')!;
+}
+
+function previewPane(el: HTMLElement): HTMLElement {
+    return el.querySelector<HTMLElement>('.wiki-edit__pane--preview')!;
 }
 
 function settingsPane(el: HTMLElement): HTMLElement {
@@ -211,12 +215,12 @@ function displayOf(element: HTMLElement): string {
     return getComputedStyle(element).display;
 }
 
-describe('WikiEditPage settings layout', () => {
-    it('keeps the panel beside the split on desktop and behind the toggle on narrow screens', async () => {
+describe('WikiEditPage layout', () => {
+    it('keeps the split and the panel side by side on desktop and shows one pane at a time on narrow screens', async () => {
         const { host } = await render({ width: 1280 });
 
-        // Desktop: the toggle is hidden and the panel sits beside the split.
-        expect(displayOf(toggleHost(host))).toBe('none');
+        expect(displayOf(byTestId(host, 'wiki-edit-tabs'))).toBe('none');
+        expect(displayOf(previewPane(host))).toBe('block');
         expect(displayOf(settingsPane(host))).toBe('block');
         const splitRect = rectOf(splitPane(host));
         const settingsRect = rectOf(settingsPane(host));
@@ -226,14 +230,11 @@ describe('WikiEditPage settings layout', () => {
         for (const width of [320, 375, 430]) {
             host.style.width = `${width}px`;
 
-            // Closed: the panel takes no width and the split fills the editor.
-            // (The toggle is a flex item of the bar, so its computed display is
-            // blockified — assert visibility, not the exact keyword.)
-            expect(displayOf(toggleHost(host))).not.toBe('none');
+            expect(displayOf(byTestId(host, 'wiki-edit-tabs'))).toBe('flex');
+            expect(displayOf(previewPane(host))).toBe('none');
             expect(displayOf(settingsPane(host))).toBe('none');
-            expect(rectOf(splitPane(host)).width).toBeCloseTo(width, 0);
+            expect(rectOf(sourcePane(host)).width).toBeCloseTo(width, 0);
 
-            // Title, Save and Cancel stay reachable at phone widths.
             for (const testId of ['wiki-edit-title', 'wiki-save']) {
                 const rect = rectOf(byTestId(host, testId));
                 expect(rect.width).toBeGreaterThan(0);
@@ -242,21 +243,24 @@ describe('WikiEditPage settings layout', () => {
         }
     });
 
-    it('opens the settings in place of the editor and returns without losing anything', async () => {
+    it('switches between write, preview and settings without losing the editor', async () => {
         const { fixture, host } = await render({ width: 375, height: 400 });
 
         const view = EditorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)!;
         view.dispatch({ changes: { from: 0, insert: 'Typed before switching' } });
         fixture.detectChanges();
 
-        expect(toggleButton(host).getAttribute('aria-pressed')).toBe('false');
+        expect(tab(host, 'write').getAttribute('aria-selected')).toBe('true');
 
-        toggleButton(host).click();
+        tab(host, 'preview').click();
         fixture.detectChanges();
+        expect(tab(host, 'preview').getAttribute('aria-selected')).toBe('true');
+        expect(displayOf(sourcePane(host))).toBe('none');
+        expect(displayOf(previewPane(host))).toBe('block');
+        expect(rectOf(previewPane(host)).width).toBeCloseTo(375, 0);
 
-        // Open: the panel replaces the split full-width, fits and scrolls; the
-        // editor is only hidden, never destroyed.
-        expect(toggleButton(host).getAttribute('aria-pressed')).toBe('true');
+        tab(host, 'settings').click();
+        fixture.detectChanges();
         expect(displayOf(splitPane(host))).toBe('none');
         expect(displayOf(settingsPane(host))).toBe('block');
         const settingsRect = rectOf(settingsPane(host));
@@ -265,27 +269,24 @@ describe('WikiEditPage settings layout', () => {
         expect(getComputedStyle(settingsPane(host)).overflowY).toBe('auto');
         expect(settingsPane(host).scrollHeight).toBeGreaterThan(settingsPane(host).clientHeight);
 
-        // The same EditorView instance survives the whole switch.
         expect(EditorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)).toBe(view);
 
-        toggleButton(host).click();
+        tab(host, 'write').click();
         fixture.detectChanges();
-
-        expect(toggleButton(host).getAttribute('aria-pressed')).toBe('false');
         expect(displayOf(splitPane(host))).toBe('grid');
+        expect(displayOf(sourcePane(host))).toBe('block');
         expect(displayOf(settingsPane(host))).toBe('none');
         expect(host.querySelector<HTMLElement>('.cm-content')!.textContent).toContain(
             'Typed before switching'
         );
 
-        // Undo history survived too: undo removes the inserted text.
         expect(undo(view)).toBe(true);
         expect(host.querySelector<HTMLElement>('.cm-content')!.textContent).not.toContain(
             'Typed before switching'
         );
     });
 
-    it('keeps the over-budget reason reachable in the settings while Save is disabled', async () => {
+    it('marks the settings tab while the page is over the budget and Save is disabled', async () => {
         const { fixture, host } = await render({
             width: 375,
             isCreate: false,
@@ -293,34 +294,26 @@ describe('WikiEditPage settings layout', () => {
         });
 
         expect(saveButton(host).disabled).toBe(false);
-        expect(toggleHost(host).classList.contains('wiki-edit__settings-toggle--over')).toBe(false);
+        expect(tab(host, 'settings').classList.contains('wiki-edit__tab--over')).toBe(false);
 
-        // Switching to Always reads goes over the 100-token budget.
-        toggleButton(host).click();
+        tab(host, 'settings').click();
         fixture.detectChanges();
         byTestId(host, 'wiki-access-always').click();
         fixture.detectChanges();
 
         expect(saveButton(host).disabled).toBe(true);
-        // The toggle stays enabled and points at the reason: the red ring
-        // (`.wiki-edit__settings-toggle--over` + box-shadow in the styles).
-        expect(toggleButton(host).disabled).toBe(false);
-        expect(toggleHost(host).classList.contains('wiki-edit__settings-toggle--over')).toBe(true);
         expect(settingsPane(host).querySelector('.ui-field-hint--error')).not.toBeNull();
 
-        // Back to the editor: the reason stays reachable behind the toggle.
-        toggleButton(host).click();
+        tab(host, 'write').click();
         fixture.detectChanges();
-        expect(displayOf(splitPane(host))).toBe('grid');
         expect(saveButton(host).disabled).toBe(true);
-        expect(toggleButton(host).disabled).toBe(false);
-        expect(toggleHost(host).classList.contains('wiki-edit__settings-toggle--over')).toBe(true);
+        expect(tab(host, 'settings').classList.contains('wiki-edit__tab--over')).toBe(true);
     });
 
     it('preserves the settings values through the switch and saves them with the same payload', async () => {
         const { fixture, insert$, host } = await render({ width: 375 });
 
-        toggleButton(host).click();
+        tab(host, 'settings').click();
         fixture.detectChanges();
 
         const summary = settingsPane(host).querySelector<HTMLTextAreaElement>('#wiki-summary')!;
@@ -332,10 +325,9 @@ describe('WikiEditPage settings layout', () => {
         byTestId(host, 'wiki-access-always').click();
         fixture.detectChanges();
 
-        // Round trip: close, reopen — the typed values are still there.
-        toggleButton(host).click();
+        tab(host, 'write').click();
         fixture.detectChanges();
-        toggleButton(host).click();
+        tab(host, 'settings').click();
         fixture.detectChanges();
         expect(settingsPane(host).querySelector<HTMLTextAreaElement>('#wiki-summary')!.value).toBe(
             'Short summary for the agent'
@@ -344,9 +336,7 @@ describe('WikiEditPage settings layout', () => {
             'Tweak after review'
         );
 
-        // Save from the editor view (settings closed) sends the same payload
-        // as before the panel could move around.
-        toggleButton(host).click();
+        tab(host, 'write').click();
         fixture.detectChanges();
         saveButton(host).click();
         fixture.detectChanges();
