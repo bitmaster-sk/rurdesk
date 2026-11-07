@@ -34,4 +34,30 @@ describe('WikiLayoutStore', () => {
         expect(new WikiLayoutStore().isTreeHidden()).toBe(true);
         expect(new WikiLayoutStore().isFullWidth()).toBe(false);
     });
+
+    it('opens the tree as an overlay on narrow screens without touching the saved choice', () => {
+        const listeners: ((event: { matches: boolean }) => void)[] = [];
+        vi.stubGlobal('window', {
+            matchMedia: () => ({
+                matches: true,
+                addEventListener: (_: string, listener: (event: { matches: boolean }) => void) =>
+                    listeners.push(listener)
+            })
+        });
+        const store = new WikiLayoutStore();
+        expect(store.isOverlay()).toBe(true);
+        expect(store.isTreeHidden()).toBe(true);
+
+        store.toggleTree();
+        expect(store.isTreeHidden()).toBe(false);
+        expect(saved.has('wiki.treeHidden')).toBe(false);
+
+        store.closeOverlayTree();
+        expect(store.isTreeHidden()).toBe(true);
+
+        store.toggleTree();
+        listeners.forEach(listener => listener({ matches: false }));
+        expect(store.isOverlay()).toBe(false);
+        expect(store.isTreeHidden()).toBe(false);
+    });
 });

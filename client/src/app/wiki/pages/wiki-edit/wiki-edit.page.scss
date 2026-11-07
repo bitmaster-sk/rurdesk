@@ -13,6 +13,8 @@
 }
 
 .wiki-edit {
+    container-type: inline-size;
+
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -38,6 +40,33 @@
         display: flex;
         align-items: center;
         gap: var(--ui-space);
+    }
+
+    &__tabs {
+        display: none;
+        border-bottom: 1px solid var(--ui-color-border);
+    }
+
+    &__tab {
+        flex: 1;
+        min-height: 2.5rem;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background: none;
+        color: var(--ui-color-text-muted);
+        font: inherit;
+        font-size: var(--font-size-s);
+        cursor: pointer;
+
+        &--on {
+            border-bottom-color: var(--ui-color-primary);
+            color: var(--ui-color-primary);
+            font-weight: 600;
+        }
+
+        &--over {
+            color: var(--ui-red-600);
+        }
     }
 
     &__presence {
@@ -188,6 +217,70 @@
 
         &--over {
             background: var(--ui-red-600);
+        }
+    }
+
+    @container (width < 48rem) {
+        &__bar {
+            flex-wrap: wrap;
+            gap: var(--ui-space-s);
+            padding: var(--ui-space-s) var(--ui-space-m);
+        }
+
+        &__title {
+            flex: 1 1 0;
+            max-width: none;
+            min-width: 0;
+        }
+
+        &__bar-end {
+            flex: 1 0 100%;
+            justify-content: flex-end;
+        }
+
+        &__presence,
+        &__draft-state {
+            display: none;
+        }
+
+        &__tabs {
+            display: flex;
+        }
+
+        &__split {
+            grid-template-columns: 1fr;
+        }
+
+        &__pane--source {
+            border-right: none;
+        }
+
+        &__pane--preview,
+        &__pane-label,
+        &__settings {
+            display: none;
+        }
+
+        &__main--preview {
+            .wiki-edit__pane--source {
+                display: none;
+            }
+
+            .wiki-edit__pane--preview {
+                display: block;
+            }
+        }
+
+        &__main--settings {
+            .wiki-edit__split {
+                display: none;
+            }
+
+            .wiki-edit__settings {
+                display: block;
+                flex: 1;
+                border-left: none;
+            }
         }
     }
 }

@@ -14,6 +14,9 @@ main menu shrinks to icons, so the page tree fits next to it and Board, Table an
 the other views stay one click away. Hide the tree with the button next to
 **+ Page** when you want the full width for reading; the button that brings it
 back sits at the top left of the page, and the browser remembers the choice.
+On a tablet or phone the tree starts hidden and opens over the page instead of
+squeezing it, across the whole screen on a phone. Picking a page or tapping
+outside the tree closes it again.
 
 ![A wiki page with the page tree on the left, a callout and a table in the text, and the linked tasks on the right](../../site/assets/img/wiki-page.png)
 
@@ -87,7 +90,12 @@ A link to a page that does not exist yet is shown in red. Clicking it opens the
 form for a new page with that title.
 
 The panel on the right holds the page's **parent**, **agent access**, a short
-**summary** and a **change note** that ends up in the history.
+**summary** and a **change note** that ends up in the history. On a narrow
+screen the editor, the preview and the settings each get the full width, and
+**Write**, **Preview** and **Settings** tabs switch between them without losing
+anything you wrote. When the page goes over the agent token budget, the
+**Settings** tab turns red: the budget bar there explains why **Save** stays
+disabled until the page fits again.
 
 ## Images and files
 

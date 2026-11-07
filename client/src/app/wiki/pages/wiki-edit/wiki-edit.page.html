@@ -81,8 +81,28 @@
         (cancelled)="onConflictCancelled()"
     />
     } @else {
-    <div class="wiki-edit__main">
-        <div class="wiki-edit__split">
+    <div class="wiki-edit__tabs" role="tablist" data-testid="wiki-edit-tabs">
+        @for (tab of editViews; track tab.view) {
+        <button
+            type="button"
+            role="tab"
+            class="wiki-edit__tab"
+            [attr.data-testid]="'wiki-edit-tab-' + tab.view"
+            [attr.aria-selected]="editView() === tab.view"
+            [class.wiki-edit__tab--on]="editView() === tab.view"
+            [class.wiki-edit__tab--over]="tab.view === EditView.Settings && isOverBudget()"
+            (click)="editView.set(tab.view)"
+        >
+            {{ tab.label | translate }}
+        </button>
+        }
+    </div>
+    <div
+        class="wiki-edit__main"
+        [class.wiki-edit__main--preview]="editView() === EditView.Preview"
+        [class.wiki-edit__main--settings]="editView() === EditView.Settings"
+    >
+        <div class="wiki-edit__split" data-testid="wiki-edit-split">
             <div class="wiki-edit__pane wiki-edit__pane--source">
                 <app-wiki-editor
                     #editor
@@ -93,7 +113,7 @@
                     (valueChange)="onBodyChange($event)"
                 />
             </div>
-            <div class="wiki-edit__pane">
+            <div class="wiki-edit__pane wiki-edit__pane--preview">
                 <div class="wiki-edit__pane-label">{{ 'WIKI.FIELD.PREVIEW' | translate }}</div>
                 <article
                     class="wiki-article"
@@ -110,7 +130,7 @@
             </div>
         </div>
 
-        <aside class="wiki-edit__settings">
+        <aside class="wiki-edit__settings" data-testid="wiki-edit-settings">
             @if (isCreate && !idProposal && canChooseShared()) {
             <div class="wiki-edit__field">
                 <label for="wiki-space">{{ 'WIKI.FIELD.SPACE' | translate }}</label>

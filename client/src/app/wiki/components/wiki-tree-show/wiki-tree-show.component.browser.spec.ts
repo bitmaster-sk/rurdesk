@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TablerIconStub, UiButtonStub, UiTooltipStub } from 'src/testing/stubs';
 import { WikiLayoutStore } from '../../store/wiki-layout.store';
 import { WikiTreeShowComponent } from './wiki-tree-show.component';
@@ -19,7 +19,16 @@ async function render(): Promise<{ element: HTMLElement; detect: () => void }> {
 }
 
 describe('WikiTreeShowComponent', () => {
-    afterEach(() => localStorage.removeItem('wiki.treeHidden'));
+    beforeEach(() =>
+        vi.spyOn(window, 'matchMedia').mockReturnValue({
+            matches: false,
+            addEventListener: () => undefined
+        } as unknown as MediaQueryList)
+    );
+    afterEach(() => {
+        localStorage.removeItem('wiki.treeHidden');
+        vi.restoreAllMocks();
+    });
 
     it('shows nothing while the page tree is visible', async () => {
         localStorage.removeItem('wiki.treeHidden');

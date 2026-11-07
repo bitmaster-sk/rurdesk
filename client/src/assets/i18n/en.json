@@ -538,6 +538,11 @@
             "HIDE": "Hide page tree",
             "SHOW": "Show page tree"
         },
+        "EDIT_VIEW": {
+            "WRITE": "Write",
+            "PREVIEW": "Preview",
+            "SETTINGS": "Settings"
+        },
         "SEARCH": {
             "PLACEHOLDER": "Search the wiki",
             "EMPTY": "Nothing found"

@@ -30,6 +30,7 @@ import {
     WikiEditorPageOption
 } from '../../components/wiki-editor/wiki-editor.component';
 import { WikiAgentAccess } from '../../constants/wiki-agent-access.enum';
+import { WikiEditView } from '../../constants/wiki-edit-view.enum';
 import { WikiMergeChunkKind } from '../../constants/wiki-merge-chunk-kind.enum';
 import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
 import { WikiBudgetConverter } from '../../converter/wiki-budget.converter';
@@ -94,6 +95,12 @@ export class WikiEditPage implements OnDestroy {
     protected readonly AgentAccess = WikiAgentAccess;
     protected readonly SpaceKind = WikiSpaceKind;
     protected readonly DraftState = WikiDraftState;
+    protected readonly EditView = WikiEditView;
+    protected readonly editViews = [
+        { view: WikiEditView.Write, label: 'WIKI.EDIT_VIEW.WRITE' },
+        { view: WikiEditView.Preview, label: 'WIKI.EDIT_VIEW.PREVIEW' },
+        { view: WikiEditView.Settings, label: 'WIKI.EDIT_VIEW.SETTINGS' }
+    ];
 
     private readonly editor = viewChild<WikiEditorComponent>('editor');
 
@@ -123,6 +130,8 @@ export class WikiEditPage implements OnDestroy {
     protected readonly editors = signal<WikiEditor[]>([]);
     protected readonly incoming = signal<WikiSavedNotice | null>(null);
     protected readonly conflict = signal<WikiConflictState | null>(null);
+
+    protected readonly editView = signal<WikiEditView>(WikiEditView.Write);
 
     private lastDraft = '';
     private savedContent = '';
