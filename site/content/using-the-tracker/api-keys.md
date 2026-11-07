@@ -28,6 +28,10 @@ The raw key is shown **once**, right after creation. Copy it then — the tracke
 only a hash and cannot show it again. If you lose it, regenerate the key or create a
 new one.
 
+On a phone the name and expiry fields stack above the **Create key** button, and the key
+list scrolls sideways on its own — every column and its regenerate/revoke actions stay
+reachable by swiping the list, without widening the page.
+
 Create one key per client rather than sharing a single key everywhere. That way, losing
 a laptop costs you one key instead of every integration you have.
 
