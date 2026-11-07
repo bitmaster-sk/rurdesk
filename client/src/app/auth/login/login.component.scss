@@ -67,7 +67,17 @@
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--ui-color-text-muted, #75665c);
+    color: var(--ui-color-border);
+
+    ::ng-deep .ui-button {
+        color: var(--ui-color-border);
+    }
+
+    ::ng-deep .ui-button:hover,
+    ::ng-deep .ui-button:focus-visible,
+    ::ng-deep .ui-button:active {
+        color: var(--ui-color-text-muted);
+    }
 }
 
 .login__field input:focus {
