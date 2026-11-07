@@ -1538,22 +1538,5 @@ export class IssueGanttComponent implements AfterViewInit, OnDestroy {
             });
     }
 
-    protected readonly isSplitDialogOpen = signal(false);
-
     public readonly pendingParent = signal<GanttPendingParent | null>(null);
-
-    protected readonly splitIssue = signal<Issue | null>(null);
-
-    protected onSplitRequested(issue: Issue): void {
-        this.splitIssue.set(issue);
-        this.isSplitDialogOpen.set(true);
-    }
-
-    protected onSplitAccepted(): void {
-        this.isSplitDialogOpen.set(false);
-    }
-
-    protected onSplitCancelled(): void {
-        this.isSplitDialogOpen.set(false);
-    }
 }

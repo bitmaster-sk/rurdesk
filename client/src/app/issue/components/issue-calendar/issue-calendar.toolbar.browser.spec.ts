@@ -200,3 +200,26 @@ describe('IssueCalendarComponent toolbar handlers (TestBed)', () => {
         });
     });
 });
+
+describe('IssueCalendarComponent stored card mode (TestBed)', () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it('loads the compact mode stored by a previous visit', async () => {
+        localStorage.setItem('issue-calendar-card-mode', 'CalendarCompact');
+        const { comp } = await createCalendarFixture();
+        expect(comp.cardMode()).toBe('CalendarCompact');
+    });
+
+    it('falls back to the comfortable default when nothing is stored', async () => {
+        const { comp } = await createCalendarFixture();
+        expect(comp.cardMode()).toBe('CalendarComfort');
+    });
+
+    it('ignores an unrecognized stored value and keeps the default', async () => {
+        localStorage.setItem('issue-calendar-card-mode', 'NotACardMode');
+        const { comp } = await createCalendarFixture();
+        expect(comp.cardMode()).toBe('CalendarComfort');
+    });
+});
