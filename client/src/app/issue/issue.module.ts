@@ -28,6 +28,7 @@ import { KanbanTileComponent } from './components/issue-kanban/components/issue-
 import { FullCalendarModule } from '@fullcalendar/angular';
 import { IssueTableDropZoneComponent } from './components/issue-table/components/issue-table-drop-zone/issue-table-drop-zone.component';
 import { SplitDialogComponent } from './components/split-dialog/split-dialog.component';
+import { SplitDialogHostComponent } from './components/split-dialog/split-dialog-host.component';
 import { SplitInputStepComponent } from './components/split-dialog/split-input-step/split-input-step.component';
 import { SplitReviewStepComponent } from './components/split-dialog/split-review-step/split-review-step.component';
 import { SplitDoneStepComponent } from './components/split-dialog/split-done-step/split-done-step.component';
@@ -141,6 +142,7 @@ import { AgentModule } from '../agent/agent.module';
         FilterComponent,
         IssueTableDropZoneComponent,
         SplitDialogComponent,
+        SplitDialogHostComponent,
         SplitInputStepComponent,
         SplitReviewStepComponent,
         SplitDoneStepComponent,

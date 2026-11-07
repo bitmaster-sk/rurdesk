@@ -24,7 +24,8 @@ import { SavedViewApi } from 'src/app/project/api/saved-view.api.service';
 
 import { signal } from '@angular/core';
 import { IssueListStateStore } from '../../store/issue-list-state.store';
-import { IssueTagsStub } from 'src/testing/stubs';
+import { IssueTagsStub, SplitDialogStub } from 'src/testing/stubs';
+import { SplitDialogHostComponent } from '../split-dialog/split-dialog-host.component';
 
 export function makeIssue(over: Partial<Issue> = {}): Issue {
     return Fixtures.issue({ idProject: 5, title: 'T', ...over });
@@ -84,14 +85,6 @@ export class DropZoneStub {
     public readonly targetIssue = input<any>(null);
     public readonly relationDrop = output<any>();
     public readonly zoneEnter = output<void>();
-}
-
-@Component({ selector: 'app-split-dialog', template: '', standalone: true })
-export class SplitDialogStub {
-    public readonly idProject = input<number>(0);
-    public readonly issue = input<any>(null);
-    public readonly accepted = output<any>();
-    public readonly cancelled = output<void>();
 }
 
 @Component({ selector: 'app-bulk-edit-button', template: '', standalone: true })
@@ -188,7 +181,7 @@ export function configureTableTestBed(): TableMocks {
             BulkEditDialogStub,
             RouterLink
         ],
-        declarations: [IssueTableComponent],
+        declarations: [IssueTableComponent, SplitDialogHostComponent],
         providers: [
             { provide: IssueTableService, useValue: issueTableServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },

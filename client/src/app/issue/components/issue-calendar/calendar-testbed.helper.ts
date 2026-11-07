@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { of, EMPTY, Subject } from 'rxjs';
-import { Component } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { provideRouter } from '@angular/router';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
@@ -10,6 +10,9 @@ import { IssueCalendarService } from './service/issue-calendar.service';
 import { IssueFilterStore } from '../filter/issue-filter.store';
 import { ProjectStore } from 'src/app/project/project.store';
 import { IssueApi } from '../../api/issue.api.service';
+import { Issue } from '../../model/issue.model';
+import { SplitDialogStub } from 'src/testing/stubs';
+import { SplitDialogHostComponent } from '../split-dialog/split-dialog-host.component';
 import { IssueToolbarService } from '../../issue-toolbar.service';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
@@ -52,12 +55,14 @@ function makeCalendarApi() {
 
 @Component({ selector: 'full-calendar', template: '', standalone: true })
 export class FullCalendarStub {
+    public readonly options = input<unknown>(undefined);
     private readonly _api = makeCalendarApi();
     public getApi = vi.fn(() => this._api);
 }
 
 @Component({ selector: 'app-issue-quick-actions', template: '', standalone: true })
 export class QuickActionsStub {
+    public readonly splitRequested = output<Issue>();
     public show = vi.fn();
 }
 
@@ -132,8 +137,14 @@ export function configureCalendarTestBed(
     };
 
     TestBed.configureTestingModule({
-        imports: [TranslateModule.forRoot(), FullCalendarStub, QuickActionsStub, FilterStub],
-        declarations: [IssueCalendarComponent],
+        imports: [
+            TranslateModule.forRoot(),
+            FullCalendarStub,
+            QuickActionsStub,
+            FilterStub,
+            SplitDialogStub
+        ],
+        declarations: [IssueCalendarComponent, SplitDialogHostComponent],
         providers: [
             { provide: IssueCalendarService, useValue: issueCalendarServiceMock },
             { provide: IssueFilterStore, useValue: issueFilterStoreMock },

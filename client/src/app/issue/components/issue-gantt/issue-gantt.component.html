@@ -180,7 +180,7 @@
 
 <app-issue-quick-actions
     #quickActions
-    (splitRequested)="onSplitRequested($event)"
+    (splitRequested)="splitDialog.open($event)"
 ></app-issue-quick-actions>
 
 @if (pendingParent(); as pending) {
@@ -192,11 +192,4 @@
     />
 }
 
-@if (isSplitDialogOpen() && splitIssue(); as issue) {
-    <app-split-dialog
-        [idProject]="issue.idProject"
-        [issue]="issue"
-        (accepted)="onSplitAccepted()"
-        (cancelled)="onSplitCancelled()"
-    ></app-split-dialog>
-}
+<app-split-dialog-host #splitDialog />

@@ -57,8 +57,6 @@ export class IssueDetailPage implements OnDestroy {
     public readonly splitPaneStorageKey = 'rurdesk.issueDetail.split';
 
     public readonly pendingDeleteIssue = signal<Issue | null>(null);
-    public readonly isSplitDialogOpen = signal(false);
-    public readonly splitIssue = signal<Issue | null>(null);
     public readonly pendingTrack = signal<Track | null>(null);
 
     private readonly params$ = this.route.paramMap.pipe(
@@ -142,19 +140,6 @@ export class IssueDetailPage implements OnDestroy {
 
     public onTrackAdded(track: Track): void {
         this.pendingTrack.set(track);
-    }
-
-    public onSplitRequested(issue: Issue): void {
-        this.splitIssue.set(issue);
-        this.isSplitDialogOpen.set(true);
-    }
-
-    public onSplitAccepted(_children: Issue[]): void {
-        this.isSplitDialogOpen.set(false);
-    }
-
-    public onSplitCancelled(): void {
-        this.isSplitDialogOpen.set(false);
     }
 
     public onDeleteRequested(issue: Issue): void {
