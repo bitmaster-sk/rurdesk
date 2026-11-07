@@ -1,5 +1,11 @@
-<div class="wiki-shell">
-    @if (!layout.isTreeHidden()) {
+<div class="wiki-shell" [class.wiki-shell--overlay]="layout.isOverlay()">
+    @if (!layout.isTreeHidden()) { @if (layout.isOverlay()) {
+    <div
+        class="wiki-shell__backdrop"
+        data-testid="wiki-nav-backdrop"
+        (click)="layout.closeOverlayTree()"
+    ></div>
+    }
     <aside class="wiki-nav" data-testid="wiki-nav">
         <div class="wiki-nav__head">
             <h2 class="wiki-nav__title">{{ 'WIKI.TITLE' | translate }}</h2>

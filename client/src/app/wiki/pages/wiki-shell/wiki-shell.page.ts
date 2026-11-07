@@ -111,6 +111,13 @@ export class WikiShellPage {
                 this.searchedQuery.set(result.query);
             });
 
+        this.router.events
+            .pipe(
+                filter(event => event instanceof NavigationEnd),
+                takeUntilDestroyed()
+            )
+            .subscribe(() => this.layout.closeOverlayTree());
+
         effect(() => {
             const idPage = this.activeIdPage();
             if (idPage !== null) {

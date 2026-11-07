@@ -4,9 +4,35 @@
 }
 
 .wiki-shell {
+    position: relative;
     display: flex;
     height: 100%;
     min-height: 0;
+
+    &__backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        background: var(--ui-dialog-backdrop);
+    }
+
+    &--overlay .wiki-nav {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        z-index: 3;
+        width: 20rem;
+        max-width: 100%;
+        box-shadow: var(--ui-dialog-shadow);
+    }
+}
+
+@media (max-width: 40rem) {
+    .wiki-shell--overlay .wiki-nav {
+        width: 100%;
+        border-right: none;
+        box-shadow: none;
+    }
 }
 
 .wiki-nav {

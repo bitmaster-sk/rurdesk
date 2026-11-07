@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, input, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, Subject, of } from 'rxjs';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TablerIconStub, UiButtonStub, UiLoaderStub, UiTooltipStub } from 'src/testing/stubs';
 import { WikiApi } from '../../api/wiki.api.service';
 import { WikiSearchHit } from '../../model/wiki-tree.model';
@@ -57,7 +57,7 @@ async function render(
             WikiTreeStub
         ],
         providers: [
-            provideRouter([]),
+            provideRouter([{ path: '**', children: [] }]),
             { provide: WikiApi, useValue: { search$: () => responses } },
             {
                 provide: WikiTreeStore,
@@ -96,6 +96,16 @@ async function waitForDebounce(fixture: ComponentFixture<WikiShellPage>): Promis
     await new Promise(resolve => setTimeout(resolve, 300));
     fixture.detectChanges();
 }
+
+function stubOverlay(matches: boolean): void {
+    vi.spyOn(window, 'matchMedia').mockReturnValue({
+        matches,
+        addEventListener: () => undefined
+    } as unknown as MediaQueryList);
+}
+
+beforeEach(() => stubOverlay(false));
+afterEach(() => vi.restoreAllMocks());
 
 describe('WikiShellPage search', () => {
     it('shows a loader instead of "nothing found" until the answer arrives', async () => {
@@ -161,5 +171,38 @@ describe('WikiShellPage tree toggle', () => {
         TestBed.inject(WikiLayoutStore).toggleTree();
         fixture.detectChanges();
         expect(find(fixture, 'wiki-nav')).not.toBeNull();
+    });
+});
+
+describe('WikiShellPage tree on narrow screens', () => {
+    beforeEach(() => stubOverlay(true));
+
+    it('lays the tree over the page instead of squeezing it and closes it on a tap outside', async () => {
+        const fixture = await render(new Subject<WikiSearchHit[]>());
+        const element = fixture.nativeElement as HTMLElement;
+        const main = element.querySelector<HTMLElement>('.wiki-main')!;
+        expect(find(fixture, 'wiki-nav')).toBeNull();
+        const width = main.getBoundingClientRect().width;
+
+        TestBed.inject(WikiLayoutStore).toggleTree();
+        fixture.detectChanges();
+        const nav = find(fixture, 'wiki-nav') as HTMLElement;
+        expect(getComputedStyle(nav).position).toBe('absolute');
+        expect(main.getBoundingClientRect().width).toBe(width);
+
+        (find(fixture, 'wiki-nav-backdrop') as HTMLElement).click();
+        fixture.detectChanges();
+        expect(find(fixture, 'wiki-nav')).toBeNull();
+    });
+
+    it('closes the tree after navigating to a page', async () => {
+        const fixture = await render(new Subject<WikiSearchHit[]>());
+        TestBed.inject(WikiLayoutStore).toggleTree();
+        fixture.detectChanges();
+        expect(find(fixture, 'wiki-nav')).not.toBeNull();
+
+        await TestBed.inject(Router).navigateByUrl('/project/1/wiki/project/deploy');
+        fixture.detectChanges();
+        expect(find(fixture, 'wiki-nav')).toBeNull();
     });
 });

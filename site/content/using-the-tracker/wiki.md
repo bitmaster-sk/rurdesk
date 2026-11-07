@@ -14,6 +14,9 @@ main menu shrinks to icons, so the page tree fits next to it and Board, Table an
 the other views stay one click away. Hide the tree with the button next to
 **+ Page** when you want the full width for reading; the button that brings it
 back sits at the top left of the page, and the browser remembers the choice.
+On a tablet or phone the tree starts hidden and opens over the page instead of
+squeezing it, across the whole screen on a phone. Picking a page or tapping
+outside the tree closes it again.
 
 ![A wiki page with the page tree on the left, a callout and a table in the text, and the linked tasks on the right](../../site/assets/img/wiki-page.png)
 
