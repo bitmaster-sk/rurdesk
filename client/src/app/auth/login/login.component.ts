@@ -34,6 +34,7 @@ export class LoginComponent implements OnInit {
     private destroyRef = inject(DestroyRef);
     public form: FormGroup<LoginForm>;
     public readonly hasFailed = signal(false);
+    public readonly passwordVisible = signal(false);
 
     public constructor() {
         this.form = this.buildForm();
@@ -47,6 +48,10 @@ export class LoginComponent implements OnInit {
         this.form.valueChanges
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(() => this.hasFailed.set(false));
+    }
+
+    public togglePasswordVisibility(): void {
+        this.passwordVisible.update(value => !value);
     }
 
     public onLogin(): void {
