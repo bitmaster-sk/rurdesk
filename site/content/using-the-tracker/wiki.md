@@ -86,6 +86,12 @@ Hover a heading and click **#** to copy a link straight to it.
 A link to a page that does not exist yet is shown in red. Clicking it opens the
 form for a new page with that title.
 
+Every code block gets a small **Copy code** button right above it, on the page
+and in the editor preview. One click copies the whole block exactly as
+written — indentation, blank lines and special characters included. Blocks
+that render as a [diagram](#diagrams) do not get the button; their source stays
+with the diagram.
+
 The panel on the right holds the page's **parent**, **agent access**, a short
 **summary** and a **change note** that ends up in the history.
 
