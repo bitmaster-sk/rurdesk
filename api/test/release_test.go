@@ -459,7 +459,7 @@ func TestRelease_AnAgentWritesTheNotesIntoTheDraft(t *testing.T) {
 	require.NotContains(t, payload["contextBundle"], "issue")
 	settings, err := injector.GetAppSettingsService()
 	require.NoError(t, err)
-	require.EqualValues(t, settings.AgentMaxTurnsPlan(), payload["maxTurns"], "release notes use the plan turn limit")
+	require.EqualValues(t, settings.AgentMaxTurns(constants.StageReleaseNotes), payload["maxTurns"], "release notes use their own turn limit")
 	release := payload["contextBundle"].(map[string]any)["release"].(map[string]any)
 	require.Equal(t, "v2.1", release["name"])
 	require.Equal(t, "next", release["tag"])

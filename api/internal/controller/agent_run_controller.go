@@ -502,6 +502,9 @@ func stagePlanEntryChoices(dto model.UpdateAgentRunStagePlanEntryReq, plan model
 	if dto.MaxTurns != 0 {
 		choices.MaxTurnsByStage = map[string]int{dto.Stage: dto.MaxTurns}
 	}
+	if dto.Effort != "" {
+		choices.EffortByStage = map[string]string{dto.Stage: dto.Effort}
+	}
 	return choices
 }
 
@@ -564,7 +567,12 @@ func (ctrl *AgentRunController) respondRunStagePlan(c *gin.Context, run *model.A
 		ModelDefault:  gateway.ModelDefault,
 		MaxTurnsLimit: gateway.MaxTurnsLimit,
 	}
-	res.MaxTurnsPlan, res.MaxTurnsImplement = ctrl.agentTaskConfig.GetDefaultMaxTurns(gateway)
+	res.DefaultsByStage = ctrl.agentTaskConfig.GetStageDefaults(gateway)
+	res.ModelsWithoutThinking, err = ctrl.agentTaskConfig.ModelsWithoutThinking(ctx, gateway)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
 	for _, entry := range plan.Stages {
 		if !constants.IsSkillStage(entry.Name) {
 			continue
@@ -583,6 +591,9 @@ func (ctrl *AgentRunController) respondRunStagePlan(c *gin.Context, run *model.A
 		}
 		if entry.MaxTurns != 0 {
 			stage.MaxTurns = &entry.MaxTurns
+		}
+		if entry.Effort != "" {
+			stage.Effort = &entry.Effort
 		}
 		res.Stages = append(res.Stages, stage)
 	}
@@ -995,6 +1006,25 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, "gateway_restart")
 	}
 	ResponseOk(c, gin.H{"failedRuns": len(runIds)})
+}
+
+func (ctrl *AgentRunController) GatewayModelThinking(c *gin.Context) {
+	ctx := c.Request.Context()
+	agentUser, ok := extctx.GetUser(ctx)
+	if !ok {
+		ResponseErr(c, errs.ErrUnauthorized)
+		return
+	}
+	var report model.GatewayModelThinkingReq
+	if err := c.ShouldBindJSON(&report); err != nil {
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
+		return
+	}
+	if err := ctrl.agentGwRepo.SetModelThinking(ctx, agentUser.IdUser, report.IsThinkingByModel); err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ResponseOk(c, gin.H{"ok": true})
 }
 
 // TaskStats accepts a stats backfill from the gateway adapter and broadcasts

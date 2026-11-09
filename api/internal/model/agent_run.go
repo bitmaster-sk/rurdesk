@@ -64,6 +64,7 @@ type AgentStageProgress struct {
 	HasThinking       bool     `json:"hasThinking,omitempty"`
 	Model             *string  `json:"model,omitempty"`
 	MaxTurns          *int     `json:"maxTurns,omitempty"`
+	Effort            *string  `json:"effort,omitempty"`
 	ModelFallbackFrom *string  `json:"modelFallbackFrom,omitempty"`
 	Attempts          int      `json:"attempts"`
 	TokensUsed        int      `json:"tokensUsed"`
@@ -122,10 +123,12 @@ type AgentTask struct {
 	HasThinking      bool       `json:"hasThinking"     db:"-"`
 	Model            *string    `json:"model"           db:"model"`
 	MaxTurns         *int       `json:"maxTurns"        db:"max_turns"`
+	Effort           *string    `json:"effort"          db:"effort"`
 }
 
 type AgentStagePlan struct {
 	Model  string                `json:"model,omitempty"`
+	Effort string                `json:"effort,omitempty"`
 	Stages []AgentStagePlanEntry `json:"stages"`
 }
 
@@ -136,6 +139,7 @@ type AgentStagePlanEntry struct {
 	IdsSkill  []int64 `json:"idsSkill,omitempty"`
 	Model     string  `json:"model,omitempty"`
 	MaxTurns  int     `json:"maxTurns,omitempty"`
+	Effort    string  `json:"effort,omitempty"`
 }
 
 // CompleteStageReq is the body of POST /private/agent/task/:idTask/complete,
@@ -189,6 +193,8 @@ type RunChoices struct {
 	Model           string             `json:"model"`
 	ModelByStage    map[string]string  `json:"modelByStage"`
 	MaxTurnsByStage map[string]int     `json:"maxTurnsByStage"`
+	Effort          string             `json:"effort"`
+	EffortByStage   map[string]string  `json:"effortByStage"`
 }
 
 type CreateAgentRunReq struct {

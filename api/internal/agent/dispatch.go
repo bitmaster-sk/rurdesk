@@ -122,6 +122,9 @@ func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun
 			if taskConfig.Model != nil {
 				payload["model"] = *taskConfig.Model
 			}
+			if taskConfig.Effort != nil {
+				payload["effort"] = *taskConfig.Effort
+			}
 		}
 
 		event := WebhookEvent{
@@ -157,7 +160,11 @@ func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.Agen
 		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("unparseable stage plan, dispatching with defaults")
 	}
 
-	taskConfig := d.agentTaskConfig.BuildAgentTaskConfig(plan, task.Stage, gateway)
+	modelsWithoutThinking, err := d.agentTaskConfig.ModelsWithoutThinking(ctx, gateway)
+	if err != nil {
+		return service.AgentTaskConfig{}, err
+	}
+	taskConfig := d.agentTaskConfig.BuildAgentTaskConfig(plan, task.Stage, gateway, modelsWithoutThinking)
 	if taskConfig.FallbackFrom != nil {
 		used := ""
 		if taskConfig.Model != nil {
@@ -169,10 +176,11 @@ func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.Agen
 			return service.AgentTaskConfig{}, err
 		}
 	}
-	if err := d.taskRepo.SetModelAndTurns(ctx, task.IdTask, taskConfig.Model, taskConfig.MaxTurns); err != nil {
+	if err := d.taskRepo.SetRunConfig(ctx, task.IdTask, taskConfig.Model, taskConfig.MaxTurns, taskConfig.Effort); err != nil {
 		return service.AgentTaskConfig{}, err
 	}
 	task.Model, task.MaxTurns = taskConfig.Model, &taskConfig.MaxTurns
+	task.Effort = taskConfig.Effort
 	return taskConfig, nil
 }
 

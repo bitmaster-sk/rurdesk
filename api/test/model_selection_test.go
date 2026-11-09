@@ -20,6 +20,7 @@ import (
 type dispatchedStage struct {
 	Model    *string `json:"model"`
 	MaxTurns int     `json:"maxTurns"`
+	Effort   *string `json:"effort"`
 }
 
 type ModelSelectionSuite struct {
@@ -95,8 +96,9 @@ func (s *ModelSelectionSuite) SetupTest() {
 	s.App.Pool.Exec(ctx,
 		"DELETE FROM agent.task WHERE id_run IN (SELECT id_run FROM agent.run WHERE id_project = $1)", s.IdProject)
 	s.App.Pool.Exec(ctx, "DELETE FROM agent.run WHERE id_project = $1", s.IdProject)
+	s.App.Pool.Exec(ctx, "UPDATE agent.gateway SET models_without_thinking = '{}' WHERE id_user_agent = $1", s.AgentUserID)
 	s.reportModels(`{"models":["openai/kimi","ollama/qwen3:8b"],"modelDefault":"openai/kimi"}`)
-	s.setAgentTurns(`null`, `null`)
+	s.setAgentStageDefaults(`{}`)
 }
 
 func (s *ModelSelectionSuite) stageChannel(idTask int64) chan dispatchedStage {
@@ -115,11 +117,21 @@ func (s *ModelSelectionSuite) reportModels(body string) {
 	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
 }
 
-func (s *ModelSelectionSuite) setAgentTurns(plan, implement string) {
+func (s *ModelSelectionSuite) reportModelThinking(body string) {
+	res := Request(s.T(), s.App, "POST", "/api/private/agent/gateway/thinking", body, s.AgentApiKey)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+}
+
+func (s *ModelSelectionSuite) setAgentStageDefaults(stageDefaults string) {
 	res := Request(s.T(), s.App, "PATCH",
 		fmt.Sprintf("/api/private/admin/user/%d/gateway", s.AgentUserID),
-		fmt.Sprintf(`{"gatewayUrl":%q,"maxTurnsPlan":%s,"maxTurnsImplement":%s}`, s.Gateway.URL, plan, implement),
+		fmt.Sprintf(`{"gatewayUrl":%q,"stageDefaults":%s}`, s.Gateway.URL, stageDefaults),
 		s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
+}
+
+func (s *ModelSelectionSuite) setAppSettings(body string) {
+	res := Request(s.T(), s.App, http.MethodPatch, "/api/private/admin/settings", body, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
 }
 
@@ -193,31 +205,43 @@ func (s *ModelSelectionSuite) TestOverviewOffersTheReportedModelsAndTurnDefaults
 	s.Equal([]string{"openai/kimi", "ollama/qwen3:8b"}, entry.Models)
 	s.Require().NotNil(entry.ModelDefault)
 	s.Equal("ollama/qwen3:8b", *entry.ModelDefault)
-	s.Equal(250, entry.MaxTurnsPlan)
-	s.Equal(500, entry.MaxTurnsImplement)
+	s.Len(entry.DefaultsByStage, 5, "every stage an agent runs")
+	s.Equal(250, entry.DefaultsByStage["design"].MaxTurns)
+	s.Equal(250, entry.DefaultsByStage["release_notes"].MaxTurns)
+	s.Equal(500, entry.DefaultsByStage["implementation"].MaxTurns)
+	s.NotContains(entry.DefaultsByStage, "pickup")
 }
 
-func (s *ModelSelectionSuite) TestAgentTurnLimitsOverrideTheAppSettings() {
-	s.setAgentTurns(`120`, `null`)
+func (s *ModelSelectionSuite) TestAgentTurnLimitsOverrideTheAppSettingsOfThatStage() {
+	s.setAgentStageDefaults(`{"brainstorming":{"maxTurns":120}}`)
 
 	entry := s.overview()
 
-	s.Equal(120, entry.MaxTurnsPlan)
-	s.Equal(500, entry.MaxTurnsImplement)
+	s.Equal(120, entry.DefaultsByStage["brainstorming"].MaxTurns)
+	s.Equal(250, entry.DefaultsByStage["design"].MaxTurns)
 }
 
-func (s *ModelSelectionSuite) TestAppSettingsSetTheTurnDefaults() {
-	setTurns := func(body string) {
-		res := Request(s.T(), s.App, http.MethodPatch, "/api/private/admin/settings", body, s.Token)
-		s.Require().Equal(http.StatusOK, res.StatusCode, readBody(s.T(), res))
-	}
-	setTurns(`{"agentMaxTurnsPlan":90,"agentMaxTurnsImplement":900}`)
-	defer setTurns(`{"agentMaxTurnsPlan":250,"agentMaxTurnsImplement":500}`)
+func (s *ModelSelectionSuite) TestAppSettingsSetTheTurnDefaultsPerStage() {
+	s.setAppSettings(`{"agentStageDefaults":{"release_notes":{"maxTurns":60},"implementation":{"maxTurns":900}}}`)
+	defer s.setAppSettings(`{"agentStageDefaults":{"release_notes":{"maxTurns":250},"implementation":{"maxTurns":500}}}`)
 
 	entry := s.overview()
 
-	s.Equal(90, entry.MaxTurnsPlan)
-	s.Equal(900, entry.MaxTurnsImplement)
+	s.Equal(60, entry.DefaultsByStage["release_notes"].MaxTurns)
+	s.Equal(900, entry.DefaultsByStage["implementation"].MaxTurns)
+	s.Equal(250, entry.DefaultsByStage["implementation_plan"].MaxTurns)
+
+	res := Request(s.T(), s.App, http.MethodGet, "/api/private/settings", "", s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var settings model.AppSettingsRes
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&settings))
+	s.Equal(model.AgentStageOptions{MaxTurns: ptr(60)}, settings.AgentStageDefaults["release_notes"])
+}
+
+func (s *ModelSelectionSuite) TestAppSettingsRejectAStageWithoutAnAgent() {
+	res := Request(s.T(), s.App, http.MethodPatch, "/api/private/admin/settings", `{"agentStageDefaults":{"pickup":{"maxTurns":10}}}`, s.Token)
+
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
 }
 
 func (s *ModelSelectionSuite) TestTurnsNeverExceedTheGatewayLimit() {
@@ -227,8 +251,8 @@ func (s *ModelSelectionSuite) TestTurnsNeverExceedTheGatewayLimit() {
 	entry := s.overview()
 	s.Require().NotNil(entry.MaxTurnsLimit)
 	s.Equal(300, *entry.MaxTurnsLimit)
-	s.Equal(250, entry.MaxTurnsPlan)
-	s.Equal(300, entry.MaxTurnsImplement, "the dock shows the default the stage will really get")
+	s.Equal(250, entry.DefaultsByStage["design"].MaxTurns)
+	s.Equal(300, entry.DefaultsByStage["implementation"].MaxTurns, "the dock shows the default the stage will really get")
 
 	for _, stage := range []string{"design", "implementation"} {
 		_, got := s.dispatch(run, stage)
@@ -247,15 +271,28 @@ func (s *ModelSelectionSuite) TestCreatingAGatewayStoresItsTurnLimits() {
 
 	created := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/admin/user/%d/gateway", agent.IdUser),
-		`{"gatewayUrl":"http://gw:9090","maxTurnsPlan":90,"maxTurnsImplement":null}`, s.Token)
+		`{"gatewayUrl":"http://gw:9090","stageDefaults":{"design":{"maxTurns":90},"implementation":{"maxTurns":null,"effort":null}}}`, s.Token)
 	body := readBody(s.T(), created)
 	s.Require().Equal(http.StatusOK, created.StatusCode, body)
 
 	var gateway model.AgentGateway
 	s.Require().NoError(json.Unmarshal([]byte(body), &gateway))
-	s.Require().NotNil(gateway.MaxTurnsPlan)
-	s.Equal(90, *gateway.MaxTurnsPlan)
-	s.Nil(gateway.MaxTurnsImplement)
+	s.Equal(map[string]model.AgentStageOptions{"design": {MaxTurns: ptr(90)}}, gateway.StageDefaults,
+		"a stage left empty inherits, so it is not stored")
+}
+
+func (s *ModelSelectionSuite) TestGatewayRejectsInvalidStageDefaults() {
+	for _, stageDefaults := range []string{
+		`{"pickup":{"maxTurns":10}}`,
+		`{"design":{"maxTurns":0}}`,
+		`{"design":{"maxTurns":10001}}`,
+		`{"design":{"effort":"auto"}}`,
+	} {
+		res := Request(s.T(), s.App, "PATCH",
+			fmt.Sprintf("/api/private/admin/user/%d/gateway", s.AgentUserID),
+			fmt.Sprintf(`{"gatewayUrl":%q,"stageDefaults":%s}`, s.Gateway.URL, stageDefaults), s.Token)
+		s.Equal(http.StatusBadRequest, res.StatusCode, stageDefaults)
+	}
 }
 
 func (s *ModelSelectionSuite) TestRecoveredWithoutABodyKeepsTheReportedModels() {
@@ -323,7 +360,7 @@ func (s *ModelSelectionSuite) TestDispatchResolvesTheModelStageThenRunThenDefaul
 }
 
 func (s *ModelSelectionSuite) TestDispatchResolvesTurnsStageThenAgentThenAppSettings() {
-	s.setAgentTurns(`120`, `null`)
+	s.setAgentStageDefaults(`{"brainstorming":{"maxTurns":120}}`)
 	run := s.assignOk(`"maxTurnsByStage":{"design":40}`)
 
 	tests := []struct {
@@ -332,6 +369,7 @@ func (s *ModelSelectionSuite) TestDispatchResolvesTurnsStageThenAgentThenAppSett
 	}{
 		{"design", 40},
 		{"brainstorming", 120},
+		{"implementation_plan", 250},
 		{"implementation", 500},
 	}
 	for _, tt := range tests {
@@ -402,6 +440,98 @@ func (s *ModelSelectionSuite) TestRunStatsSplitTokensByModel() {
 	s.Require().NoError(json.NewDecoder(res.Body).Decode(&stats))
 
 	s.Equal(map[string]int{"ollama/qwen3:8b": 100, "openai/kimi": 30}, stats.TokensByModel)
+}
+
+func (s *ModelSelectionSuite) TestOverviewOffersTheEffortDefaultsAndModelsWithoutThinking() {
+	s.reportModels(`{"models":["openai/kimi","openai/gpt-4o","ollama/llama3.3"],"modelDefault":"openai/kimi"}`)
+	s.reportModelThinking(`{"isThinkingByModel":{"ollama/llama3.3":false}}`)
+	s.setAgentStageDefaults(`{"design":{"effort":"high"}}`)
+
+	entry := s.overview()
+
+	s.Equal(model.AgentEffortDefault{Effort: ptr("high"), Source: "agent"}, entry.DefaultsByStage["design"].Effort)
+	s.Equal(model.AgentEffortDefault{Source: "model"}, entry.DefaultsByStage["implementation_plan"].Effort)
+	s.Equal([]string{"openai/gpt-4o", "ollama/llama3.3"}, entry.ModelsWithoutThinking,
+		"gpt-4o comes from the models.dev snapshot, llama3.3 from the gateway report")
+}
+
+func (s *ModelSelectionSuite) TestModelThinkingReportKeepsTheModelsItDidNotProbe() {
+	s.reportModels(`{"models":["ollama/llama3.3","ollama/phi4","ollama/qwen3:8b"],"modelDefault":"ollama/qwen3:8b"}`)
+	s.reportModelThinking(`{"isThinkingByModel":{"ollama/llama3.3":false,"ollama/phi4":false}}`)
+
+	s.reportModelThinking(`{"isThinkingByModel":{"ollama/phi4":true,"ollama/qwen3:8b":true}}`)
+
+	s.Equal([]string{"ollama/llama3.3"}, s.overview().ModelsWithoutThinking)
+}
+
+func (s *ModelSelectionSuite) TestGatewayRestartKeepsTheModelsWithoutThinking() {
+	s.reportModels(`{"models":["ollama/llama3.3"],"modelDefault":"ollama/llama3.3"}`)
+	s.reportModelThinking(`{"isThinkingByModel":{"ollama/llama3.3":false}}`)
+
+	s.reportModels(`{"models":["ollama/llama3.3"],"modelDefault":"ollama/llama3.3"}`)
+
+	s.Equal([]string{"ollama/llama3.3"}, s.overview().ModelsWithoutThinking)
+}
+
+func (s *ModelSelectionSuite) TestModelThinkingReportRequiresTheModels() {
+	res := Request(s.T(), s.App, "POST", "/api/private/agent/gateway/thinking", `{}`, s.AgentApiKey)
+
+	s.Equal(http.StatusBadRequest, res.StatusCode)
+}
+
+func (s *ModelSelectionSuite) TestAppSettingsSetTheEffortDefaults() {
+	s.setAppSettings(`{"agentStageDefaults":{"release_notes":{"effort":"low"}}}`)
+	defer s.setAppSettings(`{"agentStageDefaults":{"release_notes":{"effort":""}}}`)
+
+	entry := s.overview()
+
+	s.Equal(model.AgentEffortDefault{Source: "model"}, entry.DefaultsByStage["implementation"].Effort)
+	s.Equal(model.AgentEffortDefault{Effort: ptr("low"), Source: "settings"}, entry.DefaultsByStage["release_notes"].Effort)
+}
+
+func (s *ModelSelectionSuite) TestAppSettingsRejectAnUnknownEffort() {
+	res := Request(s.T(), s.App, http.MethodPatch, "/api/private/admin/settings", `{"agentStageDefaults":{"design":{"effort":"xhigh"}}}`, s.Token)
+
+	s.Equal(http.StatusUnprocessableEntity, res.StatusCode)
+}
+
+func (s *ModelSelectionSuite) TestAssignRejectsAnUnknownEffort() {
+	for _, choices := range []string{`"effort":"xhigh"`, `"effortByStage":{"design":"auto"}`} {
+		res := s.assign(choices)
+		s.Equal(http.StatusBadRequest, res.StatusCode, choices)
+	}
+}
+
+func (s *ModelSelectionSuite) TestDispatchResolvesTheEffortStageThenRunThenAgent() {
+	s.setAgentStageDefaults(`{"brainstorming":{"effort":"medium"}}`)
+	withChoices := s.assignOk(`"effort":"low","effortByStage":{"design":"max"}`)
+	withoutChoices := s.assignOk(``)
+
+	tests := []struct {
+		run   model.AgentRun
+		stage string
+		want  *string
+	}{
+		{withChoices, "design", ptr("max")},
+		{withChoices, "implementation", ptr("low")},
+		{withoutChoices, "brainstorming", ptr("medium")},
+		{withoutChoices, "implementation", nil},
+	}
+	for _, tt := range tests {
+		task, got := s.dispatch(tt.run, tt.stage)
+		s.Equal(tt.want, got.Effort, tt.stage)
+		s.Equal(tt.want, task.Effort, "the task records the effort it ran with")
+	}
+}
+
+func (s *ModelSelectionSuite) TestDispatchSendsNoEffortForAModelWithoutThinking() {
+	s.reportModels(`{"models":["openai/kimi","openai/gpt-4o"],"modelDefault":"openai/kimi"}`)
+	run := s.assignOk(`"model":"openai/gpt-4o","effort":"high"`)
+
+	task, got := s.dispatch(run, "design")
+
+	s.Nil(got.Effort, "the gateway gets no effort for a model without thinking")
+	s.Nil(task.Effort, "the stage card shows no effort for it")
 }
 
 func TestModelSelectionSuite(t *testing.T) {

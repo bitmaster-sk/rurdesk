@@ -32,11 +32,23 @@ func (sc *AppSettingsController) Get(c *gin.Context) {
 		IsAgentThinkingPersisted: sc.settings.IsAgentThinkingPersisted(),
 		AgentThinkingMaxKb:       sc.settings.AgentThinkingMaxKb(),
 		AttachmentMaxSizeMb:      sc.settings.AttachmentMaxSizeMb(),
-		AgentMaxTurnsPlan:        sc.settings.AgentMaxTurnsPlan(),
-		AgentMaxTurnsImplement:   sc.settings.AgentMaxTurnsImplement(),
+		AgentStageDefaults:       sc.agentStageDefaults(),
 		WikiAlwaysTokenLimit:     sc.settings.WikiAlwaysTokenLimit(),
 		PlantUmlServerUrl:        sc.settings.PlantUmlServerUrl(),
 	})
+}
+
+func (sc *AppSettingsController) agentStageDefaults() map[string]model.AgentStageOptions {
+	defaults := make(map[string]model.AgentStageOptions, len(constants.SkillStages))
+	for _, stage := range constants.SkillStages {
+		maxTurns := sc.settings.AgentMaxTurns(stage)
+		options := model.AgentStageOptions{MaxTurns: &maxTurns}
+		if effort := sc.settings.AgentEffort(stage); effort != "" {
+			options.Effort = &effort
+		}
+		defaults[stage] = options
+	}
+	return defaults
 }
 
 // Update applies a partial change. Admin-only (route is under the admin group).
@@ -69,12 +81,6 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	if req.AttachmentMaxSizeMb != nil {
 		numericChanges[constants.SettingAttachmentMaxSizeMb] = *req.AttachmentMaxSizeMb
 	}
-	if req.AgentMaxTurnsPlan != nil {
-		numericChanges[constants.SettingAgentMaxTurnsPlan] = *req.AgentMaxTurnsPlan
-	}
-	if req.AgentMaxTurnsImplement != nil {
-		numericChanges[constants.SettingAgentMaxTurnsImplement] = *req.AgentMaxTurnsImplement
-	}
 	if req.WikiAlwaysTokenLimit != nil {
 		numericChanges[constants.SettingWikiAlwaysTokenLimit] = *req.WikiAlwaysTokenLimit
 	}
@@ -85,6 +91,14 @@ func (sc *AppSettingsController) Update(c *gin.Context) {
 	stringChanges := map[string]string{}
 	if req.PlantUmlServerUrl != nil {
 		stringChanges[constants.SettingPlantUmlServerUrl] = *req.PlantUmlServerUrl
+	}
+	for stage, stageDefault := range req.AgentStageDefaults {
+		if stageDefault.MaxTurns != nil {
+			numericChanges[constants.SettingAgentMaxTurns(stage)] = *stageDefault.MaxTurns
+		}
+		if stageDefault.Effort != nil {
+			stringChanges[constants.SettingAgentEffort(stage)] = *stageDefault.Effort
+		}
 	}
 	ctx := c.Request.Context()
 	if err := extctx.RunInTx(ctx, sc.pool, func(ctx context.Context) error {

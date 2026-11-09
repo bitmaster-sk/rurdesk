@@ -188,8 +188,8 @@ func (s *RunStagePlanSuite) TestStagePlanListsWhatTheGatewayOffers() {
 	s.Equal([]string{"openai/a", "openai/b"}, payload.Models)
 	s.Require().NotNil(payload.ModelDefault)
 	s.Equal("openai/a", *payload.ModelDefault)
-	s.Equal(250, payload.MaxTurnsPlan)
-	s.Equal(500, payload.MaxTurnsImplement)
+	s.Equal(250, payload.DefaultsByStage["design"].MaxTurns)
+	s.Equal(500, payload.DefaultsByStage["implementation"].MaxTurns)
 	s.Require().NotNil(payload.MaxTurnsLimit)
 	s.Equal(700, *payload.MaxTurnsLimit)
 	s.Nil(s.stage(payload, "design").Model)
@@ -235,6 +235,50 @@ func (s *RunStagePlanSuite) TestPatchRejectsWhatTheGatewayDoesNotAllow() {
 		s.Equal(http.StatusBadRequest, s.patchStagePlanEntry(run.IdRun, body).StatusCode, body)
 	}
 	s.Nil(s.stage(s.getStagePlan(run.IdRun), "design").Model)
+}
+
+func (s *RunStagePlanSuite) TestPatchChangesAndResetsTheEffortOfAStage() {
+	s.reportModels()
+	run := s.createRun("patch-effort")
+
+	s.Require().Equal(http.StatusOK, s.patchStagePlanEntry(run.IdRun, `{"stage":"design","idsSkill":[],"effort":"max"}`).StatusCode)
+	design := s.stage(s.getStagePlan(run.IdRun), "design")
+	s.Require().NotNil(design.Effort)
+	s.Equal("max", *design.Effort)
+
+	s.Require().Equal(http.StatusOK, s.patchStagePlanEntry(run.IdRun, `{"stage":"design","idsSkill":[]}`).StatusCode)
+	s.Nil(s.stage(s.getStagePlan(run.IdRun), "design").Effort)
+}
+
+func (s *RunStagePlanSuite) TestPatchRejectsAnUnknownEffort() {
+	s.reportModels()
+	run := s.createRun("patch-effort-reject")
+
+	for _, effort := range []string{"xhigh", "auto", "HIGH"} {
+		body := fmt.Sprintf(`{"stage":"design","effort":%q}`, effort)
+		s.Equal(http.StatusBadRequest, s.patchStagePlanEntry(run.IdRun, body).StatusCode, body)
+	}
+	s.Nil(s.stage(s.getStagePlan(run.IdRun), "design").Effort)
+}
+
+func (s *RunStagePlanSuite) TestStagePlanListsTheEffortDefaultsAndModelsWithoutThinking() {
+	ctx := context.Background()
+	gatewayRepo := injector.GetAgentGatewayRepository()
+	s.Require().NoError(gatewayRepo.SetModels(ctx, s.AgentUserID, model.GatewayRecoveredReq{
+		Models:       []string{"openai/gpt-5", "openai/gpt-4o", "ollama/llama3.3"},
+		ModelDefault: "openai/gpt-5",
+	}))
+	s.Require().NoError(gatewayRepo.SetModelThinking(ctx, s.AgentUserID, map[string]bool{"ollama/llama3.3": false}))
+	defer func() {
+		s.Require().NoError(gatewayRepo.SetModelThinking(ctx, s.AgentUserID, map[string]bool{"ollama/llama3.3": true}))
+	}()
+	run := s.createRun("effort-defaults")
+
+	payload := s.getStagePlan(run.IdRun)
+
+	s.Equal([]string{"openai/gpt-4o", "ollama/llama3.3"}, payload.ModelsWithoutThinking)
+	s.Equal(model.AgentEffortDefault{Source: "model"}, payload.DefaultsByStage["design"].Effort)
+	s.Equal(model.AgentEffortDefault{Source: "model"}, payload.DefaultsByStage["implementation"].Effort)
 }
 
 func (s *RunStagePlanSuite) TestAStageKeepsSavingAfterTheGatewayDropsItsModel() {

@@ -20,13 +20,13 @@ func NewAgentGatewayRepository(pool *pgxpool.Pool) *AgentGatewayRepository {
 }
 
 const agentGatewayColumns = `id_gateway, id_user_agent, gateway_url, webhook_secret,
-	models, model_default, models_reported_at, max_turns_limit, max_turns_plan, max_turns_implement, created_at`
+	models, model_default, models_reported_at, max_turns_limit, stage_defaults, models_without_thinking, created_at`
 
 func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
 	gw := &model.AgentGateway{}
 	err := row.Scan(
 		&gw.IdGateway, &gw.IdUserAgent, &gw.GatewayUrl, &gw.WebhookSecret,
-		&gw.Models, &gw.ModelDefault, &gw.ModelsReportedAt, &gw.MaxTurnsLimit, &gw.MaxTurnsPlan, &gw.MaxTurnsImplement, &gw.CreatedAt,
+		&gw.Models, &gw.ModelDefault, &gw.ModelsReportedAt, &gw.MaxTurnsLimit, &gw.StageDefaults, &gw.ModelsWithoutThinking, &gw.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent gateway: %w", err)
@@ -37,10 +37,10 @@ func scanAgentGateway(row pgx.Row) (*model.AgentGateway, error) {
 func (r *AgentGatewayRepository) Insert(ctx context.Context, idUserAgent int64, req model.CreateAgentGatewayReq, webhookSecret []byte) (*model.AgentGateway, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
-		INSERT INTO agent.gateway (id_user_agent, gateway_url, webhook_secret, max_turns_plan, max_turns_implement)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO agent.gateway (id_user_agent, gateway_url, webhook_secret, stage_defaults)
+		VALUES ($1, $2, $3, $4)
 		RETURNING `+agentGatewayColumns,
-		idUserAgent, req.GatewayUrl, webhookSecret, req.MaxTurnsPlan, req.MaxTurnsImplement,
+		idUserAgent, req.GatewayUrl, webhookSecret, req.StoredStageDefaults(),
 	)
 	return scanAgentGateway(row)
 }
@@ -81,10 +81,10 @@ func (r *AgentGatewayRepository) Update(ctx context.Context, idUserAgent int64, 
 	db := extctx.GetDb(ctx, r.pool)
 	row := db.QueryRow(ctx, `
 		UPDATE agent.gateway
-		SET gateway_url = $2, max_turns_plan = $3, max_turns_implement = $4
+		SET gateway_url = $2, stage_defaults = $3
 		WHERE id_user_agent = $1
 		RETURNING `+agentGatewayColumns,
-		idUserAgent, req.GatewayUrl, req.MaxTurnsPlan, req.MaxTurnsImplement,
+		idUserAgent, req.GatewayUrl, req.StoredStageDefaults(),
 	)
 	gw, err := scanAgentGateway(row)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -119,6 +119,32 @@ func (r *AgentGatewayRepository) SetModels(ctx context.Context, idUserAgent int6
 	)
 	if err != nil {
 		return fmt.Errorf("setting agent gateway models: %w", err)
+	}
+	return nil
+}
+
+func (r *AgentGatewayRepository) SetModelThinking(ctx context.Context, idUserAgent int64, isThinkingByModel map[string]bool) error {
+	probed := make([]string, 0, len(isThinkingByModel))
+	without := []string{}
+	for id, isThinking := range isThinkingByModel {
+		probed = append(probed, id)
+		if !isThinking {
+			without = append(without, id)
+		}
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		UPDATE agent.gateway
+		SET models_without_thinking = ARRAY(
+			SELECT name FROM unnest(models_without_thinking) AS name WHERE name <> ALL($2::text[])
+			UNION SELECT unnest($3::text[])
+			ORDER BY 1
+		)
+		WHERE id_user_agent = $1`,
+		idUserAgent, probed, without,
+	)
+	if err != nil {
+		return fmt.Errorf("setting agent gateway model thinking: %w", err)
 	}
 	return nil
 }
