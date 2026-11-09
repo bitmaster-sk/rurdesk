@@ -98,7 +98,7 @@ gateway's default picked. Pick another one for the whole run, for example a
 cheap local model for a trivial task and a strong one for an architecture change.
 
 The dialog lists the stages in the order they run. A closed stage shows a summary
-of its skills, model and turn limit; open it to change them. Each stage can
+of its skills, model, thinking effort and turn limit; open it to change them. Each stage can
 override the run's model, so the design can run on a stronger model than the
 brainstorming. A stage without its own choice runs the run's model, and a run
 without a choice runs the gateway's default.
@@ -128,15 +128,52 @@ reports completion; press **Continue** to retry it with a fresh budget. The
 limit comes from the first of these that is set:
 
 1. the stage's own limit, set on the stage in the dialog or later on the run card;
-2. the agent's limit for planning stages or for implementation, set when you
-   create the agent or later in its edit dialog in **Admin → Users**;
-3. the app settings in **Admin → Settings**, 250 for planning stages and 500 for
-   implementation by default.
+2. the agent's limit for that stage, set when you create the agent or later in
+   its edit dialog in **Admin → Users**;
+3. the app settings in **Admin → Settings**, 500 for implementation and 250 for
+   every other stage by default.
+
+Both places list every stage an agent runs: brainstorming, design,
+implementation plan and implementation of a development run, and release notes.
+An empty field on the agent shows in grey what it takes from the app settings.
 
 A weaker model often needs a higher limit to finish. The gateway can cap the
 limit with `MAX_TURNS_LIMIT`. It reports the cap to the tracker together with
 its models, and a stage never runs with more turns than the cap, whichever
 setting asked for them.
+
+### Thinking effort
+
+The thinking effort tells the model how much to think before it answers:
+**Low**, **Medium**, **High** or **Max**. More effort usually gives a better
+brainstorm, design and plan, but costs more tokens and time. Implementation
+mostly follows the approved plan, so it often does well with less.
+
+The effort comes from the first of these that is set:
+
+1. the stage's own effort, picked on the stage in the dialog or later on the
+   run card;
+2. the effort for the whole run, picked under **Thinking effort for all stages**
+   when you assign the agent;
+3. the agent's effort for that stage, set when you create the agent or later in
+   its edit dialog in **Admin → Users**;
+4. the app settings for that stage in **Admin → Settings**.
+
+Nothing is set out of the box, so a stage runs with the model's own default
+until you pick an effort somewhere. Under the levels the stage says what it gets
+when you pick none, for example *Default: High (from agent Kimi)* or
+*Default: from the model*. For the whole run, hover the **?** next to
+**Thinking effort for all stages** to see what each stage of the run gets.
+Stages with the same default share one line. The inherited level has an outline. Click a level to
+override it, and click it again or **Use default** to go back.
+
+Not every model thinks. Rurdesk ships a list of models known to have no
+thinking, taken from the [models.dev](https://models.dev) catalog, and a gateway
+that runs local Ollama models reports which of them do not think. For those
+models the effort choice is hidden. A model on neither list is offered the
+choice. When an effort set for the run or the agent reaches a model without
+thinking, the stage runs without one and its card shows no effort. The effort of
+the whole run is shown next to its model in the run block.
 
 ### Taking the task away from the agent
 
@@ -147,7 +184,7 @@ The run no longer counts in the agent's queue.
 
 To continue, press **Assign back** on the card, pick the agent in the assignee
 field, or assign it through its dialog. The dialog opens with the paused run's
-own skills, workflow, models and turn limits, and applies them to the stages
+own skills, workflow, models, thinking efforts and turn limits, and applies them to the stages
 that have not started yet. If the workflow switch is already
 locked, the dialog says so and nothing changes. Assigning a different agent
 hands the run over to it.
@@ -180,7 +217,7 @@ duration, tool calls and cost in USD, plus a breakdown of the token use into
 input, output, cache read and cache write. Below it, every stage has its own
 card. The header of the card shows the stage's status, when it finished and
 how long it took. Open a stage that ran to see its attempts, tool calls,
-tokens and cost, the model, skills and turn limit it ran with, and which
+tokens and cost, the model, skills, thinking effort and turn limit it ran with, and which
 agent executed it after a hand-off. The
 stage waiting for your review and the next stage to start are open from the
 start. A skipped stage is struck through and has nothing to open.
@@ -289,7 +326,7 @@ had and the row says the rest was dropped.
 
 Both settings apply to the next batch of thinking; no restart is needed.
 
-![Admin application settings, with the thinking retention toggle and the per-stage KB limit](../../site/assets/img/admin-settings.png)
+![Admin application settings, with the thinking retention toggle, the per-stage KB limit and the agent defaults per stage](../../site/assets/img/admin-settings.png)
 
 > Thinking text can quote source code and tool output, exactly like a design or
 > plan comment. It is visible to every member of the project, so treat it with

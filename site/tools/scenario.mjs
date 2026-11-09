@@ -2586,11 +2586,16 @@ const STEPS = [
         id: "admin-settings",
         type: "screenshot",
         file: "admin-settings.png",
-        title: "Admin → settings (thinking, KB limit, per-user API keys)",
+        title: "Admin → settings (thinking, KB limit, agent defaults per stage)",
         run: async ({ page }) => {
-            await L.gotoApp(page, `${L.BASE}/admin/settings`);
-            await L.settle(page);
-            await L.shootPage(page, "admin-settings.png");
+            await page.setViewportSize({ width: L.VW, height: 1500 });
+            try {
+                await L.gotoApp(page, `${L.BASE}/admin/settings`);
+                await L.settle(page);
+                await L.shootPage(page, "admin-settings.png");
+            } finally {
+                await page.setViewportSize({ width: L.VW, height: L.VH });
+            }
         },
     },
     {
