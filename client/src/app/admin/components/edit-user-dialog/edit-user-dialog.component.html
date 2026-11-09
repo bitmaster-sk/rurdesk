@@ -2,7 +2,7 @@
     [visible]="visible()"
     (visibleChange)="visible.set($event)"
     [header]="'ADMIN.EDIT_USER' | translate"
-    width="32rem"
+    width="36rem"
 >
     <form [formGroup]="form" class="flex flex-col gap-2" (ngSubmit)="onSubmit()">
         <div class="flex flex-col gap-1">
@@ -60,7 +60,10 @@
                     [placeholder]="'AGENT_API_KEY.GATEWAY_URL_PLACEHOLDER' | translate"
                 />
             </div>
-            <app-agent-turn-limits-fields idPrefix="eu" />
+            <app-agent-run-defaults-fields
+                idPrefix="eu"
+                [inherited]="settingsStore.agentStageDefaults()"
+            />
             <div class="flex flex-col gap-1" data-testid="eu-gateway-models">
                 <span>{{ 'AGENT_API_KEY.MODELS' | translate }}</span>
                 @if (gatewayModels().length > 0) {

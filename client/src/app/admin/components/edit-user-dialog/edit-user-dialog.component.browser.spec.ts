@@ -1,3 +1,6 @@
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -23,8 +26,10 @@ const GATEWAY: AgentGateway = {
     modelDefault: 'openai/kimi',
     modelsReportedAt: '2026-10-17T00:00:00Z',
     maxTurnsLimit: null,
-    maxTurnsPlan: 120,
-    maxTurnsImplement: null
+    stageDefaults: {
+        [AgentStage.Brainstorming]: { maxTurns: 120 },
+        [AgentStage.Design]: { effort: AgentEffort.High }
+    }
 };
 
 describe('EditUserDialogComponent — gateway turn limits (browser)', () => {
@@ -42,7 +47,8 @@ describe('EditUserDialogComponent — gateway turn limits (browser)', () => {
                     provide: AgentGatewayApi,
                     useValue: { load$: () => of(GATEWAY), update$: updateGateway }
                 },
-                { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
+                { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+                { provide: SettingsStore, useValue: { agentStageDefaults: () => ({}) } }
             ]
         })
             .overrideComponent(EditUserDialogComponent, { set: { template: '' } })
@@ -65,50 +71,64 @@ describe('EditUserDialogComponent — gateway turn limits (browser)', () => {
         return fixture.componentInstance as unknown as EditUserDialogInternals;
     }
 
-    it('loads the agent turn limits into the form', () => {
+    function stage(dialog: EditUserDialogInternals, name: AgentStage) {
+        return dialog.form.controls.stageDefaults.controls[name].controls;
+    }
+
+    it('loads the stage defaults of the agent into the form', () => {
         const dialog = open();
 
-        expect(dialog.form.controls.maxTurnsPlan.value).toBe(120);
-        expect(dialog.form.controls.maxTurnsImplement.value).toBeNull();
+        expect(stage(dialog, AgentStage.Brainstorming).maxTurns.value).toBe(120);
+        expect(stage(dialog, AgentStage.Design).effort.value).toBe(AgentEffort.High);
+        expect(stage(dialog, AgentStage.ReleaseNotes).maxTurns.value).toBeNull();
     });
 
-    it('saves a changed turn limit together with the unchanged URL', () => {
+    it('saves a changed stage together with the unchanged ones and URL', () => {
         const dialog = open();
 
-        dialog.form.controls.maxTurnsImplement.setValue(700);
+        stage(dialog, AgentStage.ReleaseNotes).maxTurns.setValue(60);
+        stage(dialog, AgentStage.Implementation).effort.setValue(AgentEffort.Low);
         dialog.onSubmit();
 
         expect(updateGateway).toHaveBeenCalledWith(8, {
             gatewayUrl: 'http://gw:9090',
-            maxTurnsPlan: 120,
-            maxTurnsImplement: 700
+            stageDefaults: {
+                [AgentStage.Brainstorming]: { maxTurns: 120, effort: null },
+                [AgentStage.Design]: { maxTurns: null, effort: AgentEffort.High },
+                [AgentStage.Implementation]: { maxTurns: null, effort: AgentEffort.Low },
+                [AgentStage.ReleaseNotes]: { maxTurns: 60, effort: null }
+            }
         });
     });
 
-    it('a cleared limit is sent as null so the app setting applies again', () => {
+    it('a cleared stage is left out so the app settings apply again', () => {
         const dialog = open();
 
-        dialog.form.controls.maxTurnsPlan.setValue(null);
+        stage(dialog, AgentStage.Brainstorming).maxTurns.setValue(null);
         dialog.onSubmit();
 
         expect(updateGateway).toHaveBeenCalledWith(8, {
             gatewayUrl: 'http://gw:9090',
-            maxTurnsPlan: null,
-            maxTurnsImplement: null
+            stageDefaults: { [AgentStage.Design]: { maxTurns: null, effort: AgentEffort.High } }
         });
     });
 
-    it('a changed URL keeps the turn limits', () => {
+    it('a changed URL keeps the stage defaults', () => {
         const dialog = open();
 
         dialog.form.controls.gatewayUrl.setValue('http://other:9090');
         dialog.onSubmit();
 
-        expect(updateGateway).toHaveBeenCalledWith(8, {
-            gatewayUrl: 'http://other:9090',
-            maxTurnsPlan: 120,
-            maxTurnsImplement: null
-        });
+        expect(updateGateway).toHaveBeenCalledWith(
+            8,
+            expect.objectContaining({
+                gatewayUrl: 'http://other:9090',
+                stageDefaults: {
+                    [AgentStage.Brainstorming]: { maxTurns: 120, effort: null },
+                    [AgentStage.Design]: { maxTurns: null, effort: AgentEffort.High }
+                }
+            })
+        );
     });
 
     it('leaves the gateway alone when nothing about it changed', () => {
@@ -133,7 +153,8 @@ describe('EditUserDialogComponent — avatar initials (browser)', () => {
                     provide: AgentGatewayApi,
                     useValue: { load$: () => of(null), update$: () => of({}) }
                 },
-                { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
+                { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+                { provide: SettingsStore, useValue: { agentStageDefaults: () => ({}) } }
             ]
         })
             .overrideComponent(EditUserDialogComponent, { set: { template: '' } })

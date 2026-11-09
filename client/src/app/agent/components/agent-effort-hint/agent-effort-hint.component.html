@@ -1,0 +1,11 @@
+@let source = inherited();
+<span class="ui-color-text-muted text-xs" data-testid="effort-hint">
+    {{
+        hintKey()
+            | translate
+                : {
+                      effort: source.effort ? (labels[source.effort] | translate) : '',
+                      name: source.agentName
+                  }
+    }}
+</span>

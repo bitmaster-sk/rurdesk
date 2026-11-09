@@ -1,0 +1,5 @@
+<span class="effort-meter" aria-hidden="true">
+    @for (bar of bars; track bar) {
+        <i class="effort-meter__bar" [class.effort-meter__bar--on]="bar <= level()"></i>
+    }
+</span>

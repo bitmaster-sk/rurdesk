@@ -116,6 +116,7 @@
 
                 <app-agent-run-summary
                     [model]="runModel()"
+                    [effort]="runEffort()"
                     [startedAt]="run.startedAt"
                     [stats]="stats()"
                     [isShortWorkflow]="isShortWorkflow()"
@@ -146,6 +147,7 @@
                             (skillToggled)="onToggleSkill($event)"
                             (modelPicked)="onPickStageModel($event)"
                             (maxTurnsChanged)="onStageMaxTurns($event)"
+                            (effortPicked)="onPickStageEffort($event)"
                         />
                     }
                 </div>

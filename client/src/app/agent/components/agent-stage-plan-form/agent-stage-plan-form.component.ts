@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Skill } from 'src/app/shared/model/skill.model';
+import { AgentEffort } from '../../model/agent-effort.enum';
 import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.component';
 import {
     AgentStagePlanEditorRow,
+    AgentStagePlanEffortPick,
     AgentStagePlanMaxTurnsChange,
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
@@ -28,10 +30,12 @@ export class AgentStagePlanFormComponent {
     public readonly skillToggled = output<AgentStagePlanSkillToggle>();
     public readonly modelPicked = output<AgentStagePlanModelPick>();
     public readonly maxTurnsChanged = output<AgentStagePlanMaxTurnsChange>();
+    public readonly effortPicked = output<AgentStagePlanEffortPick>();
 
     protected readonly controlSize = computed(() =>
         this.size() === 'small' ? 'small' : undefined
     );
+    protected readonly gapClass = computed(() => (this.size() === 'small' ? 'gap-2' : 'gap-4'));
     protected readonly labelClass = computed(() =>
         this.size() === 'small' ? 'ui-color-text-muted text-xs' : 'ui-color-text-muted text-sm'
     );
@@ -48,6 +52,10 @@ export class AgentStagePlanFormComponent {
         if (model !== this.row().model) {
             this.modelPicked.emit({ stage: this.row().stage, model });
         }
+    }
+
+    protected onPickEffort(effort: AgentEffort | null): void {
+        this.effortPicked.emit({ stage: this.row().stage, effort });
     }
 
     protected onMaxTurns(event: Event): void {

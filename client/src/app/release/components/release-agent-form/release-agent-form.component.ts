@@ -16,6 +16,8 @@ import { AgentRunApi } from 'src/app/agent/api/agent-run.api.service';
 import { AgentStagePlanEditorRow } from 'src/app/agent/entity/agent-stage-plan-editor.entity';
 import { AgentOverview } from 'src/app/agent/model/agent-overview.model';
 import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
+import { AgentEffortConverter } from 'src/app/agent/converter/agent-effort.converter';
 import { User } from 'src/app/auth/model/user.model';
 import { ProjectSkillApi } from 'src/app/project/api/project-skill.api.service';
 import { SkillApi } from 'src/app/shared/api/skill.api.service';
@@ -52,17 +54,36 @@ export class ReleaseAgentFormComponent implements OnInit {
     private readonly idsSkill = signal<number[]>([]);
     private readonly stageModel = signal<string | null>(null);
     private readonly stageTurns = signal<number | null>(null);
+    private readonly stageEffort = signal<AgentEffort | null>(null);
 
     protected readonly overview = computed(
         () => this.overviews().find(item => item.idUserAgent === this.idUserAgentValue()) ?? null
     );
     protected readonly models = computed(() => this.overview()?.models ?? []);
+    private readonly isThinkingSupported = computed(() =>
+        AgentEffortConverter.isThinkingSupported(
+            this.stageModel() ?? this.overview()?.modelDefault ?? null,
+            this.overview()?.modelsWithoutThinking ?? []
+        )
+    );
+    private readonly agentName = computed(
+        () => this.agents().find(agent => agent.idUser === this.idUserAgentValue())?.name ?? null
+    );
     protected readonly row = computed<AgentStagePlanEditorRow>(() => ({
         stage: AgentStage.ReleaseNotes,
         idsSkill: this.idsSkill(),
         model: this.stageModel(),
         maxTurns: this.stageTurns(),
-        defaultMaxTurns: this.overview()?.maxTurnsPlan ?? null,
+        defaultMaxTurns:
+            this.overview()?.defaultsByStage[AgentStage.ReleaseNotes]?.maxTurns ?? null,
+        effort: this.stageEffort(),
+        inheritedEffort: AgentEffortConverter.toInherited(
+            AgentStage.ReleaseNotes,
+            null,
+            this.overview()?.defaultsByStage ?? null,
+            this.agentName()
+        ),
+        isThinkingSupported: this.isThinkingSupported(),
         lock: null
     }));
 
@@ -98,6 +119,13 @@ export class ReleaseAgentFormComponent implements OnInit {
 
     protected onModelPicked(model: string | null): void {
         this.stageModel.set(model);
+        if (!this.isThinkingSupported()) {
+            this.stageEffort.set(null);
+        }
+    }
+
+    protected onEffortPicked(effort: AgentEffort | null): void {
+        this.stageEffort.set(effort);
     }
 
     protected onMaxTurns(maxTurns: number | null): void {
@@ -112,12 +140,14 @@ export class ReleaseAgentFormComponent implements OnInit {
         const stage = AgentStage.ReleaseNotes;
         const model = this.stageModel();
         const maxTurns = this.stageTurns();
+        const effort = this.isThinkingSupported() ? this.stageEffort() : null;
         this.started.emit({
             idUserAgent,
             idsSkillByStage: { [stage]: this.idsSkill() },
             isShortWorkflow: false,
             ...(model ? { modelByStage: { [stage]: model } } : {}),
-            ...(maxTurns ? { maxTurnsByStage: { [stage]: maxTurns } } : {})
+            ...(maxTurns ? { maxTurnsByStage: { [stage]: maxTurns } } : {}),
+            ...(effort ? { effortByStage: { [stage]: effort } } : {})
         });
     }
 

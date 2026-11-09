@@ -32,7 +32,8 @@ import { AdminUsersComponent } from './pages/admin-users/admin-users.component';
 import { AdminTeamsComponent } from './components/admin-teams/admin-teams.component';
 import { TeamDialogComponent } from './components/team-dialog/team-dialog.component';
 import { CreateUserDialogComponent } from './components/create-user-dialog/create-user-dialog.component';
-import { AgentTurnLimitsFieldsComponent } from './components/agent-turn-limits-fields/agent-turn-limits-fields.component';
+import { AgentRunDefaultsFieldsComponent } from './components/agent-run-defaults-fields/agent-run-defaults-fields.component';
+import { AgentModule } from '../agent/agent.module';
 import { EditUserDialogComponent } from './components/edit-user-dialog/edit-user-dialog.component';
 import { AgentKeysDialogComponent } from './components/agent-keys-dialog/agent-keys-dialog.component';
 import { AdminSettingsComponent } from './pages/admin-settings/admin-settings.component';
@@ -48,7 +49,7 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
         CreateUserDialogComponent,
         EditUserDialogComponent,
         AgentKeysDialogComponent,
-        AgentTurnLimitsFieldsComponent
+        AgentRunDefaultsFieldsComponent
     ],
     imports: [
         CommonModule,
@@ -57,6 +58,7 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
         TranslateModule,
         AdminRoutingModule,
         SharedModule,
+        AgentModule,
         UiModule,
         MarkdownModule.forChild(),
         TablerIconComponent

@@ -26,7 +26,8 @@ import {
     IconChevronDown,
     IconLock,
     IconAdjustmentsHorizontal,
-    IconBook2
+    IconBook2,
+    IconHelpCircle
 } from '@tabler/icons-angular';
 import { AgentRunCardComponent } from './components/agent-run-card/agent-run-card.component';
 import { PlanActionsComponent } from './components/plan-actions/plan-actions.component';
@@ -36,6 +37,10 @@ import { AgentRunSummaryComponent } from './components/agent-run-summary/agent-r
 import { AgentStageCardComponent } from './components/agent-stage-card/agent-stage-card.component';
 import { AgentStagePlanEditorComponent } from './components/agent-stage-plan-editor/agent-stage-plan-editor.component';
 import { AgentStagePlanFormComponent } from './components/agent-stage-plan-form/agent-stage-plan-form.component';
+import { AgentEffortMeterComponent } from './components/agent-effort-meter/agent-effort-meter.component';
+import { AgentEffortHintComponent } from './components/agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortPickerComponent } from './components/agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortLabelComponent } from './components/agent-effort-label/agent-effort-label.component';
 
 @NgModule({
     declarations: [
@@ -46,7 +51,11 @@ import { AgentStagePlanFormComponent } from './components/agent-stage-plan-form/
         AgentRunSummaryComponent,
         AgentStageCardComponent,
         AgentStagePlanEditorComponent,
-        AgentStagePlanFormComponent
+        AgentStagePlanFormComponent,
+        AgentEffortMeterComponent,
+        AgentEffortHintComponent,
+        AgentEffortPickerComponent,
+        AgentEffortLabelComponent
     ],
     imports: [
         CommonModule,
@@ -78,7 +87,8 @@ import { AgentStagePlanFormComponent } from './components/agent-stage-plan-form/
             IconChevronDown,
             IconLock,
             IconAdjustmentsHorizontal,
-            IconBook2
+            IconBook2,
+            IconHelpCircle
         })
     ],
     exports: [
@@ -86,7 +96,11 @@ import { AgentStagePlanFormComponent } from './components/agent-stage-plan-form/
         PlanActionsComponent,
         RunRecoveryBannerComponent,
         AgentStagePlanEditorComponent,
-        AgentStagePlanFormComponent
+        AgentStagePlanFormComponent,
+        AgentEffortMeterComponent,
+        AgentEffortHintComponent,
+        AgentEffortPickerComponent,
+        AgentEffortLabelComponent
     ]
 })
 export class AgentModule {}

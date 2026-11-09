@@ -6,8 +6,10 @@ import { UiSaveState } from '../../../ui/components/save-status/save-status-chip
 import { SettingsApi } from 'src/app/core/settings/settings.api.service';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { VersionApi } from '../../api/version.api.service';
-import { MAX_AGENT_TURNS } from '../../constants/max-agent-turns';
 import { BuildInfo } from '../../model/build-info.model';
+import omit from 'lodash-es/omit';
+import { AppSettings } from 'src/app/core/settings/model/app-settings.model';
+import { AgentStageDefaultsFormBuilder } from '../../util/agent-stage-defaults-form';
 
 @Component({
     selector: 'app-admin-settings',
@@ -58,14 +60,7 @@ export class AdminSettingsComponent {
                 25,
                 [Validators.required, Validators.min(1), Validators.max(100)]
             ],
-            agentMaxTurnsPlan: [
-                250,
-                [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
-            ],
-            agentMaxTurnsImplement: [
-                500,
-                [Validators.required, Validators.min(1), Validators.max(MAX_AGENT_TURNS)]
-            ],
+            agentStageDefaults: AgentStageDefaultsFormBuilder.build(true),
             wikiAlwaysTokenLimit: [
                 12000,
                 [Validators.required, Validators.min(0), Validators.max(60000)]
@@ -86,7 +81,7 @@ export class AdminSettingsComponent {
             .subscribe(info => this.buildInfo.set(info));
 
         this.settingsApi.load$().subscribe(settings => {
-            this.form.patchValue(settings, { emitEvent: false });
+            this.patchForm(settings);
             this.lastSaved = JSON.stringify(this.form.getRawValue());
         });
 
@@ -102,19 +97,36 @@ export class AdminSettingsComponent {
             .subscribe(() => this.onSave());
     }
 
+    private patchForm(settings: AppSettings): void {
+        this.form.patchValue(omit(settings, 'agentStageDefaults'), { emitEvent: false });
+        AgentStageDefaultsFormBuilder.patch(
+            this.form.controls.agentStageDefaults,
+            settings.agentStageDefaults,
+            { emitEvent: false }
+        );
+    }
+
     protected onSave(): void {
         if (this.form.invalid) {
             return;
         }
         this.saveStatus.set(UiSaveState.Saving);
-        this.settingsApi.update$(this.form.getRawValue()).subscribe({
-            next: settings => {
-                this.settingsStore.set(settings);
-                this.form.patchValue(settings, { emitEvent: false });
-                this.lastSaved = JSON.stringify(this.form.getRawValue());
-                this.saveStatus.set(UiSaveState.Saved);
-            },
-            error: () => this.saveStatus.set(UiSaveState.Error)
-        });
+        const value = this.form.getRawValue();
+        this.settingsApi
+            .update$({
+                ...value,
+                agentStageDefaults: AgentStageDefaultsFormBuilder.toSettingsChange(
+                    this.form.controls.agentStageDefaults
+                )
+            })
+            .subscribe({
+                next: settings => {
+                    this.settingsStore.set(settings);
+                    this.patchForm(settings);
+                    this.lastSaved = JSON.stringify(this.form.getRawValue());
+                    this.saveStatus.set(UiSaveState.Saved);
+                },
+                error: () => this.saveStatus.set(UiSaveState.Error)
+            });
     }
 }

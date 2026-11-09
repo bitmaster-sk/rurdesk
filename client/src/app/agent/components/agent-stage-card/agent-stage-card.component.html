@@ -36,6 +36,13 @@
                     {{ tags.model }}
                 </span>
             }
+            @if (tags.effort; as effort) {
+                <app-agent-effort-label
+                    class="stage-card__tag stage-card__tag--override"
+                    [attr.data-testid]="'stage-card-effort-' + card.stage"
+                    [effort]="effort"
+                />
+            }
             @if (tags.maxTurns) {
                 <span
                     class="stage-card__tag stage-card__tag--override"
@@ -115,7 +122,7 @@
                             }
                         </div>
                     }
-                    @if (card.model || card.skillNames.length > 0 || card.maxTurns) {
+                    @if (card.model || card.skillNames.length > 0 || card.maxTurns || card.effort) {
                         <div
                             class="stage-card__block"
                             [attr.data-testid]="'stage-card-ran-with-' + card.stage"
@@ -144,6 +151,15 @@
                                         </span>
                                     }
                                 </dd>
+                                @if (card.effort; as effort) {
+                                    <dt>{{ 'AGENT_EFFORT.RAN_WITH' | translate }}</dt>
+                                    <dd
+                                        class="flex items-center gap-1"
+                                        data-testid="stage-card-ran-effort"
+                                    >
+                                        <app-agent-effort-label [effort]="effort" />
+                                    </dd>
+                                }
                                 @if (card.maxTurns) {
                                     <dt>{{ 'AGENT_STAGE_PLAN_EDITOR.MAX_TURNS' | translate }}</dt>
                                     <dd data-testid="stage-card-ran-turns">{{ card.maxTurns }}</dd>
@@ -179,6 +195,7 @@
                             (skillToggled)="skillToggled.emit($event)"
                             (modelPicked)="modelPicked.emit($event)"
                             (maxTurnsChanged)="maxTurnsChanged.emit($event)"
+                            (effortPicked)="effortPicked.emit($event)"
                         />
                     }
                 }

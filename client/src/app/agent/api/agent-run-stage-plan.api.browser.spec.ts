@@ -33,6 +33,7 @@ describe('AgentRunApi stage plan endpoints', () => {
             idsSkill: [1, 2],
             model: 'openai/b',
             maxTurns: 90,
+            effort: null,
             skip: false,
             dispatched: false
         }).subscribe();
@@ -54,6 +55,7 @@ describe('AgentRunApi stage plan endpoints', () => {
             idsSkill: [],
             model: null,
             maxTurns: null,
+            effort: null,
             skip: false,
             dispatched: false
         }).subscribe();

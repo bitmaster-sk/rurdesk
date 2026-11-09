@@ -1,0 +1,46 @@
+<div class="flex flex-col gap-1">
+    <div class="flex items-center justify-between gap-2">
+        <span class="inline-flex items-center gap-1">
+            <span [id]="labelId" [class]="labelClass()">{{ label() | translate }}</span>
+            @if (hint(); as hint) {
+                <span
+                    class="effort-picker__help"
+                    tabindex="0"
+                    role="img"
+                    [attr.aria-label]="hint"
+                    [attr.data-testid]="testId() + '-help'"
+                    [uiTooltip]="hint"
+                >
+                    <tabler-icon icon="help-circle" [size]="14" />
+                </span>
+            }
+        </span>
+        @if (effort()) {
+            <button
+                type="button"
+                class="effort-picker__reset"
+                [attr.data-testid]="testId() + '-reset'"
+                (click)="onPick(null)"
+            >
+                {{ 'AGENT_EFFORT.USE_DEFAULT' | translate }}
+            </button>
+        }
+    </div>
+    <div class="effort-picker" role="group" [attr.aria-labelledby]="labelId">
+        @for (level of levels; track level) {
+            <button
+                type="button"
+                class="effort-picker__level"
+                [class.effort-picker__level--inherited]="level === inheritedEffort()"
+                [attr.aria-pressed]="level === effort()"
+                [attr.data-testid]="testId() + '-' + level"
+                (click)="onPick(level)"
+            >
+                <app-agent-effort-label [effort]="level" />
+            </button>
+        }
+    </div>
+    @if (inherited(); as inherited) {
+        <app-agent-effort-hint [inherited]="inherited" />
+    }
+</div>

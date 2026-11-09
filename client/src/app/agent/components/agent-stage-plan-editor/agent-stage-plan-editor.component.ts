@@ -4,6 +4,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 import {
     AgentStagePlanEditorLock,
     AgentStagePlanEditorRow,
+    AgentStagePlanEffortPick,
     AgentStagePlanMaxTurnsChange,
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
@@ -27,6 +28,7 @@ export class AgentStagePlanEditorComponent {
     public readonly skillToggled = output<AgentStagePlanSkillToggle>();
     public readonly modelPicked = output<AgentStagePlanModelPick>();
     public readonly maxTurnsChanged = output<AgentStagePlanMaxTurnsChange>();
+    public readonly effortPicked = output<AgentStagePlanEffortPick>();
 
     protected readonly AgentStagePlanEditorLock = AgentStagePlanEditorLock;
     private readonly openStages = signal<Set<AgentStage>>(new Set());

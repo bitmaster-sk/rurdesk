@@ -74,6 +74,7 @@ export abstract class AgentStageCardConverter {
             model: progress.model ?? null,
             modelFallbackFrom: progress.modelFallbackFrom ?? null,
             maxTurns: progress.maxTurns ?? null,
+            effort: progress.effort ?? null,
             skillNames: (entry?.idsSkill ?? [])
                 .map(idSkill => source.skillNames.get(idSkill))
                 .filter((name): name is string => name !== undefined),
@@ -106,10 +107,12 @@ export abstract class AgentStageCardConverter {
         const isModelOverride = !!entry.model && entry.model !== source.runModel;
         const isTurnsOverride =
             entry.maxTurns !== null && entry.maxTurns !== source.defaultMaxTurns(entry.name);
+        const isEffortOverride = !!entry.effort && entry.effort !== source.runEffort;
         return {
             skillsCount: entry.idsSkill.length,
             model: isModelOverride ? entry.model : null,
-            maxTurns: isTurnsOverride ? entry.maxTurns : null
+            maxTurns: isTurnsOverride ? entry.maxTurns : null,
+            effort: isEffortOverride ? entry.effort : null
         };
     }
 

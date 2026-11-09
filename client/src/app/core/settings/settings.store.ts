@@ -1,4 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { AGENT_DEFAULT_STAGES } from 'src/app/agent/constants/agent-stage-defaults.constants';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { AgentStageOptionsByStage } from 'src/app/agent/model/agent-stage-options.model';
 import { AppSettings } from './model/app-settings.model';
 import { SettingsApi } from './settings.api.service';
 
@@ -12,8 +15,12 @@ const FALLBACK: AppSettings = {
     isAgentThinkingPersisted: true,
     agentThinkingMaxKb: 1024,
     attachmentMaxSizeMb: 25,
-    agentMaxTurnsPlan: 250,
-    agentMaxTurnsImplement: 500,
+    agentStageDefaults: Object.fromEntries(
+        AGENT_DEFAULT_STAGES.map(stage => [
+            stage,
+            { maxTurns: stage === AgentStage.Implementation ? 500 : 250, effort: null }
+        ])
+    ),
     wikiAlwaysTokenLimit: 12000,
     plantUmlServerUrl: ''
 };
@@ -30,6 +37,8 @@ export class SettingsStore {
     public readonly ganttBacklogPageSize = (): number => this.settings().ganttBacklogPageSize;
     public readonly userApiKeyLimit = (): number => this.settings().userApiKeyLimit;
     public readonly isPlantUmlEnabled = (): boolean => this.settings().plantUmlServerUrl !== '';
+    public readonly agentStageDefaults = (): AgentStageOptionsByStage =>
+        this.settings().agentStageDefaults;
 
     public load(): void {
         this.api.load$().subscribe(settings => this.settings.set(settings));

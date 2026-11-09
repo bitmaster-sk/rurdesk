@@ -1,5 +1,5 @@
 <div class="flex flex-col gap-4" data-testid="release-agent-form">
-    <div class="ui-field m-0">
+    <div class="ui-field m-0!">
         <label for="release-agent">
             {{ 'RELEASE.AGENT.AGENT' | translate }}
         </label>
@@ -51,6 +51,7 @@
         (skillToggled)="onSkillToggled($event.idSkill)"
         (modelPicked)="onModelPicked($event.model)"
         (maxTurnsChanged)="onMaxTurns($event.maxTurns)"
+        (effortPicked)="onEffortPicked($event.effort)"
     />
 
     @if (hasNotes()) {

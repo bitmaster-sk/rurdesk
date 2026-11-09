@@ -39,6 +39,15 @@
                     </ui-select>
                 </div>
             }
+            @if (isRunThinkingSupported()) {
+                <app-agent-effort-picker
+                    label="AGENT_EFFORT.RUN_LABEL"
+                    testId="agent-dock-run-effort"
+                    [effort]="runEffort()"
+                    [hint]="runEffortHint()"
+                    (effortPicked)="onPickRunEffort($event)"
+                />
+            }
             <label class="flex items-start gap-2">
                 <input
                     type="checkbox"
@@ -67,6 +76,7 @@
                 (skillToggled)="onToggle($event.idSkill, $event.stage)"
                 (modelPicked)="onPickStageModel($event.stage, $event.model)"
                 (maxTurnsChanged)="onStageTurns($event.stage, $event.maxTurns)"
+                (effortPicked)="onPickStageEffort($event.stage, $event.effort)"
             />
         }
 

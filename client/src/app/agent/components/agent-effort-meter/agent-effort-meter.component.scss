@@ -1,0 +1,38 @@
+:host {
+    display: inline-flex;
+}
+
+.effort-meter {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 1.5px;
+    height: 10px;
+}
+
+.effort-meter__bar {
+    display: block;
+    width: 2.5px;
+    border-radius: 1px;
+    background: currentColor;
+    opacity: 0.25;
+
+    &:nth-child(1) {
+        height: 4px;
+    }
+
+    &:nth-child(2) {
+        height: 6px;
+    }
+
+    &:nth-child(3) {
+        height: 8px;
+    }
+
+    &:nth-child(4) {
+        height: 10px;
+    }
+}
+
+.effort-meter__bar--on {
+    opacity: 1;
+}

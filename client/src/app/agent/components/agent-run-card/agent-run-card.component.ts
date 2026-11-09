@@ -22,6 +22,7 @@ import {
 import {
     AgentStagePlanEditorLock,
     AgentStagePlanEditorRow,
+    AgentStagePlanEffortPick,
     AgentStagePlanMaxTurnsChange,
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
@@ -51,6 +52,7 @@ import {
 } from '../../entity/agent-stage-card.entity';
 import { RunWikiStage } from '../../entity/run-wiki-context.entity';
 import { AgentRunStatsStore } from '../../store/agent-run-stats.store';
+import { AgentEffortConverter } from '../../converter/agent-effort.converter';
 
 @Component({
     selector: 'app-agent-run-card',
@@ -172,15 +174,31 @@ export class AgentRunCardComponent {
         return usedModels.size > 0 ? [...usedModels].join(', ') : null;
     });
 
+    protected readonly runEffort = computed(() => this.run()?.stagePlan?.effort ?? null);
+
+    private readonly agentName = computed(() => {
+        const idUserAgent = this.run()?.idUserAgent;
+        return idUserAgent === undefined ? null : (this.usersMap().get(idUserAgent)?.name ?? null);
+    });
+
     protected readonly stagePlanRows = computed(() => {
         const rows = new Map<string, AgentStagePlanEditorRow>();
-        (this.runStagePlan()?.stages ?? []).forEach(entry =>
+        const stagePlan = this.runStagePlan();
+        (stagePlan?.stages ?? []).forEach(entry =>
             rows.set(entry.name, {
                 stage: entry.name,
                 idsSkill: entry.idsSkill,
                 model: entry.model,
                 maxTurns: entry.maxTurns,
                 defaultMaxTurns: this.defaultMaxTurns(entry.name),
+                effort: entry.effort,
+                inheritedEffort: AgentEffortConverter.toInherited(
+                    entry.name,
+                    this.runEffort(),
+                    stagePlan?.defaultsByStage ?? null,
+                    this.agentName()
+                ),
+                isThinkingSupported: this.isThinkingSupported(entry.model),
                 lock: entry.skip ? AgentStagePlanEditorLock.Skipped : null
             })
         );
@@ -196,6 +214,7 @@ export class AgentRunCardComponent {
             stages: run.stages ?? [],
             plan: this.cardPlan(run),
             runModel: this.runModel(),
+            runEffort: this.runEffort(),
             defaultMaxTurns: stage => this.defaultMaxTurns(stage),
             skillNames: new Map(this.skillCatalog().map(skill => [skill.idSkill, skill.name])),
             agentNames: new Map(
@@ -326,7 +345,15 @@ export class AgentRunCardComponent {
     protected onPickStageModel(change: AgentStagePlanModelPick): void {
         const entry = this.stagePlanEntry(change.stage);
         if (entry) {
-            this.saveStagePlanEntry({ ...entry, model: change.model });
+            const effort = this.isThinkingSupported(change.model) ? entry.effort : null;
+            this.saveStagePlanEntry({ ...entry, model: change.model, effort });
+        }
+    }
+
+    protected onPickStageEffort(change: AgentStagePlanEffortPick): void {
+        const entry = this.stagePlanEntry(change.stage);
+        if (entry) {
+            this.saveStagePlanEntry({ ...entry, effort: change.effort });
         }
     }
 
@@ -433,18 +460,23 @@ export class AgentRunCardComponent {
             idsSkill: entry.idsSkill ?? [],
             model: entry.model || null,
             maxTurns: entry.maxTurns || null,
+            effort: entry.effort ?? null,
             dispatched: false
         }));
     }
 
-    private defaultMaxTurns(stage: string): number | null {
+    private isThinkingSupported(stageModel: string | null): boolean {
         const stagePlan = this.runStagePlan();
-        if (!stagePlan) {
-            return null;
-        }
-        return stage === String(AgentStage.Implementation)
-            ? stagePlan.maxTurnsImplement
-            : stagePlan.maxTurnsPlan;
+        const model =
+            stageModel ?? (this.run()?.stagePlan?.model || stagePlan?.modelDefault || null);
+        return AgentEffortConverter.isThinkingSupported(
+            model,
+            stagePlan?.modelsWithoutThinking ?? []
+        );
+    }
+
+    private defaultMaxTurns(stage: string): number | null {
+        return this.runStagePlan()?.defaultsByStage[stage as AgentStage]?.maxTurns ?? null;
     }
 
     private setStageStatus(stage: string, status: UiSaveState): void {

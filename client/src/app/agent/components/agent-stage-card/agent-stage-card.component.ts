@@ -11,6 +11,7 @@ import { UiSaveState } from 'src/app/ui/components/save-status/save-status-chip.
 import { AgentStageCardBody, AgentStageCardView } from '../../entity/agent-stage-card.entity';
 import {
     AgentStagePlanEditorRow,
+    AgentStagePlanEffortPick,
     AgentStagePlanMaxTurnsChange,
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
@@ -37,6 +38,7 @@ export class AgentStageCardComponent {
     public readonly skillToggled = output<AgentStagePlanSkillToggle>();
     public readonly modelPicked = output<AgentStagePlanModelPick>();
     public readonly maxTurnsChanged = output<AgentStagePlanMaxTurnsChange>();
+    public readonly effortPicked = output<AgentStagePlanEffortPick>();
 
     protected readonly AgentStageCardBody = AgentStageCardBody;
 
