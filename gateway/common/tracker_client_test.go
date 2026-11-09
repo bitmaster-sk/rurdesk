@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 )
 
@@ -103,5 +104,27 @@ func TestReportRecoveredSendsTheModelCatalog(t *testing.T) {
 	}
 	if body["maxTurnsLimit"] != float64(600) {
 		t.Errorf("maxTurnsLimit = %v", body["maxTurnsLimit"])
+	}
+}
+
+func TestReportModelThinking(t *testing.T) {
+	var path string
+	var body map[string]any
+	tracker := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		path = request.URL.Path
+		_ = json.NewDecoder(request.Body).Decode(&body)
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(tracker.Close)
+	client := NewTrackerClient(&Config{TrackerAPIUrl: tracker.URL, WebhookSecret: []byte("secret")})
+
+	if err := client.ReportModelThinking(context.Background(), map[string]bool{"ollama/llama3.3": false}); err != nil {
+		t.Fatalf("ReportModelThinking: %v", err)
+	}
+	if path != "/agent/gateway/thinking" {
+		t.Errorf("path = %q", path)
+	}
+	if want := map[string]any{"ollama/llama3.3": false}; !reflect.DeepEqual(body["isThinkingByModel"], want) {
+		t.Errorf("isThinkingByModel = %v, want %v", body["isThinkingByModel"], want)
 	}
 }

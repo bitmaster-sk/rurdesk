@@ -32,6 +32,15 @@ type ClaudeCodeAdapter struct {
 	sessions *common.ProcessSessions
 }
 
+// Every model the Claude Code CLI runs thinks.
+func (a *ClaudeCodeAdapter) ModelThinking(_ context.Context, models []common.Model) (map[string]bool, []common.Model) {
+	isThinkingByModel := make(map[string]bool, len(models))
+	for _, model := range models {
+		isThinkingByModel[model.Id()] = true
+	}
+	return isThinkingByModel, nil
+}
+
 func NewClaudeCodeAdapter(cfg *common.Config) *ClaudeCodeAdapter {
 	return &ClaudeCodeAdapter{
 		cfg:      cfg,
@@ -85,6 +94,9 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		"--mcp-config", mcpConfigPath,
 		"--model", task.Model.Name,
 	}
+	if task.Effort != "" {
+		args = append(args, "--effort", task.Effort)
+	}
 
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
@@ -108,6 +120,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		Str("model", task.Model.Name).
 		Str("mcpURL", mcpURL).
 		Int("maxTurns", task.MaxTurns).
+		Str("effort", task.Effort).
 		Msg("starting claude code")
 
 	start := time.Now()

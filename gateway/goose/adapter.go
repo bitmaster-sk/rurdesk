@@ -46,6 +46,11 @@ func NewGooseAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) *
 	}
 }
 
+// Only Ollama can be asked; the other providers are left to the tracker's models.dev snapshot.
+func (a *GooseAdapter) ModelThinking(ctx context.Context, models []common.Model) (map[string]bool, []common.Model) {
+	return ollamaThinkingByModel(ctx, a.cfg.Goose.OllamaHost, models)
+}
+
 func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunStats, error) {
 	stats := common.RunStats{}
 	task.Vocab = common.ToolVocabGoose
@@ -105,7 +110,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Repo.Token, stageMarker)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Effort, task.Repo.Token, stageMarker)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -125,6 +130,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 		Str("model", task.Model.Name).
 		Str("mcpURL", mcpURL).
 		Int("maxTurns", task.MaxTurns).
+		Str("effort", task.Effort).
 		Msg("starting goose")
 
 	start := time.Now()
@@ -348,7 +354,7 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // The tracker MCP URL + bearer are NOT set here — writeGooseConfig writes
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
-func childEnv(cfg *common.GooseConfig, provider, gitToken, stageMarker string) []string {
+func childEnv(cfg *common.GooseConfig, provider, effort, gitToken, stageMarker string) []string {
 	out := append([]string{}, os.Environ()...)
 	out = append(out,
 		"GIT_PAGER=cat",
@@ -368,6 +374,9 @@ func childEnv(cfg *common.GooseConfig, provider, gitToken, stageMarker string) [
 	}
 	if cfg.OllamaHost != "" {
 		out = append(out, "OLLAMA_HOST="+cfg.OllamaHost)
+	}
+	if effort != "" {
+		out = append(out, "GOOSE_THINKING_EFFORT="+effort)
 	}
 	return out
 }

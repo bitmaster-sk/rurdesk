@@ -200,7 +200,7 @@ func TestChildEnvWiresProvider(t *testing.T) {
 		DefaultExtensionTimeoutSeconds: 1800,
 		StopHookBlockCap:               3,
 	}
-	env := childEnv(cfg, "anthropic", "git-token-of-the-run", "/tmp/rurdesk-stage-9.submitted")
+	env := childEnv(cfg, "anthropic", "high", "git-token-of-the-run", "/tmp/rurdesk-stage-9.submitted")
 
 	mustHave := []string{
 		"GIT_PAGER=cat",
@@ -212,6 +212,7 @@ func TestChildEnvWiresProvider(t *testing.T) {
 		"GOOSE_DEFAULT_EXTENSION_TIMEOUT=1800",
 		"GOOSE_STOP_HOOK_BLOCK_CAP=3",
 		"RURDESK_STAGE_MARKER=/tmp/rurdesk-stage-9.submitted",
+		"GOOSE_THINKING_EFFORT=high",
 	}
 	for _, want := range mustHave {
 		if !hasEnv(env, want) {
@@ -235,10 +236,20 @@ func TestChildEnvInheritsProcessEnv(t *testing.T) {
 	t.Setenv("OPENAI_HOST", "https://ollama.com")
 	t.Setenv("OPENAI_API_KEY", "sk-passthrough")
 
-	env := childEnv(&common.GooseConfig{}, "openai", "", "")
+	env := childEnv(&common.GooseConfig{}, "openai", "", "", "")
 	for _, want := range []string{"OPENAI_HOST=https://ollama.com", "OPENAI_API_KEY=sk-passthrough"} {
 		if !hasEnv(env, want) {
 			t.Errorf("childEnv did not inherit %q from the process env", want)
+		}
+	}
+}
+
+func TestChildEnvLeavesTheEffortToTheModelWhenNoneIsSet(t *testing.T) {
+	env := childEnv(&common.GooseConfig{}, "ollama", "", "", "")
+
+	for _, kv := range env {
+		if strings.HasPrefix(kv, "GOOSE_THINKING_EFFORT=") {
+			t.Errorf("no effort was requested, but childEnv set %q", kv)
 		}
 	}
 }

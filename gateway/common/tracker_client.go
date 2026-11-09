@@ -85,6 +85,13 @@ func (tc *TrackerClient) ReportRecovered(ctx context.Context) error {
 	})
 }
 
+func (tc *TrackerClient) ReportModelThinking(ctx context.Context, isThinkingByModel map[string]bool) error {
+	type body struct {
+		IsThinkingByModel map[string]bool `json:"isThinkingByModel"`
+	}
+	return tc.post(ctx, "/agent/gateway/thinking", body{IsThinkingByModel: isThinkingByModel})
+}
+
 // UpdateTaskStats overwrites tokens / duration / tool-call counters on the
 // agent_task row with what the adapter measured — the agent rarely passes
 // these via complete_stage, so without this call they stay zero.

@@ -30,6 +30,7 @@ const (
 	ErrCodeTurnLimitExhausted = "turn_limit_exhausted"
 	ErrCodeModelNotAllowed    = "model_not_allowed"
 	ErrCodeMaxTurnsOverLimit  = "max_turns_over_limit"
+	ErrCodeEffortNotAllowed   = "effort_not_allowed"
 	ErrCodeTrackerMissingRepo = "tracker_missing_repo"
 	ErrCodeGitTokenUnreadable = "git_token_unreadable"
 )
