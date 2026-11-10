@@ -467,7 +467,10 @@ export class IssueInfoComponent implements OnInit {
 
     public onToggleInputDescription(event?: MouseEvent): void {
         if (event) {
-            if ((event.target as HTMLElement | null)?.closest('a, button')) {
+            const control = (event.target as HTMLElement | null)?.closest(
+                'a, button, [role="button"]'
+            );
+            if (control && control !== event.currentTarget) {
                 return;
             }
             const start = this.descriptionMousedownCoords();
@@ -653,6 +656,13 @@ export class IssueInfoComponent implements OnInit {
     }
 
     public readonly isSummary = computed(() => this.currentIssue()?.isSummary === true);
+
+    public readonly trackedTotal = computed(() => {
+        const tracked = DurationFormatter.durationToString(
+            DurationConverter.secondsToDuration(this.currentIssue()?.tracked ?? 0)
+        );
+        return tracked || (this.isSummary() ? '0h' : '');
+    });
 
     public readonly rollupProgress = computed(() => {
         const issue = this.currentIssue();

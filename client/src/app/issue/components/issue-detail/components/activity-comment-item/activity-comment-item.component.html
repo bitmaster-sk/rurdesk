@@ -68,6 +68,9 @@
                     [message]="message().message"
                     [mentionCandidates]="mentionCandidates()"
                     [attachmentScope]="attachmentScope()"
+                    sendIcon="device-floppy"
+                    sendLabel="{{ 'SAVE' | translate }}"
+                    [disableCancelButton]="false"
                     (messageChange)="editSave.emit($event)"
                     (cancelled)="onEditCancel()"
                 ></app-message-editor>

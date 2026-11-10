@@ -14,6 +14,7 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { StateStore } from 'src/app/state/store/state.store';
 import { PinApi } from 'src/app/pin/api/pin.api.service';
 import { MrDiffApi } from 'src/app/issue/api/mr-diff.api.service';
+import { UiActivatableDirective } from 'src/app/ui/directives/activatable.directive';
 import { IssueInfoComponent } from './issue-info.component';
 
 const ISSUE = {
@@ -42,7 +43,7 @@ function dispatchMouseSequence(
 describe('IssueInfoComponent — description preview click behaviour (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [IssueInfoComponent],
+            declarations: [IssueInfoComponent, UiActivatableDirective],
             providers: [
                 { provide: IssueApi, useValue: { update$: vi.fn().mockReturnValue(of(ISSUE)) } },
                 { provide: StateStore, useValue: { statesByProject$: () => of([]) } },
@@ -127,6 +128,23 @@ describe('IssueInfoComponent — description preview click behaviour (browser)',
         expect(fixture.componentInstance.showInputDescription()).toBe(false);
     });
 
+    it('does not enter edit mode when the copy icon is clicked', () => {
+        const fixture = setup();
+        const el = preview(fixture);
+        const copyIcon = document.createElement('tabler-icon');
+        copyIcon.setAttribute('role', 'button');
+        copyIcon.setAttribute('tabindex', '0');
+        el.append(copyIcon);
+
+        dispatchMouseSequence(copyIcon, [
+            { type: 'mousedown', clientX: 10, clientY: 10 },
+            { type: 'mouseup', clientX: 10, clientY: 10 },
+            { type: 'click', clientX: 10, clientY: 10 }
+        ]);
+
+        expect(fixture.componentInstance.showInputDescription()).toBe(false);
+    });
+
     it('does not enter edit mode when the pointer moves more than the drag threshold', () => {
         const fixture = setup();
         const el = preview(fixture);
@@ -167,12 +185,6 @@ describe('IssueInfoComponent — description preview click behaviour (browser)',
 
         el.focus();
         el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-        await fixture.whenStable();
-
-        // Manually invoke the directive's keyboard handler logic; uiActivatable
-        // dispatches a native click when focus + Enter is pressed, but the
-        // synthetic KeyboardEvent does not always satisfy event.target checks.
-        el.click();
         await fixture.whenStable();
 
         expect(component.showInputDescription()).toBe(true);

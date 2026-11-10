@@ -367,6 +367,11 @@
             "METADATA": "Metadata"
         }
     },
+    "MARKDOWN": {
+        "COPY_CODE": "Copy code",
+        "CODE_COPIED": "Code copied",
+        "CODE_COPY_FAILED": "Could not copy the code"
+    },
     "SHARED": {
         "CLOSE": "Close",
         "DELETE_MIGRATION": {
