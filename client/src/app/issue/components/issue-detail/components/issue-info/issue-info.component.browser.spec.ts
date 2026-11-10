@@ -315,6 +315,21 @@ describe('IssueInfoComponent — summary task', () => {
         expect(changes).not.toHaveProperty('scheduledAt');
         expect(changes).not.toHaveProperty('estimated');
     });
+
+    it('shows 0h as the tracked total only for a summary task with no time', () => {
+        const fixture = TestBed.createComponent(IssueInfoComponent);
+        fixture.componentRef.setInput('issue', { ...ISSUE, tracked: 0, isSummary: true });
+        fixture.detectChanges();
+        expect(fixture.componentInstance.trackedTotal()).toBe('0h');
+
+        fixture.componentRef.setInput('issue', { ...ISSUE, tracked: 0, isSummary: false });
+        fixture.detectChanges();
+        expect(fixture.componentInstance.trackedTotal()).toBe('');
+
+        fixture.componentRef.setInput('issue', { ...ISSUE, tracked: 2700, isSummary: false });
+        fixture.detectChanges();
+        expect(fixture.componentInstance.trackedTotal()).toBe('45m');
+    });
 });
 
 describe('IssueInfoComponent — "New task" menu action', () => {

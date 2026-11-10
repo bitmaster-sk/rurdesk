@@ -657,6 +657,13 @@ export class IssueInfoComponent implements OnInit {
 
     public readonly isSummary = computed(() => this.currentIssue()?.isSummary === true);
 
+    public readonly trackedTotal = computed(() => {
+        const tracked = DurationFormatter.durationToString(
+            DurationConverter.secondsToDuration(this.currentIssue()?.tracked ?? 0)
+        );
+        return tracked || (this.isSummary() ? '0h' : '');
+    });
+
     public readonly rollupProgress = computed(() => {
         const issue = this.currentIssue();
         const estimated = issue?.rollupEstimated ?? 0;
