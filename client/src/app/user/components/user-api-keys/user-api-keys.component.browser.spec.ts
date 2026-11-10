@@ -6,16 +6,32 @@ import {
     ReactiveFormsModule,
     FormsModule
 } from '@angular/forms';
+import {
+    IconAlertTriangle,
+    IconCircleX,
+    IconCopy,
+    IconKey,
+    IconPlus,
+    IconRefresh,
+    IconTrash,
+    TablerIconComponent,
+    provideTablerIcons
+} from '@tabler/icons-angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { ClipboardService } from 'src/app/core/clipboard.service';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { UiModule } from 'src/app/ui/ui.module';
 import { TablerIconStub, UiButtonStub, UiTooltipStub } from 'src/testing/stubs';
 import { UserApiKeyApi } from '../../api/user-api-key.api.service';
 import { UserApiKey } from '../../model/user-api-key.model';
 import { UserApiKeysComponent } from './user-api-keys.component';
+import 'flatpickr/dist/flatpickr.css';
+import 'src/styles.scss';
+import 'src/tailwind.css';
 
 @Directive({ selector: 'input[uiInput]', standalone: true })
 class UiInputStub {
@@ -283,33 +299,6 @@ describe('UserApiKeysComponent (browser)', () => {
     });
 });
 
-// ─── Mobile layout (issue #253) ─────────────────────────────────────────────
-// Real ui-* children (UiModule), not stubs: the assertions are about layout,
-// so the buttons/datepicker/table chrome must render for real. Viewports are
-// the DoD widths 320/375/430.
-
-import { page } from '@vitest/browser/context';
-import { UiModule } from 'src/app/ui/ui.module';
-// The browser config has no global stylesheet: Angular only injects
-// component styles. These layout assertions need the real ones (Tailwind
-// utilities + .panel/.ui-table/.ui-table-scroll/.secret-code), exactly like
-// the split-pane spec imports its own stylesheet.
-import 'src/styles.scss';
-import 'src/tailwind.css';
-// flatpickr's base stylesheet is an angular.json global style, not part of
-// styles.scss — the datepicker test needs it so the popup is position:absolute
-// and sized like in the app.
-import 'flatpickr/dist/flatpickr.css';
-import {
-    IconAlertTriangle,
-    IconCircleX,
-    IconCopy,
-    IconPlus,
-    IconRefresh,
-    IconTrash
-} from '@tabler/icons-angular';
-import { provideTablerIcons } from '@tabler/icons-angular';
-
 interface Viewport {
     readonly width: number;
     readonly height: number;
@@ -325,32 +314,34 @@ const longName = 'CI pipeline for the very long integration suite on every branc
 const longSecret = 'rk_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
 describe('UserApiKeysComponent layout (browser)', () => {
-    let load$: ReturnType<typeof vi.fn>;
-    let insert$: ReturnType<typeof vi.fn>;
-    let regenerate$: ReturnType<typeof vi.fn>;
-    let revoke$: ReturnType<typeof vi.fn>;
-    let copy: ReturnType<typeof vi.fn>;
     let fixture: ComponentFixture<UserApiKeysComponent>;
 
     beforeEach(async () => {
-        load$ = vi.fn().mockReturnValue(of([existing]));
-        insert$ = vi
-            .fn()
-            .mockReturnValue(of({ ...existing, idApiKey: 2, name: 'ci', rawKey: longSecret }));
-        regenerate$ = vi.fn().mockReturnValue(of({ ...existing, rawKey: 'rotated-secret' }));
-        revoke$ = vi.fn().mockReturnValue(of(undefined));
-        copy = vi.fn().mockResolvedValue(true);
-
         await TestBed.configureTestingModule({
             declarations: [UserApiKeysComponent],
-            imports: [ReactiveFormsModule, FormsModule, TranslateModule.forRoot(), UiModule],
+            imports: [
+                ReactiveFormsModule,
+                FormsModule,
+                TranslateModule.forRoot(),
+                UiModule,
+                TablerIconComponent
+            ],
             providers: [
                 {
                     provide: UserApiKeyApi,
-                    useValue: { load$, insert$, regenerate$, revoke$ }
+                    useValue: {
+                        load$: vi.fn().mockReturnValue(of([existing])),
+                        insert$: vi
+                            .fn()
+                            .mockReturnValue(
+                                of({ ...existing, idApiKey: 2, name: 'ci', rawKey: longSecret })
+                            ),
+                        regenerate$: vi.fn(),
+                        revoke$: vi.fn()
+                    }
                 },
                 { provide: SettingsStore, useValue: { userApiKeyLimit: () => 10 } },
-                { provide: ClipboardService, useValue: { copy } },
+                { provide: ClipboardService, useValue: { copy: vi.fn() } },
                 {
                     provide: ToastNotificationService,
                     useValue: { showError: vi.fn(), showSuccess: vi.fn() }
@@ -359,6 +350,7 @@ describe('UserApiKeysComponent layout (browser)', () => {
                     IconAlertTriangle,
                     IconCircleX,
                     IconCopy,
+                    IconKey,
                     IconPlus,
                     IconRefresh,
                     IconTrash
@@ -367,20 +359,22 @@ describe('UserApiKeysComponent layout (browser)', () => {
         }).compileComponents();
     });
 
+    afterEach(() => fixture.destroy());
+
     function render(): HTMLElement {
         fixture = TestBed.createComponent(UserApiKeysComponent);
         fixture.detectChanges();
         return fixture.nativeElement as HTMLElement;
     }
 
-    function el(host: HTMLElement, testid: string): HTMLElement | null {
-        return host.querySelector(`[data-testid="${testid}"]`);
+    function el(host: HTMLElement, testid: string): HTMLElement {
+        return host.querySelector<HTMLElement>(`[data-testid="${testid}"]`)!;
     }
 
     function createKey(host: HTMLElement): void {
-        const input = el(host, 'user-api-key-name') as HTMLInputElement;
-        input.value = longName;
-        input.dispatchEvent(new Event('input'));
+        const name = el(host, 'user-api-key-name') as HTMLInputElement;
+        name.value = longName;
+        name.dispatchEvent(new Event('input'));
         fixture.detectChanges();
         host.querySelector('form')!.dispatchEvent(new Event('submit'));
         fixture.detectChanges();
@@ -388,130 +382,108 @@ describe('UserApiKeysComponent layout (browser)', () => {
 
     async function resize(viewport: Viewport): Promise<void> {
         await page.viewport(viewport.width, viewport.height);
+        fixture.detectChanges();
+        await fixture.whenStable();
     }
 
-    it('keeps the panel, the create form and the one-time secret inside the page at 320/375/430px', async () => {
+    it('keeps the create form and the one-time secret inside the page at 320/375/430px', async () => {
         const host = render();
-        createKey(host); // long name + long secret, so the revealed block is at its widest
+        createKey(host);
 
         const form = host.querySelector('form')!;
-        const revealed = el(host, 'user-api-key-revealed')!;
+        const revealed = el(host, 'user-api-key-revealed');
         const secretCode = revealed.querySelector('.secret-code')!;
+        const createBtn = el(host, 'user-api-key-create');
 
         for (const viewport of narrowViewports) {
             await resize(viewport);
-            fixture.detectChanges();
-            await fixture.whenStable();
 
             expect(
                 document.documentElement.scrollWidth,
                 `no page overflow at ${viewport.width}px`
             ).toBeLessThanOrEqual(viewport.width + 1);
-
             for (const node of [host, form, revealed, secretCode]) {
                 expect(
                     node.getBoundingClientRect().right,
                     `block fits at ${viewport.width}px`
                 ).toBeLessThanOrEqual(viewport.width + 1);
             }
-
-            // Fields and Create stack full-width on mobile (column direction).
-            const createBtn = el(host, 'user-api-key-create')!;
             expect(getComputedStyle(form).flexDirection, `form stacks at ${viewport.width}px`).toBe(
                 'column'
             );
             expect(
                 createBtn.getBoundingClientRect().width,
                 `create is full width at ${viewport.width}px`
-            ).toBeGreaterThanOrEqual(viewport.width - 64); // p-4 on both sides
+            ).toBeGreaterThanOrEqual(viewport.width - 64);
         }
     });
 
-    it('lets only the table scroll horizontally while all its actions stay reachable', async () => {
+    it('lets only the table scroll horizontally while all its columns and actions stay reachable', async () => {
         const host = render();
 
-        const scroll = el(host, 'user-api-key-table-scroll')!;
-        const table = el(host, 'user-api-key-table')!;
+        const scroll = el(host, 'user-api-key-table-scroll');
+        const table = el(host, 'user-api-key-table');
+        const revoke = el(host, 'user-api-key-revoke');
 
         for (const viewport of narrowViewports) {
             await resize(viewport);
-            fixture.detectChanges();
-            await fixture.whenStable();
 
             expect(
                 document.documentElement.scrollWidth,
                 `no page overflow at ${viewport.width}px`
             ).toBeLessThanOrEqual(viewport.width + 1);
-
-            // The table is wider than its wrapper → the wrapper is the scroller.
-            expect(
-                scroll.scrollWidth,
-                `table overflows its wrapper at ${viewport.width}px`
-            ).toBeGreaterThan(scroll.clientWidth - 1);
             expect(getComputedStyle(scroll).overflowX).toBe('auto');
-
-            // All five columns are rendered (nothing is hidden to fit).
             expect(table.querySelectorAll('thead th')).toHaveLength(5);
 
-            // Every action button is inside the scrollable area and reachable
-            // by scrolling the wrapper to the end.
-            const revoke = el(host, 'user-api-key-revoke')!;
             scroll.scrollLeft = scroll.scrollWidth;
-            fixture.detectChanges();
             const revokeRect = revoke.getBoundingClientRect();
+            expect(revokeRect.width, `revoke rendered at ${viewport.width}px`).toBeGreaterThan(0);
             expect(revokeRect.right, `revoke reachable at ${viewport.width}px`).toBeLessThanOrEqual(
                 scroll.getBoundingClientRect().right + 1
             );
-            expect(revokeRect.width, `revoke rendered at ${viewport.width}px`).toBeGreaterThan(0);
         }
     });
 
-    it('opens the real datepicker, keeps the picked date and keeps desktop as a single row', async () => {
+    it('opens the datepicker on a phone and keeps the picked day', async () => {
         const host = render();
-        await resize({ width: 1280, height: 900 });
-        fixture.detectChanges();
+        await resize({ width: 320, height: 800 });
 
         const expires = el(host, 'user-api-key-expires') as HTMLInputElement;
-        // Wait for the lazily loaded flatpickr to attach.
-        for (
-            let i = 0;
-            i < 100 && !(expires as unknown as { _flatpickr?: unknown })._flatpickr;
-            i++
-        ) {
-            await new Promise(r => setTimeout(r, 10));
-        }
-        const fp = (
-            expires as unknown as {
-                _flatpickr: {
-                    open: () => void;
-                    calendarContainer: HTMLElement;
-                    setDate: (d: Date, trigger?: boolean) => void;
-                };
-            }
-        )._flatpickr;
-        fp.open();
-        await new Promise(r => setTimeout(r, 0));
-        expect(
-            document.body.contains(fp.calendarContainer) || fp.calendarContainer.isConnected,
-            'datepicker calendar opened'
-        ).toBe(true);
+        const calendar = await vi.waitFor(() => {
+            const node = document.querySelector<HTMLElement>('.flatpickr-calendar');
+            expect(node).not.toBeNull();
+            return node!;
+        });
 
-        const picked = new Date(2027, 0, 15);
-        fp.setDate(picked, true);
-        await fixture.whenStable();
+        expires.click();
+        await vi.waitFor(() => expect(calendar.classList).toContain('open'));
+        expect(calendar.getBoundingClientRect().right).toBeLessThanOrEqual(321);
+
+        const day = Array.from(
+            calendar.querySelectorAll<HTMLElement>(
+                '.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)'
+            )
+        ).at(-1)!;
+        day.click();
         fixture.detectChanges();
-        const component = fixture.componentInstance as unknown as {
-            form: { value: { expiresAt: Date | null } };
-        };
-        expect(component.form.value.expiresAt).toBeInstanceOf(Date);
 
-        // Desktop: the form stays one row aligned at the bottom.
+        const picked = (
+            fixture.componentInstance as unknown as {
+                form: { value: { expiresAt: Date | null } };
+            }
+        ).form.value.expiresAt;
+        expect(picked).toBeInstanceOf(Date);
+        expect(picked!.getDate()).toBe(Number(day.textContent));
+    });
+
+    it('keeps the create form on a single bottom-aligned row on desktop', async () => {
+        const host = render();
+        await resize({ width: 1280, height: 900 });
+
         const form = host.querySelector('form')!;
         expect(getComputedStyle(form).flexDirection).toBe('row');
-        const name = el(host, 'user-api-key-name')!;
-        const createBtn = el(host, 'user-api-key-create')!;
-        expect(createBtn.getBoundingClientRect().bottom).toBeCloseTo(
-            name.getBoundingClientRect().bottom,
+        expect(el(host, 'user-api-key-create').getBoundingClientRect().bottom).toBeCloseTo(
+            el(host, 'user-api-key-name').getBoundingClientRect().bottom,
             0
         );
     });

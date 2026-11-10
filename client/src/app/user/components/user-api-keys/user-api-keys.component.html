@@ -24,8 +24,6 @@
                 </div>
                 <div class="secret-code">
                     <code>{{ revealedKey.rawKey }}</code>
-                    <!-- Local wrap only: on a narrow screen the actions drop to
-                         their own line instead of pushing the code out of view. -->
                     <div class="flex flex-wrap justify-end gap-1 max-md:w-full">
                         <ui-button
                             [label]="'USER_API_KEY.COPY' | translate"
@@ -53,9 +51,6 @@
         }
 
         <div class="p-4 border-bottom flex flex-col gap-2">
-            <!-- Stacked on mobile (fields and Create take the full width), a
-                 single row from md up. min-w-0 keeps flex children from holding
-                 their intrinsic content width and forcing page overflow. -->
             <form
                 class="flex flex-col md:flex-row md:items-end gap-4"
                 [formGroup]="form"
@@ -128,10 +123,6 @@
                 </ui-button>
             </div>
         } @else if (keys().length) {
-            <!-- Only the table scrolls horizontally on narrow screens; every
-                 column, date and action stays reachable by scrolling it.
-                 min-w-0 lets the wrapper shrink below the table's intrinsic
-                 width instead of pushing the page wider. -->
             <div class="ui-table-scroll min-w-0" data-testid="user-api-key-table-scroll">
                 <table class="ui-table" data-testid="user-api-key-table">
                     <thead>
