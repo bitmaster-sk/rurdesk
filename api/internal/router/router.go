@@ -372,6 +372,7 @@ func New(
 	pri.POST("/agent/task/:idTask/stats", agentRunCtrl.TaskStats)
 	pri.POST("/agent/task/:idTask/thinking", agentThinkingCtrl.Create)
 	pri.POST("/agent/gateway/recovered", agentRunCtrl.GatewayRecovered)
+	pri.POST("/agent/gateway/thinking", agentRunCtrl.GatewayModelThinking)
 
 	// Workflow event→state map (project owner only)
 	pri.GET("/project/:idProject/workflow-event-state-map", workflowEventMapCtrl.GetMappings)

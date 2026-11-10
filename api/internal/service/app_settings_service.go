@@ -130,12 +130,12 @@ func (s *AppSettingsService) AgentThinkingMaxKb() int {
 	return s.getNumeric(constants.SettingAgentThinkingMaxKb)
 }
 
-func (s *AppSettingsService) AgentMaxTurnsPlan() int {
-	return s.getNumeric(constants.SettingAgentMaxTurnsPlan)
+func (s *AppSettingsService) AgentMaxTurns(stage string) int {
+	return s.getNumeric(constants.SettingAgentMaxTurns(stage))
 }
 
-func (s *AppSettingsService) AgentMaxTurnsImplement() int {
-	return s.getNumeric(constants.SettingAgentMaxTurnsImplement)
+func (s *AppSettingsService) AgentEffort(stage string) string {
+	return s.getString(constants.SettingAgentEffort(stage))
 }
 
 func (s *AppSettingsService) WikiAlwaysTokenLimit() int {
@@ -175,6 +175,9 @@ func (s *AppSettingsService) Update(ctx context.Context, numericChanges map[stri
 				return err
 			}
 			value = normalized
+		}
+		if constants.IsAgentEffortSetting(key) && value != "" && !constants.IsEffort(value) {
+			return fmt.Errorf("setting %q must be empty or one of %s", key, strings.Join(constants.Efforts, ", "))
 		}
 		// Upsert casts to jsonb — persisting the bare string would break the cast.
 		encoded, err := json.Marshal(value)

@@ -1,5 +1,6 @@
 <div
-    class="stage-plan-form flex flex-col gap-2"
+    class="stage-plan-form flex flex-col"
+    [class]="gapClass()"
     [uiSaveStatus]="saveState()"
     [attr.data-testid]="'stage-plan-form-' + row().stage"
 >
@@ -60,6 +61,15 @@
             />
         </div>
     </div>
+    @if (row().isThinkingSupported) {
+        <app-agent-effort-picker
+            [effort]="row().effort"
+            [inherited]="row().inheritedEffort"
+            [size]="size()"
+            [testId]="'stage-effort-' + row().stage"
+            (effortPicked)="onPickEffort($event)"
+        />
+    }
     @if (isDefaultsHintShown()) {
         <div class="stage-plan-form__hint ui-color-text-muted text-xs">
             {{ 'AGENT_STAGE_PLAN_EDITOR.DEFAULTS_HINT' | translate }}

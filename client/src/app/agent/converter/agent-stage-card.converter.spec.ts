@@ -1,3 +1,4 @@
+import { AgentEffort } from '../model/agent-effort.enum';
 import { describe, expect, it } from 'vitest';
 import { AgentStageCardConverter } from './agent-stage-card.converter';
 import { AgentStageCardBody, AgentStageCardSource } from '../entity/agent-stage-card.entity';
@@ -8,6 +9,7 @@ function source(partial: Partial<AgentStageCardSource>): AgentStageCardSource {
         stages: [],
         plan: [],
         runModel: 'openai/kimi',
+        runEffort: null,
         defaultMaxTurns: () => 40,
         skillNames: new Map([
             [1, 'go-backend'],
@@ -33,6 +35,7 @@ describe('AgentStageCardConverter.toViews', () => {
                         idsSkill: [1, 2],
                         model: 'anthropic/sonnet',
                         maxTurns: 80,
+                        effort: AgentEffort.Max,
                         dispatched: false
                     },
                     {
@@ -40,6 +43,7 @@ describe('AgentStageCardConverter.toViews', () => {
                         idsSkill: [1],
                         model: 'openai/kimi',
                         maxTurns: 40,
+                        effort: null,
                         dispatched: false
                     }
                 ]
@@ -49,9 +53,15 @@ describe('AgentStageCardConverter.toViews', () => {
         expect(overridden.planTags).toEqual({
             skillsCount: 2,
             model: 'anthropic/sonnet',
-            maxTurns: 80
+            maxTurns: 80,
+            effort: AgentEffort.Max
         });
-        expect(inherited.planTags).toEqual({ skillsCount: 1, model: null, maxTurns: null });
+        expect(inherited.planTags).toEqual({
+            skillsCount: 1,
+            model: null,
+            maxTurns: null,
+            effort: null
+        });
     });
 
     it('opens the stage waiting for review and the next stage to start', () => {
@@ -68,7 +78,14 @@ describe('AgentStageCardConverter.toViews', () => {
                     Fixtures.stageProgress({ stage: 'implementation' })
                 ],
                 plan: ['brainstorming', 'design', 'implementation_plan', 'implementation'].map(
-                    name => ({ name, idsSkill: [], model: null, maxTurns: null, dispatched: false })
+                    name => ({
+                        name,
+                        idsSkill: [],
+                        model: null,
+                        maxTurns: null,
+                        effort: null,
+                        dispatched: false
+                    })
                 )
             })
         );
@@ -86,6 +103,7 @@ describe('AgentStageCardConverter.toViews', () => {
                         idsSkill: [1],
                         model: null,
                         maxTurns: null,
+                        effort: null,
                         dispatched: false
                     }
                 ]
@@ -116,6 +134,7 @@ describe('AgentStageCardConverter.toViews', () => {
                         idsSkill: [2, 99],
                         model: null,
                         maxTurns: null,
+                        effort: null,
                         dispatched: false
                     }
                 ]
@@ -173,7 +192,14 @@ describe('AgentStageCardConverter.toViews', () => {
             source({
                 stages: [Fixtures.stageProgress({ stage: 'design', attempts: 1 })],
                 plan: [
-                    { name: 'design', idsSkill: [], model: null, maxTurns: null, dispatched: false }
+                    {
+                        name: 'design',
+                        idsSkill: [],
+                        model: null,
+                        maxTurns: null,
+                        effort: null,
+                        dispatched: false
+                    }
                 ]
             })
         );
@@ -187,7 +213,14 @@ describe('AgentStageCardConverter.toViews', () => {
             source({
                 stages: [Fixtures.stageProgress({ stage: 'design', attempts: 2 })],
                 plan: [
-                    { name: 'design', idsSkill: [], model: null, maxTurns: null, dispatched: true }
+                    {
+                        name: 'design',
+                        idsSkill: [],
+                        model: null,
+                        maxTurns: null,
+                        effort: null,
+                        dispatched: true
+                    }
                 ]
             })
         );
@@ -206,6 +239,7 @@ describe('AgentStageCardConverter.toViews', () => {
                         idsSkill: [],
                         model: null,
                         maxTurns: null,
+                        effort: null,
                         dispatched: false
                     }
                 ]

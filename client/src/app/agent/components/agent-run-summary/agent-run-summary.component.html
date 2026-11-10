@@ -3,8 +3,20 @@
     <div class="run-summary__kpis">
         <div class="run-summary__kpi run-summary__kpi--wide flex min-w-0 flex-col">
             <span class="run-summary__label">{{ 'AGENT.SIDEBAR.MODEL' | translate }}</span>
-            <span class="run-summary__value" data-testid="run-model">
-                {{ model() ?? ('AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT' | translate) }}
+            <span
+                class="run-summary__value flex min-w-0 items-center gap-2"
+                data-testid="run-model"
+            >
+                <span class="truncate">
+                    {{ model() ?? ('AGENT.SIDEBAR.MODEL_GATEWAY_DEFAULT' | translate) }}
+                </span>
+                @if (effort(); as effort) {
+                    <app-agent-effort-label
+                        class="run-summary__effort shrink-0"
+                        data-testid="run-effort"
+                        [effort]="effort"
+                    />
+                }
             </span>
         </div>
         <div class="run-summary__kpi flex min-w-0 flex-col">

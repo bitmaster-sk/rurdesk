@@ -1,3 +1,7 @@
+import { AgentEffortPickerComponent } from '../agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from '../agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from '../agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from '../agent-effort-meter/agent-effort-meter.component';
 import { Component, input, output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
@@ -55,14 +59,14 @@ const STAGE_PLAN: AgentRunStagePlanRes = {
         idsSkill: [],
         model: null,
         maxTurns: null,
+        effort: null,
         skip: false,
         dispatched: name !== AgentStage.Implementation
     })),
     models: ['openai/kimi'],
     modelDefault: 'openai/kimi',
-    maxTurnsPlan: 250,
-    maxTurnsImplement: 500,
-    maxTurnsLimit: null
+    maxTurnsLimit: null,
+    ...Fixtures.agentStageDefaults()
 };
 
 function designWikiRead(): AgentRunWikiRead {
@@ -111,6 +115,10 @@ describe('AgentRunCardComponent', () => {
                 AgentRunSummaryComponent,
                 AgentStageCardComponent,
                 AgentStagePlanFormComponent,
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent,
                 RunWikiStageComponent
             ],
             providers: [

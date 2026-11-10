@@ -1,3 +1,6 @@
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -28,7 +31,8 @@ describe('CreateUserDialogComponent — agent turn limits (browser)', () => {
                     useValue: { insert$: () => of({ idUser: 8, name: 'modelbot', isAgent: true }) }
                 },
                 { provide: AgentGatewayApi, useValue: { insert$: insertGateway } },
-                { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
+                { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+                { provide: SettingsStore, useValue: { agentStageDefaults: () => ({}) } }
             ]
         })
             .overrideComponent(CreateUserDialogComponent, { set: { template: '' } })
@@ -44,33 +48,39 @@ describe('CreateUserDialogComponent — agent turn limits (browser)', () => {
         return dialog;
     }
 
-    it('creates the gateway with the turn limits the admin entered', () => {
+    it('creates the gateway with the stage defaults the admin entered', () => {
         const dialog = openAgentForm();
 
-        dialog.form.patchValue({ maxTurnsPlan: 90, maxTurnsImplement: 700 });
+        dialog.form.patchValue({
+            stageDefaults: {
+                [AgentStage.Brainstorming]: { maxTurns: 90 },
+                [AgentStage.ReleaseNotes]: { maxTurns: 60, effort: AgentEffort.Low }
+            }
+        });
         dialog.onSubmit();
 
         expect(insertGateway).toHaveBeenCalledWith(8, {
             gatewayUrl: 'http://gw:9090',
-            maxTurnsPlan: 90,
-            maxTurnsImplement: 700
+            stageDefaults: {
+                [AgentStage.Brainstorming]: { maxTurns: 90, effort: null },
+                [AgentStage.ReleaseNotes]: { maxTurns: 60, effort: AgentEffort.Low }
+            }
         });
     });
 
-    it('leaves empty limits to the app settings', () => {
+    it('leaves empty stages to the app settings', () => {
         openAgentForm().onSubmit();
 
         expect(insertGateway).toHaveBeenCalledWith(8, {
             gatewayUrl: 'http://gw:9090',
-            maxTurnsPlan: null,
-            maxTurnsImplement: null
+            stageDefaults: {}
         });
     });
 
     it('refuses a limit above the ceiling', () => {
         const dialog = openAgentForm();
 
-        dialog.form.patchValue({ maxTurnsPlan: 10001 });
+        dialog.form.patchValue({ stageDefaults: { [AgentStage.Design]: { maxTurns: 10001 } } });
         dialog.onSubmit();
 
         expect(insertGateway).not.toHaveBeenCalled();
@@ -93,7 +103,8 @@ describe('CreateUserDialogComponent — avatar initials (browser)', () => {
             providers: [
                 { provide: AdminUserApi, useValue: { insert$: insertUser } },
                 { provide: AgentGatewayApi, useValue: { insert$: () => of({}) } },
-                { provide: ToastNotificationService, useValue: { showError: vi.fn() } }
+                { provide: ToastNotificationService, useValue: { showError: vi.fn() } },
+                { provide: SettingsStore, useValue: { agentStageDefaults: () => ({}) } }
             ]
         })
             .overrideComponent(CreateUserDialogComponent, { set: { template: '' } })

@@ -14,6 +14,17 @@ import (
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
 )
 
+func TestClaudeCodeReportsEveryModelAsThinking(t *testing.T) {
+	isThinkingByModel, unanswered := NewClaudeCodeAdapter(&common.Config{}).ModelThinking(context.Background(), []common.Model{{Name: "sonnet"}, {Name: "opus"}})
+
+	if len(isThinkingByModel) != 2 || !isThinkingByModel["sonnet"] || !isThinkingByModel["opus"] {
+		t.Errorf("thinking by model = %v, want sonnet and opus thinking", isThinkingByModel)
+	}
+	if len(unanswered) != 0 {
+		t.Errorf("unanswered = %v, want none", unanswered)
+	}
+}
+
 func TestMapTerminalStatus(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -457,6 +468,43 @@ func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
 	)
 	if subtype != "success" {
 		t.Errorf("subtype = %q, want the result event after the long line to be read", subtype)
+	}
+}
+
+func TestRunPassesTheEffortOnlyWhenSet(t *testing.T) {
+	for _, tt := range []struct {
+		effort   string
+		isPassed bool
+	}{{"max", true}, {"", false}} {
+		dir := t.TempDir()
+		argsFile := filepath.Join(dir, "args.txt")
+		stub := filepath.Join(dir, "claude-stub.sh")
+		script := "#!/bin/sh\n" +
+			`printf '%s\n' "$@" > ` + argsFile + "\n" +
+			"cat > /dev/null\n" +
+			`echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__tracker__complete_stage"}]}}'` + "\n" +
+			`echo '{"type":"result","subtype":"success","is_error":false}'` + "\n"
+		if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+			t.Fatalf("writing stub: %v", err)
+		}
+		t.Setenv("CLAUDE_CODE_BINARY", stub)
+		cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+		task := common.Task{IdRun: 7, IdTask: 1, Stage: common.StageDesign, WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60, Effort: tt.effort}
+
+		if _, err := NewClaudeCodeAdapter(cfg).Run(context.Background(), task); err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+
+		args, err := os.ReadFile(argsFile)
+		if err != nil {
+			t.Fatalf("reading args: %v", err)
+		}
+		if got := strings.Contains(string(args), "--effort\n"+tt.effort+"\n"); got != tt.isPassed {
+			t.Errorf("effort %q passed = %v, want %v\n--- args ---\n%s", tt.effort, got, tt.isPassed, args)
+		}
+		if !tt.isPassed && strings.Contains(string(args), "--effort") {
+			t.Errorf("no effort was requested, but claude got --effort\n--- args ---\n%s", args)
+		}
 	}
 }
 

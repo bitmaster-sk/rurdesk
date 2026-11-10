@@ -150,7 +150,7 @@ func mustAppSettings() *service.AppSettingsService {
 
 func GetAgentTaskConfigService() *service.AgentTaskConfigService {
 	instance, _ := di.GetWithNew("agent-dispatch-service", func() (any, error) {
-		return service.NewAgentTaskConfigService(mustAppSettings(), GetAgentGatewayRepository()), nil
+		return service.NewAgentTaskConfigService(mustAppSettings(), GetAgentGatewayRepository(), GetAiModelRepository()), nil
 	})
 	return instance.(*service.AgentTaskConfigService)
 }
@@ -684,6 +684,13 @@ func GetAgentThinkingRepository() *repository.AgentThinkingRepository {
 		return repository.NewAgentThinkingRepository(pool), nil
 	})
 	return instance.(*repository.AgentThinkingRepository)
+}
+
+func GetAiModelRepository() *repository.AiModelRepository {
+	instance, _ := di.GetWithNew("model-without-thinking-repository", func() (any, error) {
+		return repository.NewAiModelRepository(mustDb()), nil
+	})
+	return instance.(*repository.AiModelRepository)
 }
 
 func GetAgentGatewayRepository() *repository.AgentGatewayRepository {

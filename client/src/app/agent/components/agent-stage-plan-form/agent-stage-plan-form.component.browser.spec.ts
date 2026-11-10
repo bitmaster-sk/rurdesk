@@ -8,6 +8,11 @@ import { UiModule } from '../../../ui/ui.module';
 import { AgentStagePlanEditorRow } from '../../entity/agent-stage-plan-editor.entity';
 import { AgentStage } from '../../model/agent-stage.enum';
 import { AgentStagePlanFormComponent } from './agent-stage-plan-form.component';
+import { AgentEffortPickerComponent } from '../agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from '../agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from '../agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from '../agent-effort-meter/agent-effort-meter.component';
+import { AgentEffort } from '../../model/agent-effort.enum';
 
 const ROW: AgentStagePlanEditorRow = {
     stage: AgentStage.Design,
@@ -15,6 +20,9 @@ const ROW: AgentStagePlanEditorRow = {
     model: null,
     maxTurns: null,
     defaultMaxTurns: 250,
+    effort: null,
+    inheritedEffort: null,
+    isThinkingSupported: true,
     lock: null
 };
 
@@ -25,7 +33,13 @@ describe('AgentStagePlanFormComponent (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [UiModule, FormsModule, TranslateModule.forRoot(), TablerIconStub],
-            declarations: [AgentStagePlanFormComponent]
+            declarations: [
+                AgentStagePlanFormComponent,
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent
+            ]
         }).compileComponents();
         fixture = TestBed.createComponent(AgentStagePlanFormComponent);
         root = fixture.nativeElement as HTMLElement;
@@ -77,12 +91,14 @@ describe('AgentStagePlanFormComponent (browser)', () => {
         const turns = root.querySelector('[data-testid="stage-turns-design"]') as HTMLElement;
         expect(turns.classList).toContain('ui-input--sm');
         expect(root.querySelector('.text-xs')).not.toBeNull();
+        expect(root.querySelector('.stage-plan-form')?.classList).toContain('gap-2');
 
         fixture.componentRef.setInput('size', 'medium');
         fixture.detectChanges();
 
         expect(turns.classList).not.toContain('ui-input--sm');
         expect(root.querySelector('.text-xs')).toBeNull();
+        expect(root.querySelector('.stage-plan-form')?.classList).toContain('gap-4');
         expect(root.querySelector('.text-sm')?.textContent).toContain(
             'AGENT_STAGE_PLAN_EDITOR.SKILLS'
         );
@@ -96,5 +112,22 @@ describe('AgentStagePlanFormComponent (browser)', () => {
         expect(root.querySelector('[data-testid="stage-model-design"]')?.textContent).toContain(
             'RELEASE.AGENT.MODEL_DEFAULT'
         );
+    });
+
+    it('emits the thinking effort picked for the stage', () => {
+        fixture.detectChanges();
+        const picked = vi.fn();
+        fixture.componentInstance.effortPicked.subscribe(picked);
+
+        (root.querySelector('[data-testid="stage-effort-design-high"]') as HTMLElement).click();
+
+        expect(picked).toHaveBeenCalledWith({ stage: AgentStage.Design, effort: AgentEffort.High });
+    });
+
+    it('offers no effort for a model without thinking', () => {
+        fixture.componentRef.setInput('row', { ...ROW, isThinkingSupported: false });
+        fixture.detectChanges();
+
+        expect(root.querySelector('app-agent-effort-picker')).toBeNull();
     });
 });

@@ -95,6 +95,7 @@ func BuildStageProgress(run *model.AgentRun, tasks []*model.AgentTask, events []
 		prog.HasThinking = task.HasThinking
 		prog.Model = task.Model
 		prog.MaxTurns = task.MaxTurns
+		prog.Effort = task.Effort
 		prog.ModelFallbackFrom = fallbackFromByTask[task.IdTask]
 		switch task.Status {
 		case constants.TaskStatusActive, constants.TaskStatusPending:

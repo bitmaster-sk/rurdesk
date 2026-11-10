@@ -20,6 +20,9 @@ import {
     AgentStagePlanEditorRow
 } from '../../../agent/entity/agent-stage-plan-editor.entity';
 import { AgentStage } from '../../../agent/model/agent-stage.enum';
+import { AgentEffort } from '../../../agent/model/agent-effort.enum';
+import { AgentEffortConverter } from '../../../agent/converter/agent-effort.converter';
+import { AgentEffortHintService } from '../../../agent/service/agent-effort-hint.service';
 import { AgentRun } from '../../../agent/model/agent-run.model';
 import { ShortWorkflow } from '../../../agent/util/short-workflow';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
@@ -56,6 +59,7 @@ export class AgentDockComponent implements OnInit {
     private readonly projectSkillApi = inject(ProjectSkillApi);
     private readonly agentRunApi = inject(AgentRunApi);
     private readonly toast = inject(ToastNotificationService);
+    private readonly effortHint = inject(AgentEffortHintService);
     private readonly destroyRef = inject(DestroyRef);
 
     protected readonly stages = SKILL_STAGES;
@@ -71,6 +75,26 @@ export class AgentDockComponent implements OnInit {
     private readonly runModel = signal<string | null>(null);
     private readonly modelByStage = signal<Record<string, string>>({});
     private readonly maxTurnsByStage = signal<Record<string, number>>({});
+    protected readonly runEffort = signal<AgentEffort | null>(null);
+    private readonly effortByStage = signal<Record<string, AgentEffort>>({});
+    protected readonly isRunThinkingSupported = computed(() =>
+        this.isThinkingSupported(this.runModelValue())
+    );
+    protected readonly runEffortHint = computed(() => {
+        const defaultsByStage = this.overview()?.defaultsByStage ?? null;
+        const stages = this.stages
+            .filter(stage => !this.isSkipped(stage))
+            .flatMap(stage => {
+                const inherited = AgentEffortConverter.toInherited(
+                    stage,
+                    null,
+                    defaultsByStage,
+                    this.agent().name
+                );
+                return inherited ? [{ stage, inherited }] : [];
+            });
+        return stages.length > 0 ? this.effortHint.describeStages(stages) : null;
+    });
     protected readonly stageRows = computed<AgentStagePlanEditorRow[]>(() =>
         this.stages.map(stage => ({
             stage,
@@ -80,6 +104,14 @@ export class AgentDockComponent implements OnInit {
             model: this.stageModel(stage),
             maxTurns: this.stageTurns(stage),
             defaultMaxTurns: this.defaultTurns(stage),
+            effort: this.effortByStage()[stage] ?? null,
+            inheritedEffort: AgentEffortConverter.toInherited(
+                stage,
+                this.isRunThinkingSupported() ? this.runEffort() : null,
+                this.overview()?.defaultsByStage ?? null,
+                this.agent().name
+            ),
+            isThinkingSupported: this.isStageThinkingSupported(stage),
             lock: this.isSkipped(stage) ? AgentStagePlanEditorLock.Skipped : null
         }))
     );
@@ -125,6 +157,29 @@ export class AgentDockComponent implements OnInit {
 
     protected onPickRunModel(model: string | null): void {
         this.runModel.set(model);
+        if (!this.isThinkingSupported(this.runModelValue())) {
+            this.runEffort.set(null);
+        }
+    }
+
+    protected onPickRunEffort(effort: AgentEffort | null): void {
+        this.runEffort.set(effort);
+    }
+
+    protected onPickStageEffort(stage: AgentStage, effort: AgentEffort | null): void {
+        const rest = omit(this.effortByStage(), stage);
+        this.effortByStage.set(effort === null ? rest : { ...rest, [stage]: effort });
+    }
+
+    private isThinkingSupported(model: string | null): boolean {
+        return AgentEffortConverter.isThinkingSupported(
+            model,
+            this.overview()?.modelsWithoutThinking ?? []
+        );
+    }
+
+    private isStageThinkingSupported(stage: AgentStage): boolean {
+        return this.isThinkingSupported(this.stageModel(stage) ?? this.runModelValue());
     }
 
     private stageModel(stage: AgentStage): string | null {
@@ -134,6 +189,9 @@ export class AgentDockComponent implements OnInit {
     protected onPickStageModel(stage: AgentStage, model: string | null): void {
         const rest = omit(this.modelByStage(), stage);
         this.modelByStage.set(model === null ? rest : { ...rest, [stage]: model });
+        if (!this.isStageThinkingSupported(stage)) {
+            this.onPickStageEffort(stage, null);
+        }
     }
 
     private stageTurns(stage: AgentStage): number | null {
@@ -141,13 +199,7 @@ export class AgentDockComponent implements OnInit {
     }
 
     private defaultTurns(stage: AgentStage): number | null {
-        const overview = this.overview();
-        if (!overview) {
-            return null;
-        }
-        return stage === AgentStage.Implementation
-            ? overview.maxTurnsImplement
-            : overview.maxTurnsPlan;
+        return this.overview()?.defaultsByStage[stage]?.maxTurns ?? null;
     }
 
     protected onStageTurns(stage: AgentStage, maxTurns: number | null): void {
@@ -232,6 +284,18 @@ export class AgentDockComponent implements OnInit {
         if (Object.keys(this.maxTurnsByStage()).length > 0) {
             choices.maxTurnsByStage = this.maxTurnsByStage();
         }
+        const runEffort = this.runEffort();
+        if (runEffort !== null && this.isRunThinkingSupported()) {
+            choices.effort = runEffort;
+        }
+        const effortByStage = Object.fromEntries(
+            Object.entries(this.effortByStage()).filter(([stage]) =>
+                this.isStageThinkingSupported(stage as AgentStage)
+            )
+        );
+        if (Object.keys(effortByStage).length > 0) {
+            choices.effortByStage = effortByStage;
+        }
         return choices;
     }
 
@@ -260,6 +324,7 @@ export class AgentDockComponent implements OnInit {
     private prefillModelChoices(run: AgentRun): void {
         const modelByStage: Record<string, string> = {};
         const maxTurnsByStage: Record<string, number> = {};
+        const effortByStage: Record<string, AgentEffort> = {};
         const isOffered = (model: string | undefined): model is string =>
             !!model && this.models().includes(model);
         (run.stagePlan?.stages ?? []).forEach(entry => {
@@ -269,10 +334,15 @@ export class AgentDockComponent implements OnInit {
             if (entry.maxTurns) {
                 maxTurnsByStage[entry.name] = entry.maxTurns;
             }
+            if (entry.effort) {
+                effortByStage[entry.name] = entry.effort;
+            }
         });
         this.runModel.set(isOffered(run.stagePlan?.model) ? run.stagePlan.model : null);
         this.modelByStage.set(modelByStage);
         this.maxTurnsByStage.set(maxTurnsByStage);
+        this.runEffort.set(run.stagePlan?.effort ?? null);
+        this.effortByStage.set(effortByStage);
     }
 
     private loadDefaults(): void {

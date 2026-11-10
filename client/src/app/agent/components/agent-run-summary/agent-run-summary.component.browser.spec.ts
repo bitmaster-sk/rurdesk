@@ -1,3 +1,6 @@
+import { AgentEffortLabelComponent } from '../agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from '../agent-effort-meter/agent-effort-meter.component';
+import { AgentEffort } from '../../model/agent-effort.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { TablerIconStub } from 'src/testing/stubs';
@@ -28,7 +31,11 @@ describe('AgentRunSummaryComponent (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [UiModule, TranslateModule.forRoot(), TablerIconStub],
-            declarations: [AgentRunSummaryComponent]
+            declarations: [
+                AgentRunSummaryComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent
+            ]
         }).compileComponents();
         fixture = TestBed.createComponent(AgentRunSummaryComponent);
         root = fixture.nativeElement as HTMLElement;
@@ -141,5 +148,14 @@ describe('AgentRunSummaryComponent (browser)', () => {
         expect(root.querySelector('[data-testid="run-short-workflow"]')).toBeNull();
         expect(text('run-workflow')).toBe('AGENT.WORKFLOW.SHORT_VALUE');
         expect(root.querySelector('[data-testid="run-workflow-locked"]')).not.toBeNull();
+    });
+
+    it('shows the effort of the run next to its model only when the run has one', () => {
+        render({ model: 'openai/kimi' });
+        expect(root.querySelector('[data-testid="run-effort"]')).toBeNull();
+
+        render({ effort: AgentEffort.Max });
+
+        expect(text('run-effort')).toBe('AGENT_EFFORT.LEVEL.MAX');
     });
 });

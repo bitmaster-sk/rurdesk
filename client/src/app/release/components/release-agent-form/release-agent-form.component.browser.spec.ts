@@ -3,6 +3,8 @@ import { TranslateModule } from '@ngx-translate/core';
 import { of } from 'rxjs';
 import { AgentRunApi } from 'src/app/agent/api/agent-run.api.service';
 import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
+import { Fixtures } from 'src/testing/fixtures';
 import { User } from 'src/app/auth/model/user.model';
 import { ProjectSkillApi } from 'src/app/project/api/project-skill.api.service';
 import { SkillApi } from 'src/app/shared/api/skill.api.service';
@@ -15,7 +17,7 @@ const AGENTS: User[] = [
     { idUser: 6, name: 'Writer', email: 'w@x', colorAvatarBg: '#000', isAgent: true }
 ];
 
-async function setup() {
+async function setup(modelDefault = 'sonnet') {
     await TestBed.configureTestingModule({
         imports: [TranslateModule.forRoot()],
         declarations: [ReleaseAgentFormComponent],
@@ -39,8 +41,14 @@ async function setup() {
                             {
                                 idUserAgent: 6,
                                 models: ['opus', 'sonnet'],
-                                modelDefault: 'sonnet',
-                                maxTurnsPlan: 40
+                                modelDefault,
+                                ...Fixtures.agentStageDefaults({
+                                    modelsWithoutThinking: ['opus'],
+                                    defaultsByStage: {
+                                        [AgentStage.Design]: Fixtures.stageDefault(90),
+                                        [AgentStage.ReleaseNotes]: Fixtures.stageDefault(40)
+                                    }
+                                })
                             }
                         ])
                 }
@@ -100,6 +108,50 @@ describe('ReleaseAgentFormComponent', () => {
 
         expect(started).toHaveBeenCalledWith(
             expect.objectContaining({ modelByStage: { [AgentStage.ReleaseNotes]: 'sonnet' } })
+        );
+    });
+
+    it('sends the thinking effort picked for a model that thinks', async () => {
+        const { form, started } = await setup();
+
+        form['idUserAgent'].setValue(6);
+        form['onEffortPicked'](AgentEffort.High);
+        form['onStart']();
+
+        expect(form['row']().isThinkingSupported).toBe(true);
+        expect(started).toHaveBeenCalledWith(
+            expect.objectContaining({
+                effortByStage: { [AgentStage.ReleaseNotes]: AgentEffort.High }
+            })
+        );
+    });
+
+    it('drops the effort once a model without thinking is picked', async () => {
+        const { form, started } = await setup();
+
+        form['idUserAgent'].setValue(6);
+        form['onEffortPicked'](AgentEffort.High);
+        form['onModelPicked']('opus');
+        form['onStart']();
+
+        expect(form['row']().isThinkingSupported).toBe(false);
+        expect(form['row']().effort).toBeNull();
+        expect(started).toHaveBeenCalledWith(
+            expect.not.objectContaining({ effortByStage: expect.anything() })
+        );
+    });
+
+    it('offers no effort when the cleared model falls back to a default without thinking', async () => {
+        const { form, started } = await setup('opus');
+
+        form['idUserAgent'].setValue(6);
+        form['onModelPicked'](null);
+        form['onEffortPicked'](AgentEffort.High);
+        form['onStart']();
+
+        expect(form['row']().isThinkingSupported).toBe(false);
+        expect(started).toHaveBeenCalledWith(
+            expect.not.objectContaining({ effortByStage: expect.anything() })
         );
     });
 });

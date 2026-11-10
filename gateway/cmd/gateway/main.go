@@ -58,6 +58,7 @@ func main() {
 	// shutdown, or after the attempt cap (heartbeat sweep is the backstop);
 	// never blocks server start.
 	go reportRecoveredWithRetry(ctx, trackerClient)
+	go common.NewModelThinkingReport(cfg.Models.Models, agentAdapter, trackerClient).Run(ctx)
 
 	// Crash recovery is API-side (a sweep fails stale tasks); the gateway only
 	// runs a retention cron pruning worktrees idle past the retention window.
@@ -74,33 +75,10 @@ func main() {
 // exponential backoff until success, ctx cancellation, or the attempt cap (see
 // the call site for why retrying is safe). The heartbeat sweep is the backstop.
 func reportRecoveredWithRetry(ctx context.Context, tc *common.TrackerClient) {
-	const (
-		maxAttempts = 12
-		baseDelay   = 1 * time.Second
-		maxDelay    = 30 * time.Second
-	)
-	delay := baseDelay
-	for attempt := 1; ; attempt++ {
-		err := tc.ReportRecovered(ctx)
-		if err == nil {
-			log.Info().Msg("gateway recovery reported")
-			return
-		}
-		log.Warn().Err(err).Int("attempt", attempt).Msg("gateway recovery report failed; will retry")
-		if attempt >= maxAttempts {
-			log.Warn().Msg("gateway recovery report gave up; heartbeat sweep will reap orphaned tasks")
-			return
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(delay):
-		}
-		if delay < maxDelay {
-			if delay *= 2; delay > maxDelay {
-				delay = maxDelay
-			}
-		}
+	if common.RetryWithBackoff(ctx, "gateway recovery", tc.ReportRecovered) {
+		log.Info().Msg("gateway recovery reported")
+	} else if ctx.Err() == nil {
+		log.Warn().Msg("gateway recovery report gave up; heartbeat sweep will reap orphaned tasks")
 	}
 }
 
@@ -121,7 +99,7 @@ func setupLogger(level string) {
 	log.Info().Str("requestedLevel", level).Str("effectiveLevel", l.String()).Msg("logger configured")
 }
 
-func selectAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) common.Agent {
+func selectAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) common.Adapter {
 	switch cfg.AdapterType {
 	case "claude-code":
 		return claudecode.NewClaudeCodeAdapter(cfg)

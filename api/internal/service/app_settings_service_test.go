@@ -252,3 +252,63 @@ func TestAppSettings_UpdateRejectsUnknownStringSetting(t *testing.T) {
 		t.Fatal("expected unknown-key error")
 	}
 }
+
+func TestAppSettings_AgentEffortRoundTrips(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, stage := range constants.SkillStages {
+		if svc.AgentEffort(stage) != "" {
+			t.Fatalf("want no %s effort by default, got %q", stage, svc.AgentEffort(stage))
+		}
+	}
+	changes := map[string]string{
+		constants.SettingAgentEffort(constants.StageDesign):       "high",
+		constants.SettingAgentEffort(constants.StageReleaseNotes): "low",
+	}
+	if err := svc.Update(context.Background(), nil, nil, changes); err != nil {
+		t.Fatal(err)
+	}
+	if svc.AgentEffort(constants.StageDesign) != "high" || svc.AgentEffort(constants.StageReleaseNotes) != "low" || svc.AgentEffort(constants.StageBrainstorming) != "" {
+		t.Fatalf("want high / low / none, got %q / %q / %q", svc.AgentEffort(constants.StageDesign), svc.AgentEffort(constants.StageReleaseNotes), svc.AgentEffort(constants.StageBrainstorming))
+	}
+	if err := svc.Update(context.Background(), nil, nil, map[string]string{constants.SettingAgentEffort(constants.StageDesign): ""}); err != nil {
+		t.Fatalf("empty value must be allowed (model default): %v", err)
+	}
+	if svc.AgentEffort(constants.StageDesign) != "" {
+		t.Fatalf("want effort cleared, got %q", svc.AgentEffort(constants.StageDesign))
+	}
+}
+
+func TestAppSettings_AgentMaxTurnsPerStage(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if svc.AgentMaxTurns(constants.StageBrainstorming) != 250 || svc.AgentMaxTurns(constants.StageImplementation) != 500 {
+		t.Fatalf("want 250 / 500 by default, got %d / %d", svc.AgentMaxTurns(constants.StageBrainstorming), svc.AgentMaxTurns(constants.StageImplementation))
+	}
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAgentMaxTurns(constants.StageReleaseNotes): 60}, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if svc.AgentMaxTurns(constants.StageReleaseNotes) != 60 || svc.AgentMaxTurns(constants.StageDesign) != 250 {
+		t.Fatalf("want 60 / 250, got %d / %d", svc.AgentMaxTurns(constants.StageReleaseNotes), svc.AgentMaxTurns(constants.StageDesign))
+	}
+	if err := svc.Update(context.Background(), map[string]int{constants.SettingAgentMaxTurns(constants.StagePickup): 10}, nil, nil); err == nil {
+		t.Fatal("pickup never reaches an agent, so it has no turn limit")
+	}
+}
+
+func TestAppSettings_AgentEffortValidation(t *testing.T) {
+	svc := NewAppSettingsService(&fakeStore{data: map[string]string{}})
+	if err := svc.Load(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"xhigh", "HIGH", "auto"} {
+		changes := map[string]string{constants.SettingAgentEffort(constants.StageImplementation): bad}
+		if err := svc.Update(context.Background(), nil, nil, changes); err == nil {
+			t.Fatalf("expected error for %q", bad)
+		}
+	}
+}

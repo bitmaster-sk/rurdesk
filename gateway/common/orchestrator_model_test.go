@@ -77,37 +77,38 @@ func modelTestOrchestrator(t *testing.T, trackerURL string, maxTurnsLimit int) (
 	return NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState()), agent, repo
 }
 
-func TestParseStageExecutePayload_CarriesModelAndMaxTurns(t *testing.T) {
+func TestParseStageExecutePayload_CarriesModelMaxTurnsAndEffort(t *testing.T) {
 	event := unmarshalEvent(t, `{
 		"idRun": 42,
 		"payload": {
 			"idTask": 123,
 			"stage": "design",
 			"model": "ollama/b:8b",
-			"maxTurns": 80
+			"maxTurns": 80,
+			"effort": "high"
 		}
 	}`)
 	task, err := parseStageExecutePayload(event)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if task.RequestedModel != "ollama/b:8b" || task.MaxTurns != 80 {
-		t.Errorf("RequestedModel = %q, MaxTurns = %d", task.RequestedModel, task.MaxTurns)
+	if task.RequestedModel != "ollama/b:8b" || task.MaxTurns != 80 || task.Effort != "high" {
+		t.Errorf("RequestedModel = %q, MaxTurns = %d, Effort = %q", task.RequestedModel, task.MaxTurns, task.Effort)
 	}
 }
 
-func TestRunStage_RunsTheAgentWithTheRequestedModelAndTurns(t *testing.T) {
+func TestRunStage_RunsTheAgentWithTheRequestedModelTurnsAndEffort(t *testing.T) {
 	_, trackerURL := newTrackerRecorder(t)
 	orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, 0)
 
-	orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign, RequestedModel: "ollama/b:8b", MaxTurns: 40})
+	orchestrator.runStage(Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign, RequestedModel: "ollama/b:8b", MaxTurns: 40, Effort: "max"})
 
 	ran := agent.ran()
 	if len(ran) != 1 {
 		t.Fatalf("agent ran %d times, want 1", len(ran))
 	}
-	if ran[0].Model != (Model{Provider: "ollama", Name: "b:8b"}) || ran[0].MaxTurns != 40 {
-		t.Errorf("agent got model %+v and %d turns", ran[0].Model, ran[0].MaxTurns)
+	if ran[0].Model != (Model{Provider: "ollama", Name: "b:8b"}) || ran[0].MaxTurns != 40 || ran[0].Effort != "max" {
+		t.Errorf("agent got model %+v, %d turns and effort %q", ran[0].Model, ran[0].MaxTurns, ran[0].Effort)
 	}
 }
 
@@ -147,6 +148,7 @@ func TestRunStage_RejectsWhatTheGatewayDoesNotAllow(t *testing.T) {
 	}{
 		{"model outside MODELS", Task{RequestedModel: "anthropic/opus"}, ErrCodeModelNotAllowed},
 		{"turns over MAX_TURNS_LIMIT", Task{MaxTurns: 301}, ErrCodeMaxTurnsOverLimit},
+		{"an effort the agent CLI does not know", Task{Effort: "--dangerously-skip-permissions"}, ErrCodeEffortNotAllowed},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

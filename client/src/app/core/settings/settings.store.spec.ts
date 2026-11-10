@@ -1,3 +1,6 @@
+import { Fixtures } from 'src/testing/fixtures';
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
 import { Injector, runInInjectionContext } from '@angular/core';
 import { of } from 'rxjs';
 import { type AppSettings } from './model/app-settings.model';
@@ -32,8 +35,9 @@ describe('SettingsStore', () => {
             isAgentThinkingPersisted: false,
             agentThinkingMaxKb: 2048,
             attachmentMaxSizeMb: 40,
-            agentMaxTurnsPlan: 300,
-            agentMaxTurnsImplement: 600,
+            agentStageDefaults: Fixtures.appAgentStageDefaults({
+                [AgentStage.ReleaseNotes]: { maxTurns: 60, effort: AgentEffort.Low }
+            }),
             wikiAlwaysTokenLimit: 12000,
             plantUmlServerUrl: 'http://puml:8080'
         });
@@ -42,6 +46,10 @@ describe('SettingsStore', () => {
         expect(store.kanbanPageSize()).toBe(30);
         expect(store.ganttBacklogPageSize()).toBe(40);
         expect(store.userApiKeyLimit()).toBe(25);
+        expect(store.agentStageDefaults()[AgentStage.ReleaseNotes]).toEqual({
+            maxTurns: 60,
+            effort: AgentEffort.Low
+        });
     });
 
     it('enables plantuml only when a server url is configured', () => {
@@ -54,8 +62,7 @@ describe('SettingsStore', () => {
             isAgentThinkingPersisted: true,
             agentThinkingMaxKb: 1024,
             attachmentMaxSizeMb: 25,
-            agentMaxTurnsPlan: 250,
-            agentMaxTurnsImplement: 500,
+            agentStageDefaults: Fixtures.appAgentStageDefaults(),
             wikiAlwaysTokenLimit: 12000,
             plantUmlServerUrl: ''
         };

@@ -1,3 +1,8 @@
+import { AgentEffort, AgentEffortSource } from 'src/app/agent/model/agent-effort.enum';
+import { AgentEffortPickerComponent } from 'src/app/agent/components/agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from 'src/app/agent/components/agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from 'src/app/agent/components/agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from 'src/app/agent/components/agent-effort-meter/agent-effort-meter.component';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -40,9 +45,8 @@ const WORKLOAD: AgentOverview = {
     failedAttempts7d: 1,
     models: [],
     modelDefault: null,
-    maxTurnsPlan: 250,
-    maxTurnsImplement: 500,
-    maxTurnsLimit: null
+    maxTurnsLimit: null,
+    ...Fixtures.agentStageDefaults()
 };
 
 const WITH_MODELS: AgentOverview = {
@@ -120,7 +124,11 @@ describe('AgentDockComponent (browser)', () => {
             declarations: [
                 AgentDockComponent,
                 AgentStagePlanEditorComponent,
-                AgentStagePlanFormComponent
+                AgentStagePlanFormComponent,
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent
             ],
             providers: [
                 { provide: SkillApi, useValue: skillApi },
@@ -402,6 +410,142 @@ describe('AgentDockComponent (browser)', () => {
                 model: 'ollama/qwen3:8b',
                 modelByStage: { design: 'openai/kimi' },
                 maxTurnsByStage: { design: 40 }
+            })
+        );
+    });
+
+    it('assigns with the thinking effort the user picked for the run', async () => {
+        const fixture = await setup(AgentDockKind.Skills, WITH_MODELS);
+        const root = fixture.nativeElement as HTMLElement;
+
+        Dom.byTestId(root, 'agent-dock-run-effort-high').click();
+        fixture.detectChanges();
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(
+            7,
+            42,
+            expect.objectContaining({ effort: AgentEffort.High })
+        );
+    });
+
+    it('explains the default of each stage behind the help icon', async () => {
+        const fixture = await setup(AgentDockKind.Skills, {
+            ...WITH_MODELS,
+            ...Fixtures.agentStageDefaults({
+                defaultsByStage: {
+                    [AgentStage.Brainstorming]: Fixtures.stageDefault(
+                        250,
+                        AgentEffort.High,
+                        AgentEffortSource.Agent
+                    )
+                }
+            })
+        });
+        const root = fixture.nativeElement as HTMLElement;
+        const help = () =>
+            Dom.byTestId(root, 'agent-dock-run-effort-help').getAttribute('aria-label');
+
+        expect(help()).toBe(
+            'AGENT.STAGE.BRAINSTORMING · AGENT_EFFORT.DEFAULT_FROM_AGENT\n' +
+                'AGENT.STAGE.DESIGN, AGENT.STAGE.IMPLEMENTATION_PLAN, AGENT.STAGE.IMPLEMENTATION · AGENT_EFFORT.DEFAULT_FROM_MODEL'
+        );
+        expect(root.querySelector('[data-testid="effort-hint"]')).toBeNull();
+
+        Dom.byTestId(root, 'agent-dock-short-workflow').click();
+        fixture.detectChanges();
+
+        expect(help()).toBe(
+            'AGENT.STAGE.BRAINSTORMING · AGENT_EFFORT.DEFAULT_FROM_AGENT\n' +
+                'AGENT.STAGE.IMPLEMENTATION · AGENT_EFFORT.DEFAULT_FROM_MODEL'
+        );
+    });
+
+    it('explains a default every stage shares in one line', async () => {
+        const fixture = await setup(AgentDockKind.Skills, WITH_MODELS);
+
+        expect(
+            Dom.byTestId(
+                fixture.nativeElement as HTMLElement,
+                'agent-dock-run-effort-help'
+            ).getAttribute('aria-label')
+        ).toBe('AGENT_EFFORT.DEFAULT_FROM_MODEL');
+    });
+
+    it('drops the run effort once the run model has no thinking', async () => {
+        const fixture = await setup(AgentDockKind.Skills, {
+            ...WITH_MODELS,
+            modelsWithoutThinking: ['ollama/qwen3:8b']
+        });
+        const root = fixture.nativeElement as HTMLElement;
+
+        Dom.byTestId(root, 'agent-dock-run-effort-high').click();
+        fixture.detectChanges();
+        await Dom.pick(fixture, 'agent-dock-run-model', 'ollama/qwen3:8b');
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(root.querySelector('[data-testid="agent-dock-run-effort-high"]')).toBeNull();
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(
+            7,
+            42,
+            expect.not.objectContaining({ effort: expect.anything() })
+        );
+    });
+
+    it('drops the effort of a stage switched to a model without thinking', async () => {
+        const fixture = await setup(AgentDockKind.Skills, {
+            ...WITH_MODELS,
+            modelsWithoutThinking: ['ollama/qwen3:8b']
+        });
+        const root = fixture.nativeElement as HTMLElement;
+        openAllStages(fixture);
+
+        Dom.byTestId(root, `stage-effort-${AgentStage.Design}-max`).click();
+        Dom.byTestId(root, `stage-effort-${AgentStage.Implementation}-low`).click();
+        fixture.detectChanges();
+        await Dom.pick(fixture, `stage-model-${AgentStage.Design}`, 'ollama/qwen3:8b');
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(
+            7,
+            42,
+            expect.objectContaining({ effortByStage: { implementation: AgentEffort.Low } })
+        );
+    });
+
+    it('a paused run prefills its effort choices', async () => {
+        agentRunApi.loadByIssue$ = vi.fn().mockReturnValue(
+            of({
+                ...RUN,
+                isParked: true,
+                stagePlan: {
+                    effort: AgentEffort.Medium,
+                    stages: [
+                        {
+                            name: AgentStage.Design,
+                            skippable: true,
+                            skip: false,
+                            effort: AgentEffort.Max
+                        }
+                    ]
+                }
+            })
+        );
+        const fixture = await setup(AgentDockKind.Skills, WITH_MODELS);
+        const root = fixture.nativeElement as HTMLElement;
+
+        Dom.byTestId(root, 'agent-dock-assign').click();
+        fixture.detectChanges();
+
+        expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(
+            7,
+            42,
+            expect.objectContaining({
+                effort: AgentEffort.Medium,
+                effortByStage: { design: AgentEffort.Max }
             })
         );
     });

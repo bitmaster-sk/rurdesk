@@ -1,3 +1,4 @@
+import { AgentEffort } from './agent-effort.enum';
 import { AgentPhase } from './agent-phase.enum';
 
 export interface AgentRun {
@@ -42,6 +43,7 @@ export interface AgentStageProgress {
     hasThinking?: boolean; // full thinking is stored and readable
     model?: string | null;
     maxTurns?: number | null;
+    effort?: AgentEffort | null;
     modelFallbackFrom?: string | null;
     attempts: number;
     tokensUsed: number;
@@ -57,6 +59,7 @@ export interface AgentStageProgress {
 
 export interface AgentStagePlan {
     model?: string;
+    effort?: AgentEffort;
     stages: AgentStagePlanEntry[];
 }
 
@@ -67,6 +70,7 @@ export interface AgentStagePlanEntry {
     idsSkill?: number[];
     model?: string;
     maxTurns?: number;
+    effort?: AgentEffort;
 }
 
 export interface AgentRunEvent {
@@ -107,6 +111,8 @@ export interface RunChoices {
     model?: string;
     modelByStage?: Record<string, string>;
     maxTurnsByStage?: Record<string, number>;
+    effort?: AgentEffort;
+    effortByStage?: Record<string, AgentEffort>;
 }
 
 export interface CreateAgentRunReq extends RunChoices {

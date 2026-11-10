@@ -38,6 +38,19 @@ go vet ./...             # static analysis
 golangci-lint run ./...  # lint (config in .golangci.yml); CI gates on this
 ```
 
+### AI models
+
+`agent.ai_model` says for each model whether it thinks; the tracker offers no
+thinking effort for a model that does not. It is a snapshot of the
+[models.dev](https://models.dev) catalog: the app never calls models.dev itself.
+To refresh it, generate a new migration from the repository root and review it
+like any other:
+
+```bash
+node script/models-snapshot.mjs                     # writes api/migrations/<timestamp>_ai_model_snapshot.sql
+node script/models-snapshot.mjs --source api.json   # from a downloaded catalog instead
+```
+
 ## Configuration
 
 Config is read from the environment via Viper (`viper.AutomaticEnv()`). In

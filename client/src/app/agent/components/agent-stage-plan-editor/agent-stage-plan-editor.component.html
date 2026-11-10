@@ -47,6 +47,7 @@
                     (skillToggled)="skillToggled.emit($event)"
                     (modelPicked)="modelPicked.emit($event)"
                     (maxTurnsChanged)="maxTurnsChanged.emit($event)"
+                    (effortPicked)="effortPicked.emit($event)"
                 />
             } @else if (row.lock !== AgentStagePlanEditorLock.Skipped) {
                 <dl
@@ -85,6 +86,14 @@
                                         {{ 'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT' | translate }}
                                     </span>
                                 }
+                                ·
+                            }
+                            @if (row.effort && row.isThinkingSupported) {
+                                <app-agent-effort-label
+                                    class="font-semibold"
+                                    [attr.data-testid]="'stage-plan-summary-effort-' + row.stage"
+                                    [effort]="row.effort"
+                                />
                                 ·
                             }
                             <span

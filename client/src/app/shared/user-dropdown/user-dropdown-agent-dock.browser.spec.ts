@@ -1,3 +1,7 @@
+import { AgentEffortPickerComponent } from 'src/app/agent/components/agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from 'src/app/agent/components/agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from 'src/app/agent/components/agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from 'src/app/agent/components/agent-effort-meter/agent-effort-meter.component';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
@@ -87,7 +91,11 @@ describe('UserDropdownComponent with the agent dock open (browser)', () => {
                 UserDropdownComponent,
                 AgentDockComponent,
                 AgentStagePlanEditorComponent,
-                AgentStagePlanFormComponent
+                AgentStagePlanFormComponent,
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent
             ],
             providers: [
                 provideNoopAnimations(),

@@ -57,7 +57,7 @@ func (s *AgentStagePlanService) Choices(stagePlan json.RawMessage) model.RunChoi
 	if err != nil {
 		return model.RunChoices{}
 	}
-	choices := model.RunChoices{IsShortWorkflow: isShortPlan(plan), Model: plan.Model}
+	choices := model.RunChoices{IsShortWorkflow: isShortPlan(plan), Model: plan.Model, Effort: plan.Effort}
 	for _, entry := range plan.Stages {
 		if len(entry.IdsSkill) > 0 {
 			if choices.IdsSkillByStage == nil {
@@ -76,6 +76,12 @@ func (s *AgentStagePlanService) Choices(stagePlan json.RawMessage) model.RunChoi
 				choices.MaxTurnsByStage = map[string]int{}
 			}
 			choices.MaxTurnsByStage[entry.Name] = entry.MaxTurns
+		}
+		if entry.Effort != "" {
+			if choices.EffortByStage == nil {
+				choices.EffortByStage = map[string]string{}
+			}
+			choices.EffortByStage[entry.Name] = entry.Effort
 		}
 	}
 	return choices
@@ -131,6 +137,7 @@ func (s *AgentStagePlanService) SetStagePlanEntry(ctx context.Context, idRun int
 				plan.Stages[i].IdsSkill = req.IdsSkill
 				plan.Stages[i].Model = req.Model
 				plan.Stages[i].MaxTurns = req.MaxTurns
+				plan.Stages[i].Effort = req.Effort
 				return nil
 			}
 		}
@@ -218,11 +225,13 @@ func applyChoices(plan *model.AgentStagePlan, tasks []*model.AgentTask, choices 
 
 func applyModelChoices(plan *model.AgentStagePlan, dispatched map[string]bool, choices model.RunChoices) {
 	plan.Model = choices.Model
+	plan.Effort = choices.Effort
 	for i := range plan.Stages {
 		name := plan.Stages[i].Name
 		if constants.IsSkillStage(name) && !dispatched[name] {
 			plan.Stages[i].Model = choices.ModelByStage[name]
 			plan.Stages[i].MaxTurns = choices.MaxTurnsByStage[name]
+			plan.Stages[i].Effort = choices.EffortByStage[name]
 		}
 	}
 }

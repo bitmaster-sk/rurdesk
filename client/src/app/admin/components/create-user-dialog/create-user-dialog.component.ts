@@ -19,8 +19,9 @@ import {
     AdminCreateUserRes,
     UserCreatedEvent
 } from '../../model/admin-user.model';
-import { MAX_TURNS_VALIDATORS } from '../../constants/max-agent-turns';
 import { CreateAgentGatewayReq } from '../../model/agent-gateway.model';
+import { AgentStageDefaultsFormBuilder } from '../../util/agent-stage-defaults-form';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 
 /**
  * CreateUserDialogComponent creates a human user or an agent. When "Is agent" is on, email and
@@ -39,6 +40,7 @@ export class CreateUserDialogComponent {
     private readonly adminUserApi = inject(AdminUserApi);
     private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
+    protected readonly settingsStore = inject(SettingsStore);
 
     public readonly visible = model<boolean>(false);
     public readonly created = output<UserCreatedEvent>();
@@ -53,8 +55,7 @@ export class CreateUserDialogComponent {
         password: ['', [Validators.minLength(5), Validators.maxLength(100)]],
         // Optional: when set on an agent, its gateway is created in the same step.
         gatewayUrl: ['', [Validators.maxLength(2000)]],
-        maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
-        maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
+        stageDefaults: AgentStageDefaultsFormBuilder.build(false),
         colorAvatarBg: [Color.randomAvatarBg()],
         avatarInitials: ['', [Validators.maxLength(2)]]
     });
@@ -125,8 +126,7 @@ export class CreateUserDialogComponent {
 
         const gatewayReq: CreateAgentGatewayReq = {
             gatewayUrl: value.isAgent ? (value.gatewayUrl ?? '').trim() : '',
-            maxTurnsPlan: value.maxTurnsPlan || null,
-            maxTurnsImplement: value.maxTurnsImplement || null
+            stageDefaults: AgentStageDefaultsFormBuilder.toOptions(this.form.controls.stageDefaults)
         };
 
         this.isSaving.set(true);

@@ -1,3 +1,8 @@
+import { AgentEffortPickerComponent } from '../agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from '../agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from '../agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from '../agent-effort-meter/agent-effort-meter.component';
+import { AgentEffort } from '../../model/agent-effort.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
@@ -28,6 +33,9 @@ function row(
         model: null,
         maxTurns: null,
         defaultMaxTurns: 250,
+        effort: null,
+        inheritedEffort: null,
+        isThinkingSupported: true,
         lock: null,
         ...overrides
     };
@@ -50,7 +58,14 @@ describe('AgentStagePlanEditorComponent (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
             imports: [UiModule, FormsModule, TranslateModule.forRoot(), TablerIconStub],
-            declarations: [AgentStagePlanEditorComponent, AgentStagePlanFormComponent]
+            declarations: [
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent,
+                AgentStagePlanEditorComponent,
+                AgentStagePlanFormComponent
+            ]
         }).compileComponents();
         fixture = TestBed.createComponent(AgentStagePlanEditorComponent);
         root = fixture.nativeElement as HTMLElement;
@@ -71,6 +86,26 @@ describe('AgentStagePlanEditorComponent (browser)', () => {
         expect(Dom.text(root, `stage-plan-summary-model-${AgentStage.Design}`)).toBe(
             'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT · AGENT_STAGE_PLAN_EDITOR.TURNS'
         );
+    });
+
+    it('a closed stage puts its effort between the model and the turns', () => {
+        render([row(AgentStage.Design, { effort: AgentEffort.High })], ['openai/a']);
+
+        expect(Dom.text(root, `stage-plan-summary-model-${AgentStage.Design}`)).toBe(
+            'AGENT_STAGE_PLAN_EDITOR.MODEL_INHERIT · AGENT_EFFORT.LEVEL.HIGH · AGENT_STAGE_PLAN_EDITOR.TURNS'
+        );
+    });
+
+    it('an opened stage emits the effort the user picked', () => {
+        render([row(AgentStage.Design)]);
+        const picked = vi.fn();
+        fixture.componentInstance.effortPicked.subscribe(picked);
+
+        Dom.byTestId(root, `stage-plan-toggle-${AgentStage.Design}`)!.click();
+        fixture.detectChanges();
+        Dom.byTestId(root, `stage-effort-${AgentStage.Design}-max`)!.click();
+
+        expect(picked).toHaveBeenCalledWith({ stage: AgentStage.Design, effort: AgentEffort.Max });
     });
 
     it('an opened stage emits the skill the user toggled', () => {

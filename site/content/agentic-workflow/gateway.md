@@ -62,6 +62,26 @@ on the default instead, and its timeline says so.
 The gateway refuses to start when `MODELS` is empty, an entry has no provider,
 or `MODEL_DEFAULT` is not in the list.
 
+### Thinking effort
+
+The tracker sends the thinking effort of a stage (`low`, `medium`, `high` or
+`max`) in `stage_execute`, see [Thinking effort](./agents.md#thinking-effort).
+Goose gets it as `GOOSE_THINKING_EFFORT` and maps it to what the provider
+understands; Claude Code gets it as `--effort`. When the tracker sends none, the
+gateway sets nothing and the model uses its own default. Any other value fails
+the stage with `effort_not_allowed` before the agent starts.
+
+At startup the gateway tells the tracker which of its `MODELS` think. Claude
+Code reports all of them as thinking. Goose asks Ollama (`OLLAMA_HOST`,
+`http://localhost:11434` when unset) which of its `ollama/*` models have no
+thinking and reports them, so the tracker does not offer an effort for them.
+Other goose providers are left to the models.dev list the tracker ships. This is
+the only call besides the model itself, and it stays on your own Ollama. It does
+not delay the gateway's start. If Ollama is not up yet, the gateway keeps asking
+for a few minutes. A model Ollama never answers for keeps what the tracker knew
+about it from the previous start; a model it has never answered for is unknown,
+and the tracker still offers the effort for it.
+
 ## Connection options
 
 Each `MODELS` entry starts with its provider. Set the variables of every
@@ -220,16 +240,16 @@ If the certificate comes from an internal CA, point the tracker at it with
 
 <!-- stack-table -->
 
-| Var                         | Default          | Notes                                                                                                                                                                                          |
-| --------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MODEL_DEFAULT`             | first of `MODELS` | The model a stage runs when the tracker names none. Must be listed in `MODELS`.                                                                                                                |
-| `MAX_TURNS_LIMIT`           | _no limit_       | Highest turn limit a stage may run with. The gateway reports it to the tracker, which caps every limit it sends at this value; a stage that still asks for more fails with `max_turns_over_limit` and the agent never starts. The limits themselves are set in the tracker, see [Turn limits](./agents.md#turn-limits). |
-| `GOOSE_DEFAULT_EXTENSION_TIMEOUT` | `1800`            | Seconds one shell command of the agent may run before Goose stops it. |
-| `GOOSE_STOP_HOOK_BLOCK_CAP`       | `3`               | How many times an agent that tries to stop without submitting its result is sent back to submit it. Each reminder uses a turn. |
-| `LISTEN_PORT`               | `9090`           | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                              |
-| `MAX_OUTPUT_LINE_MB`        | `4`              | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                   |
-| `LOG_LEVEL`                 | `info`           | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                          |
-| `WORKSPACE_BASE`            | `/worktrees`     | Root for the clones and their per-run worktrees; must match the workspace volume mount.                                                                                                        |
+| Var                               | Default           | Notes                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MODEL_DEFAULT`                   | first of `MODELS` | The model a stage runs when the tracker names none. Must be listed in `MODELS`.                                                                                                                                                                                                                                         |
+| `MAX_TURNS_LIMIT`                 | _no limit_        | Highest turn limit a stage may run with. The gateway reports it to the tracker, which caps every limit it sends at this value; a stage that still asks for more fails with `max_turns_over_limit` and the agent never starts. The limits themselves are set in the tracker, see [Turn limits](./agents.md#turn-limits). |
+| `GOOSE_DEFAULT_EXTENSION_TIMEOUT` | `1800`            | Seconds one shell command of the agent may run before Goose stops it.                                                                                                                                                                                                                                                   |
+| `GOOSE_STOP_HOOK_BLOCK_CAP`       | `3`               | How many times an agent that tries to stop without submitting its result is sent back to submit it. Each reminder uses a turn.                                                                                                                                                                                          |
+| `LISTEN_PORT`                     | `9090`            | Webhook receiver (`POST /event`) and healthcheck (`GET /health`).                                                                                                                                                                                                                                                       |
+| `MAX_OUTPUT_LINE_MB`              | `4`               | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                                                                                                                                            |
+| `LOG_LEVEL`                       | `info`            | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                                                                                                                                                   |
+| `WORKSPACE_BASE`                  | `/worktrees`      | Root for the clones and their per-run worktrees; must match the workspace volume mount.                                                                                                                                                                                                                                 |
 
 ## Authentication
 

@@ -1,3 +1,4 @@
+import { AgentEffortOrigin } from '../../entity/agent-effort.entity';
 import { Component, input, output } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
@@ -15,6 +16,7 @@ import { AgentStageCardView } from '../../entity/agent-stage-card.entity';
 import {
     AgentStagePlanEditorLock,
     AgentStagePlanEditorRow,
+    AgentStagePlanEffortPick,
     AgentStagePlanMaxTurnsChange,
     AgentStagePlanModelPick,
     AgentStagePlanSkillToggle
@@ -22,6 +24,7 @@ import {
 import { AgentPhase } from '../../model/agent-phase.enum';
 import { AgentRunStagePlanRes } from '../../model/agent-run-stage-plan.model';
 import { AgentStage } from '../../model/agent-stage.enum';
+import { AgentEffort, AgentEffortSource } from '../../model/agent-effort.enum';
 import { AgentRunCardComponent } from './agent-run-card.component';
 
 @Component({ selector: 'app-agent-stage-card', template: '', standalone: true })
@@ -32,6 +35,7 @@ class AgentStageCardStub {
     public readonly skillToggled = output<AgentStagePlanSkillToggle>();
     public readonly modelPicked = output<AgentStagePlanModelPick>();
     public readonly maxTurnsChanged = output<AgentStagePlanMaxTurnsChange>();
+    public readonly effortPicked = output<AgentStagePlanEffortPick>();
 }
 
 const CATALOG: Skill[] = [
@@ -47,6 +51,7 @@ function stagePlan(implementationSkills: number[]): AgentRunStagePlanRes {
                 idsSkill: [1],
                 model: null,
                 maxTurns: null,
+                effort: null,
                 skip: false,
                 dispatched: true
             },
@@ -55,6 +60,7 @@ function stagePlan(implementationSkills: number[]): AgentRunStagePlanRes {
                 idsSkill: [],
                 model: null,
                 maxTurns: null,
+                effort: null,
                 skip: true,
                 dispatched: false
             },
@@ -63,15 +69,15 @@ function stagePlan(implementationSkills: number[]): AgentRunStagePlanRes {
                 idsSkill: implementationSkills,
                 model: null,
                 maxTurns: null,
+                effort: null,
                 skip: false,
                 dispatched: false
             }
         ],
         models: ['openai/a', 'openai/b'],
         modelDefault: 'openai/a',
-        maxTurnsPlan: 250,
-        maxTurnsImplement: 500,
-        maxTurnsLimit: 700
+        maxTurnsLimit: 700,
+        ...Fixtures.agentStageDefaults()
     };
 }
 
@@ -136,6 +142,7 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
                                     (skillToggled)="onToggleSkill($event)"
                                     (modelPicked)="onPickStageModel($event)"
                                     (maxTurnsChanged)="onStageMaxTurns($event)"
+                                    (effortPicked)="onPickStageEffort($event)"
                                 />
                             }
                         }
@@ -173,6 +180,9 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
             model: null,
             maxTurns: null,
             defaultMaxTurns: 500,
+            effort: null,
+            inheritedEffort: { effort: null, origin: AgentEffortOrigin.Model, agentName: null },
+            isThinkingSupported: true,
             lock: null
         });
     });
@@ -220,9 +230,76 @@ describe('AgentRunCardComponent — run stage plan (browser)', () => {
             idsSkill: [],
             model: 'openai/b',
             maxTurns: null,
+            effort: null,
             skip: false,
             dispatched: false
         });
+    });
+
+    it('a picked thinking effort is saved for that stage', async () => {
+        const { card } = await setup();
+
+        card(AgentStage.Implementation).effortPicked.emit({
+            stage: AgentStage.Implementation,
+            effort: AgentEffort.High
+        });
+
+        expect(agentRunApi.updateStagePlanEntry$).toHaveBeenCalledWith(
+            55,
+            expect.objectContaining({ name: 'implementation', effort: AgentEffort.High })
+        );
+    });
+
+    it('offers the effort the stage inherits from the agent', async () => {
+        agentRunApi.loadStagePlan$.mockReturnValue(
+            of({
+                ...stagePlan([]),
+                ...Fixtures.agentStageDefaults({
+                    defaultsByStage: {
+                        [AgentStage.Implementation]: Fixtures.stageDefault(
+                            500,
+                            AgentEffort.Medium,
+                            AgentEffortSource.Agent
+                        )
+                    }
+                })
+            })
+        );
+        const { card } = await setup();
+
+        expect(card(AgentStage.Implementation).planRow()?.inheritedEffort).toEqual({
+            effort: AgentEffort.Medium,
+            origin: AgentEffortOrigin.Agent,
+            agentName: null
+        });
+    });
+
+    it('offers no effort when the model the stage runs has no thinking', async () => {
+        agentRunApi.loadStagePlan$.mockReturnValue(
+            of({ ...stagePlan([]), modelsWithoutThinking: ['openai/a'] })
+        );
+        const { card } = await setup();
+
+        expect(card(AgentStage.Implementation).planRow()?.isThinkingSupported).toBe(false);
+    });
+
+    it('switching to a model without thinking clears the effort of the stage', async () => {
+        const plan = stagePlan([]);
+        plan.stages[2] = { ...plan.stages[2], effort: AgentEffort.Max };
+        agentRunApi.loadStagePlan$.mockReturnValue(
+            of({ ...plan, modelsWithoutThinking: ['openai/b'] })
+        );
+        const { card } = await setup();
+
+        card(AgentStage.Implementation).modelPicked.emit({
+            stage: AgentStage.Implementation,
+            model: 'openai/b'
+        });
+
+        expect(agentRunApi.updateStagePlanEntry$).toHaveBeenCalledWith(
+            55,
+            expect.objectContaining({ model: 'openai/b', effort: null })
+        );
     });
 
     it('a turn limit is saved for that stage', async () => {

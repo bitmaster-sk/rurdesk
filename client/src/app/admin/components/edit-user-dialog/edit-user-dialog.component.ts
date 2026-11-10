@@ -18,8 +18,9 @@ import { Initials } from 'src/app/shared/avatar/initials';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
-import { MAX_TURNS_VALIDATORS } from '../../constants/max-agent-turns';
 import { AgentGateway, CreateAgentGatewayReq } from '../../model/agent-gateway.model';
+import { AgentStageDefaultsFormBuilder } from '../../util/agent-stage-defaults-form';
+import { SettingsStore } from 'src/app/core/settings/settings.store';
 
 /**
  * EditUserDialogComponent edits an existing user — same shape as create but the
@@ -37,6 +38,7 @@ export class EditUserDialogComponent {
     private readonly adminUserApi = inject(AdminUserApi);
     private readonly agentGatewayApi = inject(AgentGatewayApi);
     private readonly sToast = inject(ToastNotificationService);
+    protected readonly settingsStore = inject(SettingsStore);
 
     public readonly user = input<AdminUser | null>(null);
     public readonly visible = model<boolean>(false);
@@ -62,8 +64,7 @@ export class EditUserDialogComponent {
         email: ['', [Validators.email, Validators.maxLength(250)]],
         isAdmin: [false],
         gatewayUrl: ['', [Validators.maxLength(2000)]],
-        maxTurnsPlan: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
-        maxTurnsImplement: this.fb.control<number | null>(null, MAX_TURNS_VALIDATORS),
+        stageDefaults: AgentStageDefaultsFormBuilder.build(false),
         colorAvatarBg: [''],
         avatarInitials: ['', [Validators.maxLength(2)]]
     });
@@ -87,8 +88,6 @@ export class EditUserDialogComponent {
                 email: user.email,
                 isAdmin: user.isAdmin,
                 gatewayUrl: '',
-                maxTurnsPlan: null,
-                maxTurnsImplement: null,
                 colorAvatarBg: user.colorAvatarBg,
                 avatarInitials: user.avatarInitials ?? ''
             });
@@ -102,10 +101,10 @@ export class EditUserDialogComponent {
                     this.gateway.set(gw);
                     if (gw) {
                         gatewayUrl.setValue(gw.gatewayUrl);
-                        this.form.patchValue({
-                            maxTurnsPlan: gw.maxTurnsPlan,
-                            maxTurnsImplement: gw.maxTurnsImplement
-                        });
+                        AgentStageDefaultsFormBuilder.patch(
+                            this.form.controls.stageDefaults,
+                            gw.stageDefaults
+                        );
                         gatewayUrl.setValidators([Validators.required, Validators.maxLength(2000)]);
                     } else {
                         gatewayUrl.clearValidators();
@@ -150,8 +149,7 @@ export class EditUserDialogComponent {
         const gw = this.gateway();
         const gatewayReq: CreateAgentGatewayReq = {
             gatewayUrl: value.gatewayUrl!.trim(),
-            maxTurnsPlan: value.maxTurnsPlan || null,
-            maxTurnsImplement: value.maxTurnsImplement || null
+            stageDefaults: AgentStageDefaultsFormBuilder.toOptions(this.form.controls.stageDefaults)
         };
         const calls: ReturnType<AdminUserApi['update$']>[] = [
             this.adminUserApi.update$(user.idUser, req)
@@ -179,8 +177,7 @@ export class EditUserDialogComponent {
     private isGatewayChanged(gw: AgentGateway, req: CreateAgentGatewayReq): boolean {
         return (
             req.gatewayUrl !== gw.gatewayUrl ||
-            req.maxTurnsPlan !== gw.maxTurnsPlan ||
-            req.maxTurnsImplement !== gw.maxTurnsImplement
+            !AgentStageDefaultsFormBuilder.isEqual(req.stageDefaults ?? {}, gw.stageDefaults)
         );
     }
 

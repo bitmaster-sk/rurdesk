@@ -79,6 +79,9 @@ export class AgentRunApi {
         if (entry.maxTurns !== null) {
             body.maxTurns = entry.maxTurns;
         }
+        if (entry.effort !== null) {
+            body.effort = entry.effort;
+        }
         return this.http.patch<AgentRunStagePlanRes>(
             `/api/private/agent/run/${idRun}/stage-plan`,
             body

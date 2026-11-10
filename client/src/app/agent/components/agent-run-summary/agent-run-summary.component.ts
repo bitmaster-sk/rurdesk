@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { RunStats } from '../../model/agent-run.model';
+import { AgentEffort } from '../../model/agent-effort.enum';
 import { CostFormatter } from '../../entity/cost.formatter';
 import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
 
@@ -12,6 +13,7 @@ import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
 })
 export class AgentRunSummaryComponent {
     public readonly model = input<string | null>(null);
+    public readonly effort = input<AgentEffort | null>(null);
     public readonly startedAt = input<string | null>(null);
     public readonly stats = input<RunStats | null>(null);
     public readonly isShortWorkflow = input(false);

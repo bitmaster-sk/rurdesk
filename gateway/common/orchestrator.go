@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -136,7 +137,7 @@ func (o *Orchestrator) runStage(task Task) {
 		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
 		return
 	}
-	if err := o.applyModelAndTurns(&task); err != nil {
+	if err := o.applyStageOptions(&task); err != nil {
 		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
@@ -265,12 +266,19 @@ func (o *Orchestrator) prepareWorkspace(task *Task) (func(), bool) {
 	return func() { _ = RemoveWorktree(repoPath, task.IdRun) }, true
 }
 
-func (o *Orchestrator) applyModelAndTurns(task *Task) error {
+func (o *Orchestrator) applyStageOptions(task *Task) error {
 	model, err := o.cfg.Models.Resolve(task.RequestedModel)
 	if err != nil {
 		return err
 	}
 	task.Model = model
+
+	if task.Effort != "" && !slices.Contains(Efforts, task.Effort) {
+		return &AgentError{
+			Code:   ErrCodeEffortNotAllowed,
+			Detail: fmt.Sprintf("effort %q is not one of %s", task.Effort, strings.Join(Efforts, ", ")),
+		}
+	}
 
 	limit := o.cfg.MaxTurnsLimit
 	if task.MaxTurns == 0 {
@@ -418,6 +426,7 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		PrBranch:       payload.PrBranch,
 		RequestedModel: payload.Model,
 		MaxTurns:       payload.MaxTurns,
+		Effort:         payload.Effort,
 	}
 
 	if payload.Repo != nil {

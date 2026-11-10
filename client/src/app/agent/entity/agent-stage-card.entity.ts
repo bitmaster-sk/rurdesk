@@ -1,3 +1,4 @@
+import { AgentEffort } from '../model/agent-effort.enum';
 import { AgentStageProgress, AgentStageStatus } from '../model/agent-run.model';
 
 export enum AgentStageCardBody {
@@ -10,6 +11,7 @@ export interface AgentStageCardPlanTags {
     skillsCount: number;
     model: string | null;
     maxTurns: number | null;
+    effort: AgentEffort | null;
 }
 
 export interface AgentStageCardView {
@@ -30,6 +32,7 @@ export interface AgentStageCardView {
     model: string | null;
     modelFallbackFrom: string | null;
     maxTurns: number | null;
+    effort: AgentEffort | null;
     skillNames: string[];
     planTags: AgentStageCardPlanTags | null;
     body: AgentStageCardBody;
@@ -41,6 +44,7 @@ export interface AgentStageCardPlanEntry {
     idsSkill: number[];
     model: string | null;
     maxTurns: number | null;
+    effort: AgentEffort | null;
     dispatched: boolean;
 }
 
@@ -48,6 +52,7 @@ export interface AgentStageCardSource {
     stages: AgentStageProgress[];
     plan: AgentStageCardPlanEntry[];
     runModel: string | null;
+    runEffort: AgentEffort | null;
     defaultMaxTurns: (stage: string) => number | null;
     skillNames: Map<number, string>;
     agentNames: Map<number, string>;

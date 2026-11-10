@@ -1,3 +1,5 @@
+import { AgentStageOptionsByStage } from 'src/app/agent/model/agent-stage-options.model';
+
 export interface AgentGateway {
     idGateway: number;
     idUserAgent: number;
@@ -7,8 +9,7 @@ export interface AgentGateway {
     modelDefault: string | null;
     modelsReportedAt: string | null;
     maxTurnsLimit: number | null;
-    maxTurnsPlan: number | null;
-    maxTurnsImplement: number | null;
+    stageDefaults: AgentStageOptionsByStage;
 }
 
 export interface CreateAgentGatewayRes extends AgentGateway {
@@ -17,6 +18,5 @@ export interface CreateAgentGatewayRes extends AgentGateway {
 
 export interface CreateAgentGatewayReq {
     gatewayUrl: string;
-    maxTurnsPlan?: number | null;
-    maxTurnsImplement?: number | null;
+    stageDefaults?: AgentStageOptionsByStage;
 }

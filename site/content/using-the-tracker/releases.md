@@ -79,8 +79,8 @@ Delete it and start a new one from another tag.
 ## Letting an agent write the release notes
 
 **Write with an agent** on the release notes step opens a form: pick the agent
-and, if you want, change the skills, the model and the turn limit of the
-*Release notes* stage. The model starts at the default model of the agent's
+and, if you want, change the skills, the model, the thinking effort and the turn
+limit of the *Release notes* stage. The model starts at the default model of the agent's
 gateway. **Start writing** lets the agent write. No task is created and nothing
 is posted to any task. The agent gets exactly the tasks of the release: the
 closed ones and, when you chose to release the open tasks too, those as well.

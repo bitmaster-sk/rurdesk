@@ -1,3 +1,4 @@
+import { AgentDefaultsByStage } from './agent-stage-options.model';
 import { AgentStage } from './agent-stage.enum';
 
 export interface AgentCurrentRun {
@@ -18,7 +19,7 @@ export interface AgentOverview {
     failedAttempts7d: number;
     models: string[];
     modelDefault: string | null;
-    maxTurnsPlan: number;
-    maxTurnsImplement: number;
     maxTurnsLimit: number | null;
+    defaultsByStage: AgentDefaultsByStage;
+    modelsWithoutThinking: string[];
 }

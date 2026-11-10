@@ -1,3 +1,8 @@
+import { AgentEffortPickerComponent } from '../agent-effort-picker/agent-effort-picker.component';
+import { AgentEffortHintComponent } from '../agent-effort-hint/agent-effort-hint.component';
+import { AgentEffortLabelComponent } from '../agent-effort-label/agent-effort-label.component';
+import { AgentEffortMeterComponent } from '../agent-effort-meter/agent-effort-meter.component';
+import { AgentEffort } from '../../model/agent-effort.enum';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, provideRouter } from '@angular/router';
@@ -27,6 +32,9 @@ const PLAN_ROW: AgentStagePlanEditorRow = {
     model: null,
     maxTurns: null,
     defaultMaxTurns: 500,
+    effort: null,
+    inheritedEffort: null,
+    isThinkingSupported: true,
     lock: null
 };
 
@@ -51,10 +59,12 @@ function view(progress: Partial<AgentStageProgress>, isEditable = true): AgentSt
                 idsSkill: [1, 2],
                 model: null,
                 maxTurns: null,
+                effort: null,
                 dispatched: false
             }
         ],
         runModel: 'openai/kimi',
+        runEffort: null,
         defaultMaxTurns: () => 40,
         skillNames: new Map(SKILLS.map(skill => [skill.idSkill, skill.name])),
         agentNames: new Map(),
@@ -77,6 +87,10 @@ describe('AgentStageCardComponent (browser)', () => {
                 RouterModule
             ],
             declarations: [
+                AgentEffortPickerComponent,
+                AgentEffortHintComponent,
+                AgentEffortLabelComponent,
+                AgentEffortMeterComponent,
                 AgentStageCardComponent,
                 AgentStagePlanFormComponent,
                 RunWikiStageComponent
@@ -193,5 +207,37 @@ describe('AgentStageCardComponent (browser)', () => {
 
         expect((byTestId('stage-card-toggle-design') as HTMLButtonElement).disabled).toBe(true);
         expect(byTestId('stage-card-body-design')).toBeNull();
+    });
+
+    it('tags a stage whose effort differs from the run', () => {
+        const [card] = AgentStageCardConverter.toViews({
+            stages: [Fixtures.stageProgress({ stage: 'design' })],
+            plan: [
+                {
+                    name: 'design',
+                    idsSkill: [],
+                    model: null,
+                    maxTurns: null,
+                    effort: AgentEffort.Max,
+                    dispatched: false
+                }
+            ],
+            runModel: null,
+            runEffort: AgentEffort.Low,
+            defaultMaxTurns: () => 40,
+            skillNames: new Map(),
+            agentNames: new Map(),
+            isEditable: true
+        });
+        render(card);
+
+        expect(text('stage-card-effort-design')).toBe('AGENT_EFFORT.LEVEL.MAX');
+    });
+
+    it('shows the effort a stage ran with', () => {
+        render(view({ stage: 'design', status: 'done', attempts: 1, effort: AgentEffort.High }));
+        open('design');
+
+        expect(text('stage-card-ran-effort')).toBe('AGENT_EFFORT.LEVEL.HIGH');
     });
 });

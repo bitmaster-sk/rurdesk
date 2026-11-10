@@ -1,0 +1,87 @@
+<fieldset
+    class="flex min-w-0 flex-col gap-3 rounded-lg border border-[var(--ui-surface-200)] p-3"
+    [formGroupName]="groupName()"
+>
+    <legend class="ui-color-text px-1 text-sm font-semibold">
+        {{ 'AGENT_API_KEY.STAGE_DEFAULTS' | translate }}
+    </legend>
+    <div
+        class="grid grid-cols-[max-content_minmax(0,9rem)_minmax(0,1fr)] items-center gap-x-3 gap-y-3"
+    >
+        @for (group of groups; track group.label; let isFirst = $first) {
+            <span
+                class="ui-color-text-muted text-[0.7rem] font-bold tracking-wider uppercase"
+                [class]="
+                    isFirst
+                        ? ''
+                        : 'col-span-3 border-t border-dashed border-[var(--ui-surface-200)] pt-3'
+                "
+            >
+                {{ group.label | translate }}
+            </span>
+            @if (isFirst) {
+                <span class="ui-color-text-muted text-xs font-semibold">
+                    {{ 'AGENT_API_KEY.TURN_LIMIT' | translate }}
+                </span>
+                <span class="ui-color-text-muted text-xs font-semibold">
+                    {{ 'AGENT_EFFORT.LABEL' | translate }}
+                </span>
+            }
+            @for (stage of group.stages; track stage) {
+                <ng-container [formGroupName]="stage">
+                    <label
+                        class="pr-2 whitespace-nowrap"
+                        [for]="idPrefix() + '-' + stage + '-max-turns'"
+                    >
+                        {{ stageLabels[stage] | translate }}
+                    </label>
+                    <input
+                        uiInput
+                        [id]="idPrefix() + '-' + stage + '-max-turns'"
+                        type="number"
+                        min="1"
+                        formControlName="maxTurns"
+                        [attr.data-testid]="idPrefix() + '-' + stage + '-max-turns'"
+                        [placeholder]="turnsPlaceholder(stage)"
+                    />
+                    <ui-select
+                        class="min-w-0"
+                        [inputId]="idPrefix() + '-' + stage + '-effort'"
+                        [options]="efforts"
+                        [showClear]="true"
+                        [placeholder]="effortPlaceholder(stage)"
+                        [attr.aria-label]="
+                            ('AGENT_EFFORT.LABEL' | translate) +
+                            ', ' +
+                            (stageLabels[stage] | translate)
+                        "
+                        [attr.data-testid]="idPrefix() + '-' + stage + '-effort'"
+                        formControlName="effort"
+                    >
+                        <ng-template #item let-effort>
+                            <ng-container
+                                [ngTemplateOutlet]="effortLabel"
+                                [ngTemplateOutletContext]="{ $implicit: effort }"
+                            />
+                        </ng-template>
+                        <ng-template #selectedItem let-effort>
+                            <ng-container
+                                [ngTemplateOutlet]="effortLabel"
+                                [ngTemplateOutletContext]="{ $implicit: effort }"
+                            />
+                        </ng-template>
+                    </ui-select>
+                </ng-container>
+            }
+        }
+    </div>
+    @if (inherited()) {
+        <span class="ui-color-text-muted text-xs">
+            {{ 'AGENT_API_KEY.STAGE_DEFAULTS_HINT' | translate }}
+        </span>
+    }
+</fieldset>
+
+<ng-template #effortLabel let-effort>
+    <app-agent-effort-label [effort]="effort" />
+</ng-template>

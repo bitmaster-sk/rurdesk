@@ -67,6 +67,11 @@
     white-space: nowrap;
 }
 
+.run-summary__effort {
+    font-weight: 400;
+    color: var(--ui-color-text-muted);
+}
+
 .run-summary__value--mono {
     font-family: var(--ui-font-mono);
     font-size: 0.75rem;

@@ -1,3 +1,6 @@
+import { Fixtures } from 'src/testing/fixtures';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
+import { AgentEffort } from 'src/app/agent/model/agent-effort.enum';
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -21,7 +24,12 @@ describe('AdminSettingsComponent — build version (browser)', () => {
                     provide: SettingsApi,
                     useValue: {
                         load$: () =>
-                            of({ tablePageSize: 50, kanbanPageSize: 20, ganttBacklogPageSize: 30 }),
+                            of({
+                                tablePageSize: 50,
+                                kanbanPageSize: 20,
+                                ganttBacklogPageSize: 30,
+                                agentStageDefaults: Fixtures.appAgentStageDefaults()
+                            }),
                         update$: () => of({})
                     }
                 },
@@ -69,8 +77,7 @@ describe('AdminSettingsComponent — agent thinking switch (browser)', () => {
         isAgentThinkingPersisted: false,
         agentThinkingMaxKb: 1024,
         attachmentMaxSizeMb: 25,
-        agentMaxTurnsPlan: 250,
-        agentMaxTurnsImplement: 500
+        agentStageDefaults: Fixtures.appAgentStageDefaults()
     };
 
     async function setup() {
@@ -134,12 +141,11 @@ describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
         isAgentThinkingPersisted: true,
         agentThinkingMaxKb: 1024,
         attachmentMaxSizeMb: 25,
-        agentMaxTurnsPlan: 250,
-        agentMaxTurnsImplement: 500
+        agentStageDefaults: Fixtures.appAgentStageDefaults()
     };
 
     it('saves a changed turn default on blur', async () => {
-        const update$ = vi.fn().mockReturnValue(of({ ...loaded, agentMaxTurnsImplement: 900 }));
+        const update$ = vi.fn().mockReturnValue(of(loaded));
         await TestBed.configureTestingModule({
             imports: [ReactiveFormsModule],
             declarations: [AdminSettingsComponent],
@@ -153,7 +159,7 @@ describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
         })
             .overrideComponent(AdminSettingsComponent, {
                 set: {
-                    template: `<form [formGroup]="form"><input type="number" class="turns" formControlName="agentMaxTurnsImplement" /></form>`
+                    template: `<form [formGroup]="form"><ng-container formGroupName="agentStageDefaults"><ng-container formGroupName="release_notes"><input type="number" class="turns" formControlName="maxTurns" /></ng-container></ng-container></form>`
                 }
             })
             .compileComponents();
@@ -161,14 +167,19 @@ describe('AdminSettingsComponent — agent turn defaults (browser)', () => {
         fixture.detectChanges();
         const input = fixture.nativeElement.querySelector('.turns') as HTMLInputElement;
 
-        expect(input.value).toBe('500');
-        input.value = '900';
+        expect(input.value).toBe('250');
+        input.value = '60';
         input.dispatchEvent(new Event('input'));
         input.dispatchEvent(new Event('blur'));
         fixture.detectChanges();
 
         expect(update$).toHaveBeenCalledTimes(1);
-        expect(update$.mock.calls[0][0]).toMatchObject({ agentMaxTurnsImplement: 900 });
+        expect(update$.mock.calls[0][0]).toMatchObject({
+            agentStageDefaults: {
+                [AgentStage.ReleaseNotes]: { maxTurns: 60, effort: '' },
+                [AgentStage.Implementation]: { maxTurns: 500, effort: '' }
+            }
+        });
     });
 });
 
@@ -182,8 +193,7 @@ describe('AdminSettingsComponent — wiki always token limit (browser)', () => {
         isAgentThinkingPersisted: true,
         agentThinkingMaxKb: 1024,
         attachmentMaxSizeMb: 25,
-        agentMaxTurnsPlan: 250,
-        agentMaxTurnsImplement: 500,
+        agentStageDefaults: Fixtures.appAgentStageDefaults(),
         wikiAlwaysTokenLimit: 12000,
         plantUmlServerUrl: ''
     };
@@ -232,8 +242,7 @@ describe('AdminSettingsComponent — plantuml server url (browser)', () => {
         isAgentThinkingPersisted: true,
         agentThinkingMaxKb: 1024,
         attachmentMaxSizeMb: 25,
-        agentMaxTurnsPlan: 250,
-        agentMaxTurnsImplement: 500,
+        agentStageDefaults: Fixtures.appAgentStageDefaults(),
         plantUmlServerUrl: 'http://puml:8080'
     };
 
@@ -301,5 +310,71 @@ describe('AdminSettingsComponent — plantuml server url (browser)', () => {
         input.dispatchEvent(new Event('blur'));
         fixture.detectChanges();
         expect(store.isPlantUmlEnabled()).toBe(false);
+    });
+});
+
+describe('AdminSettingsComponent — agent thinking effort (browser)', () => {
+    const loaded = {
+        tablePageSize: 50,
+        kanbanPageSize: 20,
+        ganttBacklogPageSize: 30,
+        sprintVelocityLimit: 10,
+        userApiKeyLimit: 10,
+        isAgentThinkingPersisted: true,
+        agentThinkingMaxKb: 1024,
+        attachmentMaxSizeMb: 25,
+        agentStageDefaults: Fixtures.appAgentStageDefaults({
+            [AgentStage.Design]: { maxTurns: 250, effort: AgentEffort.High }
+        }),
+        wikiAlwaysTokenLimit: 12000,
+        plantUmlServerUrl: ''
+    };
+
+    async function setup(update$: ReturnType<typeof vi.fn>) {
+        await TestBed.configureTestingModule({
+            imports: [ReactiveFormsModule],
+            declarations: [AdminSettingsComponent],
+            providers: [
+                { provide: SettingsApi, useValue: { load$: () => of(loaded), update$ } },
+                {
+                    provide: VersionApi,
+                    useValue: { load$: () => of({ version: 'dev', commit: 'unknown' }) }
+                }
+            ]
+        })
+            .overrideComponent(AdminSettingsComponent, { set: { template: '' } })
+            .compileComponents();
+        const fixture = TestBed.createComponent(AdminSettingsComponent);
+        fixture.detectChanges();
+        return (fixture.componentInstance as unknown as { form: AdminSettingsComponent['form'] })
+            .form;
+    }
+
+    it('saves a picked effort right away', async () => {
+        const update$ = vi.fn().mockReturnValue(of(loaded));
+        const form = await setup(update$);
+
+        form.controls.agentStageDefaults.controls[AgentStage.ReleaseNotes].controls.effort.setValue(
+            AgentEffort.Low
+        );
+
+        expect(update$).toHaveBeenCalledTimes(1);
+        expect(update$.mock.calls[0][0]).toMatchObject({
+            agentStageDefaults: {
+                [AgentStage.Design]: { effort: 'high' },
+                [AgentStage.ReleaseNotes]: { effort: 'low' }
+            }
+        });
+    });
+
+    it('a cleared effort is saved as the model default', async () => {
+        const update$ = vi.fn().mockReturnValue(of(loaded));
+        const form = await setup(update$);
+
+        form.controls.agentStageDefaults.controls[AgentStage.Design].controls.effort.setValue(null);
+
+        expect(update$.mock.calls[0][0]).toMatchObject({
+            agentStageDefaults: { [AgentStage.Design]: { effort: '' } }
+        });
     });
 });

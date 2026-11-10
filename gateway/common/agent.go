@@ -34,6 +34,9 @@ const (
 	MessageKindReviewReply           = "review_reply"
 )
 
+// Mirrors constants.Efforts in api/internal/constants/agent.go. The value reaches the agent CLI, so nothing else may pass.
+var Efforts = []string{"low", "medium", "high", "max"}
+
 type Task struct {
 	IdTask        int64
 	IdRun         int64
@@ -97,6 +100,8 @@ type Task struct {
 	// MaxTurns is the per-stage hard cap on agent turns/iterations enforced
 	// by the underlying runtime. Zero means "not set".
 	MaxTurns int
+
+	Effort string
 
 	RequestedModel string
 

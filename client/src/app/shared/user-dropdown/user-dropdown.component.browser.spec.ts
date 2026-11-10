@@ -29,9 +29,8 @@ const OVERVIEW: AgentOverview[] = [
         failedAttempts7d: 0,
         models: [],
         modelDefault: null,
-        maxTurnsPlan: 250,
-        maxTurnsImplement: 500,
-        maxTurnsLimit: null
+        maxTurnsLimit: null,
+        ...Fixtures.agentStageDefaults()
     }
 ];
 

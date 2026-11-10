@@ -10,6 +10,7 @@ type StageExecutePayload struct {
 	Repo          *AgentRunGitRepo `json:"repo"`
 	Model         string           `json:"model"`
 	MaxTurns      int              `json:"maxTurns"`
+	Effort        string           `json:"effort"`
 	ContextBundle *ContextBundle   `json:"contextBundle"`
 }
 

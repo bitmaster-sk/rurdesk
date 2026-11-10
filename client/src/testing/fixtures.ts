@@ -1,12 +1,57 @@
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
+import { AgentEffort, AgentEffortSource } from 'src/app/agent/model/agent-effort.enum';
+import { AgentRunStagePlanRes } from 'src/app/agent/model/agent-run-stage-plan.model';
+import { AgentStageDefault } from 'src/app/agent/model/agent-stage-options.model';
+import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
 import { AgentRun, AgentStageProgress } from 'src/app/agent/model/agent-run.model';
 import { User } from 'src/app/auth/model/user.model';
+import { AgentStageOptionsByStage } from 'src/app/agent/model/agent-stage-options.model';
 import { SwimlaneCell } from 'src/app/issue/components/issue-kanban/entity/swimlane-cell.entity';
 import { ExtendedIssue } from 'src/app/issue/model/extended-issue.model';
 import { Issue } from 'src/app/issue/model/issue.model';
 import { Skill } from 'src/app/shared/model/skill.model';
 
 export abstract class Fixtures {
+    public static agentStageDefaults(
+        overrides: Partial<
+            Pick<AgentRunStagePlanRes, 'defaultsByStage' | 'modelsWithoutThinking'>
+        > = {}
+    ): Pick<AgentRunStagePlanRes, 'defaultsByStage' | 'modelsWithoutThinking'> {
+        const fromModel = { effort: null, source: AgentEffortSource.Model };
+        return {
+            modelsWithoutThinking: overrides.modelsWithoutThinking ?? [],
+            defaultsByStage: {
+                [AgentStage.Brainstorming]: { maxTurns: 250, effort: fromModel },
+                [AgentStage.Design]: { maxTurns: 250, effort: fromModel },
+                [AgentStage.ImplementationPlan]: { maxTurns: 250, effort: fromModel },
+                [AgentStage.Implementation]: { maxTurns: 500, effort: fromModel },
+                [AgentStage.ReleaseNotes]: { maxTurns: 250, effort: fromModel },
+                ...overrides.defaultsByStage
+            }
+        };
+    }
+
+    public static appAgentStageDefaults(
+        overrides: AgentStageOptionsByStage = {}
+    ): AgentStageOptionsByStage {
+        return {
+            [AgentStage.Brainstorming]: { maxTurns: 250, effort: null },
+            [AgentStage.Design]: { maxTurns: 250, effort: null },
+            [AgentStage.ImplementationPlan]: { maxTurns: 250, effort: null },
+            [AgentStage.Implementation]: { maxTurns: 500, effort: null },
+            [AgentStage.ReleaseNotes]: { maxTurns: 250, effort: null },
+            ...overrides
+        };
+    }
+
+    public static stageDefault(
+        maxTurns: number,
+        effort: AgentEffort | null = null,
+        source: AgentEffortSource = AgentEffortSource.Model
+    ): AgentStageDefault {
+        return { maxTurns, effort: { effort, source } };
+    }
+
     public static issue(overrides: Partial<Issue> = {}): Issue {
         return {
             idIssue: 1,

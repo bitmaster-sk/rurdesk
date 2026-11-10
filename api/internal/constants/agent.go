@@ -59,6 +59,26 @@ const RunEventModelFallback = "model_fallback"
 
 const MaxAgentTurns = 10000
 
+const (
+	EffortLow    = "low"
+	EffortMedium = "medium"
+	EffortHigh   = "high"
+	EffortMax    = "max"
+)
+
+// The oneof binding tags must list the same values.
+var Efforts = []string{EffortLow, EffortMedium, EffortHigh, EffortMax}
+
+func IsEffort(effort string) bool {
+	return slices.Contains(Efforts, effort)
+}
+
+const (
+	EffortSourceAgent    = "agent"
+	EffortSourceSettings = "settings"
+	EffortSourceModel    = "model"
+)
+
 type StageDef struct {
 	Name      string
 	Skippable bool
