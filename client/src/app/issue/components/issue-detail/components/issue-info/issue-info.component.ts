@@ -467,7 +467,10 @@ export class IssueInfoComponent implements OnInit {
 
     public onToggleInputDescription(event?: MouseEvent): void {
         if (event) {
-            if ((event.target as HTMLElement | null)?.closest('a, button')) {
+            const control = (event.target as HTMLElement | null)?.closest(
+                'a, button, [role="button"]'
+            );
+            if (control && control !== event.currentTarget) {
                 return;
             }
             const start = this.descriptionMousedownCoords();

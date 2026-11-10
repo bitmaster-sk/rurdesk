@@ -72,7 +72,6 @@ import { WikiProposalOriginComponent } from './components/wiki-proposal-origin/w
 import { WikiPageAsideComponent } from './components/wiki-page-aside/wiki-page-aside.component';
 import { WikiTreeShowComponent } from './components/wiki-tree-show/wiki-tree-show.component';
 import { WikiHeadingAnchorsDirective } from './directives/wiki-heading-anchors.directive';
-import { WikiCodeCopyDirective } from './directives/wiki-code-copy.directive';
 import { WikiMermaidDirective } from './directives/wiki-mermaid.directive';
 import { WikiPlantUmlDirective } from './directives/wiki-plantuml.directive';
 import { WikiEditorModule } from './wiki-editor.module';
@@ -95,7 +94,6 @@ import { WikiRoutingModule } from './wiki-routing.module';
         WikiTreeShowComponent,
         WikiPageAsideComponent,
         WikiHeadingAnchorsDirective,
-        WikiCodeCopyDirective,
         WikiMermaidDirective,
         WikiPlantUmlDirective
     ],

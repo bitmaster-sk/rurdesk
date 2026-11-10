@@ -194,6 +194,44 @@ tabler-icon {
         }
     }
 
+    :where(.markdown-code-block) {
+        margin: 0.75em 0;
+    }
+
+    .markdown-code-block {
+        position: relative;
+
+        > pre {
+            margin: 0;
+            padding-right: calc(var(--ui-space-m) + 2rem);
+        }
+    }
+
+    .markdown-code-copy {
+        position: absolute;
+        z-index: 1;
+        top: var(--ui-space-s);
+        right: var(--ui-space-s);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        border-radius: var(--ui-radius-sm);
+        color: var(--ui-surface-400);
+        background: var(--ui-surface-50);
+        cursor: pointer;
+
+        &:hover {
+            color: var(--ui-color-primary);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--ui-color-primary);
+            outline-offset: 2px;
+        }
+    }
+
     li > p {
         margin: 0.15em 0;
     }

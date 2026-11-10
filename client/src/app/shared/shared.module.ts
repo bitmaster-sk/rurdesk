@@ -72,8 +72,11 @@ import {
     IconPencil,
     IconSearch,
     IconHammer,
-    IconLink
+    IconLink,
+    IconCopy,
+    IconCopyCheck
 } from '@tabler/icons-angular';
+import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directive';
 
 @NgModule({
     declarations: [
@@ -100,6 +103,7 @@ import {
         MockupCardComponent,
         AgentThinkingRowComponent,
         MessageBodyComponent,
+        MarkdownCodeCopyDirective,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,
@@ -152,7 +156,9 @@ import {
             IconPencil,
             IconSearch,
             IconHammer,
-            IconLink
+            IconLink,
+            IconCopy,
+            IconCopyCheck
         })
     ],
     exports: [
@@ -181,6 +187,7 @@ import {
         MockupCardComponent,
         AgentThinkingRowComponent,
         MessageBodyComponent,
+        MarkdownCodeCopyDirective,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
         AttachmentRenderDirective,

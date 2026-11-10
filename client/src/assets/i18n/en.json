@@ -350,6 +350,11 @@
             "METADATA": "Metadata"
         }
     },
+    "MARKDOWN": {
+        "COPY_CODE": "Copy code",
+        "CODE_COPIED": "Code copied",
+        "CODE_COPY_FAILED": "Could not copy the code"
+    },
     "SHARED": {
         "CLOSE": "Close",
         "DELETE_MIGRATION": {
@@ -547,12 +552,9 @@
             "NEW_SHARED": "New shared page",
             "EDIT": "Edit",
             "COPY_LINK": "Copy link",
-            "COPY_CODE": "Copy code",
             "FULL_WIDTH": "Use full width",
             "NARROW": "Use narrow width",
             "LINK_COPIED": "Link copied",
-            "CODE_COPIED": "Code copied",
-            "CODE_COPY_FAILED": "Could not copy the code",
             "HEADING_LINK": "Copy a link to this heading",
             "VERSION_BY": "version {{version}} · {{name}}",
             "LINKED_TASKS": "Linked tasks",
