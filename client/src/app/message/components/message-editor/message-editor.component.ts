@@ -574,6 +574,10 @@ export class MessageEditorComponent implements ControlValueAccessor, AfterViewIn
             return;
         }
         if (this.change() === 'onaction') {
+            if (this.mode() === 'edit' && value === this.message()) {
+                this.cancelled.emit();
+                return;
+            }
             this.propagateChange(value);
             if (this.mode() === 'create') {
                 this.text.set('');

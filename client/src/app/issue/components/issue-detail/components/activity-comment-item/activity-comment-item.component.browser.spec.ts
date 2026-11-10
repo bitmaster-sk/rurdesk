@@ -1,5 +1,6 @@
 import { Component, input, output } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { MarkdownModule } from 'ngx-markdown';
 import { MARKDOWN_MARKED_OPTIONS } from 'src/app/shared/markdown/marked-options';
 import { MARKDOWN_MENTION_EXTENSION } from 'src/app/shared/markdown/mention-extension';
@@ -238,5 +239,59 @@ describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', 
         // The mention chip must appear inside the line-mode lines.
         const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
         expect(chips.length).toBeGreaterThan(0);
+    });
+});
+
+describe('ActivityCommentItemComponent editing (browser)', () => {
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            imports: [
+                MarkdownModule.forRoot(),
+                UiModule,
+                TranslateModule.forRoot(),
+                AvatarStub,
+                MessageEditorStub,
+                TablerIconStub,
+                AttachmentLightboxStub,
+                DiffViewerStub,
+                AnchorReplyStub,
+                PlanActionsStub
+            ],
+            declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
+        }).compileComponents();
+    });
+
+    function renderEditing() {
+        const fixture = TestBed.createComponent(ActivityCommentItemComponent);
+        fixture.componentRef.setInput('message', plainMessage('old text'));
+        fixture.componentRef.setInput('isOwnMessage', true);
+        fixture.componentRef.setInput('isEditing', true);
+        fixture.detectChanges();
+        const editor = fixture.debugElement.query(By.directive(MessageEditorStub))
+            .componentInstance as MessageEditorStub;
+        return { fixture, editor };
+    }
+
+    it('offers save and cancel instead of send while editing', () => {
+        const { editor } = renderEditing();
+
+        expect(editor.message()).toBe('old text');
+        expect(editor.sendIcon()).toBe('device-floppy');
+        expect(editor.sendLabel()).toBe('SAVE');
+        expect(editor.disableCancelButton()).toBe(false);
+    });
+
+    it('emits the edited text on save and closes on cancel', () => {
+        const { fixture, editor } = renderEditing();
+        const saved: string[] = [];
+        let cancelCount = 0;
+        fixture.componentInstance.editSave.subscribe(text => saved.push(text));
+        fixture.componentInstance.editCancel.subscribe(() => cancelCount++);
+
+        editor.messageChange.emit('new text');
+        editor.cancelled.emit();
+
+        expect(saved).toEqual(['new text']);
+        expect(cancelCount).toBe(1);
     });
 });

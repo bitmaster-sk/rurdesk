@@ -20,6 +20,7 @@ import { User } from 'src/app/auth/model/user.model';
             [message]="message"
             [mentionCandidates]="mentionCandidates"
             (messageChange)="onMessageChange($event)"
+            (cancelled)="onCancelled()"
         ></app-message-editor>
     `
 })
@@ -30,8 +31,12 @@ class HostComponent {
     public message = '';
     public mentionCandidates: User[] = [];
     public emitted: string[] = [];
+    public cancelCount = 0;
     public onMessageChange(v: string): void {
         this.emitted.push(v);
+    }
+    public onCancelled(): void {
+        this.cancelCount++;
     }
 }
 
@@ -124,6 +129,38 @@ describe('MessageEditorComponent (contenteditable)', () => {
         expect(chips.length).toBe(1);
         expect(chips[0].textContent).toBe('@Jan');
         expect(EditorText.serialize(el)).toBe('hello @[Jan](user:1)');
+    });
+
+    it('closes an unchanged edit on save instead of doing nothing', async () => {
+        host.mode = 'edit';
+        host.message = 'unchanged';
+        await initFixture();
+
+        editorEl(fixture).dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true })
+        );
+        fixture.detectChanges();
+
+        expect(host.emitted).toEqual([]);
+        expect(host.cancelCount).toBe(1);
+    });
+
+    it('saves a changed edit without cancelling', async () => {
+        host.mode = 'edit';
+        host.message = 'old';
+        await initFixture();
+        const el = editorEl(fixture);
+        el.textContent = 'new';
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        fixture.detectChanges();
+
+        el.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true })
+        );
+        fixture.detectChanges();
+
+        expect(host.emitted).toEqual(['new']);
+        expect(host.cancelCount).toBe(0);
     });
 
     it('Bold toolbar wraps the current selection in **; model/emit only on send (onaction)', async () => {
