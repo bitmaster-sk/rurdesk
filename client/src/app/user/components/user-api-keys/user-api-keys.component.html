@@ -24,47 +24,55 @@
                 </div>
                 <div class="secret-code">
                     <code>{{ revealedKey.rawKey }}</code>
-                    <ui-button
-                        [label]="'USER_API_KEY.COPY' | translate"
-                        severity="secondary"
-                        size="small"
-                        data-testid="user-api-key-copy"
-                        (click)="onCopy()"
-                    >
-                        <tabler-icon icon="copy" [size]="14" />
-                    </ui-button>
-                    <ui-button
-                        severity="secondary"
-                        variant="text"
-                        size="small"
-                        [uiTooltip]="'USER_API_KEY.DISMISS' | translate"
-                        uiTooltipPosition="top"
-                        data-testid="user-api-key-dismiss"
-                        (click)="onDismissRevealed()"
-                    >
-                        <tabler-icon icon="circle-x" [size]="14" />
-                    </ui-button>
+                    <div class="flex flex-wrap justify-end gap-1 max-md:w-full">
+                        <ui-button
+                            [label]="'USER_API_KEY.COPY' | translate"
+                            severity="secondary"
+                            size="small"
+                            data-testid="user-api-key-copy"
+                            (click)="onCopy()"
+                        >
+                            <tabler-icon icon="copy" [size]="14" />
+                        </ui-button>
+                        <ui-button
+                            severity="secondary"
+                            variant="text"
+                            size="small"
+                            [uiTooltip]="'USER_API_KEY.DISMISS' | translate"
+                            uiTooltipPosition="top"
+                            data-testid="user-api-key-dismiss"
+                            (click)="onDismissRevealed()"
+                        >
+                            <tabler-icon icon="circle-x" [size]="14" />
+                        </ui-button>
+                    </div>
                 </div>
             </div>
         }
 
         <div class="p-4 border-bottom flex flex-col gap-2">
-            <form class="flex items-end gap-4" [formGroup]="form" (ngSubmit)="onCreate()">
-                <div class="flex flex-col gap-1 flex-1">
+            <form
+                class="flex flex-col md:flex-row md:items-end gap-4"
+                [formGroup]="form"
+                (ngSubmit)="onCreate()"
+            >
+                <div class="flex flex-col gap-1 flex-1 min-w-0 md:w-auto">
                     <label for="user-api-key-name">{{ 'USER_API_KEY.NAME' | translate }}</label>
                     <input
                         uiInput
+                        class="w-full"
                         id="user-api-key-name"
                         formControlName="name"
                         data-testid="user-api-key-name"
                     />
                 </div>
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-1 min-w-0 max-md:w-full md:w-auto">
                     <label for="user-api-key-expires">
                         {{ 'USER_API_KEY.EXPIRES_AT' | translate }}
                     </label>
                     <input
                         uiDatepicker
+                        class="w-full"
                         id="user-api-key-expires"
                         formControlName="expiresAt"
                         [invalid]="form.controls.expiresAt.invalid"
@@ -74,6 +82,7 @@
                 </div>
                 <ui-button
                     type="submit"
+                    class="max-md:w-full"
                     [label]="'USER_API_KEY.CREATE' | translate"
                     size="small"
                     [loading]="isCreateBusy()"
@@ -114,72 +123,76 @@
                 </ui-button>
             </div>
         } @else if (keys().length) {
-            <table class="ui-table" data-testid="user-api-key-table">
-                <thead>
-                    <tr>
-                        <th scope="col">{{ 'USER_API_KEY.NAME' | translate }}</th>
-                        <th scope="col">{{ 'USER_API_KEY.CREATED_AT' | translate }}</th>
-                        <th scope="col">{{ 'USER_API_KEY.LAST_USED' | translate }}</th>
-                        <th scope="col">{{ 'USER_API_KEY.EXPIRES_AT' | translate }}</th>
-                        <th scope="col" class="action-column"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (key of keys(); track key.idApiKey) {
-                        <tr data-testid="user-api-key-row">
-                            <td>{{ key.name }}</td>
-                            <td>{{ key.createdAt | date: 'short' }}</td>
-                            <td>
-                                {{
-                                    key.lastUsedAt
-                                        ? (key.lastUsedAt | date: 'short')
-                                        : ('USER_API_KEY.NEVER_USED' | translate)
-                                }}
-                            </td>
-                            <td>
-                                {{
-                                    key.expiresAt
-                                        ? (key.expiresAt | date: 'short')
-                                        : ('USER_API_KEY.NEVER' | translate)
-                                }}
-                            </td>
-                            <td class="action-column">
-                                <div class="flex justify-end gap-1">
-                                    <ui-button
-                                        severity="secondary"
-                                        variant="text"
-                                        size="small"
-                                        [loading]="idRegeneratingApiKey() === key.idApiKey"
-                                        [uiTooltip]="'USER_API_KEY.REGENERATE' | translate"
-                                        uiTooltipPosition="top"
-                                        uiConfirm
-                                        [confirmText]="
-                                            'USER_API_KEY.REGENERATE_CONFIRM' | translate
-                                        "
-                                        data-testid="user-api-key-regenerate"
-                                        (confirmed)="onRegenerate(key.idApiKey)"
-                                    >
-                                        <tabler-icon icon="refresh" [size]="14" />
-                                    </ui-button>
-                                    <ui-button
-                                        severity="danger"
-                                        variant="text"
-                                        size="small"
-                                        [uiTooltip]="'USER_API_KEY.REVOKE' | translate"
-                                        uiTooltipPosition="top"
-                                        uiConfirm
-                                        [confirmText]="'USER_API_KEY.REVOKE_CONFIRM' | translate"
-                                        data-testid="user-api-key-revoke"
-                                        (confirmed)="onRevoke(key.idApiKey)"
-                                    >
-                                        <tabler-icon icon="trash" [size]="14" />
-                                    </ui-button>
-                                </div>
-                            </td>
+            <div class="ui-table-scroll min-w-0" data-testid="user-api-key-table-scroll">
+                <table class="ui-table" data-testid="user-api-key-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'USER_API_KEY.NAME' | translate }}</th>
+                            <th scope="col">{{ 'USER_API_KEY.CREATED_AT' | translate }}</th>
+                            <th scope="col">{{ 'USER_API_KEY.LAST_USED' | translate }}</th>
+                            <th scope="col">{{ 'USER_API_KEY.EXPIRES_AT' | translate }}</th>
+                            <th scope="col" class="action-column"></th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @for (key of keys(); track key.idApiKey) {
+                            <tr data-testid="user-api-key-row">
+                                <td>{{ key.name }}</td>
+                                <td>{{ key.createdAt | date: 'short' }}</td>
+                                <td>
+                                    {{
+                                        key.lastUsedAt
+                                            ? (key.lastUsedAt | date: 'short')
+                                            : ('USER_API_KEY.NEVER_USED' | translate)
+                                    }}
+                                </td>
+                                <td>
+                                    {{
+                                        key.expiresAt
+                                            ? (key.expiresAt | date: 'short')
+                                            : ('USER_API_KEY.NEVER' | translate)
+                                    }}
+                                </td>
+                                <td class="action-column">
+                                    <div class="flex justify-end gap-1">
+                                        <ui-button
+                                            severity="secondary"
+                                            variant="text"
+                                            size="small"
+                                            [loading]="idRegeneratingApiKey() === key.idApiKey"
+                                            [uiTooltip]="'USER_API_KEY.REGENERATE' | translate"
+                                            uiTooltipPosition="top"
+                                            uiConfirm
+                                            [confirmText]="
+                                                'USER_API_KEY.REGENERATE_CONFIRM' | translate
+                                            "
+                                            data-testid="user-api-key-regenerate"
+                                            (confirmed)="onRegenerate(key.idApiKey)"
+                                        >
+                                            <tabler-icon icon="refresh" [size]="14" />
+                                        </ui-button>
+                                        <ui-button
+                                            severity="danger"
+                                            variant="text"
+                                            size="small"
+                                            [uiTooltip]="'USER_API_KEY.REVOKE' | translate"
+                                            uiTooltipPosition="top"
+                                            uiConfirm
+                                            [confirmText]="
+                                                'USER_API_KEY.REVOKE_CONFIRM' | translate
+                                            "
+                                            data-testid="user-api-key-revoke"
+                                            (confirmed)="onRevoke(key.idApiKey)"
+                                        >
+                                            <tabler-icon icon="trash" [size]="14" />
+                                        </ui-button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         } @else {
             <p class="m-0 p-4 ui-color-text-muted" data-testid="user-api-key-empty">
                 {{ 'USER_API_KEY.EMPTY' | translate }}
