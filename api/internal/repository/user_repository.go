@@ -11,6 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const userColumns = `id_user, name, email, coalesce(password, '') AS password, color_avatar_bg, avatar_initials,
+	is_agent, is_admin, is_active, is_break_glass, last_login_at, password IS NULL AS is_passwordless,
+	scim_external_id IS NOT NULL AS is_scim_managed`
+
 type UserRepository struct {
 	pool *pgxpool.Pool
 }
@@ -23,7 +27,7 @@ func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*mod
 	db := extctx.GetDb(ctx, r.pool)
 	err := db.QueryRow(ctx, `
 		INSERT INTO users.user(email, password, name, color_avatar_bg, avatar_initials, is_agent, is_admin)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, NULLIF($2, ''), $3, $4, $5, $6, $7)
 		RETURNING id_user
 	`, user.Email, user.Password, user.Name, user.ColorAvatarBg, user.AvatarInitials, user.IsAgent, user.IsAdmin,
 	).Scan(&user.IdUser)
@@ -36,7 +40,7 @@ func (r *UserRepository) InsertUser(ctx context.Context, user *model.User) (*mod
 func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
+		SELECT `+userColumns+`
 		FROM users.user
 		WHERE id_user = $1
 	`, idUser)
@@ -53,7 +57,7 @@ func (r *UserRepository) LoadUser(ctx context.Context, idUser int64) (*model.Use
 func (r *UserRepository) LoadUserByEmail(ctx context.Context, email string) (*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
+		SELECT `+userColumns+`
 		FROM users.user
 		WHERE email = $1
 	`, email)
@@ -138,7 +142,7 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 	db := extctx.GetDb(ctx, r.pool)
 	var exists bool
 	err := db.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM users.user WHERE email = $1)`, email,
+		`SELECT EXISTS(SELECT 1 FROM users.user WHERE lower(email) = lower($1))`, email,
 	).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("checking email exists: %w", err)
@@ -149,7 +153,7 @@ func (r *UserRepository) EmailExists(ctx context.Context, email string) (bool, e
 func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
-		SELECT id_user, name, email, password, color_avatar_bg, avatar_initials, is_agent, is_admin, is_active
+		SELECT `+userColumns+`
 		FROM users.user
 		ORDER BY id_user
 	`)
@@ -161,6 +165,19 @@ func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 		return nil, fmt.Errorf("collecting users: %w", err)
 	}
 	return users, nil
+}
+
+func (r *UserRepository) LoadIdsWithIdentity(ctx context.Context) ([]int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `SELECT DISTINCT id_user FROM users.user_identity`)
+	if err != nil {
+		return nil, fmt.Errorf("querying users with an identity: %w", err)
+	}
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	if err != nil {
+		return nil, fmt.Errorf("collecting users with an identity: %w", err)
+	}
+	return ids, nil
 }
 
 func (r *UserRepository) CountUsers(ctx context.Context) (int64, error) {
@@ -301,4 +318,59 @@ func (r *UserRepository) IsAgentUser(ctx context.Context, idUser int64) (bool, e
 		return false, fmt.Errorf("querying user is agent: %w", err)
 	}
 	return isAgent, nil
+}
+
+func (r *UserRepository) LoadUsersByEmailFold(ctx context.Context, email string) ([]*model.User, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, "SELECT "+userColumns+" FROM users.user WHERE lower(email) = lower($1) ORDER BY id_user", email)
+	if err != nil {
+		return nil, fmt.Errorf("querying users by folded email: %w", err)
+	}
+	users, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.User])
+	if err != nil {
+		return nil, fmt.Errorf("collecting users by folded email: %w", err)
+	}
+	return users, nil
+}
+
+func (r *UserRepository) EmailTakenByOther(ctx context.Context, email string, idUser int64) (bool, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var taken bool
+	err := db.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM users.user WHERE lower(email) = lower($1) AND id_user <> $2)`, email, idUser,
+	).Scan(&taken)
+	if err != nil {
+		return false, fmt.Errorf("checking email taken: %w", err)
+	}
+	return taken, nil
+}
+
+func (r *UserRepository) TouchLastLogin(ctx context.Context, idUser int64) error {
+	db := extctx.GetDb(ctx, r.pool)
+	if _, err := db.Exec(ctx, `UPDATE users.user SET last_login_at = now() WHERE id_user = $1`, idUser); err != nil {
+		return fmt.Errorf("touching last login: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) SetBreakGlass(ctx context.Context, idUser int64, isBreakGlass bool) error {
+	db := extctx.GetDb(ctx, r.pool)
+	tag, err := db.Exec(ctx, `UPDATE users.user SET is_break_glass = $1 WHERE id_user = $2`, isBreakGlass, idUser)
+	if err != nil {
+		return fmt.Errorf("setting break-glass: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	return nil
+}
+
+func (r *UserRepository) HasIdentity(ctx context.Context, idUser int64) (bool, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var has bool
+	err := db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users.user_identity WHERE id_user = $1)`, idUser).Scan(&has)
+	if err != nil {
+		return false, fmt.Errorf("checking user identity: %w", err)
+	}
+	return has, nil
 }
