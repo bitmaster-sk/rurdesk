@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -84,28 +83,6 @@ func TestClientOrigin(t *testing.T) {
 			handler := &originRewriteHandler{publicBaseURL: tt.publicBaseURL}
 
 			assert.Equal(t, tt.want, handler.clientOrigin(request))
-		})
-	}
-}
-
-func TestLoadConfig_PublicBaseURL(t *testing.T) {
-	tests := []struct {
-		name string
-		set  string
-		want string
-	}{
-		{name: "unset means derive per request", set: "", want: ""},
-		{name: "trailing slash is trimmed", set: "https://tracker.example.com/", want: "https://tracker.example.com"},
-		{name: "surrounding whitespace is trimmed", set: "  https://tracker.example.com  ", want: "https://tracker.example.com"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			previous := viper.GetString("MCP_PUBLIC_BASE_URL")
-			viper.Set("MCP_PUBLIC_BASE_URL", tt.set)
-			defer viper.Set("MCP_PUBLIC_BASE_URL", previous)
-
-			assert.Equal(t, tt.want, LoadConfig().PublicBaseURL)
 		})
 	}
 }

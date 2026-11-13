@@ -1,8 +1,12 @@
 package middleware
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,5 +52,19 @@ func TestResolveAllowOrigin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, resolveAllowOrigin(tt.allowed, tt.requestOrigin))
 		})
+	}
+}
+
+func TestCors_AllowsEveryMethodTheApiUses(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	engine.Use(Cors())
+	recorder := httptest.NewRecorder()
+
+	engine.ServeHTTP(recorder, httptest.NewRequest(http.MethodOptions, "/api/private/user/password", nil))
+
+	allowed := recorder.Header().Get("Access-Control-Allow-Methods")
+	for _, method := range []string{"GET", "POST", "PUT", "PATCH", "DELETE"} {
+		assert.Contains(t, strings.Split(allowed, ","), method)
 	}
 }

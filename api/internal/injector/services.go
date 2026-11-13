@@ -8,11 +8,14 @@ import (
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/ai"
+	"github.com/bitmaster-sk/rurdesk/api/internal/authpolicy"
 	"github.com/bitmaster-sk/rurdesk/api/internal/controller"
+	"github.com/bitmaster-sk/rurdesk/api/internal/deactivation"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/license"
 	"github.com/bitmaster-sk/rurdesk/api/internal/mcp"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/publicurl"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/router"
 	"github.com/bitmaster-sk/rurdesk/api/internal/scheduler"
@@ -138,6 +141,14 @@ func mustCache() *redis.Client {
 		panic(fmt.Sprintf("injector: cache client unavailable: %v", err))
 	}
 	return client
+}
+
+func mustPublicBaseUrl() string {
+	baseUrl, err := publicurl.Load()
+	if err != nil {
+		panic(fmt.Sprintf("injector: %v", err))
+	}
+	return baseUrl
 }
 
 func mustAppSettings() *service.AppSettingsService {
@@ -499,7 +510,7 @@ func GetIssueService() *service.IssueService {
 
 func GetMCPServer() *mcp.MCPServer {
 	instance, _ := di.GetWithNew("mcp-server", func() (any, error) {
-		return mcp.NewMCPServer(mcp.LoadConfig(), GetHttpServer()), nil
+		return mcp.NewMCPServer(&mcp.Config{PublicBaseURL: mustPublicBaseUrl()}, GetHttpServer()), nil
 	})
 	return instance.(*mcp.MCPServer)
 }
@@ -538,7 +549,7 @@ func GetAdvisoryLockRepository() *repository.AdvisoryLockRepository {
 func GetUserService() *service.UserService {
 	instance, _ := di.GetWithNew("user-service", func() (any, error) {
 		cache := mustCache()
-		return service.NewUserService(GetUserRepository(), GetAdvisoryLockRepository(), cache, mustDb()), nil
+		return service.NewUserService(GetUserRepository(), GetAdvisoryLockRepository(), cache, mustDb(), GetPasswordLoginPolicy), nil
 	})
 	return instance.(*service.UserService)
 }
@@ -566,8 +577,24 @@ func GetUserController() *controller.UserController {
 
 func GetAdminController() *controller.AdminController {
 	instance, _ := di.GetWithNew("admin-controller", func() (any, error) {
-		pool := mustDb()
 		return controller.NewAdminController(
+			GetUserService(),
+			GetUserRepository(),
+			GetProjectRepository(),
+			GetApiKeyService(),
+			GetAclService(),
+			GetNotifier(),
+			GetDeactivationService(),
+			GetUserChangeGuard,
+			mustDb(),
+		), nil
+	})
+	return instance.(*controller.AdminController)
+}
+
+func GetDeactivationService() *deactivation.Service {
+	instance, _ := di.GetWithNew("deactivation-service", func() (any, error) {
+		return deactivation.New(
 			GetUserService(),
 			GetUserRepository(),
 			GetProjectRepository(),
@@ -580,10 +607,11 @@ func GetAdminController() *controller.AdminController {
 			GetDispatcher(),
 			GetNotifier(),
 			mustAgentThinkingService(),
-			pool,
+			mustDb(),
+			GetUserChangeGuard,
 		), nil
 	})
-	return instance.(*controller.AdminController)
+	return instance.(*deactivation.Service)
 }
 
 func GetTeamController() *controller.TeamController {
@@ -1545,6 +1573,8 @@ func GetRouter() (*router.Router, error) {
 			GetHealthController(),
 			GetVersionController(),
 			GetMCPServer().Handler(),
+			GetAuthMethodsController(),
+			GetRouteExtension(),
 		), nil
 	})
 	if err != nil {
@@ -1574,6 +1604,58 @@ func GetLicenseProvider() license.Provider {
 // anything resolves the provider.
 func SetLicenseProvider(provider license.Provider) {
 	di.Set("license-provider", provider)
+}
+
+func GetPasswordLoginPolicy() authpolicy.PasswordLoginPolicy {
+	instance, _ := di.GetWithNew("password-login-policy", func() (any, error) {
+		return authpolicy.Free{}, nil
+	})
+	return instance.(authpolicy.PasswordLoginPolicy)
+}
+
+func SetPasswordLoginPolicy(policy authpolicy.PasswordLoginPolicy) {
+	di.Set("password-login-policy", policy)
+}
+
+func GetUserChangeGuard() authpolicy.UserChangeGuard {
+	instance, _ := di.GetWithNew("user-change-guard", func() (any, error) {
+		return authpolicy.Free{}, nil
+	})
+	return instance.(authpolicy.UserChangeGuard)
+}
+
+func SetUserChangeGuard(guard authpolicy.UserChangeGuard) {
+	di.Set("user-change-guard", guard)
+}
+
+func GetAuthMethodsProvider() authpolicy.AuthMethodsProvider {
+	instance, _ := di.GetWithNew("auth-methods-provider", func() (any, error) {
+		return authpolicy.Free{}, nil
+	})
+	return instance.(authpolicy.AuthMethodsProvider)
+}
+
+func SetAuthMethodsProvider(provider authpolicy.AuthMethodsProvider) {
+	di.Set("auth-methods-provider", provider)
+}
+
+// SetRouteExtension must run before the router is built.
+func GetRouteExtension() router.Extension {
+	instance, _ := di.GetWithNew("route-extension", func() (any, error) {
+		return router.Extension(router.NoExtension), nil
+	})
+	return instance.(router.Extension)
+}
+
+func SetRouteExtension(extension router.Extension) {
+	di.Set("route-extension", extension)
+}
+
+func GetAuthMethodsController() *controller.AuthMethodsController {
+	instance, _ := di.GetWithNew("auth-methods-controller", func() (any, error) {
+		return controller.NewAuthMethodsController(GetAuthMethodsProvider), nil
+	})
+	return instance.(*controller.AuthMethodsController)
 }
 
 func GetLicenseController() *controller.LicenseController {

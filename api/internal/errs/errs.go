@@ -42,16 +42,21 @@ func NewErr(code, message, translateKey string) *Error {
 	return newErr(code, message, translateKey, http.StatusUnprocessableEntity)
 }
 
+func NewErrWithStatus(code, message, translateKey string, status int) *Error {
+	return newErr(code, message, translateKey, status)
+}
+
 var (
 	// ── Generic HTTP sentinels ──────────────────────────────────────────────
 
-	ErrBadRequest   = newErr("BAD_REQUEST", "bad request", "error.bad_request", http.StatusBadRequest)
-	ErrValidation   = newErr("VALIDATION_FAILED", "request validation failed", "error.validation", http.StatusBadRequest)
-	ErrUnauthorized = newErr("UNAUTHORIZED", "unauthorized", "error.unauthorized", http.StatusUnauthorized)
-	ErrForbidden    = newErr("FORBIDDEN", "forbidden", "error.forbidden", http.StatusForbidden)
-	ErrNotFound     = newErr("NOT_FOUND", "not found", "error.not_found", http.StatusNotFound)
-	ErrInternal     = newErr("INTERNAL_ERROR", "internal server error", "error.internal", http.StatusInternalServerError)
-	ErrConflict     = newErr("CONFLICT", "conflict", "error.conflict", http.StatusConflict)
+	ErrBadRequest      = newErr("BAD_REQUEST", "bad request", "error.bad_request", http.StatusBadRequest)
+	ErrValidation      = newErr("VALIDATION_FAILED", "request validation failed", "error.validation", http.StatusBadRequest)
+	ErrUnauthorized    = newErr("UNAUTHORIZED", "unauthorized", "error.unauthorized", http.StatusUnauthorized)
+	ErrForbidden       = newErr("FORBIDDEN", "forbidden", "error.forbidden", http.StatusForbidden)
+	ErrNotFound        = newErr("NOT_FOUND", "not found", "error.not_found", http.StatusNotFound)
+	ErrInternal        = newErr("INTERNAL_ERROR", "internal server error", "error.internal", http.StatusInternalServerError)
+	ErrConflict        = newErr("CONFLICT", "conflict", "error.conflict", http.StatusConflict)
+	ErrLicenseRequired = newErr("LICENSE_REQUIRED", "this feature needs a valid license", "error.license_required", http.StatusForbidden)
 
 	// ── Workflow / state / severity / issue-type ────────────────────────────
 
@@ -124,11 +129,13 @@ var (
 	ErrAgentAdmin    = newErr("AGENT_ADMIN", "agent users cannot be admins", "error.agent_admin", http.StatusUnprocessableEntity)
 	ErrAgentActivity = newErr("USER_HAS_AGENT_ACTIVITY", "user has agent history and cannot be deleted", "error.user_has_agent_activity", http.StatusUnprocessableEntity)
 
-	ErrAuthoredContent    = newErr("USER_HAS_AUTHORED_CONTENT", "user authored issues and cannot be deleted", "error.user_has_authored_content", http.StatusUnprocessableEntity)
-	ErrSelfDisable        = newErr("SELF_DISABLE", "you cannot disable your own account", "error.self_disable", http.StatusUnprocessableEntity)
-	ErrUserDisabled       = newErr("USER_DISABLED", "this account is disabled", "error.user_disabled", http.StatusUnprocessableEntity)
-	ErrRegistrationClosed = newErr("REGISTRATION_CLOSED", "public registration is closed; ask an admin to create your account", "error.registration_closed", http.StatusUnprocessableEntity)
-	ErrMissingCredentials = newErr("MISSING_CREDENTIALS", "email and password are required for human users", "error.missing_credentials", http.StatusBadRequest)
+	ErrAuthoredContent      = newErr("USER_HAS_AUTHORED_CONTENT", "user authored issues and cannot be deleted", "error.user_has_authored_content", http.StatusUnprocessableEntity)
+	ErrSelfDisable          = newErr("SELF_DISABLE", "you cannot disable your own account", "error.self_disable", http.StatusUnprocessableEntity)
+	ErrAgentPassword        = newErr("AGENT_PASSWORD", "agents sign in with API keys, not passwords", "error.agent_password", http.StatusUnprocessableEntity)
+	ErrBreakGlassNotAllowed = newErr("BREAK_GLASS_NOT_ALLOWED", "only an active admin with a password and no SSO identity can be a break-glass account", "error.break_glass_not_allowed", http.StatusUnprocessableEntity)
+	ErrUserDisabled         = newErr("USER_DISABLED", "this account is disabled", "error.user_disabled", http.StatusUnprocessableEntity)
+	ErrRegistrationClosed   = newErr("REGISTRATION_CLOSED", "public registration is closed; ask an admin to create your account", "error.registration_closed", http.StatusUnprocessableEntity)
+	ErrMissingCredentials   = newErr("MISSING_CREDENTIALS", "email and password are required for human users", "error.missing_credentials", http.StatusBadRequest)
 
 	// ── API keys ───────────────────────────────────────────────────────────
 

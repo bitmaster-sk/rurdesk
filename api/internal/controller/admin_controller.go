@@ -12,8 +12,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/authpolicy"
+	"github.com/bitmaster-sk/rurdesk/api/internal/deactivation"
+	"github.com/bitmaster-sk/rurdesk/api/internal/email"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -27,50 +28,38 @@ import (
 )
 
 type AdminController struct {
-	userService   *service.UserService
-	userRepo      *repository.UserRepository
-	projectRepo   *repository.ProjectRepository
-	aclRepo       *repository.AclRepository
-	apiKeySvc     *service.ApiKeyService
-	acl           *service.AclService
-	agentRunRepo  *repository.AgentRunRepository
-	agentTaskRepo *repository.AgentTaskRepository
-	issueRepo     *repository.IssueRepository
-	dispatcher    *agent.Dispatcher
-	notifier      *notify.Notifier
-	thinking      *agent.ThinkingService
-	pool          *pgxpool.Pool
+	userService  *service.UserService
+	userRepo     *repository.UserRepository
+	projectRepo  *repository.ProjectRepository
+	apiKeySvc    *service.ApiKeyService
+	acl          *service.AclService
+	notifier     *notify.Notifier
+	deactivation *deactivation.Service
+	changeGuard  func() authpolicy.UserChangeGuard
+	pool         *pgxpool.Pool
 }
 
 func NewAdminController(
 	userService *service.UserService,
 	userRepo *repository.UserRepository,
 	projectRepo *repository.ProjectRepository,
-	aclRepo *repository.AclRepository,
 	apiKeySvc *service.ApiKeyService,
 	acl *service.AclService,
-	agentRunRepo *repository.AgentRunRepository,
-	agentTaskRepo *repository.AgentTaskRepository,
-	issueRepo *repository.IssueRepository,
-	dispatcher *agent.Dispatcher,
 	notifier *notify.Notifier,
-	thinking *agent.ThinkingService,
+	deactivationService *deactivation.Service,
+	changeGuard func() authpolicy.UserChangeGuard,
 	pool *pgxpool.Pool,
 ) *AdminController {
 	return &AdminController{
-		userService:   userService,
-		userRepo:      userRepo,
-		projectRepo:   projectRepo,
-		aclRepo:       aclRepo,
-		apiKeySvc:     apiKeySvc,
-		acl:           acl,
-		agentRunRepo:  agentRunRepo,
-		agentTaskRepo: agentTaskRepo,
-		issueRepo:     issueRepo,
-		dispatcher:    dispatcher,
-		notifier:      notifier,
-		thinking:      thinking,
-		pool:          pool,
+		userService:  userService,
+		userRepo:     userRepo,
+		projectRepo:  projectRepo,
+		apiKeySvc:    apiKeySvc,
+		acl:          acl,
+		notifier:     notifier,
+		deactivation: deactivationService,
+		changeGuard:  changeGuard,
+		pool:         pool,
 	}
 }
 
@@ -112,6 +101,7 @@ func (ac *AdminController) CreateUser(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
+	req.Email = email.Normalize(req.Email)
 	if req.Email == "" || req.Password == "" {
 		_ = c.Error(errs.ErrMissingCredentials)
 		c.Status(http.StatusUnprocessableEntity)
@@ -213,7 +203,7 @@ func (ac *AdminController) synthAgentEmail(ctx context.Context, name string) (st
 			return "", err
 		}
 		if !exists {
-			return candidate, nil
+			return email.Normalize(candidate), nil
 		}
 		candidate = fmt.Sprintf("agent-%s-%d@%s", slug, i, domain)
 	}
@@ -347,33 +337,13 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 		}
 	}
 
-	// Captured before the mutation for the api-key cache purge when the active
-	// flag changes (the key rows themselves are not touched by a disable). Purged
-	// in BOTH directions: disabling must kill cached sessions at once, and
-	// re-enabling must clear the negative cache entry a disabled key's lookup
-	// writes, or the key would stay 401 for up to the negative-cache TTL.
-	var keyHashes []string
-	purgeKeyCache := false
-	// Runs of a disabled agent, captured inside the tx so the non-terminal set is
-	// consistent with the flag flip; dispatched/broadcast after commit (below).
-	var cancelledRuns []*model.AgentRun
-	// Task ids cancelled with those runs, compacted after commit like
-	// AgentRunController.Cancel does.
-	var cancelledTaskIds []int64
-	// The acting admin, recorded as the actor of the run-cancel events.
 	acting, _ := extctx.GetUser(ctx)
-	var actorID *int64
-	if acting.IdUser != 0 {
-		actingID := acting.IdUser
-		actorID = &actingID
-	}
 	// Guard + mutate in a tx to avoid a TOCTOU race on the admin count (mirrors guardLastOwner).
 	// Only fields present in the request are applied — this endpoint serves the
 	// admin toggle (isAdmin only), the active toggle (isActive only) and the edit
 	// form (name/email[/isAdmin]).
 	adminChanged := false
-	activeChanged := false
-	disableApplied := false
+	var activeResult *deactivation.Result
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
 		if pErr := ac.applyProfileUpdate(ctx, idUser, isAgent, &req); pErr != nil {
 			return pErr
@@ -383,106 +353,39 @@ func (ac *AdminController) UpdateUser(c *gin.Context) {
 			return gErr
 		}
 		adminChanged = changed
-		acChanged, aErr := ac.applyActiveUpdate(ctx, idUser, targetActiveAdmin, &req)
-		if aErr != nil {
-			return aErr
-		}
-		activeChanged = acChanged
-		if activeChanged {
-			// Key hashes must be read before the flag flips so the cache purge
-			// can run once the tx commits.
-			hashes, hErr := ac.apiKeySvc.KeyHashesByUser(ctx, idUser)
-			if hErr != nil {
-				return hErr
+		if req.IsActive != nil {
+			res, aErr := ac.deactivation.ApplyInTx(ctx, idUser, *req.IsActive, deactivation.Options{IdActor: acting.IdUser})
+			if aErr != nil {
+				return aErr
 			}
-			keyHashes = hashes
-			purgeKeyCache = true
+			activeResult = res
 		}
-		if activeChanged && !*req.IsActive {
-			disableApplied = true
-			// A disabled agent must not leave runs hanging: the gateway callbacks
-			// authenticate with its api key, which stops working on disable, so
-			// the active stage could never report completion. Cancel every
-			// non-terminal run now (same cancel path as AgentRunController.Cancel),
-			// then dispatch + broadcast after the tx commits.
-			runs, rErr := ac.agentRunRepo.LoadActiveForUpdate(ctx, idUser)
-			if rErr != nil {
-				return rErr
-			}
-			for _, locked := range runs {
-				// The rows are locked FOR UPDATE by LoadActiveForUpdate, so a
-				// concurrent phase transition can't slip between the load and
-				// the cancel. The acting admin is the actor so run_event shows
-				// who cancelled the run.
-				updated, tErr := ac.agentRunRepo.TransitionPhase(ctx, locked.IdRun, locked.Phase, constants.PhaseCancelled, constants.ActorTypeUser, actorID, "agent account disabled")
-				if tErr != nil {
-					return tErr
-				}
-				idsTask, cErr := ac.agentTaskRepo.CancelNonTerminalForRun(ctx, locked.IdRun)
-				if cErr != nil {
-					return cErr
-				}
-				cancelledTaskIds = append(cancelledTaskIds, idsTask...)
-				cancelledRuns = append(cancelledRuns, updated)
-			}
-		}
-		return nil
+		return ac.applyBreakGlassUpdate(ctx, idUser, isAgent, &req)
 	})
 	switch {
-	case err == errs.ErrLastAdmin:
-		_ = c.Error(errs.ErrLastAdmin)
-		c.Status(http.StatusUnprocessableEntity)
-	case err == errs.ErrSelfDisable:
-		_ = c.Error(errs.ErrSelfDisable)
-		c.Status(http.StatusUnprocessableEntity)
-	case isLastOwnerErr(err):
-		// ErrLastOwner.WithMessage returns a copy, so match by code via errs.As.
-		_ = c.Error(err)
-		c.Status(http.StatusUnprocessableEntity)
 	case errors.Is(err, repository.ErrUserNotFound):
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
-	case isConflict(err): // email taken (incl. losing the unique-index race)
+	case isConflict(err) || errors.Is(err, repository.ErrEmailTaken): // email taken (incl. losing the unique-index race)
 		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusConflict)
 	case err != nil:
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 	default:
 		// An isAdmin change must kill existing sessions and the cached project-role
-		// admin bypass; an isActive change must do the same plus purge the cached
-		// api-key sessions (a disabled agent's key must stop working at once, and a
-		// re-enabled one must not trip the negative cache entry). A name/email/colour
-		// edit needs neither.
-		if adminChanged || activeChanged {
+		// admin bypass; an isActive change does the same plus purges the cached
+		// api-key sessions (see deactivation.Service.AfterCommit). A
+		// name/email/colour edit needs neither.
+		if adminChanged {
 			if iErr := ac.userService.InvalidateUserSessions(ctx, idUser); iErr != nil {
-				_ = c.Error(iErr)
-				c.Status(http.StatusInternalServerError)
+				ResponseErr(c, iErr)
 				return
 			}
 			ac.acl.InvalidateAllUserProjectCaches(ctx, idUser)
-			if purgeKeyCache {
-				ac.apiKeySvc.PurgeCache(ctx, keyHashes)
-			}
 		}
-		if disableApplied {
-			ac.notifier.Disconnect(idUser)
-			// Fold the cancelled tasks' live thinking events, like
-			// AgentRunController.Cancel does. Must run after the tx committed so
-			// the rows it reads are visible; best-effort, never fails the request.
-			if len(cancelledTaskIds) > 0 {
-				ac.thinking.Compact(ctx, cancelledTaskIds...)
-			}
-			// Tell the gateways of the cancelled runs and refresh open clients.
-			// Dispatch is async like in AgentRunController.Cancel — a gateway
-			// that is down must not fail the disable.
-			for _, run := range cancelledRuns {
-				runForEvent := run
-				go func() {
-					_ = ac.dispatcher.DispatchCancelled(context.Background(), runForEvent)
-				}()
-				agent.BroadcastRunUpdate(ctx, ac.notifier, ac.projectRepo, ac.issueRepo, ac.agentRunRepo, ac.agentTaskRepo, run)
-			}
+		if aErr := ac.deactivation.AfterCommit(ctx, activeResult); aErr != nil {
+			ResponseErr(c, aErr)
+			return
 		}
 		c.Status(http.StatusOK)
 	}
@@ -501,67 +404,46 @@ func (ac *AdminController) applyAdminUpdate(ctx context.Context, idUser int64, t
 		return false, err
 	}
 	changed := targetIsAdmin != *req.IsAdmin
-	if targetActiveAdmin && targetIsAdmin && !*req.IsAdmin {
-		if err := ac.guardLastAdmin(ctx); err != nil {
+	if targetIsAdmin && !*req.IsAdmin {
+		if err := ac.changeGuard().Check(ctx, authpolicy.UserChange{IdUser: idUser, Kind: authpolicy.ChangeRemoveAdmin}); err != nil {
+			return false, err
+		}
+		if targetActiveAdmin {
+			if err := ac.deactivation.GuardLastAdmin(ctx); err != nil {
+				return false, err
+			}
+		}
+		if err := ac.userRepo.SetBreakGlass(ctx, idUser, false); err != nil {
 			return false, err
 		}
 	}
 	return changed, ac.userRepo.SetAdmin(ctx, idUser, *req.IsAdmin)
 }
 
-// applyActiveUpdate applies the isActive toggle when present and reports whether
-// the flag actually changed. Disabling the last active admin is rejected (the
-// guard only applies to an active admin target); disabling the last active owner
-// of any project is rejected with ErrLastOwner naming the project; self-disable
-// is rejected by the caller before the tx starts.
-func (ac *AdminController) applyActiveUpdate(ctx context.Context, idUser int64, targetActiveAdmin bool, req *model.AdminUpdateUserReq) (bool, error) {
-	if req.IsActive == nil {
-		return false, nil
+// applyBreakGlassUpdate runs after the admin and active changes of the same request,
+// so the eligibility check sees the final state of the account.
+func (ac *AdminController) applyBreakGlassUpdate(ctx context.Context, idUser int64, isAgent bool, req *model.AdminUpdateUserReq) error {
+	if req.IsBreakGlass == nil {
+		return nil
+	}
+	if !*req.IsBreakGlass {
+		if err := ac.changeGuard().Check(ctx, authpolicy.UserChange{IdUser: idUser, Kind: authpolicy.ChangeRemoveBreakGlass}); err != nil {
+			return err
+		}
+		return ac.userRepo.SetBreakGlass(ctx, idUser, false)
 	}
 	user, err := ac.userRepo.LoadUser(ctx, idUser)
 	if err != nil {
-		return false, err
+		return err
 	}
-	changed := user.IsActive != *req.IsActive
-	if !changed || *req.IsActive {
-		return changed, ac.userRepo.SetActive(ctx, idUser, *req.IsActive)
-	}
-	if targetActiveAdmin {
-		if err := ac.guardLastAdmin(ctx); err != nil {
-			return false, err
-		}
-	}
-	if err := ac.guardLastProjectOwner(ctx, idUser); err != nil {
-		return false, err
-	}
-	return changed, ac.userRepo.SetActive(ctx, idUser, *req.IsActive)
-}
-
-// guardLastProjectOwner rejects a disable that would leave a project without an
-// active owner: every project where idUser holds owner access (directly or via an
-// owner-ranked team) must keep at least one other active owner. Runs inside the
-// caller's transaction; CountProjectOwnersLocked takes the advisory lock, and the
-// count already excludes disabled users, so the target itself is the one expected
-// to disappear — count <= 1 means the disable would orphan the project.
-func (ac *AdminController) guardLastProjectOwner(ctx context.Context, idUser int64) error {
-	idsProject, err := ac.projectRepo.LoadProjectIdsWhereUserOwner(ctx, idUser)
+	hasIdentity, err := ac.userRepo.HasIdentity(ctx, idUser)
 	if err != nil {
 		return err
 	}
-	for _, idProject := range idsProject {
-		count, err := ac.aclRepo.CountProjectOwnersLocked(ctx, idProject)
-		if err != nil {
-			return err
-		}
-		if count <= 1 {
-			name, err := ac.projectRepo.LoadProjectName(ctx, idProject)
-			if err != nil {
-				return err
-			}
-			return errs.ErrLastOwner.WithMessage(fmt.Sprintf("cannot disable the last active owner of project %q", name))
-		}
+	if isAgent || !user.IsAdmin || !user.IsActive || user.IsPasswordless || hasIdentity {
+		return errs.ErrBreakGlassNotAllowed
 	}
-	return nil
+	return ac.userRepo.SetBreakGlass(ctx, idUser, true)
 }
 
 // applyProfileUpdate writes name/email when present. Agents have a synthetic,
@@ -570,8 +452,15 @@ func (ac *AdminController) applyProfileUpdate(ctx context.Context, idUser int64,
 	if req.Name != nil {
 		name := strings.TrimSpace(*req.Name)
 		if !isAgent && req.Email != nil {
-			email := strings.TrimSpace(*req.Email)
-			if err := ac.userRepo.UpdateProfile(ctx, idUser, name, email); err != nil {
+			normalizedEmail := email.Normalize(*req.Email)
+			isTaken, err := ac.userRepo.EmailTakenByOther(ctx, normalizedEmail, idUser)
+			if err != nil {
+				return err
+			}
+			if isTaken {
+				return repository.ErrEmailTaken
+			}
+			if err := ac.userRepo.UpdateProfile(ctx, idUser, name, normalizedEmail); err != nil {
 				return err
 			}
 		} else if err := ac.userRepo.UpdateUser(ctx, idUser, name); err != nil {
@@ -634,8 +523,11 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 		if gErr != nil {
 			return gErr
 		}
+		if gErr := ac.changeGuard().Check(ctx, authpolicy.UserChange{IdUser: idUser, Kind: authpolicy.ChangeDelete}); gErr != nil {
+			return gErr
+		}
 		if isAdmin && active {
-			if gErr := ac.guardLastAdmin(ctx); gErr != nil {
+			if gErr := ac.deactivation.GuardLastAdmin(ctx); gErr != nil {
 				return gErr
 			}
 		}
@@ -643,7 +535,7 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 		// longer counts as an owner (GetProjectOwnerCount joins on is_active),
 		// so deleting an already-disabled owner can never orphan the project.
 		if active {
-			if gErr := ac.guardLastProjectOwner(ctx, idUser); gErr != nil {
+			if gErr := ac.deactivation.GuardLastProjectOwner(ctx, idUser); gErr != nil {
 				return gErr
 			}
 		}
@@ -656,18 +548,11 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 	case err == errs.ErrAuthoredContent:
 		_ = c.Error(errs.ErrAuthoredContent)
 		c.Status(http.StatusConflict)
-	case err == errs.ErrLastAdmin:
-		_ = c.Error(errs.ErrLastAdmin)
-		c.Status(http.StatusUnprocessableEntity)
-	case isLastOwnerErr(err):
-		_ = c.Error(err)
-		c.Status(http.StatusUnprocessableEntity)
 	case errors.Is(err, repository.ErrUserNotFound):
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 	case err != nil:
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
+		ResponseErr(c, err)
 	default:
 		// Kill remaining sessions and cached api-key auth snapshots.
 		if iErr := ac.userService.InvalidateUserSessions(ctx, idUser); iErr != nil {
@@ -681,22 +566,41 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 	}
 }
 
-// isLastOwnerErr matches ErrLastOwner by code: the disable guard returns the
-// sentinel with WithMessage (a copy), so pointer/sentinel equality fails.
-func isLastOwnerErr(err error) bool {
-	var appErr *errs.Error
-	return errs.As(err, &appErr) && appErr.Code == errs.ErrLastOwner.Code
-}
-
-func (ac *AdminController) guardLastAdmin(ctx context.Context) error {
-	count, err := ac.userRepo.CountAdmins(ctx)
+func (ac *AdminController) SetPassword(c *gin.Context) {
+	idUser, err := strconv.ParseInt(c.Param("idUser"), 10, 64)
 	if err != nil {
-		return err
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	if count <= 1 {
-		return errs.ErrLastAdmin
+	var req model.AdminSetPasswordReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		_ = c.Error(err)
+		c.Status(http.StatusBadRequest)
+		return
 	}
-	return nil
+	ctx := c.Request.Context()
+	user, err := ac.userRepo.LoadUser(ctx, idUser)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if user.IsAgent {
+		ResponseErr(c, errs.ErrAgentPassword)
+		return
+	}
+	keepToken := ""
+	if acting, _ := extctx.GetUser(ctx); acting.IdUser == idUser {
+		keepToken = extctx.BearerToken(c.GetHeader("Authorization"))
+		if keepToken == "" {
+			keepToken, _ = c.Cookie("Authorization")
+		}
+	}
+	if err := ac.userService.SetPassword(ctx, idUser, req.Password, keepToken); err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
 // requireAgent aborts with 422 unless the target user is an agent. API keys minted

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -34,7 +36,7 @@ func Logger(base zerolog.Logger) gin.HandlerFunc {
 		logEvent := event.
 			Int("status", status).
 			Str("latency", latency.String()).
-			Str("url", c.Request.URL.RequestURI())
+			Str("url", loggedUrl(c.Request.URL))
 
 		if mcpTool := c.GetHeader("X-MCP-Tool"); mcpTool != "" {
 			logEvent = logEvent.Str("mcp_tool", mcpTool)
@@ -49,4 +51,16 @@ func Logger(base zerolog.Logger) gin.HandlerFunc {
 
 		logEvent.Msg("request")
 	}
+}
+
+// Query strings under these prefixes carry OIDC codes, SAML state or SCIM filters with e-mails.
+var queryHiddenPrefixes = []string{"/api/public/sso/", "/api/scim/"}
+
+func loggedUrl(requestUrl *url.URL) string {
+	for _, prefix := range queryHiddenPrefixes {
+		if strings.HasPrefix(requestUrl.Path, prefix) {
+			return requestUrl.Path
+		}
+	}
+	return requestUrl.RequestURI()
 }

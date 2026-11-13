@@ -121,7 +121,7 @@ type originRewriteHandler struct {
 // X-Forwarded-Proto IS honoured: it can only flip the scheme on an origin we
 // already control, and without it every URL behind a TLS-terminating proxy would
 // be advertised as http://. Deployments that cannot preserve Host pin the origin
-// with MCP_PUBLIC_BASE_URL instead, which bypasses request headers entirely.
+// with PUBLIC_BASE_URL instead, which bypasses request headers entirely.
 func (h *originRewriteHandler) clientOrigin(r *http.Request) string {
 	if h.publicBaseURL != "" {
 		return h.publicBaseURL
