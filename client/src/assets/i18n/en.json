@@ -1907,7 +1907,33 @@
         "EXTENDED_SESSION": "Stay signed in for 30 days",
         "LABEL": "Login",
         "SHOW_PASSWORD": "Show password",
-        "HIDE_PASSWORD": "Hide password"
+        "HIDE_PASSWORD": "Hide password",
+        "SSO_BUTTON": "Sign in with your company account",
+        "USE_PASSWORD": "Sign in with email and password",
+        "BACK_TO_SSO": "Back to company sign-in",
+        "EMERGENCY": "Emergency sign-in with a password",
+        "BREAK_GLASS_ONLY": "While company sign-in is required, only break-glass accounts can sign in with a password.",
+        "SSO_UNAVAILABLE": "Company sign-in is temporarily unavailable. If you have no password, ask your administrator.",
+        "SSO_ERROR": {
+            "SSO_UNAVAILABLE": "Company sign-in is not available right now.",
+            "INVALID_STATE": "The sign-in took too long or was already used. Try again.",
+            "IDP_ERROR": "Your identity provider did not complete the sign-in. Try again.",
+            "INTERNAL": "Company sign-in failed. Try again.",
+            "EMAIL_MISSING": "Your identity provider did not send an e-mail address.",
+            "DOMAIN_NOT_ALLOWED": "Your e-mail domain cannot sign in here.",
+            "EMAIL_NOT_VERIFIED": "Your identity provider says your e-mail address is not verified.",
+            "EMAIL_AMBIGUOUS": "More accounts use your e-mail address. Ask your administrator.",
+            "ACCOUNT_NOT_LINKABLE": "Your account cannot use company sign-in. Ask your administrator.",
+            "ACCOUNT_DISABLED": "Your account is disabled.",
+            "ACCOUNT_NOT_PROVISIONED": "You have no account here yet. Ask your administrator for access.",
+            "SAML_SUBJECT_UNSUPPORTED": "Your identity provider sent no lasting identifier. Ask your administrator.",
+            "UNKNOWN": "Company sign-in failed."
+        },
+        "SSO_EXCHANGE": {
+            "PROGRESS": "Signing you in…",
+            "FAILED": "The sign-in link is invalid or has expired.",
+            "BACK": "Back to sign in"
+        }
     },
     "REGISTER": {
         "WELCOME": "Welcome to Rurdesk",

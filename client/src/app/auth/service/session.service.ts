@@ -19,7 +19,7 @@ export class SessionService {
     private readonly attachmentStore = inject(AttachmentStore);
     private readonly noticeService = inject(NoticeService);
 
-    public start(token: string): void {
+    public start(token: string, returnUrl = '/'): void {
         this.tokenStore.saveToken(token);
         this.noticeService.reconnect();
         // App bootstrap skips the auth-gated settings load for anonymous visitors;
@@ -29,7 +29,7 @@ export class SessionService {
         // Notifications are similarly auth-gated — init the store's bootstrap
         // (idempotent, so safe even if AppComponent already called it).
         this.notificationStore.init();
-        void this.router.navigate(['/']);
+        void this.router.navigateByUrl(returnUrl);
     }
 
     public end(redirectTo?: string): void {

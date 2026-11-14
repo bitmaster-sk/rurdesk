@@ -103,4 +103,24 @@ describe('AuthApi', () => {
 
         expect(http.delete).toHaveBeenCalledWith('/api/private/logout');
     });
+    it('loads the sign-in methods without an error toast', () => {
+        const { api, http } = build();
+
+        api.loadMethods$().subscribe();
+
+        const [url, options] = http.get.mock.calls[0];
+        expect(url).toBe('/api/public/auth/methods');
+        expect(options.context.get(SILENCE_ERROR_TOAST)).toBe(true);
+    });
+
+    it('exchanges the SSO code without an error toast', () => {
+        const { api, http } = build();
+
+        api.exchangeSso$('abc').subscribe();
+
+        const [url, body, options] = http.post.mock.calls[0];
+        expect(url).toBe('/api/public/sso/exchange');
+        expect(body).toEqual({ code: 'abc' });
+        expect(options.context.get(SILENCE_ERROR_TOAST)).toBe(true);
+    });
 });

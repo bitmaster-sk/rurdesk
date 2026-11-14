@@ -1,12 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
 import { page } from '@vitest/browser/context';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthApi } from '../api/auth.api.service';
+import { PASSWORD_ONLY } from '../constants/sso.constants';
 import { AuthModule } from '../auth.module';
 import { LoginComponent } from '../login/login.component';
 import { SessionService } from '../service/session.service';
@@ -30,7 +31,8 @@ describe('AuthPage (browser)', () => {
     async function render(path: 'login' | 'register') {
         const authApi = {
             login$: vi.fn(),
-            register$: vi.fn()
+            register$: vi.fn(),
+            loadMethods$: vi.fn().mockReturnValue(of(PASSWORD_ONLY))
         };
         const tokenStore = { hasToken: vi.fn().mockReturnValue(false) };
         const session = { start: vi.fn(), end: vi.fn() };
@@ -43,7 +45,7 @@ describe('AuthPage (browser)', () => {
                 { provide: SessionService, useValue: session },
                 {
                     provide: ActivatedRoute,
-                    useValue: { url: of([{ path }]) }
+                    useValue: { url: of([{ path }]), queryParamMap: of(convertToParamMap({})) }
                 }
             ]
         }).compileComponents();
