@@ -42,6 +42,18 @@ import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { WikiApi } from 'src/app/wiki/api/wiki.api.service';
 import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
+import { IssueHistoryApi } from 'src/app/issue/api/issue-history.api.service';
+import {
+    IssueHistory,
+    IssueHistoryRes,
+    IssueHistoryUser
+} from 'src/app/issue/model/issue-history.model';
+import { IssueHistoryLookups } from 'src/app/issue/entity/issue-history-group.entity';
+import { StateStore } from 'src/app/state/store/state.store';
+import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
+import { HistoryGroupConverter } from './converter/history-group.converter';
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -53,6 +65,7 @@ import { WikiProposal } from 'src/app/wiki/model/wiki-proposal.model';
 })
 export class IssueActivityFeedComponent implements AfterViewInit {
     public readonly idIssue = input.required<number>();
+    public readonly idIssuePublic = input.required<number>();
     public readonly idProject = input.required<number>();
     public readonly pendingTrack = input<Track | null>(null);
     public readonly agentRun = input<AgentRun | null>(null);
@@ -66,6 +79,11 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     private readonly messageApi = inject(MessageApi);
     private readonly wikiApi = inject(WikiApi);
+    private readonly issueHistoryApi = inject(IssueHistoryApi);
+    private readonly stateStore = inject(StateStore);
+    private readonly severityStore = inject(SeverityStore);
+    private readonly issueTypeStore = inject(IssueTypeStore);
+    private readonly tagStore = inject(TagStore);
     private readonly trackerService = inject(TrackerService);
     private readonly sNotice = inject(NoticeService);
     private readonly projectMemberStore = inject(ProjectMemberStore);
@@ -79,6 +97,18 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly liveItems = signal<TimelineItem[]>([]);
     private readonly proposalItems = signal<TimelineItem[]>([]);
     protected readonly usersMap = signal<Map<number, User>>(new Map());
+    private readonly historyUsersMap = signal<Map<number, IssueHistoryUser>>(new Map());
+    private readonly lookupMaps = signal<Omit<IssueHistoryLookups, 'users'>>({
+        states: new Map(),
+        severities: new Map(),
+        issueTypes: new Map(),
+        tags: new Map()
+    });
+
+    public readonly historyLookups = computed<IssueHistoryLookups>(() => ({
+        ...this.lookupMaps(),
+        users: this.historyUsersMap()
+    }));
 
     public readonly activeFilters = signal<Set<TimelineFilter>>(new Set());
     public readonly idMessageEdit = signal<number | null>(null);
@@ -250,17 +280,47 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         const usersMap$ = this.projectMemberStore.usersMap$;
         const messages$ = this.messageApi.load$(this.idIssue(), MessageRecipientType.issue);
         const tracks$ = this.trackerService.loadTracks$({ idIssue: this.idIssue() });
+        const history$ = this.issueHistoryApi.load$(this.idProject(), this.idIssuePublic());
 
-        combineLatest([messages$, tracks$, usersMap$])
+        combineLatest([messages$, tracks$, history$, usersMap$])
             .pipe(first())
-            .subscribe(([messages, tracks, usersMap]) => {
+            .subscribe(([messages, tracks, history, usersMap]) => {
                 this.usersMap.set(usersMap);
-                this.allItems.set(this.mergeItems(messages, tracks));
+                this.setHistoryUsers(history);
+                this.allItems.set(this.mergeItems(messages, tracks, history.history));
             });
 
+        this.listenLookupMaps();
+        this.listenHistoryChanges();
         this.listenTrackChange();
         this.listenTaskChanges();
         this.listenProposalChanges();
+    }
+
+    private listenLookupMaps(): void {
+        combineLatest([
+            this.stateStore.statesMapByProject$(this.idProject()).pipe(startWith(new Map())),
+            this.severityStore.severitiesMap$.pipe(startWith(new Map())),
+            this.issueTypeStore.issueTypesMap$.pipe(startWith(new Map())),
+            this.tagStore.tagsMap$.pipe(startWith(new Map()))
+        ])
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(([states, severities, issueTypes, tags]) =>
+                this.lookupMaps.set({ states, severities, issueTypes, tags })
+            );
+    }
+
+    private listenHistoryChanges(): void {
+        this.sNotice.issue$
+            .pipe(
+                filter(notice => notice.payload.idIssue === this.idIssue()),
+                switchMap(() => this.issueHistoryApi.load$(this.idProject(), this.idIssuePublic())),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe(history => {
+                this.setHistoryUsers(history);
+                this.replaceHistoryItems(history.history);
+            });
     }
 
     private listenProposalChanges(): void {
@@ -434,16 +494,46 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         this.liveItems.update(applyUpdate);
     }
 
-    private mergeItems(messages: Message[], tracks: Track[]): TimelineItem[] {
+    private mergeItems(
+        messages: Message[],
+        tracks: Track[],
+        history: IssueHistory[]
+    ): TimelineItem[] {
         const commentItems: TimelineItem[] = messages.map(msg => ({
             type: 'comment' as const,
             date: new Date(msg.createdAt),
             data: msg
         }));
 
-        return [...commentItems, ...this.toTimeItems(tracks)].sort(
+        return [...commentItems, ...this.toTimeItems(tracks), ...this.toHistoryItems(history)].sort(
             (a, b) => a.date.getTime() - b.date.getTime()
         );
+    }
+
+    private replaceHistoryItems(history: IssueHistory[]): void {
+        this.allItems.update(items =>
+            [
+                ...items.filter(item => item.type !== 'history'),
+                ...this.toHistoryItems(history)
+            ].sort((a, b) => a.date.getTime() - b.date.getTime())
+        );
+    }
+
+    private toHistoryItems(history: IssueHistory[]): TimelineItem[] {
+        return HistoryGroupConverter.toGroups(history).map(group => ({
+            type: 'history' as const,
+            date: group.date,
+            data: group
+        }));
+    }
+
+    private setHistoryUsers(history: IssueHistoryRes): void {
+        this.historyUsersMap.set(new Map(history.users.map(user => [user.idUser, user])));
+    }
+
+    public getUserForHistory(idUser: number | null): IssueHistoryUser | undefined {
+        if (idUser == null) return undefined;
+        return this.historyUsersMap().get(idUser);
     }
 
     private replaceTimeItems(tracks: Track[]): void {

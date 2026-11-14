@@ -1,0 +1,115 @@
+<ng-template #valueTemplate let-value>
+    @switch (value.kind) {
+        @case ('empty') {
+            <span class="value value--empty" data-testid="history-empty">
+                {{ value.labelKey | translate }}
+            </span>
+        }
+        @case ('translated') {
+            <span class="value">{{ value.labelKey | translate }}</span>
+        }
+        @case ('state') {
+            <app-state-badge [state]="value.state" size="xs" />
+        }
+        @case ('severity') {
+            <span class="value value--severity">
+                <app-severity-circle [color]="value.severity.color" [size]="0.75" />
+                {{ value.severity.title }}
+            </span>
+        }
+        @case ('issueType') {
+            <app-issue-type-badge [issueType]="value.issueType" size="xs" />
+        }
+        @case ('user') {
+            <span class="value value--user">
+                <app-avatar
+                    [disabled]="value.user.isActive === false"
+                    [name]="value.user.name"
+                    [bgColor]="value.user.colorAvatarBg"
+                    [manualInitials]="value.user.avatarInitials"
+                    [height]="1.5"
+                    [width]="1.5"
+                    [radius]="0.75"
+                ></app-avatar>
+                {{ value.user.name }}
+            </span>
+        }
+        @default {
+            <span class="value">{{ value.text }}</span>
+        }
+    }
+</ng-template>
+
+<div class="activity-item">
+    <div class="activity-marker">
+        <div class="history-icon"><tabler-icon icon="history" [size]="16" /></div>
+        <div class="connector"></div>
+    </div>
+    <div class="history-card">
+        <div class="history-header">
+            @if (isSystem()) {
+                <tabler-icon icon="settings" [size]="14" class="system-icon" />
+                <span class="author" data-testid="history-system">
+                    {{ systemLabelKey() | translate }}
+                </span>
+            } @else if (user(); as u) {
+                <app-avatar
+                    [disabled]="u.isActive === false"
+                    [name]="u.name"
+                    [bgColor]="u.colorAvatarBg"
+                    [manualInitials]="u.avatarInitials"
+                    [height]="1.25"
+                    [width]="1.25"
+                    [radius]="0.625"
+                ></app-avatar>
+                <span class="author" data-testid="history-user">{{ u.name }}</span>
+            } @else {
+                <span class="author" data-testid="history-deleted-user">
+                    {{ 'ISSUE.HISTORY.DELETED_USER' | translate }}
+                </span>
+            }
+            <span class="timestamp">{{ group().date | date: 'medium' }}</span>
+        </div>
+        <ul class="history-rows">
+            @for (row of rows(); track $index) {
+                <li class="history-row" data-testid="history-row">
+                    @switch (row.kind) {
+                        @case ('description') {
+                            {{ 'ISSUE.HISTORY.DESCRIPTION_CHANGED' | translate }}
+                        }
+                        @case ('tags') {
+                            <span class="field">{{ (row.labelKey | translate) + ': ' }}</span>
+                            @for (tag of row.added; track tag.idTag) {
+                                <span class="tag-change" data-testid="history-tag-added">
+                                    <span class="tag-sign">+</span>
+                                    <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                                </span>
+                            }
+                            @for (tag of row.removed; track tag.idTag) {
+                                <span
+                                    class="tag-change tag-change--removed"
+                                    data-testid="history-tag-removed"
+                                >
+                                    <span class="tag-sign">−</span>
+                                    <app-tag-chip [name]="tag.name" [color]="tag.color" />
+                                </span>
+                            }
+                        }
+                        @case ('value') {
+                            <span class="field">{{ (row.labelKey | translate) + ': ' }}</span>
+                            <ng-container
+                                [ngTemplateOutlet]="valueTemplate"
+                                [ngTemplateOutletContext]="{ $implicit: row.oldValue }"
+                            />
+                            <span class="arrow">{{ ' → ' }}</span>
+                            <ng-container
+                                [ngTemplateOutlet]="valueTemplate"
+                                [ngTemplateOutletContext]="{ $implicit: row.newValue }"
+                            />
+                        }
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+</div>

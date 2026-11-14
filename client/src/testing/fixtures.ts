@@ -10,6 +10,10 @@ import { SwimlaneCell } from 'src/app/issue/components/issue-kanban/entity/swiml
 import { ExtendedIssue } from 'src/app/issue/model/extended-issue.model';
 import { Issue } from 'src/app/issue/model/issue.model';
 import { Skill } from 'src/app/shared/model/skill.model';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
+import { IssueState } from 'src/app/state/model/issue-state.model';
+import { Tag } from 'src/app/tag/model/tag.model';
 
 export abstract class Fixtures {
     public static agentStageDefaults(
@@ -163,6 +167,54 @@ export abstract class Fixtures {
             cacheWriteTokens: 0,
             costUsd: null,
             costEstimated: false,
+            ...overrides
+        };
+    }
+
+    public static state(overrides: Partial<IssueState> = {}): IssueState {
+        return {
+            idState: 1,
+            idProject: 10,
+            name: 'New',
+            start: true,
+            final: false,
+            protected: false,
+            orderRank: 0,
+            ...overrides
+        };
+    }
+
+    public static severity(overrides: Partial<IssueSeverity> = {}): IssueSeverity {
+        return {
+            idSeverity: 1,
+            idProject: 10,
+            title: 'High',
+            color: '#d32f2f',
+            protected: false,
+            orderRank: 0,
+            ...overrides
+        };
+    }
+
+    public static issueType(overrides: Partial<IssueType> = {}): IssueType {
+        return {
+            idIssueType: 1,
+            idProject: 10,
+            name: 'Bug',
+            protected: false,
+            orderRank: 0,
+            ...overrides
+        };
+    }
+
+    public static tag(overrides: Partial<Tag> = {}): Tag {
+        return {
+            idTag: 1,
+            idProject: 10,
+            name: 'backend',
+            color: '#2196f3',
+            orderRank: 0,
+            issueCount: 0,
             ...overrides
         };
     }
