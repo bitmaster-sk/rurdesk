@@ -138,7 +138,7 @@
                 <tbody>
                     @for (team of sortedTeams(); track team.idTeam) {
                         <tr>
-                            <td>{{ team.name }}</td>
+                            <td><app-team-label [team]="team" /></td>
                             <td class="ui-color-text-muted">{{ team.memberCount }}</td>
                             <td>
                                 <ui-tag
@@ -235,7 +235,7 @@
             [emptyMessage]="'NO_DATA' | translate"
             (valueChanged)="onAddTeam($event.value)"
         >
-            <ng-template #item let-team>{{ team.name }}</ng-template>
+            <ng-template #item let-team><app-team-label [team]="team" /></ng-template>
         </ui-listbox>
     </div>
 </ui-popover>

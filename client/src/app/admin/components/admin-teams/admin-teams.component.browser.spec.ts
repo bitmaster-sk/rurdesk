@@ -3,7 +3,9 @@ import { of } from 'rxjs';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { TeamApi } from '../../../team/api/team.api.service';
+import { AdminSsoApi } from '../../api/admin-sso.api.service';
 import { AdminTeamApi } from '../../api/admin-team.api.service';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { AdminTeamsComponent } from './admin-teams.component';
 
 /**
@@ -22,18 +24,34 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         colorAvatarBg: '#123456',
         isAgent: false,
         isAdmin: false,
-        isActive: true
+        isActive: true,
+        isBreakGlass: false,
+        isPasswordless: false,
+        lastLoginAt: null,
+        hasSsoIdentity: false,
+        isScimManaged: false
     };
     let insertTeamMember$: ReturnType<typeof vi.fn>;
     let loadTeamMembers$: ReturnType<typeof vi.fn>;
+    let showInfo: ReturnType<typeof vi.fn>;
+    let mappings: {
+        idSsoGroupMapping: number;
+        groupValue: string;
+        idTeam: number;
+        teamName: string;
+    }[];
 
     beforeEach(async () => {
         insertTeamMember$ = vi.fn(() => of(void 0));
         loadTeamMembers$ = vi.fn(() => of([]));
+        showInfo = vi.fn();
+        mappings = [];
         await TestBed.configureTestingModule({
             declarations: [AdminTeamsComponent],
             providers: [
                 { provide: TeamApi, useValue: { load$: () => of([team]) } },
+                { provide: AdminSsoApi, useValue: { loadMappings$: () => of(mappings) } },
+                { provide: ToastNotificationService, useValue: { showInfo } },
                 {
                     provide: AdminTeamApi,
                     useValue: {
@@ -141,5 +159,34 @@ describe('AdminTeamsComponent — native drop targets (browser)', () => {
         };
 
         expect(comp.availableUsers().map(u => u.idUser)).toEqual([7]);
+    });
+
+    it('warns that the next sign-in overrides a manual change of an SSO user in a mapped team', () => {
+        mappings = [
+            { idSsoGroupMapping: 1, groupValue: 'core', idTeam: team.idTeam, teamName: 'Core' }
+        ];
+        const ssoUser = { ...user, hasSsoIdentity: true };
+        const fixture = TestBed.createComponent(AdminTeamsComponent);
+        fixture.componentRef.setInput('users', [ssoUser]);
+        fixture.componentRef.setInput('draggedUser', ssoUser);
+        fixture.detectChanges();
+
+        drop(fixture.nativeElement.querySelector('.team-row') as HTMLElement);
+
+        expect(showInfo).toHaveBeenCalledWith('ADMIN.SSO_TEAM.OVERRIDE_WARNING', 6000);
+    });
+
+    it('does not warn about a user without SSO', () => {
+        mappings = [
+            { idSsoGroupMapping: 1, groupValue: 'core', idTeam: team.idTeam, teamName: 'Core' }
+        ];
+        const fixture = TestBed.createComponent(AdminTeamsComponent);
+        fixture.componentRef.setInput('users', [user]);
+        fixture.componentRef.setInput('draggedUser', user);
+        fixture.detectChanges();
+
+        drop(fixture.nativeElement.querySelector('.team-row') as HTMLElement);
+
+        expect(showInfo).not.toHaveBeenCalled();
     });
 });

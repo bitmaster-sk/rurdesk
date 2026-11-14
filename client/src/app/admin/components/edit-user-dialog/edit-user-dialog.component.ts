@@ -15,17 +15,20 @@ import { forkJoin, map } from 'rxjs';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { Color } from 'src/app/shared/color/color';
 import { Initials } from 'src/app/shared/avatar/initials';
+import { AdminSsoApi } from '../../api/admin-sso.api.service';
 import { AdminUserApi } from '../../api/admin-user.api.service';
 import { AgentGatewayApi } from '../../api/agent-gateway.api.service';
 import { AdminUpdateUserReq, AdminUser } from '../../model/admin-user.model';
 import { AgentGateway, CreateAgentGatewayReq } from '../../model/agent-gateway.model';
+import { SsoIdentity } from '../../model/admin-sso.model';
+import { ApiError } from 'src/app/shared/model/api-error.model';
 import { AgentStageDefaultsFormBuilder } from '../../util/agent-stage-defaults-form';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 
 /**
  * EditUserDialogComponent edits an existing user — same shape as create but the
  * agent flag is fixed (shown read-only). An agent edits only its name; a human also
- * edits email and the admin flag. Password is never changed here.
+ * edits email and the admin flag, and an admin may set a new password for a human.
  */
 @Component({
     selector: 'app-edit-user-dialog',
@@ -37,15 +40,41 @@ export class EditUserDialogComponent {
     private readonly fb = inject(FormBuilder);
     private readonly adminUserApi = inject(AdminUserApi);
     private readonly agentGatewayApi = inject(AgentGatewayApi);
+    private readonly adminSsoApi = inject(AdminSsoApi);
     private readonly sToast = inject(ToastNotificationService);
     protected readonly settingsStore = inject(SettingsStore);
 
     public readonly user = input<AdminUser | null>(null);
+    public readonly users = input<AdminUser[]>([]);
     public readonly visible = model<boolean>(false);
     public readonly updated = output<void>();
 
     protected readonly isSaving = signal(false);
+    protected readonly identities = signal<SsoIdentity[]>([]);
+    protected readonly moveTarget = signal<number | null>(null);
+    protected readonly moveTargets = computed(() => {
+        const idUser = this.user()?.idUser;
+        return this.users().filter(
+            candidate =>
+                candidate.idUser !== idUser &&
+                !candidate.isAgent &&
+                !candidate.isBreakGlass &&
+                candidate.isActive
+        );
+    });
     protected readonly isAgent = computed(() => this.user()?.isAgent ?? false);
+    protected readonly canBeBreakGlass = computed(() => {
+        const user = this.user();
+        return (
+            !!user &&
+            (user.isBreakGlass ||
+                (!user.isAgent &&
+                    user.isAdmin &&
+                    user.isActive &&
+                    !user.isPasswordless &&
+                    !user.hasSsoIdentity))
+        );
+    });
     // The agent's existing gateway, loaded on open. null = agent has none yet
     // (URL is then managed in the keys window, not here).
     protected readonly gateway = signal<AgentGateway | null>(null);
@@ -63,10 +92,12 @@ export class EditUserDialogComponent {
         isAgent: [{ value: false, disabled: true }],
         email: ['', [Validators.email, Validators.maxLength(250)]],
         isAdmin: [false],
+        isBreakGlass: [false],
         gatewayUrl: ['', [Validators.maxLength(2000)]],
         stageDefaults: AgentStageDefaultsFormBuilder.build(false),
         colorAvatarBg: [''],
-        avatarInitials: ['', [Validators.maxLength(2)]]
+        avatarInitials: ['', [Validators.maxLength(2)]],
+        newPassword: ['', [Validators.minLength(5), Validators.maxLength(100)]]
     });
 
     private readonly nameValue = toSignal(this.form.controls.name.valueChanges, {
@@ -87,10 +118,13 @@ export class EditUserDialogComponent {
                 isAgent: user.isAgent,
                 email: user.email,
                 isAdmin: user.isAdmin,
+                isBreakGlass: user.isBreakGlass,
                 gatewayUrl: '',
                 colorAvatarBg: user.colorAvatarBg,
-                avatarInitials: user.avatarInitials ?? ''
+                avatarInitials: user.avatarInitials ?? '',
+                newPassword: ''
             });
+            this.loadIdentities(user);
             const email = this.form.controls.email;
             const gatewayUrl = this.form.controls.gatewayUrl;
             if (user.isAgent) {
@@ -144,6 +178,9 @@ export class EditUserDialogComponent {
                   colorAvatarBg: value.colorAvatarBg!,
                   avatarInitials: value.avatarInitials?.trim() ?? ''
               };
+        if (!user.isAgent && value.isBreakGlass !== user.isBreakGlass) {
+            req.isBreakGlass = value.isBreakGlass!;
+        }
 
         // For an agent with an existing gateway, save a changed URL alongside the name.
         const gw = this.gateway();
@@ -158,6 +195,9 @@ export class EditUserDialogComponent {
             calls.push(
                 this.agentGatewayApi.update$(user.idUser, gatewayReq).pipe(map(() => void 0))
             );
+        }
+        if (!user.isAgent && value.newPassword) {
+            calls.push(this.adminUserApi.setPassword$(user.idUser, value.newPassword));
         }
 
         this.isSaving.set(true);
@@ -179,6 +219,49 @@ export class EditUserDialogComponent {
             req.gatewayUrl !== gw.gatewayUrl ||
             !AgentStageDefaultsFormBuilder.isEqual(req.stageDefaults ?? {}, gw.stageDefaults)
         );
+    }
+
+    protected onUnlinkIdentity(): void {
+        const user = this.user();
+        if (!user) {
+            return;
+        }
+        this.adminSsoApi.unlinkIdentity$(user.idUser).subscribe({
+            next: identities => {
+                this.identities.set(identities);
+                this.updated.emit();
+            },
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
+        });
+    }
+
+    protected onMoveIdentity(): void {
+        const user = this.user();
+        const idTargetUser = this.moveTarget();
+        if (!user || idTargetUser === null) {
+            return;
+        }
+        this.adminSsoApi.moveIdentity$(user.idUser, { idTargetUser }).subscribe({
+            next: () => {
+                this.updated.emit();
+                this.visible.set(false);
+            },
+            error: (err: unknown) =>
+                this.sToast.showError(ApiError.translateKeyOf(err) ?? 'ADMIN.ACTION_FAILED')
+        });
+    }
+
+    private loadIdentities(user: AdminUser): void {
+        this.identities.set([]);
+        this.moveTarget.set(null);
+        if (!user.hasSsoIdentity) {
+            return;
+        }
+        this.adminSsoApi.loadIdentities$(user.idUser).subscribe({
+            next: identities => this.identities.set(identities),
+            error: () => this.identities.set([])
+        });
     }
 
     protected onShuffleColor(): void {

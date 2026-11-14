@@ -21,7 +21,12 @@ describe('AdminUsersComponent — native drag source (browser)', () => {
         colorAvatarBg: '#123456',
         isAgent: false,
         isAdmin: false,
-        isActive: true
+        isActive: true,
+        isBreakGlass: false,
+        isPasswordless: false,
+        lastLoginAt: null,
+        hasSsoIdentity: false,
+        isScimManaged: false
     };
 
     beforeEach(async () => {

@@ -2,6 +2,7 @@ import {
     ChangeDetectionStrategy,
     Component,
     DestroyRef,
+    computed,
     OnInit,
     inject,
     signal
@@ -40,6 +41,8 @@ export class UserSettingsPage implements OnInit {
     private readonly destroyRef = inject(DestroyRef);
 
     public readonly currentUser = this.authStore.user;
+
+    public readonly isPasswordChangeShown = computed(() => !this.currentUser()?.isPasswordless);
 
     // Per-field save chips so feedback appears next to the control the user
     // actually edited — a colour save must not light the chip over the name input.

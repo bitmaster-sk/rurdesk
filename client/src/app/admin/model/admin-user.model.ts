@@ -7,6 +7,11 @@ export interface AdminUser {
     isAgent: boolean;
     isAdmin: boolean;
     isActive: boolean;
+    isBreakGlass: boolean;
+    isPasswordless: boolean;
+    lastLoginAt: string | null;
+    hasSsoIdentity: boolean;
+    isScimManaged: boolean;
 }
 
 export interface AdminCreateUserReq {
@@ -30,6 +35,7 @@ export interface AdminUpdateUserReq {
     email?: string;
     isAdmin?: boolean;
     isActive?: boolean;
+    isBreakGlass?: boolean;
     colorAvatarBg?: string;
     avatarInitials?: string;
 }

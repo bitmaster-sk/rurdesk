@@ -22,13 +22,16 @@
                     (drop)="onDropOnTeam($event, team)"
                     (click)="onSelectTeam(team)"
                 >
-                    <span
-                        class="rounded-full w-4 h-4 shrink-0"
-                        [style.backgroundColor]="team.color"
-                    ></span>
-                    <span class="flex-1 text-ellipsis overflow-hidden whitespace-nowrap">
-                        {{ team.name }}
-                    </span>
+                    <app-team-label class="flex-1" [team]="team" />
+                    @if (ssoTeamIds().has(team.idTeam)) {
+                        <ui-tag
+                            severity="info"
+                            [value]="'ADMIN.SSO_TAG' | translate"
+                            [uiTooltip]="'ADMIN.SSO_TEAM.MANAGED' | translate"
+                            uiTooltipPosition="top"
+                            data-testid="team-sso-tag"
+                        />
+                    }
                     <ui-button
                         variant="text"
                         severity="info"

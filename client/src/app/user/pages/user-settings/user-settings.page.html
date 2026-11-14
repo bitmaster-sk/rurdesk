@@ -63,7 +63,8 @@
             </section>
 
             <!-- Change password -->
-            <section class="panel">
+            @if (isPasswordChangeShown()) {
+            <section class="panel" data-testid="password-panel">
                 <header class="panel-head">
                     <div class="panel-head-l">
                         <tabler-icon icon="lock" [size]="16" class="panel-icon" />
@@ -96,6 +97,7 @@
                     </div>
                 </div>
             </section>
+            }
 
             <app-user-api-keys />
         </div>

@@ -71,6 +71,27 @@
                                                 severity="secondary"
                                             />
                                         }
+                                        @if (user.hasSsoIdentity) {
+                                            <ui-tag
+                                                [value]="'ADMIN.SSO_TAG' | translate"
+                                                severity="info"
+                                                data-testid="user-sso-tag"
+                                            />
+                                        }
+                                        @if (user.isScimManaged) {
+                                            <ui-tag
+                                                [value]="'ADMIN.SCIM_TAG' | translate"
+                                                severity="info"
+                                                data-testid="user-scim-tag"
+                                            />
+                                        }
+                                        @if (user.isBreakGlass) {
+                                            <ui-tag
+                                                [value]="'ADMIN.BREAK_GLASS.TAG' | translate"
+                                                severity="warn"
+                                                data-testid="user-break-glass-tag"
+                                            />
+                                        }
                                         @if (!user.isActive) {
                                             <ui-tag
                                                 [value]="'ADMIN.DISABLED' | translate"
@@ -178,7 +199,12 @@
 </div>
 
 <app-create-user-dialog [(visible)]="showCreate" (created)="onUserCreated($event)" />
-<app-edit-user-dialog [user]="editUser()" [(visible)]="showEdit" (updated)="onUserUpdated()" />
+<app-edit-user-dialog
+    [user]="editUser()"
+    [users]="users()"
+    [(visible)]="showEdit"
+    (updated)="onUserUpdated()"
+/>
 <app-agent-keys-dialog
     [agent]="keysAgent()"
     [presetRevealedKey]="keysPresetKey()"

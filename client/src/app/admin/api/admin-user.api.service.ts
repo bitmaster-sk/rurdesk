@@ -37,6 +37,14 @@ export class AdminUserApi {
         });
     }
 
+    public setPassword$(idUser: number, password: string): Observable<void> {
+        return this.http.put<void>(
+            `/api/private/admin/user/${idUser}/password`,
+            { password },
+            { context: RequestContext.disableErrorToast() }
+        );
+    }
+
     public delete$(idUser: number): Observable<void> {
         return this.http.delete<void>(`/api/private/admin/user/${idUser}`);
     }
