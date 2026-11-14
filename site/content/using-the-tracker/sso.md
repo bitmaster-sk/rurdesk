@@ -9,7 +9,8 @@ Single sign-on (SSO) lets people sign in with their company account from an
 identity provider (IdP) such as Microsoft Entra ID, Okta, Keycloak or Google
 Workspace, over OpenID Connect (OIDC) or SAML 2.0. One IdP serves the whole
 instance. It is a paid feature: it needs the commercial
-image and a license that includes SSO, see [Licensing](../getting-started/licensing.md).
+image and a license key, see
+[Getting a license key](../getting-started/licensing.md#getting-a-license-key).
 
 Passwords keep working next to SSO unless you [enforce it](#enforcing-sso).
 When a sign-in fails, see [SSO troubleshooting](./sso-troubleshooting.md).
