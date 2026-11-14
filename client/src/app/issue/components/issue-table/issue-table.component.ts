@@ -47,6 +47,10 @@ import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
 import { IssueSelectionStore, SelectionResult } from '../../store/issue-selection.store';
 import { SelectionLimitToastService } from '../../service/selection-limit-toast.service';
 import { SelectionClick } from '../../util/selection-click';
+import {
+    STORAGE_KEY_RELATION_MODE,
+    STORAGE_KEY_RELATION_ASK_LAG
+} from './constants/table-storage-keys';
 
 @Component({
     selector: 'app-issue-table',
@@ -140,14 +144,11 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     // Relation mode preferences — persisted to localStorage
-    public isRelationMode = signal(localStorage.getItem('issue-relation-mode') === 'true');
+    public isRelationMode = signal(localStorage.getItem(STORAGE_KEY_RELATION_MODE) === 'true');
 
-    public isAskLag = signal(localStorage.getItem('issue-relation-ask-lag') !== 'false');
+    public isAskLag = signal(localStorage.getItem(STORAGE_KEY_RELATION_ASK_LAG) !== 'false');
 
     public colCount = computed(() => (this.isRelationMode() ? 10 : 8));
-
-    public isSplitDialogOpen = signal(false);
-    public splitIssue = signal<Issue | null>(null);
 
     public readonly rows = this.issueTableService.rows;
 
@@ -421,13 +422,13 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
 
     public onRelationModeChange(value: boolean): void {
         this.isRelationMode.set(value);
-        localStorage.setItem('issue-relation-mode', String(value));
+        localStorage.setItem(STORAGE_KEY_RELATION_MODE, String(value));
         if (!value) this.idsExtendedIssue.set(new Set());
     }
 
     public onAskLagChange(value: boolean): void {
         this.isAskLag.set(value);
-        localStorage.setItem('issue-relation-ask-lag', String(value));
+        localStorage.setItem(STORAGE_KEY_RELATION_ASK_LAG, String(value));
     }
 
     // --- Row expansion ---
@@ -549,21 +550,6 @@ export class IssueTableComponent implements OnInit, AfterViewInit, OnDestroy {
             .deleteRelation$(idProject, issue.idIssuePublic, rel.idIssueRelation)
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe();
-    }
-
-    // --- Split ---
-
-    public onSplitRequested(issue: Issue): void {
-        this.splitIssue.set(issue);
-        this.isSplitDialogOpen.set(true);
-    }
-
-    public onSplitAccepted(_children: Issue[]): void {
-        this.isSplitDialogOpen.set(false);
-    }
-
-    public onSplitCancelled(): void {
-        this.isSplitDialogOpen.set(false);
     }
 
     private onSavedViewResetSignal(): void {

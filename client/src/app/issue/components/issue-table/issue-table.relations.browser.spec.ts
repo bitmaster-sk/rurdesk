@@ -149,3 +149,37 @@ describe('IssueTableComponent.markPulsed (TestBed)', () => {
         clearTimeoutSpy.mockRestore();
     });
 });
+
+describe('IssueTableComponent stored relation preferences (TestBed)', () => {
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    it('loads relation mode enabled when stored as "true"', async () => {
+        localStorage.setItem('issue-relation-mode', 'true');
+        const { comp } = await createTableFixture();
+        expect(comp.isRelationMode()).toBe(true);
+    });
+
+    it('keeps relation mode off when nothing is stored', async () => {
+        const { comp } = await createTableFixture();
+        expect(comp.isRelationMode()).toBe(false);
+    });
+
+    it('loads ask-lag disabled when stored as "false"', async () => {
+        localStorage.setItem('issue-relation-ask-lag', 'false');
+        const { comp } = await createTableFixture();
+        expect(comp.isAskLag()).toBe(false);
+    });
+
+    it('keeps ask-lag enabled when nothing is stored', async () => {
+        const { comp } = await createTableFixture();
+        expect(comp.isAskLag()).toBe(true);
+    });
+
+    it('keeps ask-lag enabled when an unrecognized value is stored', async () => {
+        localStorage.setItem('issue-relation-ask-lag', 'nonsense');
+        const { comp } = await createTableFixture();
+        expect(comp.isAskLag()).toBe(true);
+    });
+});

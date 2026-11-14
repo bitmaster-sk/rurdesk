@@ -1,0 +1,8 @@
+@if (splitIssue(); as issue) {
+    <app-split-dialog
+        [idProject]="issue.idProject"
+        [issue]="issue"
+        (accepted)="close()"
+        (cancelled)="close()"
+    ></app-split-dialog>
+}

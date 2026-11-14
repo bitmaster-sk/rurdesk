@@ -18,7 +18,7 @@
             [issue]="issue"
             [project]="project"
             [agentRun]="agentRunStore.run()"
-            (splitRequested)="onSplitRequested($event)"
+            (splitRequested)="splitDialog.open($event)"
             (trackAdded)="onTrackAdded($event)"
             (deleteRequested)="onDeleteRequested($event)"
             (cancelAgentRun)="agentRunStore.cancel()"
@@ -44,14 +44,8 @@
     </div>
 </ui-split-pane>
 
-@if (isSplitDialogOpen() && splitIssue(); as issue) {
-<app-split-dialog
-    [idProject]="project.idProject"
-    [issue]="issue"
-    (accepted)="onSplitAccepted($event)"
-    (cancelled)="onSplitCancelled()"
-></app-split-dialog>
-} } }
+<app-split-dialog-host #splitDialog />
+} }
 
 <ui-dialog
     [visible]="!!pendingDeleteIssue()"

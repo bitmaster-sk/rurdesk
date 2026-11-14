@@ -250,10 +250,6 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
 
     private grid: KanbanGrid<KanbanTile> = [];
 
-    protected readonly isSplitDialogOpen = signal(false);
-
-    protected readonly splitIssue = signal<Issue | null>(null);
-
     protected readonly sortColumn = signal('title');
 
     protected readonly sortDirection = signal<'asc' | 'desc'>('asc');
@@ -515,19 +511,6 @@ export class IssueKanbanComponent implements OnInit, AfterViewInit, OnDestroy {
         if (this.selection.count() === 0) return false;
         this.selection.clear();
         return true;
-    }
-
-    protected onSplitRequested(issue: Issue): void {
-        this.splitIssue.set(issue);
-        this.isSplitDialogOpen.set(true);
-    }
-
-    protected onSplitAccepted(): void {
-        this.isSplitDialogOpen.set(false);
-    }
-
-    protected onSplitCancelled(): void {
-        this.isSplitDialogOpen.set(false);
     }
 
     protected onColumnLoadMore(column: KanbanColumn): void {

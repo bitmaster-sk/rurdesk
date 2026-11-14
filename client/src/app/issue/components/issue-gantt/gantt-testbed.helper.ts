@@ -29,6 +29,9 @@ import { ExtendedIssue } from '../../model/extended-issue.model';
 import { Fixtures } from 'src/testing/fixtures';
 import { ReadIssueRelationDto } from '../../model/issue-relation.model';
 import { IssueListStateStore } from '../../store/issue-list-state.store';
+import { Issue } from '../../model/issue.model';
+import { SplitDialogStub } from 'src/testing/stubs';
+import { SplitDialogHostComponent } from '../split-dialog/split-dialog-host.component';
 
 export function makeTask(over: Partial<ExtendedIssue> = {}): ExtendedIssue {
     return Fixtures.extendedIssue({
@@ -60,6 +63,8 @@ export class WbsPanelStub {
     public readonly isCollapsed = input<boolean>(false);
     public readonly hoveredTaskId = input<number | null>(null);
     public readonly selectedTaskId = input<number | null>(null);
+    public readonly hasHierarchy = input<boolean>(false);
+    public readonly outlineLevel = input<number | null>(0);
     public readonly scrolled = output<number>();
     public readonly taskClicked = output<any>();
     public readonly taskHovered = output<number | null>();
@@ -67,6 +72,7 @@ export class WbsPanelStub {
     public readonly loadMoreBacklog = output<void>();
     public readonly treeDropped = output<any>();
     public readonly collapseToggled = output<number>();
+    public readonly outlineLevelChange = output<number | null>();
 }
 
 @Component({ selector: 'app-gantt-timeline-body', template: '', standalone: true })
@@ -125,6 +131,7 @@ export class MinimapStub {
 
 @Component({ selector: 'app-issue-quick-actions', template: '', standalone: true })
 export class QuickActionsStub {
+    public readonly splitRequested = output<Issue>();
     public show = vi.fn();
 }
 
@@ -280,9 +287,10 @@ export function configureGanttTestBed(
             TimelineBodyStub,
             MinimapStub,
             QuickActionsStub,
-            FilterStub
+            FilterStub,
+            SplitDialogStub
         ],
-        declarations: [IssueGanttComponent],
+        declarations: [IssueGanttComponent, SplitDialogHostComponent],
         providers: [
             { provide: IssueGanttService, useValue: ganttServiceMock },
             { provide: GanttTimelineService, useValue: timelineServiceMock },

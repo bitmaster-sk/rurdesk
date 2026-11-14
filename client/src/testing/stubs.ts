@@ -174,3 +174,11 @@ export class IssueTagsStub {
     public readonly idsTag = input<number[] | null | undefined>([]);
     public readonly max = input(3);
 }
+
+@Component({ selector: 'app-split-dialog', template: '', standalone: true })
+export class SplitDialogStub {
+    public readonly idProject = input<number>(0);
+    public readonly issue = input<any>(null);
+    public readonly accepted = output<any>();
+    public readonly cancelled = output<void>();
+}

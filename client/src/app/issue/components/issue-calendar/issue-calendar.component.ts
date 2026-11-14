@@ -52,6 +52,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { FULLCALENDAR_LOCALES, FullCalendarLocales } from './fullcalendar-locales';
 import { IssueViewMode } from '../../constants/issue-view-modes.enum';
 import { IssueLastViewStorage } from '../../util/issue-last-view.storage';
+import { STORAGE_KEY_CARD_MODE } from './constants/calendar-storage-keys';
 
 @Component({
     selector: 'app-issue-calendar',
@@ -182,7 +183,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
     });
 
     public readonly cardMode = signal<IssueCardViewType>(
-        this.validCalendarMode(localStorage.getItem('issue-calendar-card-mode'))
+        this.validCalendarMode(localStorage.getItem(STORAGE_KEY_CARD_MODE))
     );
 
     public constructor() {
@@ -333,7 +334,7 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
 
     public onCardModeChange(mode: IssueCardViewType): void {
         this.cardMode.set(mode);
-        localStorage.setItem('issue-calendar-card-mode', mode);
+        localStorage.setItem(STORAGE_KEY_CARD_MODE, mode);
         this.calendarRef()
             .getApi()
             .el.classList.toggle('fc--compact', mode === 'CalendarCompact');
@@ -645,22 +646,5 @@ export class IssueCalendarComponent implements AfterViewInit, OnDestroy {
                 })
             );
         }
-    }
-
-    protected readonly isSplitDialogOpen = signal(false);
-
-    protected readonly splitIssue = signal<Issue | null>(null);
-
-    protected onSplitRequested(issue: Issue): void {
-        this.splitIssue.set(issue);
-        this.isSplitDialogOpen.set(true);
-    }
-
-    protected onSplitAccepted(): void {
-        this.isSplitDialogOpen.set(false);
-    }
-
-    protected onSplitCancelled(): void {
-        this.isSplitDialogOpen.set(false);
     }
 }
