@@ -11,11 +11,12 @@ import (
 const maxHierarchyDepth = 100
 
 type HierarchyRollupService struct {
-	repo *repository.IssueHierarchyRepository
+	repo       *repository.IssueHierarchyRepository
+	historySvc *IssueHistoryService
 }
 
-func NewHierarchyRollupService(repo *repository.IssueHierarchyRepository) *HierarchyRollupService {
-	return &HierarchyRollupService{repo: repo}
+func NewHierarchyRollupService(repo *repository.IssueHierarchyRepository, historySvc *IssueHistoryService) *HierarchyRollupService {
+	return &HierarchyRollupService{repo: repo, historySvc: historySvc}
 }
 
 func (s *HierarchyRollupService) RecomputeAncestors(ctx context.Context, idsIssue []int64) ([]int64, error) {
@@ -50,9 +51,16 @@ func (s *HierarchyRollupService) RecomputeFrom(ctx context.Context, idsIssue []i
 	var changedAll []int64
 	level := idsIssue
 	for depth := 0; len(level) > 0 && depth < maxHierarchyDepth; depth++ {
-		changed, err := s.repo.RecomputeNodes(ctx, level)
+		recomputed, err := s.repo.RecomputeNodes(ctx, level)
 		if err != nil {
 			return nil, err
+		}
+		changed := make([]int64, 0, len(recomputed))
+		for _, issue := range recomputed {
+			if err := s.historySvc.RecordSystem(ctx, issue.IdIssue, issue.HistoryChanges()); err != nil {
+				return nil, err
+			}
+			changed = append(changed, issue.IdIssue)
 		}
 		for _, id := range changed {
 			if !seen[id] {

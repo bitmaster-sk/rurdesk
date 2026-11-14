@@ -42,6 +42,7 @@ func New(
 	trackerCtrl *controller.TrackerController,
 	pinCtrl *controller.PinController,
 	irc *controller.IssueRelationController,
+	issueHistoryCtrl *controller.IssueHistoryController,
 	ganttOrderCtrl *controller.GanttOrderController,
 	participantCtrl *controller.IssueParticipantController,
 	pbCtrl *controller.ProjectBuilderController,
@@ -212,6 +213,7 @@ func New(
 	// Issue relations
 	pri.GET("/project/:idProject/relation", irc.GetRelationsBulk)
 	pri.GET("/project/:idProject/issue/:idIssuePublic/relation", irc.GetRelations)
+	pri.GET("/project/:idProject/issue/:idIssuePublic/history", issueHistoryCtrl.GetHistory)
 	pri.POST("/project/:idProject/issue/:idIssuePublic/relation", irc.CreateRelation)
 	pri.PATCH("/project/:idProject/issue/:idIssuePublic/relation/:idRelation", irc.UpdateRelation)
 	pri.DELETE("/project/:idProject/issue/:idIssuePublic/relation/:idRelation", irc.DeleteRelation)

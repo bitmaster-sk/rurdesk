@@ -167,6 +167,27 @@ func (r *UserRepository) ListUsers(ctx context.Context) ([]*model.User, error) {
 	return users, nil
 }
 
+func (r *UserRepository) LoadUsersByIds(ctx context.Context, idsUser []int64) ([]*model.User, error) {
+	if len(idsUser) == 0 {
+		return nil, nil
+	}
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT `+userColumns+`
+		FROM users.user
+		WHERE id_user = ANY($1)
+		ORDER BY id_user
+	`, idsUser)
+	if err != nil {
+		return nil, fmt.Errorf("querying users by ids: %w", err)
+	}
+	users, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[model.User])
+	if err != nil {
+		return nil, fmt.Errorf("collecting users by ids: %w", err)
+	}
+	return users, nil
+}
+
 func (r *UserRepository) LoadIdsWithIdentity(ctx context.Context) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `SELECT DISTINCT id_user FROM users.user_identity`)

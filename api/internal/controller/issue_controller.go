@@ -15,6 +15,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/pointer"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/bitmaster-sk/rurdesk/api/internal/urlutil"
@@ -48,6 +49,7 @@ type IssueController struct {
 	wikiSvc             *service.WikiService
 	attachmentLinkSvc   *service.AttachmentLinkService
 	hierarchy           *service.HierarchyRollupService
+	historySvc          *service.IssueHistoryService
 	pool                *pgxpool.Pool
 }
 
@@ -64,6 +66,7 @@ func NewIssueController(
 	notifSvc *service.NotificationService,
 	customFieldValueSvc *service.CustomFieldValueService,
 	hierarchy *service.HierarchyRollupService,
+	historySvc *service.IssueHistoryService,
 	pool *pgxpool.Pool,
 ) *IssueController {
 	return &IssueController{
@@ -79,6 +82,7 @@ func NewIssueController(
 		notifSvc:            notifSvc,
 		customFieldValueSvc: customFieldValueSvc,
 		hierarchy:           hierarchy,
+		historySvc:          historySvc,
 		pool:                pool,
 	}
 }
@@ -458,7 +462,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 			return errs.ErrSummaryComputed
 		}
 
-		isAssigneeChanged := dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value)
+		isAssigneeChanged := dto.AssignedTo.Value != nil && !pointer.Equal(issue.AssignedTo, dto.AssignedTo.Value)
 		if isAssigneeChanged && !ic.acl.CanReadProject(ctx, *dto.AssignedTo.Value, dto.IdProject) {
 			return errs.ErrForbidden
 		}
@@ -480,7 +484,7 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 			}
 		}
 
-		if dto.AssignedTo.Value != nil && !int64PtrEq(issue.AssignedTo, dto.AssignedTo.Value) {
+		if dto.AssignedTo.Value != nil && !pointer.Equal(issue.AssignedTo, dto.AssignedTo.Value) {
 			if err := ic.rejectDisabledAssignee(ctx, *dto.AssignedTo.Value); err != nil {
 				return err
 			}
@@ -519,6 +523,9 @@ func (ic *IssueController) EditIssue(c *gin.Context) {
 				return err
 			}
 			result.IdsTag = idsTag
+		}
+		if err := ic.historySvc.RecordUserEdit(ctx, user.IdUser, &snapshot, issue); err != nil {
+			return err
 		}
 		if dto.AssignedTo.Value != nil {
 			if addErr := ic.participantRepo.Add(ctx, issue.IdIssue, *dto.AssignedTo.Value, "assignee", &user.IdUser); addErr != nil {
@@ -696,6 +703,9 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 		if txErr != nil {
 			return txErr
 		}
+		if txErr = ic.historySvc.RecordUserEdit(ctx, user.IdUser, &oldIssue, updated); txErr != nil {
+			return txErr
+		}
 		if txErr = ic.participantRepo.Add(ctx, issue.IdIssue, agentUser.IdUser, "assignee", &user.IdUser); txErr != nil {
 			return fmt.Errorf("auto-adding assignee as participant (assign-agent): %w", txErr)
 		}
@@ -741,7 +751,7 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 }
 
 func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, newIssue *model.Issue) {
-	if int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) {
+	if pointer.Equal(oldIssue.AssignedTo, newIssue.AssignedTo) {
 		return
 	}
 
@@ -997,6 +1007,13 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 			}
 			participantChangedIssueIds = append(participantChangedIssueIds, idIssue)
 		}
+		for _, updated := range results {
+			if old, ok := oldByPublic[updated.IdIssuePublic]; ok {
+				if err := ic.historySvc.RecordUserEdit(ctx, user.IdUser, old, updated); err != nil {
+					return err
+				}
+			}
+		}
 		var touched []int64
 		for _, updated := range results {
 			if old, ok := oldByPublic[updated.IdIssuePublic]; ok && old.RollupInputsDiffer(updated) {
@@ -1052,7 +1069,7 @@ func (ic *IssueController) BulkEditIssues(c *gin.Context) {
 	if ic.dispatcher != nil {
 		for _, newIssue := range results {
 			oldIssue, ok := oldByPublic[newIssue.IdIssuePublic]
-			if !ok || int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) {
+			if !ok || pointer.Equal(oldIssue.AssignedTo, newIssue.AssignedTo) {
 				continue
 			}
 			ic.handleAgentAssignment(ctx, oldIssue, newIssue)
@@ -1182,7 +1199,7 @@ func (ic *IssueController) sendIssueNotifications(
 	}
 
 	// Assignee changed
-	if !int64PtrEq(oldIssue.AssignedTo, newIssue.AssignedTo) && newIssue.AssignedTo != nil {
+	if !pointer.Equal(oldIssue.AssignedTo, newIssue.AssignedTo) && newIssue.AssignedTo != nil {
 		if *newIssue.AssignedTo != actor.IdUser {
 			dto := *base
 			dto.IdUser = *newIssue.AssignedTo
@@ -1197,7 +1214,7 @@ func (ic *IssueController) sendIssueNotifications(
 	}
 
 	// State changed — notify creator and assignee (except actor)
-	if !int64PtrEq(oldIssue.IdState, newIssue.IdState) {
+	if !pointer.Equal(oldIssue.IdState, newIssue.IdState) {
 		var stateBody *model.NotificationBodyState
 		if newIssue.IdState != nil {
 			if state, err := ic.stateRepo.LoadState(ctx, newIssue.IdProject, *newIssue.IdState); err == nil {
@@ -1219,7 +1236,7 @@ func (ic *IssueController) sendIssueNotifications(
 	}
 
 	// Severity changed — notify creator and assignee (except actor)
-	if !int64PtrEq(oldIssue.IdSeverity, newIssue.IdSeverity) {
+	if !pointer.Equal(oldIssue.IdSeverity, newIssue.IdSeverity) {
 		var severityBody *model.NotificationBodySeverity
 		notificationType := constants.NotificationTypeSeverityEscalated
 		if newIssue.IdSeverity != nil {
@@ -1250,16 +1267,6 @@ func (ic *IssueController) sendIssueNotifications(
 			}
 		}
 	}
-}
-
-func int64PtrEq(a, b *int64) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return *a == *b
 }
 
 func uniqueRecipients(creatorId int64, assignedTo *int64, excludeId int64) []int64 {

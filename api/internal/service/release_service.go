@@ -29,6 +29,7 @@ type ReleaseService struct {
 	projectSkillService *ProjectSkillService
 	agentTaskConfig     *AgentTaskConfigService
 	acl                 *AclService
+	historySvc          *IssueHistoryService
 	onReleaseChanged    func(ctx context.Context, idProject, idRelease int64)
 }
 
@@ -45,6 +46,7 @@ type ReleaseServiceDeps struct {
 	ProjectSkillService *ProjectSkillService
 	AgentTaskConfig     *AgentTaskConfigService
 	Acl                 *AclService
+	HistorySvc          *IssueHistoryService
 }
 
 func NewReleaseService(deps ReleaseServiceDeps) *ReleaseService {
@@ -61,6 +63,7 @@ func NewReleaseService(deps ReleaseServiceDeps) *ReleaseService {
 		projectSkillService: deps.ProjectSkillService,
 		agentTaskConfig:     deps.AgentTaskConfig,
 		acl:                 deps.Acl,
+		historySvc:          deps.HistorySvc,
 	}
 }
 
@@ -241,7 +244,7 @@ func (s *ReleaseService) Publish(ctx context.Context, user model.User, idProject
 		if release.RecreateTag && strings.EqualFold(release.Name, tag.Name) {
 			return errs.ErrReleaseNameIsTag
 		}
-		if err := s.applyTag(ctx, release, tag, draft, result); err != nil {
+		if err := s.applyTag(ctx, user.IdUser, release, tag, draft, result); err != nil {
 			return err
 		}
 		release.IssueCount = releasedIssueCount(release, draft)
@@ -258,7 +261,7 @@ func (s *ReleaseService) Publish(ctx context.Context, user model.User, idProject
 	return result, nil
 }
 
-func (s *ReleaseService) applyTag(ctx context.Context, release *model.Release, tag *model.Tag, draft *model.ReleaseDraft, result *ReleaseResult) error {
+func (s *ReleaseService) applyTag(ctx context.Context, idUser int64, release *model.Release, tag *model.Tag, draft *model.ReleaseDraft, result *ReleaseResult) error {
 	sourceName := tag.Name
 	tag.Name = release.Name
 	if err := s.tagRepo.UpdateTag(ctx, tag); err != nil {
@@ -286,12 +289,15 @@ func (s *ReleaseService) applyTag(ctx context.Context, release *model.Release, t
 	for i, issue := range draft.OpenIssues {
 		idsOpen[i] = issue.IdIssue
 	}
-	if idTagNext != nil {
-		if err := s.issueRepo.AddIssueTags(ctx, idsOpen, []int64{*idTagNext}); err != nil {
-			return err
+	err := s.moveIssueTags(ctx, idUser, idsOpen, func() error {
+		if idTagNext != nil {
+			if err := s.issueRepo.AddIssueTags(ctx, idsOpen, []int64{*idTagNext}); err != nil {
+				return err
+			}
 		}
-	}
-	if err := s.issueRepo.RemoveIssueTags(ctx, idsOpen, []int64{tag.IdTag}); err != nil {
+		return s.issueRepo.RemoveIssueTags(ctx, idsOpen, []int64{tag.IdTag})
+	})
+	if err != nil {
 		return err
 	}
 	result.IdsIssueChanged = idsOpen
@@ -439,7 +445,7 @@ func (s *ReleaseService) Delete(ctx context.Context, user model.User, idProject,
 		}
 		result.Release = release
 		if release.Status == constants.ReleaseStatusReleased {
-			if err := s.settleTag(ctx, release, req, result); err != nil {
+			if err := s.settleTag(ctx, user.IdUser, release, req, result); err != nil {
 				return err
 			}
 		}
@@ -457,7 +463,7 @@ func (s *ReleaseService) Delete(ctx context.Context, user model.User, idProject,
 	return result, nil
 }
 
-func (s *ReleaseService) settleTag(ctx context.Context, release *model.Release, req model.DeleteReleaseReq, result *ReleaseResult) error {
+func (s *ReleaseService) settleTag(ctx context.Context, idUser int64, release *model.Release, req model.DeleteReleaseReq, result *ReleaseResult) error {
 	if req.Tag == "" || req.Tag == constants.ReleaseTagKeep {
 		return nil
 	}
@@ -481,7 +487,16 @@ func (s *ReleaseService) settleTag(ctx context.Context, release *model.Release, 
 	if err != nil {
 		return err
 	}
-	if err := s.issueRepo.AddIssueTags(ctx, idsIssue, []int64{*req.IdTagTarget}); err != nil {
+	err = s.moveIssueTags(ctx, idUser, idsIssue, func() error {
+		if err := s.issueRepo.AddIssueTags(ctx, idsIssue, []int64{*req.IdTagTarget}); err != nil {
+			return err
+		}
+		if req.Tag == constants.ReleaseTagMoveDelete {
+			return nil
+		}
+		return s.issueRepo.RemoveIssueTags(ctx, idsIssue, []int64{versionTag.IdTag})
+	})
+	if err != nil {
 		return err
 	}
 	result.IdsIssueChanged = idsIssue
@@ -492,12 +507,24 @@ func (s *ReleaseService) settleTag(ctx context.Context, release *model.Release, 
 		result.DeletedTag = versionTag
 		return nil
 	}
-	if err := s.issueRepo.RemoveIssueTags(ctx, idsIssue, []int64{versionTag.IdTag}); err != nil {
-		return err
-	}
 	versionTag.IssueCount = 0
 	result.RenamedTag = versionTag
 	return nil
+}
+
+func (s *ReleaseService) moveIssueTags(ctx context.Context, idUser int64, idsIssue []int64, move func() error) error {
+	before, err := s.issueRepo.LoadTagIdsByIssue(ctx, idsIssue)
+	if err != nil {
+		return err
+	}
+	if err := move(); err != nil {
+		return err
+	}
+	after, err := s.issueRepo.LoadTagIdsByIssue(ctx, idsIssue)
+	if err != nil {
+		return err
+	}
+	return s.historySvc.RecordTagEdits(ctx, idUser, before, after)
 }
 
 func (s *ReleaseService) stopNotesRun(ctx context.Context, user model.User, release *model.Release, result *ReleaseResult) error {
