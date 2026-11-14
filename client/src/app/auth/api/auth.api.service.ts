@@ -3,7 +3,9 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { RequestContext } from 'src/app/core/request-context';
+import { AuthMethods } from '../model/auth-methods.model';
 import { Register } from '../model/register.model';
+import { SsoExchangeRes } from '../model/sso-exchange.model';
 import { User } from '../model/user.model';
 
 @Injectable({ providedIn: 'root' })
@@ -50,6 +52,20 @@ export class AuthApi {
         return this.http.patch<User>(
             '/api/private/user',
             { name, colorAvatarBg },
+            { context: RequestContext.disableErrorToast() }
+        );
+    }
+
+    public loadMethods$(): Observable<AuthMethods> {
+        return this.http.get<AuthMethods>('/api/public/auth/methods', {
+            context: RequestContext.disableErrorToast()
+        });
+    }
+
+    public exchangeSso$(code: string): Observable<SsoExchangeRes> {
+        return this.http.post<SsoExchangeRes>(
+            '/api/public/sso/exchange',
+            { code },
             { context: RequestContext.disableErrorToast() }
         );
     }

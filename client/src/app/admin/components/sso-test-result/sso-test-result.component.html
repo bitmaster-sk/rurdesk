@@ -1,0 +1,56 @@
+@if (result(); as r) {
+    <div class="flex flex-col gap-2">
+        @if (r.isSuccess) {
+            <ui-message severity="success" data-testid="sso-test-success">
+                <div class="flex flex-col gap-2">
+                    <span data-testid="sso-test-outcome">
+                        <strong>{{ 'ADMIN.SSO.TEST.SUCCESS' | translate }}</strong>
+                        {{ 'ADMIN.SSO.TEST.OUTCOME' | translate }} {{ outcomeKey() | translate }}
+                        @if (reasonKey(); as reason) {
+                            — {{ reason | translate }}
+                        }
+                    </span>
+                    <dl class="m-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-sm">
+                        <dt class="ui-color-text-muted">
+                            {{ 'ADMIN.SSO.TEST.EMAIL' | translate }}
+                        </dt>
+                        <dd class="m-0">
+                            {{ r.email || '—' }}
+                            @if (r.emailVerified === false) {
+                                ({{ 'ADMIN.SSO.TEST.NOT_VERIFIED' | translate }})
+                            }
+                        </dd>
+                        <dt class="ui-color-text-muted">{{ 'ADMIN.SSO.TEST.NAME' | translate }}</dt>
+                        <dd class="m-0">{{ r.name || '—' }}</dd>
+                        <dt class="ui-color-text-muted">
+                            {{ 'ADMIN.SSO.TEST.GROUPS' | translate }}
+                        </dt>
+                        <dd class="m-0">
+                            @if (r.hasGroupsClaim) {
+                                {{ groupsText() || ('ADMIN.SSO.TEST.NO_GROUPS' | translate) }}
+                            } @else {
+                                {{ 'ADMIN.SSO.TEST.GROUPS_MISSING' | translate }}
+                            }
+                        </dd>
+                        <dt class="ui-color-text-muted">
+                            {{ 'ADMIN.SSO.TEST.SUBJECT' | translate }}
+                        </dt>
+                        <dd class="m-0 break-all">{{ r.subject }}</dd>
+                    </dl>
+                </div>
+            </ui-message>
+            @for (key of warningKeys(); track key) {
+                <ui-message severity="warn" data-testid="sso-test-warning">
+                    {{ key | translate }}
+                </ui-message>
+            }
+        } @else {
+            <ui-message severity="danger" data-testid="sso-test-error">
+                {{ errorKey() | translate }}
+                @if (r.detail) {
+                    <code class="block break-all text-xs">{{ r.detail }}</code>
+                }
+            </ui-message>
+        }
+    </div>
+}

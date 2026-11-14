@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { AuthGuard } from './auth/auth.guard';
 import { AuthPage } from './auth/auth/auth.page';
+import { SsoCallbackPage } from './auth/sso-callback/sso-callback.page';
 import { NotFoundPage } from './home/not-found/not-found.page';
 import { UserResolver } from './core/user.resolver';
 import { TranslateResolver } from './translate.resolver';
@@ -22,6 +23,7 @@ const routes: Routes = [
           ]),
     { path: 'login', component: AuthPage },
     { path: 'register', component: AuthPage },
+    { path: 'auth/sso', component: SsoCallbackPage },
     { path: 'logout', redirectTo: '/login' },
     // Public, auth-independent 404 so it renders whether or not you're signed in.
     // The authenticated shell's wildcard redirects unknown in-app routes here.

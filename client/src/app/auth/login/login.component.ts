@@ -1,4 +1,7 @@
 import { AuthApi } from '../api/auth.api.service';
+import { PASSWORD_ONLY } from '../constants/sso.constants';
+import { AuthMethods } from '../model/auth-methods.model';
+import { SsoConverter } from '../converter/sso.converter';
 import { SessionService } from '../service/session.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 import {
@@ -6,11 +9,15 @@ import {
     Component,
     DestroyRef,
     OnInit,
+    computed,
     inject,
     signal
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 interface LoginForm {
     email: FormControl<string | null>;
@@ -31,14 +38,41 @@ export class LoginComponent implements OnInit {
     private tokenStore = inject(AuthTokenStore);
     private session = inject(SessionService);
 
+    private readonly route = inject(ActivatedRoute);
+
     private destroyRef = inject(DestroyRef);
-    public form: FormGroup<LoginForm>;
+    public readonly form: FormGroup<LoginForm> = this.buildForm();
     public readonly hasFailed = signal(false);
     public readonly passwordVisible = signal(false);
+    private readonly isPasswordChosen = signal(false);
 
-    public constructor() {
-        this.form = this.buildForm();
-    }
+    public readonly methods = toSignal<AuthMethods | null>(
+        this.authApi.loadMethods$().pipe(catchError(() => of(PASSWORD_ONLY))),
+        { initialValue: null }
+    );
+
+    public readonly ssoErrorKey = toSignal(
+        this.route.queryParamMap.pipe(
+            map(params => params.get('ssoError')),
+            map(code => (code ? SsoConverter.toErrorKey(code) : null))
+        ),
+        { initialValue: null }
+    );
+
+    private readonly isExtended = toSignal(
+        this.form.controls.hasExtendedSessionLifetime.valueChanges.pipe(
+            map(value => value ?? false)
+        ),
+        { initialValue: false }
+    );
+
+    public readonly ssoStartUrl = computed(() =>
+        SsoConverter.toStartUrl(!!this.methods()?.sso?.canStaySignedIn && this.isExtended())
+    );
+
+    public readonly isPasswordShown = computed(
+        () => !this.methods()?.sso || this.isPasswordChosen()
+    );
 
     public ngOnInit(): void {
         if (this.tokenStore.hasToken()) {
@@ -48,6 +82,11 @@ export class LoginComponent implements OnInit {
         this.form.valueChanges
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe(() => this.hasFailed.set(false));
+    }
+
+    public showPassword(isShown: boolean): void {
+        this.isPasswordChosen.set(isShown);
+        this.hasFailed.set(false);
     }
 
     public togglePasswordVisibility(): void {

@@ -7,4 +7,5 @@ export interface User {
     isAgent?: boolean;
     isAdmin?: boolean;
     isActive?: boolean;
+    isPasswordless?: boolean;
 }

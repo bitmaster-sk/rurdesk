@@ -1,0 +1,87 @@
+<div class="flex flex-col" data-testid="sso-enforcement">
+    <div class="p-3 flex items-center justify-between gap-3">
+        <div class="flex flex-col min-w-0">
+            <span class="flex items-center gap-1 text-base font-semibold">
+                {{ 'ADMIN.SSO.ENFORCE.TITLE' | translate }}
+                <app-sso-hint text="ADMIN.SSO.ENFORCE.INFO" />
+            </span>
+            @if (state().isEnforced) {
+                <span class="text-sm ui-color-text-muted" data-testid="sso-enforce-on">
+                    {{ 'ADMIN.SSO.ENFORCE.ON' | translate }}
+                </span>
+            } @else if (!state().isEnabled) {
+                <span class="text-sm ui-color-text-muted" data-testid="sso-enforce-needs-active">
+                    {{ 'ADMIN.SSO.ENFORCE.NEEDS_ACTIVE' | translate }}
+                </span>
+            } @else {
+                <span class="text-sm ui-color-text-muted" data-testid="sso-enforce-off">
+                    {{ 'ADMIN.SSO.ENFORCE.OFF' | translate }}
+                </span>
+            }
+        </div>
+        @if (state().isEnforced) {
+            <ui-button
+                severity="secondary"
+                variant="outlined"
+                size="small"
+                [label]="'ADMIN.SSO.ENFORCE.DISABLE' | translate"
+                [disabled]="isBusy()"
+                (click)="enforcedChange.emit(false)"
+                data-testid="sso-enforce-disable"
+            />
+        } @else {
+            <ui-button
+                severity="secondary"
+                variant="outlined"
+                size="small"
+                [label]="'ADMIN.SSO.ENFORCE.ENABLE' | translate"
+                [disabled]="!canEnforce()"
+                uiConfirm
+                [confirmText]="'ADMIN.SSO.ENFORCE.ENABLE_CONFIRM' | translate"
+                (confirmed)="enforcedChange.emit(true)"
+                data-testid="sso-enforce-enable"
+            />
+        }
+    </div>
+    @if (state().isEnabled || state().isEnforced) {
+        <div class="panel-sub-head border-top">
+            <div class="panel-sub-head-l">
+                <span class="panel-sub-title">{{ 'ADMIN.SSO.ENFORCE.ACCOUNTS' | translate }}</span>
+                <span class="panel-sub-count">{{ state().breakGlassAccounts.length }}</span>
+            </div>
+        </div>
+        @if (hasBreakGlass()) {
+            <table class="ui-table w-full" data-testid="sso-break-glass-table">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'NAME' | translate }}</th>
+                        <th scope="col">{{ 'ADMIN.EMAIL' | translate }}</th>
+                        <th scope="col">{{ 'ADMIN.SSO.ENFORCE.LAST_LOGIN' | translate }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (account of state().breakGlassAccounts; track account.idUser) {
+                        <tr data-testid="sso-break-glass-row">
+                            <td>{{ account.name }}</td>
+                            <td class="break-all">{{ account.email }}</td>
+                            <td>
+                                @if (account.lastLoginAt) {
+                                    {{ account.lastLoginAt | date: 'medium' }}
+                                } @else {
+                                    {{ 'ADMIN.SSO.ENFORCE.NEVER' | translate }}
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        } @else {
+            <p
+                class="m-0 p-3 text-sm ui-color-text-muted"
+                data-testid="sso-enforce-needs-break-glass"
+            >
+                {{ 'ADMIN.SSO.ENFORCE.NO_ACCOUNTS' | translate }}
+            </p>
+        }
+    }
+</div>

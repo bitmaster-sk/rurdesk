@@ -42,14 +42,98 @@
         </div>
 
         @if (!isAgent()) {
+            @if (user()?.isScimManaged) {
+                <ui-message severity="info" data-testid="eu-scim-managed">
+                    {{ 'ADMIN.SCIM_MANAGED' | translate }}
+                </ui-message>
+            }
             <div class="flex flex-col gap-1">
                 <label for="eu-email">{{ 'ADMIN.EMAIL' | translate }}</label>
                 <input uiInput id="eu-email" type="email" formControlName="email" />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="eu-new-password">{{ 'ADMIN.NEW_PASSWORD' | translate }}</label>
+                <input
+                    uiInput
+                    id="eu-new-password"
+                    type="password"
+                    autocomplete="new-password"
+                    formControlName="newPassword"
+                    data-testid="eu-new-password"
+                />
+                <small class="ui-color-text-muted text-xs">
+                    {{ 'ADMIN.NEW_PASSWORD_HINT' | translate }}
+                </small>
             </div>
             <div class="flex items-center gap-2">
                 <input type="checkbox" uiToggle id="eu-isadmin" formControlName="isAdmin" />
                 <label for="eu-isadmin">{{ 'ADMIN.IS_ADMIN' | translate }}</label>
             </div>
+            @if (canBeBreakGlass()) {
+                <div class="flex flex-col gap-1" data-testid="eu-break-glass">
+                    <div class="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            uiToggle
+                            id="eu-isbreakglass"
+                            formControlName="isBreakGlass"
+                        />
+                        <label for="eu-isbreakglass">
+                            {{ 'ADMIN.BREAK_GLASS.LABEL' | translate }}
+                        </label>
+                    </div>
+                    <small class="ui-color-text-muted text-xs">
+                        {{ 'ADMIN.BREAK_GLASS.HINT' | translate }}
+                    </small>
+                </div>
+            }
+            @if (identities().length > 0) {
+                <div class="flex flex-col gap-2" data-testid="eu-sso-identity">
+                    <span>{{ 'ADMIN.SSO_IDENTITY.TITLE' | translate }}</span>
+                    @for (identity of identities(); track identity.idUserIdentity) {
+                        <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+                            <dt>{{ 'ADMIN.SSO_IDENTITY.ISSUER' | translate }}</dt>
+                            <dd class="break-all">{{ identity.issuer }}</dd>
+                            <dt>{{ 'ADMIN.SSO_IDENTITY.SUBJECT' | translate }}</dt>
+                            <dd class="break-all">{{ identity.subject }}</dd>
+                            <dt>{{ 'ADMIN.SSO_IDENTITY.LINKED_AT' | translate }}</dt>
+                            <dd>{{ identity.createAt | date: 'medium' }}</dd>
+                        </dl>
+                    }
+                    <div class="flex items-end gap-2">
+                        <ui-select
+                            class="flex-1"
+                            [options]="moveTargets()"
+                            optionLabel="name"
+                            optionValue="idUser"
+                            [filter]="true"
+                            [placeholder]="'ADMIN.SSO_IDENTITY.MOVE_TARGET' | translate"
+                            [ngModel]="moveTarget()"
+                            [ngModelOptions]="{ standalone: true }"
+                            (ngModelChange)="moveTarget.set($event)"
+                            data-testid="eu-sso-move-target"
+                        />
+                        <ui-button
+                            severity="secondary"
+                            [label]="'ADMIN.SSO_IDENTITY.MOVE' | translate"
+                            [disabled]="moveTarget() === null"
+                            uiConfirm
+                            [confirmText]="'ADMIN.SSO_IDENTITY.MOVE_CONFIRM' | translate"
+                            (confirmed)="onMoveIdentity()"
+                            data-testid="eu-sso-move"
+                        />
+                        <ui-button
+                            severity="danger"
+                            variant="outlined"
+                            [label]="'ADMIN.SSO_IDENTITY.UNLINK' | translate"
+                            uiConfirm
+                            [confirmText]="'ADMIN.SSO_IDENTITY.UNLINK_CONFIRM' | translate"
+                            (confirmed)="onUnlinkIdentity()"
+                            data-testid="eu-sso-unlink"
+                        />
+                    </div>
+                </div>
+            }
         } @else if (gateway()) {
             <div class="flex flex-col gap-1">
                 <label for="eu-gateway-url">{{ 'AGENT_API_KEY.GATEWAY_URL' | translate }}</label>

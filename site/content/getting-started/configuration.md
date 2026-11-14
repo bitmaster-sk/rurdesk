@@ -43,12 +43,14 @@ These must match the credentials your Postgres service is configured with.
 | `STATIC_DIR` | `/app/public` | Directory of the built SPA when `SERVE_STATIC=true` |
 | `ALLOWED_WS_ORIGINS` | _(empty)_ | Extra origin hosts (comma-separated) allowed to open the WebSocket. Empty by default — only **same-origin** handshakes are accepted. See the reverse-proxy note below |
 | `ALLOWED_ORIGINS` | _(empty)_ | Comma-separated origins allowed to call the API from a browser. Empty means `*` — safe here because authentication is a bearer token, never a cookie, so a wildcard grants no ambient authority. Set it to have the browser enforce a narrower set. |
-| `MCP_PUBLIC_BASE_URL` | _(empty)_ | Pins the origin advertised to MCP clients in the `/mcp` endpoint URL. Empty by default — derived from each request's `Host`. Set it only when your proxy cannot preserve `Host` |
+| `PUBLIC_BASE_URL` | _(empty)_ | The address people open in the browser, e.g. `https://tracker.example.com`. See [Public URL](#public-url) |
+| `MCP_PUBLIC_BASE_URL` | _(empty)_ | Older name of `PUBLIC_BASE_URL`, still honoured. Used only when `PUBLIC_BASE_URL` is unset |
 | `GIT_INTEGRATION_ENCRYPTION_KEY` | `<32-byte-key>` | Encrypts stored git integration tokens at rest |
 | `MERGE_POLL_INTERVAL` | `60s` | How often linked pull requests are checked for a merge. Lower it for snappier `done` state changes at the cost of more git-host API calls |
 | `AGENT_EMAIL_DOMAIN` | `agents.local` | Domain for the synthesized e-mail of an agent account (`agent-<name>@<domain>`). Renamed from `BOT_EMAIL_DOMAIN`; existing accounts keep the address they were created with |
 | `LICENSE_KEY` | _(empty)_ | **Commercial image only.** Signed license key enabling paid features. Ignored by the free image; unset means paid features stay off. See [Licensing](./licensing.md) |
 | `LICENSE_PUBLIC_KEY` | _(empty)_ | **Commercial image only.** Base64 Ed25519 public key the license key is verified against, offline and at startup. See [Licensing](./licensing.md) |
+| `SSO_ENCRYPTION_KEY` | `<32-byte-key>` | **Commercial image only.** Base64 of 32 random bytes (`openssl rand -base64 32`). Encrypts the SSO client secret and the key of the SAML certificate. Without it SSO cannot be set up. See [Single sign-on](../using-the-tracker/sso.md) |
 
 > **WebSocket origin & your reverse proxy.** Real-time updates use a WebSocket
 > that is accepted only when the request's `Origin` matches its `Host` (a
@@ -196,12 +198,30 @@ small dense model.
 > against the providers named in its own `MODELS` list (local Ollama, Ollama
 > Cloud, Anthropic, or Gemini), not `AI_API_KEY`. See [Agent Gateway](./gateway.md).
 
+## Public URL
+
+`PUBLIC_BASE_URL` is the address people open in the browser, for example
+`https://tracker.example.com`. It must be an absolute `http` or `https` address
+without a path; a trailing slash is removed. An invalid value stops the tracker
+at startup with an error that names the variable.
+
+When set, the tracker uses it instead of the request's `Host` header for
+addresses it hands out, such as the MCP endpoint URL. Leave it unset only if
+your proxy forwards `Host` unchanged.
+
+Single sign-on and SCIM need it set to an `https` address without a path, see
+[Single sign-on](../using-the-tracker/sso.md).
+
+`MCP_PUBLIC_BASE_URL` is the older name of this variable. It still works, with
+the same lenient handling as before, but only when `PUBLIC_BASE_URL` is unset.
+Rename it when you next touch your configuration.
+
 ## Attachments
 
 Files attached to task comments and chat messages are stored in the database.
 The maximum size of a single file is an application setting, not an environment
 variable: an admin changes **Maximum attachment size (MB)**
-in **Admin → Settings**. The default is 25 MB and the allowed range is 1–100 MB.
+in **Admin → Settings → General**. The default is 25 MB and the allowed range is 1–100 MB.
 The new value applies to the next upload without a restart.
 
 Your reverse proxy must accept request bodies at least that large — see
@@ -226,7 +246,7 @@ services:
             rurdesk_network:
 ```
 
-Then an admin sets **PlantUML server URL** in **Admin → Settings** to
+Then an admin sets **PlantUML server URL** in **Admin → Settings → General** to
 `http://rurdesk_plantuml:8080` — the container's name. Like the attachment limit
 this is an application setting, not an environment variable: the new value
 applies without a restart. Left empty, PlantUML is off — blocks render as

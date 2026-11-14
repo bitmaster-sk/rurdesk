@@ -1,0 +1,30 @@
+<div class="h-full flex">
+    <nav class="settings-menu" data-testid="settings-nav">
+        <ul class="navigation">
+            <li class="menu-section-title">{{ 'ADMIN.SETTINGS' | translate }}</li>
+            @for (section of sections; track section.path) {
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        [routerLink]="section.path"
+                        routerLinkActive="active"
+                        [attr.data-testid]="'settings-nav-' + section.path"
+                    >
+                        <tabler-icon [icon]="section.icon" [size]="16" class="icon" />
+                        <span class="text">{{ section.label | translate }}</span>
+                    </a>
+                </li>
+            }
+        </ul>
+        @if (versionLabel()) {
+            <div class="version" data-testid="settings-version">
+                <span>{{ 'ADMIN.VERSION' | translate }}</span>
+                <span class="version-value">{{ versionLabel() }}</span>
+            </div>
+        }
+    </nav>
+    <div class="flex-1 min-w-0 overflow-y-auto flex justify-center items-start p-4">
+        <router-outlet />
+    </div>
+</div>

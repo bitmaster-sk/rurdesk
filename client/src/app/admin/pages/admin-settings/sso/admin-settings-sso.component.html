@@ -1,0 +1,133 @@
+<div class="flex w-full flex-col gap-3" style="max-width: 720px" data-testid="settings-sso">
+    @if (isUnavailable() || state()?.isLicensed === false) {
+        <ui-message severity="info" data-testid="sso-unlicensed">
+            {{ 'ADMIN.SSO.UNLICENSED' | translate }}
+            <a [href]="docsUrl" target="_blank" rel="noopener">
+                {{ 'ADMIN.SSO.DOCS' | translate }}
+            </a>
+        </ui-message>
+        @if (state()?.isEnabled) {
+            <div>
+                <ui-button
+                    severity="danger"
+                    variant="outlined"
+                    [label]="'ADMIN.SSO.DISABLE' | translate"
+                    [disabled]="isBusy()"
+                    uiConfirm
+                    [confirmText]="'ADMIN.SSO.DISABLE_CONFIRM' | translate"
+                    (confirmed)="onDisable()"
+                    data-testid="sso-disable-unlicensed"
+                />
+            </div>
+        }
+        @if (state(); as s) {
+            @if (s.isEnforced || s.scim.isEnabled || s.scim.hasToken) {
+                <ng-container
+                    [ngTemplateOutlet]="security"
+                    [ngTemplateOutletContext]="{ $implicit: s }"
+                />
+            }
+        }
+    } @else if (state(); as s) {
+        @if (!s.hasEncryptionKey) {
+            <ui-message severity="danger" data-testid="sso-key-missing">
+                {{ 'ADMIN.SSO.KEY_MISSING' | translate }}
+            </ui-message>
+        }
+        @if (s.isSecretUndecryptable) {
+            <ui-message severity="danger" data-testid="sso-secret-undecryptable">
+                {{ 'ADMIN.SSO.SECRET_UNDECRYPTABLE' | translate }}
+            </ui-message>
+        }
+        @if (s.isSpKeyUndecryptable) {
+            <ui-message severity="danger" data-testid="sso-sp-key-undecryptable">
+                <div class="flex flex-col gap-2">
+                    <span>{{ 'ADMIN.SSO.SP_KEY_UNDECRYPTABLE' | translate }}</span>
+                    <div>
+                        <ui-button
+                            severity="danger"
+                            size="small"
+                            [label]="'ADMIN.SSO.SP_REGENERATE' | translate"
+                            [disabled]="!canEdit() || isBusy()"
+                            uiConfirm
+                            (confirmed)="onRegenerateSpCertificate()"
+                            data-testid="sso-sp-regenerate"
+                        />
+                    </div>
+                </div>
+            </ui-message>
+        }
+        <app-sso-status
+            [state]="s"
+            [hasMappings]="mappings().length > 0"
+            [canActivate]="canActivate()"
+            [isBusy]="isBusy()"
+            (activate)="onActivate()"
+            (disable)="onDisable()"
+        />
+        <app-sso-connection-form
+            [connection]="s.draft"
+            (protocolChange)="selectedProtocol.set($event)"
+            [isDisabled]="!canEdit() || isBusy()"
+            [canTest]="canTest()"
+            [isLive]="s.isEnabled"
+            [isDraftActive]="s.isDraftActive"
+            [canApply]="canActivate()"
+            (save)="onSaveDraft($event)"
+            (saveAndTest)="onSaveAndTest($event)"
+            (apply)="onActivate()"
+        >
+            <app-sso-idp-data [state]="s" [protocol]="protocol()" />
+            @if (testResult(); as result) {
+                <app-sso-test-result [result]="result" />
+            }
+        </app-sso-connection-form>
+        <app-sso-rules-form
+            [rules]="s.rules"
+            [isDisabled]="!canEdit() || isBusy()"
+            (save)="onSaveRules($event)"
+        />
+        <app-sso-group-mapping
+            [mappings]="mappings()"
+            [teams]="teams()"
+            [suggestedGroups]="suggestedGroups()"
+            [isDisabled]="!canEdit() || isBusy()"
+            (add)="onAddMapping($event)"
+            (remove)="onRemoveMapping($event)"
+        />
+        <ng-container [ngTemplateOutlet]="security" [ngTemplateOutletContext]="{ $implicit: s }" />
+    } @else {
+        <ui-loader />
+    }
+</div>
+
+<ng-template #security let-s>
+    <section class="panel" data-testid="sso-security">
+        <header class="panel-head">
+            <div class="panel-head-l">
+                <tabler-icon icon="lock" [size]="16" class="panel-icon" />
+                <div class="panel-title">{{ 'ADMIN.SSO.SECURITY.TITLE' | translate }}</div>
+            </div>
+        </header>
+        <div class="panel-body panel-body--flush flex flex-col">
+            @if (s.isLicensed || s.isEnforced) {
+                <app-sso-enforcement
+                    [state]="s"
+                    [isBusy]="isBusy()"
+                    (enforcedChange)="onSetEnforced($event)"
+                />
+            }
+            @if (s.isLicensed || s.scim.isEnabled || s.scim.hasToken) {
+                <app-sso-scim
+                    [class.border-top]="s.isLicensed || s.isEnforced"
+                    [state]="s"
+                    [revealedToken]="revealedScimToken()"
+                    [isBusy]="isBusy()"
+                    (enabledChange)="onSetScimEnabled($event)"
+                    (generateToken)="onGenerateScimToken()"
+                    (deleteToken)="onDeleteScimToken()"
+                />
+            }
+        </div>
+    </section>
+</ng-template>

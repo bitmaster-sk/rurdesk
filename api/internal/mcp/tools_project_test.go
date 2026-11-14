@@ -36,7 +36,7 @@ func newProjectTestEngine(responseBody string) *gin.Engine {
 
 func TestListProjects_HappyPath(t *testing.T) {
 	engine := newProjectTestEngine(`[{"idProject":1,"name":"Alpha"}]`)
-	mcpServer := mcp.NewMCPServer(mcp.LoadConfig(), engine)
+	mcpServer := mcp.NewMCPServer(&mcp.Config{}, engine)
 	_ = mcpServer
 
 	d := mcp.NewDispatcher(engine)

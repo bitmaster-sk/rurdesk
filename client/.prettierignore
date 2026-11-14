@@ -2,7 +2,9 @@ dist/
 coverage/
 .angular/
 playwright-report/
+playwright-report-sso/
 test-results/
+test-results-sso/
 package-lock.json
 
 # Vendored Prism themes — keep them byte-identical to upstream.

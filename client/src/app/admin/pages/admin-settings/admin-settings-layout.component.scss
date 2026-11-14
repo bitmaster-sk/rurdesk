@@ -1,0 +1,86 @@
+.settings-menu {
+    flex: 0 0 16rem;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--ui-color-canvas);
+    border-right: 1px solid var(--ui-color-border);
+
+    .navigation {
+        margin: 0;
+        padding: 0;
+        list-style-type: none;
+    }
+
+    .menu-section-title {
+        color: var(--ui-color-text-muted);
+        text-transform: uppercase;
+        font-weight: bold;
+        padding: var(--ui-space-l) var(--ui-space);
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+        margin-bottom: var(--ui-space);
+
+        &:has(.link.active) .menu-item-border,
+        &:has(.link:hover) .menu-item-border {
+            background-color: var(--ui-color-primary);
+        }
+    }
+
+    .menu-item-border {
+        width: 4px;
+        min-height: 100%;
+        border-top-right-radius: var(--ui-radius-md);
+        border-bottom-right-radius: var(--ui-radius-md);
+        background-color: transparent;
+    }
+
+    .link {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        margin: 0 var(--ui-space);
+        padding: var(--ui-space);
+        border: 1px solid transparent;
+        border-radius: var(--ui-radius-md);
+        color: var(--ui-color-text-muted);
+        text-decoration: none;
+
+        .icon {
+            margin-right: var(--ui-space);
+            font-size: var(--font-size-m);
+        }
+
+        &:hover {
+            color: var(--ui-color-primary);
+            background-color: var(--ui-color-content-hover);
+        }
+
+        &.active {
+            color: var(--ui-color-primary);
+            font-weight: bold;
+            background-color: var(--ui-color-primary-weak-border);
+            border-color: var(--ui-color-border);
+        }
+    }
+
+    .version {
+        margin-top: auto;
+        padding: var(--ui-space) var(--ui-space-l);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--ui-space);
+        border-top: 1px solid var(--ui-color-border);
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+
+    .version-value {
+        font-family: var(--ui-font-mono);
+        color: var(--ui-color-text);
+    }
+}

@@ -66,6 +66,8 @@ func New(
 	healthCtrl *controller.HealthController,
 	versionCtrl *controller.VersionController,
 	mcpHandler http.Handler,
+	authMethodsCtrl *controller.AuthMethodsController,
+	extend Extension,
 ) *Router {
 	// Health probes and MCP are registered before the global middleware: health
 	// polling must not spam the request log, and MCP's long-lived SSE streams
@@ -86,6 +88,7 @@ func New(
 	pub := api.Group("/public")
 	pub.POST("/register", userCtrl.Register)
 	pub.POST("/login", userCtrl.Login)
+	pub.GET("/auth/methods", authMethodsCtrl.Get)
 
 	auth := middleware.Auth(cache, apiKeyAuth)
 	pri := api.Group("/private", auth)
@@ -120,6 +123,7 @@ func New(
 	admin.POST("/user", adminCtrl.CreateUser)
 	admin.PATCH("/user/:idUser", adminCtrl.UpdateUser)
 	admin.DELETE("/user/:idUser", adminCtrl.DeleteUser)
+	admin.PUT("/user/:idUser/password", adminCtrl.SetPassword)
 	admin.GET("/user/:idUser/api-key", adminCtrl.GetAgentApiKey)
 	admin.POST("/user/:idUser/api-key", adminCtrl.CreateAgentApiKey)
 	admin.POST("/user/:idUser/api-key/token", adminCtrl.RegenerateAgentApiKey)
@@ -381,6 +385,8 @@ func New(
 	pri.GET("/project/:idProject/skills", projectSkillCtrl.Get)
 	pri.PUT("/project/:idProject/skills", projectSkillCtrl.Replace)
 	pri.GET("/project/:idProject/agents/overview", agentOverviewCtrl.Get)
+
+	extend(RouteGroups{Engine: engine, Public: pub, Private: pri, Admin: admin})
 
 	// In production the Go binary serves the Angular build itself (single
 	// container, no nginx). Gated by SERVE_STATIC so dev — which serves the

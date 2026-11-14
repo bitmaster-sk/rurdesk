@@ -8,6 +8,8 @@ services:
         build:
             context: ../..
             dockerfile: docker/tracker/Dockerfile.prod
+            args:
+                API_PACKAGE: ./commercial/cmd/api
         container_name: e2e_tracker
         restart: "no"
         ports:
@@ -28,6 +30,10 @@ services:
             # Must be 32 bytes base64-encoded, not a raw 32-char string.
             GIT_INTEGRATION_ENCRYPTION_KEY: ZTJlLXRlc3Qta2V5LWUyZS10ZXN0LWtleS0zMmJ5dGU=
             MERGE_POLL_INTERVAL: 2s
+            PUBLIC_BASE_URL: http://localhost:1000
+            SSO_ENCRYPTION_KEY: ZTJlLXNzby1rZXktZTJlLXNzby1rZXktMzJieXRlcyE=
+            LICENSE_PUBLIC_KEY: AgsFzs3h9Dn0UwovKiiQYtmGh8IRUX9SieoHdDuZna8=
+            LICENSE_KEY: eyJ0ZW5hbnQiOiJlMmUiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwWiJ9.fRMWD6eKVzg9I4xOLZxEbBALidTZzUXJpQqzyWO5MOxPvrOjjUUxr39FJN4RR7YbTOXoBxWK2hkjoV2deIFwDA
         depends_on:
             db:
                 condition: service_healthy
@@ -53,6 +59,29 @@ services:
             - tracker
         networks:
             e2e_network:
+
+    mock-idp:
+        image: ghcr.io/navikt/mock-oauth2-server:2.1.10
+        container_name: e2e_mock_idp
+        restart: "no"
+        environment:
+            SERVER_PORT: "18080"
+            JSON_CONFIG: '{"interactiveLogin": true}'
+        ports:
+            - "18080:18080"
+        networks:
+            e2e_network:
+
+    # The tracker accepts an http issuer only on localhost and the browser must see the same issuer, so localhost:18080 inside the tracker is forwarded here.
+    mock-idp-loopback:
+        image: alpine/socat:1.8.0.1
+        container_name: e2e_mock_idp_loopback
+        restart: "no"
+        network_mode: "service:tracker"
+        command: TCP-LISTEN:18080,fork,reuseaddr TCP:mock-idp:18080
+        depends_on:
+            - tracker
+            - mock-idp
 
     db:
         image: postgres:17

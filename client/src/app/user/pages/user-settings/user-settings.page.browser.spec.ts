@@ -101,6 +101,51 @@ describe('UserSettingsPage — avatar colour (browser)', () => {
     });
 });
 
+describe('UserSettingsPage — password change (browser)', () => {
+    async function build(isPasswordless: boolean): Promise<UserSettingsPage> {
+        await TestBed.configureTestingModule({
+            declarations: [UserSettingsPage],
+            imports: [ReactiveFormsModule],
+            providers: [
+                {
+                    provide: AuthStore,
+                    useValue: {
+                        user: signal({
+                            idUser: 1,
+                            name: 'tester',
+                            email: 't@t.sk',
+                            colorAvatarBg: '#112233',
+                            isPasswordless
+                        }),
+                        updateUser$: vi.fn()
+                    }
+                },
+                {
+                    provide: ToastNotificationService,
+                    useValue: { showError: () => {}, showSuccess: () => {} }
+                }
+            ]
+        })
+            .overrideComponent(UserSettingsPage, { set: { template: '' } })
+            .compileComponents();
+        const fixture = TestBed.createComponent(UserSettingsPage);
+        fixture.detectChanges();
+        return fixture.componentInstance;
+    }
+
+    it('offers the password change to an account with a password', async () => {
+        const settings = await build(false);
+
+        expect(settings.isPasswordChangeShown()).toBe(true);
+    });
+
+    it('hides the password change for an account that signs in only through SSO', async () => {
+        const settings = await build(true);
+
+        expect(settings.isPasswordChangeShown()).toBe(false);
+    });
+});
+
 @Component({ selector: 'app-user-api-keys', template: '', standalone: true })
 class UserApiKeysStub {}
 

@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrUserNotFound = errors.New("user not found")
+	ErrEmailTaken   = errors.New("email taken")
 
 	ErrApiKeyNotFound = errors.New("api key not found")
 

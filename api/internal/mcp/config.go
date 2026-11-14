@@ -1,11 +1,5 @@
 package mcp
 
-import (
-	"strings"
-
-	"github.com/spf13/viper"
-)
-
 // Config holds MCP server config. MCP mounts on the shared HTTP engine (no
 // standalone listener), so there is no address to configure.
 type Config struct {
@@ -15,12 +9,6 @@ type Config struct {
 	// Set it when a proxy cannot preserve Host, or to remove any dependence on
 	// request headers for the URL that carries the client's bearer token.
 	PublicBaseURL string
-}
-
-func LoadConfig() *Config {
-	return &Config{
-		PublicBaseURL: strings.TrimRight(strings.TrimSpace(viper.GetString("MCP_PUBLIC_BASE_URL")), "/"),
-	}
 }
 
 // internalBaseSentinel is a placeholder origin embedded in SSE endpoint events

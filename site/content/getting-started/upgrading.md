@@ -10,6 +10,19 @@ Most releases need nothing beyond pulling the new images, see
 more. Go through every section between your current version and the one you
 move to, oldest first.
 
+## Upgrading to 1.8.0
+
+E-mail addresses are now stored in lower case and compared without regard to
+case. The upgrade converts the existing addresses. When two accounts differ only
+in the case of their address (`Jan@example.com` and `jan@example.com`), both stay
+unchanged and each signs in only with its exact address. Give one of them another
+address in **Admin → Users**.
+
+`MCP_PUBLIC_BASE_URL` is renamed to `PUBLIC_BASE_URL`. The old name keeps
+working, so nothing breaks; rename it when convenient. Unlike the old name, the
+new one must be an address without a path, otherwise the tracker does not start.
+See [Public URL](./configuration.md#public-url).
+
 ## Upgrading to 1.7.0
 
 An agent can write the release notes of a version. That needs a gateway of the

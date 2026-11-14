@@ -6,61 +6,128 @@
         <p>{{ 'LOGIN.SUBTITLE' | translate }}</p>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="onLogin()" class="login__form">
-        <div class="login__field">
-            <label for="email">{{ 'EMAIL' | translate }}</label>
-            <input id="email" formControlName="email" type="text" autocomplete="email" />
-        </div>
+    @if (ssoErrorKey(); as errorKey) {
+        <ui-message severity="danger" data-testid="login-sso-error">
+            {{ errorKey | translate }}
+        </ui-message>
+    }
 
-        <div class="login__field login__field--password">
-            <label for="password">{{ 'PASSWORD.LABEL' | translate }}</label>
-            <div class="login__password-wrap">
-                <input
-                    id="password"
-                    formControlName="password"
-                    [type]="passwordVisible() ? 'text' : 'password'"
-                    autocomplete="current-password"
-                />
-                <ui-button
-                    type="button"
-                    severity="secondary"
-                    [ariaLabel]="
-                        (passwordVisible() ? 'LOGIN.HIDE_PASSWORD' : 'LOGIN.SHOW_PASSWORD')
-                            | translate
-                    "
-                    [isIconOnly]="true"
-                    variant="text"
-                    size="small"
-                    (click)="togglePasswordVisibility()"
-                    class="login__password-toggle"
-                    data-testid="login-password-toggle"
-                >
-                    <tabler-icon [icon]="passwordVisible() ? 'eye-off' : 'eye'"></tabler-icon>
-                </ui-button>
-            </div>
-        </div>
-
-        <div class="ui-field-checkbox">
-            <input
-                id="extended-session"
-                data-testid="login-extended-session"
-                type="checkbox"
-                uiCheckbox
-                formControlName="hasExtendedSessionLifetime"
-            />
-            <label for="extended-session">{{ 'LOGIN.EXTENDED_SESSION' | translate }}</label>
-        </div>
-
-        @if (hasFailed()) {
-            <p class="login__error" role="alert">{{ 'LOGIN.FAILED' | translate }}</p>
+    @if (methods(); as methods) {
+        @if (methods.ssoUnavailable) {
+            <ui-message severity="warn" data-testid="login-sso-unavailable">
+                {{ 'LOGIN.SSO_UNAVAILABLE' | translate }}
+            </ui-message>
         }
 
-        <ui-button
-            type="submit"
-            [label]="'LOGIN.LABEL' | translate"
-            [disabled]="form.invalid"
-            [fluid]="true"
-            class="login__btn"
-        ></ui-button>
-    </form>
+        @if (isPasswordShown()) {
+            @if (methods.sso?.isEnforced) {
+                <p class="login__hint" data-testid="login-break-glass-hint">
+                    {{ 'LOGIN.BREAK_GLASS_ONLY' | translate }}
+                </p>
+            }
+
+            <form [formGroup]="form" (ngSubmit)="onLogin()" class="login__form">
+                <div class="login__field">
+                    <label for="email">{{ 'EMAIL' | translate }}</label>
+                    <input id="email" formControlName="email" type="text" autocomplete="email" />
+                </div>
+
+                <div class="login__field login__field--password">
+                    <label for="password">{{ 'PASSWORD.LABEL' | translate }}</label>
+                    <div class="login__password-wrap">
+                        <input
+                            id="password"
+                            formControlName="password"
+                            [type]="passwordVisible() ? 'text' : 'password'"
+                            autocomplete="current-password"
+                        />
+                        <ui-button
+                            type="button"
+                            severity="secondary"
+                            [ariaLabel]="
+                                (passwordVisible() ? 'LOGIN.HIDE_PASSWORD' : 'LOGIN.SHOW_PASSWORD')
+                                    | translate
+                            "
+                            [isIconOnly]="true"
+                            variant="text"
+                            size="small"
+                            (click)="togglePasswordVisibility()"
+                            class="login__password-toggle"
+                            data-testid="login-password-toggle"
+                        >
+                            <tabler-icon
+                                [icon]="passwordVisible() ? 'eye-off' : 'eye'"
+                            ></tabler-icon>
+                        </ui-button>
+                    </div>
+                </div>
+
+                @if (hasFailed()) {
+                    <p class="login__error" role="alert">{{ 'LOGIN.FAILED' | translate }}</p>
+                }
+
+                <div class="login__action">
+                    <ui-button
+                        type="submit"
+                        [label]="'LOGIN.LABEL' | translate"
+                        [disabled]="form.invalid"
+                        [fluid]="true"
+                        data-testid="login-submit"
+                    ></ui-button>
+                    <ng-container [ngTemplateOutlet]="staySignedIn" />
+                </div>
+            </form>
+
+            @if (methods.sso) {
+                <ui-button
+                    variant="text"
+                    severity="secondary"
+                    size="small"
+                    [label]="'LOGIN.BACK_TO_SSO' | translate"
+                    (click)="showPassword(false)"
+                    class="self-center"
+                    data-testid="login-back-to-sso"
+                />
+            }
+        } @else {
+            <div class="login__action">
+                <a
+                    class="ui-button ui-button--primary w-full justify-center"
+                    [href]="ssoStartUrl()"
+                    data-testid="login-sso"
+                >
+                    <tabler-icon icon="building" [size]="16" />
+                    {{ 'LOGIN.SSO_BUTTON' | translate }}
+                </a>
+                @if (methods.sso?.canStaySignedIn) {
+                    <ng-container [ngTemplateOutlet]="staySignedIn" />
+                }
+            </div>
+
+            <ui-button
+                variant="text"
+                severity="secondary"
+                size="small"
+                [label]="
+                    (methods.sso?.isEnforced ? 'LOGIN.EMERGENCY' : 'LOGIN.USE_PASSWORD') | translate
+                "
+                (click)="showPassword(true)"
+                class="self-center"
+                data-testid="login-use-password"
+            />
+        }
+    }
 </div>
+
+<ng-template #staySignedIn>
+    <div class="ui-field-checkbox justify-center">
+        <input
+            id="extended-session"
+            data-testid="login-extended-session"
+            type="checkbox"
+            uiCheckbox
+            [formControl]="form.controls.hasExtendedSessionLifetime"
+        />
+        <label for="extended-session">{{ 'LOGIN.EXTENDED_SESSION' | translate }}</label>
+    </div>
+</ng-template>

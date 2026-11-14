@@ -12,6 +12,7 @@ import { SessionService } from './session.service';
 
 function build(logout$ = () => of(undefined)) {
     const navigate = vi.fn();
+    const navigateByUrl = vi.fn();
     const load = vi.fn();
     const loadLicense = vi.fn();
     const saveToken = vi.fn();
@@ -21,7 +22,7 @@ function build(logout$ = () => of(undefined)) {
     const reconnect = vi.fn();
     const injector = Injector.create({
         providers: [
-            { provide: Router, useValue: { navigate } },
+            { provide: Router, useValue: { navigate, navigateByUrl } },
             { provide: AuthApi, useValue: { logout$ } },
             { provide: AuthTokenStore, useValue: { saveToken, clearToken } },
             { provide: SettingsStore, useValue: { load } },
@@ -35,6 +36,7 @@ function build(logout$ = () => of(undefined)) {
     return {
         session,
         navigate,
+        navigateByUrl,
         load,
         loadLicense,
         saveToken,
@@ -47,7 +49,7 @@ function build(logout$ = () => of(undefined)) {
 
 describe('SessionService.start', () => {
     it('stores the token, loads the auth-gated state and lands on the home page', () => {
-        const { session, navigate, load, loadLicense, saveToken, init } = build();
+        const { session, navigateByUrl, load, loadLicense, saveToken, init } = build();
 
         session.start('jwt-123');
 
@@ -55,7 +57,15 @@ describe('SessionService.start', () => {
         expect(load).toHaveBeenCalled();
         expect(loadLicense).toHaveBeenCalled();
         expect(init).toHaveBeenCalled();
-        expect(navigate).toHaveBeenCalledWith(['/']);
+        expect(navigateByUrl).toHaveBeenCalledWith('/');
+    });
+
+    it('lands on the return URL after an SSO sign-in', () => {
+        const { session, navigateByUrl } = build();
+
+        session.start('jwt-123', '/issue/5');
+
+        expect(navigateByUrl).toHaveBeenCalledWith('/issue/5');
     });
 
     it('reconnects the notice socket with the new token', () => {

@@ -21,7 +21,8 @@ admin**, and the endpoint closes permanently afterwards. Every further account
 already-bootstrapped instance shows a "Registration is closed" notice — ask
 your admin for an account instead.
 
-Users log in at **`/login`**. A session lasts **24 hours** by default; ticking
+Users log in at **`/login`** with their e-mail, in any mix of upper and lower
+case. A session lasts **24 hours** by default; ticking
 **Stay signed in for 30 days** on the login form issues a session that lasts
 **30 days** instead. Either way the session ends immediately on logout, on a
 password change (all other sessions), and on an admin-flag change, when the
@@ -47,8 +48,14 @@ From the Users panel an admin can:
 - **Create human users** — name, e-mail, password, optional **admin** flag,
   and optionally assign them straight to a project with a role.
 - **Create agents** — see below.
+- **Set a new password** for a human user in the edit dialog — the user is
+  signed out everywhere and signs in with the new password.
 - **Promote / demote admins** — the **last admin can never be demoted or
   deleted** (guarded server-side), and **agents can never be admins**.
+- **Mark a break-glass account** — an active admin with a password and no SSO
+  identity keeps signing in with the password while
+  [single sign-on is enforced](./sso.md#enforcing-sso). The **Break-glass** label
+  marks it in the list. Demoting or disabling the account clears the flag.
 - **Disable / enable users and agents** — see [Disabling accounts](#disabling-accounts).
 - **Delete users** — refused while the user has agent activity (runs,
   provenance records) or has created or edited tasks, so history stays

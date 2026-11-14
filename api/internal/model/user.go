@@ -1,17 +1,49 @@
 package model
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type User struct {
-	IdUser         int64   `json:"idUser"        db:"id_user"`
-	Name           string  `json:"name"          db:"name"`
-	Email          string  `json:"email"         db:"email"`
-	ColorAvatarBg  string  `json:"colorAvatarBg" db:"color_avatar_bg"`
-	Password       string  `json:"-"             db:"password"`
-	IsAgent        bool    `json:"isAgent"         db:"is_agent"`
-	IsAdmin        bool    `json:"isAdmin"       db:"is_admin"`
-	IsActive       bool    `json:"isActive"      db:"is_active"`
-	AvatarInitials *string `json:"avatarInitials,omitempty" db:"avatar_initials"`
+	IdUser         int64      `json:"idUser"        db:"id_user"`
+	Name           string     `json:"name"          db:"name"`
+	Email          string     `json:"email"         db:"email"`
+	ColorAvatarBg  string     `json:"colorAvatarBg" db:"color_avatar_bg"`
+	Password       string     `json:"-"             db:"password"`
+	IsAgent        bool       `json:"isAgent"         db:"is_agent"`
+	IsAdmin        bool       `json:"isAdmin"       db:"is_admin"`
+	IsActive       bool       `json:"isActive"      db:"is_active"`
+	AvatarInitials *string    `json:"avatarInitials,omitempty" db:"avatar_initials"`
+	IsBreakGlass   bool       `json:"isBreakGlass"   db:"is_break_glass"`
+	IsPasswordless bool       `json:"isPasswordless" db:"is_passwordless"`
+	LastLoginAt    *time.Time `json:"lastLoginAt"    db:"last_login_at"`
+	IsScimManaged  bool       `json:"isScimManaged"  db:"is_scim_managed"`
+	HasSsoIdentity bool       `json:"hasSsoIdentity" db:"-"`
+}
+
+type PublicUser struct {
+	IdUser         int64   `json:"idUser"`
+	Name           string  `json:"name"`
+	Email          string  `json:"email"`
+	ColorAvatarBg  string  `json:"colorAvatarBg"`
+	IsAgent        bool    `json:"isAgent"`
+	IsAdmin        bool    `json:"isAdmin"`
+	IsActive       bool    `json:"isActive"`
+	AvatarInitials *string `json:"avatarInitials,omitempty"`
+}
+
+func (u *User) Public() PublicUser {
+	return PublicUser{
+		IdUser:         u.IdUser,
+		Name:           u.Name,
+		Email:          u.Email,
+		ColorAvatarBg:  u.ColorAvatarBg,
+		IsAgent:        u.IsAgent,
+		IsAdmin:        u.IsAdmin,
+		IsActive:       u.IsActive,
+		AvatarInitials: u.AvatarInitials,
+	}
 }
 
 func (u *User) MarshalBinary() ([]byte, error) {
@@ -74,6 +106,11 @@ type AdminUpdateUserReq struct {
 	Email          *string          `json:"email"         binding:"omitempty,email,max=250"`
 	IsAdmin        *bool            `json:"isAdmin"`
 	IsActive       *bool            `json:"isActive"`
+	IsBreakGlass   *bool            `json:"isBreakGlass"`
 	ColorAvatarBg  *string          `json:"colorAvatarBg" binding:"omitempty,hexcolor"`
 	AvatarInitials Optional[string] `json:"avatarInitials,omitzero"`
+}
+
+type AdminSetPasswordReq struct {
+	Password string `json:"password" binding:"required,min=5,max=100"`
 }

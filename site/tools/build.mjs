@@ -37,6 +37,8 @@ export const SIDEBAR = [
         section: 'Using the tracker',
         pages: [
             { src: 'using-the-tracker/user-management.md', out: 'user-management.html', nav: 'User management' },
+            { src: 'using-the-tracker/sso.md', out: 'sso.html', nav: 'Single sign-on' },
+            { src: 'using-the-tracker/sso-troubleshooting.md', out: 'sso-troubleshooting.html', nav: 'SSO troubleshooting' },
             { src: 'using-the-tracker/features.md', out: 'features.html', nav: 'Projects, tasks & AI' },
             { src: 'using-the-tracker/sprints.md', out: 'sprints.html', nav: 'Sprints' },
             { src: 'using-the-tracker/saved-views.md', out: 'saved-views.html', nav: 'Saved views' },

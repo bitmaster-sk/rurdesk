@@ -27,6 +27,7 @@ class CreateUserDialogStub {
 @Component({ selector: 'app-edit-user-dialog', template: '', standalone: true })
 class EditUserDialogStub {
     public readonly user = input<AdminUser | null>(null);
+    public readonly users = input<AdminUser[]>([]);
     public readonly visible = model<boolean>(false);
 }
 
@@ -50,7 +51,12 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
         colorAvatarBg: '#123456',
         isAgent: false,
         isAdmin: false,
-        isActive: true
+        isActive: true,
+        isBreakGlass: false,
+        isPasswordless: false,
+        lastLoginAt: null,
+        hasSsoIdentity: false,
+        isScimManaged: false
     };
     const disabled: AdminUser = { ...active, idUser: 8, name: 'Bob', isActive: false };
 
@@ -164,6 +170,26 @@ describe('AdminUsersComponent — disable/enable toggle (browser)', () => {
         expect(actionButtons(ownRow).length).toBe(3);
         // Other row: promote, edit, disable, delete.
         expect(actionButtons(otherRow).length).toBe(4);
+    });
+
+    it('labels SSO, SCIM and break-glass accounts', () => {
+        TestBed.overrideProvider(AdminUserApi, {
+            useValue: {
+                load$: () =>
+                    of([
+                        { ...active, hasSsoIdentity: true, isScimManaged: true },
+                        { ...disabled, isBreakGlass: true }
+                    ]),
+                setActive$
+            }
+        });
+        const fixture = render();
+        const [ssoRow, breakGlassRow] = rows(fixture);
+
+        expect(ssoRow.querySelector('[data-testid="user-sso-tag"]')).not.toBeNull();
+        expect(ssoRow.querySelector('[data-testid="user-scim-tag"]')).not.toBeNull();
+        expect(ssoRow.querySelector('[data-testid="user-break-glass-tag"]')).toBeNull();
+        expect(breakGlassRow.querySelector('[data-testid="user-break-glass-tag"]')).not.toBeNull();
     });
 
     it('surfaces a failed toggle as an error toast', async () => {

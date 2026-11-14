@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/commercial/licensekey"
+	"github.com/bitmaster-sk/rurdesk/api/commercial/sso"
 	"github.com/bitmaster-sk/rurdesk/api/internal/bootstrap"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/spf13/viper"
@@ -19,6 +20,7 @@ func main() {
 	defer stop()
 
 	installLicense()
+	sso.Install()
 
 	if err := bootstrap.Run(ctx); err != nil {
 		log.Fatal(err)

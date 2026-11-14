@@ -4,9 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/authpolicy"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/email"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/password"
@@ -23,14 +26,15 @@ var ErrInvalidPassword = errors.New("invalid password")
 const bootstrapLockKey int64 = 2 << 48
 
 type UserService struct {
-	userRepo *repository.UserRepository
-	lockRepo *repository.AdvisoryLockRepository
-	cache    *redis.Client
-	pool     *pgxpool.Pool
+	userRepo    *repository.UserRepository
+	lockRepo    *repository.AdvisoryLockRepository
+	cache       *redis.Client
+	pool        *pgxpool.Pool
+	loginPolicy func() authpolicy.PasswordLoginPolicy
 }
 
-func NewUserService(repo *repository.UserRepository, lockRepo *repository.AdvisoryLockRepository, cache *redis.Client, pool *pgxpool.Pool) *UserService {
-	return &UserService{userRepo: repo, lockRepo: lockRepo, cache: cache, pool: pool}
+func NewUserService(repo *repository.UserRepository, lockRepo *repository.AdvisoryLockRepository, cache *redis.Client, pool *pgxpool.Pool, loginPolicy func() authpolicy.PasswordLoginPolicy) *UserService {
+	return &UserService{userRepo: repo, lockRepo: lockRepo, cache: cache, pool: pool, loginPolicy: loginPolicy}
 }
 
 func (s *UserService) Register(ctx context.Context, user *model.User) (*model.User, error) {
@@ -71,29 +75,59 @@ func (s *UserService) CountUsers(ctx context.Context) (int64, error) {
 }
 
 func (s *UserService) ListUsers(ctx context.Context) ([]*model.User, error) {
-	return s.userRepo.ListUsers(ctx)
+	users, err := s.userRepo.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	idsWithIdentity, err := s.userRepo.LoadIdsWithIdentity(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, user := range users {
+		user.HasSsoIdentity = slices.Contains(idsWithIdentity, user.IdUser)
+	}
+	return users, nil
 }
 
-func (s *UserService) Login(ctx context.Context, email, plainPassword string, hasExtendedSessionLifetime bool) (string, error) {
-	user, err := s.userRepo.LoadUserByEmail(ctx, email)
-	if err != nil {
-		// Hashing anyway keeps this path as slow as a real account's; returning
-		// early instead leaked whether the address exists.
-		_ = password.Compare(password.Dummy(), plainPassword)
-		return "", ErrInvalidPassword
-	}
-	// A disabled account is rejected with the same error as a wrong password:
-	// no account-state leak, and the timing matches the compare below.
-	if !user.IsActive {
+func (s *UserService) Login(ctx context.Context, rawEmail, plainPassword string, hasExtendedSessionLifetime bool) (string, error) {
+	user, err := s.loadForLogin(ctx, rawEmail)
+	// Hashing on every rejection keeps unknown, disabled, passwordless and
+	// policy-blocked accounts as slow as a wrong password, so none of them leaks.
+	if err != nil || !user.IsActive || user.IsPasswordless || !s.loginPolicy().Allow(ctx, user) {
 		_ = password.Compare(password.Dummy(), plainPassword)
 		return "", ErrInvalidPassword
 	}
 	if err := password.Compare(user.Password, plainPassword); err != nil {
 		return "", ErrInvalidPassword
 	}
+	return s.CreateSession(ctx, user, hasExtendedSessionLifetime)
+}
+
+func (s *UserService) loadForLogin(ctx context.Context, rawEmail string) (*model.User, error) {
+	user, err := s.userRepo.LoadUserByEmail(ctx, rawEmail)
+	if err == nil {
+		return user, nil
+	}
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, err
+	}
+	folded, err := s.userRepo.LoadUsersByEmailFold(ctx, email.Normalize(rawEmail))
+	if err != nil {
+		return nil, err
+	}
+	if len(folded) != 1 {
+		return nil, repository.ErrUserNotFound
+	}
+	return folded[0], nil
+}
+
+func (s *UserService) CreateSession(ctx context.Context, user *model.User, isExtended bool) (string, error) {
 	lifetime := constants.SessionLifetime
-	if hasExtendedSessionLifetime {
+	if isExtended {
 		lifetime = constants.SessionLifetimeExtended
+	}
+	if err := s.userRepo.TouchLastLogin(ctx, user.IdUser); err != nil {
+		return "", err
 	}
 	token := uuid.New().String()
 	if err := s.cache.Set(ctx, token, user, lifetime).Err(); err != nil {
@@ -146,13 +180,24 @@ func (s *UserService) ChangePassword(ctx context.Context, idUser int64, currentP
 	if err != nil {
 		return fmt.Errorf("loading user %d: %w", idUser, err)
 	}
-	if user.IsAgent {
+	if user.IsAgent || user.IsPasswordless {
 		return ErrInvalidPassword
 	}
 	if password.Compare(user.Password, currentPassword) != nil {
 		return ErrInvalidPassword
 	}
 	hash, err := password.Hash(newPassword)
+	if err != nil {
+		return fmt.Errorf("hashing password: %w", err)
+	}
+	if err := s.userRepo.UpdatePassword(ctx, idUser, hash); err != nil {
+		return err
+	}
+	return s.InvalidateUserSessionsExcept(ctx, idUser, keepToken)
+}
+
+func (s *UserService) SetPassword(ctx context.Context, idUser int64, plain, keepToken string) error {
+	hash, err := password.Hash(plain)
 	if err != nil {
 		return fmt.Errorf("hashing password: %w", err)
 	}

@@ -1,12 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { UiModule } from '../../ui/ui.module';
 import { AuthRobotStub } from 'src/testing/stubs';
 import { AuthApi } from '../api/auth.api.service';
+import { PASSWORD_ONLY } from '../constants/sso.constants';
 import {
+    IconBuilding,
     IconEye,
     IconEyeOff,
     TablerIconComponent,
@@ -17,7 +20,7 @@ import { AuthTokenStore } from '../store/auth-token.store';
 import { LoginComponent } from './login.component';
 
 describe('LoginComponent (browser)', () => {
-    let authApi: { login$: ReturnType<typeof vi.fn> };
+    let authApi: { login$: ReturnType<typeof vi.fn>; loadMethods$: ReturnType<typeof vi.fn> };
     let tokenStore: { hasToken: ReturnType<typeof vi.fn> };
     let session: { start: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> };
 
@@ -26,7 +29,7 @@ describe('LoginComponent (browser)', () => {
     }
 
     beforeEach(async () => {
-        authApi = { login$: vi.fn() };
+        authApi = { login$: vi.fn(), loadMethods$: vi.fn().mockReturnValue(of(PASSWORD_ONLY)) };
         tokenStore = { hasToken: vi.fn().mockReturnValue(false) };
         session = { start: vi.fn(), end: vi.fn() };
 
@@ -44,7 +47,7 @@ describe('LoginComponent (browser)', () => {
                 { provide: AuthApi, useValue: authApi },
                 { provide: AuthTokenStore, useValue: tokenStore },
                 { provide: SessionService, useValue: session },
-                provideTablerIcons({ IconEye, IconEyeOff })
+                provideTablerIcons({ IconBuilding, IconEye, IconEyeOff })
             ]
         }).compileComponents();
     });
@@ -188,5 +191,140 @@ describe('LoginComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(error()).toBeNull();
+    });
+    function withSsoError(code: string): void {
+        TestBed.overrideProvider(ActivatedRoute, {
+            useValue: { queryParamMap: of(convertToParamMap({ ssoError: code })) }
+        });
+    }
+
+    function query(testId: string): HTMLElement | null {
+        return document.querySelector(`[data-testid="${testId}"]`);
+    }
+
+    function withSso(sso: { isEnforced: boolean; canStaySignedIn: boolean }): void {
+        authApi.loadMethods$.mockReturnValue(
+            of({ password: true, sso: { protocol: 'oidc', ...sso }, ssoUnavailable: false })
+        );
+    }
+
+    function click(testId: string): void {
+        (query(testId)?.querySelector('button') as HTMLButtonElement).click();
+    }
+
+    it('shows company sign-in alone and the password form on request', () => {
+        withSso({ isEnforced: false, canStaySignedIn: false });
+        const fixture = setup();
+
+        expect(query('login-sso')?.classList).toContain('ui-button--primary');
+        expect(document.querySelector('#password')).toBeNull();
+        expect(query('login-use-password')?.textContent).toContain('LOGIN.USE_PASSWORD');
+
+        click('login-use-password');
+        fixture.detectChanges();
+
+        expect(query('login-sso')).toBeNull();
+        expect(document.querySelector('#password')).not.toBeNull();
+        expect(query('login-submit')?.querySelector('button')?.classList).toContain(
+            'ui-button--primary'
+        );
+
+        click('login-back-to-sso');
+        fixture.detectChanges();
+
+        expect(query('login-sso')).not.toBeNull();
+        expect(document.querySelector('#password')).toBeNull();
+    });
+
+    it('puts stay signed in under company sign-in when SSO sessions can last long', () => {
+        withSso({ isEnforced: false, canStaySignedIn: true });
+        const fixture = setup();
+
+        const link = query('login-sso') as HTMLAnchorElement;
+        const checkbox = query('login-extended-session') as HTMLInputElement;
+        expect(link.getAttribute('href')).toBe('/api/public/sso/start');
+        expect(
+            link.compareDocumentPosition(checkbox) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+
+        checkbox.click();
+        fixture.detectChanges();
+        expect(link.getAttribute('href')).toBe('/api/public/sso/start?extended=true');
+        expect(fixture.componentInstance.form.controls.hasExtendedSessionLifetime.value).toBe(true);
+    });
+
+    it('offers stay signed in only with the password when SSO sessions cannot last long', () => {
+        withSso({ isEnforced: false, canStaySignedIn: false });
+        const fixture = setup();
+
+        expect(query('login-extended-session')).toBeNull();
+
+        click('login-use-password');
+        fixture.detectChanges();
+
+        const checkbox = query('login-extended-session') as HTMLInputElement;
+        const submit = query('login-submit') as HTMLElement;
+        expect(checkbox.closest('form')).not.toBeNull();
+        expect(
+            submit.compareDocumentPosition(checkbox) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+    });
+
+    it('offers the password only as an emergency sign-in while SSO is enforced', () => {
+        withSso({ isEnforced: true, canStaySignedIn: false });
+        const fixture = setup();
+
+        expect(query('login-use-password')?.textContent).toContain('LOGIN.EMERGENCY');
+        expect(query('login-break-glass-hint')).toBeNull();
+
+        click('login-use-password');
+        fixture.detectChanges();
+
+        expect(document.querySelector('#password')).not.toBeNull();
+        expect(query('login-break-glass-hint')?.textContent).toContain('LOGIN.BREAK_GLASS_ONLY');
+    });
+
+    it('shows no company sign-in for password-only instances', () => {
+        setup();
+
+        expect(query('login-sso')).toBeNull();
+        expect(query('login-sso-unavailable')).toBeNull();
+        expect(query('login-use-password')).toBeNull();
+        expect(query('login-back-to-sso')).toBeNull();
+        const submit = query('login-submit')?.querySelector('button') as HTMLButtonElement;
+        expect(submit.classList).toContain('ui-button--primary');
+    });
+
+    it('shows no sign-in method before the methods arrive', () => {
+        authApi.loadMethods$.mockReturnValue(new Subject());
+        setup();
+
+        expect(document.querySelector('#email')).toBeNull();
+        expect(query('login-sso')).toBeNull();
+    });
+
+    it('falls back to password-only when the methods cannot be loaded', () => {
+        authApi.loadMethods$.mockReturnValue(throwError(() => new Error('500')));
+        setup();
+
+        expect(query('login-sso')).toBeNull();
+    });
+
+    it('explains that company sign-in is unavailable', () => {
+        authApi.loadMethods$.mockReturnValue(
+            of({ password: true, sso: null, ssoUnavailable: true })
+        );
+        setup();
+
+        expect(query('login-sso-unavailable')?.textContent).toContain('LOGIN.SSO_UNAVAILABLE');
+    });
+
+    it('translates the SSO error from the query string', () => {
+        withSsoError('account_not_provisioned');
+        setup();
+
+        expect(query('login-sso-error')?.textContent).toContain(
+            'LOGIN.SSO_ERROR.ACCOUNT_NOT_PROVISIONED'
+        );
     });
 });

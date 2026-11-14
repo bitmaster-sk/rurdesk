@@ -18,7 +18,9 @@ concurrency:
 jobs:
   e2e:
     name: Playwright e2e
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is Ubuntu 26.04, which Playwright 1.60 cannot install
+    # Chromium on (support starts in 1.61). Back to ubuntu-latest after the upgrade.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -59,14 +61,27 @@ jobs:
         working-directory: client
         env:
           E2E_BASE_URL: http://localhost:1000
-        run: npx playwright test
+        run: npx playwright test --project=chromium
+
+      # Enforcing SSO signs everyone out, so these specs run after the others. A
+      # separate step instead of the config's project dependency, so one failure
+      # above does not skip them; --no-deps keeps Playwright from re-running it.
+      - name: Run SSO e2e
+        if: ${{ !cancelled() }}
+        working-directory: client
+        env:
+          E2E_BASE_URL: http://localhost:1000
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report-sso
+        run: npx playwright test --project=sso --no-deps --output=test-results-sso
 
       - name: Upload report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
-          path: client/playwright-report
+          path: |
+            client/playwright-report
+            client/playwright-report-sso
           retention-days: 7
 
       # Traces and videos are copied into the HTML report, but error-context.md
@@ -77,7 +92,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-failures
-          path: client/test-results
+          path: |
+            client/test-results
+            client/test-results-sso
           retention-days: 7
 
       - name: Tear down

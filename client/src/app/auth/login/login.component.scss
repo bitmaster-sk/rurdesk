@@ -91,6 +91,15 @@
     text-align: center;
 }
 
-.login__btn {
+.login__hint {
+    margin: 0;
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-s);
+}
+
+.login__action {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-l);
     margin-top: var(--ui-space-s);
 }

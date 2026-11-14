@@ -141,6 +141,44 @@ provider credentials its `.env` needs. If you don't want agent workers, comment
 the `gateway-agent-*` services out of [`docker-compose.yml`](docker-compose.yml)
 and skip steps 1–2 for those folders.
 
+## Commercial build (development)
+
+The paid features (single sign-on, SCIM) live in `api/commercial/` and only
+the commercial binary links them. To run it locally with a dev license and a
+Keycloak identity provider, start the stack with the overlay:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.commercial.yml up -d
+```
+
+The API then builds `./commercial/cmd/api`, sets `PUBLIC_BASE_URL=http://localhost`
+and an `SSO_ENCRYPTION_KEY`, and loads a dev license (tenant `dev`, valid until 2099)
+signed by a key that no release trusts. Plain `docker compose up` switches back
+to the free build.
+
+Keycloak runs on <http://localhost:8180> (console `admin` / `admin`) with the
+realm `rurdesk`, the groups `developers` and `rurdesk-admins` and two users:
+`jana` / `jana` and `peter` / `peter`. Set up the connection under
+**Admin → Settings → Single sign-on** with:
+
+| Protocol | Field           | Value                                                        |
+| -------- | --------------- | ------------------------------------------------------------ |
+| OIDC     | Issuer          | `http://localhost:8180/realms/rurdesk`                       |
+| OIDC     | Client ID       | `rurdesk`                                                    |
+| OIDC     | Client secret   | `rurdesk-dev-secret`                                         |
+| SAML     | Metadata URL    | `http://localhost:8180/realms/rurdesk/protocol/saml/descriptor` |
+
+The realm already sends the `groups` claim (OIDC) and the `email`, `name` and
+`groups` attributes (SAML), so leave the groups scope off. Allow the domain
+`acme.test` and map the groups to teams after the test sign-in.
+
+SCIM needs no identity provider: turn it on in the same page, generate a token
+and call the API directly, e.g.
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost/api/scim/v2/Users
+```
+
 ## Deployment (published images)
 
 In production the whole web stack is a **single `rurdesk` image** — the Go

@@ -2,17 +2,17 @@ package controller
 
 import (
 	"errors"
-	"math/rand"
 	"net/http"
 	"strings"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/avatar"
+	"github.com/bitmaster-sk/rurdesk/api/internal/email"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/password"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
-	colorful "github.com/lucasb-eyer/go-colorful"
 )
 
 type UserController struct {
@@ -67,10 +67,10 @@ func (uc *UserController) Register(c *gin.Context) {
 	}
 
 	user := &model.User{
-		Email:         dto.Email,
+		Email:         email.Normalize(dto.Email),
 		Name:          dto.Name,
 		Password:      hash,
-		ColorAvatarBg: randomAvatarColor(),
+		ColorAvatarBg: avatar.RandomColor(),
 		IsAdmin:       true, // first ever user bootstraps as instance admin
 	}
 	_, created, err := uc.userService.RegisterFirst(c.Request.Context(), user)
@@ -165,17 +165,11 @@ func (uc *UserController) ListUsers(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if users == nil {
-		users = []*model.User{}
+	public := make([]model.PublicUser, 0, len(users))
+	for _, user := range users {
+		public = append(public, user.Public())
 	}
-	c.JSON(http.StatusOK, users)
-}
-
-// randomAvatarColor generates the default avatar background — a pleasant, evenly
-// distributed HCL colour with high-ish luminance. Shared by every user/agent
-// creation path so the formula lives in one place.
-func randomAvatarColor() string {
-	return colorful.Hcl(rand.Float64()*360, rand.Float64(), 0.6+rand.Float64()*0.4).Hex()
+	c.JSON(http.StatusOK, public)
 }
 
 // avatarColorOrRandom returns the caller-supplied colour when present, else a
@@ -184,7 +178,7 @@ func avatarColorOrRandom(supplied *string) string {
 	if supplied != nil {
 		return *supplied
 	}
-	return randomAvatarColor()
+	return avatar.RandomColor()
 }
 
 func normalizeAvatarInitials(supplied *string) *string {

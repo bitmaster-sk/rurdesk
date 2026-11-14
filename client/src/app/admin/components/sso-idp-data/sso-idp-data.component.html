@@ -1,0 +1,34 @@
+@if (state().isPublicBaseUrlValid) {
+    <dl
+        class="m-0 grid grid-cols-[11rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2"
+        data-testid="sso-idp-data"
+    >
+        @for (field of fields(); track field.testId) {
+            <dt class="text-base ui-color-text-muted">{{ field.label | translate }}</dt>
+            <dd class="m-0 min-w-0">
+                <code class="break-all text-sm" [attr.data-testid]="field.testId">
+                    {{ field.value }}
+                </code>
+            </dd>
+            <dd class="m-0 justify-self-end">
+                <ui-button
+                    variant="text"
+                    size="small"
+                    severity="secondary"
+                    [isIconOnly]="true"
+                    [ariaLabel]="'ADMIN.SSO.COPY' | translate"
+                    (click)="onCopy(field.value)"
+                >
+                    <tabler-icon icon="copy" [size]="14" />
+                </ui-button>
+            </dd>
+        }
+    </dl>
+} @else {
+    <ui-message severity="warn" data-testid="sso-public-url-invalid">
+        {{
+            'ADMIN.SSO.IDP_DATA.PUBLIC_URL_INVALID'
+                | translate: { value: state().publicBaseUrl || '—' }
+        }}
+    </ui-message>
+}

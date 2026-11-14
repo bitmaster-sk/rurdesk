@@ -6,6 +6,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
+	"github.com/bitmaster-sk/rurdesk/api/internal/publicurl"
 	"github.com/spf13/viper"
 )
 
@@ -19,6 +20,10 @@ func configure() {
 // Run boots the application and serves until ctx is cancelled.
 func Run(ctx context.Context) error {
 	configure()
+
+	if _, err := publicurl.Load(); err != nil {
+		return err
+	}
 
 	app, err := issue.New()
 	if err != nil {

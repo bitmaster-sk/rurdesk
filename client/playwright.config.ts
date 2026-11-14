@@ -21,7 +21,20 @@ export default defineConfig({
         video: 'retain-on-failure',
         screenshot: 'only-on-failure'
     },
-    projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+    projects: [
+        {
+            name: 'chromium',
+            use: { ...devices['Desktop Chrome'] },
+            testIgnore: /sso\.spec\.ts/
+        },
+        // Enforcing SSO signs everyone out, so these specs must not run next to the others.
+        {
+            name: 'sso',
+            use: { ...devices['Desktop Chrome'] },
+            testMatch: /sso\.spec\.ts/,
+            dependencies: ['chromium']
+        }
+    ],
     // Locally, start the Angular dev server automatically. When E2E_BASE_URL is
     // set (e.g. CI points it at a full docker-compose stack that also serves the
     // API), skip the client-only dev server — it would not have a backend.

@@ -1,0 +1,278 @@
+<form [formGroup]="form" class="panel" data-testid="sso-connection">
+    <header class="panel-head">
+        <div class="panel-head-l">
+            <tabler-icon icon="plug-connected" [size]="16" class="panel-icon" />
+            <div class="panel-title">{{ 'ADMIN.SSO.CONNECTION.TITLE' | translate }}</div>
+        </div>
+        <ui-choice
+            [options]="protocolOptions"
+            optionLabel="label"
+            optionValue="value"
+            size="small"
+            [allowEmpty]="false"
+            formControlName="protocol"
+            [attr.aria-label]="'ADMIN.SSO.CONNECTION.PROTOCOL' | translate"
+            data-testid="sso-protocol"
+        />
+    </header>
+    <div class="panel-sub-head">
+        <div class="panel-sub-head-l">
+            <tabler-icon icon="arrow-up-right" [size]="14" class="ui-color-text-muted" />
+            <span class="panel-sub-title">{{ 'ADMIN.SSO.IDP_DATA.TITLE' | translate }}</span>
+        </div>
+        <app-sso-hint
+            [text]="
+                protocol() === SsoProtocol.Saml
+                    ? 'ADMIN.SSO.IDP_DATA.HINT_SAML'
+                    : 'ADMIN.SSO.IDP_DATA.HINT_OIDC'
+            "
+        />
+    </div>
+    <div class="panel-body">
+        <ng-content select="app-sso-idp-data" />
+    </div>
+    <div class="panel-sub-head border-top">
+        <div class="panel-sub-head-l">
+            <tabler-icon icon="arrow-down-left" [size]="14" class="ui-color-text-muted" />
+            <span class="panel-sub-title">{{ 'ADMIN.SSO.CONNECTION.FROM_IDP' | translate }}</span>
+        </div>
+    </div>
+    <div class="panel-body flex flex-col gap-3">
+        @if (protocol() === SsoProtocol.Saml) {
+            <div class="flex flex-col gap-1">
+                <label
+                    for="sso-metadata-url"
+                    class="flex items-center gap-1 text-base font-semibold ui-color-text"
+                >
+                    {{ 'ADMIN.SSO.CONNECTION.METADATA_URL' | translate }}
+                    <app-sso-hint text="ADMIN.SSO.CONNECTION.METADATA_URL_INFO" />
+                </label>
+                <input
+                    id="sso-metadata-url"
+                    uiInput
+                    formControlName="metadataUrl"
+                    data-testid="sso-metadata-url"
+                    placeholder="https://"
+                />
+            </div>
+            <div class="flex flex-col gap-1">
+                <label for="sso-metadata-xml" class="text-base font-semibold ui-color-text">
+                    {{ 'ADMIN.SSO.CONNECTION.METADATA_XML' | translate }}
+                </label>
+                <textarea
+                    id="sso-metadata-xml"
+                    uiTextarea
+                    rows="3"
+                    formControlName="metadataXml"
+                    data-testid="sso-metadata-xml"
+                    [placeholder]="
+                        connection()?.hasMetadata
+                            ? ('ADMIN.SSO.CONNECTION.METADATA_KEEP' | translate)
+                            : ''
+                    "
+                ></textarea>
+                <input
+                    type="file"
+                    accept=".xml,application/xml,text/xml"
+                    class="text-sm"
+                    [disabled]="isDisabled()"
+                    (change)="onMetadataFile($event)"
+                    data-testid="sso-metadata-file"
+                />
+            </div>
+            @if (connection()?.issuer && connection()?.protocol === SsoProtocol.Saml) {
+                <p class="m-0 text-sm" data-testid="sso-idp-entity-id">
+                    <span class="ui-color-text-muted">
+                        {{ 'ADMIN.SSO.CONNECTION.IDP_ENTITY_ID' | translate }}:
+                    </span>
+                    <code class="break-all">{{ connection()?.issuer }}</code>
+                </p>
+            }
+        } @else {
+            <div class="flex flex-col gap-1">
+                <label for="sso-issuer" class="text-base font-semibold ui-color-text">
+                    {{ 'ADMIN.SSO.CONNECTION.ISSUER' | translate }}
+                </label>
+                <input
+                    id="sso-issuer"
+                    uiInput
+                    formControlName="issuer"
+                    data-testid="sso-issuer"
+                    placeholder="https://"
+                />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1">
+                    <label for="sso-client-id" class="text-base font-semibold ui-color-text">
+                        {{ 'ADMIN.SSO.CONNECTION.CLIENT_ID' | translate }}
+                    </label>
+                    <input
+                        id="sso-client-id"
+                        uiInput
+                        formControlName="clientId"
+                        data-testid="sso-client-id"
+                    />
+                </div>
+                <div class="flex flex-col gap-1">
+                    <label for="sso-client-secret" class="text-base font-semibold ui-color-text">
+                        {{ 'ADMIN.SSO.CONNECTION.CLIENT_SECRET' | translate }}
+                    </label>
+                    <input
+                        id="sso-client-secret"
+                        uiInput
+                        type="password"
+                        autocomplete="off"
+                        formControlName="clientSecret"
+                        data-testid="sso-client-secret"
+                        [placeholder]="
+                            connection()?.hasClientSecret
+                                ? ('ADMIN.SSO.CONNECTION.SECRET_KEEP' | translate)
+                                : ''
+                        "
+                    />
+                </div>
+            </div>
+        }
+        <details class="sso-advanced" data-testid="sso-advanced">
+            <summary
+                class="inline-flex items-center gap-1 cursor-pointer text-sm ui-color-text-muted"
+            >
+                <tabler-icon icon="chevron-right" [size]="14" />
+                {{
+                    (protocol() === SsoProtocol.Saml
+                        ? 'ADMIN.SSO.CONNECTION.ATTRIBUTES'
+                        : 'ADMIN.SSO.CONNECTION.CLAIMS'
+                    ) | translate
+                }}
+            </summary>
+            <div class="flex flex-col gap-3 pt-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                        <label for="sso-email-claim" class="text-base font-semibold ui-color-text">
+                            {{
+                                (protocol() === SsoProtocol.Saml
+                                    ? 'ADMIN.SSO.CONNECTION.EMAIL_ATTRIBUTE'
+                                    : 'ADMIN.SSO.CONNECTION.EMAIL_CLAIM'
+                                ) | translate
+                            }}
+                        </label>
+                        <input
+                            id="sso-email-claim"
+                            uiInput
+                            formControlName="emailClaim"
+                            data-testid="sso-email-claim"
+                        />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label for="sso-groups-claim" class="text-base font-semibold ui-color-text">
+                            {{
+                                (protocol() === SsoProtocol.Saml
+                                    ? 'ADMIN.SSO.CONNECTION.GROUPS_ATTRIBUTE'
+                                    : 'ADMIN.SSO.CONNECTION.GROUPS_CLAIM'
+                                ) | translate
+                            }}
+                        </label>
+                        <input
+                            id="sso-groups-claim"
+                            uiInput
+                            formControlName="groupsClaim"
+                            data-testid="sso-groups-claim"
+                        />
+                    </div>
+                    @if (protocol() === SsoProtocol.Saml) {
+                        <div class="flex flex-col gap-1">
+                            <label
+                                for="sso-name-attribute"
+                                class="text-base font-semibold ui-color-text"
+                            >
+                                {{ 'ADMIN.SSO.CONNECTION.NAME_ATTRIBUTE' | translate }}
+                            </label>
+                            <input
+                                id="sso-name-attribute"
+                                uiInput
+                                formControlName="nameAttribute"
+                                data-testid="sso-name-attribute"
+                            />
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <label
+                                for="sso-subject-attribute"
+                                class="text-base font-semibold ui-color-text"
+                            >
+                                {{ 'ADMIN.SSO.CONNECTION.SUBJECT_ATTRIBUTE' | translate }}
+                                <span class="text-xs ui-color-text-muted">
+                                    {{ 'ADMIN.SSO.OPTIONAL' | translate }}
+                                </span>
+                            </label>
+                            <input
+                                id="sso-subject-attribute"
+                                uiInput
+                                formControlName="subjectAttribute"
+                                data-testid="sso-subject-attribute"
+                                [placeholder]="'ADMIN.SSO.CONNECTION.SUBJECT_NAME_ID' | translate"
+                            />
+                        </div>
+                    }
+                </div>
+                @if (protocol() !== SsoProtocol.Saml) {
+                    <div class="flex items-center justify-between gap-3">
+                        <label for="sso-groups-scope" class="flex flex-col">
+                            <span class="text-base font-semibold ui-color-text">
+                                {{ 'ADMIN.SSO.CONNECTION.GROUPS_SCOPE' | translate }}
+                            </span>
+                            <span class="text-sm ui-color-text-muted">
+                                {{ 'ADMIN.SSO.CONNECTION.GROUPS_SCOPE_HINT' | translate }}
+                            </span>
+                        </label>
+                        <input
+                            id="sso-groups-scope"
+                            type="checkbox"
+                            uiToggle
+                            formControlName="hasGroupsScope"
+                            data-testid="sso-groups-scope"
+                        />
+                    </div>
+                }
+            </div>
+        </details>
+        <ng-content select="app-sso-test-result" />
+    </div>
+    <div class="p-3 border-top flex items-center justify-between gap-3">
+        <span class="text-sm ui-color-text-muted" data-testid="sso-pending">
+            @if (isPending()) {
+                {{
+                    (canApply()
+                        ? 'ADMIN.SSO.CONNECTION.PENDING_TESTED'
+                        : 'ADMIN.SSO.CONNECTION.PENDING_UNTESTED'
+                    ) | translate
+                }}
+            }
+        </span>
+        <div class="flex gap-2 shrink-0">
+            <ui-button
+                severity="secondary"
+                variant="outlined"
+                [label]="'ADMIN.SSO.CONNECTION.SAVE' | translate"
+                [disabled]="form.invalid || isDisabled()"
+                (click)="onSave()"
+                data-testid="sso-save-draft"
+            />
+            <ui-button
+                [severity]="isPending() && canApply() ? 'secondary' : 'primary'"
+                [variant]="isPending() && canApply() ? 'outlined' : 'filled'"
+                [label]="'ADMIN.SSO.CONNECTION.SAVE_AND_TEST' | translate"
+                [disabled]="form.invalid || isDisabled() || !canTest()"
+                (click)="onSaveAndTest()"
+                data-testid="sso-save-and-test"
+            />
+            @if (isPending() && canApply()) {
+                <ui-button
+                    [label]="'ADMIN.SSO.CONNECTION.APPLY' | translate"
+                    [disabled]="isDisabled()"
+                    (click)="apply.emit()"
+                    data-testid="sso-apply"
+                />
+            }
+        </div>
+    </div>
+</form>

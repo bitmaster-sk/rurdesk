@@ -1,0 +1,6 @@
+<span
+    class="rounded-full w-3 h-3 shrink-0"
+    [style.backgroundColor]="team().color || 'var(--ui-color-unknown)'"
+    data-testid="team-label-dot"
+></span>
+<span class="truncate" data-testid="team-label-name">{{ team().name }}</span>

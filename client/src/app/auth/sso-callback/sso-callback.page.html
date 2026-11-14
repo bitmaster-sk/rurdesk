@@ -1,0 +1,15 @@
+<div class="flex min-h-screen items-center justify-center p-6">
+    <div class="flex w-full max-w-sm flex-col items-center gap-4 text-center">
+        @if (hasFailed()) {
+        <ui-message severity="danger" data-testid="sso-callback-error">
+            {{ 'LOGIN.SSO_EXCHANGE.FAILED' | translate }}
+        </ui-message>
+        <a routerLink="/login" class="ui-button ui-button--primary" data-testid="sso-callback-back">
+            {{ 'LOGIN.SSO_EXCHANGE.BACK' | translate }}
+        </a>
+        } @else {
+        <ui-loader [ariaLabel]="'LOGIN.SSO_EXCHANGE.PROGRESS' | translate"></ui-loader>
+        <p>{{ 'LOGIN.SSO_EXCHANGE.PROGRESS' | translate }}</p>
+        }
+    </div>
+</div>

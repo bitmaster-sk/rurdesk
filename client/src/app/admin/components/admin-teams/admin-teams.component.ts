@@ -7,7 +7,9 @@ import {
     input,
     signal
 } from '@angular/core';
+import { AdminSsoApi } from '../../api/admin-sso.api.service';
 import { AdminTeamApi } from '../../api/admin-team.api.service';
+import { ToastNotificationService } from 'src/app/core/toast-notification.service';
 import { AdminUser } from '../../model/admin-user.model';
 import { Team } from '../../../team/model/team.model';
 import { User } from '../../../auth/model/user.model';
@@ -33,12 +35,15 @@ export class AdminTeamsComponent implements OnInit {
 
     private readonly adminTeamApi = inject(AdminTeamApi);
     private readonly teamApi = inject(TeamApi);
+    private readonly adminSsoApi = inject(AdminSsoApi);
+    private readonly sToast = inject(ToastNotificationService);
 
     protected readonly teams = signal<Team[]>([]);
     protected readonly selectedTeam = signal<Team | null>(null);
     protected readonly members = signal<User[]>([]);
     protected readonly showTeamDialog = signal(false);
     protected readonly editedTeam = signal<Team | null>(null);
+    protected readonly ssoTeamIds = signal<ReadonlySet<number>>(new Set());
 
     protected readonly availableUsers = computed<User[]>(() => {
         const memberIds = new Set(this.members().map(m => m.idUser));
@@ -51,6 +56,10 @@ export class AdminTeamsComponent implements OnInit {
 
     public ngOnInit(): void {
         this.loadTeams();
+        this.adminSsoApi.loadMappings$().subscribe({
+            next: mappings => this.ssoTeamIds.set(new Set(mappings.map(mapping => mapping.idTeam))),
+            error: () => this.ssoTeamIds.set(new Set())
+        });
     }
 
     private loadTeams(): void {
@@ -94,6 +103,7 @@ export class AdminTeamsComponent implements OnInit {
     protected onAddMember(user: User | AdminUser, team: Team | null = this.selectedTeam()): void {
         if (!team) return;
         this.adminTeamApi.insertMember$(team.idTeam, user.idUser).subscribe(() => {
+            this.warnIfSsoManaged(user.idUser, team.idTeam);
             if (this.selectedTeam()?.idTeam === team.idTeam) {
                 this.loadMembers(team.idTeam);
             }
@@ -143,8 +153,16 @@ export class AdminTeamsComponent implements OnInit {
     protected onConfirmRemoveMember(user: User): void {
         const team = this.selectedTeam();
         if (!team) return;
-        this.adminTeamApi
-            .deleteMember$(team.idTeam, user.idUser)
-            .subscribe(() => this.loadMembers(team.idTeam));
+        this.adminTeamApi.deleteMember$(team.idTeam, user.idUser).subscribe(() => {
+            this.warnIfSsoManaged(user.idUser, team.idTeam);
+            this.loadMembers(team.idTeam);
+        });
+    }
+
+    private warnIfSsoManaged(idUser: number, idTeam: number): void {
+        const isSsoUser = this.users().some(user => user.idUser === idUser && user.hasSsoIdentity);
+        if (isSsoUser && this.ssoTeamIds().has(idTeam)) {
+            this.sToast.showInfo('ADMIN.SSO_TEAM.OVERRIDE_WARNING', 6000);
+        }
     }
 }
