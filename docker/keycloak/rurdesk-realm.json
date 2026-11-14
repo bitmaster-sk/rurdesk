@@ -1,0 +1,97 @@
+{
+    "realm": "rurdesk",
+    "enabled": true,
+    "sslRequired": "none",
+    "groups": [{ "name": "developers" }, { "name": "rurdesk-admins" }],
+    "users": [
+        {
+            "username": "jana",
+            "email": "jana@acme.test",
+            "emailVerified": true,
+            "firstName": "Jana",
+            "lastName": "Novakova",
+            "enabled": true,
+            "credentials": [{ "type": "password", "value": "jana", "temporary": false }],
+            "groups": ["/developers"]
+        },
+        {
+            "username": "peter",
+            "email": "peter@acme.test",
+            "emailVerified": true,
+            "firstName": "Peter",
+            "lastName": "Horvath",
+            "enabled": true,
+            "credentials": [{ "type": "password", "value": "peter", "temporary": false }],
+            "groups": ["/rurdesk-admins", "/developers"]
+        }
+    ],
+    "clients": [
+        {
+            "clientId": "rurdesk",
+            "name": "rurdesk (OIDC)",
+            "protocol": "openid-connect",
+            "enabled": true,
+            "publicClient": false,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "rurdesk-dev-secret",
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": false,
+            "redirectUris": ["http://localhost/api/public/sso/oidc/callback"],
+            "webOrigins": ["http://localhost"],
+            "protocolMappers": [
+                {
+                    "name": "groups",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-group-membership-mapper",
+                    "config": {
+                        "claim.name": "groups",
+                        "full.path": "false",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "userinfo.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "clientId": "http://localhost/api/public/sso/saml/metadata",
+            "name": "rurdesk (SAML)",
+            "protocol": "saml",
+            "enabled": true,
+            "frontchannelLogout": false,
+            "redirectUris": ["http://localhost/api/public/sso/saml/acs"],
+            "attributes": {
+                "saml.client.signature": "false",
+                "saml.server.signature": "true",
+                "saml.assertion.signature": "true",
+                "saml.encrypt": "false",
+                "saml.force.post.binding": "true",
+                "saml.authnstatement": "true",
+                "saml.signature.algorithm": "RSA_SHA256",
+                "saml_force_name_id_format": "true",
+                "saml_name_id_format": "persistent",
+                "saml_assertion_consumer_url_post": "http://localhost/api/public/sso/saml/acs"
+            },
+            "protocolMappers": [
+                {
+                    "name": "email",
+                    "protocol": "saml",
+                    "protocolMapper": "saml-user-property-mapper",
+                    "config": { "user.attribute": "email", "attribute.name": "email", "attribute.nameformat": "Basic" }
+                },
+                {
+                    "name": "name",
+                    "protocol": "saml",
+                    "protocolMapper": "saml-user-property-mapper",
+                    "config": { "user.attribute": "firstName", "attribute.name": "name", "attribute.nameformat": "Basic" }
+                },
+                {
+                    "name": "groups",
+                    "protocol": "saml",
+                    "protocolMapper": "saml-group-membership-mapper",
+                    "config": { "attribute.name": "groups", "full.path": "false", "single": "true", "attribute.nameformat": "Basic" }
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,35 @@
+# Throwaway dev keys and passwords only; never reuse them outside local development.
+services:
+    rurdesk.api:
+        environment:
+            API_PACKAGE: ./commercial/cmd/api
+            PUBLIC_BASE_URL: http://localhost
+            SSO_ENCRYPTION_KEY: 9/t7qWZ611KBvgwYDCFgk70Q8nfYZS8KQ8U9bw+4eMc=
+            LICENSE_PUBLIC_KEY: bXZy71VI47Xc7ZUmmMW1VevVeXTadVyMD2Eo7OlgP9A=
+            LICENSE_KEY: eyJ0ZW5hbnQiOiJkZXYiLCJleHBpcmVzQXQiOiIyMDk5LTAxLTAxVDAwOjAwOjAwWiJ9.HNqJqP5pm9CDbwGXg4a8liX2kP6y8yHEnDOZwl6nV50IvxtT1uFw9vUPNWSK-G_u9Vauug5LaeA6YCoXXzjeAg
+
+    keycloak:
+        image: quay.io/keycloak/keycloak:26.8.2
+        container_name: rurdesk_keycloak
+        command: ["start-dev", "--import-realm"]
+        environment:
+            KC_BOOTSTRAP_ADMIN_USERNAME: admin
+            KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+            KC_HOSTNAME: http://localhost:8180
+            KC_HTTP_PORT: "8080"
+        ports:
+            - "8180:8080"
+        volumes:
+            - ./docker/keycloak/rurdesk-realm.json:/opt/keycloak/data/import/rurdesk-realm.json:ro
+        networks:
+            rurdesk_network:
+
+    # The API accepts an http issuer only on localhost and the browser must see the same issuer, so localhost:8180 inside the API is forwarded to Keycloak.
+    keycloak-loopback:
+        image: alpine/socat:1.8.0.1
+        container_name: rurdesk_keycloak_loopback
+        network_mode: "service:rurdesk.api"
+        command: ["TCP-LISTEN:8180,fork,reuseaddr", "TCP:keycloak:8080"]
+        depends_on:
+            - rurdesk.api
+            - keycloak
