@@ -64,9 +64,11 @@ This file covers the tracker image. One section per artefact inside it, listing
 the dependencies actually linked into that artefact rather than everything
 named in a manifest:
 
-  api       the server binary — REST, WebSocket, MCP, and the static SPA
-  admin     the maintenance CLI shipped alongside it
-  client    the Angular bundle it serves (production dependencies only)
+  api             the server binary — REST, WebSocket, MCP, and the static SPA
+  api-commercial  the server binary of the rurdesk-commercial image: everything
+                  in api plus single sign-on (OIDC, SAML) and SCIM
+  admin           the maintenance CLI shipped alongside it
+  client          the Angular bundle it serves (production dependencies only)
 
 A dependency shared by two artefacts is listed in both sections. The gateway
 ships as its own image and carries its own notice file.
@@ -168,7 +170,7 @@ assemble() {
 }
 
 assemble_all() {
-    assemble "$1" preamble_tracker api admin client
+    assemble "$1" preamble_tracker api api-commercial admin client
     assemble "$2" preamble_gateway gateway
 }
 

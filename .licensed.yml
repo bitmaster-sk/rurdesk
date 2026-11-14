@@ -59,6 +59,7 @@ reviewed:
     - golang.org/x/crypto/bcrypt
     - golang.org/x/crypto/blowfish
     - golang.org/x/crypto/hkdf
+    - golang.org/x/crypto/ripemd160
     - golang.org/x/crypto/sha3
     - golang.org/x/net/bpf
     - golang.org/x/net/html
@@ -172,6 +173,13 @@ apps:
   # The server binary: REST, WebSocket, MCP and the static SPA.
   - name: api
     source_path: ./api/cmd/api
+    sources:
+      go: true
+
+  # The server binary of the rurdesk-commercial image: everything in `api`
+  # plus the commercial packages (SSO, SAML, SCIM) and their dependencies.
+  - name: api-commercial
+    source_path: ./api/commercial/cmd/api
     sources:
       go: true
 
