@@ -28,9 +28,27 @@ ARG COMMIT
 # Selects the entrypoint package. It changes what the `api` binary contains; the
 # runtime stage is identical either way.
 ARG API_PACKAGE
+# Our license public key (base64 of the raw 32-byte Ed25519 key), embedded in
+# the commercial binary so it ignores LICENSE_PUBLIC_KEY from env. Empty for
+# local and e2e builds. A release sets REQUIRE_LICENSE_PUBLIC_KEY=1 so a missing
+# key fails the build instead of shipping an image that trusts env.
+ARG EMBEDDED_LICENSE_PUBLIC_KEY
+ARG REQUIRE_LICENSE_PUBLIC_KEY=0
 ENV VERSION=${VERSION} \
     COMMIT=${COMMIT} \
-    API_PACKAGE=${API_PACKAGE}
+    API_PACKAGE=${API_PACKAGE} \
+    EMBEDDED_LICENSE_PUBLIC_KEY=${EMBEDDED_LICENSE_PUBLIC_KEY}
+
+RUN if [ -n "$EMBEDDED_LICENSE_PUBLIC_KEY" ] \
+        && [ "$(printf '%s' "$EMBEDDED_LICENSE_PUBLIC_KEY" | base64 -d 2>/dev/null | wc -c)" -ne 32 ]; then \
+        echo "ERROR: EMBEDDED_LICENSE_PUBLIC_KEY must be base64 of a 32-byte Ed25519 public key" >&2; \
+        exit 1; \
+    fi \
+ && if [ "$API_PACKAGE" = "./commercial/cmd/api" ] && [ "$REQUIRE_LICENSE_PUBLIC_KEY" = "1" ] \
+        && [ -z "$EMBEDDED_LICENSE_PUBLIC_KEY" ]; then \
+        echo "ERROR: EMBEDDED_LICENSE_PUBLIC_KEY is required for a commercial release build" >&2; \
+        exit 1; \
+    fi
 
 RUN go install github.com/pressly/goose/v3/cmd/goose@v3.26.0
 

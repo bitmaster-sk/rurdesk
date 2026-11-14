@@ -119,11 +119,16 @@ jobs:
                   file: ./docker/tracker/Dockerfile.prod
                   platforms: linux/amd64,linux/arm64
                   push: true
+                  # EMBEDDED_LICENSE_PUBLIC_KEY is our license public key (base64
+                  # of the raw 32-byte Ed25519 key). Public by design; the private
+                  # half that signs customer licenses never leaves Bitwarden.
                   build-args: |
                       VERSION=${{ steps.meta-commercial.outputs.version }}
                       COMMIT=${{ github.sha }}
                       REQUIRE_NOTICES=1
                       API_PACKAGE=./commercial/cmd/api
+                      EMBEDDED_LICENSE_PUBLIC_KEY=6050Z8W80SmuG5QqLTk36WQwOkcK4gOGpRRlOm7g8Ek=
+                      REQUIRE_LICENSE_PUBLIC_KEY=1
                   tags: ${{ steps.meta-commercial.outputs.tags }}
                   labels: ${{ steps.meta-commercial.outputs.labels }}
 

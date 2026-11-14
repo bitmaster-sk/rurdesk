@@ -70,20 +70,42 @@ func New(publicKey ed25519.PublicKey, encodedKey string) (Provider, error) {
 	return Provider{claims: parsed}, nil
 }
 
-// FromEnv builds a Provider from LICENSE_PUBLIC_KEY (base64 of the raw 32-byte
-// Ed25519 key) and LICENSE_KEY.
+// embeddedPublicKey is our release public key (base64 of the raw 32-byte
+// Ed25519 key), stamped at link time by script/build.sh. Dev and e2e builds
+// leave it empty and read LICENSE_PUBLIC_KEY from env instead.
+var embeddedPublicKey string
+
+// FromEnv builds a Provider from LICENSE_KEY. A release build verifies it
+// against its embedded public key and ignores LICENSE_PUBLIC_KEY, so a
+// self-made key pair cannot unlock it. Only an unstamped build reads
+// LICENSE_PUBLIC_KEY (base64 of the raw 32-byte Ed25519 key).
 func FromEnv() (Provider, error) {
 	encodedKey := viper.GetString("LICENSE_KEY")
-	encodedPublicKey := viper.GetString("LICENSE_PUBLIC_KEY")
+	encodedPublicKey, origin := publicKeyInUse()
 	if encodedKey == "" || encodedPublicKey == "" {
 		return Provider{}, ErrNotConfigured
 	}
 
 	publicKey, err := base64.StdEncoding.DecodeString(encodedPublicKey)
 	if err != nil {
-		return Provider{}, fmt.Errorf("decoding LICENSE_PUBLIC_KEY: %w", err)
+		return Provider{}, fmt.Errorf("decoding %s: %w", origin, err)
 	}
 	return New(publicKey, encodedKey)
+}
+
+// IsEnvPublicKeyIgnored reports a LICENSE_PUBLIC_KEY that this build overrides
+// with its embedded key.
+func IsEnvPublicKeyIgnored() bool {
+	return embeddedPublicKey != "" && viper.GetString("LICENSE_PUBLIC_KEY") != ""
+}
+
+// publicKeyInUse never falls back to env when a key is embedded, not even when
+// the embedded one is broken.
+func publicKeyInUse() (encodedPublicKey string, origin string) {
+	if embeddedPublicKey != "" {
+		return embeddedPublicKey, "embedded public key"
+	}
+	return viper.GetString("LICENSE_PUBLIC_KEY"), "LICENSE_PUBLIC_KEY"
 }
 
 // IsAvailable entitles every paid feature while the key is unexpired.
