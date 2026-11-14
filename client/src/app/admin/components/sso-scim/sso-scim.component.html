@@ -1,0 +1,130 @@
+<div class="flex flex-col" data-testid="sso-scim">
+    <div class="p-3 flex items-center justify-between gap-3">
+        <label for="sso-scim-toggle" class="flex flex-col min-w-0">
+            <span class="flex items-center gap-1 text-base font-semibold ui-color-text">
+                {{ 'ADMIN.SSO.SCIM.TITLE' | translate }}
+                <app-sso-hint text="ADMIN.SSO.SCIM.INFO" />
+            </span>
+            <span class="text-sm ui-color-text-muted">{{ 'ADMIN.SSO.SCIM.HINT' | translate }}</span>
+        </label>
+        <input
+            id="sso-scim-toggle"
+            type="checkbox"
+            uiToggle
+            [checked]="scim().isEnabled"
+            [disabled]="scim().isEnabled ? isBusy() : !canChange()"
+            (change)="onToggle($event)"
+            data-testid="sso-scim-toggle"
+        />
+    </div>
+    @if (scim().isEnabled || scim().hasToken) {
+        <div class="panel-sub-head border-top">
+            <div class="panel-sub-head-l">
+                <tabler-icon icon="arrow-up-right" [size]="14" class="ui-color-text-muted" />
+                <span class="panel-sub-title">{{ 'ADMIN.SSO.IDP_DATA.TITLE' | translate }}</span>
+            </div>
+        </div>
+        <div class="p-3 flex flex-col gap-3">
+            <dl class="m-0 grid grid-cols-[11rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2">
+                <dt class="text-base ui-color-text-muted">
+                    {{ 'ADMIN.SSO.SCIM.BASE_URL' | translate }}
+                </dt>
+                <dd class="m-0 min-w-0">
+                    <code class="break-all text-sm" data-testid="sso-scim-base-url">
+                        {{ scim().baseUrl }}
+                    </code>
+                </dd>
+                <dd class="m-0 justify-self-end">
+                    <ui-button
+                        variant="text"
+                        size="small"
+                        severity="secondary"
+                        [isIconOnly]="true"
+                        [ariaLabel]="'ADMIN.SSO.COPY' | translate"
+                        (click)="onCopy(scim().baseUrl)"
+                    >
+                        <tabler-icon icon="copy" [size]="14" />
+                    </ui-button>
+                </dd>
+                <dt class="text-base ui-color-text-muted">
+                    {{ 'ADMIN.SSO.SCIM.TOKEN' | translate }}
+                </dt>
+                <dd
+                    class="m-0 min-w-0 text-sm ui-color-text-muted"
+                    data-testid="sso-scim-last-used"
+                >
+                    @if (scim().hasToken) {
+                        {{
+                            'ADMIN.SSO.SCIM.TOKEN_INFO'
+                                | translate
+                                    : {
+                                          created: (scim().tokenCreateAt | date: 'medium'),
+                                          used: scim().lastUsedAt
+                                              ? (scim().lastUsedAt | date: 'medium')
+                                              : ('ADMIN.SSO.ENFORCE.NEVER' | translate)
+                                      }
+                        }}
+                    } @else {
+                        {{ 'ADMIN.SSO.SCIM.NO_TOKEN' | translate }}
+                    }
+                </dd>
+                <dd class="m-0 flex gap-2 justify-end">
+                    @if (scim().hasToken) {
+                        <ui-button
+                            severity="danger"
+                            variant="outlined"
+                            size="small"
+                            [label]="'ADMIN.SSO.SCIM.DELETE_TOKEN' | translate"
+                            [disabled]="isBusy()"
+                            uiConfirm
+                            [confirmText]="'ADMIN.SSO.SCIM.DELETE_TOKEN_CONFIRM' | translate"
+                            (confirmed)="deleteToken.emit()"
+                            data-testid="sso-scim-delete-token"
+                        />
+                        <ui-button
+                            severity="secondary"
+                            variant="outlined"
+                            size="small"
+                            [label]="'ADMIN.SSO.SCIM.REGENERATE' | translate"
+                            [disabled]="!canChange()"
+                            uiConfirm
+                            [confirmText]="'ADMIN.SSO.SCIM.REGENERATE_CONFIRM' | translate"
+                            (confirmed)="generateToken.emit()"
+                            data-testid="sso-scim-regenerate"
+                        />
+                    } @else {
+                        <ui-button
+                            size="small"
+                            [label]="'ADMIN.SSO.SCIM.GENERATE' | translate"
+                            [disabled]="!canChange()"
+                            (click)="generateToken.emit()"
+                            data-testid="sso-scim-generate"
+                        />
+                    }
+                </dd>
+            </dl>
+            @if (revealedToken(); as token) {
+                <ui-message severity="success" data-testid="sso-scim-token">
+                    <div class="flex flex-col gap-2">
+                        <span>{{ 'ADMIN.SSO.SCIM.TOKEN_ONCE' | translate }}</span>
+                        <div class="flex items-center gap-2">
+                            <code class="flex-1 break-all" data-testid="sso-scim-token-value">
+                                {{ token }}
+                            </code>
+                            <ui-button
+                                variant="text"
+                                size="small"
+                                severity="secondary"
+                                [isIconOnly]="true"
+                                [ariaLabel]="'ADMIN.SSO.COPY' | translate"
+                                (click)="onCopy(token)"
+                            >
+                                <tabler-icon icon="copy" [size]="14" />
+                            </ui-button>
+                        </div>
+                    </div>
+                </ui-message>
+            }
+        </div>
+    }
+</div>

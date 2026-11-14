@@ -24,7 +24,21 @@ import {
     IconDeviceFloppy,
     IconAlertTriangle,
     IconSparkles,
-    IconRestore
+    IconRestore,
+    IconShieldLock,
+    IconLock,
+    IconPlugConnected,
+    IconListCheck,
+    IconShield,
+    IconShieldCheck,
+    IconBook,
+    IconCircle,
+    IconCircleCheck,
+    IconInfoCircle,
+    IconArrowUpRight,
+    IconArrowDownLeft,
+    IconArrowRight,
+    IconChevronRight
 } from '@tabler/icons-angular';
 import { AdminRoutingModule } from './admin-routing.module';
 import { SharedModule } from '../shared/shared.module';
@@ -36,13 +50,37 @@ import { AgentRunDefaultsFieldsComponent } from './components/agent-run-defaults
 import { AgentModule } from '../agent/agent.module';
 import { EditUserDialogComponent } from './components/edit-user-dialog/edit-user-dialog.component';
 import { AgentKeysDialogComponent } from './components/agent-keys-dialog/agent-keys-dialog.component';
-import { AdminSettingsComponent } from './pages/admin-settings/admin-settings.component';
+import { AdminSettingsLayoutComponent } from './pages/admin-settings/admin-settings-layout.component';
+import { AdminSettingsGeneralComponent } from './pages/admin-settings/general/admin-settings-general.component';
+import { AdminSettingsAgentsComponent } from './pages/admin-settings/agents/admin-settings-agents.component';
+import { AdminSettingsSsoComponent } from './pages/admin-settings/sso/admin-settings-sso.component';
+import { SsoIdpDataComponent } from './components/sso-idp-data/sso-idp-data.component';
+import { SsoConnectionFormComponent } from './components/sso-connection-form/sso-connection-form.component';
+import { SsoTestResultComponent } from './components/sso-test-result/sso-test-result.component';
+import { SsoStatusComponent } from './components/sso-status/sso-status.component';
+import { SsoHintComponent } from './components/sso-hint/sso-hint.component';
+import { SsoRulesFormComponent } from './components/sso-rules-form/sso-rules-form.component';
+import { SsoGroupMappingComponent } from './components/sso-group-mapping/sso-group-mapping.component';
+import { SsoEnforcementComponent } from './components/sso-enforcement/sso-enforcement.component';
+import { SsoScimComponent } from './components/sso-scim/sso-scim.component';
 import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.component';
 
 @NgModule({
     declarations: [
         AdminUsersComponent,
-        AdminSettingsComponent,
+        AdminSettingsLayoutComponent,
+        AdminSettingsGeneralComponent,
+        AdminSettingsAgentsComponent,
+        AdminSettingsSsoComponent,
+        SsoIdpDataComponent,
+        SsoConnectionFormComponent,
+        SsoTestResultComponent,
+        SsoStatusComponent,
+        SsoHintComponent,
+        SsoRulesFormComponent,
+        SsoGroupMappingComponent,
+        SsoEnforcementComponent,
+        SsoScimComponent,
         AdminSkillsComponent,
         AdminTeamsComponent,
         TeamDialogComponent,
@@ -82,7 +120,21 @@ import { AdminSkillsComponent } from './pages/admin-skills/admin-skills.componen
             IconDeviceFloppy,
             IconAlertTriangle,
             IconSparkles,
-            IconRestore
+            IconRestore,
+            IconShieldLock,
+            IconLock,
+            IconPlugConnected,
+            IconListCheck,
+            IconShield,
+            IconShieldCheck,
+            IconBook,
+            IconCircle,
+            IconCircleCheck,
+            IconInfoCircle,
+            IconArrowUpRight,
+            IconArrowDownLeft,
+            IconArrowRight,
+            IconChevronRight
         })
     ]
 })

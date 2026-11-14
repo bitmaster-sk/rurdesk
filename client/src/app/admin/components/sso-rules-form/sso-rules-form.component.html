@@ -1,0 +1,74 @@
+<form [formGroup]="form" class="panel" data-testid="sso-rules">
+    <header class="panel-head">
+        <div class="panel-head-l">
+            <tabler-icon icon="list-check" [size]="16" class="panel-icon" />
+            <div class="panel-title">{{ 'ADMIN.SSO.RULES.TITLE' | translate }}</div>
+        </div>
+    </header>
+    <div class="panel-body flex flex-col gap-3">
+        <div class="flex flex-col gap-1">
+            <label
+                for="sso-domains"
+                class="flex items-center gap-1 text-base font-semibold ui-color-text"
+            >
+                {{ 'ADMIN.SSO.RULES.DOMAINS' | translate }}
+                <app-sso-hint text="ADMIN.SSO.RULES.DOMAINS_INFO" />
+            </label>
+            <textarea
+                id="sso-domains"
+                uiTextarea
+                rows="2"
+                placeholder="example.com"
+                formControlName="allowedDomains"
+                data-testid="sso-domains"
+            ></textarea>
+            <span class="text-sm ui-color-text-muted">
+                {{ 'ADMIN.SSO.RULES.DOMAINS_HINT' | translate }}
+            </span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+            <label for="sso-auto-create" class="flex flex-col">
+                <span class="text-base font-semibold ui-color-text">
+                    {{ 'ADMIN.SSO.RULES.AUTO_CREATE' | translate }}
+                </span>
+                <span class="text-sm ui-color-text-muted">
+                    {{ 'ADMIN.SSO.RULES.AUTO_CREATE_HINT' | translate }}
+                </span>
+            </label>
+            <input
+                id="sso-auto-create"
+                type="checkbox"
+                uiToggle
+                formControlName="isAutoCreate"
+                data-testid="sso-auto-create"
+            />
+        </div>
+        <div class="flex flex-col gap-1">
+            <label
+                for="sso-admin-group"
+                class="flex items-center gap-1 text-base font-semibold ui-color-text"
+            >
+                {{ 'ADMIN.SSO.RULES.ADMIN_GROUP' | translate }}
+                <span class="text-sm font-normal ui-color-text-muted">
+                    {{ 'ADMIN.SSO.RULES.ADMIN_GROUP_SOURCE' | translate }}
+                </span>
+                <app-sso-hint text="ADMIN.SSO.RULES.ADMIN_GROUP_INFO" />
+            </label>
+            <input
+                id="sso-admin-group"
+                uiInput
+                formControlName="adminGroup"
+                [placeholder]="'ADMIN.SSO.RULES.ADMIN_GROUP_PLACEHOLDER' | translate"
+                data-testid="sso-admin-group"
+            />
+        </div>
+    </div>
+    <div class="p-3 border-top flex justify-end">
+        <ui-button
+            [label]="'ADMIN.SSO.RULES.SAVE' | translate"
+            [disabled]="isDisabled()"
+            (click)="onSave()"
+            data-testid="sso-save-rules"
+        />
+    </div>
+</form>

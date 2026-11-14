@@ -1,0 +1,9 @@
+.sso-status-icon {
+    background: var(--ui-surface-100);
+    color: var(--ui-color-text-muted);
+}
+
+.sso-status-icon.sso-status-icon--on {
+    background: var(--ui-green-100);
+    color: var(--ui-green-600);
+}

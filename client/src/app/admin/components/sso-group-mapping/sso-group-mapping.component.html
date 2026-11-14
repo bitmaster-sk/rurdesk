@@ -1,0 +1,120 @@
+<section class="panel" data-testid="sso-group-mapping">
+    <header class="panel-head">
+        <div class="panel-head-l">
+            <tabler-icon icon="users-group" [size]="16" class="panel-icon" />
+            <div class="panel-title">{{ 'ADMIN.SSO.MAPPING.TITLE' | translate }}</div>
+        </div>
+        <app-sso-hint text="ADMIN.SSO.MAPPING.INFO" />
+    </header>
+    <div class="panel-body panel-body--flush flex flex-col">
+        <table class="ui-table w-full" data-testid="sso-mapping-table">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'ADMIN.SSO.MAPPING.GROUP_COLUMN' | translate }}</th>
+                    <th scope="col" class="w-[1.5rem]"></th>
+                    <th scope="col">{{ 'ADMIN.SSO.MAPPING.TEAM_COLUMN' | translate }}</th>
+                    <th scope="col"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (row of rows(); track row.mapping.idSsoGroupMapping) {
+                    <tr data-testid="sso-mapping-row">
+                        <td class="break-all">
+                            <code>{{ row.mapping.groupValue }}</code>
+                        </td>
+                        <td class="ui-color-text-muted">
+                            <tabler-icon icon="arrow-right" [size]="14" />
+                        </td>
+                        <td><app-team-label [team]="row.team" /></td>
+                        <td class="text-right">
+                            <ui-button
+                                variant="text"
+                                severity="danger"
+                                size="small"
+                                [isIconOnly]="true"
+                                [disabled]="isDisabled()"
+                                [ariaLabel]="'ADMIN.SSO.MAPPING.REMOVE' | translate"
+                                (click)="remove.emit(row.mapping.idSsoGroupMapping)"
+                                data-testid="sso-mapping-remove"
+                            >
+                                <tabler-icon icon="trash" [size]="14" />
+                            </ui-button>
+                        </td>
+                    </tr>
+                } @empty {
+                    <tr>
+                        <td colspan="4" class="text-center ui-color-text-muted">
+                            {{ 'ADMIN.SSO.MAPPING.EMPTY' | translate }}
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="p-3 border-top flex flex-col gap-3">
+            <form
+                [formGroup]="form"
+                class="grid grid-cols-[1fr_auto_1fr_auto] items-end gap-2"
+                (ngSubmit)="onAdd()"
+            >
+                <div class="flex flex-col gap-1">
+                    <label for="sso-mapping-group" class="text-base ui-color-text">
+                        {{ 'ADMIN.SSO.MAPPING.GROUP' | translate }}
+                    </label>
+                    <input
+                        id="sso-mapping-group"
+                        uiInput
+                        formControlName="groupValue"
+                        [placeholder]="'ADMIN.SSO.MAPPING.GROUP_PLACEHOLDER' | translate"
+                        data-testid="sso-mapping-group"
+                    />
+                </div>
+                <tabler-icon icon="arrow-right" [size]="14" class="ui-color-text-muted mb-2" />
+                <div class="flex flex-col gap-1">
+                    <label for="sso-mapping-team" class="text-base ui-color-text">
+                        {{ 'ADMIN.SSO.MAPPING.TEAM' | translate }}
+                    </label>
+                    <ui-select
+                        inputId="sso-mapping-team"
+                        [options]="teams()"
+                        optionLabel="name"
+                        optionValue="idTeam"
+                        [placeholder]="'ADMIN.SSO.MAPPING.TEAM_PLACEHOLDER' | translate"
+                        formControlName="idTeam"
+                        data-testid="sso-mapping-team"
+                    >
+                        <ng-template #selectedItem let-team>
+                            <app-team-label [team]="team" />
+                        </ng-template>
+                        <ng-template #item let-team>
+                            <app-team-label [team]="team" />
+                        </ng-template>
+                    </ui-select>
+                </div>
+                <ui-button
+                    type="submit"
+                    severity="secondary"
+                    variant="outlined"
+                    [label]="'ADMIN.SSO.MAPPING.ADD' | translate"
+                    [disabled]="form.invalid || isDisabled()"
+                    data-testid="sso-mapping-add"
+                />
+            </form>
+            @if (unmappedGroups().length > 0) {
+                <div class="flex flex-wrap items-center gap-1 text-sm ui-color-text-muted">
+                    <span class="mr-1">{{ 'ADMIN.SSO.MAPPING.FROM_TEST' | translate }}:</span>
+                    @for (group of unmappedGroups(); track group) {
+                        <ui-button
+                            variant="outlined"
+                            severity="secondary"
+                            size="small"
+                            [label]="group"
+                            [disabled]="isDisabled()"
+                            (click)="onUseGroup(group)"
+                            data-testid="sso-mapping-suggestion"
+                        />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</section>

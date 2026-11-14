@@ -1,0 +1,131 @@
+<section class="panel" data-testid="sso-status-panel">
+    <div class="flex items-center justify-between gap-3 p-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <div
+                class="sso-status-icon grid place-items-center w-[2.5rem] h-[2.5rem] shrink-0 rounded-lg"
+                [class.sso-status-icon--on]="state().isEnabled"
+            >
+                <tabler-icon [icon]="state().isEnabled ? 'shield-check' : 'shield'" [size]="22" />
+            </div>
+            <div class="flex flex-col min-w-0">
+                <span class="text-lg font-bold" data-testid="sso-status">
+                    {{
+                        (state().isEnabled
+                            ? 'ADMIN.SSO.STATUS.ACTIVE'
+                            : 'ADMIN.SSO.STATUS.INACTIVE'
+                        ) | translate
+                    }}
+                </span>
+                <span class="text-sm ui-color-text-muted truncate" data-testid="sso-status-detail">
+                    @if (state().isEnabled) {
+                        {{ protocolLabel() }} · {{ issuerHost() }}
+                        @if (state().isEnforced) {
+                            · {{ 'ADMIN.SSO.STATUS.ENFORCED' | translate }}
+                        }
+                        @if (state().scim.isEnabled && state().scim.hasToken) {
+                            · {{ 'ADMIN.SSO.STATUS.SCIM' | translate }}
+                        }
+                    } @else {
+                        {{ 'ADMIN.SSO.STATUS.PASSWORDS' | translate }}
+                    }
+                </span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <a
+                class="ui-button ui-button--secondary ui-button--text ui-button--small"
+                [href]="docsUrl"
+                target="_blank"
+                rel="noopener"
+            >
+                <tabler-icon icon="book" [size]="14" />
+                {{ 'ADMIN.SSO.STATUS.GUIDE' | translate }}
+            </a>
+            @if (state().isEnabled) {
+                <ui-button
+                    severity="danger"
+                    variant="outlined"
+                    size="small"
+                    [label]="'ADMIN.SSO.STATUS.TURN_OFF' | translate"
+                    [disabled]="isBusy()"
+                    uiConfirm
+                    [confirmText]="'ADMIN.SSO.DISABLE_CONFIRM' | translate"
+                    (confirmed)="disable.emit()"
+                    data-testid="sso-disable"
+                />
+            } @else {
+                <ui-button
+                    size="small"
+                    [label]="'ADMIN.SSO.STATUS.TURN_ON' | translate"
+                    [disabled]="!canActivate() || isBusy()"
+                    (click)="activate.emit()"
+                    data-testid="sso-activate"
+                />
+            }
+        </div>
+    </div>
+    @if (!state().isEnabled) {
+        <ul
+            class="m-0 px-3 py-3 border-top ui-bg-surface-50 list-none flex flex-wrap gap-x-4 gap-y-1 text-sm"
+            data-testid="sso-checklist"
+        >
+            <ng-container
+                [ngTemplateOutlet]="check"
+                [ngTemplateOutletContext]="{
+                    isDone: state().isDraftTested,
+                    label: 'ADMIN.SSO.STATUS.CHECK_TESTED',
+                    testId: 'sso-check-tested'
+                }"
+            />
+            <ng-container
+                [ngTemplateOutlet]="check"
+                [ngTemplateOutletContext]="{
+                    isDone: hasDomains(),
+                    label: 'ADMIN.SSO.STATUS.CHECK_DOMAINS',
+                    testId: 'sso-check-domains'
+                }"
+            />
+            <ng-container
+                [ngTemplateOutlet]="check"
+                [ngTemplateOutletContext]="{
+                    isDone: hasMappings(),
+                    label: 'ADMIN.SSO.STATUS.CHECK_MAPPED',
+                    testId: 'sso-check-mapped',
+                    isOptional: true
+                }"
+            />
+        </ul>
+        @if (!state().isPublicBaseUrlValid) {
+            <p class="m-0 px-3 pb-3 ui-bg-surface-50 text-sm ui-color-text-muted">
+                {{ 'ADMIN.SSO.ACTIVATE_NEEDS_URL' | translate }}
+            </p>
+        }
+    }
+</section>
+
+<ng-template
+    #check
+    let-isDone="isDone"
+    let-label="label"
+    let-testId="testId"
+    let-isOptional="isOptional"
+>
+    <li
+        class="flex items-center gap-2"
+        [class.ui-color-text-muted]="!isDone"
+        [attr.data-testid]="testId"
+        [attr.data-done]="isDone"
+    >
+        <tabler-icon
+            [icon]="isDone ? 'circle-check' : 'circle'"
+            [size]="16"
+            [class]="isDone ? 'ui-color-green' : 'ui-color-text-muted'"
+        />
+        {{ label | translate }}
+        @if (isOptional) {
+            <span class="text-xs ui-color-text-muted">
+                ({{ 'ADMIN.SSO.OPTIONAL' | translate }})
+            </span>
+        }
+    </li>
+</ng-template>

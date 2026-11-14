@@ -1,0 +1,15 @@
+.sso-advanced > summary {
+    list-style: none;
+}
+
+.sso-advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.sso-advanced > summary tabler-icon {
+    transition: transform 0.15s;
+}
+
+.sso-advanced[open] > summary tabler-icon {
+    transform: rotate(90deg);
+}

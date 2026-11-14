@@ -19,6 +19,7 @@ import { SecDurationPipe } from './duration/sec-duration.pipe';
 import { StateBadgeComponent } from './state-badge/state-badge.component';
 import { StateBadgeSelectorComponent } from './state-badge-selector/state-badge-selector.component';
 import { SeverityBadgeComponent } from './severity-badge/severity-badge.component';
+import { TeamLabelComponent } from './team-label/team-label.component';
 import { SeverityBadgeSelectorComponent } from './severity-badge-selector/severity-badge-selector.component';
 import { IssueTypeBadgeComponent } from './issue-type-badge/issue-type-badge.component';
 import { IssueTypeBadgeSelectorComponent } from './issue-type-badge-selector/issue-type-badge-selector.component';
@@ -85,6 +86,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
         SeverityBadgeSelectorComponent,
+        TeamLabelComponent,
         IssueTypeBadgeComponent,
         IssueTypeBadgeSelectorComponent,
         IssueTypeDropdownComponent,
@@ -169,6 +171,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         StateBadgeSelectorComponent,
         SeverityBadgeComponent,
         SeverityBadgeSelectorComponent,
+        TeamLabelComponent,
         IssueTypeBadgeComponent,
         IssueTypeBadgeSelectorComponent,
         IssueTypeDropdownComponent,
