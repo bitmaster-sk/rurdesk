@@ -72,12 +72,16 @@ COPY --from=api-build /go/bin/goose /usr/local/bin/goose
 COPY --from=client-build /client/dist/production/browser /app/public
 
 # Copy the notice file with error handling. [t] is a workaround for Dockerfile syntax to make the COPY optional.
+# The commercial image gets its own file, so the free one never lists commercial dependencies.
 ARG REQUIRE_NOTICES=0
-COPY THIRD_PARTY_NOTICES.tx[t] /tmp/notices/
-RUN if [ -f /tmp/notices/THIRD_PARTY_NOTICES.txt ]; then \
-        mv /tmp/notices/THIRD_PARTY_NOTICES.txt /app/; \
+ARG API_PACKAGE
+COPY THIRD_PARTY_NOTICES*.tx[t] /tmp/notices/
+RUN notices=THIRD_PARTY_NOTICES.txt; \
+    if [ "$API_PACKAGE" = "./commercial/cmd/api" ]; then notices=THIRD_PARTY_NOTICES.commercial.txt; fi; \
+    if [ -f "/tmp/notices/$notices" ]; then \
+        mv "/tmp/notices/$notices" /app/THIRD_PARTY_NOTICES.txt; \
     elif [ "$REQUIRE_NOTICES" = "1" ]; then \
-        echo "ERROR: THIRD_PARTY_NOTICES.txt is missing — run script/licenses.sh before building this image" >&2; \
+        echo "ERROR: $notices is missing — run script/licenses.sh before building this image" >&2; \
         exit 1; \
     else \
         echo "Built without third-party notices. Not fit for distribution." > /app/THIRD_PARTY_NOTICES.txt; \

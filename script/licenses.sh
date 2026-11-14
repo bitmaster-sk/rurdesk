@@ -11,6 +11,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
 TRACKER_NOTICES="$ROOT/THIRD_PARTY_NOTICES.txt"
+COMMERCIAL_NOTICES="$ROOT/THIRD_PARTY_NOTICES.commercial.txt"
 GATEWAY_NOTICES="$ROOT/gateway/THIRD_PARTY_NOTICES.txt"
 
 if ! command -v licensed >/dev/null 2>&1; then
@@ -38,7 +39,7 @@ Regenerate with `script/licenses.sh`; the configuration lives in .licensed.yml.
 HEAD
 }
 
-# Closing note shared by both files: applies wherever Go code is involved.
+# Closing note shared by every file: applies wherever Go code is involved.
 preamble_tail() {
     cat <<'TAIL'
 
@@ -64,14 +65,45 @@ This file covers the tracker image. One section per artefact inside it, listing
 the dependencies actually linked into that artefact rather than everything
 named in a manifest:
 
-  api             the server binary — REST, WebSocket, MCP, and the static SPA
-  api-commercial  the server binary of the rurdesk-commercial image: everything
-                  in api plus single sign-on (OIDC, SAML) and SCIM
-  admin           the maintenance CLI shipped alongside it
-  client          the Angular bundle it serves (production dependencies only)
+  api       the server binary — REST, WebSocket, MCP, and the static SPA
+  admin     the maintenance CLI shipped alongside it
+  client    the Angular bundle it serves (production dependencies only)
 
 A dependency shared by two artefacts is listed in both sections. The gateway
 ships as its own image and carries its own notice file.
+TRACKER
+    obligations_tracker
+    preamble_tail
+}
+
+preamble_commercial() {
+    preamble_head
+    cat <<'COMMERCIAL'
+
+SCOPE
+--------------------------------------------------------------------------------
+This file covers the rurdesk-commercial image. One section per artefact inside
+it, listing the dependencies actually linked into that artefact rather than
+everything named in a manifest:
+
+  api-commercial  the server binary — everything the free server does plus
+                  single sign-on (OIDC, SAML) and SCIM
+  admin           the maintenance CLI shipped alongside it
+  client          the Angular bundle it serves (production dependencies only)
+
+The code under api/commercial/ is not covered by the AGPL; LICENSE.commercial
+in the image states its terms. A dependency shared by two artefacts is listed
+in both sections. The gateway ships as its own image and carries its own notice
+file.
+COMMERCIAL
+    obligations_tracker
+    preamble_tail
+}
+
+# Both tracker images bundle the same client and the same core dependencies, so
+# the components that ask for more than attribution are the same in both.
+obligations_tracker() {
+    cat <<'OBLIGATIONS'
 
 OBLIGATIONS BEYOND ATTRIBUTION
 --------------------------------------------------------------------------------
@@ -109,8 +141,7 @@ the record of that decision is the `reviewed` block in .licensed.yml.
    which the reader's own system font draws. No JoyPixels artwork is bundled,
    referenced or served, so only the MIT half applies. Revisit this if the
    emoji pipeline ever switches to image-based emoji.
-TRACKER
-    preamble_tail
+OBLIGATIONS
 }
 
 preamble_gateway() {
@@ -170,13 +201,14 @@ assemble() {
 }
 
 assemble_all() {
-    assemble "$1" preamble_tracker api api-commercial admin client
-    assemble "$2" preamble_gateway gateway
+    assemble "$1" preamble_tracker api admin client
+    assemble "$2" preamble_commercial api-commercial admin client
+    assemble "$3" preamble_gateway gateway
 }
 
 licensed cache
 licensed status
 licensed notices
-assemble_all "$TRACKER_NOTICES" "$GATEWAY_NOTICES"
+assemble_all "$TRACKER_NOTICES" "$COMMERCIAL_NOTICES" "$GATEWAY_NOTICES"
 
-echo "wrote THIRD_PARTY_NOTICES.txt and gateway/THIRD_PARTY_NOTICES.txt"
+echo "wrote THIRD_PARTY_NOTICES.txt, THIRD_PARTY_NOTICES.commercial.txt and gateway/THIRD_PARTY_NOTICES.txt"
