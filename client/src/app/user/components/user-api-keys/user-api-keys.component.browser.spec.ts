@@ -6,16 +6,32 @@ import {
     ReactiveFormsModule,
     FormsModule
 } from '@angular/forms';
+import {
+    IconAlertTriangle,
+    IconCircleX,
+    IconCopy,
+    IconKey,
+    IconPlus,
+    IconRefresh,
+    IconTrash,
+    TablerIconComponent,
+    provideTablerIcons
+} from '@tabler/icons-angular';
 import { TranslateModule } from '@ngx-translate/core';
 import { of, throwError } from 'rxjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { ClipboardService } from 'src/app/core/clipboard.service';
 import { SettingsStore } from 'src/app/core/settings/settings.store';
 import { ToastNotificationService } from 'src/app/core/toast-notification.service';
+import { UiModule } from 'src/app/ui/ui.module';
 import { TablerIconStub, UiButtonStub, UiTooltipStub } from 'src/testing/stubs';
 import { UserApiKeyApi } from '../../api/user-api-key.api.service';
 import { UserApiKey } from '../../model/user-api-key.model';
 import { UserApiKeysComponent } from './user-api-keys.component';
+import 'flatpickr/dist/flatpickr.css';
+import 'src/styles.scss';
+import 'src/tailwind.css';
 
 @Directive({ selector: 'input[uiInput]', standalone: true })
 class UiInputStub {
@@ -280,5 +296,195 @@ describe('UserApiKeysComponent (browser)', () => {
         await Promise.resolve();
 
         expect(showError).toHaveBeenCalledWith('USER_API_KEY.COPY_FAILED');
+    });
+});
+
+interface Viewport {
+    readonly width: number;
+    readonly height: number;
+}
+
+const narrowViewports: Viewport[] = [
+    { width: 320, height: 800 },
+    { width: 375, height: 800 },
+    { width: 430, height: 800 }
+];
+
+const longName = 'CI pipeline for the very long integration suite on every branch';
+const longSecret = 'rk_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+describe('UserApiKeysComponent layout (browser)', () => {
+    let fixture: ComponentFixture<UserApiKeysComponent>;
+
+    beforeEach(async () => {
+        await TestBed.configureTestingModule({
+            declarations: [UserApiKeysComponent],
+            imports: [
+                ReactiveFormsModule,
+                FormsModule,
+                TranslateModule.forRoot(),
+                UiModule,
+                TablerIconComponent
+            ],
+            providers: [
+                {
+                    provide: UserApiKeyApi,
+                    useValue: {
+                        load$: vi.fn().mockReturnValue(of([existing])),
+                        insert$: vi
+                            .fn()
+                            .mockReturnValue(
+                                of({ ...existing, idApiKey: 2, name: 'ci', rawKey: longSecret })
+                            ),
+                        regenerate$: vi.fn(),
+                        revoke$: vi.fn()
+                    }
+                },
+                { provide: SettingsStore, useValue: { userApiKeyLimit: () => 10 } },
+                { provide: ClipboardService, useValue: { copy: vi.fn() } },
+                {
+                    provide: ToastNotificationService,
+                    useValue: { showError: vi.fn(), showSuccess: vi.fn() }
+                },
+                provideTablerIcons({
+                    IconAlertTriangle,
+                    IconCircleX,
+                    IconCopy,
+                    IconKey,
+                    IconPlus,
+                    IconRefresh,
+                    IconTrash
+                })
+            ]
+        }).compileComponents();
+    });
+
+    afterEach(() => fixture.destroy());
+
+    function render(): HTMLElement {
+        fixture = TestBed.createComponent(UserApiKeysComponent);
+        fixture.detectChanges();
+        return fixture.nativeElement as HTMLElement;
+    }
+
+    function el(host: HTMLElement, testid: string): HTMLElement {
+        return host.querySelector<HTMLElement>(`[data-testid="${testid}"]`)!;
+    }
+
+    function createKey(host: HTMLElement): void {
+        const name = el(host, 'user-api-key-name') as HTMLInputElement;
+        name.value = longName;
+        name.dispatchEvent(new Event('input'));
+        fixture.detectChanges();
+        host.querySelector('form')!.dispatchEvent(new Event('submit'));
+        fixture.detectChanges();
+    }
+
+    async function resize(viewport: Viewport): Promise<void> {
+        await page.viewport(viewport.width, viewport.height);
+        fixture.detectChanges();
+        await fixture.whenStable();
+    }
+
+    it('keeps the create form and the one-time secret inside the page at 320/375/430px', async () => {
+        const host = render();
+        createKey(host);
+
+        const form = host.querySelector('form')!;
+        const revealed = el(host, 'user-api-key-revealed');
+        const secretCode = revealed.querySelector('.secret-code')!;
+        const createBtn = el(host, 'user-api-key-create');
+
+        for (const viewport of narrowViewports) {
+            await resize(viewport);
+
+            expect(
+                document.documentElement.scrollWidth,
+                `no page overflow at ${viewport.width}px`
+            ).toBeLessThanOrEqual(viewport.width + 1);
+            for (const node of [host, form, revealed, secretCode]) {
+                expect(
+                    node.getBoundingClientRect().right,
+                    `block fits at ${viewport.width}px`
+                ).toBeLessThanOrEqual(viewport.width + 1);
+            }
+            expect(getComputedStyle(form).flexDirection, `form stacks at ${viewport.width}px`).toBe(
+                'column'
+            );
+            expect(
+                createBtn.getBoundingClientRect().width,
+                `create is full width at ${viewport.width}px`
+            ).toBeGreaterThanOrEqual(viewport.width - 64);
+        }
+    });
+
+    it('lets only the table scroll horizontally while all its columns and actions stay reachable', async () => {
+        const host = render();
+
+        const scroll = el(host, 'user-api-key-table-scroll');
+        const table = el(host, 'user-api-key-table');
+        const revoke = el(host, 'user-api-key-revoke');
+
+        for (const viewport of narrowViewports) {
+            await resize(viewport);
+
+            expect(
+                document.documentElement.scrollWidth,
+                `no page overflow at ${viewport.width}px`
+            ).toBeLessThanOrEqual(viewport.width + 1);
+            expect(getComputedStyle(scroll).overflowX).toBe('auto');
+            expect(table.querySelectorAll('thead th')).toHaveLength(5);
+
+            scroll.scrollLeft = scroll.scrollWidth;
+            const revokeRect = revoke.getBoundingClientRect();
+            expect(revokeRect.width, `revoke rendered at ${viewport.width}px`).toBeGreaterThan(0);
+            expect(revokeRect.right, `revoke reachable at ${viewport.width}px`).toBeLessThanOrEqual(
+                scroll.getBoundingClientRect().right + 1
+            );
+        }
+    });
+
+    it('opens the datepicker on a phone and keeps the picked day', async () => {
+        const host = render();
+        await resize({ width: 320, height: 800 });
+
+        const expires = el(host, 'user-api-key-expires') as HTMLInputElement;
+        const calendar = await vi.waitFor(() => {
+            const node = document.querySelector<HTMLElement>('.flatpickr-calendar');
+            expect(node).not.toBeNull();
+            return node!;
+        });
+
+        expires.click();
+        await vi.waitFor(() => expect(calendar.classList).toContain('open'));
+        expect(calendar.getBoundingClientRect().right).toBeLessThanOrEqual(321);
+
+        const day = Array.from(
+            calendar.querySelectorAll<HTMLElement>(
+                '.flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)'
+            )
+        ).at(-1)!;
+        day.click();
+        fixture.detectChanges();
+
+        const picked = (
+            fixture.componentInstance as unknown as {
+                form: { value: { expiresAt: Date | null } };
+            }
+        ).form.value.expiresAt;
+        expect(picked).toBeInstanceOf(Date);
+        expect(picked!.getDate()).toBe(Number(day.textContent));
+    });
+
+    it('keeps the create form on a single bottom-aligned row on desktop', async () => {
+        const host = render();
+        await resize({ width: 1280, height: 900 });
+
+        const form = host.querySelector('form')!;
+        expect(getComputedStyle(form).flexDirection).toBe('row');
+        expect(el(host, 'user-api-key-create').getBoundingClientRect().bottom).toBeCloseTo(
+            el(host, 'user-api-key-name').getBoundingClientRect().bottom,
+            0
+        );
     });
 });

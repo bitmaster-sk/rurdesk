@@ -9,8 +9,14 @@
                         <div class="panel-title">{{ 'USER.PROFILE' | translate }}</div>
                     </div>
                 </header>
-                <div class="panel-body flex items-end gap-4" [formGroup]="profileForm">
+                <div
+                    class="panel-body flex flex-col md:flex-row md:items-start gap-4"
+                    [formGroup]="profileForm"
+                    data-testid="profile-body"
+                >
                     <app-avatar
+                        class="self-start"
+                        data-testid="profile-avatar"
                         [name]="currentUser()?.name ?? ''"
                         [bgColor]="avatarColor()"
                         [manualInitials]="$safeNavigationMigration(currentUser()?.avatarInitials)"
@@ -18,19 +24,21 @@
                         [height]="3.5"
                         [radius]="1.75"
                     ></app-avatar>
-                    <div class="flex flex-col gap-1 flex-1">
+                    <div class="flex flex-col gap-1 flex-1 min-w-0">
                         <label for="prof-name">{{ 'NAME' | translate }}</label>
                         <input
                             uiInput
+                            class="w-full"
                             id="prof-name"
                             formControlName="name"
                             [uiSaveStatus]="nameSaveStatus()"
                         />
                     </div>
-                    <div class="flex flex-col gap-1 flex-1">
+                    <div class="flex flex-col gap-1 flex-1 min-w-0">
                         <label for="prof-email">{{ 'EMAIL' | translate }}</label>
                         <input
                             uiInput
+                            class="w-full"
                             id="prof-email"
                             formControlName="email"
                             readonly
@@ -81,19 +89,30 @@
                         </ui-button>
                     </div>
                 </header>
-                <div class="panel-body flex items-end gap-4" [formGroup]="passwordForm">
-                    <div class="flex flex-col gap-1 flex-1">
+                <div
+                    class="panel-body flex flex-col md:flex-row md:items-end gap-4"
+                    [formGroup]="passwordForm"
+                    data-testid="password-body"
+                >
+                    <div class="flex flex-col gap-1 flex-1 min-w-0">
                         <label for="pwd-current">{{ 'USER.CURRENT_PASSWORD' | translate }}</label>
                         <input
                             uiInput
                             type="password"
+                            class="w-full"
                             id="pwd-current"
                             formControlName="currentPassword"
                         />
                     </div>
-                    <div class="flex flex-col gap-1 flex-1">
+                    <div class="flex flex-col gap-1 flex-1 min-w-0">
                         <label for="pwd-new">{{ 'USER.NEW_PASSWORD' | translate }}</label>
-                        <input uiInput type="password" id="pwd-new" formControlName="newPassword" />
+                        <input
+                            uiInput
+                            class="w-full"
+                            type="password"
+                            id="pwd-new"
+                            formControlName="newPassword"
+                        />
                     </div>
                 </div>
             </section>
