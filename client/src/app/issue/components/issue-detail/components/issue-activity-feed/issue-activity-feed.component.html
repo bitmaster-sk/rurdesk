@@ -40,6 +40,17 @@
             <tabler-icon icon="paperclip" [size]="14" />
             Attachments
         </button>
+        <button
+            type="button"
+            class="chip"
+            data-testid="filter-history"
+            [class.active]="activeFilters().has('history')"
+            [attr.aria-pressed]="activeFilters().has('history')"
+            (click)="setFilter('history')"
+        >
+            <tabler-icon icon="history" [size]="14" />
+            {{ 'ISSUE.HISTORY.FILTER' | translate }}
+        </button>
     </div>
 
     <div class="feed-scroll" #scrollContainer>
@@ -133,6 +144,12 @@
                     [proposal]="group.item.data"
                     [author]="proposalAuthor(group.item.data)"
                 ></app-wiki-proposal-card>
+            } @else if (group.item.type === 'history') {
+                <app-activity-history-item
+                    [group]="group.item.data"
+                    [user]="getUserForHistory(group.item.data.idUser)"
+                    [lookups]="historyLookups()"
+                ></app-activity-history-item>
             }
         }
         @for (row of trailingThinkingRows(); track row.stage.stage) {

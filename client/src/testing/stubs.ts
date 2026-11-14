@@ -1,5 +1,7 @@
 import { Component, Directive, forwardRef, input, output } from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
+import { IssueType } from 'src/app/issue-type/model/issue-type.model';
+import { IssueState } from 'src/app/state/model/issue-state.model';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 /**
@@ -33,6 +35,7 @@ export class AvatarStub {
     public readonly width = input<number>(0);
     public readonly radius = input<number>(0);
     public readonly disabled = input<boolean>(false);
+    public readonly manualInitials = input<string | null | undefined>(null);
 }
 
 @Component({ selector: 'app-message-editor', template: '', standalone: true })
@@ -181,4 +184,32 @@ export class SplitDialogStub {
     public readonly issue = input<any>(null);
     public readonly accepted = output<any>();
     public readonly cancelled = output<void>();
+}
+
+@Component({ selector: 'app-state-badge', template: '{{ state()?.name }}', standalone: true })
+export class StateBadgeStub {
+    public readonly state = input<IssueState | undefined>(undefined);
+    public readonly size = input<string>('default');
+}
+
+@Component({ selector: 'app-severity-circle', template: '', standalone: true })
+export class SeverityCircleStub {
+    public readonly color = input<string | null | undefined>(undefined);
+    public readonly size = input<number>(1);
+}
+
+@Component({
+    selector: 'app-issue-type-badge',
+    template: '{{ issueType()?.name }}',
+    standalone: true
+})
+export class IssueTypeBadgeStub {
+    public readonly issueType = input<IssueType | undefined>(undefined);
+    public readonly size = input<string>('default');
+}
+
+@Component({ selector: 'app-tag-chip', template: '{{ name() }}', standalone: true })
+export class TagChipStub {
+    public readonly name = input<string>('');
+    public readonly color = input<string | null>(null);
 }

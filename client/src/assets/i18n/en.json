@@ -796,6 +796,40 @@
     },
     "ISSUE": {
         "POINTS": "Points",
+        "HISTORY": {
+            "FILTER": "History",
+            "SYSTEM": "Recalculated from subtasks",
+            "SYSTEM_GENERIC": "System",
+            "DELETED_USER": "Deleted user",
+            "DESCRIPTION_CHANGED": "Changed the description",
+            "SUMMARY_ON": "summary task",
+            "SUMMARY_OFF": "regular task",
+            "EMPTY": {
+                "STATE": "No state",
+                "SEVERITY": "No severity",
+                "ISSUE_TYPE": "No type",
+                "ASSIGNEE": "Unassigned",
+                "SCHEDULED_AT": "No date",
+                "ESTIMATED": "No estimate",
+                "POINTS": "No points",
+                "DEFAULT": "None"
+            },
+            "FIELD": {
+                "STATE": "State",
+                "SEVERITY": "Severity",
+                "ISSUE_TYPE": "Type",
+                "ASSIGNEE": "Assignee",
+                "TITLE": "Title",
+                "DESCRIPTION": "Description",
+                "ESTIMATED": "Estimate",
+                "SCHEDULED_AT": "Date",
+                "POINTS": "Points",
+                "TAGS": "Tags",
+                "IS_SUMMARY": "Task kind",
+                "ROLLUP_ESTIMATED": "Subtask estimate",
+                "ROLLUP_TRACKED": "Subtask tracked"
+            }
+        },
         "COMPUTED_ESTIMATE_HINT": "Computed from subtasks: the time from the earliest start to the latest end. Tracked {{tracked}} of {{estimated}} ({{percent}} %).",
         "COMPUTED_SPAN_HINT": "Computed from subtasks: the time from the earliest start to the latest end.",
         "COMPUTED_START_HINT": "Computed from subtasks: the start of the earliest subtask.",

@@ -34,6 +34,7 @@
         @if (issue.idIssue) {
         <app-issue-activity-feed
             [idIssue]="issue.idIssue"
+            [idIssuePublic]="issue.idIssuePublic"
             [idProject]="project.idProject"
             [pendingTrack]="pendingTrack()"
             [agentRun]="agentRunStore.run()"

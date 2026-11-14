@@ -46,6 +46,7 @@ import { IssueGanttComponent } from './components/issue-gantt/issue-gantt.compon
 import { IssueActivityFeedComponent } from './components/issue-detail/components/issue-activity-feed/issue-activity-feed.component';
 import { ActivityCommentItemComponent } from './components/issue-detail/components/activity-comment-item/activity-comment-item.component';
 import { ActivityTimeItemComponent } from './components/issue-detail/components/activity-time-item/activity-time-item.component';
+import { ActivityHistoryItemComponent } from './components/issue-detail/components/activity-history-item/activity-history-item.component';
 import { WikiProposalCardComponent } from './components/issue-detail/components/wiki-proposal-card/wiki-proposal-card.component';
 import {
     TablerIconComponent,
@@ -108,7 +109,8 @@ import {
     IconBellOff,
     IconRepeat,
     IconPin,
-    IconScissors
+    IconScissors,
+    IconHistory
 } from '@tabler/icons-angular';
 import { GanttTimelineHeaderComponent } from './components/issue-gantt/components/gantt-timeline-header/gantt-timeline-header';
 import { GanttTaskBarComponent } from './components/issue-gantt/components/gantt-task-bar/gantt-task-bar';
@@ -160,6 +162,7 @@ import { AgentModule } from '../agent/agent.module';
         IssueActivityFeedComponent,
         ActivityCommentItemComponent,
         ActivityTimeItemComponent,
+        ActivityHistoryItemComponent,
         WikiProposalCardComponent,
         GanttTimelineHeaderComponent,
         GanttTaskBarComponent,
@@ -260,7 +263,8 @@ import { AgentModule } from '../agent/agent.module';
             IconBell,
             IconBellOff,
             IconPin,
-            IconScissors
+            IconScissors,
+            IconHistory
         })
     ]
 })

@@ -411,6 +411,7 @@ func GetReleaseService() *service.ReleaseService {
 			ProjectSkillService: GetProjectSkillService(),
 			AgentTaskConfig:     GetAgentTaskConfigService(),
 			Acl:                 GetAclService(),
+			HistorySvc:          GetIssueHistoryService(),
 		})
 		releases.OnReleaseChanged(func(ctx context.Context, idProject, idRelease int64) {
 			controller.BroadcastRelease(ctx, GetNotifier(), GetProjectMemberService(), GetReleaseRepository(), idProject, idRelease)
@@ -983,6 +984,7 @@ func GetIssueController() *controller.IssueController {
 			GetNotificationService(),
 			GetCustomFieldValueService(),
 			GetHierarchyRollupService(),
+			GetIssueHistoryService(),
 			pool,
 		).WithGitIntRepo(GetGitIntegrationRepository()).WithWiki(GetWikiService()).
 			WithAttachments(GetAttachmentLinkService()).
@@ -1159,9 +1161,30 @@ func GetIssueHierarchyRepository() *repository.IssueHierarchyRepository {
 	return instance.(*repository.IssueHierarchyRepository)
 }
 
+func GetIssueHistoryRepository() *repository.IssueHistoryRepository {
+	instance, _ := di.GetWithNew("issue-history-repository", func() (any, error) {
+		return repository.NewIssueHistoryRepository(mustDb()), nil
+	})
+	return instance.(*repository.IssueHistoryRepository)
+}
+
+func GetIssueHistoryService() *service.IssueHistoryService {
+	instance, _ := di.GetWithNew("issue-history-service", func() (any, error) {
+		return service.NewIssueHistoryService(GetIssueHistoryRepository(), GetUserRepository()), nil
+	})
+	return instance.(*service.IssueHistoryService)
+}
+
+func GetIssueHistoryController() *controller.IssueHistoryController {
+	instance, _ := di.GetWithNew("issue-history-controller", func() (any, error) {
+		return controller.NewIssueHistoryController(GetIssueRepository(), GetIssueHistoryService(), GetAclService()), nil
+	})
+	return instance.(*controller.IssueHistoryController)
+}
+
 func GetHierarchyRollupService() *service.HierarchyRollupService {
 	instance, _ := di.GetWithNew("hierarchy-rollup-service", func() (any, error) {
-		return service.NewHierarchyRollupService(GetIssueHierarchyRepository()), nil
+		return service.NewHierarchyRollupService(GetIssueHierarchyRepository(), GetIssueHistoryService()), nil
 	})
 	return instance.(*service.HierarchyRollupService)
 }
@@ -1416,6 +1439,8 @@ func GetPhaseStateTransitioner() *agent.PhaseStateTransitioner {
 			GetStateRepository(),
 			GetProjectRepository(),
 			GetNotifier(),
+			GetIssueHistoryService(),
+			mustDb(),
 		), nil
 	})
 	return instance.(*agent.PhaseStateTransitioner)
@@ -1549,6 +1574,7 @@ func GetRouter() (*router.Router, error) {
 			GetTrackerController(),
 			GetPinController(),
 			GetIssueRelationController(),
+			GetIssueHistoryController(),
 			GetGanttOrderController(),
 			GetIssueParticipantController(),
 			GetProjectBuilderController(),

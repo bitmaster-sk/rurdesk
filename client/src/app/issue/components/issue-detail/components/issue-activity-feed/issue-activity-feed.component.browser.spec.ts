@@ -1,5 +1,6 @@
 import { Component, Pipe, PipeTransform, input, output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
 import { IssueActivityFeedComponent } from './issue-activity-feed.component';
 import { User } from 'src/app/auth/model/user.model';
@@ -17,13 +18,13 @@ import { WikiProposalKind } from 'src/app/wiki/constants/wiki-proposal-kind.enum
 import { WikiProposalState } from 'src/app/wiki/constants/wiki-proposal-state.enum';
 import { WikiSpaceKind } from 'src/app/wiki/constants/wiki-space-kind.enum';
 import { WikiProposal, WikiProposalNotice } from 'src/app/wiki/model/wiki-proposal.model';
-
-@Pipe({ name: 'translate', standalone: false })
-class StubTranslatePipe implements PipeTransform {
-    public transform(v: string): string {
-        return v;
-    }
-}
+import { IssueHistoryApi } from 'src/app/issue/api/issue-history.api.service';
+import { IssueHistoryField } from 'src/app/issue/constants/issue-history-field.enum';
+import { IssueHistory, IssueHistoryUser } from 'src/app/issue/model/issue-history.model';
+import { StateStore } from 'src/app/state/store/state.store';
+import { SeverityStore } from 'src/app/severity/store/severity.store';
+import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
+import { TagStore } from 'src/app/tag/store/tag.store';
 
 @Pipe({ name: 'date', standalone: false })
 class StubDatePipe implements PipeTransform {
@@ -74,6 +75,22 @@ class WikiProposalCardStub {
     public readonly author = input<unknown>(undefined);
 }
 
+@Component({ selector: 'app-activity-history-item', template: '', standalone: true })
+class ActivityHistoryItemStub {
+    public readonly group = input<unknown>(undefined);
+    public readonly user = input<unknown>(undefined);
+    public readonly lookups = input<unknown>(undefined);
+}
+
+function lookupStoreProviders() {
+    return [
+        { provide: StateStore, useValue: { statesMapByProject$: () => NEVER } },
+        { provide: SeverityStore, useValue: { severitiesMap$: NEVER } },
+        { provide: IssueTypeStore, useValue: { issueTypesMap$: NEVER } },
+        { provide: TagStore, useValue: { tagsMap$: NEVER } }
+    ];
+}
+
 function makeUser(id: number, name: string): User {
     return { idUser: id, name, email: '', colorAvatarBg: '' };
 }
@@ -91,7 +108,8 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     const stubNotice = {
         Message: NEVER,
         agentThinking$: NEVER,
-        wikiProposal$: NEVER
+        wikiProposal$: NEVER,
+        issue$: NEVER
     };
 
     const stubProjectMemberStore = {
@@ -106,7 +124,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [IssueActivityFeedComponent, StubTranslatePipe, StubDatePipe],
+            declarations: [IssueActivityFeedComponent, StubDatePipe],
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
@@ -114,10 +132,16 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
                 AgentThinkingRowStub,
-                WikiProposalCardStub
+                WikiProposalCardStub,
+                ActivityHistoryItemStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                {
+                    provide: IssueHistoryApi,
+                    useValue: { load$: () => of({ history: [], users: [] }) }
+                },
+                ...lookupStoreProviders(),
                 { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
                 { provide: MessageApi, useValue: stubMessage },
                 { provide: TrackerService, useValue: stubTracker },
@@ -131,6 +155,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('mentionCandidates() returns a User[] matching the values of usersMap', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
 
@@ -157,6 +182,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('keeps the thinking rows whatever the chips select', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', {
             idRun: 5,
@@ -190,6 +216,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('takes the agent avatar from the members, before any agent message exists', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', {
             idRun: 5,
@@ -209,16 +236,17 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         expect(comp.agentCreator()).toBe(agent);
     });
 
-    it('offers the comment, time and attachment chips', () => {
+    it('offers the comment, time, attachment and history chips', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
 
         const chips = [...fixture.nativeElement.querySelectorAll('.chip')].map(
             (chip: HTMLElement) => chip.textContent.trim()
         );
-        expect(chips).toEqual(['All', 'Comments', 'Time', 'Attachments']);
+        expect(chips).toEqual(['All', 'Comments', 'Time', 'Attachments', 'ISSUE.HISTORY.FILTER']);
     });
 
     it('shows only comments with attachments when the attachment chip is on', async () => {
@@ -247,6 +275,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
         });
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
         await fixture.whenStable();
@@ -260,6 +289,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('does not offer a thinking row for a stage that produced none', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', {
             idRun: 5,
@@ -276,6 +306,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('offers a thinking row for a stage that produced no comment', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', {
             idRun: 5,
@@ -303,6 +334,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('leaves the running stage to the live row', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', {
             idRun: 5,
@@ -325,6 +357,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('scrolls the feed down when a live thinking row appears', async () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
         const scroll: HTMLElement = fixture.nativeElement.querySelector('.feed-scroll');
@@ -347,6 +380,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('scrolls again only when the next stage starts', async () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
         const scroll: HTMLElement = fixture.nativeElement.querySelector('.feed-scroll');
@@ -382,6 +416,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('does not claim there is no activity while the agent is thinking', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.componentRef.setInput('agentRun', { idRun: 5, phase: 'in_progress' });
         fixture.detectChanges();
@@ -392,6 +427,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('says there is no activity on an empty task', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
 
@@ -401,6 +437,7 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
     it('mentionCandidates() returns an empty array when usersMap is empty', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
 
@@ -430,7 +467,7 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
         const tracks = [makeTrack(null)];
 
         await TestBed.configureTestingModule({
-            declarations: [IssueActivityFeedComponent, StubTranslatePipe, StubDatePipe],
+            declarations: [IssueActivityFeedComponent, StubDatePipe],
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
@@ -438,10 +475,16 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
                 AgentThinkingRowStub,
-                WikiProposalCardStub
+                WikiProposalCardStub,
+                ActivityHistoryItemStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                {
+                    provide: IssueHistoryApi,
+                    useValue: { load$: () => of({ history: [], users: [] }) }
+                },
+                ...lookupStoreProviders(),
                 { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
                 { provide: MessageApi, useValue: { load$: () => of([]) } },
                 {
@@ -453,7 +496,12 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
                 },
                 {
                     provide: NoticeService,
-                    useValue: { Message: NEVER, agentThinking$: NEVER, wikiProposal$: NEVER }
+                    useValue: {
+                        Message: NEVER,
+                        agentThinking$: NEVER,
+                        wikiProposal$: NEVER,
+                        issue$: NEVER
+                    }
                 },
                 {
                     provide: ProjectMemberStore,
@@ -471,6 +519,7 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
 
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
 
@@ -535,7 +584,7 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
         const loadIssueProposals = vi.fn(() => of(loaded));
 
         await TestBed.configureTestingModule({
-            declarations: [IssueActivityFeedComponent, StubTranslatePipe, StubDatePipe],
+            declarations: [IssueActivityFeedComponent, StubDatePipe],
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
@@ -543,10 +592,16 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
                 AgentThinkingRowStub,
-                WikiProposalCardStub
+                WikiProposalCardStub,
+                ActivityHistoryItemStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                {
+                    provide: IssueHistoryApi,
+                    useValue: { load$: () => of({ history: [], users: [] }) }
+                },
+                ...lookupStoreProviders(),
                 { provide: WikiApi, useValue: { loadIssueProposals$: loadIssueProposals } },
                 { provide: MessageApi, useValue: { load$: () => of([]) } },
                 {
@@ -558,7 +613,8 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
                     useValue: {
                         Message: NEVER,
                         agentThinking$: NEVER,
-                        wikiProposal$: proposalNotices.asObservable()
+                        wikiProposal$: proposalNotices.asObservable(),
+                        issue$: NEVER
                     }
                 },
                 {
@@ -577,6 +633,7 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
 
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
         fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
         fixture.componentRef.setInput('idProject', 10);
         fixture.detectChanges();
         const cards = (): number =>
@@ -593,5 +650,149 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
         proposalNotices.next({ payload: { idProject: 10, idIssue: 1 } });
         fixture.detectChanges();
         expect(cards()).toBe(2);
+    });
+});
+
+describe('IssueActivityFeedComponent history (browser)', () => {
+    const historyRow = (idChange: string, title: string): IssueHistory => ({
+        idIssueHistory: 1,
+        idChange,
+        field: IssueHistoryField.Title,
+        oldValue: 'Old',
+        newValue: title,
+        idUser: 1,
+        source: 'user',
+        createAt: '2026-11-10T09:00:00Z'
+    });
+
+    let issueNotices: Subject<{ payload: { idIssue: number } }>;
+    let history: IssueHistory[];
+    let historyUsers: IssueHistoryUser[];
+    let loadHistory: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+        issueNotices = new Subject();
+        history = [historyRow('a', 'First')];
+        historyUsers = [];
+        loadHistory = vi.fn(() => of({ history, users: historyUsers }));
+
+        await TestBed.configureTestingModule({
+            declarations: [IssueActivityFeedComponent, StubDatePipe],
+            imports: [
+                TranslateModule.forRoot(),
+                MessageEditorStub,
+                TablerIconStub,
+                ActivityCommentItemStub,
+                ActivityTimeItemStub,
+                AgentThinkingRowStub,
+                WikiProposalCardStub,
+                ActivityHistoryItemStub
+            ],
+            providers: [
+                { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
+                { provide: IssueHistoryApi, useValue: { load$: loadHistory } },
+                ...lookupStoreProviders(),
+                { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
+                {
+                    provide: MessageApi,
+                    useValue: {
+                        load$: () =>
+                            of([
+                                {
+                                    idMessage: 5,
+                                    message: 'hello',
+                                    createdAt: new Date('2026-11-10T08:00:00Z'),
+                                    creator: makeUser(1, 'Me')
+                                }
+                            ])
+                    }
+                },
+                {
+                    provide: TrackerService,
+                    useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
+                },
+                {
+                    provide: NoticeService,
+                    useValue: {
+                        Message: NEVER,
+                        agentThinking$: NEVER,
+                        wikiProposal$: NEVER,
+                        issue$: issueNotices.asObservable()
+                    }
+                },
+                {
+                    provide: ProjectMemberStore,
+                    useValue: { load: () => {}, usersMap$: of(new Map<number, User>()) }
+                },
+                {
+                    provide: AuthStore,
+                    useValue: {
+                        user: signal(makeUser(1, 'Me')),
+                        getUser: () => makeUser(1, 'Me')
+                    }
+                }
+            ]
+        }).compileComponents();
+    });
+
+    function render() {
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.detectChanges();
+        const el = fixture.nativeElement as HTMLElement;
+        return {
+            fixture,
+            el,
+            historyCards: () => el.querySelectorAll('app-activity-history-item').length,
+            commentCards: () => el.querySelectorAll('app-activity-comment-item').length
+        };
+    }
+
+    it('loads the history of the task by its public id', () => {
+        const page = render();
+
+        expect(loadHistory).toHaveBeenCalledWith(10, 31);
+        expect(page.historyCards()).toBe(1);
+        expect(page.commentCards()).toBe(1);
+    });
+
+    it('keeps only the history when the History chip is on', () => {
+        const page = render();
+
+        (page.el.querySelector('[data-testid="filter-history"]') as HTMLElement).click();
+        page.fixture.detectChanges();
+
+        expect(page.historyCards()).toBe(1);
+        expect(page.commentCards()).toBe(0);
+    });
+
+    it('takes the author of a change from the history, not from the project members', () => {
+        const author: IssueHistoryUser = {
+            idUser: 1,
+            name: 'Former member',
+            colorAvatarBg: '#123',
+            avatarInitials: null,
+            isActive: true
+        };
+        historyUsers = [author];
+        const page = render();
+
+        const item = page.fixture.debugElement.query(By.directive(ActivityHistoryItemStub));
+        expect((item.componentInstance as ActivityHistoryItemStub).user()).toEqual(author);
+    });
+
+    it('reloads the history when this task changes, not when another one does', () => {
+        const page = render();
+        history = [historyRow('a', 'First'), historyRow('b', 'Second')];
+
+        issueNotices.next({ payload: { idIssue: 99 } });
+        page.fixture.detectChanges();
+        expect(page.historyCards()).toBe(1);
+
+        issueNotices.next({ payload: { idIssue: 1 } });
+        page.fixture.detectChanges();
+        expect(page.historyCards()).toBe(2);
     });
 });

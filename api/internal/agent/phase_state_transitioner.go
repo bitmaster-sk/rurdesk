@@ -6,6 +6,9 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
+	"github.com/bitmaster-sk/rurdesk/api/internal/pointer"
+	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type eventMappingLoader interface {
@@ -21,12 +24,18 @@ type issueStateStore interface {
 	UpdateIssueState(ctx context.Context, idIssue int64, idState int64) error
 }
 
+type issueHistoryRecorder interface {
+	RecordSystem(ctx context.Context, idIssue int64, changes []model.IssueHistoryChange) error
+}
+
 type PhaseStateTransitioner struct {
 	workflowEventMapRepo eventMappingLoader
 	issueRepo            issueStateStore
 	stateRepo            stateLoader
 	projectRepo          projectMemberLoader
 	notifier             notify.INotifier
+	history              issueHistoryRecorder
+	pool                 *pgxpool.Pool
 }
 
 func NewPhaseStateTransitioner(
@@ -35,6 +44,8 @@ func NewPhaseStateTransitioner(
 	stateRepo stateLoader,
 	projectRepo projectMemberLoader,
 	notifier notify.INotifier,
+	history issueHistoryRecorder,
+	pool *pgxpool.Pool,
 ) *PhaseStateTransitioner {
 	return &PhaseStateTransitioner{
 		workflowEventMapRepo: workflowEventMapRepo,
@@ -42,6 +53,8 @@ func NewPhaseStateTransitioner(
 		stateRepo:            stateRepo,
 		projectRepo:          projectRepo,
 		notifier:             notifier,
+		history:              history,
+		pool:                 pool,
 	}
 }
 
@@ -81,7 +94,7 @@ func (t *PhaseStateTransitioner) Transition(ctx context.Context, idProject, idIs
 		return
 	}
 
-	if err := t.issueRepo.UpdateIssueState(ctx, idIssue, *mapping.IdState); err != nil {
+	if err := t.writeState(ctx, idIssue, *mapping.IdState); err != nil {
 		logger.Warn().
 			Int64("idIssue", idIssue).
 			Int64("idState", *mapping.IdState).
@@ -98,6 +111,31 @@ func (t *PhaseStateTransitioner) Transition(ctx context.Context, idProject, idIs
 		Int64("idState", *mapping.IdState).
 		Str("stateName", state.Name).
 		Msg("phase state transition: issue state updated")
+}
+
+func (t *PhaseStateTransitioner) writeState(ctx context.Context, idIssue, idState int64) error {
+	if extctx.HasTx(ctx) {
+		return t.writeStateInTx(ctx, idIssue, idState)
+	}
+	return extctx.RunInTx(ctx, t.pool, func(txCtx context.Context) error {
+		return t.writeStateInTx(txCtx, idIssue, idState)
+	})
+}
+
+func (t *PhaseStateTransitioner) writeStateInTx(ctx context.Context, idIssue, idState int64) error {
+	issue, err := t.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: &idIssue})
+	if err != nil {
+		return err
+	}
+	if err := t.issueRepo.UpdateIssueState(ctx, idIssue, idState); err != nil {
+		return err
+	}
+	if pointer.Equal(issue.IdState, &idState) {
+		return nil
+	}
+	return t.history.RecordSystem(ctx, idIssue, []model.IssueHistoryChange{
+		{Field: model.IssueHistoryFieldState, OldValue: pointer.Value(issue.IdState), NewValue: idState},
+	})
 }
 
 // broadcast must stay deferred: BroadcastIssueUpdate re-reads the issue on a pool connection after the request context is gone.

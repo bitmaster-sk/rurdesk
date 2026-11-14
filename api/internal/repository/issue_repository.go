@@ -1063,6 +1063,33 @@ func (r *IssueRepository) SetIssueTags(ctx context.Context, idIssue int64, idsTa
 	return r.AddIssueTags(ctx, []int64{idIssue}, idsTag)
 }
 
+func (r *IssueRepository) LoadTagIdsByIssue(ctx context.Context, idsIssue []int64) (map[int64][]int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT iss.id_issue, COALESCE(array_agg(itg.id_tag) FILTER (WHERE itg.id_tag IS NOT NULL), '{}')
+		FROM unnest($1::bigint[]) AS iss(id_issue)
+		LEFT JOIN issues.issue_tag itg ON itg.id_issue = iss.id_issue
+		GROUP BY iss.id_issue
+	`, idsIssue)
+	if err != nil {
+		return nil, fmt.Errorf("querying tags of issues: %w", err)
+	}
+	defer rows.Close()
+	tagsByIssue := make(map[int64][]int64, len(idsIssue))
+	for rows.Next() {
+		var idIssue int64
+		var idsTag []int64
+		if err := rows.Scan(&idIssue, &idsTag); err != nil {
+			return nil, fmt.Errorf("scanning tags of issues: %w", err)
+		}
+		tagsByIssue[idIssue] = idsTag
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("reading tags of issues: %w", err)
+	}
+	return tagsByIssue, nil
+}
+
 func (r *IssueRepository) AddIssueTags(ctx context.Context, idsIssue, idsTag []int64) error {
 	if len(idsIssue) == 0 || len(idsTag) == 0 {
 		return nil

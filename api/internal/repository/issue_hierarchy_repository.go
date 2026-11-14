@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
+	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -56,7 +57,7 @@ func (r *IssueHierarchyRepository) LoadParentRelation(ctx context.Context, idIss
 
 // Derives each node from its direct children only, so children must be recomputed first.
 // Keep in sync with migration 20261105120000_issue_summary_rollup.sql.
-func (r *IssueHierarchyRepository) RecomputeNodes(ctx context.Context, idsIssue []int64) ([]int64, error) {
+func (r *IssueHierarchyRepository) RecomputeNodes(ctx context.Context, idsIssue []int64) ([]model.RecomputedIssue, error) {
 	if len(idsIssue) == 0 {
 		return nil, nil
 	}
@@ -110,20 +111,31 @@ func (r *IssueHierarchyRepository) RecomputeNodes(ctx context.Context, idsIssue 
 			rollup_estimated = c.rollup_estimated,
 			rollup_tracked = c.rollup_tracked,
 			backlog_children = c.backlog_children
-		FROM computed c
+		FROM computed c, issues.issue prev
 		WHERE p.id_issue = c.id_issue
+		  AND prev.id_issue = p.id_issue
 		  AND (p.is_summary, p.scheduled_at, p.estimated, p.rollup_estimated, p.rollup_tracked, p.backlog_children)
 		      IS DISTINCT FROM (c.is_summary, c.scheduled_at, c.estimated, c.rollup_estimated, c.rollup_tracked, c.backlog_children)
-		RETURNING p.id_issue
+		RETURNING p.id_issue,
+		          prev.is_summary, prev.scheduled_at, prev.estimated, prev.rollup_estimated, prev.rollup_tracked,
+		          p.is_summary, p.scheduled_at, p.estimated, p.rollup_estimated, p.rollup_tracked
 	`, idsIssue)
 	if err != nil {
 		return nil, fmt.Errorf("recomputing hierarchy nodes: %w", err)
 	}
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	recomputed, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (model.RecomputedIssue, error) {
+		var issue model.RecomputedIssue
+		err := row.Scan(
+			&issue.IdIssue,
+			&issue.Before.IsSummary, &issue.Before.ScheduledAt, &issue.Before.Estimated, &issue.Before.RollupEstimated, &issue.Before.RollupTracked,
+			&issue.After.IsSummary, &issue.After.ScheduledAt, &issue.After.Estimated, &issue.After.RollupEstimated, &issue.After.RollupTracked,
+		)
+		return issue, err
+	})
 	if err != nil {
 		return nil, fmt.Errorf("collecting recomputed nodes: %w", err)
 	}
-	return ids, nil
+	return recomputed, nil
 }
 
 // Sees only committed-in-tx state: run it after the change, inside the same transaction.
