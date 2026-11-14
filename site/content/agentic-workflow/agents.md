@@ -130,7 +130,7 @@ limit comes from the first of these that is set:
 1. the stage's own limit, set on the stage in the dialog or later on the run card;
 2. the agent's limit for that stage, set when you create the agent or later in
    its edit dialog in **Admin → Users**;
-3. the app settings in **Admin → Settings**, 500 for implementation and 250 for
+3. the app settings in **Admin → Settings → Agents and AI**, 500 for implementation and 250 for
    every other stage by default.
 
 Both places list every stage an agent runs: brainstorming, design,
@@ -157,7 +157,7 @@ The effort comes from the first of these that is set:
    when you assign the agent;
 3. the agent's effort for that stage, set when you create the agent or later in
    its edit dialog in **Admin → Users**;
-4. the app settings for that stage in **Admin → Settings**.
+4. the app settings for that stage in **Admin → Settings → Agents and AI**.
 
 Nothing is set out of the box, so a stage runs with the model's own default
 until you pick an effort somewhere. Under the levels the stage says what it gets
@@ -311,7 +311,7 @@ text that would have to be parsed back apart, so an agent whose thinking quotes
 an arrow, a bracket or any other marker is shown as the prose it wrote. This is
 the contract every gateway implements, not something specific to Goose.
 
-**What is stored** is up to the instance admin, in **Admin → Settings → Keep the
+**What is stored** is up to the instance admin, in **Admin → Settings → Agents and AI → Keep the
 full agent thinking**:
 
 - **On** (default): the full thinking of each stage is kept and can be reopened

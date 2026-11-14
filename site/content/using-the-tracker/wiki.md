@@ -150,7 +150,7 @@ PlantUML server — teams already writing PlantUML keep their diagrams:
 
 PlantUML works everywhere mermaid does: on the page, in the editor preview,
 in comments, chat messages and task descriptions. It needs a server, though:
-an admin sets its URL in **Admin → Settings** (see
+an admin sets its URL in **Admin → Settings → General** (see
 [Configuration](../getting-started/configuration.md#plantuml-diagrams)); while
 no server is configured the block stays a plain code block.
 
@@ -243,7 +243,7 @@ Pages marked **Always reads** share one token budget for the whole instance
 (12 000 by default): the shared **Always reads** pages plus the project's own
 must fit it together, in every project. The editor shows how much of it is used
 and does not let you go over. An admin changes the budget in **Admin →
-Settings**, not per project.
+Settings → Agents and AI**, not per project.
 
 ### What goes into an agent's prompt
 

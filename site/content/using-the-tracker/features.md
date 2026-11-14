@@ -135,7 +135,7 @@ is still uploading, the message cannot be sent and a new task cannot be saved.
 Allowed types are images (PNG, JPEG, GIF, WebP), PDF, plain text and ZIP, among
 others. SVG is not allowed. The type is checked from the file content, not its
 extension. A file over the size limit is rejected; admins set the limit in
-**Admin → Settings** (default 25 MB).
+**Admin → Settings → General** (default 25 MB).
 
 In a posted message, images show as uniform thumbnails. Click one to open it
 enlarged, move between the images of that message with the arrow keys or buttons,

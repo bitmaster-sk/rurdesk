@@ -20,6 +20,8 @@ different entrypoint packages, so this is a property of the artifact, not a
 runtime switch. A free instance also never calls out: there is no license
 server, no phone-home, no telemetry.
 
+Paid features: [single sign-on](../using-the-tracker/sso.md) with SCIM provisioning.
+
 ## Running the free build
 
 Nothing to configure. Use the `rurdesk` image and ignore this page.

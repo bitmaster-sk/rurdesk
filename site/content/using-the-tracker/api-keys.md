@@ -68,5 +68,5 @@ key is rejected on the very next request, not after a cache delay.
   rule above prevents. Use the web interface for admin work.
 - A key cannot raise its own rate limit. Keys run at the standard per-user limit.
 - The number of keys per user is capped. An administrator sets the cap under
-  **Admin → Settings → API keys per user**; the default is 10. Raising it never touches
+  **Admin → Settings → Agents and AI → API keys per user**; the default is 10. Raising it never touches
   existing keys, and lowering it only blocks new ones.
