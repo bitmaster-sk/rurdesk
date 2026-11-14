@@ -46,7 +46,9 @@ testem.log
 /.vitest-attachments
 **/__screenshots__/
 /playwright-report
+/playwright-report-sso
 /test-results
+/test-results-sso
 /.playwright
 
 # System Files

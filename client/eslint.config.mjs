@@ -10,7 +10,9 @@ export default tseslint.config(
             'coverage/**',
             '.angular/**',
             'playwright-report/**',
+            'playwright-report-sso/**',
             'test-results/**',
+            'test-results-sso/**',
             'out-tsc/**'
         ]
     },
