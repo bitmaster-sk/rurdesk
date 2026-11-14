@@ -53,6 +53,27 @@ Enter resets.
 
 Your split is remembered in the browser and applies to every task you open.
 
+### Change history
+
+The activity feed also records every change to a task's fields: state,
+severity, type, assignee, title, description, estimate, date, points and tags.
+Each entry shows who made the change, when, and the old → new value. Fields
+changed in one save share one entry. A description change only says that the
+description changed, without the text.
+
+Changes made through MCP or by an agent appear under that user like any other
+edit, and so do tag moves made when a release is published or deleted. An
+entry keeps showing its author after they leave the project; an author whose
+account was deleted shows as **Deleted user**. Values the tracker computes itself, such as the dates and estimate of a
+[summary task](#summary-tasks-and-the-outline) recalculated from its subtasks, or a state set
+automatically by an agent's workflow, appear as **system** entries. Repeated
+recalculations of the same field within 15 minutes merge into one entry, so
+logging time on subtasks does not flood the feed. An entry that ends up back at
+its old value disappears.
+
+Switch the feed to the **History** chip to see only these entries. The history
+starts on the day the feature was deployed and is deleted together with the task.
+
 ### Participants & notifications
 
 Every task keeps a list of **participants**. You become one automatically when
@@ -148,7 +169,8 @@ are deleted after 24 hours; removing a file from a description or message makes
 it count as never sent.
 
 To find a file shared on a task, switch the activity feed to the **Attachments**
-chip. It shows only the comments that carry an attachment.
+chip. It shows only the comments that carry an attachment. The **History** chip
+likewise narrows the feed to [field changes](#change-history).
 
 ### Emoji shortcuts
 
