@@ -636,3 +636,9 @@ messages and task descriptions alike. While no PlantUML server is configured,
 the block stays a plain code block.
 
 ![UI mockup cards in a design comment — one chosen](../../site/assets/img/message-mockup.png)
+
+## Single sign-on
+
+People can sign in with their company account over OpenID Connect or SAML 2.0,
+with users and groups kept in sync over SCIM. It is a paid feature of the
+commercial image, see [Single sign-on](./sso.md).

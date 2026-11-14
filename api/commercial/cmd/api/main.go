@@ -32,6 +32,10 @@ func main() {
 func installLicense() {
 	viper.AutomaticEnv()
 
+	if licensekey.IsEnvPublicKeyIgnored() {
+		log.Print("license: LICENSE_PUBLIC_KEY is ignored, this build verifies keys against its embedded public key")
+	}
+
 	provider, err := licensekey.FromEnv()
 	switch {
 	case errors.Is(err, licensekey.ErrNotConfigured):

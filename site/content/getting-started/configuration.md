@@ -7,7 +7,8 @@ stackTables: true
 # Configuration
 
 The API is configured entirely through environment variables (read via Viper's
-`AutomaticEnv`). In the Docker setup these live in **`docker/api/.env`**.
+`AutomaticEnv`). In the Docker deployment they are the `environment:` entries of
+the `rurdesk` service in your `docker-compose.yml` (see [Installation](./installation.md)).
 
 > **Never commit real secrets.** All values below are placeholders. Generate
 > strong random values for keys and passwords.
@@ -16,10 +17,10 @@ The API is configured entirely through environment variables (read via Viper's
 
 | Variable | Example | Purpose |
 | --- | --- | --- |
-| `DATABASE_HOST` | `rurdesk-db` | Postgres host (the compose network alias) |
+| `DATABASE_HOST` | `rurdesk_db` | Postgres host (the compose network alias) |
 | `DATABASE_PORT` | `5432` | Postgres port |
-| `DATABASE_NAME` | `issue` | Database name |
-| `DATABASE_USER` | `issue` | Database user |
+| `DATABASE_NAME` | `rurdesk` | Database name |
+| `DATABASE_USER` | `rurdesk` | Database user |
 | `DATABASE_PASSWORD` | `<strong-password>` | Database password |
 
 These must match the credentials your Postgres service is configured with.
@@ -28,9 +29,9 @@ These must match the credentials your Postgres service is configured with.
 
 | Variable | Example | Purpose |
 | --- | --- | --- |
-| `CACHE_HOST` | `rurdesk-cache` | Redis host (compose alias) |
+| `CACHE_HOST` | `rurdesk_cache` | Redis host (compose alias) |
 | `CACHE_PORT` | `6379` | Redis port |
-| `CACHE_PASSWORD` | _(empty in dev)_ | Redis password, if set |
+| `CACHE_PASSWORD` | _(empty)_ | Redis password, if set |
 | `CACHE_DB` | `0` | Redis logical DB index |
 
 ## Application
@@ -39,7 +40,7 @@ These must match the credentials your Postgres service is configured with.
 | --- | --- | --- |
 | `APPLICATION_HOST` | `0.0.0.0` | Bind host for the tracker |
 | `APPLICATION_PORT` | `1000` | Single listen port — serves REST, WebSocket, MCP (`/mcp`) and, in production, the Angular SPA |
-| `SERVE_STATIC` | `true` | Production only: serve the Angular build from the Go binary (set in the `rurdesk` image; leave unset in dev) |
+| `SERVE_STATIC` | `true` | Serve the web app from the same binary. Already set in the `rurdesk` image; leave it as is |
 | `STATIC_DIR` | `/app/public` | Directory of the built SPA when `SERVE_STATIC=true` |
 | `ALLOWED_WS_ORIGINS` | _(empty)_ | Extra origin hosts (comma-separated) allowed to open the WebSocket. Empty by default — only **same-origin** handshakes are accepted. See the reverse-proxy note below |
 | `ALLOWED_ORIGINS` | _(empty)_ | Comma-separated origins allowed to call the API from a browser. Empty means `*` — safe here because authentication is a bearer token, never a cookie, so a wildcard grants no ambient authority. Set it to have the browser enforce a narrower set. |
@@ -49,7 +50,6 @@ These must match the credentials your Postgres service is configured with.
 | `MERGE_POLL_INTERVAL` | `60s` | How often linked pull requests are checked for a merge. Lower it for snappier `done` state changes at the cost of more git-host API calls |
 | `AGENT_EMAIL_DOMAIN` | `agents.local` | Domain for the synthesized e-mail of an agent account (`agent-<name>@<domain>`). Renamed from `BOT_EMAIL_DOMAIN`; existing accounts keep the address they were created with |
 | `LICENSE_KEY` | _(empty)_ | **Commercial image only.** Signed license key enabling paid features. Ignored by the free image; unset means paid features stay off. See [Licensing](./licensing.md) |
-| `LICENSE_PUBLIC_KEY` | _(empty)_ | **Commercial image only.** Base64 Ed25519 public key the license key is verified against, offline and at startup. See [Licensing](./licensing.md) |
 | `SSO_ENCRYPTION_KEY` | `<32-byte-key>` | **Commercial image only.** Base64 of 32 random bytes (`openssl rand -base64 32`). Encrypts the SSO client secret and the key of the SAML certificate. Without it SSO cannot be set up. See [Single sign-on](../using-the-tracker/sso.md) |
 
 > **WebSocket origin & your reverse proxy.** Real-time updates use a WebSocket
@@ -189,10 +189,10 @@ small dense model.
 
 > **Slow models and proxy timeouts.** Large cloud/local models can take minutes
 > to answer. The API bounds each call with `AI_TIMEOUT_SECONDS` (default 300s),
-> but any reverse proxy in front of it must allow at least as long. The dev nginx
-> proxy sets `proxy_read_timeout`/`proxy_send_timeout` to 600s on `/api/` for this
-> reason (nginx otherwise defaults to 60s). If you raise `AI_TIMEOUT_SECONDS`,
-> raise the proxy timeout to match.
+> but any reverse proxy in front of it must allow at least as long. For nginx, set
+> `proxy_read_timeout` and `proxy_send_timeout` to 600s on `/api/` (nginx
+> otherwise defaults to 60s). If you raise `AI_TIMEOUT_SECONDS`, raise the proxy
+> timeout to match.
 
 > The **agent gateway** is independent of this provider — it runs the Goose agent
 > against the providers named in its own `MODELS` list (local Ollama, Ollama
@@ -256,40 +256,36 @@ plain code and nothing is sent anywhere.
 > Pointing it at a public rendering service means diagram text leaves your
 > network — run your own server for anything sensitive.
 
-## Minimal example `docker/api/.env`
+## Minimal example
 
-```env
-# Database
-DATABASE_HOST=rurdesk-db
-DATABASE_PORT=5432
-DATABASE_NAME=rurdesk
-DATABASE_USER=rurdesk
-DATABASE_PASSWORD=rurdesk
+The `environment:` block of the `rurdesk` service in `docker-compose.yml`:
 
-# Cache
-CACHE_HOST=rurdesk-cache
-CACHE_PORT=6379
-CACHE_PASSWORD=
-CACHE_DB=0
-
-# Application (single port: REST + WebSocket + MCP + SPA)
-APPLICATION_HOST=0.0.0.0
-APPLICATION_PORT=1000
-GIT_INTEGRATION_ENCRYPTION_KEY=<generate-a-32-byte-key>
-
-# AI features (in-API): quality check / kickstarter / split
-AI_PROVIDER=anthropic
-AI_API_KEY=<your-anthropic-key>
-AI_MODEL=<model-id>          # no default; unset = AI features off (toast), rest works
-# AI_QUALITY_MODEL=          # optional — falls back to AI_MODEL
-PROJECT_BUILDER_DESCRIPTION_MAX_LENGTH=10000
+```yaml
+        environment:
+            # Database
+            DATABASE_HOST: rurdesk_db
+            DATABASE_PORT: "5432"
+            DATABASE_NAME: rurdesk
+            DATABASE_USER: rurdesk
+            DATABASE_PASSWORD: <strong-password>
+            # Cache
+            CACHE_HOST: rurdesk_cache
+            CACHE_PORT: "6379"
+            CACHE_DB: "0"
+            # Application (single port: REST + WebSocket + MCP + web app)
+            GIT_INTEGRATION_ENCRYPTION_KEY: <generate-a-32-byte-key>
+            # AI features (in-API): quality check / kickstarter / split
+            AI_PROVIDER: anthropic
+            AI_API_KEY: <your-anthropic-key>
+            AI_MODEL: <model-id>     # no default; unset = AI features off, the rest works
+            # AI_QUALITY_MODEL:      # optional — falls back to AI_MODEL
 ```
-
 
 ## Applying changes
 
-After editing `docker/api/.env`:
+After editing `docker-compose.yml`, recreate the container so it picks up the
+new values:
 
 ```bash
-docker compose up -d --force-recreate rurdesk.api
+docker compose up -d --force-recreate rurdesk
 ```

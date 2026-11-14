@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/license"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -130,4 +131,136 @@ func TestUnknownPayloadFieldsAreIgnored(t *testing.T) {
 	provider, err := New(publicKey, key)
 	require.NoError(t, err)
 	assert.Equal(t, "bitmaster-sk", provider.Status(context.Background()).Tenant)
+}
+
+// stampEmbeddedPublicKey stands in for the -ldflags -X stamp of a release build.
+func stampEmbeddedPublicKey(t *testing.T, encodedPublicKey string) {
+	t.Helper()
+
+	original := embeddedPublicKey
+	t.Cleanup(func() { embeddedPublicKey = original })
+	embeddedPublicKey = encodedPublicKey
+}
+
+func encodePublicKey(publicKey ed25519.PublicKey) string {
+	return base64.StdEncoding.EncodeToString(publicKey)
+}
+
+func TestFromEnvPrefersTheEmbeddedPublicKey(t *testing.T) {
+	viper.AutomaticEnv()
+
+	ourPublicKey, ourSigningKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+	envPublicKey, envSigningKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	signedByUs := issueKey(t, ourSigningKey, validClaims(time.Hour))
+	signedByEnvPair := issueKey(t, envSigningKey, validClaims(time.Hour))
+
+	const (
+		accepted      = "accepted"
+		rejected      = "rejected"
+		notConfigured = "not configured"
+	)
+
+	tests := []struct {
+		name            string
+		embeddedKey     string
+		envPublicKey    string
+		licenseKey      string
+		expectedOutcome string
+	}{
+		{"embedded: a key signed by the env pair is rejected", encodePublicKey(ourPublicKey), encodePublicKey(envPublicKey), signedByEnvPair, rejected},
+		{"embedded: a key signed by us is accepted", encodePublicKey(ourPublicKey), encodePublicKey(envPublicKey), signedByUs, accepted},
+		{"embedded: no env public key is needed", encodePublicKey(ourPublicKey), "", signedByUs, accepted},
+		{"embedded: an undecodable embedded key never falls back to env", "not-base64!!!", encodePublicKey(envPublicKey), signedByEnvPair, rejected},
+		{"embedded: no license key", encodePublicKey(ourPublicKey), encodePublicKey(envPublicKey), "", notConfigured},
+		{"not embedded: the env pair works", "", encodePublicKey(envPublicKey), signedByEnvPair, accepted},
+		{"not embedded: a key signed by another pair is rejected", "", encodePublicKey(envPublicKey), signedByUs, rejected},
+		{"not embedded: no env public key", "", "", signedByEnvPair, notConfigured},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stampEmbeddedPublicKey(t, test.embeddedKey)
+			t.Setenv("LICENSE_PUBLIC_KEY", test.envPublicKey)
+			t.Setenv("LICENSE_KEY", test.licenseKey)
+
+			provider, err := FromEnv()
+
+			switch test.expectedOutcome {
+			case accepted:
+				require.NoError(t, err)
+				assert.True(t, provider.IsAvailable(context.Background(), license.SSO))
+			case rejected:
+				require.Error(t, err)
+				assert.NotErrorIs(t, err, ErrNotConfigured)
+			case notConfigured:
+				assert.ErrorIs(t, err, ErrNotConfigured)
+			}
+		})
+	}
+}
+
+func TestIsEnvPublicKeyIgnored(t *testing.T) {
+	viper.AutomaticEnv()
+
+	publicKey, _, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name            string
+		embeddedKey     string
+		envPublicKey    string
+		expectedIgnored bool
+	}{
+		{"embedded key and env key", encodePublicKey(publicKey), "env-key", true},
+		{"embedded key only", encodePublicKey(publicKey), "", false},
+		{"env key only", "", "env-key", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stampEmbeddedPublicKey(t, test.embeddedKey)
+			t.Setenv("LICENSE_PUBLIC_KEY", test.envPublicKey)
+
+			assert.Equal(t, test.expectedIgnored, IsEnvPublicKeyIgnored())
+		})
+	}
+}
+
+func TestIssueProducesAKeyThatNewAccepts(t *testing.T) {
+	publicKey, signingKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+	expiresAt := time.Date(2030, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	key, err := Issue(signingKey, "acme", expiresAt)
+	require.NoError(t, err)
+
+	provider, err := New(publicKey, key)
+	require.NoError(t, err)
+	status := provider.Status(context.Background())
+	assert.Equal(t, "acme", status.Tenant)
+	assert.True(t, expiresAt.Equal(*status.ExpiresAt))
+}
+
+func TestIssueRejectsIncompleteClaims(t *testing.T) {
+	_, signingKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name      string
+		tenant    string
+		expiresAt time.Time
+	}{
+		{"no tenant", "", time.Now().Add(time.Hour)},
+		{"no expiry", "acme", time.Time{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Issue(signingKey, test.tenant, test.expiresAt)
+			assert.Error(t, err)
+		})
+	}
 }

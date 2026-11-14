@@ -12,8 +12,8 @@ license key.
 
 | Image | Contents | License |
 | --- | --- | --- |
-| `ghcr.io/<owner>/rurdesk/rurdesk` | Everything except paid features | AGPL-3.0 |
-| `ghcr.io/<owner>/rurdesk/rurdesk-commercial` | Adds paid features, gated by a key | AGPL-3.0 core + commercial license for `api/commercial/` |
+| `ghcr.io/bitmaster-sk/rurdesk/rurdesk` | Everything except paid features | AGPL-3.0 |
+| `ghcr.io/bitmaster-sk/rurdesk/rurdesk-commercial` | Adds paid features, gated by a key | AGPL-3.0 core + commercial license for `api/commercial/` |
 
 The free image **contains no paid code at all** — the two images are built from
 different entrypoint packages, so this is a property of the artifact, not a
@@ -22,26 +22,30 @@ server, no phone-home, no telemetry.
 
 Paid features: [single sign-on](../using-the-tracker/sso.md) with SCIM provisioning.
 
+## Getting a license key
+
+Write to [info@bitmaster.sk](mailto:info@bitmaster.sk) with the name of your
+organisation. We agree the terms with you and send you a key.
+
 ## Running the free build
 
 Nothing to configure. Use the `rurdesk` image and ignore this page.
 
 ## Installing a license key
 
-The commercial image reads two environment variables:
+The commercial image reads one environment variable:
 
 | Variable | Example | Purpose |
 | --- | --- | --- |
 | `LICENSE_KEY` | `eyJ0ZW5h….3Ryb25n` | Your signed license key, as issued |
-| `LICENSE_PUBLIC_KEY` | `<base64-32-bytes>` | Ed25519 public key the key is verified against, shipped with your license |
 
 ```env
 LICENSE_KEY=<your-key>
-LICENSE_PUBLIC_KEY=<public-key>
 ```
 
-Verification is a signature check performed **offline, once at startup**. The
-key states the tenant, the plan, the entitled features and an expiry date.
+Verification is a signature check performed **offline, once at startup**,
+against the public key built into the image. The key states the tenant and an
+expiry date; a valid, unexpired key enables every paid feature.
 
 **A missing or invalid key is not a boot failure.** The instance starts, logs
 the reason, and runs with paid features off:
@@ -86,7 +90,7 @@ onward.
 Replace `LICENSE_KEY` with the new key and restart:
 
 ```bash
-docker compose up -d --force-recreate rurdesk.api
+docker compose up -d --force-recreate rurdesk
 ```
 
 The banner disappears on the next page load.
