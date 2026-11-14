@@ -228,3 +228,39 @@ func TestIsEnvPublicKeyIgnored(t *testing.T) {
 		})
 	}
 }
+
+func TestIssueProducesAKeyThatNewAccepts(t *testing.T) {
+	publicKey, signingKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+	expiresAt := time.Date(2030, 12, 31, 23, 59, 59, 0, time.UTC)
+
+	key, err := Issue(signingKey, "acme", expiresAt)
+	require.NoError(t, err)
+
+	provider, err := New(publicKey, key)
+	require.NoError(t, err)
+	status := provider.Status(context.Background())
+	assert.Equal(t, "acme", status.Tenant)
+	assert.True(t, expiresAt.Equal(*status.ExpiresAt))
+}
+
+func TestIssueRejectsIncompleteClaims(t *testing.T) {
+	_, signingKey, err := ed25519.GenerateKey(nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name      string
+		tenant    string
+		expiresAt time.Time
+	}{
+		{"no tenant", "", time.Now().Add(time.Hour)},
+		{"no expiry", "acme", time.Time{}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Issue(signingKey, test.tenant, test.expiresAt)
+			assert.Error(t, err)
+		})
+	}
+}

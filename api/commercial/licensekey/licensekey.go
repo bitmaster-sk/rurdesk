@@ -70,6 +70,25 @@ func New(publicKey ed25519.PublicKey, encodedKey string) (Provider, error) {
 	return Provider{claims: parsed}, nil
 }
 
+// Issue signs a key for tenant in the format New verifies. It runs only in our
+// signing tool; the private key never reaches a deployed instance.
+func Issue(signingKey ed25519.PrivateKey, tenant string, expiresAt time.Time) (string, error) {
+	if tenant == "" {
+		return "", errors.New("tenant is required")
+	}
+	if expiresAt.IsZero() {
+		return "", errors.New("expiry is required")
+	}
+
+	payload, err := json.Marshal(claims{Tenant: tenant, ExpiresAt: expiresAt})
+	if err != nil {
+		return "", fmt.Errorf("encoding license payload: %w", err)
+	}
+
+	return base64.RawURLEncoding.EncodeToString(payload) + "." +
+		base64.RawURLEncoding.EncodeToString(ed25519.Sign(signingKey, payload)), nil
+}
+
 // embeddedPublicKey is our release public key (base64 of the raw 32-byte
 // Ed25519 key), stamped at link time by script/build.sh. Dev and e2e builds
 // leave it empty and read LICENSE_PUBLIC_KEY from env instead.
