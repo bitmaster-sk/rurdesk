@@ -13,7 +13,13 @@ export interface IssueDraft {
 export abstract class Interaction {
     public static async login(page: Page, user: TestUser): Promise<void> {
         await page.goto('/login');
-        await page.locator('input[formcontrolname="email"]').fill(user.email);
+        const email = page.locator('input[formcontrolname="email"]');
+        const usePassword = page.getByTestId('login-use-password');
+        await expect(email.or(usePassword)).toBeVisible();
+        if (await usePassword.isVisible()) {
+            await usePassword.click();
+        }
+        await email.fill(user.email);
         await page.locator('input[formcontrolname="password"]').fill(user.password);
         await page.getByRole('button', { name: /login/i }).click();
         await page.waitForURL(url => !url.pathname.endsWith('/login'));
