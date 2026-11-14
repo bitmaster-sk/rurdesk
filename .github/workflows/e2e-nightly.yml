@@ -18,7 +18,9 @@ concurrency:
 jobs:
   e2e:
     name: Playwright e2e
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is Ubuntu 26.04, which Playwright 1.60 cannot install
+    # Chromium on (support starts in 1.61). Back to ubuntu-latest after the upgrade.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
