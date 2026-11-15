@@ -173,6 +173,8 @@ contract.
 | `MAX_OUTPUT_LINE_MB`                   | `4`              | Longest line of agent output read, in MB. A longer line is skipped and logged; the stage keeps running.                              |
 | `LOG_LEVEL`                            | `info`           | `debug` \| `info` \| `warn` \| `error`. JSON via `zerolog`.                                                                          |
 | `WORKSPACE_BASE`                       | `/worktrees`     | Root for the clones and their per-run worktrees. Must match the `gateway-workspace` volume mount.                                    |
+| `WORKTREE_RETENTION_DAYS`              | `7`              | Days an unused run worktree stays on disk. Failed and cancelled runs keep theirs for Continue; Restart removes it once no other stage is running. Whole number, at least 1. |
+| `UNPUSHED_BRANCH_RETENTION_DAYS`       | `30`             | Days a local agent branch with commits on no remote outlives its worktree; fully pushed branches go with the worktree. Whole number, at least 1. |
 | `MODEL_DEFAULT`                        | first of `MODELS` | Model run when `stage_execute` names none. Must be in `MODELS`, or the gateway refuses to start.                                     |
 | `MAX_TURNS_LIMIT`                      | no limit         | Ceiling on the `maxTurns` the tracker sends. Reported in `ReportRecovered` so the tracker caps at it; a higher value still fails with `max_turns_over_limit`. Without `maxTurns` the gateway uses 250 / 500 (implementation), capped by this limit. |
 | `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the `anthropic` / `google` provider.                                                                             |
