@@ -33,6 +33,9 @@ const (
 	ErrCodeEffortNotAllowed   = "effort_not_allowed"
 	ErrCodeTrackerMissingRepo = "tracker_missing_repo"
 	ErrCodeGitTokenUnreadable = "git_token_unreadable"
+	// ErrCodeWorktreeUnusable: the run's worktree has no branch checked out or
+	// is not a git worktree, and may hold work the gateway must not delete.
+	ErrCodeWorktreeUnusable = "worktree_unusable"
 )
 
 // AgentError is an adapter-level failure carrying a stable Code (used

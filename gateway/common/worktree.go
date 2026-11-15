@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,8 @@ import (
 const agentRunsDir = ".agent-runs"
 
 // Concurrent git ref updates on one repo fail with "cannot lock ref".
+// RemoveWorktree and PruneAgentBranches lock it themselves: never call them
+// while holding it.
 var worktreeMu sync.Mutex
 
 // hookSourcePath is the pre-push hook baked into the image and installed into
@@ -155,6 +158,10 @@ func CreateWorktree(repoPath, token, baseBranch, branch string, idRun int64) (st
 	if err := runRemoteGit(repoPath, token, "fetch", "origin", baseBranch); err != nil {
 		return "", fmt.Errorf("fetching %s: %w", baseBranch, err)
 	}
+	// git refuses to add a worktree at a registered path an operator deleted.
+	if err := runGit(repoPath, "worktree", "prune"); err != nil {
+		return "", fmt.Errorf("pruning worktrees: %w", err)
+	}
 	if err := runGit(repoPath, "worktree", "add", worktreePath, "-b", branch, "origin/"+baseBranch); err != nil {
 		return "", fmt.Errorf("creating worktree: %w", err)
 	}
@@ -215,12 +222,87 @@ func WorktreeExists(repoPath string, idRun int64) bool {
 	return err == nil && info.IsDir()
 }
 
+// worktreeState fails when the directory is not a worktree root. branch is the
+// checked-out branch or the one a paused rebase rewrites; isDisposable is set
+// only for a detached HEAD with no uncommitted changes and no commits outside
+// branches and remotes.
+func worktreeState(worktreePath string) (branch string, isDisposable bool, err error) {
+	topLevel, err := runGitQuietOutput(worktreePath, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", false, fmt.Errorf("reading the worktree root: %w", err)
+	}
+	isRoot, err := isSamePath(strings.TrimSpace(topLevel), worktreePath)
+	if err != nil {
+		return "", false, err
+	}
+	if !isRoot {
+		return "", false, fmt.Errorf("%s is not a git worktree", worktreePath)
+	}
+	branch, err = branchOfWorktree(worktreePath)
+	if err != nil {
+		return "", false, fmt.Errorf("reading the worktree branch: %w", err)
+	}
+	if branch == "" {
+		branch = rebasingBranch(worktreePath)
+	}
+	if branch != "" {
+		return branch, false, nil
+	}
+	status, err := runGitQuietOutput(worktreePath, "status", "--porcelain")
+	if err != nil {
+		return "", false, fmt.Errorf("reading the worktree status: %w", err)
+	}
+	uniqueCommits, err := runGitQuietOutput(worktreePath, "rev-list", "HEAD", "--not", "--branches", "--remotes")
+	if err != nil {
+		return "", false, fmt.Errorf("listing commits outside branches: %w", err)
+	}
+	return "", strings.TrimSpace(status) == "" && strings.TrimSpace(uniqueCommits) == "", nil
+}
+
+// rebasingBranch returns the branch a paused rebase in the worktree rewrites,
+// or "" when no rebase is in progress.
+func rebasingBranch(worktreePath string) string {
+	for _, stateDir := range []string{"rebase-merge", "rebase-apply"} {
+		headNamePath, err := runGitQuietOutput(worktreePath, "rev-parse", "--git-path", stateDir+"/head-name")
+		if err != nil {
+			continue
+		}
+		headNamePath = strings.TrimSpace(headNamePath)
+		if !filepath.IsAbs(headNamePath) {
+			headNamePath = filepath.Join(worktreePath, headNamePath)
+		}
+		headName, err := os.ReadFile(headNamePath)
+		if err != nil {
+			continue
+		}
+		if branch, ok := strings.CutPrefix(strings.TrimSpace(string(headName)), "refs/heads/"); ok {
+			return branch
+		}
+	}
+	return ""
+}
+
+func isSamePath(first, second string) (bool, error) {
+	resolvedFirst, err := filepath.EvalSymlinks(first)
+	if err != nil {
+		return false, err
+	}
+	resolvedSecond, err := filepath.EvalSymlinks(second)
+	if err != nil {
+		return false, err
+	}
+	return resolvedFirst == resolvedSecond, nil
+}
+
 // RemoveWorktree removes a git worktree, falling back to a plain directory
 // removal when git doesn't know about it (orphaned admin metadata is common —
 // .git/worktrees pruned but agent-runs dir survived, or vice versa). Git's
 // stderr is discarded so retention sweeps don't spam the log with "fatal:
 // ... is not a working tree"; the directory removal is what matters.
 func RemoveWorktree(repoPath string, idRun int64) error {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
 	worktreePath := filepath.Join(repoPath, agentRunsDir, fmt.Sprintf("%d", idRun))
 	_ = runGitQuiet(repoPath, "worktree", "remove", "--force", worktreePath)
 	// Prune dead admin metadata so the next `git worktree list` is clean.
@@ -232,6 +314,75 @@ func RemoveWorktree(repoPath string, idRun int64) error {
 	return nil
 }
 
+// PruneAgentBranches deletes local agent branches that no worktree has checked
+// out: right away when all their commits are on a remote (pushed, or never
+// committed to), otherwise once their tip is older than unpushedCutoff.
+func PruneAgentBranches(repoPath string, unpushedCutoff time.Time) error {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
+	if err := runGitQuiet(repoPath, "worktree", "prune"); err != nil {
+		return fmt.Errorf("pruning worktrees: %w", err)
+	}
+	checkedOut, err := checkedOutBranches(repoPath)
+	if err != nil {
+		return err
+	}
+	refs, err := runGitOutput(repoPath, "for-each-ref", "--format=%(refname:short) %(committerdate:unix)", "refs/heads/agent/")
+	if err != nil {
+		return fmt.Errorf("listing agent branches: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(refs), "\n") {
+		branch, tipUnix, found := strings.Cut(line, " ")
+		if !found || !IsAgentBranch(branch) || checkedOut[branch] {
+			continue
+		}
+		isDeletable, err := isAgentBranchDeletable(repoPath, branch, tipUnix, unpushedCutoff)
+		if err != nil {
+			log.Warn().Str("repo", repoPath).Str("branch", branch).Err(err).Msg("retention: cannot inspect agent branch")
+			continue
+		}
+		if !isDeletable {
+			continue
+		}
+		if err := runGitQuiet(repoPath, "branch", "-D", branch); err != nil {
+			log.Warn().Str("repo", repoPath).Str("branch", branch).Err(err).Msg("retention: cannot delete agent branch")
+			continue
+		}
+		log.Info().Str("repo", repoPath).Str("branch", branch).Msg("retention: deleted agent branch")
+	}
+	return nil
+}
+
+func isAgentBranchDeletable(repoPath, branch, tipUnix string, unpushedCutoff time.Time) (bool, error) {
+	localOnly, err := runGitOutput(repoPath, "rev-list", "refs/heads/"+branch, "--not", "--remotes")
+	if err != nil {
+		return false, fmt.Errorf("listing commits on no remote: %w", err)
+	}
+	if strings.TrimSpace(localOnly) == "" {
+		return true, nil
+	}
+	tipSeconds, err := strconv.ParseInt(tipUnix, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("parsing tip date %q: %w", tipUnix, err)
+	}
+	return time.Unix(tipSeconds, 0).Before(unpushedCutoff), nil
+}
+
+func checkedOutBranches(repoPath string) (map[string]bool, error) {
+	out, err := runGitOutput(repoPath, "worktree", "list", "--porcelain")
+	if err != nil {
+		return nil, fmt.Errorf("listing worktrees: %w", err)
+	}
+	branches := map[string]bool{}
+	for _, line := range strings.Split(out, "\n") {
+		if branch, ok := strings.CutPrefix(line, "branch refs/heads/"); ok {
+			branches[branch] = true
+		}
+	}
+	return branches, nil
+}
+
 // runGitQuiet runs git discarding stdout/stderr, for cleanup paths where
 // git's complaints (e.g. "not a working tree" after metadata was already
 // cleared) are expected and harmless.
@@ -240,6 +391,15 @@ func runGitQuiet(dir string, args ...string) error {
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	return cmd.Run()
+}
+
+// runGitQuietOutput returns stdout and discards stderr, for probes whose
+// failure is an expected answer rather than something to log.
+func runGitQuietOutput(dir string, args ...string) (string, error) {
+	cmd := newGitCmd(dir, nil, args...)
+	cmd.Stderr = io.Discard
+	out, err := cmd.Output()
+	return string(out), err
 }
 
 // GenerateBranchName returns the branch name for a run. It must keep matching
