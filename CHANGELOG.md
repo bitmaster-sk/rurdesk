@@ -5,6 +5,138 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-11-15
+
+Single sign-on for the commercial build, the change history of every task, bulk edit,
+summary tasks in the Gantt, and a thinking effort for each agent stage.
+
+### Highlights
+
+- **Single sign-on** — the commercial image signs people in with their company account
+  over OpenID Connect or SAML 2.0 and keeps users in sync over SCIM 2.0. IdP groups map
+  to teams and the admin role. Once SSO is enforced, break-glass admin accounts keep a
+  password as the way back in. The license key is verified against a public key built
+  into the release image.
+- **Change history** — the activity feed records every change to the state, severity,
+  type, assignee, title, description, estimate, date, points and tags of a task, with
+  its author and the old and new value. The **History** chip shows only these entries.
+- **Bulk edit** — select tasks in the table or on the Kanban board with the mouse or the
+  keyboard and change the state, severity, type, assignee and tags of up to 100 of them
+  at once. A review step lists the changes, and every task changes or none does.
+- **Summary tasks in the Gantt** — a task with scheduled subtasks takes its dates and
+  progress from them, and dragging it moves the whole group. The WBS panel shows the
+  tree numbered and indented; rows can be folded, indented, outdented and dragged.
+- **Thinking effort** — pick **Low**, **Medium**, **High** or **Max** for each stage, for
+  the whole run, on the agent or in the app settings. The gateway passes it to Goose and
+  Claude Code. Models without thinking are not offered a choice.
+- **Continue keeps the agent's work** — a stage that fails or is cancelled, for example
+  on a rate limit, keeps its worktree, so **Continue** resumes the uncommitted changes
+  and unpushed commits instead of starting over. **Restart** removes the old run's
+  worktree. The agent is told whether it continues an interrupted attempt or revises
+  the stage after feedback.
+- **Agent run cost** — the run summary and every stage show the cost in USD and the
+  tokens split into input, output, cache read and cache write.
+
+### Breaking changes
+
+- **E-mail addresses are stored in lower case** and compared without regard to case.
+  The upgrade converts existing addresses. Two accounts that differ only in the case of
+  their address stay unchanged and each signs in only with its exact address; give one
+  of them another address in **Admin → Users**.
+- **The wiki token budget is one setting for the whole instance.** It moved from
+  **Project settings → Wiki** to **Admin → Settings → Agents and AI**, and
+  `PUT /project/:idProject/wiki/settings` is gone. The upgrade keeps the largest budget
+  any project had.
+- **Turn limits are set per stage.** `maxTurnsPlan` and `maxTurnsImplement` of an agent
+  and the app settings `agent.max_turns_plan` and `agent.max_turns_implement` are
+  replaced by a limit for each stage (`agent.max_turns.<stage>`). The upgrade copies the
+  planning limit to every stage but implementation.
+- **The dates and estimate of a summary task are computed.** `update_issue` and
+  `bulk_update_issues` refuse to change them with `SUMMARY_COMPUTED`.
+- **The released commercial image ignores `LICENSE_PUBLIC_KEY`** and verifies the key
+  against its built-in public key.
+- **`stage_execute` no longer carries `previousFailedAttempt`.** It sends `resumedAfter`
+  and `isRevision` instead, and Restart sends the new `run_discarded` event.
+
+### Added
+
+- Single sign-on over OpenID Connect and SAML 2.0, SCIM 2.0 provisioning, group mapping
+  to teams and the admin role, enforced SSO with break-glass accounts, company sign-in
+  on the login page, and SSO details on users and teams. Commercial image only.
+- `PUBLIC_BASE_URL`, the address people open in the browser. SSO and SCIM need it.
+- `SSO_ENCRYPTION_KEY`, which encrypts the SSO client secret and the SAML certificate
+  key. Commercial image only.
+- A tool that signs customer license keys.
+- **Set a new password** for a user in **Admin → Users**, which signs the user out
+  everywhere.
+- The change history of a task in the activity feed and at
+  `GET /project/:idProject/issue/:idIssuePublic/history`.
+- Bulk edit in the table and on the Kanban board, with the shortcuts <kbd>x</kbd>,
+  <kbd>Shift</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>, <kbd>Shift</kbd>+<kbd>X</kbd> and
+  <kbd>e</kbd>. The issue batch endpoint can now unassign tasks, refuses agents as
+  assignees and notifies people as a single edit does.
+- Keyboard navigation on the Kanban board: <kbd>j</kbd>/<kbd>k</kbd>,
+  <kbd>h</kbd>/<kbd>l</kbd> and the arrow keys.
+- Summary tasks, the WBS outline and `PUT /project/:idProject/issue/:idIssuePublic/parent`.
+- Thinking effort per stage, per run, per agent and in the app settings. A gateway with
+  Ollama models reports which of them do not think.
+- The cost and token breakdown of agent runs. Claude Code costs are marked `≈` as an
+  estimate; local models show `—`.
+- The `WORKTREE_RETENTION_DAYS` (7) and `UNPUSHED_BRANCH_RETENTION_DAYS` (30) gateway
+  settings, and the `worktree_unusable` stage error.
+- A copy button on code blocks in every rendered Markdown and in plain wiki code blocks.
+- A **Text / Preview** switch in the admin skill editor.
+- A **Filter** toggle with **Show archived** in the custom field settings.
+- A show/hide toggle on the password field of the login form.
+
+### Changed
+
+- **Admin → Settings** is split into tabs: **General**, **Agents and AI** and **SSO**.
+- `MCP_PUBLIC_BASE_URL` is renamed to `PUBLIC_BASE_URL`. The old name still works when
+  the new one is unset.
+- A failed or cancelled stage keeps its worktree until Restart or retention removes it;
+  retention counts from the last stage that used the worktree and also deletes unused
+  local agent branches.
+- The wiki tree opens over the page on tablets and phones, the wiki editor switches
+  between **Write**, **Preview** and **Settings** on narrow screens, and the linked tasks
+  panel moves under the article.
+- The login page, the profile and password forms and the API key form fit narrow and
+  short screens; the API key table scrolls on its own.
+- The docs show keyboard shortcuts for Windows/Linux and Mac side by side.
+
+### Fixed
+
+- A task without tracked time showed a bare `0h` next to a hidden _Tracked_ label.
+- Saving an unchanged comment edit left the editor open. Task comment edits now show
+  **Save** and **Cancel** like chat edits.
+
+### Database
+
+Six migrations, applied automatically on startup:
+
+| Migration                                    | Purpose                                                         |
+| -------------------------------------------- | --------------------------------------------------------------- |
+| `20261104120000_agent_task_cost.sql`         | token breakdown and cost of agent tasks                         |
+| `20261104130000_wiki_global_token_limit.sql` | the wiki token budget as one app setting                        |
+| `20261105120000_issue_summary_rollup.sql`    | summary tasks and the values rolled up from their subtasks      |
+| `20261107120000_agent_thinking_effort.sql`   | thinking effort, per-stage defaults and models without thinking |
+| `20261110120000_sso.sql`                     | SSO, SCIM, break-glass accounts and lower-case e-mail addresses |
+| `20261114120000_issue_history.sql`           | the change history of tasks                                     |
+
+Rolling back to 1.7.0 requires `goose down`; removing the image is not enough.
+
+### Upgrading
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Migrations run on startup. Upgrade the tracker and every gateway together. See
+[Upgrading](https://rurdesk.com/docs/upgrading.html) for the details.
+
+[1.8.0]: https://github.com/bitmaster-sk/rurdesk/compare/v1.7.0...v1.8.0
+
 ## [1.7.0] - 2026-11-03
 
 Tags and releases for tasks, task links that work across projects, and users and agents
