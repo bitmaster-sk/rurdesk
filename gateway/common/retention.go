@@ -10,24 +10,33 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Retention deletes worktree directories idle longer than maxAge. Idle is
-// measured by mtime — the agent touches files on every stage attempt, so no
-// recent activity means complete or abandoned. Worktrees active in the
-// orchestrator's activeTasks map are skipped regardless of mtime.
+// Retention deletes worktree directories whose root mtime is older than maxAge,
+// then the local agent branches no worktree uses. Worktrees of active tasks are
+// skipped regardless of mtime.
 type Retention struct {
-	cfg          *Config
-	orchestrator *Orchestrator
-	interval     time.Duration
-	maxAge       time.Duration
+	cfg                  *Config
+	orchestrator         *Orchestrator
+	interval             time.Duration
+	maxAge               time.Duration
+	unpushedBranchMaxAge time.Duration
 }
 
 func NewRetention(cfg *Config, orch *Orchestrator) *Retention {
 	return &Retention{
-		cfg:          cfg,
-		orchestrator: orch,
-		interval:     1 * time.Hour,
-		maxAge:       7 * 24 * time.Hour,
+		cfg:                  cfg,
+		orchestrator:         orch,
+		interval:             1 * time.Hour,
+		maxAge:               durationOrDays(cfg.WorktreeRetention, defaultWorktreeRetentionDays),
+		unpushedBranchMaxAge: durationOrDays(cfg.UnpushedBranchRetention, defaultUnpushedBranchRetentionDays),
 	}
+}
+
+// durationOrDays returns duration, or defaultDays when duration is not set.
+func durationOrDays(duration time.Duration, defaultDays int) time.Duration {
+	if duration > 0 {
+		return duration
+	}
+	return time.Duration(defaultDays) * 24 * time.Hour
 }
 
 func (r *Retention) Start(ctx context.Context) {
@@ -59,6 +68,13 @@ func (r *Retention) runOnce() {
 }
 
 func (r *Retention) pruneClone(repoPath string, activeRuns map[int64]bool) {
+	r.pruneWorktrees(repoPath, activeRuns)
+	if err := PruneAgentBranches(repoPath, time.Now().Add(-r.unpushedBranchMaxAge)); err != nil {
+		log.Warn().Str("repo", repoPath).Err(err).Msg("retention: cannot prune agent branches")
+	}
+}
+
+func (r *Retention) pruneWorktrees(repoPath string, activeRuns map[int64]bool) {
 	cutoff := time.Now().Add(-r.maxAge)
 	agentRunsPath := filepath.Join(repoPath, agentRunsDir)
 	entries, err := os.ReadDir(agentRunsPath)

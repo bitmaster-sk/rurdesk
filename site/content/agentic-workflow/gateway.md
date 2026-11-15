@@ -187,6 +187,20 @@ needs no repository.
   `<WORKSPACE_BASE>/<host>/<repository path>`, e.g.
   `/worktrees/github.com/your-org/your-repo`. Every run gets its own worktree in
   that clone, branched from the freshly fetched base branch.
+- **Worktree lifetime.** A run keeps its worktree when a stage fails or is
+  cancelled, so **Continue** resumes the unfinished work: uncommitted changes and
+  commits that were never pushed, or a rebase the agent stopped in the middle of.
+  **Restart** removes the old run's worktree as soon as the gateway is not running
+  another stage. Otherwise the gateway removes a worktree once nothing has used it for
+  `WORKTREE_RETENTION_DAYS`. It then deletes the local branch too: right away when
+  all its commits are on the git host, after `UNPUSHED_BRANCH_RETENTION_DAYS`
+  when some never were.
+- **Unusable worktree.** If a run's worktree has no branch checked out, because a
+  newer run of the issue took over its pull request branch, or is no longer a git
+  worktree, the stage fails with `worktree_unusable`. When the worktree holds
+  nothing that could be lost, the gateway replaces it on its own instead. To
+  recover, remove the directory named in the error on the gateway host (this
+  needs shell access to it), then press **Continue**.
 - **Base branch.** The tracker picks it when the run starts: the **Base branch**
   of the git integration, or the repository's default branch when it is empty.
   An empty repository gets `main`, and the gateway pushes an initial commit to it.
@@ -250,6 +264,8 @@ If the certificate comes from an internal CA, point the tracker at it with
 | `MAX_OUTPUT_LINE_MB`              | `4`               | Longest single line of agent output the gateway reads, in MB. A longer line is skipped and logged as a warning, and the stage keeps running.                                                                                                                                                                            |
 | `LOG_LEVEL`                       | `info`            | `debug` \| `info` \| `warn` \| `error` (JSON output).                                                                                                                                                                                                                                                                   |
 | `WORKSPACE_BASE`                  | `/worktrees`      | Root for the clones and their per-run worktrees; must match the workspace volume mount.                                                                                                                                                                                                                                 |
+| `WORKTREE_RETENTION_DAYS`         | `7`               | Days a run worktree may stay unused before the gateway removes it. A failed or cancelled run keeps its worktree for Continue until then. Must be a whole number of at least 1. |
+| `UNPUSHED_BRANCH_RETENTION_DAYS`  | `30`              | Days a local branch with commits that never reached the git host outlives its worktree. Branches whose commits are all on the host go together with the worktree. Must be a whole number of at least 1. |
 
 ## Authentication
 

@@ -22,6 +22,11 @@ var errTaskGone = errors.New("tracker no longer runs this task")
 type activeTask struct {
 	task   Task
 	cancel context.CancelFunc
+	// discarded asks runStage to remove the run's worktree once the agent stops.
+	discarded bool
+	// isPastCleanup is set once runStage no longer checks discarded, so a
+	// later run_discarded has to remove the worktree itself.
+	isPastCleanup bool
 }
 
 // Orchestrator dispatches stage_execute webhook events to the agent and
@@ -66,6 +71,8 @@ func (o *Orchestrator) HandleEvent(event WebhookEvent) error {
 		return o.handleStageExecute(event)
 	case "cancelled":
 		return o.handleCancelled(event)
+	case "run_discarded":
+		return o.handleRunDiscarded(event)
 	default:
 		log.Warn().Str("type", event.Type).Str("eventId", event.EventId).Msg("unhandled event type — nothing dispatched")
 		return nil
@@ -97,19 +104,49 @@ func (o *Orchestrator) handleStageExecute(event WebhookEvent) error {
 	return nil
 }
 
+// handleCancelled stops the run's stage but keeps its worktree, so Continue
+// can resume the unfinished work.
 func (o *Orchestrator) handleCancelled(event WebhookEvent) error {
 	if event.IdRun == 0 {
 		return fmt.Errorf("cancelled event missing idRun")
 	}
+	toCancel, _ := o.activeTasksOfRun(event.IdRun, false)
+	o.cancelTasks(toCancel)
+	return nil
+}
+
+// handleRunDiscarded stops the run's stage and removes its worktree after
+// Restart replaced the run. Only attempts running now are marked, so a later
+// Continue of the same run keeps its new worktree.
+func (o *Orchestrator) handleRunDiscarded(event WebhookEvent) error {
+	if event.IdRun == 0 {
+		return fmt.Errorf("run_discarded event missing idRun")
+	}
+	toCancel, isWorktreeUnowned := o.activeTasksOfRun(event.IdRun, true)
+	o.cancelTasks(toCancel)
+	if isWorktreeUnowned {
+		go o.removeDiscardedWorktree(event.IdRun)
+	}
+	return nil
+}
+
+// activeTasksOfRun also reports whether no task will remove the run's worktree
+// itself.
+func (o *Orchestrator) activeTasksOfRun(idRun int64, isDiscarded bool) (tasks []*activeTask, isWorktreeUnowned bool) {
 	o.mu.Lock()
-	var toCancel []*activeTask
+	defer o.mu.Unlock()
+	isWorktreeUnowned = true
 	for _, at := range o.activeTasks {
-		if at.task.IdRun == event.IdRun {
-			toCancel = append(toCancel, at)
+		if at.task.IdRun == idRun {
+			at.discarded = at.discarded || isDiscarded
+			isWorktreeUnowned = isWorktreeUnowned && at.isPastCleanup
+			tasks = append(tasks, at)
 		}
 	}
-	o.mu.Unlock()
+	return tasks, isWorktreeUnowned
+}
 
+func (o *Orchestrator) cancelTasks(toCancel []*activeTask) {
 	for _, at := range toCancel {
 		if at.cancel != nil {
 			at.cancel()
@@ -119,7 +156,54 @@ func (o *Orchestrator) handleCancelled(event WebhookEvent) error {
 			log.Warn().Int64("idRun", at.task.IdRun).Err(err).Msg("agent cancel returned error")
 		}
 	}
-	return nil
+}
+
+// removeWorktreeIfDiscarded runs while the stage still holds the semaphore, so
+// no later attempt of the run can have created a new worktree yet.
+func (o *Orchestrator) removeWorktreeIfDiscarded(idTask, idRun int64) {
+	if o.finishCleanup(idTask) {
+		o.removeRunWorktree(idRun)
+	}
+}
+
+// finishCleanup reports whether the task was discarded and hands any later
+// run_discarded the removal of the worktree.
+func (o *Orchestrator) finishCleanup(idTask int64) (isDiscarded bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	at := o.activeTasks[idTask]
+	if at == nil {
+		return false
+	}
+	at.isPastCleanup = true
+	return at.discarded
+}
+
+// removeDiscardedWorktree waits for a stage slot first. Slots go to waiters
+// in arrival order, so a Continue of the run sent after Restart cannot reuse
+// the worktree before it is removed.
+func (o *Orchestrator) removeDiscardedWorktree(idRun int64) {
+	o.sem <- struct{}{}
+	defer func() { <-o.sem }()
+	o.removeRunWorktree(idRun)
+}
+
+func (o *Orchestrator) removeRunWorktree(idRun int64) {
+	clones, err := ListClones(o.cfg.WorkspaceBase)
+	if err != nil {
+		log.Warn().Int64("idRun", idRun).Err(err).Msg("cannot list clones to remove a discarded worktree")
+		return
+	}
+	for _, repoPath := range clones {
+		if !WorktreeExists(repoPath, idRun) {
+			continue
+		}
+		if err := RemoveWorktree(repoPath, idRun); err != nil {
+			log.Warn().Int64("idRun", idRun).Str("repo", repoPath).Err(err).Msg("failed to remove a discarded worktree")
+			continue
+		}
+		log.Info().Int64("idRun", idRun).Str("repo", repoPath).Msg("removed the worktree of a discarded run")
+	}
 }
 
 func (o *Orchestrator) completeTaskNoAction(task Task) {
@@ -186,13 +270,20 @@ func (o *Orchestrator) runStage(task Task) {
 	select {
 	case o.sem <- struct{}{}:
 	case <-ctx.Done():
+		if o.finishCleanup(task.IdTask) {
+			go o.removeDiscardedWorktree(task.IdRun)
+		}
 		return
 	}
 	defer func() { <-o.sem }()
+	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
 
-	discardWorkspace, ok := o.prepareWorkspace(&task)
+	cleanup, ok := o.prepareWorkspace(&task)
 	if !ok {
 		return
+	}
+	if cleanup != nil {
+		defer cleanup()
 	}
 
 	log.Info().
@@ -202,20 +293,15 @@ func (o *Orchestrator) runStage(task Task) {
 		Msg("dispatching agent")
 	start := time.Now()
 	stats, err := o.agent.Run(ctx, task)
+	// A failed or dropped attempt keeps its worktree for Continue.
 	if errors.Is(context.Cause(ctx), errTaskGone) {
-		discardWorkspace()
 		return
 	}
 	if err != nil {
 		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("agent run failed")
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
-		// Worktree is removed on failure so the next attempt starts fresh.
-		discardWorkspace()
 		return
-	}
-	if isRepoless {
-		discardWorkspace()
 	}
 	o.state.RecordRunDuration(time.Since(start))
 	// The agent already posted complete_stage via its MCP tool but rarely
@@ -228,7 +314,9 @@ func (o *Orchestrator) runStage(task Task) {
 	}
 }
 
-func (o *Orchestrator) prepareWorkspace(task *Task) (func(), bool) {
+// prepareWorkspace returns a cleanup only for the scratch directory of a
+// repoless stage; a run's worktree outlives the stage attempt.
+func (o *Orchestrator) prepareWorkspace(task *Task) (cleanup func(), ok bool) {
 	if task.Stage == StageReleaseNotes {
 		dir, err := os.MkdirTemp("", fmt.Sprintf("release-notes-%d-", task.IdRun))
 		if err != nil {
@@ -247,13 +335,12 @@ func (o *Orchestrator) prepareWorkspace(task *Task) (func(), bool) {
 		return nil, false
 	}
 
+	isReused, ok := o.reuseRunWorktree(repoPath, task)
+	if !ok {
+		return nil, false
+	}
 	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
-	if WorktreeExists(repoPath, task.IdRun) {
-		task.WorktreePath = WorktreePath(repoPath, task.IdRun)
-		if branch, err := branchOfWorktree(task.WorktreePath); err == nil {
-			task.Branch = branch
-		}
-	} else {
+	if !isReused {
 		path, branch, err := o.createRunWorktree(repoPath, *task)
 		if err != nil {
 			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
@@ -263,7 +350,46 @@ func (o *Orchestrator) prepareWorkspace(task *Task) (func(), bool) {
 		task.WorktreePath = path
 		task.Branch = branch
 	}
-	return func() { _ = RemoveWorktree(repoPath, task.IdRun) }, true
+	// Retention measures idleness by the root's mtime, which edits in
+	// subdirectories never change.
+	now := time.Now()
+	if err := os.Chtimes(task.WorktreePath, now, now); err != nil {
+		log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("failed to mark the worktree as used")
+	}
+	return nil, true
+}
+
+// reuseRunWorktree points the task at the run's existing worktree. A clean
+// detached worktree is removed so the caller creates a new one; any other
+// worktree without a branch fails the stage and stays on disk for an operator.
+func (o *Orchestrator) reuseRunWorktree(repoPath string, task *Task) (isReused, ok bool) {
+	if !WorktreeExists(repoPath, task.IdRun) {
+		return false, true
+	}
+	worktreePath := WorktreePath(repoPath, task.IdRun)
+	branch, isDisposable, err := worktreeState(worktreePath)
+	switch {
+	case err == nil && branch != "":
+		task.WorktreePath = worktreePath
+		task.Branch = branch
+		task.ResumedWorktree = true
+		return true, true
+	case err == nil && isDisposable:
+		log.Info().Int64("idRun", task.IdRun).Msg("worktree is detached and holds no work — creating a new one")
+		if err := RemoveWorktree(repoPath, task.IdRun); err != nil {
+			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to remove the detached worktree")
+			o.failTask(*task, "worktree_error", err.Error())
+			return false, false
+		}
+		return false, true
+	default:
+		log.Warn().Int64("idTask", task.IdTask).Str("path", worktreePath).AnErr("cause", err).Msg("worktree cannot be reused")
+		o.failTask(*task, ErrCodeWorktreeUnusable, fmt.Sprintf(
+			"the worktree of run %d at %s has no branch checked out or is not a git worktree, so this run cannot continue on it; "+
+				"another run has likely taken over its branch. To retry, remove that directory on the gateway host; anything not pushed is then lost",
+			task.IdRun, worktreePath))
+		return false, false
+	}
 }
 
 func (o *Orchestrator) applyStageOptions(task *Task) error {
@@ -452,6 +578,8 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 			task.ApprovedMockupRef = *bundle.ApprovedMockupRef
 		}
 		task.IsShortWorkflow = bundle.IsShortWorkflow
+		task.ResumedAfter = bundle.ResumedAfter
+		task.IsRevision = bundle.IsRevision
 		for _, skill := range decodeEach[model.Skill](bundle.Skills) {
 			if skill.Name == "" || skill.Content == "" {
 				continue

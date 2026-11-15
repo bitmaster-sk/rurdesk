@@ -27,4 +27,9 @@ type ContextBundle struct {
 	WikiProposals     []json.RawMessage     `json:"wikiProposals"`
 	IsShortWorkflow   bool                  `json:"isShortWorkflow"`
 	Release           *ReleasePromptContext `json:"release"`
+	// ResumedAfter is the reason the previous attempt of this stage stopped
+	// ("" when it did not fail or was not cancelled); IsRevision is set when an
+	// earlier attempt completed and the user sent the stage back.
+	ResumedAfter string `json:"resumedAfter"`
+	IsRevision   bool   `json:"isRevision"`
 }

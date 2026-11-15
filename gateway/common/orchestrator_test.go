@@ -453,6 +453,24 @@ func TestParseStageExecutePayload_CarriesPrBranch(t *testing.T) {
 	}
 }
 
+func TestParseStageExecutePayload_CarriesAttemptContext(t *testing.T) {
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "implementation",
+			"contextBundle": {"resumedAfter": "provider_rate_limited", "isRevision": true}
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.ResumedAfter != "provider_rate_limited" || !task.IsRevision {
+		t.Errorf("attempt context = (%q, %v), want (provider_rate_limited, true)", task.ResumedAfter, task.IsRevision)
+	}
+}
+
 func TestCreateRunWorktree_PicksBranch(t *testing.T) {
 	const prBranch = "agent/a3/i48/1790053695"
 	tests := []struct {
@@ -750,7 +768,8 @@ func TestParseStageExecutePayload_RealTrackerPayload(t *testing.T) {
 					{"id": 9, "kind": "update", "slug": "gateway-webhook-protocol", "title": "Gateway Webhook Protocol", "parent": null, "reason": "payload types", "baseVersion": 1, "state": "open", "updated": false}
 				],
 				"isShortWorkflow": false,
-				"previousFailedAttempt": null
+				"resumedAfter": "",
+				"isRevision": false
 			}
 		}
 	}`

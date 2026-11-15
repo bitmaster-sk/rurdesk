@@ -418,6 +418,13 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	} else {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
+	// The gateway's retention removes the worktree anyway, so a failed delivery
+	// only delays the cleanup.
+	go func() {
+		if err := ctrl.dispatcher.DispatchRunDiscarded(context.Background(), oldRun); err != nil {
+			log.Warn().Err(err).Int64("idRun", idRun).Msg("restart: failed to tell the gateway to discard the run")
+		}
+	}()
 
 	stagePlan, err := ctrl.stagePlan.BuildFromChoices(oldRun.Kind, ctrl.stagePlan.Choices(oldRun.StagePlan))
 	if err != nil {

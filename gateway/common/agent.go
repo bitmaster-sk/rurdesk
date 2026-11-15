@@ -66,6 +66,12 @@ type Task struct {
 
 	IsShortWorkflow bool
 
+	// ResumedAfter and IsRevision say why this attempt exists. ResumedWorktree
+	// is set when the attempt reuses the run's existing worktree.
+	ResumedAfter    string
+	IsRevision      bool
+	ResumedWorktree bool
+
 	// RejectedOutput is the markdown body of this stage's previous, rejected
 	// attempt — shipped only when re-executing after rejection. Rendered with
 	// an explicit "rejected, revise it" label; must never look approved.

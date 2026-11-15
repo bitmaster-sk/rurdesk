@@ -190,6 +190,7 @@
             "MAX_TURNS_OVER_LIMIT": "The turn limit is higher than the gateway allows. Lower it and press Continue.",
             "EFFORT_NOT_ALLOWED": "The gateway refused the thinking effort. Pick another one and press Continue.",
             "WORKTREE_ERROR": "The workspace could not be prepared. Press Restart to begin a fresh run.",
+            "WORKTREE_UNUSABLE": "The workspace of this run on the gateway is in a state the agent cannot continue from. Ask the gateway operator to remove it (see the details below), then press Continue.",
             "TRACKER_MISSING_REPO": "The gateway got no repository for this run. Update the tracker so it sends the project git integration, then press Continue.",
             "GIT_TOKEN_UNREADABLE": "The gateway could not decrypt the git token of this run. Make sure its TRACKER_TO_GATEWAY_TOKEN matches the gateway in the tracker, then press Continue.",
             "DISPATCH_FAILED": "The tracker could not start this stage. Check the details below, then press Continue or Restart.",

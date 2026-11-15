@@ -224,19 +224,55 @@ func TestRenderPrompt_RejectsUnknownStage(t *testing.T) {
 	}
 }
 
-func TestRenderPrompt_RevisionHintForAttemptN(t *testing.T) {
-	task := Task{
-		IdTask:    1,
-		IdRun:     1,
-		Stage:     StageDesign,
-		AttemptNo: 3,
+func TestRenderPrompt_AttemptContext(t *testing.T) {
+	const (
+		revision   = "revision after user feedback"
+		continuing = "continuing after the previous attempt stopped"
+		gitStatus  = "git status"
+		recreated  = "re-created from branch"
+		lost       = "Its work is not available"
+	)
+	const branch = "agent/a1/i2/3"
+	cases := []struct {
+		name    string
+		task    Task
+		want    []string
+		notWant []string
+	}{
+		{"first attempt", Task{AttemptNo: 1}, nil, []string{revision, continuing}},
+		{"revision only", Task{AttemptNo: 2, IsRevision: true}, []string{revision}, []string{continuing}},
+		{"continuation in the kept worktree",
+			Task{AttemptNo: 2, ResumedAfter: "provider_rate_limited", ResumedWorktree: true, Branch: branch},
+			[]string{continuing, "provider_rate_limited", gitStatus, branch}, []string{revision, recreated, lost}},
+		{"continuation on a worktree re-created from the PR branch",
+			Task{AttemptNo: 2, ResumedAfter: "unknown", Branch: branch, PrBranch: branch},
+			[]string{continuing, recreated}, []string{lost}},
+		{"continuation without the worktree",
+			Task{AttemptNo: 2, ResumedAfter: "cancelled", Branch: branch},
+			[]string{continuing, lost}, []string{gitStatus, recreated}},
+		{"revision interrupted by a failure",
+			Task{AttemptNo: 3, IsRevision: true, ResumedAfter: "provider_rate_limited", ResumedWorktree: true, Branch: branch},
+			[]string{revision, continuing}, nil},
 	}
-	out, err := RenderPrompt(task)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(out, "revision") {
-		t.Errorf("attempt > 1 prompt should mention revision; got:\n%s", out)
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.task.IdTask, testCase.task.IdRun, testCase.task.Stage = 1, 1, StageImplementation
+			testCase.task.Repo.BaseBranch = "main"
+			out, err := RenderPrompt(testCase.task)
+			if err != nil {
+				t.Fatalf("RenderPrompt: %v", err)
+			}
+			for _, want := range testCase.want {
+				if !strings.Contains(out, want) {
+					t.Errorf("prompt lacks %q", want)
+				}
+			}
+			for _, notWant := range testCase.notWant {
+				if strings.Contains(out, notWant) {
+					t.Errorf("prompt contains %q", notWant)
+				}
+			}
+		})
 	}
 }
 

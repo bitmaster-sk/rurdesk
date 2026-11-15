@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // git runs a git command in dir, failing the test with combined output on error.
@@ -442,5 +443,131 @@ func TestResumeWorktree_TakesBranchFromStaleWorktree(t *testing.T) {
 	}
 	if got := headSha(t, worktreePath); got != want {
 		t.Errorf("worktree HEAD = %s, want %s", got, want)
+	}
+}
+
+// commitOn commits a file on branch in the clone at the given committer date,
+// without checking the branch out.
+func commitOn(t *testing.T, repoPath, branch, name string, date time.Time) {
+	t.Helper()
+	worktreePath := filepath.Join(t.TempDir(), "wt")
+	git(t, repoPath, "worktree", "add", worktreePath, branch)
+	if err := os.WriteFile(filepath.Join(worktreePath, name), []byte(name+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, worktreePath, "add", name)
+	stamp := date.Format(time.RFC3339)
+	cmd := exec.Command("git", "commit", "-m", name)
+	cmd.Dir = worktreePath
+	cmd.Env = append(os.Environ(), "GIT_COMMITTER_DATE="+stamp, "GIT_AUTHOR_DATE="+stamp)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("commit on %s: %v\n%s", branch, err, out)
+	}
+	git(t, repoPath, "worktree", "remove", "--force", worktreePath)
+}
+
+func TestPruneAgentBranches(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
+	git(t, repoPath, "fetch", "origin", "main")
+	now := time.Now()
+	daysAgo := func(days int) time.Time { return now.Add(-time.Duration(days) * 24 * time.Hour) }
+
+	branch := func(name string) { git(t, repoPath, "branch", name, "origin/main") }
+	push := func(name string) { git(t, repoPath, "push", "origin", name) }
+
+	branch("agent/a1/i1/1")
+	commitOn(t, repoPath, "agent/a1/i1/1", "pushed.txt", daysAgo(1))
+	push("agent/a1/i1/1")
+	branch("agent/a1/i5/5")
+	branch("agent/a1/i2/2")
+	commitOn(t, repoPath, "agent/a1/i2/2", "young.txt", daysAgo(10))
+	branch("agent/a1/i6/6")
+	commitOn(t, repoPath, "agent/a1/i6/6", "old.txt", daysAgo(40))
+	branch("agent/a1/i3/3")
+	push("agent/a1/i3/3")
+	git(t, repoPath, "worktree", "add", filepath.Join(t.TempDir(), "in-use"), "agent/a1/i3/3")
+	branch("agent/a1/i4/x")
+	push("agent/a1/i4/x")
+	branch("feature/x")
+	commitOn(t, repoPath, "feature/x", "feature.txt", daysAgo(40))
+
+	if err := PruneAgentBranches(repoPath, daysAgo(30)); err != nil {
+		t.Fatalf("PruneAgentBranches: %v", err)
+	}
+
+	cases := []struct {
+		branch     string
+		wantExists bool
+	}{
+		{"agent/a1/i1/1", false}, // pushed, no worktree
+		{"agent/a1/i5/5", false}, // no own commits
+		{"agent/a1/i2/2", true},  // unpushed, younger than the cutoff
+		{"agent/a1/i6/6", false}, // unpushed, older than the cutoff
+		{"agent/a1/i3/3", true},  // checked out in a worktree
+		{"agent/a1/i4/x", true},  // not an agent branch name
+		{"feature/x", true},
+		{"main", true},
+	}
+	for _, testCase := range cases {
+		err := runGitQuiet(repoPath, "rev-parse", "--verify", "refs/heads/"+testCase.branch)
+		if exists := err == nil; exists != testCase.wantExists {
+			t.Errorf("branch %s exists = %v, want %v", testCase.branch, exists, testCase.wantExists)
+		}
+	}
+}
+
+func TestCreateWorktree_ReplacesWorktreeWhoseDirectoryWasDeleted(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
+	worktreePath, err := CreateWorktree(repoPath, testGitToken, "main", "agent/a1/i1/1", 1)
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	if err := os.RemoveAll(worktreePath); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := CreateWorktree(repoPath, testGitToken, "main", "agent/a1/i1/2", 1); err != nil {
+		t.Fatalf("CreateWorktree after its directory was deleted: %v", err)
+	}
+}
+
+// stopMidRebase leaves the worktree in a rebase paused on a conflict, as an
+// agent stopped while rebasing would.
+func stopMidRebase(t *testing.T, repoPath, worktreePath string) {
+	t.Helper()
+	git(t, repoPath, "branch", "conflicting", "origin/main")
+	commitOn(t, repoPath, "conflicting", "conflict.txt", time.Now())
+	if err := os.WriteFile(filepath.Join(worktreePath, "conflict.txt"), []byte("mine\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, worktreePath, "add", "conflict.txt")
+	git(t, worktreePath, "commit", "-m", "mine")
+	cmd := exec.Command("git", "rebase", "conflicting")
+	cmd.Dir = worktreePath
+	if out, err := cmd.CombinedOutput(); err == nil {
+		t.Fatalf("rebase did not stop on a conflict:\n%s", out)
+	}
+}
+
+func TestPruneAgentBranches_KeepsBranchUnderRebase(t *testing.T) {
+	tmp := newGitEnv(t)
+	originPath, _ := seedOrigin(t, tmp, "main")
+	repoPath := ensureRepo(t, filepath.Join(tmp, "ws"), testRepo(originPath, "example.com", "main"))
+	worktreePath, err := CreateWorktree(repoPath, testGitToken, "main", "agent/a1/i1/1", 1)
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	stopMidRebase(t, repoPath, worktreePath)
+
+	if err := PruneAgentBranches(repoPath, time.Now().Add(time.Hour)); err != nil {
+		t.Fatalf("PruneAgentBranches: %v", err)
+	}
+
+	if err := runGitQuiet(repoPath, "rev-parse", "--verify", "refs/heads/agent/a1/i1/1"); err != nil {
+		t.Errorf("the branch of a worktree stopped mid-rebase was deleted: %v", err)
 	}
 }

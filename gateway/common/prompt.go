@@ -40,8 +40,15 @@ two messages conflict, the later one is what the user wants now.
 Note: #{{.IdIssuePublic}} is the human-readable label shown in the UI. Do NOT pass it to tools — tools always require the numeric issue_id above.
 
 ## Stage
-{{.Stage}} (attempt #{{.AttemptNo}}{{if gt .AttemptNo 1}} — revision after user feedback{{end}})
-{{if .ApprovedDesign}}
+{{.Stage}} (attempt #{{.AttemptNo}}{{if .IsRevision}} — revision after user feedback{{end}}{{if .ResumedAfter}} — continuing after the previous attempt stopped{{end}})
+{{if .ResumedAfter}}
+## Continuing an interrupted attempt
+The previous attempt of this stage stopped before it finished (reason: ` + "`{{.ResumedAfter}}`" + `).
+{{- if .ResumedWorktree}} This worktree may still hold its work on branch ` + "`{{.Branch}}`" + `: uncommitted changes and local commits. Start with ` + "`git status`" + ` and ` + "`git log --oneline origin/{{.Repo.BaseBranch}}..HEAD`" + `, then continue from where it stopped. Do not start over and do not discard these changes.
+{{- else if and .PrBranch (eq .Branch .PrBranch)}} This worktree was re-created from branch ` + "`{{.Branch}}`" + ` as it is on origin. Anything the previous attempt did not push is gone. Check ` + "`git log --oneline origin/{{.Repo.BaseBranch}}..HEAD`" + ` to see what is already there.
+{{- else}} Its work is not available, so this worktree starts from the base branch.
+{{- end}}
+{{end}}{{if .ApprovedDesign}}
 ## Approved design (accepted when it was written — build on it, do not redo it)
 Anything the conversation asked for after this was written overrides it. Do not undo such a change to bring the code back in line with this document.
 {{.ApprovedDesign}}

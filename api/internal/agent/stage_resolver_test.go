@@ -140,3 +140,42 @@ func TestResolveNextStage_BadJSONFails(t *testing.T) {
 		t.Errorf("expected error for malformed stage_plan")
 	}
 }
+
+func TestResolveAttemptContext(t *testing.T) {
+	reason := func(value string) *string { return &value }
+	attempt := func(stage string, attemptNo int, status string, errorReason *string) *model.AgentTask {
+		return &model.AgentTask{IdTask: int64(attemptNo), Stage: stage, AttemptNo: attemptNo, Status: status, ErrorReason: errorReason}
+	}
+	impl := constants.StageImplementation
+	cases := []struct {
+		name             string
+		prior            []*model.AgentTask
+		attemptNo        int
+		wantResumedAfter string
+		wantIsRevision   bool
+	}{
+		{"first attempt", nil, 1, "", false},
+		{"after a rate limit", []*model.AgentTask{attempt(impl, 1, constants.TaskStatusFailed, reason("provider_rate_limited"))}, 2, "provider_rate_limited", false},
+		{"after a failure without a reason", []*model.AgentTask{attempt(impl, 1, constants.TaskStatusFailed, nil)}, 2, "unknown", false},
+		{"after a cancel", []*model.AgentTask{attempt(impl, 1, constants.TaskStatusCancelled, nil)}, 2, "cancelled", false},
+		{"after user feedback", []*model.AgentTask{attempt(impl, 1, constants.TaskStatusCompleted, nil)}, 2, "", true},
+		{"revision interrupted by a failure", []*model.AgentTask{
+			attempt(impl, 1, constants.TaskStatusCompleted, nil),
+			attempt(impl, 2, constants.TaskStatusFailed, reason("provider_rate_limited")),
+		}, 3, "provider_rate_limited", true},
+		{"failure in another stage", []*model.AgentTask{attempt(constants.StageDesign, 1, constants.TaskStatusFailed, reason("provider_error"))}, 1, "", false},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			task := attempt(impl, testCase.attemptNo, constants.TaskStatusActive, nil)
+			task.IdTask = 100
+			tasks := append(append([]*model.AgentTask(nil), testCase.prior...), task)
+
+			resumedAfter, isRevision := ResolveAttemptContext(tasks, task)
+
+			if resumedAfter != testCase.wantResumedAfter || isRevision != testCase.wantIsRevision {
+				t.Errorf("ResolveAttemptContext = (%q, %v), want (%q, %v)", resumedAfter, isRevision, testCase.wantResumedAfter, testCase.wantIsRevision)
+			}
+		})
+	}
+}

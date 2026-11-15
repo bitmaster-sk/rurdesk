@@ -234,6 +234,20 @@ func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun)
 	return d.DispatchEvent(ctx, run, event)
 }
 
+// DispatchRunDiscarded tells the gateway that Restart replaced the run, so it
+// stops the run's stage and removes its worktree.
+func (d *Dispatcher) DispatchRunDiscarded(ctx context.Context, run *model.AgentRun) error {
+	event := WebhookEvent{
+		IdRun:       run.IdRun,
+		IdProject:   run.IdProject,
+		IdIssue:     run.IdIssue,
+		IdUserAgent: run.IdUserAgent,
+		Event:       "run_discarded",
+		Payload:     map[string]any{},
+	}
+	return d.DispatchEvent(ctx, run, event)
+}
+
 func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, event WebhookEvent) error {
 	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil || gateway == nil {
@@ -325,13 +339,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		}
 		bundle["release"] = release
 	}
-	if task.AttemptNo > 1 {
-		for _, t := range priorTasks {
-			if t.Stage == task.Stage && t.IdTask != task.IdTask && t.Status == constants.TaskStatusFailed {
-				bundle["previousFailedAttempt"] = t
-			}
-		}
-	}
+	bundle["resumedAfter"], bundle["isRevision"] = ResolveAttemptContext(priorTasks, task)
 	return bundle, wikiReads, nil
 }
 

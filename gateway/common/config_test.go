@@ -3,6 +3,7 @@ package common
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // setBaseEnv sets the required base env vars so adapter-specific tests can
@@ -15,6 +16,8 @@ func setBaseEnv(t *testing.T) {
 	t.Setenv("MODELS", "openai/kimi")
 	t.Setenv("MODEL_DEFAULT", "")
 	t.Setenv("MAX_TURNS_LIMIT", "")
+	t.Setenv("WORKTREE_RETENTION_DAYS", "")
+	t.Setenv("UNPUSHED_BRANCH_RETENTION_DAYS", "")
 }
 
 func TestLoadConfigClaudeCodeNoAPIKeyRequired(t *testing.T) {
@@ -203,5 +206,48 @@ func TestIgnoredRepoEnv_ListsTheRepoVarsStillSet(t *testing.T) {
 
 	if len(got) != 2 || got[0] != "REPO_URL" || got[1] != "REPO_BRANCH_BASE" {
 		t.Errorf("IgnoredRepoEnv = %v, want [REPO_URL REPO_BRANCH_BASE]", got)
+	}
+}
+
+func TestLoadConfig_RetentionDays(t *testing.T) {
+	retentionOf := map[string]func(cfg *Config) time.Duration{
+		"WORKTREE_RETENTION_DAYS":        func(cfg *Config) time.Duration { return cfg.WorktreeRetention },
+		"UNPUSHED_BRANCH_RETENTION_DAYS": func(cfg *Config) time.Duration { return cfg.UnpushedBranchRetention },
+	}
+	defaults := map[string]time.Duration{
+		"WORKTREE_RETENTION_DAYS":        7 * 24 * time.Hour,
+		"UNPUSHED_BRANCH_RETENTION_DAYS": 30 * 24 * time.Hour,
+	}
+	for key, retention := range retentionOf {
+		cases := []struct {
+			value   string
+			want    time.Duration
+			wantErr string
+		}{
+			{value: "", want: defaults[key]},
+			{value: "3", want: 72 * time.Hour},
+			{value: "0", wantErr: key + " must be at least 1"},
+			{value: "abc", wantErr: key + " must be a whole number of days"},
+		}
+		for _, testCase := range cases {
+			t.Run(key+"="+testCase.value, func(t *testing.T) {
+				setBaseEnv(t)
+				t.Setenv(key, testCase.value)
+
+				cfg, err := LoadConfig("goose")
+				if testCase.wantErr != "" {
+					if err == nil || !strings.Contains(err.Error(), testCase.wantErr) {
+						t.Fatalf("LoadConfig error = %v, want %q", err, testCase.wantErr)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("LoadConfig: %v", err)
+				}
+				if got := retention(cfg); got != testCase.want {
+					t.Errorf("%s = %v, want %v", key, got, testCase.want)
+				}
+			})
+		}
 	}
 }

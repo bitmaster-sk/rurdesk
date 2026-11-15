@@ -51,6 +51,38 @@ func ResolveNextAttemptNo(tasks []*model.AgentTask, stage string) int {
 	return maxN + 1
 }
 
+// ResolveAttemptContext returns why this attempt of the stage exists:
+// resumedAfter is how the attempt right before it stopped (its failure reason,
+// "unknown" or "cancelled"), isRevision is set when an earlier attempt completed.
+func ResolveAttemptContext(tasks []*model.AgentTask, task *model.AgentTask) (resumedAfter string, isRevision bool) {
+	var previous *model.AgentTask
+	for _, t := range tasks {
+		if t.Stage != task.Stage || t.AttemptNo >= task.AttemptNo {
+			continue
+		}
+		if t.Status == constants.TaskStatusCompleted {
+			isRevision = true
+		}
+		if previous == nil || t.AttemptNo > previous.AttemptNo {
+			previous = t
+		}
+	}
+	if previous == nil {
+		return "", isRevision
+	}
+	switch previous.Status {
+	case constants.TaskStatusFailed:
+		if previous.ErrorReason == nil || *previous.ErrorReason == "" {
+			return "unknown", isRevision
+		}
+		return *previous.ErrorReason, isRevision
+	case constants.TaskStatusCancelled:
+		return "cancelled", isRevision
+	default:
+		return "", isRevision
+	}
+}
+
 func latestTask(tasks []*model.AgentTask) *model.AgentTask {
 	var latest *model.AgentTask
 	for _, t := range tasks {

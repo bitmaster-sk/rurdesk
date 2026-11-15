@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Tracker endpoint paths are fixed by the tracker's routing, so only the base
@@ -29,8 +30,13 @@ type Config struct {
 	WorkspaceBase      string
 	Models             ModelCatalog
 	MaxTurnsLimit      int
-	ClaudeCode         *ClaudeCodeConfig
-	Goose              *GooseConfig
+	// WorktreeRetention is how long an idle run worktree stays on disk;
+	// UnpushedBranchRetention how long a local branch with commits that are on
+	// no remote outlives its worktree.
+	WorktreeRetention       time.Duration
+	UnpushedBranchRetention time.Duration
+	ClaudeCode              *ClaudeCodeConfig
+	Goose                   *GooseConfig
 }
 
 // ClaudeCodeConfig configures the Claude Code CLI adapter, which authenticates
@@ -113,18 +119,28 @@ func LoadConfig(adapterType string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	worktreeRetention, err := envDays("WORKTREE_RETENTION_DAYS", defaultWorktreeRetentionDays)
+	if err != nil {
+		return nil, err
+	}
+	unpushedBranchRetention, err := envDays("UNPUSHED_BRANCH_RETENTION_DAYS", defaultUnpushedBranchRetentionDays)
+	if err != nil {
+		return nil, err
+	}
 	cfg := &Config{
-		TrackerMCPUrl:      trackerURL + trackerMCPPath,
-		TrackerAPIUrl:      trackerURL + trackerAPIPath,
-		AgentApiKey:        agentApiKey,
-		WebhookSecret:      webhookSecret,
-		ListenPort:         listenPort,
-		MaxOutputLineBytes: maxOutputLineBytes,
-		AdapterType:        adapterType,
-		LogLevel:           logLevel,
-		WorkspaceBase:      workspaceBase,
-		Models:             models,
-		MaxTurnsLimit:      envInt("MAX_TURNS_LIMIT", 0),
+		TrackerMCPUrl:           trackerURL + trackerMCPPath,
+		TrackerAPIUrl:           trackerURL + trackerAPIPath,
+		AgentApiKey:             agentApiKey,
+		WebhookSecret:           webhookSecret,
+		ListenPort:              listenPort,
+		MaxOutputLineBytes:      maxOutputLineBytes,
+		AdapterType:             adapterType,
+		LogLevel:                logLevel,
+		WorkspaceBase:           workspaceBase,
+		Models:                  models,
+		MaxTurnsLimit:           envInt("MAX_TURNS_LIMIT", 0),
+		WorktreeRetention:       worktreeRetention,
+		UnpushedBranchRetention: unpushedBranchRetention,
 	}
 
 	switch adapterType {
@@ -157,6 +173,28 @@ func envOrDefault(key, defaultVal string) string {
 		return val
 	}
 	return defaultVal
+}
+
+const (
+	defaultWorktreeRetentionDays       = 7
+	defaultUnpushedBranchRetentionDays = 30
+)
+
+// envDays returns defaultDays when key is unset and fails on anything but a
+// whole number of days of at least 1.
+func envDays(key string, defaultDays int) (time.Duration, error) {
+	days := defaultDays
+	if val := os.Getenv(key); val != "" {
+		parsed, err := strconv.Atoi(val)
+		if err != nil {
+			return 0, fmt.Errorf("%s must be a whole number of days, got %q", key, val)
+		}
+		days = parsed
+	}
+	if days < 1 {
+		return 0, fmt.Errorf("%s must be at least 1, got %d", key, days)
+	}
+	return time.Duration(days) * 24 * time.Hour, nil
 }
 
 func envInt(key string, defaultVal int) int {
