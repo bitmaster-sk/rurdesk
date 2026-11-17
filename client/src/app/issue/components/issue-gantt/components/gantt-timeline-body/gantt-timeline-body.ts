@@ -3,7 +3,6 @@ import {
     Component,
     ComponentRef,
     ElementRef,
-    NgZone,
     OnDestroy,
     computed,
     effect,
@@ -38,7 +37,6 @@ import { DRAG_TOOLTIP_POSITIONS } from './constants/gantt-timeline-body.constant
     standalone: false
 })
 export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
-    private readonly ngZone = inject(NgZone);
     private readonly overlay = inject(Overlay);
     public readonly timelineService = inject(GanttTimelineService);
 
@@ -263,9 +261,7 @@ export class GanttTimelineBodyComponent implements AfterViewInit, OnDestroy {
             }
         };
 
-        this.ngZone.runOutsideAngular(() => {
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
 }
