@@ -6,6 +6,7 @@ import {
     ElementRef,
     HostListener,
     OnDestroy,
+    TemplateRef,
     effect,
     inject,
     input
@@ -15,6 +16,7 @@ import { UiTooltipComponent } from '../components/tooltip/tooltip.component';
 export type UiTooltipPosition = 'top' | 'bottom' | 'left' | 'right';
 
 const SHOW_DELAY_MS = 150;
+const VIEWPORT_MARGIN_PX = 8;
 
 /** Connected-position pairs per side, with the opposite side as a flip fallback. */
 const POSITIONS: Record<UiTooltipPosition, ConnectedPosition[]> = {
@@ -38,14 +40,15 @@ const POSITIONS: Record<UiTooltipPosition, ConnectedPosition[]> = {
 
 /**
  * Hover/focus tooltip: a small dark bubble (`UiTooltipComponent`) anchored to
- * the host via a CDK overlay. No-op on empty text.
+ * the host via a CDK overlay. Takes plain text or a template for structured
+ * content. No-op on empty text.
  */
 @Directive({
     selector: '[uiTooltip]',
     standalone: false
 })
 export class UiTooltipDirective implements OnDestroy {
-    public readonly uiTooltip = input<string>('');
+    public readonly uiTooltip = input<string | TemplateRef<unknown>>('');
     public readonly uiTooltipPosition = input<UiTooltipPosition>('top');
 
     private readonly overlay = inject(Overlay);
@@ -54,6 +57,7 @@ export class UiTooltipDirective implements OnDestroy {
     private overlayRef: OverlayRef | null = null;
     private componentRef: ComponentRef<UiTooltipComponent> | null = null;
     private showTimer: ReturnType<typeof setTimeout> | null = null;
+    private isTouch = false;
     private readonly tooltipId = `ui-tooltip-${nextId()}`;
 
     public constructor() {
@@ -79,9 +83,23 @@ export class UiTooltipDirective implements OnDestroy {
         this.scheduleShow();
     }
 
+    @HostListener('pointerenter', ['$event'])
+    @HostListener('pointerdown', ['$event'])
+    protected onPointer(event: PointerEvent): void {
+        this.isTouch = event.pointerType === 'touch';
+    }
+
+    // A tap sends emulated mouse events, and the browser fires mouseleave as soon
+    // as the bubble renders: on touch the bubble stays until blur or Escape.
     @HostListener('mouseleave')
+    protected onMouseLeave(): void {
+        if (!this.isTouch) {
+            this.hide();
+        }
+    }
+
     @HostListener('blur')
-    protected onLeave(): void {
+    protected onBlur(): void {
         this.hide();
     }
 
@@ -111,7 +129,8 @@ export class UiTooltipDirective implements OnDestroy {
         const positionStrategy = this.overlay
             .position()
             .flexibleConnectedTo(this.host)
-            .withPositions(POSITIONS[this.uiTooltipPosition()]);
+            .withPositions(POSITIONS[this.uiTooltipPosition()])
+            .withViewportMargin(VIEWPORT_MARGIN_PX);
 
         this.overlayRef = this.overlay.create({
             positionStrategy,

@@ -1,4 +1,4 @@
-import { Component, Directive, forwardRef, input, output } from '@angular/core';
+import { Component, Directive, forwardRef, input, output, TemplateRef } from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
 import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
@@ -118,7 +118,7 @@ export class UiDialogStub {
 
 @Directive({ selector: '[uiTooltip]', standalone: true })
 export class UiTooltipStub {
-    public readonly uiTooltip = input<string>('');
+    public readonly uiTooltip = input<string | TemplateRef<unknown>>('');
     public readonly uiTooltipPosition = input<string>('top');
 }
 

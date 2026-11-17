@@ -6,6 +6,19 @@ import { UiModule } from '../ui.module';
     standalone: false,
     template: `
         <button #b [uiTooltip]="text" uiTooltipPosition="top">host</button>
+        <button data-testid="rich" [uiTooltip]="richTpl">rich</button>
+        <button
+            data-testid="edge"
+            style="position: fixed; left: 0; top: 100px"
+            uiTooltip="A tip long enough to be wider than the button it belongs to"
+            uiTooltipPosition="bottom"
+        >
+            x
+        </button>
+        <ng-template #richTpl>
+            <strong class="rich-title">Main project</strong>
+            <p class="rich-text">The agent works in its code.</p>
+        </ng-template>
     `
 })
 class HostComponent {
@@ -90,5 +103,50 @@ describe('UiTooltipDirective (browser)', () => {
         expect(el.getAttribute('aria-describedby')).toBeTruthy();
         el.dispatchEvent(new MouseEvent('mouseleave'));
         expect(el.hasAttribute('aria-describedby')).toBe(false);
+    });
+
+    it('keeps the bubble of a tap until the host loses focus', async () => {
+        const fixture = setup();
+        const el = host(fixture.nativeElement);
+        el.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch' }));
+        el.dispatchEvent(new MouseEvent('mouseenter'));
+        el.dispatchEvent(new FocusEvent('focus'));
+        await wait(AFTER_DELAY);
+        el.dispatchEvent(new MouseEvent('mouseleave'));
+        expect(bubble()).not.toBeNull();
+        el.dispatchEvent(new FocusEvent('blur'));
+        expect(bubble()).toBeNull();
+    });
+
+    it('hides on mouseleave again once a mouse is back', async () => {
+        const fixture = setup();
+        const el = host(fixture.nativeElement);
+        el.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch' }));
+        el.dispatchEvent(new FocusEvent('blur'));
+        el.dispatchEvent(new PointerEvent('pointerenter', { pointerType: 'mouse' }));
+        el.dispatchEvent(new MouseEvent('mouseenter'));
+        await wait(AFTER_DELAY);
+        el.dispatchEvent(new MouseEvent('mouseleave'));
+        expect(bubble()).toBeNull();
+    });
+
+    it('keeps the bubble inside the screen next to its edge', async () => {
+        const fixture = setup();
+        const el = fixture.nativeElement.querySelector('[data-testid="edge"]') as HTMLElement;
+        el.dispatchEvent(new MouseEvent('mouseenter'));
+        await wait(AFTER_DELAY);
+        expect(bubble()!.getBoundingClientRect().left).toBeGreaterThanOrEqual(8);
+    });
+
+    it('shows a template as structured content in the bubble', async () => {
+        const fixture = setup();
+        const el = fixture.nativeElement.querySelector('[data-testid="rich"]') as HTMLElement;
+        el.dispatchEvent(new MouseEvent('mouseenter'));
+        await wait(AFTER_DELAY);
+        expect(bubble()!.querySelector('.rich-title')?.textContent).toBe('Main project');
+        expect(bubble()!.querySelector('.rich-text')?.textContent).toBe(
+            'The agent works in its code.'
+        );
+        expect(bubble()!.getAttribute('role')).toBe('tooltip');
     });
 });
