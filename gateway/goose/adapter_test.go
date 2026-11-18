@@ -714,3 +714,121 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 		t.Errorf("goose stdin is not the full prompt\n--- got ---\n%s\n--- want ---\n%s", stdin, wantPrompt)
 	}
 }
+
+const testRunToken = "rdr_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+func writeEnvRecordingStub(t *testing.T) (stub, envFile string) {
+	t.Helper()
+	dir := t.TempDir()
+	stub = filepath.Join(dir, "goose-stub.sh")
+	envFile = filepath.Join(dir, "env.txt")
+	script := "#!/bin/sh\n" + "env > " + envFile + "\n" + "cat > /dev/null\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	return stub, envFile
+}
+
+func setAgentSecretsInEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("GATEWAY_TO_TRACKER_TOKEN", "deadbeef")
+	t.Setenv("TRACKER_TO_GATEWAY_TOKEN", "webhook-secret-hex")
+	t.Setenv("RURDESK_GIT_TOKEN", "inherited-git-token")
+}
+
+func TestGooseConfig_ChatUsesRunTokenAndURL(t *testing.T) {
+	stub, envFile := writeEnvRecordingStub(t)
+	t.Setenv("GOOSE_BINARY", stub)
+	configHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	setAgentSecretsInEnv(t)
+	task := common.Task{
+		IdRun: 7, IdTask: 31, Stage: common.StageChat, WorktreePath: t.TempDir(),
+		RunToken: testRunToken,
+		Repo:     common.AgentRunGitRepo{Token: "run-git-token"},
+		Chat:     &common.ChatContext{Mode: common.ChatModeReply},
+	}
+
+	_, _ = newTestAdapter().Run(context.Background(), task)
+
+	config, err := os.ReadFile(filepath.Join(configHome, "goose", "config.yaml"))
+	if err != nil {
+		t.Fatalf("reading goose config: %v", err)
+	}
+	if !strings.Contains(string(config), "uri: http://issue.proxy/mcp/chat/http\n") {
+		t.Errorf("goose config lacks the chat endpoint\n%s", config)
+	}
+	if !strings.Contains(string(config), "Authorization: Bearer "+testRunToken+"\n") || strings.Contains(string(config), "deadbeef") {
+		t.Errorf("goose config does not authenticate with the run token only\n%s", config)
+	}
+	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token", "run-git-token")
+}
+
+func TestGooseAdapter_ChatPassesTheModelAndEffort(t *testing.T) {
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "args.txt")
+	envFile := filepath.Join(dir, "env.txt")
+	stub := filepath.Join(dir, "goose-stub.sh")
+	script := "#!/bin/sh\n" + `printf '%s\n' "$@" > ` + argsFile + "\n" + "env > " + envFile + "\n" + "cat > /dev/null\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	t.Setenv("GOOSE_BINARY", stub)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	task := common.Task{
+		IdRun: 7, IdTask: 31, Stage: common.StageChat, WorktreePath: t.TempDir(), MaxTurns: 60,
+		RunToken: testRunToken, Chat: &common.ChatContext{Mode: common.ChatModeReply},
+		Model: common.Model{Provider: "ollama", Name: "qwen3:8b"}, Effort: "low",
+	}
+
+	_, _ = newTestAdapter().Run(context.Background(), task)
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"--provider\nollama\n", "--model\nqwen3:8b\n"} {
+		if !strings.Contains(string(args), want) {
+			t.Errorf("chat args missing %q\n--- args ---\n%s", want, args)
+		}
+	}
+	env, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(env), "GOOSE_THINKING_EFFORT=low\n") {
+		t.Errorf("chat env lacks the effort\n%s", env)
+	}
+}
+
+func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
+	stub, envFile := writeEnvRecordingStub(t)
+	t.Setenv("GOOSE_BINARY", stub)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	setAgentSecretsInEnv(t)
+	task := common.Task{IdRun: 7, IdTask: 1, Stage: common.StageImplementation, WorktreePath: t.TempDir(), Repo: common.AgentRunGitRepo{Token: "run-git-token"}}
+
+	_, _ = newTestAdapter().Run(context.Background(), task)
+
+	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token")
+	env, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(env), "RURDESK_GIT_TOKEN=run-git-token\n") {
+		t.Error("an issue stage lost the git token of its run")
+	}
+}
+
+func assertAgentEnvHasNoSecrets(t *testing.T, envFile string, secrets ...string) {
+	t.Helper()
+	env, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatalf("reading the agent env: %v", err)
+	}
+	for _, secret := range secrets {
+		if strings.Contains(string(env), secret) {
+			t.Errorf("the agent env holds %q", secret)
+		}
+	}
+}

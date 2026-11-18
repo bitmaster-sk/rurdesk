@@ -12,6 +12,8 @@ type StageExecutePayload struct {
 	MaxTurns      int              `json:"maxTurns"`
 	Effort        string           `json:"effort"`
 	ContextBundle *ContextBundle   `json:"contextBundle"`
+	// RunToken is the MCP token of this run; a chat turn's is scoped to its conversation.
+	RunToken string `json:"runToken"`
 }
 
 // List elements stay raw so one malformed entry is skipped instead of failing the whole stage.
@@ -32,4 +34,7 @@ type ContextBundle struct {
 	// earlier attempt completed and the user sent the stage back.
 	ResumedAfter string `json:"resumedAfter"`
 	IsRevision   bool   `json:"isRevision"`
+	// HistoryTruncated is set when a chat turn's reviewThread lost its oldest messages.
+	HistoryTruncated bool         `json:"historyTruncated"`
+	Chat             *ChatContext `json:"chat"`
 }

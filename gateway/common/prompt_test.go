@@ -48,10 +48,10 @@ func TestRenderPrompt_EachStageProducesNonEmptyOutput(t *testing.T) {
 // just writing its answer. The top rule must also say a plain message is
 // discarded, not submitted.
 func TestRenderPrompt_MandatesCompleteStageAtTopAndBottom(t *testing.T) {
-	stages := []string{StageBrainstorming, StageDesign, StageImplementationPlan, StageImplementation}
+	stages := []string{StageBrainstorming, StageDesign, StageImplementationPlan, StageImplementation, StageChat}
 	for _, stage := range stages {
 		t.Run(stage, func(t *testing.T) {
-			out, err := RenderPrompt(Task{IdTask: 100, IdRun: 42, IdIssue: 7, Stage: stage, AttemptNo: 1})
+			out, err := RenderPrompt(Task{IdTask: 100, IdRun: 42, IdIssue: 7, Stage: stage, AttemptNo: 1, Chat: &ChatContext{Mode: ChatModeReply}})
 			if err != nil {
 				t.Fatalf("RenderPrompt(%q) error: %v", stage, err)
 			}

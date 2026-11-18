@@ -9,16 +9,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/gateway/claude-code/model"
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
 	"github.com/rs/zerolog/log"
 )
 
 const defaultClaudeBinary = "claude"
+
+// chatBuiltinTools is the allow-list of built-in tools for a chat turn: reading, searching and
+// web research. MCP tools (the tracker) are not built-ins and stay available.
+const chatBuiltinTools = "Read,Grep,Glob,WebSearch,WebFetch"
+
+// chatDisallowedTools is the second fence behind the allow-list: no shell, file edits or subagents.
+const chatDisallowedTools = "Bash,Write,Edit,MultiEdit,NotebookEdit,Task"
 
 // ClaudeCodeAdapter implements common.Agent by driving the official Claude
 // Code CLI (`claude`, installed via npm) headlessly. It authenticates against
@@ -28,8 +37,9 @@ const defaultClaudeBinary = "claude"
 // scrubbed from the child env so calls never silently bill the Console
 // pay-per-token bucket.
 type ClaudeCodeAdapter struct {
-	cfg      *common.Config
-	sessions *common.ProcessSessions
+	cfg            *common.Config
+	thinkingSender common.ThinkingSender
+	sessions       *common.ProcessSessions
 }
 
 // Every model the Claude Code CLI runs thinks.
@@ -41,10 +51,11 @@ func (a *ClaudeCodeAdapter) ModelThinking(_ context.Context, models []common.Mod
 	return isThinkingByModel, nil
 }
 
-func NewClaudeCodeAdapter(cfg *common.Config) *ClaudeCodeAdapter {
+func NewClaudeCodeAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) *ClaudeCodeAdapter {
 	return &ClaudeCodeAdapter{
-		cfg:      cfg,
-		sessions: common.NewProcessSessions(),
+		cfg:            cfg,
+		thinkingSender: thinkingSender,
+		sessions:       common.NewProcessSessions(),
 	}
 }
 
@@ -65,7 +76,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	defer os.RemoveAll(mcpConfigDir)
 
 	mcpURL := common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage)
-	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, a.cfg.AgentApiKey, task.IdRun)
+	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, task.MCPBearer(a.cfg.AgentApiKey), task.IdRun)
 	if err != nil {
 		return stats, fmt.Errorf("writing claude MCP settings: %w", err)
 	}
@@ -86,22 +97,35 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		// stream-json on stdout requires --verbose in print mode, or the CLI
 		// buffers one result object instead of emitting per-event lines.
 		"--verbose",
+		// Streams thinking as it is produced, so the tracker can show it live.
+		"--include-partial-messages",
 		// Headless auto-approve; without it the CLI blocks on interactive
 		// confirmation and the run hangs.
 		"--dangerously-skip-permissions",
 		"--max-turns", fmt.Sprintf("%d", task.MaxTurns),
-		"--session-id", common.SessionUUID(task.IdRun, task.Stage, task.AttemptNo),
+		"--session-id", common.TaskSessionUUID(task),
 		"--mcp-config", mcpConfigPath,
 		"--model", task.Model.Name,
 	}
 	if task.Effort != "" {
 		args = append(args, "--effort", task.Effort)
 	}
+	// Without it the CLI streams thinking as empty fragments.
+	if display := a.cfg.ClaudeCode.ThinkingDisplay; display != "" {
+		args = append(args, "--thinking-display", display)
+	}
+	if task.Stage == common.StageChat {
+		// A chat is private to its owner: the CLI must not keep the turn's transcript on the gateway
+		// host. Each turn gets the whole history, so nothing is resumed.
+		args = append(args, "--no-session-persistence",
+			"--tools", chatBuiltinTools,
+			"--disallowedTools", chatDisallowedTools)
+	}
 
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.Repo.Token)
+	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.AgentGitToken())
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -140,6 +164,8 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	var usage resultUsage
 	completeStageCalled := false
 
+	thinking := common.NewThinkingBatcher(a.thinkingSender, task.IdTask)
+	thinking.Start(runCtx)
 	done := make(chan struct{})
 	go func() {
 		drainEvents(stdoutPipe, a.cfg.MaxOutputLineBytes, task.IdRun,
@@ -170,6 +196,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 				usage = u
 				statsMu.Unlock()
 			},
+			thinking.Add,
 		)
 		close(done)
 	}()
@@ -185,6 +212,10 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	<-done
 	<-stderrDone
 	waitErr := cmd.Wait()
+	thinking.Stop()
+	if dropped := thinking.DroppedCount(); dropped > 0 {
+		log.Warn().Int64("idTask", task.IdTask).Int("dropped", dropped).Msg("thinking events dropped on overflow")
+	}
 
 	statsMu.Lock()
 	stats.ToolCallsCount = toolCalls
@@ -257,7 +288,8 @@ func mapTerminalStatus(exitCode int, subtype string, isError bool) error {
 // well-formed line to zerolog so the operator sees the agent's timeline.
 // tool_use blocks in `assistant` messages fire onToolCalls; usage totals fire
 // onTokens (caller keeps the max); the final `result` event fires onFinal
-// with its subtype/is_error for error mapping.
+// with its subtype/is_error for error mapping. Thinking fragments (merged by thinkingCoalescer)
+// and tool calls fire onThinking; answer text is skipped. Thinking text is logged only at debug level.
 func drainEvents(
 	r io.Reader,
 	maxLineBytes int,
@@ -266,12 +298,14 @@ func drainEvents(
 	onToolCalls func(count int, sawCompleteStage bool),
 	onTokens func(int),
 	onUsage func(resultUsage),
+	onThinking func(common.ThinkingEvent),
 ) {
+	thoughts := &thinkingCoalescer{onThinking: onThinking}
 	skipped, err := common.ReadLines(r, maxLineBytes, func(line []byte) {
 		if len(line) == 0 {
 			return
 		}
-		var ev map[string]any
+		var ev model.StreamLine
 		if err := json.Unmarshal(line, &ev); err != nil {
 			log.Warn().
 				Int64("idRun", idRun).
@@ -279,88 +313,209 @@ func drainEvents(
 				Msg("claude code stdout: non-JSON line")
 			return
 		}
-		evType, _ := ev["type"].(string)
-		switch evType {
+		isThinkingProgress := ev.Type == "system" && ev.Subtype == "thinking_tokens"
+		fragment, isThinkingDelta := thinkingFragment(ev)
+		switch {
+		case isThinkingDelta:
+			thoughts.add(fragment)
+		case !isThinkingProgress:
+			thoughts.flush()
+		}
+		logEvent := log.Info()
+		// Partial events and thinking progress arrive per token, so they only
+		// show at debug level.
+		if ev.Type == "stream_event" || isThinkingProgress {
+			logEvent = log.Debug()
+		}
+		loggedEvent := json.RawMessage(line)
+		switch ev.Type {
 		case "assistant":
+			for _, call := range toolUses(ev) {
+				thoughts.send(call)
+			}
 			if onToolCalls != nil {
-				if n, sawCompleteStage := countToolUses(ev); n > 0 {
-					onToolCalls(n, sawCompleteStage)
+				if count, sawCompleteStage := countToolUses(ev); count > 0 {
+					onToolCalls(count, sawCompleteStage)
 				}
 			}
-			if onTokens != nil {
-				if t := tokensFromMessage(ev); t > 0 {
-					onTokens(t)
+			if onTokens != nil && ev.Message != nil && ev.Message.Usage != nil {
+				if tokens := ev.Message.Usage.Total(); tokens > 0 {
+					onTokens(tokens)
 				}
+			}
+			if hasThinkingText(ev) {
+				loggedEvent = withoutThinkingText(ev)
 			}
 		case "result":
 			if onFinal != nil {
-				subtype, _ := ev["subtype"].(string)
-				isError, _ := ev["is_error"].(bool)
-				onFinal(subtype, isError)
+				onFinal(ev.Subtype, ev.IsError)
 			}
 			if onTokens != nil {
-				if t := extractTotalTokens(ev); t > 0 {
-					onTokens(t)
+				if tokens := totalTokens(ev); tokens > 0 {
+					onTokens(tokens)
 				}
 			}
 			if onUsage != nil {
 				onUsage(extractResultUsage(ev))
 			}
 		}
-		log.Info().
+		logEvent.
 			Int64("idRun", idRun).
-			Str("type", evType).
-			Interface("event", ev).
+			Str("type", ev.Type).
+			RawJSON("event", loggedEvent).
 			Msg("agent event")
 	})
+	thoughts.flush()
 	common.LogReadOutcome(idRun, "claude code stdout", skipped, err)
 }
 
+// thinkingFlushChars is the size at which merged thinking is sent, the same as
+// the goose adapter's flushChars.
+const thinkingFlushChars = 200
+
+// thinkingCoalescer merges consecutive thinking fragments, which the CLI
+// streams a few words at a time, into events of about thinkingFlushChars.
+// A nil onThinking drops everything.
+type thinkingCoalescer struct {
+	onThinking func(common.ThinkingEvent)
+	buffer     strings.Builder
+}
+
+func (c *thinkingCoalescer) add(fragment string) {
+	if c.onThinking == nil {
+		return
+	}
+	c.buffer.WriteString(fragment)
+	if c.buffer.Len() >= thinkingFlushChars {
+		c.flush()
+	}
+}
+
+func (c *thinkingCoalescer) flush() {
+	if c.onThinking == nil || c.buffer.Len() == 0 {
+		return
+	}
+	c.onThinking(common.ThinkingEvent{Kind: common.ThinkingKindThinking, Text: c.buffer.String()})
+	c.buffer.Reset()
+}
+
+// send passes a non-thinking event on after the thinking that preceded it.
+func (c *thinkingCoalescer) send(event common.ThinkingEvent) {
+	if c.onThinking == nil {
+		return
+	}
+	c.flush()
+	c.onThinking(event)
+}
+
+// thinkingFragment returns the text of a `thinking_delta` stream event and
+// whether the event is one.
+func thinkingFragment(ev model.StreamLine) (string, bool) {
+	if ev.Type != "stream_event" || ev.Event == nil || ev.Event.Type != "content_block_delta" ||
+		ev.Event.Delta.Type != "thinking_delta" {
+		return "", false
+	}
+	return ev.Event.Delta.Thinking, true
+}
+
+func hasThinkingText(ev model.StreamLine) bool {
+	return ev.Message != nil && slices.ContainsFunc(ev.Message.Content, func(block model.ContentBlock) bool {
+		return block.Type == "thinking" && block.Thinking != ""
+	})
+}
+
+// withoutThinkingText is the decoded `assistant` event with the text of its
+// thinking blocks replaced by its length, so the info-level event log never
+// holds thinking. Fields the decoded shape does not know are left out.
+func withoutThinkingText(ev model.StreamLine) json.RawMessage {
+	message := *ev.Message
+	message.Content = slices.Clone(message.Content)
+	for index, block := range message.Content {
+		if block.Type == "thinking" && block.Thinking != "" {
+			message.Content[index].Thinking = fmt.Sprintf("(%d chars, sent to the tracker)", len(block.Thinking))
+		}
+	}
+	ev.Message = &message
+	encoded, err := json.Marshal(ev)
+	if err != nil {
+		return json.RawMessage(`{"type":"assistant"}`)
+	}
+	return encoded
+}
+
+// toolUses turns the tool_use blocks of an `assistant` event into tool events.
+func toolUses(ev model.StreamLine) []common.ThinkingEvent {
+	if ev.Message == nil {
+		return nil
+	}
+	var calls []common.ThinkingEvent
+	for _, block := range ev.Message.Content {
+		if block.Type != "tool_use" {
+			continue
+		}
+		calls = append(calls, common.ThinkingEvent{Kind: common.ThinkingKindTool, Tool: block.Name, Text: toolDetail(block)})
+	}
+	return calls
+}
+
+// toolDetailMaxChars caps a tool detail like the goose adapter does.
+const toolDetailMaxChars = 400
+
+// toolDetail is the one line that identifies a tool call: the command, the
+// file or the pattern; other tools show none.
+func toolDetail(block model.ContentBlock) string {
+	var input model.ToolInput
+	if len(block.Input) > 0 {
+		if err := json.Unmarshal(block.Input, &input); err != nil {
+			return ""
+		}
+	}
+	var value string
+	switch block.Name {
+	case "Bash":
+		value = input.Command
+	case "Read", "Edit", "Write":
+		value = input.FilePath
+	case "Grep", "Glob":
+		value = input.Pattern
+	default:
+		return ""
+	}
+	if index := strings.IndexByte(value, '\n'); index >= 0 {
+		value = strings.TrimRight(value[:index], "\r ") + "…"
+	}
+	if runes := []rune(value); len(runes) > toolDetailMaxChars {
+		value = string(runes[:toolDetailMaxChars]) + "…"
+	}
+	return value
+}
+
 // countToolUses counts tool_use content blocks in an `assistant` event.
-func countToolUses(ev map[string]any) (count int, sawCompleteStage bool) {
-	message, ok := ev["message"].(map[string]any)
-	if !ok {
+func countToolUses(ev model.StreamLine) (count int, sawCompleteStage bool) {
+	if ev.Message == nil {
 		return 0, false
 	}
-	content, ok := message["content"].([]any)
-	if !ok {
-		return 0, false
-	}
-	for _, block := range content {
-		if blockMap, ok := block.(map[string]any); ok {
-			if t, _ := blockMap["type"].(string); t == "tool_use" {
-				count++
-				if name, _ := blockMap["name"].(string); strings.Contains(name, "complete_stage") {
-					sawCompleteStage = true
-				}
+	for _, block := range ev.Message.Content {
+		if block.Type == "tool_use" {
+			count++
+			if strings.Contains(block.Name, "complete_stage") {
+				sawCompleteStage = true
 			}
 		}
 	}
 	return count, sawCompleteStage
 }
 
-// tokensFromMessage pulls a token total from an assistant event's message.usage.
-func tokensFromMessage(ev map[string]any) int {
-	message, ok := ev["message"].(map[string]any)
-	if !ok {
-		return 0
-	}
-	if usage, ok := message["usage"].(map[string]any); ok {
-		return tokensFromMap(usage)
-	}
-	return 0
-}
-
-// extractTotalTokens hunts token totals in a claude `result` event, probing a
-// few layouts since the schema can drift across CLI versions. Returns 0 if
-// none found.
-func extractTotalTokens(ev map[string]any) int {
-	if usage, ok := ev["usage"].(map[string]any); ok {
-		if n := tokensFromMap(usage); n > 0 {
-			return n
+// totalTokens is the token total of a claude `result` event: its usage, or
+// the counts on the event itself, since the schema can drift across CLI
+// versions. Returns 0 if none found.
+func totalTokens(ev model.StreamLine) int {
+	if ev.Usage != nil {
+		if total := ev.Usage.Total(); total > 0 {
+			return total
 		}
 	}
-	return tokensFromMap(ev)
+	return ev.TokenUsage.Total()
 }
 
 type resultUsage struct {
@@ -371,38 +526,15 @@ type resultUsage struct {
 	CostUsd          *float64
 }
 
-func extractResultUsage(ev map[string]any) resultUsage {
-	usage, _ := ev["usage"].(map[string]any)
-	in, _ := common.NumberField(usage, "input_tokens")
-	out, _ := common.NumberField(usage, "output_tokens")
-	cacheRead, _ := common.NumberField(usage, "cache_read_input_tokens")
-	cacheWrite, _ := common.NumberField(usage, "cache_creation_input_tokens")
-	var cost *float64
-	if c, ok := ev["total_cost_usd"].(float64); ok {
-		cost = &c
+func extractResultUsage(ev model.StreamLine) resultUsage {
+	usage := resultUsage{CostUsd: ev.TotalCostUsd}
+	if ev.Usage != nil {
+		usage.InputTokens = ev.Usage.InputTokens
+		usage.OutputTokens = ev.Usage.OutputTokens
+		usage.CacheReadTokens = ev.Usage.CacheReadInputTokens
+		usage.CacheWriteTokens = ev.Usage.CacheCreationInputTokens
 	}
-	return resultUsage{
-		InputTokens:      in,
-		OutputTokens:     out,
-		CacheReadTokens:  cacheRead,
-		CacheWriteTokens: cacheWrite,
-		CostUsd:          cost,
-	}
-}
-
-func tokensFromMap(m map[string]any) int {
-	if t, ok := common.NumberField(m, "total_tokens"); ok && t > 0 {
-		return t
-	}
-	in, _ := common.NumberField(m, "input_tokens")
-	out, _ := common.NumberField(m, "output_tokens")
-	cacheCreate, _ := common.NumberField(m, "cache_creation_input_tokens")
-	cacheRead, _ := common.NumberField(m, "cache_read_input_tokens")
-	total := in + out + cacheCreate + cacheRead
-	if total > 0 {
-		return total
-	}
-	return 0
+	return usage
 }
 
 func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error {
@@ -410,11 +542,12 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 	return nil
 }
 
-// childEnv builds the subprocess env: inherited env with ANTHROPIC_API_KEY
-// and ANTHROPIC_AUTH_TOKEN removed (a stray host var can't flip billing to
-// the Console pay-per-token bucket), plus GIT_PAGER=cat (the implement
-// stage's `git log`/`git diff` would otherwise block on a pager), IS_SANDBOX=1,
-// and an optional CLAUDE_CODE_OAUTH_TOKEN.
+// childEnv builds the subprocess env: common.AgentEnv (inherited env without
+// the gateway secrets, plus the run's git token unless it is empty) with
+// ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN removed (a stray host var can't
+// flip billing to the Console pay-per-token bucket), plus GIT_PAGER=cat (the
+// implement stage's `git log`/`git diff` would otherwise block on a pager),
+// IS_SANDBOX=1, and an optional CLAUDE_CODE_OAUTH_TOKEN.
 //
 // IS_SANDBOX=1: the container runs as root, and the CLI refuses
 // --dangerously-skip-permissions under uid 0 unless this is set. The
@@ -422,8 +555,8 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 // auto-approve is intended, so we opt into the root bypass instead of
 // re-plumbing the image to non-root.
 func childEnv(oauthToken, gitToken string) []string {
-	base := os.Environ()
-	out := make([]string, 0, len(base)+4)
+	base := common.AgentEnv(os.Environ(), gitToken)
+	out := make([]string, 0, len(base)+3)
 	for _, kv := range base {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") ||
 			strings.HasPrefix(kv, "ANTHROPIC_AUTH_TOKEN=") {
@@ -433,37 +566,45 @@ func childEnv(oauthToken, gitToken string) []string {
 	}
 	out = append(out, "GIT_PAGER=cat")
 	out = append(out, "IS_SANDBOX=1")
-	out = append(out, common.GitTokenEnv(gitToken))
 	if oauthToken != "" {
 		out = append(out, "CLAUDE_CODE_OAUTH_TOKEN="+oauthToken)
 	}
 	return out
 }
 
+// mcpSettings is the --mcp-config file of the Claude Code CLI.
+type mcpSettings struct {
+	McpServers map[string]mcpServer `json:"mcpServers"`
+}
+
+type mcpServer struct {
+	Type    string            `json:"type"`
+	Url     string            `json:"url"`
+	Headers map[string]string `json:"headers"`
+}
+
 // writeMCPSettings writes <dir>/mcp.json with the "tracker" MCP server entry
-// (stage-scoped SSE endpoint, agent key as an Authorization: Bearer header — the
-// tracker API strips the prefix and matches by shape) and returns its path for
-// --mcp-config.
+// (stage-scoped SSE endpoint, the agent key — or a chat turn's run token — as
+// an Authorization: Bearer header; the tracker API strips the prefix and matches
+// by shape) and returns its path for --mcp-config.
 //
 // dir MUST be outside the worktree: the file holds the agent's bearer token in
 // cleartext and the agent commits from the worktree, so `git add -A` would push
 // it to the user's remote.
-func writeMCPSettings(dir, mcpURL, agentKey string, idRun int64) (string, error) {
+func writeMCPSettings(dir, mcpURL, bearerToken string, idRun int64) (string, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("creating MCP config dir: %w", err)
 	}
-	settings := map[string]any{
-		"mcpServers": map[string]any{
-			"tracker": map[string]any{
-				"type": "sse",
-				"url":  mcpURL,
-				"headers": map[string]string{
-					"Authorization":         "Bearer " + agentKey,
-					common.TrackerRunHeader: strconv.FormatInt(idRun, 10),
-				},
+	settings := mcpSettings{McpServers: map[string]mcpServer{
+		"tracker": {
+			Type: "sse",
+			Url:  mcpURL,
+			Headers: map[string]string{
+				"Authorization":         "Bearer " + bearerToken,
+				common.TrackerRunHeader: strconv.FormatInt(idRun, 10),
 			},
 		},
-	}
+	}}
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
 		return "", err

@@ -12,6 +12,7 @@ const (
 	StageImplementationPlan = "implementation_plan"
 	StageImplementation     = "implementation"
 	StageReleaseNotes       = "release_notes"
+	StageChat               = "chat"
 )
 
 // Outcome enum, mirroring api/internal/constants/agent.go.
@@ -94,6 +95,12 @@ type Task struct {
 	WikiProposals []WikiProposal
 
 	Release *ReleaseContext
+
+	// Chat is set on a chat turn only.
+	Chat *ChatContext
+	// RunToken is the short-lived MCP token of this run; a chat turn's is scoped
+	// to its conversation and replaces the agent key.
+	RunToken string
 
 	// Stage selects which instruction block the prompt template uses.
 	Stage string
@@ -209,6 +216,24 @@ type RunStats struct {
 type Agent interface {
 	Run(ctx context.Context, task Task) (RunStats, error)
 	Cancel(ctx context.Context, runID RunID) error
+}
+
+// MCPBearer is the token the agent's MCP client authenticates with. A chat turn
+// uses its run token and never falls back to the agent key.
+func (t Task) MCPBearer(agentKey string) string {
+	if t.Stage == StageChat {
+		return t.RunToken
+	}
+	return agentKey
+}
+
+// AgentGitToken is the git token the agent process gets: none in a chat, which
+// must not push.
+func (t Task) AgentGitToken() string {
+	if t.Stage == StageChat {
+		return ""
+	}
+	return t.Repo.Token
 }
 
 func (t Task) ReportStageSubmitted() {

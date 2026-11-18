@@ -42,7 +42,7 @@ func TestUpdateTaskStatsSendsAllUsageFields(t *testing.T) {
 		TokensUsed: 30, DurationMs: 1200, ToolCallsCount: 2,
 		InputTokens: 12, OutputTokens: 3456, CacheReadTokens: 150000, CacheWriteTokens: 20000,
 		CostUsd: &cost, CostEstimated: true,
-	})
+	}, "abc123")
 	if err != nil {
 		t.Fatalf("UpdateTaskStats: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestUpdateTaskStatsSendsAllUsageFields(t *testing.T) {
 		"tokensUsed": 30.0, "durationMs": 1200.0, "toolCallsCount": 2.0,
 		"inputTokens": 12.0, "outputTokens": 3456.0,
 		"cacheReadTokens": 150000.0, "cacheWriteTokens": 20000.0,
-		"costUsd": 0.42, "costEstimated": true,
+		"costUsd": 0.42, "costEstimated": true, "headCommit": "abc123",
 	}
 	for key, val := range want {
 		if body[key] != val {
@@ -62,7 +62,7 @@ func TestUpdateTaskStatsSendsAllUsageFields(t *testing.T) {
 	}
 
 	body = nil
-	err = client.UpdateTaskStats(context.Background(), 8, RunStats{TokensUsed: 5})
+	err = client.UpdateTaskStats(context.Background(), 8, RunStats{TokensUsed: 5}, "")
 	if err != nil {
 		t.Fatalf("UpdateTaskStats: %v", err)
 	}
@@ -71,6 +71,9 @@ func TestUpdateTaskStatsSendsAllUsageFields(t *testing.T) {
 	}
 	if body["costEstimated"] != false {
 		t.Errorf("body[costEstimated] = %v, want false", body["costEstimated"])
+	}
+	if _, ok := body["headCommit"]; ok {
+		t.Errorf("body[headCommit] = %v, want it left out without a commit", body["headCommit"])
 	}
 }
 

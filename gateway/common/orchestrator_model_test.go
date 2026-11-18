@@ -112,6 +112,42 @@ func TestRunStage_RunsTheAgentWithTheRequestedModelTurnsAndEffort(t *testing.T) 
 	}
 }
 
+func TestParseStageExecutePayload_CarriesTheChatModelAndEffort(t *testing.T) {
+	event := unmarshalEvent(t, `{
+		"idRun": 42,
+		"payload": {
+			"idTask": 123,
+			"stage": "chat",
+			"runToken": "run-token",
+			"model": "ollama/b:8b",
+			"effort": "low"
+		}
+	}`)
+	task, err := parseStageExecutePayload(event)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task.RequestedModel != "ollama/b:8b" || task.Effort != "low" {
+		t.Errorf("RequestedModel = %q, Effort = %q", task.RequestedModel, task.Effort)
+	}
+}
+
+func TestRunStage_RunsAChatTurnWithTheRequestedModelAndEffort(t *testing.T) {
+	_, trackerURL := newTrackerRecorder(t)
+	orchestrator, agent, _ := modelTestOrchestrator(t, trackerURL, 0)
+
+	orchestrator.runStage(Task{IdTask: 1, IdRun: 2, IdUserAgent: 1, Stage: StageChat, RunToken: "run-token",
+		Chat: &ChatContext{Mode: ChatModeReply}, RequestedModel: "ollama/b:8b", Effort: "low"})
+
+	ran := agent.ran()
+	if len(ran) != 1 {
+		t.Fatalf("agent ran %d times, want 1", len(ran))
+	}
+	if ran[0].Model != (Model{Provider: "ollama", Name: "b:8b"}) || ran[0].Effort != "low" {
+		t.Errorf("agent got model %+v and effort %q", ran[0].Model, ran[0].Effort)
+	}
+}
+
 func TestRunStage_UsesTheGatewayDefaultsWhenTheTrackerSendsNone(t *testing.T) {
 	tests := []struct {
 		stage    string

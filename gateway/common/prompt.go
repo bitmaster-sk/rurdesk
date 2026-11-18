@@ -291,8 +291,60 @@ The following instructions are mandatory for this stage. Where they conflict wit
 {{end}}## Instructions
 `
 
+// chatHeader opens a chat turn: no issue, no stage. The read-only rules are a
+// promise the tracker and the env also enforce: the run token reaches only read
+// tools and the agent process holds no git token. ALLOWED leaves out
+// Vocab.ListDir, whose Claude Code entry offers Bash.
+const chatHeader = `You are an AI agent answering a user in a private chat in the tracker. This is not work on an issue: you only read and answer.
+
+` + stageEndWarning + `
+## Projects
+You may read the tasks and the wiki of these projects with the {{.Vocab.Tracker}} tools:
+{{range .Chat.Projects}}
+- {{.Name}} (project_id: {{.IdProject}}){{if .IsMain}} — main project{{end}}{{else}}
+- none: this chat has no project, so there are no tasks or wiki pages to read.{{end}}
+
+## Code
+{{if .Chat.WorktreeHead}}The working directory is a checkout of the main project's repository at commit ` + "`{{.Chat.WorktreeHead}}`" + ` of ` + "`{{.Repo.BaseBranch}}`" + `. The code of the other projects is not available.
+{{- else}}No repository is available: the working directory is an empty scratch directory. Answer from the tasks, the wiki and the conversation.{{end}}
+{{if and .Chat.HeadCommit .Chat.WorktreeHead (ne .Chat.HeadCommit .Chat.WorktreeHead)}}
+The code was refreshed since your last answer: it was at commit ` + "`{{.Chat.HeadCommit}}`" + ` and is now at ` + "`{{.Chat.WorktreeHead}}`" + `. Earlier answers in the conversation may describe code that has changed since.
+{{end}}
+## Read-only
+You only read; you must not change anything:
+- no code changes: do not create, edit or delete files, and do not commit or push;
+- no changes in the tracker: do not create or update tasks, comments, messages or wiki pages. The tracker refuses such calls in a chat.
+
+ALLOWED tools: {{.Vocab.Grep}}, {{.Vocab.ReadFile}}, {{.Vocab.Glob}}, the read-only {{.Vocab.Tracker}} tools, and web search and fetch when you have them.
+
+FORBIDDEN: {{.Vocab.WriteFile}}, {{.Vocab.Replace}}, {{.Vocab.RunShell}}.
+
+## Conversation (oldest first)
+{{if .Chat.IsHistoryTruncated}}The conversation is longer than what fits here: its oldest messages were left out. Ask the user when you miss something said earlier.
+{{end}}{{range .Conversation}}
+[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}]: {{.Message}}
+{{end}}
+## Identifiers (use exactly these values when calling tools)
+- task_id: {{.IdTask}} ← pass this to complete_stage
+- run_id: {{.IdRun}}
+`
+
+const chatBody = `{{if eq .Chat.Mode "task_draft"}}{{if .Chat.DraftFromMessage}}The user asked you to draft one task about the answer quoted below; use the rest of the conversation only as context.
+
+[Answer to draft the task from]:
+{{.Chat.DraftFromMessage.Body}}
+
+{{else}}The user asked you to draft a task from this conversation. {{end}}Write it in Markdown: the first line is ` + "`# <title>`" + ` with a short title, then a description someone can start work from — the goal, what is known from the conversation, and open questions. Do not create the task; the user reviews the draft and creates it.
+Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + `, ` + "`message=<the draft>`" + `, ` + "`message_kind=task_draft`" + `.
+{{- else}}Answer the user's latest message.
+Call ` + "`complete_stage`" + ` with ` + "`outcome=output_submitted`" + `, ` + "`message=<your answer, plain markdown>`" + `, ` + "`message_kind=chat_reply`" + `.
+If the user asks you to create or draft a task, reply with ` + "`message_kind=task_draft`" + ` and ` + "`# <title>`" + ` as the first line of the message, then a description someone can start work from. Do not create the task; the user reviews the draft and creates it.
+{{- end}}
+If you cannot answer, call ` + "`complete_stage`" + ` with ` + "`outcome=errored`" + ` and ` + "`error_reason=<short reason>`" + `.`
+
 var compiledHeader = template.Must(template.New("header").Parse(promptHeader))
 var compiledReleaseHeader = template.Must(template.New("releaseHeader").Parse(releaseHeader))
+var compiledChatHeader = template.Must(template.New("chatHeader").Parse(chatHeader))
 var compiledWiki = template.Must(template.New("wiki").Parse(wikiSection))
 var compiledSkills = template.Must(template.New("skills").Parse(skillsSection))
 var compiledReminder = template.Must(template.New("reminder").Parse(completeStageReminder))
@@ -301,6 +353,7 @@ var compiledBrainstorming = template.Must(template.New("brainstorming").Parse(br
 var compiledDesign = template.Must(template.New("design").Parse(designBody))
 var compiledImplPlan = template.Must(template.New("implPlan").Parse(implementationPlanBody))
 var compiledReleaseNotes = template.Must(template.New("releaseNotes").Parse(releaseNotesBody))
+var compiledChat = template.Must(template.New("chat").Parse(chatBody))
 
 // RenderPrompt renders the per-stage prompt for the agent, ending with the
 // complete_stage reminder. Stage bodies substitute task.Vocab into their
@@ -311,22 +364,6 @@ func RenderPrompt(task Task) (string, error) {
 	}
 
 	header := compiledHeader
-	if task.Release != nil {
-		header = compiledReleaseHeader
-	}
-	var buf bytes.Buffer
-	if err := header.Execute(&buf, task); err != nil {
-		return "", fmt.Errorf("rendering header: %w", err)
-	}
-
-	if err := compiledWiki.Execute(&buf, task); err != nil {
-		return "", fmt.Errorf("rendering wiki section: %w", err)
-	}
-
-	if err := compiledSkills.Execute(&buf, task); err != nil {
-		return "", fmt.Errorf("rendering skills section: %w", err)
-	}
-
 	var body *template.Template
 	switch task.Stage {
 	case StageBrainstorming:
@@ -341,10 +378,29 @@ func RenderPrompt(task Task) (string, error) {
 		if task.Release == nil {
 			return "", fmt.Errorf("release notes stage without a release")
 		}
-		body = compiledReleaseNotes
+		header, body = compiledReleaseHeader, compiledReleaseNotes
+	case StageChat:
+		if task.Chat == nil {
+			return "", fmt.Errorf("chat turn without a chat context")
+		}
+		header, body = compiledChatHeader, compiledChat
 	default:
 		return "", fmt.Errorf("unknown stage: %q", task.Stage)
 	}
+
+	var buf bytes.Buffer
+	if err := header.Execute(&buf, task); err != nil {
+		return "", fmt.Errorf("rendering header: %w", err)
+	}
+
+	if err := compiledWiki.Execute(&buf, task); err != nil {
+		return "", fmt.Errorf("rendering wiki section: %w", err)
+	}
+
+	if err := compiledSkills.Execute(&buf, task); err != nil {
+		return "", fmt.Errorf("rendering skills section: %w", err)
+	}
+
 	if err := body.Execute(&buf, task); err != nil {
 		return "", fmt.Errorf("rendering %s body: %w", task.Stage, err)
 	}

@@ -1,12 +1,14 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,8 +28,23 @@ var worktreeMu sync.Mutex
 // every cloned repo. A var, not const, so tests can point it at a fixture.
 var hookSourcePath = "/etc/git-hooks/pre-push"
 
-// Never put the token in the clone URL: git writes the URL to .git/config.
+// ErrRemoteEmpty: origin has no branches yet and the caller may not seed it.
+var ErrRemoteEmpty = errors.New("origin is empty")
+
+// EnsureRepo clones or refreshes the repo, seeding an empty origin with its
+// base branch.
 func EnsureRepo(workspaceBase string, repo AgentRunGitRepo) (string, error) {
+	return prepareRepo(workspaceBase, repo, true)
+}
+
+// EnsureRepoReadOnly is EnsureRepo for a chat, which never pushes: an empty
+// origin fails with ErrRemoteEmpty instead of being seeded.
+func EnsureRepoReadOnly(workspaceBase string, repo AgentRunGitRepo) (string, error) {
+	return prepareRepo(workspaceBase, repo, false)
+}
+
+// Never put the token in the clone URL: git writes the URL to .git/config.
+func prepareRepo(workspaceBase string, repo AgentRunGitRepo, canSeed bool) (string, error) {
 	worktreeMu.Lock()
 	defer worktreeMu.Unlock()
 
@@ -40,16 +57,16 @@ func EnsureRepo(workspaceBase string, repo AgentRunGitRepo) (string, error) {
 			return "", fmt.Errorf("creating workspace dir: %w", err)
 		}
 		log.Info().Str("url", repo.CloneUrl).Str("path", repoPath).Msg("cloning repo")
-		if err := runRemoteGit(".", repo.Token, "clone", "-c", "credential.helper="+credentialHelper, repo.CloneUrl, repoPath); err != nil {
+		// The empty helper drops the helpers of the system and global config, so
+		// none of them (a store, cache or keychain) is handed the token.
+		if err := runRemoteGit(".", repo.Token, "clone", "-c", "credential.helper=", "-c", "credential.helper="+credentialHelper, repo.CloneUrl, repoPath); err != nil {
 			return "", fmt.Errorf("cloning %s: %w", repo.CloneUrl, err)
 		}
-	} else {
-		if err := runGit(repoPath, "remote", "set-url", "origin", repo.CloneUrl); err != nil {
-			return "", fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
-		}
-		if err := runGit(repoPath, "config", "--replace-all", "credential.helper", credentialHelper); err != nil {
-			return "", fmt.Errorf("setting the credential helper in %s: %w", repoPath, err)
-		}
+	} else if err := runGit(repoPath, "remote", "set-url", "origin", repo.CloneUrl); err != nil {
+		return "", fmt.Errorf("refreshing remote URL in %s: %w", repoPath, err)
+	}
+	if err := setCredentialHelper(repoPath); err != nil {
+		return "", err
 	}
 
 	// A brand-new (empty) repo has no branches: `fetch origin main` would
@@ -69,6 +86,9 @@ func EnsureRepo(workspaceBase string, repo AgentRunGitRepo) (string, error) {
 				repo.BaseBranch, repoPath,
 			)
 		}
+		if !canSeed {
+			return "", ErrRemoteEmpty
+		}
 		if err := seedEmptyRemote(repoPath, repo.Token, repo.BaseBranch); err != nil {
 			return "", fmt.Errorf("seeding empty remote in %s: %w", repoPath, err)
 		}
@@ -81,6 +101,19 @@ func EnsureRepo(workspaceBase string, repo AgentRunGitRepo) (string, error) {
 		return "", fmt.Errorf("creating agent-runs dir: %w", err)
 	}
 	return repoPath, nil
+}
+
+// setCredentialHelper makes the clone's own helper the only one: the empty
+// entry resets the list, so helpers of the system or global config never see
+// the token, neither to answer nor to store it.
+func setCredentialHelper(repoPath string) error {
+	if err := runGit(repoPath, "config", "--replace-all", "credential.helper", ""); err != nil {
+		return fmt.Errorf("resetting the credential helpers in %s: %w", repoPath, err)
+	}
+	if err := runGit(repoPath, "config", "--add", "credential.helper", credentialHelper); err != nil {
+		return fmt.Errorf("setting the credential helper in %s: %w", repoPath, err)
+	}
+	return nil
 }
 
 // seedInitialCommitIdentity is the author/committer for the empty initial
@@ -166,6 +199,89 @@ func CreateWorktree(repoPath, token, baseBranch, branch string, idRun int64) (st
 		return "", fmt.Errorf("creating worktree: %w", err)
 	}
 	return worktreePath, nil
+}
+
+// CreateDetachedWorktree creates the run's worktree on a detached HEAD at the
+// freshly fetched origin/<baseBranch> and returns that commit. The token
+// is used only by the fetch and never lands in the clone's config.
+func CreateDetachedWorktree(repoPath, token, baseBranch string, idRun int64) (headSha string, err error) {
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
+	worktreePath := WorktreePath(repoPath, idRun)
+	if err := runRemoteGit(repoPath, token, "fetch", "origin", baseBranch); err != nil {
+		return "", fmt.Errorf("fetching %s: %w", baseBranch, err)
+	}
+	if err := runGit(repoPath, "worktree", "prune"); err != nil {
+		return "", fmt.Errorf("pruning worktrees: %w", err)
+	}
+	if err := runGit(repoPath, "worktree", "add", "--detach", worktreePath, "origin/"+baseBranch); err != nil {
+		return "", fmt.Errorf("creating detached worktree: %w", err)
+	}
+	return worktreeHead(worktreePath)
+}
+
+// untrustedWorktreeConfig keeps the gateway's own git calls in an agent-touched
+// worktree from running hooks or an fsmonitor command the agent planted.
+var untrustedWorktreeConfig = []string{"-c", "core.hooksPath=" + os.DevNull, "-c", "core.fsmonitor=false"}
+
+// ResetDetachedWorktree puts a reused worktree back on a detached HEAD at head, dropping every
+// change, commit, branch checkout and untracked file the agent left. Nothing is fetched; it fails
+// when head is empty or unknown or the worktree cannot be restored.
+func ResetDetachedWorktree(worktreePath, head string) error {
+	if head == "" {
+		return errors.New("no recorded head commit")
+	}
+	worktreeMu.Lock()
+	defer worktreeMu.Unlock()
+
+	// Run nothing in a directory that is not the worktree root: git would act on
+	// the clone around it.
+	if _, err := worktreeHead(worktreePath); err != nil {
+		return err
+	}
+	for _, args := range [][]string{
+		{"cat-file", "-e", head + "^{commit}"},
+		{"reset", "--hard"},
+		{"checkout", "--force", "--detach", head},
+		{"clean", "-ffdx"},
+	} {
+		if err := runGitQuiet(worktreePath, append(slices.Clone(untrustedWorktreeConfig), args...)...); err != nil {
+			return fmt.Errorf("git %s in %s: %w", strings.Join(args, " "), worktreePath, err)
+		}
+	}
+	if branch := rebasingBranch(worktreePath); branch != "" {
+		return fmt.Errorf("%s is in the middle of a rebase of %s", worktreePath, branch)
+	}
+	reset, err := worktreeHead(worktreePath)
+	if err != nil {
+		return err
+	}
+	if reset != head {
+		return fmt.Errorf("%s is at %s after the reset, want %s", worktreePath, reset, head)
+	}
+	return nil
+}
+
+// worktreeHead returns the commit checked out in the worktree rooted at
+// worktreePath, failing when that directory is not a worktree root.
+func worktreeHead(worktreePath string) (string, error) {
+	topLevel, err := runGitQuietOutput(worktreePath, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", fmt.Errorf("reading the worktree root: %w", err)
+	}
+	isRoot, err := isSamePath(strings.TrimSpace(topLevel), worktreePath)
+	if err != nil {
+		return "", err
+	}
+	if !isRoot {
+		return "", fmt.Errorf("%s is not a git worktree", worktreePath)
+	}
+	head, err := runGitQuietOutput(worktreePath, "rev-parse", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("reading the worktree HEAD: %w", err)
+	}
+	return strings.TrimSpace(head), nil
 }
 
 func ResumeWorktree(repoPath, token, branch string, idRun int64) (string, error) {

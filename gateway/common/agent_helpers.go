@@ -2,13 +2,18 @@ package common
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
-// MCPURLForStage picks the right MCP endpoint for the stage: non-implementation
-// stages get the restricted /mcp/plan/sse subset, implementation gets the full
-// /mcp/sse. The base URL is expected to end in /mcp/sse.
+// MCPURLForStage picks the right MCP endpoint for the stage: a chat turn gets
+// the read-only /mcp/chat/sse, other non-implementation stages the restricted
+// /mcp/plan/sse subset, implementation the full /mcp/sse. The base URL is
+// expected to end in /mcp/sse.
 func MCPURLForStage(baseURL, stage string) string {
+	if stage == StageChat {
+		return strings.Replace(baseURL, "/mcp/sse", "/mcp/chat/sse", 1)
+	}
 	if stage != StageImplementation {
 		return strings.Replace(baseURL, "/mcp/sse", "/mcp/plan/sse", 1)
 	}
@@ -33,6 +38,15 @@ func SessionUUID(idRun int64, stage string, attemptNo int) string {
 		stageCode, attemptNo, idRun)
 }
 
+// TaskSessionUUID is the --session-id of the task's CLI process. A chat turn derives it from
+// idTask rather than the attempt, which is capped at 9.
+func TaskSessionUUID(task Task) string {
+	if task.Stage == StageChat {
+		return fmt.Sprintf("00000000-0000-4000-8600-%012d", task.IdTask)
+	}
+	return SessionUUID(task.IdRun, task.Stage, task.AttemptNo)
+}
+
 func stageCodeHex(stage string) string {
 	switch stage {
 	case StageBrainstorming:
@@ -51,3 +65,25 @@ func stageCodeHex(stage string) string {
 }
 
 const TrackerRunHeader = "X-Rurdesk-Run"
+
+// agentEnvSecrets are gateway secrets no agent process may inherit: the agent
+// key, the webhook secret and a git token the gateway itself was given.
+var agentEnvSecrets = []string{"GATEWAY_TO_TRACKER_TOKEN", "TRACKER_TO_GATEWAY_TOKEN", gitTokenEnvName}
+
+// AgentEnv is the base env of an agent process: base without the gateway
+// secrets, plus the git token of the run when there is one. A chat passes no
+// git token, so its agent cannot push.
+func AgentEnv(base []string, gitToken string) []string {
+	env := make([]string, 0, len(base)+1)
+	for _, entry := range base {
+		name, _, _ := strings.Cut(entry, "=")
+		if slices.Contains(agentEnvSecrets, name) {
+			continue
+		}
+		env = append(env, entry)
+	}
+	if gitToken != "" {
+		env = append(env, GitTokenEnv(gitToken))
+	}
+	return env
+}

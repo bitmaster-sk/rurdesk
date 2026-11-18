@@ -1,6 +1,7 @@
 package common
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -76,6 +77,46 @@ func TestLoadConfigClaudeCodeOAuthTokenFlowsThrough(t *testing.T) {
 	}
 	if cfg.ClaudeCode.OAuthToken != "sk-oauth-token" {
 		t.Errorf("OAuthToken = %q, want sk-oauth-token", cfg.ClaudeCode.OAuthToken)
+	}
+}
+
+func TestLoadConfigClaudeThinkingDisplay(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		value       string
+		isSet       bool
+		want        string
+		wantErrText string
+	}{
+		{name: "unset defaults to summarized", want: "summarized"},
+		{name: "empty omits the flag", value: "", isSet: true, want: ""},
+		{name: "omitted", value: "omitted", isSet: true, want: "omitted"},
+		{name: "unknown value", value: "loud", isSet: true, wantErrText: "CLAUDE_THINKING_DISPLAY"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setBaseEnv(t)
+			t.Setenv("MODELS", "sonnet")
+			t.Setenv("CLAUDE_THINKING_DISPLAY", tt.value)
+			if !tt.isSet {
+				if err := os.Unsetenv("CLAUDE_THINKING_DISPLAY"); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			cfg, err := LoadConfig("claude-code")
+			if tt.wantErrText != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErrText) {
+					t.Fatalf("err = %v, want one naming %s", err, tt.wantErrText)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadConfig: %v", err)
+			}
+			if cfg.ClaudeCode.ThinkingDisplay != tt.want {
+				t.Errorf("ThinkingDisplay = %q, want %q", cfg.ClaudeCode.ThinkingDisplay, tt.want)
+			}
+		})
 	}
 }
 
