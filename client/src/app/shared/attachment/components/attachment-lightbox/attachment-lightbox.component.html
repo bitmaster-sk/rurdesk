@@ -5,6 +5,8 @@
     [src]="url()"
     [alt]="gallery.active()?.name ?? ''"
     [hasMany]="hasMany()"
+    [index]="position()"
+    [count]="total()"
     (previous)="gallery.previous()"
     (next)="gallery.next()"
 >

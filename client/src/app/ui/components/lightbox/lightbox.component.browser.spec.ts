@@ -20,7 +20,9 @@ const images = ['one', 'two'].map(
             header="Pictures"
             [src]="src()"
             alt="picture"
-            [hasMany]="true"
+            [hasMany]="hasMany()"
+            [index]="index()"
+            [count]="count()"
             (previous)="steps.push(-1)"
             (next)="steps.push(1)"
         >
@@ -31,6 +33,9 @@ const images = ['one', 'two'].map(
 class HostComponent {
     public open = true;
     public readonly src = signal<string | null>(images[0]);
+    public readonly hasMany = signal(true);
+    public readonly index = signal<number | null>(null);
+    public readonly count = signal<number | null>(null);
     public steps: number[] = [];
 }
 
@@ -56,6 +61,10 @@ function query<T extends Element>(testid: string): T | null {
 
 function zoomLevel(): string | undefined {
     return query('ui-lightbox-zoom-level')?.textContent?.trim();
+}
+
+function counter(): string | null {
+    return query('ui-lightbox-counter')?.textContent?.trim() ?? null;
 }
 
 function transform(): string | undefined {
@@ -91,6 +100,7 @@ describe('UiLightboxComponent', () => {
         expect(query('ui-lightbox-image')).toBeNull();
         expect(query('missing')?.textContent).toBe('gone');
         expect(query('ui-lightbox-zoom-level')).toBeNull();
+        expect(query('ui-lightbox-counter')).toBeNull();
     });
 
     it('zooms in and back to fit with the buttons and keys', async () => {
@@ -157,5 +167,49 @@ describe('UiLightboxComponent', () => {
         await press(fixture, 'ArrowRight');
 
         expect(fixture.componentInstance.steps).toEqual([]);
+    });
+
+    it('shows the position when index and count are given and keeps arrows and zoom working', async () => {
+        const fixture = await render(host => {
+            host.index.set(2);
+            host.count.set(5);
+        });
+        expect(counter()).toBe('2 / 5');
+
+        query<HTMLElement>('ui-lightbox-next')?.click();
+        await press(fixture, '+');
+
+        expect(fixture.componentInstance.steps).toEqual([1]);
+        expect(zoomLevel()).toBe('150 %');
+        expect(counter()).toBe('2 / 5');
+    });
+
+    it('hides the counter unless both index and count are given', async () => {
+        const fixture = await render(host => host.index.set(2));
+        expect(counter()).toBeNull();
+
+        fixture.componentInstance.count.set(5);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(counter()).toBe('2 / 5');
+
+        fixture.componentInstance.index.set(null);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        expect(counter()).toBeNull();
+    });
+
+    it('shows 1 / 1 without arrows over the missing state for a single item', async () => {
+        await render(host => {
+            host.hasMany.set(false);
+            host.index.set(1);
+            host.count.set(1);
+            host.src.set(null);
+        });
+
+        expect(counter()).toBe('1 / 1');
+        expect(query('ui-lightbox-prev')).toBeNull();
+        expect(query('ui-lightbox-next')).toBeNull();
+        expect(query('missing')?.textContent).toBe('gone');
     });
 });

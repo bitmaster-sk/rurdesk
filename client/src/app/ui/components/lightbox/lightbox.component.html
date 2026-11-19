@@ -57,6 +57,19 @@
                 </button>
             }
         </div>
+        @if (hasPosition()) {
+            <div class="ui-color-text-muted flex items-center justify-center text-sm">
+                <span
+                    class="tabular-nums"
+                    data-testid="ui-lightbox-counter"
+                    [attr.aria-label]="
+                        'UI.LIGHTBOX.COUNTER' | translate: { index: index(), count: count() }
+                    "
+                >
+                    {{ index() }} / {{ count() }}
+                </span>
+            </div>
+        }
         @if (src()) {
             <div class="ui-color-text-muted flex items-center justify-center gap-1 text-sm">
                 <ui-button
