@@ -30,6 +30,10 @@ func (d *stubStageDispatcher) DispatchStageExecute(_ context.Context, _ *model.A
 	d.dispatched = append(d.dispatched, task)
 }
 
+func (d *stubStageDispatcher) DispatchChatTurn(_ context.Context, _ *model.AgentRun, task *model.AgentTask, _ string) {
+	d.dispatched = append(d.dispatched, task)
+}
+
 // SchedulerBroadcastSuite covers the "timeline doesn't spin after approval" bug:
 // when the scheduler dispatches the next stage of an already-in_progress run —
 // the state right after a user approves a stage — it must broadcast a run
@@ -147,7 +151,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 	s.Require().NoError(err)
 
 	dispatcher := &stubStageDispatcher{}
-	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, injector.GetIssueRepository(), dispatcher, injector.GetNotifier())
+	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, injector.GetIssueRepository(), dispatcher, injector.GetChatTurns(), injector.GetNotifier())
 
 	s.Require().NoError(sched.TickOnce(ctx))
 

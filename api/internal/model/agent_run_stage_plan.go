@@ -11,9 +11,8 @@ type AgentRunStagePlanEntry struct {
 }
 
 type AgentRunStagePlanRes struct {
-	Stages                []AgentRunStagePlanEntry     `json:"stages"`
-	Models                []string                     `json:"models"`
-	ModelDefault          *string                      `json:"modelDefault"`
+	Stages []AgentRunStagePlanEntry `json:"stages"`
+	AgentModelChoices
 	MaxTurnsLimit         *int                         `json:"maxTurnsLimit"`
 	DefaultsByStage       map[string]AgentStageDefault `json:"defaultsByStage"`
 	ModelsWithoutThinking []string                     `json:"modelsWithoutThinking"`

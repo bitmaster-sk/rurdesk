@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,6 +29,11 @@ type fakeStore struct {
 	stageIdTask  int64
 	stageLastSeq int
 	stageErr     error
+	taskBlob     []byte
+	taskTail     string
+	taskEvents   model.AgentThinkingEvents
+	taskLastSeq  int
+	taskErr      error
 }
 
 func newFakeStore() *fakeStore {
@@ -73,6 +79,14 @@ func (f *fakeStore) LoadEventsByStage(_ context.Context, _ int64, _ string) (mod
 	return f.stageEvents, f.stageIdTask, f.stageLastSeq, f.stageErr
 }
 
+func (f *fakeStore) LoadCompactedByTask(_ context.Context, _ int64) ([]byte, string, error) {
+	return f.taskBlob, f.taskTail, f.taskErr
+}
+
+func (f *fakeStore) LoadLiveByTask(_ context.Context, _ int64) (model.AgentThinkingEvents, int, error) {
+	return f.taskEvents, f.taskLastSeq, f.taskErr
+}
+
 func (f *fakeStore) OrphanedTaskIds(_ context.Context) ([]int64, error) {
 	return f.orphans, nil
 }
@@ -91,20 +105,43 @@ func (f *fakeTasks) RecordHeartbeat(_ context.Context, _ int64) error {
 	return f.beatErr
 }
 
-type fakeRuns struct{}
+type fakeRuns struct {
+	kind string
+}
 
 func (f *fakeRuns) LoadById(_ context.Context, idRun int64) (*model.AgentRun, error) {
-	return &model.AgentRun{IdRun: idRun, IdProject: 3}, nil
+	kind := f.kind
+	if kind == "" {
+		kind = constants.RunKindIssue
+	}
+	return &model.AgentRun{IdRun: idRun, IdProject: 3, Kind: kind}, nil
+}
+
+type fakeConversations struct {
+	conversation *model.AgentConversation
+	err          error
+	lookups      int
+}
+
+func (f *fakeConversations) LoadConversationByRun(_ context.Context, _ int64) (*model.AgentConversation, error) {
+	f.lookups++
+	return f.conversation, f.err
 }
 
 type fakeNotifier struct {
 	notices    []*model.AgentThinkingNotice
 	idsProject []int64
+	owners     []int64
 }
 
-func (f *fakeNotifier) Broadcast(_ context.Context, idProject int64, notice *model.AgentThinkingNotice) {
+func (f *fakeNotifier) BroadcastToProject(_ context.Context, idProject int64, notice *model.AgentThinkingNotice) {
 	f.notices = append(f.notices, notice)
 	f.idsProject = append(f.idsProject, idProject)
+}
+
+func (f *fakeNotifier) BroadcastToUser(_ context.Context, idUser int64, notice *model.AgentThinkingNotice) {
+	f.notices = append(f.notices, notice)
+	f.owners = append(f.owners, idUser)
 }
 
 const testThinkingMaxKb = 1024
@@ -121,8 +158,15 @@ func (f *fakeSettings) AgentThinkingMaxKb() int { return f.maxKb }
 func newTestService(store *fakeStore, isPersisted bool) (*ThinkingService, *fakeTasks, *fakeNotifier) {
 	tasks := &fakeTasks{}
 	notifier := &fakeNotifier{}
-	svc := NewThinkingService(store, tasks, &fakeRuns{}, notifier, &fakeSettings{isOn: isPersisted, maxKb: testThinkingMaxKb})
+	svc := NewThinkingService(store, tasks, &fakeRuns{}, &fakeConversations{}, notifier, &fakeSettings{isOn: isPersisted, maxKb: testThinkingMaxKb})
 	return svc, tasks, notifier
+}
+
+func newChatTestService(conversations *fakeConversations) (*ThinkingService, *fakeNotifier) {
+	notifier := &fakeNotifier{}
+	svc := NewThinkingService(newFakeStore(), &fakeTasks{}, &fakeRuns{kind: constants.RunKindChat}, conversations,
+		notifier, &fakeSettings{isOn: true, maxKb: testThinkingMaxKb})
+	return svc, notifier
 }
 
 func thinkingEvent(text string) model.AgentThinkingEvent {
@@ -205,7 +249,7 @@ func TestThinkingService_CreateStopsAtTheByteCap(t *testing.T) {
 func TestThinkingService_CapFollowsTheConfiguredSize(t *testing.T) {
 	store := newFakeStore()
 	store.storedBytes = 64 * 1024
-	svc := NewThinkingService(store, &fakeTasks{}, &fakeRuns{}, &fakeNotifier{}, &fakeSettings{isOn: true, maxKb: 128})
+	svc := NewThinkingService(store, &fakeTasks{}, &fakeRuns{}, &fakeConversations{}, &fakeNotifier{}, &fakeSettings{isOn: true, maxKb: 128})
 
 	require.NoError(t, svc.Create(context.Background(), 1, 1, model.AgentThinkingEvents{thinkingEvent("within budget")}))
 	assert.Len(t, store.appended, 1)
@@ -401,4 +445,125 @@ func TestThinkingService_TailIsCappedAcrossBatches(t *testing.T) {
 	tail := store.compactedTo[1]
 	assert.LessOrEqual(t, len(tail), thinkingTailBytes)
 	assert.Contains(t, tail, "the last thought")
+}
+
+func TestThinkingService_ChatThinkingGoesToTheOwnerOnly(t *testing.T) {
+	conversations := &fakeConversations{conversation: &model.AgentConversation{IdConversation: 12, IdUser: 5}}
+	svc, notifier := newChatTestService(conversations)
+
+	require.NoError(t, svc.Create(context.Background(), 1, 1, model.AgentThinkingEvents{thinkingEvent("a private thought")}))
+
+	assert.Empty(t, notifier.idsProject, "a chat's thinking never reaches the project members")
+	require.Equal(t, []int64{5}, notifier.owners)
+	require.Len(t, notifier.notices, 1)
+	require.NotNil(t, notifier.notices[0].IdConversation)
+	assert.Equal(t, int64(12), *notifier.notices[0].IdConversation)
+}
+
+func TestThinkingService_ChatThinkingWithoutAnOwnerIsDropped(t *testing.T) {
+	cases := map[string]*fakeConversations{
+		"no conversation":   {},
+		"lookup failed":     {err: errors.New("database is down")},
+		"owner not on file": {conversation: &model.AgentConversation{IdConversation: 12}},
+	}
+	for name, conversations := range cases {
+		t.Run(name, func(t *testing.T) {
+			svc, notifier := newChatTestService(conversations)
+
+			require.NoError(t, svc.Create(context.Background(), 1, 1, model.AgentThinkingEvents{thinkingEvent("a private thought")}))
+
+			assert.Equal(t, 1, conversations.lookups)
+			assert.Empty(t, notifier.notices, "an unresolved owner gets nothing, and nobody else does either")
+		})
+	}
+}
+
+func TestThinkingService_IssueThinkingStillGoesToTheProject(t *testing.T) {
+	store := newFakeStore()
+	svc, _, notifier := newTestService(store, true)
+
+	require.NoError(t, svc.Create(context.Background(), 1, 1, model.AgentThinkingEvents{thinkingEvent("a shared thought")}))
+
+	assert.Equal(t, []int64{3}, notifier.idsProject)
+	assert.Empty(t, notifier.owners)
+	require.Len(t, notifier.notices, 1)
+	assert.Nil(t, notifier.notices[0].IdConversation)
+}
+
+func TestThinkingService_LoadForTaskReplaysTheBlob(t *testing.T) {
+	events := model.AgentThinkingEvents{thinkingEvent("the whole turn")}
+	blob, err := events.Gzip()
+	require.NoError(t, err)
+	store := newFakeStore()
+	store.taskBlob = blob
+	store.taskEvents = model.AgentThinkingEvents{thinkingEvent("rows left behind")}
+	svc, _, _ := newTestService(store, true)
+
+	res, err := svc.LoadForTask(context.Background(), 4)
+
+	require.NoError(t, err)
+	assert.True(t, res.IsComplete)
+	assert.Equal(t, events, res.Events)
+	assert.Equal(t, int64(4), res.IdTask)
+	assert.Equal(t, int64(9), res.IdRun)
+	assert.Equal(t, "implementation", res.Stage)
+}
+
+func TestThinkingService_LoadForTaskReplaysARunningTurn(t *testing.T) {
+	store := newFakeStore()
+	store.taskEvents = model.AgentThinkingEvents{thinkingEvent("still thinking")}
+	store.taskLastSeq = 6
+	svc, _, _ := newTestService(store, true)
+
+	res, err := svc.LoadForTask(context.Background(), 4)
+
+	require.NoError(t, err)
+	assert.False(t, res.IsComplete)
+	require.Len(t, res.Events, 1)
+	assert.Equal(t, "still thinking", res.Events[0].Text)
+	assert.Equal(t, int64(4), res.IdTask)
+	assert.Equal(t, 6, res.LastSeq)
+}
+
+func TestThinkingService_LoadForTaskFallsBackToTheTail(t *testing.T) {
+	cases := map[string][]byte{
+		"no blob stored": nil,
+		"damaged blob":   []byte("not gzip"),
+	}
+	for name, blob := range cases {
+		t.Run(name, func(t *testing.T) {
+			store := newFakeStore()
+			store.taskBlob = blob
+			store.taskTail = "the last thoughts"
+			svc, _, _ := newTestService(store, true)
+
+			res, err := svc.LoadForTask(context.Background(), 4)
+
+			require.NoError(t, err)
+			assert.False(t, res.IsComplete)
+			require.Len(t, res.Events, 1)
+			assert.Equal(t, "the last thoughts", res.Events[0].Text)
+		})
+	}
+}
+
+func TestThinkingService_LoadForTaskOfATurnWithNothing(t *testing.T) {
+	svc, _, _ := newTestService(newFakeStore(), true)
+
+	res, err := svc.LoadForTask(context.Background(), 4)
+
+	require.NoError(t, err)
+	assert.False(t, res.IsComplete)
+	assert.NotNil(t, res.Events)
+	assert.Empty(t, res.Events)
+}
+
+func TestThinkingService_LoadForTaskSurfacesAStoreFailure(t *testing.T) {
+	store := newFakeStore()
+	store.taskErr = errors.New("database is down")
+	svc, _, _ := newTestService(store, true)
+
+	_, err := svc.LoadForTask(context.Background(), 4)
+
+	require.Error(t, err)
 }

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -16,9 +17,11 @@ import (
 )
 
 // StageDispatcher seams the scheduler to the real Dispatcher, kept as an
-// interface for testability.
+// interface for testability. A chat turn carries the raw run token the
+// scheduler minted for it; only its hash is stored.
 type StageDispatcher interface {
 	DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask)
+	DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string)
 }
 
 type Scheduler struct {
@@ -28,6 +31,7 @@ type Scheduler struct {
 	projectRepo *repository.ProjectRepository
 	issueRepo   *repository.IssueRepository
 	dispatcher  StageDispatcher
+	chatTurns   *ChatTurns
 	notifier    notify.INotifier
 
 	mu sync.Mutex
@@ -40,6 +44,7 @@ func NewScheduler(
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
 	dispatcher StageDispatcher,
+	chatTurns *ChatTurns,
 	notifier notify.INotifier,
 ) *Scheduler {
 	return &Scheduler{
@@ -49,6 +54,7 @@ func NewScheduler(
 		projectRepo: projectRepo,
 		issueRepo:   issueRepo,
 		dispatcher:  dispatcher,
+		chatTurns:   chatTurns,
 		notifier:    notifier,
 	}
 }
@@ -120,6 +126,10 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 		if err != nil {
 			return err
 		}
+		if locked.Kind == constants.RunKindChat {
+			task, err = s.chatTask(ctx, locked, existing)
+			return err
+		}
 
 		// A pending task can already exist (a revision or other re-queue created
 		// it directly). Dispatch it — ResolveNextStage may miss it if its stage
@@ -157,7 +167,33 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 		}
 		return nil
 	}
+	if run.Kind == constants.RunKindChat {
+		return s.activateChatTurn(ctx, run, task)
+	}
 	return s.activateAndDispatch(ctx, run, task)
+}
+
+// chatTask returns the turn to run: a pending one or a new one. Every chat turn is a stage = chat task.
+func (s *Scheduler) chatTask(ctx context.Context, run *model.AgentRun, existing []*model.AgentTask) (*model.AgentTask, error) {
+	if pending := latestPendingTask(existing); pending != nil {
+		return pending, nil
+	}
+	return s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, constants.StageChat, ResolveNextAttemptNo(existing, constants.StageChat))
+}
+
+// activateChatTurn starts the turn and dispatches it. No run snapshot is broadcast, as a chat run
+// is private to its owner.
+func (s *Scheduler) activateChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask) error {
+	running, active, rawToken, err := s.chatTurns.Activate(ctx, run, task)
+	if errors.Is(err, ErrChatRunOrphaned) {
+		log.Warn().Int64("idRun", run.IdRun).Msg("scheduler: chat run without a conversation cancelled")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	s.dispatcher.DispatchChatTurn(ctx, running, active, rawToken)
+	return nil
 }
 
 // activateAndDispatch marks the task active, moves the run queued→in_progress,

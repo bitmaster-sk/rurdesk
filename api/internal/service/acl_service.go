@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
@@ -39,7 +40,31 @@ func NewAclService(
 
 // --- Project role resolution ---
 
+// getProjectRole is the role every Can* check uses. A run scope on the request
+// narrows the cached role here, after the cache, so it never reaches the cache that
+// the agent's own key reads too.
 func (acl *AclService) getProjectRole(ctx context.Context, idUser, idProject int64) (model.Role, bool) {
+	role, hasAccess := acl.cachedProjectRole(ctx, idUser, idProject)
+	return scopeProjectRole(ctx, idProject, role, hasAccess)
+}
+
+// scopeProjectRole denies projects outside a run scope and caps the rest at the
+// scope's MaxRole, so a run reaches its own projects and nothing else.
+func scopeProjectRole(ctx context.Context, idProject int64, role model.Role, hasAccess bool) (model.Role, bool) {
+	scope, isScoped := extctx.GetRunScope(ctx)
+	if !isScoped || !hasAccess {
+		return role, hasAccess
+	}
+	if !slices.Contains(scope.IdsProject, idProject) {
+		return "", false
+	}
+	if model.RoleRank(role) > model.RoleRank(scope.MaxRole) {
+		return scope.MaxRole, true
+	}
+	return role, true
+}
+
+func (acl *AclService) cachedProjectRole(ctx context.Context, idUser, idProject int64) (model.Role, bool) {
 	cacheKey := fmt.Sprintf("acl:project:%d:%d", idProject, idUser)
 
 	cached, err := acl.cache.Get(ctx, cacheKey).Result()
@@ -164,7 +189,22 @@ func (acl *AclService) InvalidateUserTeamProjectCaches(ctx context.Context, idUs
 // an instance admin, who resolveProjectRole already treats as an owner everywhere. Lives
 // here so both answers come from one place — the membership query alone returned nothing
 // for a non-member admin the ACL was letting in.
+// A run scope on the request keeps only its projects.
 func (acl *AclService) LoadVisibleProjects(ctx context.Context, idUser int64) ([]*model.Project, error) {
+	projects, err := acl.loadVisibleProjects(ctx, idUser)
+	if err != nil {
+		return nil, err
+	}
+	scope, isScoped := extctx.GetRunScope(ctx)
+	if !isScoped {
+		return projects, nil
+	}
+	return slices.DeleteFunc(projects, func(project *model.Project) bool {
+		return !slices.Contains(scope.IdsProject, project.IdProject)
+	}), nil
+}
+
+func (acl *AclService) loadVisibleProjects(ctx context.Context, idUser int64) ([]*model.Project, error) {
 	isAdmin, err := acl.userRepo.IsAdminUser(ctx, idUser)
 	if err != nil {
 		return nil, fmt.Errorf("resolving admin flag: %w", err)

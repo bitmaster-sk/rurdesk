@@ -124,6 +124,7 @@ type AgentTask struct {
 	Model            *string    `json:"model"           db:"model"`
 	MaxTurns         *int       `json:"maxTurns"        db:"max_turns"`
 	Effort           *string    `json:"effort"          db:"effort"`
+	ChatMode         *string    `json:"chatMode,omitempty" db:"chat_mode"`
 }
 
 type AgentStagePlan struct {

@@ -16,8 +16,8 @@ func NewThinkingNotifier(notifier notify.INotifier, members projectMemberLoader)
 	return &ThinkingNotifier{notifier: notifier, members: members}
 }
 
-// Broadcast sends the thinking notice to every member of the project.
-func (n *ThinkingNotifier) Broadcast(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice) {
+// BroadcastToProject sends the thinking notice to every member of the project.
+func (n *ThinkingNotifier) BroadcastToProject(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice) {
 	if notice == nil {
 		return
 	}
@@ -33,6 +33,20 @@ func (n *ThinkingNotifier) Broadcast(ctx context.Context, idProject int64, notic
 	}
 	n.notifier.Send(&notify.Notice{
 		IdsUser: idsUser,
+		Subject: notify.SubjectAgentThinking,
+		Action:  notify.ActionCreate,
+		Payload: notice,
+	})
+}
+
+// BroadcastToUser sends the thinking notice to that user alone, as a chat turn's goes to the
+// conversation owner; without a user nothing is sent.
+func (n *ThinkingNotifier) BroadcastToUser(_ context.Context, idUser int64, notice *model.AgentThinkingNotice) {
+	if notice == nil || idUser == 0 {
+		return
+	}
+	n.notifier.Send(&notify.Notice{
+		IdsUser: []int64{idUser},
 		Subject: notify.SubjectAgentThinking,
 		Action:  notify.ActionCreate,
 		Payload: notice,

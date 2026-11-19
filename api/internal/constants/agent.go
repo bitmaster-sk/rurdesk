@@ -26,11 +26,13 @@ const (
 	StageImplementationPlan = "implementation_plan"
 	StageImplementation     = "implementation"
 	StageReleaseNotes       = "release_notes"
+	StageChat               = "chat"
 )
 
 const (
 	RunKindIssue        = "issue"
 	RunKindReleaseNotes = "release_notes"
+	RunKindChat         = "chat"
 )
 
 const (
@@ -184,3 +186,10 @@ var RecoverableFailReasons = map[string]bool{
 var RecoverableFailReasonList = []string{FailReasonCrashRecovery, FailReasonGatewayRestart}
 
 const AgentRunHeader = "X-Rurdesk-Run"
+
+// States of an agent shown to a user who waits for it.
+const (
+	AgentStatusIdle   = "idle"
+	AgentStatusBusy   = "busy"
+	AgentStatusQueued = "queued"
+)

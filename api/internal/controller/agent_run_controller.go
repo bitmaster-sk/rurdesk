@@ -40,6 +40,7 @@ type AgentRunController struct {
 	stagePlan         *service.AgentStagePlanService
 	agentTaskConfig   *service.AgentTaskConfigService
 	dispatcher        *agent.Dispatcher
+	chatTurns         *agent.ChatTurns
 	proposals         *service.WikiProposalService
 	releases          *service.ReleaseService
 	notifier          notify.INotifier
@@ -61,6 +62,7 @@ func NewAgentRunController(
 	stagePlan *service.AgentStagePlanService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
+	chatTurns *agent.ChatTurns,
 	proposals *service.WikiProposalService,
 	releases *service.ReleaseService,
 	notifier notify.INotifier,
@@ -81,6 +83,7 @@ func NewAgentRunController(
 		stagePlan:         stagePlan,
 		agentTaskConfig:   agentTaskConfig,
 		dispatcher:        dispatcher,
+		chatTurns:         chatTurns,
 		proposals:         proposals,
 		releases:          releases,
 		notifier:          notifier,
@@ -98,7 +101,7 @@ func (ctrl *AgentRunController) GetRun(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		ResponseErr(c, errs.ErrNotFound)
 		return
@@ -210,7 +213,7 @@ func (ctrl *AgentRunController) Approve(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
@@ -276,7 +279,7 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
@@ -331,7 +334,7 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 	}
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
@@ -387,7 +390,7 @@ func (ctrl *AgentRunController) Restart(c *gin.Context) {
 	}
 	user, _ := extctx.GetUser(ctx)
 
-	oldRun, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	oldRun, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		ResponseErr(c, errs.ErrNotFound)
 		return
@@ -569,10 +572,9 @@ func (ctrl *AgentRunController) respondRunStagePlan(c *gin.Context, run *model.A
 	}
 
 	res := model.AgentRunStagePlanRes{
-		Stages:        make([]model.AgentRunStagePlanEntry, 0, len(plan.Stages)),
-		Models:        gateway.Models,
-		ModelDefault:  gateway.ModelDefault,
-		MaxTurnsLimit: gateway.MaxTurnsLimit,
+		Stages:            make([]model.AgentRunStagePlanEntry, 0, len(plan.Stages)),
+		AgentModelChoices: gateway.ModelChoices(),
+		MaxTurnsLimit:     gateway.MaxTurnsLimit,
 	}
 	res.DefaultsByStage = ctrl.agentTaskConfig.GetStageDefaults(gateway)
 	res.ModelsWithoutThinking, err = ctrl.agentTaskConfig.ModelsWithoutThinking(ctx, gateway)
@@ -617,7 +619,7 @@ func (ctrl *AgentRunController) loadRunForStagePlan(c *gin.Context, isWrite bool
 	ctx := c.Request.Context()
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		ResponseErr(c, errs.ErrNotFound)
 		return nil, false
@@ -657,7 +659,7 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 	}
 	user, _ := extctx.GetUser(ctx)
 
-	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	run, err := ctrl.loadAgentRun(ctx, idRun)
 	if err == repository.ErrRunNotFound {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
@@ -733,6 +735,11 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.Status(http.StatusNotFound)
 		return
 	}
+	// A run token completes the task of its own turn and nothing else.
+	if scope, isScoped := extctx.GetRunScope(ctx); isScoped && task.IdRun != scope.IdRun {
+		ResponseErr(c, errs.ErrForbidden)
+		return
+	}
 	run, err := ctrl.agentRunRepo.LoadById(ctx, task.IdRun)
 	if err != nil {
 		_ = c.Error(errs.ErrNotFound)
@@ -749,6 +756,10 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 	if err := validateOutcomeForStage(body.Outcome, task.Stage); err != nil {
 		_ = c.Error(errs.ErrBadRequest.WithMessage(err.Error()))
 		c.Status(http.StatusBadRequest)
+		return
+	}
+	if run.Kind == constants.RunKindChat {
+		ctrl.completeChatTurn(c, run, task, &body)
 		return
 	}
 	if run.IdIssue != nil {
@@ -859,6 +870,18 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		Status:    res.targetStatus,
 		NextPhase: res.nextPhase,
 	})
+}
+
+// completeChatTurn ends a chat turn: the reply becomes a conversation message for
+// its owner. No issue state, PR, run notice or project-wide message is involved.
+func (ctrl *AgentRunController) completeChatTurn(c *gin.Context, run *model.AgentRun, task *model.AgentTask, body *model.CompleteStageReq) {
+	ctx := c.Request.Context()
+	res, err := ctrl.chatTurns.Complete(ctx, run, task, body)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, res)
 }
 
 func (ctrl *AgentRunController) applyCompleteStage(
@@ -1010,7 +1033,15 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 		return
 	}
 	for _, idRun := range runIds {
-		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, "gateway_restart")
+		run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+		if err == nil && run.Kind == constants.RunKindChat {
+			// A chat turn is re-queued rather than failed so the conversation survives the restart.
+			if err := ctrl.chatTurns.GatewayRestarted(ctx, idRun); err != nil {
+				log.Error().Err(err).Int64("idRun", idRun).Msg("re-queueing a chat turn after a gateway restart")
+			}
+			continue
+		}
+		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, constants.FailReasonGatewayRestart)
 	}
 	ResponseOk(c, gin.H{"failedRuns": len(runIds)})
 }
@@ -1035,7 +1066,7 @@ func (ctrl *AgentRunController) GatewayModelThinking(c *gin.Context) {
 }
 
 // TaskStats accepts a stats backfill from the gateway adapter and broadcasts
-// an agent_run notice so the open stats panel refetches.
+// an agent_run notice so the open stats panel refetches, and stores the commit a chat turn's worktree is at.
 func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	ctx := c.Request.Context()
 	idTask, err := strconv.ParseInt(c.Param("idTask"), 10, 64)
@@ -1054,6 +1085,7 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 		CacheWriteTokens *int     `json:"cacheWriteTokens"`
 		CostUsd          *float64 `json:"costUsd"`
 		CostEstimated    bool     `json:"costEstimated"`
+		HeadCommit       *string  `json:"headCommit"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		_ = c.Error(errs.ErrValidation.WithMessage(err.Error()))
@@ -1077,25 +1109,45 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	// directly — no client refetch needed.
 	if task, err := ctrl.agentTaskRepo.LoadById(ctx, idTask); err == nil {
 		if run, err := ctrl.agentRunRepo.LoadById(ctx, task.IdRun); err == nil {
-			if stats, err := ctrl.agentTaskRepo.StatsForRun(ctx, task.IdRun); err == nil {
-				members, _ := ctrl.projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
-				var idsUser []int64
-				if len(members) > 0 {
-					idsUser = make([]int64, len(members))
-					for i, m := range members {
-						idsUser[i] = m.IdUser
-					}
+			if run.Kind == constants.RunKindChat && body.HeadCommit != nil && *body.HeadCommit != "" {
+				if err := ctrl.chatTurns.ReportHeadCommit(ctx, run, idTask, *body.HeadCommit); err != nil {
+					ResponseErr(c, err)
+					return
 				}
-				ctrl.notifier.Send(&notify.Notice{
-					IdsUser: idsUser,
-					Subject: notify.SubjectAgentStats,
-					Action:  notify.ActionUpdate,
-					Payload: &model.AgentStatsNotice{IdRun: task.IdRun, Stats: stats},
-				})
+			}
+			if stats, err := ctrl.agentTaskRepo.StatsForRun(ctx, task.IdRun); err == nil {
+				ctrl.sendStatsNotice(ctx, run, &model.AgentStatsNotice{IdRun: task.IdRun, Stats: stats})
 			}
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+// sendStatsNotice tells the run's audience about new stats: the project members, or only the
+// owner of a chat run; nothing when the audience cannot be resolved.
+func (ctrl *AgentRunController) sendStatsNotice(ctx context.Context, run *model.AgentRun, payload *model.AgentStatsNotice) {
+	var idsUser []int64
+	if run.Kind == constants.RunKindChat {
+		idOwner, err := ctrl.chatTurns.OwnerOf(ctx, run.IdRun)
+		if err != nil || idOwner == 0 {
+			return
+		}
+		idsUser = []int64{idOwner}
+	} else {
+		members, _ := ctrl.projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
+		for _, member := range members {
+			idsUser = append(idsUser, member.IdUser)
+		}
+	}
+	if len(idsUser) == 0 {
+		return
+	}
+	ctrl.notifier.Send(&notify.Notice{
+		IdsUser: idsUser,
+		Subject: notify.SubjectAgentStats,
+		Action:  notify.ActionUpdate,
+		Payload: payload,
+	})
 }
 
 // TaskHeartbeat records that the active task is still alive.
@@ -1436,4 +1488,17 @@ func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.C
 		return
 	}
 	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks, idAssignee))
+}
+
+// loadAgentRun loads a run for the issue and release run endpoints; a chat run has its own
+// endpoints and does not exist here.
+func (ctrl *AgentRunController) loadAgentRun(ctx context.Context, idRun int64) (*model.AgentRun, error) {
+	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
+	if err != nil {
+		return nil, err
+	}
+	if run.Kind == constants.RunKindChat {
+		return nil, repository.ErrRunNotFound
+	}
+	return run, nil
 }

@@ -101,8 +101,7 @@ func (s *AgentTaskConfigService) ApplyToOverviews(ctx context.Context, entries [
 		if !ok {
 			gateway = &model.AgentGateway{Models: []string{}}
 		}
-		entry.Models = gateway.Models
-		entry.ModelDefault = gateway.ModelDefault
+		entry.AgentModelChoices = gateway.ModelChoices()
 		entry.MaxTurnsLimit = gateway.MaxTurnsLimit
 		entry.DefaultsByStage = s.GetStageDefaults(gateway)
 		entry.ModelsWithoutThinking, err = s.ModelsWithoutThinking(ctx, gateway)

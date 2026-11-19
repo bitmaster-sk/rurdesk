@@ -173,6 +173,57 @@ func (r *AgentThinkingRepository) LoadCompacted(ctx context.Context, idRun int64
 	return blob, tail, nil
 }
 
+// LoadLiveByTask returns the task's event rows, which exist while it runs, with
+// the highest seq stored.
+func (r *AgentThinkingRepository) LoadLiveByTask(ctx context.Context, idTask int64) (events model.AgentThinkingEvents, lastSeq int, err error) {
+	db := extctx.GetDb(ctx, r.pool)
+	rows, err := db.Query(ctx, `
+		SELECT seq, kind, tool, text, event_at
+		FROM agent.task_thinking
+		WHERE id_task = $1
+		ORDER BY seq, event_index`, idTask)
+	if err != nil {
+		return nil, 0, fmt.Errorf("loading live thinking of task %d: %w", idTask, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var event model.AgentThinkingEvent
+		var seq int
+		if err := rows.Scan(&seq, &event.Kind, &event.Tool, &event.Text, &event.At); err != nil {
+			return nil, 0, fmt.Errorf("scanning live thinking event: %w", err)
+		}
+		if seq > lastSeq {
+			lastSeq = seq
+		}
+		events = append(events, event)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("loading live thinking of task %d: %w", idTask, err)
+	}
+	return events, lastSeq, nil
+}
+
+// LoadCompactedByTask returns the task's compacted thinking. A task that does not
+// exist reads the same as one that recorded nothing.
+func (r *AgentThinkingRepository) LoadCompactedByTask(ctx context.Context, idTask int64) (blob []byte, tail string, err error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var storedTail *string
+	err = db.QueryRow(ctx,
+		"SELECT thinking_blob, thinking_tail FROM agent.task WHERE id_task = $1", idTask,
+	).Scan(&blob, &storedTail)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, "", nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("loading compacted thinking of task %d: %w", idTask, err)
+	}
+	if storedTail != nil {
+		tail = *storedTail
+	}
+	return blob, tail, nil
+}
+
 func (r *AgentThinkingRepository) OrphanedTaskIds(ctx context.Context) ([]int64, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `

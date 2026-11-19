@@ -36,7 +36,8 @@ func BroadcastRunUpdate(
 	taskRepo *repository.AgentTaskRepository,
 	run *model.AgentRun,
 ) {
-	if run == nil {
+	// A chat run is private to its owner; project members are never notified.
+	if run == nil || run.Kind == constants.RunKindChat {
 		return
 	}
 	events, err := runRepo.LoadEvents(ctx, run.IdRun)
@@ -245,4 +246,31 @@ func FailRun(
 		updated.ErrorMessage = &msg
 	}
 	BroadcastRunUpdate(ctx, notifier, projectRepo, issueRepo, runRepo, taskRepo, updated)
+}
+
+// FailRunOrChatTurn is FailRun for a run whose stage the heartbeat sweep already failed; a chat
+// run is not failed, its turn ends with an error message.
+func FailRunOrChatTurn(
+	ctx context.Context,
+	notifier notify.INotifier,
+	projectRepo *repository.ProjectRepository,
+	issueRepo assigneeLoader,
+	runRepo *repository.AgentRunRepository,
+	taskRepo *repository.AgentTaskRepository,
+	chatTurns *ChatTurns,
+	idRun int64,
+	reason string,
+) {
+	run, err := runRepo.LoadById(ctx, idRun)
+	if err != nil {
+		log.Debug().Err(err).Int64("idRun", idRun).Msg("FailRunOrChatTurn: run load failed")
+		return
+	}
+	if run.Kind != constants.RunKindChat {
+		FailRun(ctx, notifier, projectRepo, issueRepo, runRepo, taskRepo, idRun, reason)
+		return
+	}
+	if err := chatTurns.FailRun(ctx, idRun, reason); err != nil {
+		log.Error().Err(err).Int64("idRun", idRun).Msg("ending a lost chat turn")
+	}
 }

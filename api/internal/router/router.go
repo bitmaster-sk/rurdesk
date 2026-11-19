@@ -20,6 +20,7 @@ func New(
 	baseLogger zerolog.Logger,
 	cache *redis.Client,
 	apiKeyAuth middleware.ApiKeyAuthenticator,
+	runTokenAuth middleware.RunTokenAuthenticator,
 	userCtrl *controller.UserController,
 	teamCtrl *controller.TeamController,
 	projectCtrl *controller.ProjectController,
@@ -55,6 +56,7 @@ func New(
 	gitIntCtrl *controller.GitIntegrationController,
 	agentRunCtrl *controller.AgentRunController,
 	agentThinkingCtrl *controller.AgentThinkingController,
+	agentConversationCtrl *controller.AgentConversationController,
 	agentGwCtrl *controller.AgentGatewayController,
 	workflowEventMapCtrl *controller.WorkflowEventMapController,
 	skillCtrl *controller.SkillController,
@@ -91,7 +93,7 @@ func New(
 	pub.POST("/login", userCtrl.Login)
 	pub.GET("/auth/methods", authMethodsCtrl.Get)
 
-	auth := middleware.Auth(cache, apiKeyAuth)
+	auth := middleware.Auth(cache, apiKeyAuth, runTokenAuth)
 	pri := api.Group("/private", auth)
 
 	pri.GET("/user", userCtrl.GetByToken)
@@ -362,6 +364,23 @@ func New(
 	pri.POST("/agent/run/:idRun/restart", agentRunCtrl.Restart)
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
 	pri.GET("/agent/run/:idRun/thinking", agentThinkingCtrl.Get)
+	pri.GET("/agent/conversation/:id/thinking", agentThinkingCtrl.GetChatTurn) // owner only, ?idTask= one turn
+	// Agent chat: every route is the owner's and none is open to a run token.
+	pri.GET("/agent/conversation", agentConversationCtrl.GetConversations)
+	pri.POST("/agent/conversation", agentConversationCtrl.CreateConversation)
+	pri.GET("/agent/conversation/agents", agentConversationCtrl.GetAgents)
+	pri.GET("/agent/conversation/unread-count", agentConversationCtrl.GetUnreadCount)
+	pri.GET("/agent/conversation/:id", agentConversationCtrl.GetConversation)
+	pri.DELETE("/agent/conversation/:id", agentConversationCtrl.DeleteConversation)
+	pri.GET("/agent/conversation/:id/message", agentConversationCtrl.GetMessages)
+	pri.POST("/agent/conversation/:id/message", agentConversationCtrl.CreateMessage)
+	pri.POST("/agent/conversation/:id/project", agentConversationCtrl.AddProject)
+	pri.DELETE("/agent/conversation/:id/project/:idProject", agentConversationCtrl.RemoveProject)
+	pri.POST("/agent/conversation/:id/read", agentConversationCtrl.SetRead)
+	pri.PUT("/agent/conversation/:id/pin", agentConversationCtrl.SetPinned)
+	pri.PUT("/agent/conversation/:id/settings", agentConversationCtrl.UpdateSettings)
+	pri.POST("/agent/conversation/:id/task-draft", agentConversationCtrl.CreateTaskDraft)
+	pri.POST("/agent/conversation/:id/retry", agentConversationCtrl.Retry)
 	pri.GET("/agent/run/:idRun/stage-plan", agentRunCtrl.GetStagePlan)
 	pri.GET("/agent/run/:idRun/wiki-read", wikiAgentCtrl.GetRunReads)
 	pri.PATCH("/agent/run/:idRun/stage-plan", agentRunCtrl.PatchStagePlanEntry)

@@ -83,15 +83,19 @@ func (r *AgentOverviewRepository) Load(ctx context.Context, idProject int64) ([]
 	return out, nil
 }
 
+// applyActive marks agents running a stage. A chat turn makes the agent busy but
+// never shows as its current work: conversations are private to their owner.
 func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int64, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
-		SELECT t.id_user_agent, t.stage, r.id_project, i.id_issue_public, rel.name
+		SELECT t.id_user_agent, t.stage,
+		       CASE WHEN r.kind = $2 THEN 0 ELSE coalesce(r.id_project, 0) END,
+		       i.id_issue_public, rel.name
 		FROM agent.task t
 		JOIN agent.run r ON r.id_run = t.id_run
 		LEFT JOIN issues.issue i ON i.id_issue = r.id_issue
 		LEFT JOIN issues.release rel ON rel.id_release = r.id_release
 		WHERE t.status = $1
-	`, constants.TaskStatusActive)
+	`, constants.TaskStatusActive, constants.RunKindChat)
 	if err != nil {
 		return fmt.Errorf("querying active tasks: %w", err)
 	}
@@ -117,15 +121,17 @@ func (r *AgentOverviewRepository) applyActive(ctx context.Context, idProject int
 	return rows.Err()
 }
 
+// applyQueue counts queued issue and release runs; queued chat turns stay private.
 func (r *AgentOverviewRepository) applyQueue(ctx context.Context, idProject int64, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
 		SELECT r.id_user_agent, r.id_project, i.id_issue_public
 		FROM agent.run r
 		LEFT JOIN issues.issue i ON i.id_issue = r.id_issue
 		WHERE r.phase = $1
+		  AND r.kind <> $2
 		  AND (r.id_issue IS NULL OR i.assigned_to = r.id_user_agent)
 		ORDER BY r.created_at
-	`, constants.PhaseQueued)
+	`, constants.PhaseQueued, constants.RunKindChat)
 	if err != nil {
 		return fmt.Errorf("querying queued runs: %w", err)
 	}
@@ -174,15 +180,18 @@ func (r *AgentOverviewRepository) applyCompletedToday(ctx context.Context, byAge
 	return rows.Err()
 }
 
+// applyTaskCounters sums the agent's tokens over every task, chat turns included, but counts
+// failed attempts of issue and release stages only.
 func (r *AgentOverviewRepository) applyTaskCounters(ctx context.Context, byAgent map[int64]*model.AgentOverview) error {
 	rows, err := extctx.GetDb(ctx, r.pool).Query(ctx, `
-		SELECT id_user_agent,
-		       COALESCE(SUM(tokens_used), 0),
-		       COUNT(*) FILTER (WHERE status = $1)
-		FROM agent.task
-		WHERE created_at >= now() - interval '7 days'
-		GROUP BY id_user_agent
-	`, constants.TaskStatusFailed)
+		SELECT t.id_user_agent,
+		       COALESCE(SUM(t.tokens_used), 0),
+		       COUNT(*) FILTER (WHERE t.status = $1 AND r.kind <> $2)
+		FROM agent.task t
+		JOIN agent.run r ON r.id_run = t.id_run
+		WHERE t.created_at >= now() - interval '7 days'
+		GROUP BY t.id_user_agent
+	`, constants.TaskStatusFailed, constants.RunKindChat)
 	if err != nil {
 		return fmt.Errorf("querying task counters: %w", err)
 	}

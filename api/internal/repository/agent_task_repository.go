@@ -29,7 +29,7 @@ const agentTaskColumns = `
 	cost_usd, cost_estimated,
 	started_at, finished_at, last_heartbeat_at, created_at,
 	thinking_tail, thinking_blob IS NOT NULL,
-	model, max_turns, effort`
+	model, max_turns, effort, chat_mode`
 
 func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 	task := &model.AgentTask{}
@@ -41,7 +41,7 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 		&task.CostUsd, &task.CostEstimated,
 		&task.StartedAt, &task.FinishedAt, &task.LastHeartbeatAt, &task.CreatedAt,
 		&task.ThinkingTail, &task.HasThinking,
-		&task.Model, &task.MaxTurns, &task.Effort,
+		&task.Model, &task.MaxTurns, &task.Effort, &task.ChatMode,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent task: %w", err)
@@ -68,6 +68,15 @@ func (r *AgentTaskRepository) SetRunConfig(ctx context.Context, idTask int64, mo
 		idTask, model, maxTurns, effort)
 	if err != nil {
 		return fmt.Errorf("setting task run config: %w", err)
+	}
+	return nil
+}
+
+// SetModel records the model a chat turn runs with; a chat turn has no effort or max turns of its own.
+func (r *AgentTaskRepository) SetModel(ctx context.Context, idTask int64, model *string) error {
+	db := extctx.GetDb(ctx, r.pool)
+	if _, err := db.Exec(ctx, `UPDATE agent.task SET model = $2 WHERE id_task = $1`, idTask, model); err != nil {
+		return fmt.Errorf("setting task model: %w", err)
 	}
 	return nil
 }
@@ -243,6 +252,17 @@ func (r *AgentTaskRepository) UpdateStats(
 		return fmt.Errorf("updating task stats: %w", err)
 	}
 	return nil
+}
+
+// SetChatMode fixes the mode of a chat turn's attempt; a mode already set is kept.
+func (r *AgentTaskRepository) SetChatMode(ctx context.Context, idTask int64, mode string) (*model.AgentTask, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
+		UPDATE agent.task SET chat_mode = coalesce(chat_mode, $2)
+		WHERE id_task = $1
+		RETURNING %s`, agentTaskColumns),
+		idTask, mode,
+	)
+	return scanAgentTask(row)
 }
 
 func (r *AgentTaskRepository) SetError(ctx context.Context, idTask int64, reason, detail string) error {
@@ -478,4 +498,27 @@ func (r *AgentTaskRepository) tokensByModel(ctx context.Context, idRun int64) (m
 		byModel[model] = tokens
 	}
 	return byModel, rows.Err()
+}
+
+// LoadAgentActiveTask returns the stage the agent runs right now, or nil. The
+// scheduler keeps one active task per agent.
+func (r *AgentTaskRepository) LoadAgentActiveTask(ctx context.Context, idUserAgent int64) (*model.AgentActiveTask, error) {
+	active := &model.AgentActiveTask{}
+	err := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
+		SELECT tsk.id_task, tsk.id_run, run.kind, coalesce(run.id_project, 0), iss.id_issue_public, tsk.stage
+		FROM agent.task tsk
+		JOIN agent.run run ON run.id_run = tsk.id_run
+		LEFT JOIN issues.issue iss ON iss.id_issue = run.id_issue
+		WHERE run.id_user_agent = $1 AND tsk.status = $2
+		ORDER BY tsk.started_at DESC NULLS LAST, tsk.id_task DESC
+		LIMIT 1`,
+		idUserAgent, constants.TaskStatusActive,
+	).Scan(&active.IdTask, &active.IdRun, &active.Kind, &active.IdProject, &active.IdIssuePublic, &active.Stage)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("loading active task of agent %d: %w", idUserAgent, err)
+	}
+	return active, nil
 }

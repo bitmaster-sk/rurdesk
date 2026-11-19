@@ -53,7 +53,7 @@ func performAuthHeaderRequest(t *testing.T, cache SessionCache, apiKeyAuth ApiKe
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/protected", Auth(cache, apiKeyAuth), func(c *gin.Context) {
+	router.GET("/protected", Auth(cache, apiKeyAuth, &fakeRunTokenAuth{}), func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 
@@ -216,7 +216,7 @@ func performSubprotocolRequest(t *testing.T, cache SessionCache, protocols strin
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/protected", Auth(cache, &fakeApiKeyAuth{}), func(c *gin.Context) {
+	router.GET("/protected", Auth(cache, &fakeApiKeyAuth{}, &fakeRunTokenAuth{}), func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 
@@ -263,7 +263,7 @@ func TestAuthMarkerWithoutTokenIsUnauthorized(t *testing.T) {
 func TestAuthCookieIsNotAnAuthSource(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.GET("/protected", Auth(&fakeSessionCache{value: sessionJSON(t)}, &fakeApiKeyAuth{}), func(c *gin.Context) {
+	router.GET("/protected", Auth(&fakeSessionCache{value: sessionJSON(t)}, &fakeApiKeyAuth{}, &fakeRunTokenAuth{}), func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 

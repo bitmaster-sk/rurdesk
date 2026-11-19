@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/rs/zerolog/log"
@@ -14,6 +15,7 @@ type Sweep struct {
 	agentRunRepo  *repository.AgentRunRepository
 	projectRepo   *repository.ProjectRepository
 	issueRepo     *repository.IssueRepository
+	chatTurns     *ChatTurns
 	notifier      notify.INotifier
 }
 
@@ -22,6 +24,7 @@ func NewSweep(
 	runRepo *repository.AgentRunRepository,
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
+	chatTurns *ChatTurns,
 	notifier notify.INotifier,
 ) *Sweep {
 	return &Sweep{
@@ -29,6 +32,7 @@ func NewSweep(
 		agentRunRepo:  runRepo,
 		projectRepo:   projectRepo,
 		issueRepo:     issueRepo,
+		chatTurns:     chatTurns,
 		notifier:      notifier,
 	}
 }
@@ -56,6 +60,6 @@ func (s *Sweep) runHeartbeatSweep(ctx context.Context) {
 	}
 	for _, idRun := range runIds {
 		log.Warn().Int64("idRun", idRun).Msg("heartbeat sweep: failing run with stale heartbeat")
-		FailRun(ctx, s.notifier, s.projectRepo, s.issueRepo, s.agentRunRepo, s.agentTaskRepo, idRun, "heartbeat_stale")
+		FailRunOrChatTurn(ctx, s.notifier, s.projectRepo, s.issueRepo, s.agentRunRepo, s.agentTaskRepo, s.chatTurns, idRun, constants.FailReasonHeartbeatStale)
 	}
 }
