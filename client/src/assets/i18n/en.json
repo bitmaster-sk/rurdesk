@@ -126,7 +126,8 @@
             "NEXT": "Next image",
             "ZOOM_IN": "Zoom in",
             "ZOOM_OUT": "Zoom out",
-            "ZOOM_RESET": "Fit to screen"
+            "ZOOM_RESET": "Fit to screen",
+            "COUNTER": "Image {{index}} of {{count}}"
         }
     },
     "AGENT": {

@@ -160,7 +160,8 @@ extension. A file over the size limit is rejected; admins set the limit in
 
 In a posted message, images show as uniform thumbnails. Click one to open it
 enlarged, move between the images of that message with the arrow keys or buttons,
-and press `Esc` to close. Zoom with the mouse wheel, the zoom buttons or the `+`
+and press `Esc` to close. The enlarged view shows where you are in the set, e.g.
+`3 / 8`. Zoom with the mouse wheel, the zoom buttons or the `+`
 and `-` keys, drag the zoomed image to move around, and double-click or press `0`
 to fit it back to the screen. Other files show as a card with the name and size;
 click the card to download the file. PDFs open in a new tab instead. Only people who can read the task or

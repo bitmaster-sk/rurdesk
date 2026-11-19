@@ -107,7 +107,8 @@ limit apply as for [task attachments](features.md#attachments).
 
 On the page and in the editor preview, images show as thumbnails and other files
 as a card with the name and size. Click a thumbnail to open it enlarged and move
-through all the images of the page with the arrow keys.
+through all the images of the page with the arrow keys; the enlarged view shows
+where you are in the set, e.g. `3 / 8`.
 
 A file belongs to its space: anyone who can read the space can open it, and it
 cannot be linked from a page in another space. Once you pick a file for a new

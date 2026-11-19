@@ -1205,16 +1205,18 @@
                 <ui-button size="small" severity="secondary" (click)="lightboxOpen = true">
                     Open lightbox
                 </ui-button>
-                <code>ui-lightbox: arrows, zoom, Esc</code>
+                <code>ui-lightbox: arrows, counter, zoom, Esc</code>
             </div>
         </div>
 
         <ui-lightbox
             [(visible)]="lightboxOpen"
-            [header]="'Image ' + (lightboxIndex + 1) + ' / ' + lightboxImages.length"
+            header="Lightbox demo"
             [src]="lightboxImages[lightboxIndex]"
             alt="Lightbox demo"
             [hasMany]="true"
+            [index]="lightboxIndex + 1"
+            [count]="lightboxImages.length"
             (previous)="onLightboxStep(-1)"
             (next)="onLightboxStep(1)"
         />

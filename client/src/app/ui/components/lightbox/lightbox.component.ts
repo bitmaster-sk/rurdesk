@@ -23,6 +23,10 @@ export class UiLightboxComponent {
     public readonly src = input<string | null>(null);
     public readonly alt = input('');
     public readonly hasMany = input(false);
+    /** 1-based display position of the current item; null hides the counter. */
+    public readonly index = input<number | null>(null);
+    /** Total number of items in the set; null hides the counter. */
+    public readonly count = input<number | null>(null);
     public readonly previous = output<void>();
     public readonly next = output<void>();
 
@@ -35,6 +39,11 @@ export class UiLightboxComponent {
     protected readonly isMaxZoom = computed(() => this.zoom().scale >= UiLightboxZoom.maxScale);
     protected readonly zoomPercent = computed(() => Math.round(this.zoom().scale * 100));
     protected readonly transform = computed(() => UiLightboxZoom.toTransform(this.zoom()));
+    protected readonly hasPosition = computed(() => {
+        const index = this.index();
+        const count = this.count();
+        return index !== null && count !== null && index >= 1 && count >= index;
+    });
 
     public constructor() {
         effect(() => {

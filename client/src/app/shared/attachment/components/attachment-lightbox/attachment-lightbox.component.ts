@@ -13,6 +13,11 @@ export class AttachmentLightboxComponent {
     private readonly store = inject(AttachmentStore);
 
     protected readonly hasMany = computed(() => this.gallery.images().length > 1);
+    protected readonly position = computed(() => {
+        const index = this.gallery.activeIndex();
+        return index === null ? null : index + 1;
+    });
+    protected readonly total = computed(() => this.gallery.images().length);
     protected readonly url = computed(() => {
         const idAttachment = this.gallery.active()?.idAttachment;
         const state = idAttachment ? this.store.state(idAttachment) : null;
