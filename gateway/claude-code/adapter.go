@@ -515,7 +515,7 @@ func totalTokens(ev model.StreamLine) int {
 			return total
 		}
 	}
-	return ev.TokenUsage.Total()
+	return ev.Total()
 }
 
 type resultUsage struct {
