@@ -24,6 +24,9 @@ export class AgentThinkingStore {
     private lastSeq = 0;
     private firstSeq = 0;
     private appliedStage: string | null = null;
+    // Event count of each streamed batch of the current task, in seq order, so the stored copy can
+    // replace exactly the batches it already holds.
+    private streamedBatches: { seq: number; count: number }[] = [];
 
     public constructor() {
         this.noticeService.agentThinking$
@@ -57,7 +60,10 @@ export class AgentThinkingStore {
         }
         this.appliedStage = stage;
 
-        const merged = [...events, ...this.events()];
+        const covered = this.streamedBatches
+            .filter(batch => batch.seq <= lastSeq)
+            .reduce((sum, batch) => sum + batch.count, 0);
+        const merged = [...events, ...this.events().slice(covered)];
         const kept = this.capped(merged);
         this.events.set(kept);
 
@@ -96,6 +102,7 @@ export class AgentThinkingStore {
             this.firstSeq = notice.seq;
         }
 
+        this.streamedBatches.push({ seq: notice.seq, count: notice.events.length });
         const merged = [...this.events(), ...notice.events];
         const kept = this.capped(merged);
         if (kept.length < merged.length) {
@@ -126,5 +133,6 @@ export class AgentThinkingStore {
         this.lastSeq = 0;
         this.firstSeq = 0;
         this.appliedStage = null;
+        this.streamedBatches = [];
     }
 }

@@ -234,6 +234,38 @@ describe('AgentThinkingStore', () => {
         expect(store.hasGap()).toBe(false);
     });
 
+    // The fetch races the stream: batches that streamed while it was in flight
+    // are already part of the stored copy and must not show twice, and the ones
+    // after it must not be lost.
+    it('drops only the streamed batches the stored thinking already holds', () => {
+        const notices = new Subject<{ payload: AgentThinkingNotice }>();
+        const store = build(notices);
+        store.bind(5);
+
+        notices.next(makeNotice(5, 3, 'third'));
+        notices.next(makeNotice(5, 4, 'fourth'));
+        store.applyStored(
+            'implementation',
+            1,
+            [
+                { kind: AgentThinkingKind.Thinking, text: 'first', at: 1 },
+                { kind: AgentThinkingKind.Thinking, text: 'second', at: 2 },
+                { kind: AgentThinkingKind.Thinking, text: 'third', at: 3 }
+            ],
+            3
+        );
+        notices.next(makeNotice(5, 5, 'fifth'));
+
+        expect(store.events().map(event => event.text)).toEqual([
+            'first',
+            'second',
+            'third',
+            'fourth',
+            'fifth'
+        ]);
+        expect(store.hasGap()).toBe(false);
+    });
+
     it('keeps flagging a gap the stored thinking does not close', () => {
         const notices = new Subject<{ payload: AgentThinkingNotice }>();
         const store = build(notices);
