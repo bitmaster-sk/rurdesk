@@ -1,4 +1,4 @@
-import { Injectable, NgZone, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { GanttTimelineService } from './gantt-timeline.service';
 import { HandleSide } from '../constants/gantt-handle-side.enum';
 import { format } from 'date-fns';
@@ -32,7 +32,6 @@ export interface RelationDropTarget {
 @Injectable()
 export class GanttDragService {
     private readonly timelineService = inject(GanttTimelineService);
-    private readonly ngZone = inject(NgZone);
 
     public readonly state = signal<DragState>({
         mode: DragMode.Idle,
@@ -194,9 +193,9 @@ export class GanttDragService {
             const target = this.detectRelationDropTarget(clientX, clientY);
             const previous = this._activeDropTarget();
             if (target?.taskId !== previous?.taskId || target?.side !== previous?.side) {
-                // Signal writes inside runOutsideAngular don't trigger CD on OnPush
-                // consumers — re-enter the zone only when the target actually changes.
-                this.ngZone.run(() => this._activeDropTarget.set(target));
+                // detectRelationDropTarget returns a fresh object every move —
+                // only write the signal when the target actually changes.
+                this._activeDropTarget.set(target);
             }
         }
     }
@@ -301,11 +300,9 @@ export class GanttDragService {
     };
 
     private addGlobalListeners(): void {
-        this.ngZone.runOutsideAngular(() => {
-            document.addEventListener('mousemove', this.onGlobalMouseMove);
-            document.addEventListener('mouseup', this.onGlobalMouseUp);
-            document.addEventListener('keydown', this.onGlobalKeyDown);
-        });
+        document.addEventListener('mousemove', this.onGlobalMouseMove);
+        document.addEventListener('mouseup', this.onGlobalMouseUp);
+        document.addEventListener('keydown', this.onGlobalKeyDown);
     }
 
     private removeGlobalListeners(): void {

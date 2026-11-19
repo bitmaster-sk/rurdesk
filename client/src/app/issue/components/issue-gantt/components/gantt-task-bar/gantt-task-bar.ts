@@ -3,7 +3,6 @@ import {
     ChangeDetectionStrategy,
     Component,
     ElementRef,
-    NgZone,
     computed,
     effect,
     inject,
@@ -45,7 +44,6 @@ import {
 export class GanttTaskBarComponent implements AfterViewChecked {
     private readonly router = inject(Router);
     public readonly timelineService = inject(GanttTimelineService);
-    private readonly ngZone = inject(NgZone);
     private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
     protected readonly HandleSide = HandleSide;
@@ -251,11 +249,8 @@ export class GanttTaskBarComponent implements AfterViewChecked {
             this.resizeEnded.emit({ taskId: task.idIssuePublic, newEstimated });
         };
 
-        // Listeners run inside zone so _resizePreviewWidth updates trigger CD on this OnPush component
-        this.ngZone.run(() => {
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
 
     public onContextMenu(event: MouseEvent): void {

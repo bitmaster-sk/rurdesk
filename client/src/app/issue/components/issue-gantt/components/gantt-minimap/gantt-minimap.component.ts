@@ -3,7 +3,6 @@ import {
     Component,
     ElementRef,
     AfterViewInit,
-    NgZone,
     OnDestroy,
     computed,
     inject,
@@ -27,7 +26,6 @@ const MINIMAP_HEIGHT = 40;
 })
 export class GanttMinimapComponent implements AfterViewInit, OnDestroy {
     private readonly timelineService = inject(GanttTimelineService);
-    private readonly ngZone = inject(NgZone);
     private readonly minimap = viewChild.required<ElementRef<HTMLDivElement>>('minimap');
 
     public readonly tasks = input.required<ExtendedIssue[]>();
@@ -129,9 +127,7 @@ export class GanttMinimapComponent implements AfterViewInit, OnDestroy {
             document.removeEventListener('mouseup', onMouseUp);
         };
 
-        this.ngZone.runOutsideAngular(() => {
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-        });
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     }
 }

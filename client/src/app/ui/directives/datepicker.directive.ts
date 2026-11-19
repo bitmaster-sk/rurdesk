@@ -2,7 +2,6 @@ import {
     AfterViewInit,
     Directive,
     ElementRef,
-    NgZone,
     OnDestroy,
     booleanAttribute,
     effect,
@@ -53,7 +52,6 @@ type UiDatepickerValue = Date | Date[] | null;
 })
 export class UiDatepickerDirective implements ControlValueAccessor, AfterViewInit, OnDestroy {
     private readonly el = inject<ElementRef<HTMLInputElement>>(ElementRef);
-    private readonly zone = inject(NgZone);
     private readonly i18n = inject(I18nService);
     private readonly destroyRef = inject(DestroyRef);
 
@@ -100,11 +98,9 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
         if (this.destroyed) {
             return;
         }
-        this.zone.runOutsideAngular(() => {
-            this.fp = flatpickr(this.el.nativeElement, this.buildOptions());
-        });
+        this.fp = flatpickr(this.el.nativeElement, this.buildOptions());
         if (this.pending !== undefined) {
-            this.fp!.setDate(this.toSetDate(this.pending), false);
+            this.fp.setDate(this.toSetDate(this.pending), false);
             this.pending = undefined;
         }
         if (this.pendingDisabled) {
@@ -163,9 +159,8 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
             maxDate: this.maxDate() ?? undefined,
             formatDate: (date: Date) => UiDate.format(date, pattern),
             parseDate: (str: string) => UiDate.parse(str, pattern),
-            onChange: (selectedDates: Date[]) => this.zone.run(() => this.emit(selectedDates)),
-            onClose: (selectedDates: Date[]) =>
-                this.zone.run(() => this.handleClose(selectedDates)),
+            onChange: (selectedDates: Date[]) => this.emit(selectedDates),
+            onClose: (selectedDates: Date[]) => this.handleClose(selectedDates),
             onReady: (_sel: Date[], _str: string, instance: FlatpickrInstance) =>
                 this.attachFooter(instance)
         };
@@ -231,14 +226,12 @@ export class UiDatepickerDirective implements ControlValueAccessor, AfterViewIni
         setLabels();
         this.i18n.langChange$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(setLabels);
 
-        today.addEventListener('click', () =>
-            this.zone.run(() => {
-                const base = this.mode() === 'datetime' ? new Date() : startOfDay(new Date());
-                // 2nd arg true → fires onChange, so the form updates via the CVA.
-                instance.setDate(this.mode() === 'range' ? [base, base] : base, true);
-            })
-        );
-        clear.addEventListener('click', () => this.zone.run(() => instance.clear())); // → onChange [] → null
+        today.addEventListener('click', () => {
+            const base = this.mode() === 'datetime' ? new Date() : startOfDay(new Date());
+            // 2nd arg true → fires onChange, so the form updates via the CVA.
+            instance.setDate(this.mode() === 'range' ? [base, base] : base, true);
+        });
+        clear.addEventListener('click', () => instance.clear()); // → onChange [] → null
 
         footer.append(today, clear);
         instance.calendarContainer.appendChild(footer);

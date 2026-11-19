@@ -1,4 +1,4 @@
-import { Injectable, NgZone, inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { KeyboardResolver } from './keyboard-resolver';
 import { HotkeyAction } from './command.model';
 import { CommandPaletteService } from './command-palette.service';
@@ -22,7 +22,6 @@ const BLOCKING_OVERLAY =
 @Injectable({ providedIn: 'root' })
 export class HotkeyService {
     private readonly palette = inject(CommandPaletteService);
-    private readonly zone = inject(NgZone);
     private started = false;
     private listHandler: ListNavigationHandler | null = null;
     private selectionHandler: ListSelectionHandler | null = null;
@@ -38,11 +37,7 @@ export class HotkeyService {
     public start(): void {
         if (this.started) return;
         this.started = true;
-        // Register OUTSIDE Angular so plain typing (which resolves to 'none') never re-enters the
-        // zone / triggers global change detection. Only a real action pays the zone.run cost.
-        this.zone.runOutsideAngular(() =>
-            document.addEventListener('keydown', e => this.onKeydown(e))
-        );
+        document.addEventListener('keydown', e => this.onKeydown(e));
     }
 
     private onKeydown(event: KeyboardEvent): void {
@@ -50,43 +45,42 @@ export class HotkeyService {
             paletteOpen: this.palette.isOpen(),
             helpOpen: this.palette.isHelpOpen()
         });
-        if (action.type === 'none') return; // common case: no zone entry, no CD
+        if (action.type === 'none') return; // common case: nothing to do
         const isListAction =
             action.type === 'list-move' ||
             action.type === 'list-move-across' ||
             HotkeyService.isSelectionAction(action);
         if (HotkeyService.isSelectionAction(action) && !this.selectionHandler) return;
         if (isListAction && HotkeyService.isOverlayOpen()) return;
-        this.zone.run(() => {
-            switch (action.type) {
-                case 'open':
+
+        switch (action.type) {
+            case 'open':
+                event.preventDefault();
+                this.palette.open(action.mode === 'navigation' ? '/' : '');
+                break;
+            case 'close':
+                event.preventDefault();
+                this.palette.close();
+                break;
+            case 'help':
+                event.preventDefault();
+                this.palette.openHelp();
+                break;
+            case 'list-move':
+                if (this.listHandler) {
                     event.preventDefault();
-                    this.palette.open(action.mode === 'navigation' ? '/' : '');
-                    break;
-                case 'close':
+                    this.listHandler.move(action.delta);
+                }
+                break;
+            case 'list-move-across':
+                if (this.listHandler?.moveAcross) {
                     event.preventDefault();
-                    this.palette.close();
-                    break;
-                case 'help':
-                    event.preventDefault();
-                    this.palette.openHelp();
-                    break;
-                case 'list-move':
-                    if (this.listHandler) {
-                        event.preventDefault();
-                        this.listHandler.move(action.delta);
-                    }
-                    break;
-                case 'list-move-across':
-                    if (this.listHandler?.moveAcross) {
-                        event.preventDefault();
-                        this.listHandler.moveAcross(action.delta);
-                    }
-                    break;
-                default:
-                    this.runSelection(action, event);
-            }
-        });
+                    this.listHandler.moveAcross(action.delta);
+                }
+                break;
+            default:
+                this.runSelection(action, event);
+        }
     }
 
     private static isOverlayOpen(): boolean {
