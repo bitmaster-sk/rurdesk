@@ -509,7 +509,7 @@ func (s *AgentConversationDispatchSuite) TestNotifyTurnStarted_TellsTheOwnerOnly
 
 	notices := recorder.Notices()
 	s.Require().Len(notices, 1)
-	s.Equal(notify.SubjectAgentConversation, notices[0].Subject)
+	s.Equal(notify.SubjectAgentConversationTurn, notices[0].Subject)
 	s.Equal(notify.ActionUpdate, notices[0].Action)
 	s.Equal([]int64{s.Owner.IdUser}, notices[0].IdsUser, "a turn is private to the conversation owner")
 	s.Equal(&model.AgentConversationTurnNotice{IdConversation: conv.IdConversation, IdTask: event.Payload.IdTask}, notices[0].Payload)

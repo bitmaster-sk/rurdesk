@@ -494,7 +494,7 @@ func (t *ChatTurns) NotifyTurnStarted(ctx context.Context, run *model.AgentRun, 
 	}
 	t.notifier.Send(&notify.Notice{
 		IdsUser: []int64{conversation.IdUser},
-		Subject: notify.SubjectAgentConversation,
+		Subject: notify.SubjectAgentConversationTurn,
 		Action:  notify.ActionUpdate,
 		Payload: &model.AgentConversationTurnNotice{IdConversation: conversation.IdConversation, IdTask: task.IdTask},
 	})
