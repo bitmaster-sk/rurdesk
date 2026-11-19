@@ -43,6 +43,9 @@ export async function loginAs(page, email, password) {
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(() => localStorage.removeItem('Authorization')).catch(() => {});
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle' });
+  // A stack with SSO hides the password form behind "Use password".
+  const usePassword = page.locator('[data-testid="login-use-password"]');
+  if (await usePassword.isVisible().catch(() => false)) await usePassword.click();
   await page.waitForSelector('[formcontrolname="email"]');
   await page.fill('[formcontrolname="email"]', email);
   await page.fill('[formcontrolname="password"]', password);

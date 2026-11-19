@@ -168,7 +168,7 @@ The gateway refuses to start without all four:
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status, heartbeats, recovery). |
+| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk:1000`. The fixed paths are appended in code: `/mcp/sse` for the agent's MCP client (non-implementation stages get the restricted `/mcp/plan/sse` subset automatically), `/mcp/chat/sse` (or `/mcp/chat/http`) for chat stages, and `/api/private` for REST calls (status, heartbeats, recovery). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token, sent as Bearer on every tracker request and embedded in the agent's MCP config. **Issued from the tracker admin UI** (agent credentials).                                                                                                                       |
 | `TRACKER_TO_GATEWAY_TOKEN` | Hex-encoded 32-byte HMAC token shared with the tracker. Verifies the `X-Tracker-Signature` on incoming `POST /event`. **Shown once when you register the agent's gateway** (see [Agents](./agents.md)).                                                                                |
 | `MODELS`                   | The models this gateway allows, as `provider/model` entries separated by commas. See [Models](#models).                                                                                                                                                                                |
@@ -208,6 +208,12 @@ needs no repository.
 - **Token.** The token is never written to disk. The clone's git config holds a
   credential helper that reads the token from the environment of the git
   process, and the agent gets only the token of the run it works on.
+- **Agent environment.** `GATEWAY_TO_TRACKER_TOKEN`, `TRACKER_TO_GATEWAY_TOKEN`
+  and `RURDESK_GIT_TOKEN` are removed from the agent's environment in every stage;
+  an issue stage gets the git token of its own run explicitly. Credential helpers
+  already in the clone's config are reset, so the gateway's helper is the only one.
+- **Chat.** [Agent chat](./agent-chat.md) uses the same clone for a detached,
+  read-only worktree, see [The chat stage](#the-chat-stage).
 - **Masking.** The gateway replaces the token with `***` in everything it sends
   to the tracker itself: the live thinking stream and error details. Text the
   agent posts through its own MCP tools does not pass through the gateway and is
@@ -345,12 +351,65 @@ creation time; copy it into the gateway's env (regenerate it if lost).
 
 ## Live thinking
 
-The Goose gateway send the agent's thinking and tool calls to the tracker
-while a stage runs, so the task's activity feed can show them live (see
+The gateway sends the agent's thinking and tool calls to the tracker while a
+stage runs, so the task's activity feed (or an [agent chat](./agent-chat.md))
+can show them live (see
 [Watching the agent think](./agents.md#watching-the-agent-think)). It batches
 them about once a second, and the whole channel is best-effort: if the tracker
 rejects the batches — an older tracker, for instance — the gateway logs one
 warning, stops relaying for that stage, and the run continues untouched.
+
+Both adapters stream. Goose emits thinking natively. **Claude Code** runs with
+`--include-partial-messages` and `--thinking-display summarized`, so it streams
+thinking fragments too; the text is the API's **summarised** thinking, not the
+raw chain of thought. `CLAUDE_THINKING_DISPLAY` sets the display value: unset
+means `summarized`; `summarized` or `omitted` is passed as is; **empty** omits
+the flag, for example when a Claude Code version rejects it. Any other value
+stops the gateway at startup with an error. The gateway image pins the CLI version, and these flags are
+re-tested on every bump.
+
+## The chat stage
+
+An [agent chat](./agent-chat.md) message arrives as a `stage_execute` for the
+`chat` stage. It differs from an issue stage:
+
+- **Endpoint and token.** The agent's MCP client uses `/mcp/chat/sse` (or
+  `/mcp/chat/http`) with a **run token** (`rdr_…`). The token is scoped to one
+  conversation, can only read (a fixed GET allowlist, no writes, no code and no
+  global lists such as `get_my_issues` or `list_track_records`) and **expires at
+  the end of each turn**, whether it completes, fails or is restarted. Even a
+  turn that never ends cleanly cannot keep it longer than **6 hours** (a hard
+  cap set when the turn starts). A stage without a token fails with
+  `tracker_missing_run_token`.
+- **Read-only agent.** Claude Code runs with
+  `--tools Read,Grep,Glob,WebSearch,WebFetch`, an allow-list of built-in tools,
+  so no built-in that runs commands (`Bash`, `Monitor`, ...), edits files or
+  starts subagents is offered; `--disallowedTools Bash,Write,Edit,MultiEdit,NotebookEdit,Task`
+  denies the main ones again. The web tools are there for research: a page the
+  agent fetches can carry instructions, and a fetched URL can carry data out. MCP tools are not built-ins and stay callable.
+  `Read`, `Grep` and `Glob` can read any file the gateway process can read, not
+  only the worktree. Goose keeps its tools; see
+  [Known limitations](./agent-chat.md#known-limitations).
+- **No transcript.** Claude Code chat runs with `--no-session-persistence`, so
+  the CLI writes no session file under `~/.claude/projects`; Goose runs every
+  stage with `--no-session`.
+- **Environment.** The agent process never sees `GATEWAY_TO_TRACKER_TOKEN`,
+  `TRACKER_TO_GATEWAY_TOKEN` or `RURDESK_GIT_TOKEN`. This applies to every stage;
+  issue stages get the git token explicitly for their own run, chat gets none.
+  Credential helpers found in the clone's git config are reset to the gateway's own.
+- **Worktree.** With a project, a **detached** worktree is reused from turn to
+  turn without a fetch and reset to the head recorded after the previous turn
+  (`reset --hard`, `clean`, with hooks and fsmonitor off for the gateway's git
+  calls). When the default branch moved on, it is recreated at the current
+  commit and the conversation gets a "code refreshed" note. The gateway reports
+  `headCommit` in the stage's stats. Without a project, or for an empty
+  origin, the agent gets a scratch directory and nothing is cloned or pushed.
+- **Retention.** Chat worktrees are removed after `WORKTREE_RETENTION_DAYS`
+  like others.
+- **Scheduling.** The tracker runs a chat turn after the stage that is active
+  and before queued issue runs, and re-queues it when the gateway restarts, up to 3
+  attempts per message. Steady chat traffic on a shared agent therefore delays
+  its queued issue runs.
 
 ## Healthcheck & verifying a deploy
 
