@@ -1,0 +1,23 @@
+<div
+    class="chat-model-settings"
+    data-testid="chat-model-settings"
+    [class.is-compact]="isCompact()"
+    [uiTooltip]="hint() ? (hint() | translate) : ''"
+>
+    @if (choices().models.length > 0) {
+        <div class="chat-model-settings-field">
+            <label [class.sr-only]="isCompact()" for="chat-model-select">
+                {{ 'AGENT_CHAT.MODEL' | translate }}
+            </label>
+            <ui-select
+                data-testid="chat-model-select"
+                inputId="chat-model-select"
+                optionLabel="label"
+                optionValue="value"
+                [size]="size()"
+                [options]="modelOptions()"
+                [formControl]="modelControl"
+            />
+        </div>
+    }
+</div>

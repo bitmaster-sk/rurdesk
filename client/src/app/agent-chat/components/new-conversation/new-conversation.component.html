@@ -1,0 +1,91 @@
+<form class="new-conversation" [formGroup]="form" (ngSubmit)="onStart()">
+    <div class="new-conversation-head">
+        <ui-button
+            class="new-conversation-back chat-touch"
+            variant="text"
+            severity="secondary"
+            data-testid="new-conversation-back"
+            [isIconOnly]="true"
+            [ariaLabel]="'AGENT_CHAT.BACK' | translate"
+            (click)="back.emit()"
+        >
+            <tabler-icon icon="arrow-left" [size]="18" />
+        </ui-button>
+        <h1 class="m-0 text-lg font-semibold">{{ 'AGENT_CHAT.NEW' | translate }}</h1>
+    </div>
+    <div class="ui-field m-0">
+        <label for="new-conversation-project">
+            {{ 'AGENT_CHAT.NEW_FORM.PROJECTS' | translate }}
+        </label>
+        <ui-multiselect
+            class="w-full"
+            inputId="new-conversation-project"
+            optionLabel="name"
+            optionValue="idProject"
+            formControlName="idProjects"
+            [showToggleAll]="false"
+            [options]="projects()"
+            [placeholder]="'AGENT_CHAT.NO_PROJECT' | translate"
+        />
+        <span class="ui-field-hint">{{ 'AGENT_CHAT.NEW_FORM.PROJECT_HINT' | translate }}</span>
+        @if (chosen().length > 0) {
+            <div class="new-conversation-chips">
+                @for (project of chosen(); track project.idProject; let isMain = $first) {
+                    <span
+                        class="new-conversation-chip"
+                        data-testid="new-conversation-chip"
+                        [class.is-main]="isMain"
+                    >
+                        {{ project.name }}
+                        @if (isMain) {
+                            <span
+                                class="new-conversation-chip-main"
+                                data-testid="new-conversation-main"
+                            >
+                                {{ 'AGENT_CHAT.MAIN_PROJECT' | translate }}
+                            </span>
+                        } @else {
+                            <button
+                                type="button"
+                                class="new-conversation-chip-action"
+                                data-testid="new-conversation-make-main"
+                                (click)="onMakeMain(project.idProject)"
+                            >
+                                {{ 'AGENT_CHAT.NEW_FORM.MAKE_MAIN' | translate }}
+                            </button>
+                        }
+                    </span>
+                }
+            </div>
+        }
+    </div>
+    <div class="ui-field m-0">
+        <label class="required" for="new-conversation-agent">
+            {{ 'AGENT_CHAT.NEW_FORM.AGENT' | translate }}
+        </label>
+        <app-user-dropdown
+            class="w-full"
+            inputId="new-conversation-agent"
+            formControlName="idUserAgent"
+            [users]="agents()"
+            [showClear]="false"
+            [emptyMessage]="'AGENT_CHAT.NEW_FORM.NO_AGENTS' | translate"
+        />
+    </div>
+    @if (agentModels(); as choices) {
+        <app-chat-model-settings
+            [choices]="choices"
+            [settings]="settings()"
+            (settingsChange)="settings.set($event)"
+        />
+    }
+    <div class="flex justify-end">
+        <ui-button
+            type="submit"
+            data-testid="new-conversation-start"
+            [label]="'AGENT_CHAT.NEW_FORM.START' | translate"
+            [loading]="isCreating()"
+            [disabled]="form.invalid"
+        />
+    </div>
+</form>

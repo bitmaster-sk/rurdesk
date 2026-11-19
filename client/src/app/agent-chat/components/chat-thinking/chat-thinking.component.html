@@ -1,0 +1,49 @@
+<div
+    class="chat-thinking"
+    data-testid="chat-thinking"
+    [class.is-live]="isLive()"
+    [attr.role]="isLive() ? 'status' : null"
+    [attr.aria-live]="isLive() ? 'polite' : null"
+>
+    @if (isLive()) {
+        <div class="chat-thinking-panel">
+            <div class="chat-thinking-head">
+                <span class="working-dot"></span>
+                @if (isWaiting()) {
+                    <span data-testid="chat-thinking-waiting">
+                        {{ 'AGENT_CHAT.THINKING.WAITING' | translate }}
+                    </span>
+                } @else {
+                    <span>{{ 'AGENT_CHAT.THINKING.LABEL' | translate }}</span>
+                }
+                <span class="chat-thinking-elapsed">{{ elapsed() }}</span>
+            </div>
+            @if (!isWaiting()) {
+                <app-agent-thinking-lines [lines]="lines()" [hasGap]="hasGap()" [isLive]="true" />
+            }
+        </div>
+    } @else {
+        <div class="chat-thinking-panel">
+            @switch (status()) {
+                @case (StoredThinkingStatus.Loading) {
+                    <div class="chat-thinking-head" data-testid="chat-thinking-loading">
+                        {{ 'AGENT_CHAT.THINKING.LOADING' | translate }}
+                    </div>
+                }
+                @case (StoredThinkingStatus.Empty) {
+                    <div class="chat-thinking-head" data-testid="chat-thinking-empty">
+                        {{ 'AGENT_CHAT.THINKING.EMPTY' | translate }}
+                    </div>
+                }
+                @case (StoredThinkingStatus.Failed) {
+                    <div class="chat-thinking-head" data-testid="chat-thinking-failed">
+                        {{ 'AGENT_CHAT.THINKING.FAILED' | translate }}
+                    </div>
+                }
+                @default {
+                    <app-agent-thinking-lines [lines]="lines()" />
+                }
+            }
+        </div>
+    }
+</div>

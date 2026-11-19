@@ -1,0 +1,249 @@
+:host {
+    display: block;
+    height: 100%;
+}
+
+.agent-chat {
+    display: flex;
+    height: 100%;
+}
+
+.agent-chat-list {
+    flex: 0 0 17rem;
+    // A long title is cut by the list, not allowed to widen the pane.
+    min-width: 0;
+}
+
+.agent-chat-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.agent-chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--ui-space) 0;
+}
+
+// Space before each change of author; a message that continues the previous one stays close.
+.agent-chat-messages > * + :not(.is-continuation) {
+    margin-top: var(--ui-space-l);
+}
+
+.agent-chat-entry.is-pending {
+    opacity: 0.6;
+}
+
+.agent-chat-pending {
+    padding: 0 var(--ui-space-l) var(--ui-space-s) calc(2.25rem + 2 * var(--ui-space-l));
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+}
+
+.agent-chat-system {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--ui-space);
+    padding: var(--ui-space-s) var(--ui-space-l);
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+    text-align: center;
+}
+
+.agent-chat-empty {
+    padding: var(--ui-space-l);
+    color: var(--ui-color-text-muted);
+}
+
+.agent-chat-placeholder {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ui-space-l);
+    color: var(--ui-color-text-muted);
+    text-align: center;
+}
+
+.agent-chat-error {
+    margin: 0 var(--ui-space-l) var(--ui-space);
+    padding: var(--ui-space) var(--ui-space-l);
+    border: 1px solid var(--ui-red-200, var(--ui-color-border));
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-red-50, var(--ui-color-surface));
+    color: var(--ui-red-800, var(--ui-color-text));
+    font-size: var(--font-size-s);
+}
+
+.agent-chat-composer {
+    flex: 0 0 auto;
+    padding: var(--ui-space) var(--ui-space-l) var(--ui-space-l);
+    border-top: 1px solid var(--ui-color-border);
+}
+
+.agent-chat-main-required {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+}
+
+// The icon-only button keeps its hover background square.
+.agent-chat-create-task ::ng-deep .ui-button {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+}
+
+// The pill of a continued message and the opened thinking, between the author line and the text.
+.agent-chat-thinking-lead {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--ui-space-s);
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-bottom: var(--ui-space-s);
+
+    app-chat-thinking {
+        align-self: stretch;
+    }
+}
+
+// The pill sits centred on the author line, its padding and border overhanging the line instead of
+// making it taller.
+app-chat-thinking-pill[messageMeta] {
+    align-self: center;
+    margin-block: calc(-1 * var(--ui-space-xs) - 2px);
+}
+
+// Below the breakpoint the list and the open conversation (or the new
+// conversation form) take turns; the route decides which one shows.
+@media (max-width: 40rem) {
+    .agent-chat-list {
+        flex: 1 1 auto;
+    }
+
+    .agent-chat.has-pane .agent-chat-list,
+    .agent-chat:not(.has-pane) .agent-chat-main {
+        display: none;
+    }
+
+    .agent-chat-composer {
+        padding: var(--ui-space) var(--ui-space) var(--ui-space-l);
+    }
+
+    .chat-touch ::ng-deep .ui-button {
+        width: 44px;
+        height: 44px;
+    }
+
+    // The pill and the opened thinking take rows of the message grid themselves; the pill of a
+    // continued message shares the first row with Create task.
+    .agent-chat-thinking-lead {
+        display: contents;
+
+        app-chat-thinking-pill {
+            grid-row: 1;
+            grid-column: 1 / 3;
+            justify-self: start;
+        }
+
+        app-chat-thinking {
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+    }
+
+    .agent-chat-messages {
+        padding: var(--ui-space-s) 0;
+    }
+
+    .agent-chat-messages > * + :not(.is-continuation) {
+        margin-top: var(--ui-space-xl);
+    }
+
+    .agent-chat-pending {
+        padding-left: var(--ui-space-l);
+    }
+
+    // The author line carries a small avatar and the text takes the whole width. The
+    // shared message view is only reshaped here, inside the agent chat.
+    .agent-chat-entry ::ng-deep app-message-view .message-view {
+        display: grid;
+        grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+        column-gap: var(--ui-space);
+        row-gap: var(--ui-space-s);
+        align-items: center;
+
+        .message-avatar {
+            grid-column: 1;
+            grid-row: 1;
+            width: 1.75rem;
+            padding-top: 0;
+        }
+
+        .initials-avatar {
+            width: 1.75rem !important;
+            height: 1.75rem !important;
+            border-radius: 50% !important;
+            font-size: 0.875rem !important;
+        }
+
+        &.continuation .message-avatar {
+            display: none;
+        }
+
+        // A continued message has no author line: its first line shares the row with Create task.
+        &.continuation .message-body > .message-text:first-child {
+            grid-row: 1;
+            grid-column: 1 / 3;
+        }
+
+        &.continuation .message-actions {
+            align-self: start;
+        }
+
+        .message-body {
+            display: contents;
+        }
+
+        .message-meta {
+            grid-column: 2;
+            grid-row: 1;
+            margin-bottom: 0;
+        }
+
+        .message-text,
+        .message-edited,
+        .edit-wrapper {
+            display: block;
+            grid-column: 1 / -1;
+            min-width: 0;
+        }
+
+        // The 44px touch target overhangs the author line instead of making it taller.
+        .message-actions {
+            grid-column: 3;
+            grid-row: 1;
+            margin-block: -0.5rem;
+        }
+
+        pre,
+        table {
+            display: block;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+    }
+}
+
+// The per-answer action has no hover on touch devices.
+@media (hover: none) {
+    .agent-chat-entry ::ng-deep app-message-view .message-view .message-actions {
+        opacity: 1;
+    }
+}

@@ -30,6 +30,7 @@ import { ProjectSkillApi } from '../../../project/api/project-skill.api.service'
 import { SkillApi } from '../../api/skill.api.service';
 import { CreateAgentRunReq, RunChoices } from '../../../agent/model/agent-run.model';
 import { AgentOverview } from '../../../agent/model/agent-overview.model';
+import { TokenFormatter } from '../../../agent/entity/token.formatter';
 import { ApiError } from '../../model/api-error.model';
 import { Skill } from '../../model/skill.model';
 
@@ -63,6 +64,7 @@ export class AgentDockComponent implements OnInit {
     private readonly destroyRef = inject(DestroyRef);
 
     protected readonly stages = SKILL_STAGES;
+    protected readonly TokenFormatter = TokenFormatter;
     protected readonly skills = signal<Skill[]>([]);
     protected readonly isLoading = signal(false);
     protected readonly isAssigning = signal(false);
@@ -239,16 +241,6 @@ export class AgentDockComponent implements OnInit {
                 }
             }
         });
-    }
-
-    protected formatTokens(tokens: number): string {
-        if (tokens < 1000) {
-            return `${tokens}`;
-        }
-        if (tokens < 1_000_000) {
-            return `${Math.round(tokens / 100) / 10}k`;
-        }
-        return `${Math.round(tokens / 100_000) / 10}M`;
     }
 
     protected formatDuration(ms: number | null): string {

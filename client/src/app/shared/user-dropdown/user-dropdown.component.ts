@@ -43,6 +43,9 @@ export class UserDropdownComponent implements ControlValueAccessor {
     public readonly filter = input(false);
     public readonly users = input<User[]>([]);
     public readonly placeholder = input<string>();
+    public readonly inputId = input<string>();
+    public readonly emptyMessage = input<string>();
+    public readonly showClear = input(true);
     public readonly saveStatus = input<UiSaveState>(UiSaveState.Idle);
 
     public readonly hasAgentFeatures = input(false);

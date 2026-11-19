@@ -1,0 +1,81 @@
+:host {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+// The column of the release creation form: centred, top-aligned.
+.new-conversation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-xl);
+    width: 100%;
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: var(--ui-space-xl);
+}
+
+.new-conversation-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space);
+}
+
+.new-conversation-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: 0 var(--ui-space);
+    min-height: 1.75rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: 999px;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+
+    &.is-main {
+        border-color: var(--ui-color-primary);
+    }
+}
+
+.new-conversation-chip-main {
+    color: var(--ui-color-text-muted);
+}
+
+.new-conversation-chip-action {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--ui-color-primary);
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.new-conversation-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+}
+
+.new-conversation-back {
+    display: none;
+}
+
+@media (max-width: 40rem) {
+    .new-conversation {
+        padding: var(--ui-space-l);
+    }
+
+    .new-conversation-back {
+        display: inline-flex;
+    }
+
+    .chat-touch ::ng-deep .ui-button {
+        min-width: 44px;
+        height: 44px;
+    }
+}

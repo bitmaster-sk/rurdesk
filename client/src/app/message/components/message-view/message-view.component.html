@@ -28,8 +28,10 @@
                     </span>
                 }
                 <span class="message-date">{{ message().createdAt | date: 'shortTime' }}</span>
+                <ng-content select="[messageMeta]" />
             </div>
         }
+        <ng-content select="[messageLead]" />
         @if (isEditing()) {
             <div class="edit-wrapper" (keydown.escape)="onEditCancel()">
                 <app-message-editor
@@ -60,16 +62,19 @@
             }
         }
     </div>
-    @if (isOwnMessage() && !isEditing()) {
+    @if (!isEditing()) {
         <div class="message-actions">
-            <ui-button
-                variant="text"
-                severity="secondary"
-                class="edit-btn"
-                (click)="editRequest.emit()"
-            >
-                <tabler-icon icon="pencil" [size]="14" />
-            </ui-button>
+            @if (isOwnMessage()) {
+                <ui-button
+                    variant="text"
+                    severity="secondary"
+                    class="edit-btn"
+                    (click)="editRequest.emit()"
+                >
+                    <tabler-icon icon="pencil" [size]="14" />
+                </ui-button>
+            }
+            <ng-content select="[messageAction]" />
         </div>
     }
 </div>

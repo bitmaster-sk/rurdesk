@@ -97,6 +97,10 @@
         transition: opacity 0.1s;
         align-self: flex-start;
 
+        &:empty {
+            display: none;
+        }
+
         .edit-btn {
             padding: var(--ui-space-xs);
             height: 1.5rem;

@@ -143,6 +143,10 @@ function buildListening(getToken: () => string | null): NoticeService {
     return buildService(location, { getToken } as unknown as AuthTokenStore);
 }
 
+function noticeEvent(subject: string, action: string, payload: unknown): MessageEvent {
+    return new MessageEvent('message', { data: JSON.stringify({ subject, action, payload }) });
+}
+
 function messageNotice(): MessageEvent {
     return new MessageEvent('message', {
         data: JSON.stringify({ subject: 'message', action: 'c', payload: {} })
@@ -207,5 +211,27 @@ describe('NoticeService.reconnect', () => {
 
         expect(ListeningSocket.created).toHaveLength(2);
         expect(ListeningSocket.created[1].protocols).toEqual(['Authorization', 'jwt-gone']);
+    });
+});
+
+describe('NoticeService agent conversation notices', () => {
+    it('routes a message and a started turn to their own streams', () => {
+        const service = buildListening(() => 'jwt');
+        const messages = vi.fn();
+        const turns = vi.fn();
+        service.agentConversation$.subscribe(messages);
+        service.agentConversationTurn$.subscribe(turns);
+        const [socket] = ListeningSocket.created;
+
+        socket.fire('message', noticeEvent('agent_conversation', 'c', { idMessage: 7 }));
+        socket.fire(
+            'message',
+            noticeEvent('agent_conversation_turn', 'u', { idConversation: 4, idTask: 3 })
+        );
+
+        expect(messages).toHaveBeenCalledTimes(1);
+        expect(messages.mock.calls[0][0].payload).toEqual({ idMessage: 7 });
+        expect(turns).toHaveBeenCalledTimes(1);
+        expect(turns.mock.calls[0][0].payload).toEqual({ idConversation: 4, idTask: 3 });
     });
 });

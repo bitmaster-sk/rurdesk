@@ -1,0 +1,34 @@
+<div #body class="thinking-body" [class.is-live]="isLive()" data-testid="agent-thinking-body">
+    @if (hasGap()) {
+        <div class="thinking-gap">
+            <tabler-icon icon="alert-triangle" [size]="14" />
+            <span>{{ 'AGENT.THINKING.GAP' | translate }}</span>
+        </div>
+    }
+    @for (line of lines(); track $index) {
+        @switch (line.kind) {
+            @case (thinkingKind.Tool) {
+                <div class="thinking-act" [attr.data-kind]="line.toolKind">
+                    <span class="thinking-act-chip">
+                        <tabler-icon [icon]="toolIcon(line.toolKind)" [size]="12" />
+                    </span>
+                    <span class="thinking-act-body">
+                        <span class="thinking-act-name">{{ line.label }}</span>
+                        @if (line.detail) {
+                            <code class="thinking-act-arg">{{ line.detail }}</code>
+                        }
+                    </span>
+                </div>
+            }
+            @case (thinkingKind.Truncated) {
+                <div class="thinking-gap" data-testid="agent-thinking-truncated">
+                    <tabler-icon icon="alert-triangle" [size]="14" />
+                    <span>{{ 'AGENT.THINKING.TRUNCATED' | translate }}</span>
+                </div>
+            }
+            @default {
+                <p class="thinking-thought">{{ line.label }}</p>
+            }
+        }
+    }
+</div>

@@ -158,7 +158,9 @@
             </div>
             <div class="flex justify-between gap-2">
                 <span class="ui-color-text-muted">{{ 'AGENT_DOCK.TOKENS_7D' | translate }}</span>
-                <span data-testid="agent-dock-tokens">{{ formatTokens(workload.tokens7d) }}</span>
+                <span data-testid="agent-dock-tokens">
+                    {{ TokenFormatter.format(workload.tokens7d) }}
+                </span>
             </div>
             <div class="flex justify-between gap-2">
                 <span class="ui-color-text-muted">{{ 'AGENT_DOCK.AVG_DURATION' | translate }}</span>

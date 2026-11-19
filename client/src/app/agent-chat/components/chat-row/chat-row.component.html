@@ -1,0 +1,28 @@
+<div class="chat-row" data-testid="chat-row" [class.is-continuation]="isContinuation()">
+    <div class="chat-row-avatar">
+        @if (!isContinuation() && author(); as author) {
+            <app-avatar
+                [disabled]="author.isActive === false"
+                [name]="author.name"
+                [bgColor]="author.colorAvatarBg"
+                [manualInitials]="author.avatarInitials"
+                [height]="2.25"
+                [width]="2.25"
+                [radius]="1.125"
+            ></app-avatar>
+        }
+    </div>
+    <div class="chat-row-content" data-testid="chat-row-content">
+        @if (!isContinuation() && author(); as author) {
+            <div class="chat-row-meta">
+                <span class="chat-row-author" data-testid="chat-row-author">{{ author.name }}</span>
+                @if (createdAt(); as createdAt) {
+                    <span class="chat-row-date">{{ createdAt | date: 'shortTime' }}</span>
+                }
+                <ng-content select="[messageMeta]" />
+            </div>
+        }
+        <ng-content select="[messageLead]" />
+        <ng-content />
+    </div>
+</div>

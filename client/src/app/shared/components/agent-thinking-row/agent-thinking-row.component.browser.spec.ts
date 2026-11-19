@@ -8,6 +8,7 @@ import { AgentThinkingKind } from 'src/app/agent/constants/agent-thinking-kind.e
 import { AgentThinkingNotice } from 'src/app/agent/model/agent-thinking.model';
 import { AgentThinkingStore } from 'src/app/agent/store/agent-thinking.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
+import { AgentThinkingLinesComponent } from '../agent-thinking-lines/agent-thinking-lines.component';
 import { AgentThinkingRowComponent } from './agent-thinking-row.component';
 import { Fixtures } from 'src/testing/fixtures';
 
@@ -27,7 +28,7 @@ describe('AgentThinkingRowComponent (browser)', () => {
             })
         );
         await TestBed.configureTestingModule({
-            declarations: [AgentThinkingRowComponent],
+            declarations: [AgentThinkingRowComponent, AgentThinkingLinesComponent],
             imports: [TranslateModule.forRoot(), TablerIconStub, AvatarStub],
             providers: [
                 AgentThinkingStore,

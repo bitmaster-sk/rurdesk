@@ -1,0 +1,235 @@
+<header class="chat-header">
+    <div class="chat-header-top">
+        <ui-button
+            class="chat-header-back chat-touch"
+            variant="text"
+            severity="secondary"
+            data-testid="chat-header-back"
+            [isIconOnly]="true"
+            [ariaLabel]="'AGENT_CHAT.BACK' | translate"
+            (click)="back.emit()"
+        >
+            <tabler-icon icon="arrow-left" [size]="18" />
+        </ui-button>
+        <h1 class="chat-header-title" data-testid="chat-header-title">
+            {{ title() || ('AGENT_CHAT.UNTITLED' | translate) }}
+        </h1>
+        <div class="chat-header-actions">
+            @if (isPhone()) {
+                <ui-button
+                    class="chat-touch chat-header-action"
+                    variant="text"
+                    severity="secondary"
+                    size="small"
+                    data-testid="chat-header-settings"
+                    [isIconOnly]="true"
+                    [ariaLabel]="'AGENT_CHAT.CONVERSATION_SETTINGS' | translate"
+                    (click)="isSettingsOpen.set(true)"
+                >
+                    <tabler-icon icon="adjustments-horizontal" [size]="16" />
+                </ui-button>
+            }
+            <ui-button
+                class="chat-touch chat-header-action"
+                variant="text"
+                severity="secondary"
+                size="small"
+                data-testid="chat-header-pin"
+                [isIconOnly]="true"
+                [ariaLabel]="(isPinned() ? 'AGENT_CHAT.UNPIN' : 'AGENT_CHAT.PIN') | translate"
+                [uiTooltip]="(isPinned() ? 'AGENT_CHAT.UNPIN' : 'AGENT_CHAT.PIN') | translate"
+                (click)="pinChange.emit(!isPinned())"
+            >
+                <tabler-icon [icon]="isPinned() ? 'pinned' : 'pin'" [size]="16" />
+            </ui-button>
+            <ui-button
+                class="chat-touch chat-header-action chat-header-action--danger"
+                variant="text"
+                severity="secondary"
+                size="small"
+                data-testid="chat-header-delete"
+                uiConfirm
+                [isIconOnly]="true"
+                [ariaLabel]="'AGENT_CHAT.DELETE' | translate"
+                [uiTooltip]="'AGENT_CHAT.DELETE' | translate"
+                [confirmText]="'AGENT_CHAT.DELETE_CONFIRM' | translate"
+                [acceptLabel]="'AGENT_CHAT.DELETE' | translate"
+                (confirmed)="deleteConversation.emit()"
+            >
+                <tabler-icon icon="trash" [size]="16" />
+            </ui-button>
+        </div>
+    </div>
+    <div class="chat-header-row chat-header-meta">
+        <span
+            class="chat-header-agent"
+            role="group"
+            data-testid="chat-header-agent"
+            [attr.aria-label]="'AGENT_CHAT.AGENT' | translate"
+        >
+            <app-avatar
+                [name]="detail().agent.name"
+                [bgColor]="detail().agent.colorAvatarBg"
+                [manualInitials]="detail().agent.avatarInitials"
+                [height]="1.5"
+                [width]="1.5"
+                [radius]="0.75"
+            ></app-avatar>
+            <span class="chat-header-agent-name">{{ detail().agent.name }}</span>
+        </span>
+        <span
+            class="chat-header-status"
+            role="status"
+            aria-live="polite"
+            [attr.data-state]="status().state"
+            data-testid="chat-header-status"
+        >
+            <span class="chat-header-status-dot"></span>
+            {{ status().key | translate: status().params }}
+            @if (status().issueLink; as link) {
+                <a data-testid="chat-header-status-issue" [routerLink]="link">
+                    #{{ status().idIssuePublic }}
+                </a>
+            }
+        </span>
+        <span class="chat-header-usage">
+            <span class="chat-header-tokens" data-testid="chat-header-tokens">
+                {{ 'AGENT_CHAT.TOKENS' | translate: { tokens: tokens() } }}
+            </span>
+            @if (cost(); as cost) {
+                <span
+                    class="chat-header-tokens"
+                    data-testid="chat-header-cost"
+                    [uiTooltip]="
+                        isCostEstimated() ? ('AGENT.STATS.COST_ESTIMATED_HINT' | translate) : ''
+                    "
+                >
+                    {{ cost }}
+                </span>
+            }
+        </span>
+        @if (!isPhone()) {
+            <ng-container [ngTemplateOutlet]="modelTpl" />
+        }
+    </div>
+    @if (!isPhone()) {
+        <ng-container [ngTemplateOutlet]="contextTpl" />
+    }
+    @if (isPhone()) {
+        <ui-dialog
+            data-testid="chat-header-settings-panel"
+            width="min(32rem, calc(100vw - 2rem))"
+            [header]="'AGENT_CHAT.CONVERSATION_SETTINGS' | translate"
+            [dismissable]="true"
+            [(visible)]="isSettingsOpen"
+        >
+            @if (isSettingsOpen()) {
+                <div class="chat-header-panel">
+                    <ng-container [ngTemplateOutlet]="modelTpl" />
+                    <ng-container
+                        [ngTemplateOutlet]="contextTpl"
+                        [ngTemplateOutletContext]="{ isStacked: true }"
+                    />
+                </div>
+            }
+        </ui-dialog>
+    }
+</header>
+
+<ng-template #modelTpl>
+    <app-chat-model-settings
+        [choices]="detail().agentModels"
+        [settings]="settings()"
+        [isDisabled]="isAnswering()"
+        disabledHint="AGENT_CHAT.SETTINGS_LOCKED"
+        [isCompact]="!isPhone()"
+        (settingsChange)="settingsChange.emit($event)"
+    />
+</ng-template>
+
+<ng-template #contextTpl let-isStacked="isStacked">
+    <div class="chat-header-context" [class.is-stacked]="isStacked">
+        <span class="chat-header-label" data-testid="chat-context-label">
+            {{ 'AGENT_CHAT.CONTEXT' | translate }}
+        </span>
+        <div class="chat-header-row chat-header-chips">
+            @for (project of detail().projects; track project.idProject) {
+                <span class="chat-chip" [class.is-main]="project.isMain" data-testid="chat-chip">
+                    {{ project.name }}
+                    @if (project.isMain) {
+                        <span
+                            class="chat-chip-main"
+                            tabindex="0"
+                            data-testid="chat-chip-main"
+                            [uiTooltip]="mainHelpTpl"
+                            uiTooltipPosition="bottom"
+                        >
+                            {{ 'AGENT_CHAT.MAIN_PROJECT' | translate }}
+                        </span>
+                    }
+                    @if (!hasMain()) {
+                        <button
+                            type="button"
+                            class="chat-chip-make-main"
+                            data-testid="chat-chip-make-main"
+                            (click)="attachProject.emit(project.idProject)"
+                        >
+                            {{ 'AGENT_CHAT.MAKE_MAIN' | translate }}
+                        </button>
+                    }
+                    @if (!project.isMain || !isLocked()) {
+                        <button
+                            type="button"
+                            class="chat-chip-remove"
+                            data-testid="chat-chip-remove"
+                            [attr.aria-label]="
+                                'AGENT_CHAT.REMOVE_PROJECT' | translate: { name: project.name }
+                            "
+                            (click)="detachProject.emit(project.idProject)"
+                        >
+                            <tabler-icon icon="x" [size]="12" />
+                        </button>
+                    }
+                </span>
+            } @empty {
+                <span class="chat-header-muted">{{ 'AGENT_CHAT.NO_PROJECT' | translate }}</span>
+            }
+            <label class="sr-only" for="chat-add-project">
+                {{ 'AGENT_CHAT.ADD_PROJECT' | translate }}
+            </label>
+            <ui-select
+                data-testid="chat-add-project"
+                inputId="chat-add-project"
+                size="small"
+                optionLabel="name"
+                optionValue="idProject"
+                [filter]="true"
+                [options]="projectOptions()"
+                [placeholder]="'AGENT_CHAT.ADD_PROJECT' | translate"
+                [formControl]="addProjectControl"
+            />
+        </div>
+    </div>
+    @if (projectError(); as key) {
+        <div class="chat-header-error" data-testid="chat-project-error">{{ key | translate }}</div>
+    }
+</ng-template>
+
+<ng-template #mainHelpTpl>
+    <div class="chat-main-help" data-testid="chat-main-help">
+        <strong class="chat-main-help-title">{{ 'AGENT_CHAT.MAIN_HELP.TITLE' | translate }}</strong>
+        <dl class="chat-main-help-list">
+            <tabler-icon icon="code" [size]="16" />
+            <div>
+                <dt>{{ 'AGENT_CHAT.MAIN_HELP.MAIN' | translate }}</dt>
+                <dd>{{ 'AGENT_CHAT.MAIN_HELP.MAIN_TEXT' | translate }}</dd>
+            </div>
+            <tabler-icon icon="books" [size]="16" />
+            <div>
+                <dt>{{ 'AGENT_CHAT.MAIN_HELP.CONTEXT' | translate }}</dt>
+                <dd>{{ 'AGENT_CHAT.MAIN_HELP.CONTEXT_TEXT' | translate }}</dd>
+            </div>
+        </dl>
+        <p class="chat-main-help-note">{{ 'AGENT_CHAT.MAIN_HELP.LOCK' | translate }}</p>
+    </div>
+</ng-template>

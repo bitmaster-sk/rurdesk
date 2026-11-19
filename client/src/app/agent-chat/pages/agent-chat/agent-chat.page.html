@@ -1,0 +1,177 @@
+<div class="agent-chat" [class.has-pane]="isNew() || idConversation() !== null">
+    <app-conversation-list
+        class="agent-chat-list"
+        [conversations]="conversations()"
+        [idSelected]="idConversation()"
+        [idProject]="idProject()"
+        [scope]="scope()"
+        (scopeChange)="onScopeChange($event)"
+        (pinChange)="onPinConversation($event.idConversation, $event.isPinned)"
+        (deleteConversation)="onDeleteConversation($event)"
+    />
+    <section class="agent-chat-main">
+        @if (isNew()) {
+        <app-new-conversation
+            [projects]="projects()"
+            [idProject]="idProject()"
+            (created)="onCreated($event)"
+            (attachRefused)="onAttachRefused($event)"
+            (attachFailed)="onAttachFailed($event)"
+            (back)="onBack()"
+        />
+        } @else if (detail(); as current) {
+        <app-conversation-header
+            [detail]="current"
+            [projects]="projects()"
+            [projectError]="projectError()"
+            (attachProject)="onAttachProject($event)"
+            (detachProject)="onDetachProject($event)"
+            (pinChange)="onPinConversation(current.conversation.idConversation, $event)"
+            (settingsChange)="onChangeSettings(current.conversation.idConversation, $event)"
+            (deleteConversation)="onDeleteConversation(current.conversation.idConversation)"
+            (back)="onBack()"
+        />
+        <ng-template #thinkingLead let-entry let-isContinued="isContinued">
+            @if (isContinued) {
+            <app-chat-thinking-pill
+                [isOpen]="isThinkingOpen(entry)"
+                (toggled)="onToggleThinking(entry)"
+            />
+            } @if (isThinkingOpen(entry)) {
+            <app-chat-thinking [events]="thinkingOf(entry)" [status]="thinkingStatusOf(entry)" />
+            }
+        </ng-template>
+        <div class="agent-chat-messages" #msgList>
+            @for (entry of entries(); track entry.idMessage; let i = $index) { @if (entry.message;
+            as message) {
+            <div
+                class="agent-chat-entry"
+                [class.is-continuation]="isContinuation(i)"
+                [class.is-pending]="entry.isPending"
+                [attr.data-testid]="entry.isPending ? 'chat-message-pending' : null"
+            >
+                @if (entry.kind === AgentConversationMessageKind.TaskDraft) {
+                <app-chat-row
+                    [author]="message.creator"
+                    [createdAt]="message.createdAt"
+                    [isContinuation]="isContinuation(i)"
+                >
+                    @if (hasThinking(entry) && !isContinuation(i)) {
+                    <app-chat-thinking-pill
+                        messageMeta
+                        [isOpen]="isThinkingOpen(entry)"
+                        (toggled)="onToggleThinking(entry)"
+                    />
+                    } @if (hasThinking(entry) && (isContinuation(i) || isThinkingOpen(entry))) {
+                    <div messageLead class="agent-chat-thinking-lead">
+                        <ng-container
+                            *ngTemplateOutlet="
+                                thinkingLead;
+                                context: { $implicit: entry, isContinued: isContinuation(i) }
+                            "
+                        />
+                    </div>
+                    }
+                    <app-task-draft-card
+                        [body]="message.message"
+                        (edit)="onEditDraft(message.message)"
+                    />
+                </app-chat-row>
+                } @else {
+                <app-message-view [message]="message" [isContinuation]="isContinuation(i)">
+                    @if (hasThinking(entry) && !isContinuation(i)) {
+                    <app-chat-thinking-pill
+                        messageMeta
+                        [isOpen]="isThinkingOpen(entry)"
+                        (toggled)="onToggleThinking(entry)"
+                    />
+                    } @if (hasThinking(entry) && (isContinuation(i) || isThinkingOpen(entry))) {
+                    <div messageLead class="agent-chat-thinking-lead">
+                        <ng-container
+                            *ngTemplateOutlet="
+                                thinkingLead;
+                                context: { $implicit: entry, isContinued: isContinuation(i) }
+                            "
+                        />
+                    </div>
+                    } @if (entry.author === AgentConversationAuthor.Agent && entry.kind ===
+                    AgentConversationMessageKind.Text) {
+                    <ui-button
+                        messageAction
+                        variant="text"
+                        severity="secondary"
+                        class="agent-chat-create-task chat-touch"
+                        data-testid="chat-create-task"
+                        [disabled]="!canCreateTask()"
+                        [isIconOnly]="true"
+                        [ariaLabel]="'AGENT_CHAT.CREATE_TASK' | translate"
+                        [uiTooltip]="'AGENT_CHAT.CREATE_TASK' | translate"
+                        uiTooltipPosition="left"
+                        (click)="onCreateTask(entry.idMessage)"
+                    >
+                        <tabler-icon icon="clipboard-list" [size]="14" />
+                    </ui-button>
+                    }
+                </app-message-view>
+                } @if (entry.isPending) {
+                <div class="agent-chat-pending">{{ 'AGENT_CHAT.PENDING' | translate }}</div>
+                }
+            </div>
+            } @else {
+            <div class="agent-chat-system" data-testid="chat-system-line">
+                <span>{{ entry.systemKey ?? '' | translate: entry.systemParams }}</span>
+                @if (entry.idMessage === idMessageRetryable()) {
+                <ui-button size="small" variant="text" data-testid="chat-retry" (click)="onRetry()">
+                    {{ 'AGENT_CHAT.RETRY' | translate }}
+                </ui-button>
+                }
+            </div>
+            } } @empty {
+            <div class="agent-chat-empty">{{ 'AGENT_CHAT.EMPTY_CONVERSATION' | translate }}</div>
+            } @if (isAnswering()) {
+            <app-chat-row [author]="current.agent">
+                <app-chat-thinking
+                    [idConversation]="current.conversation.idConversation"
+                    [idRun]="current.conversation.idRun"
+                    [idTask]="idTaskLive()"
+                    [isLive]="true"
+                    (thinkingChange)="onLiveThinking($event)"
+                />
+            </app-chat-row>
+            }
+        </div>
+        @if (sendError(); as key) {
+        <div class="agent-chat-error" role="alert" data-testid="agent-chat-send-error">
+            {{ key | translate }}
+        </div>
+        } @if (draftBody(); as body) {
+        <app-task-draft-dialog
+            [body]="body"
+            [idConversation]="current.conversation.idConversation"
+            [idProject]="current.conversation.idProject"
+            [projects]="projects()"
+            (cancelled)="onDraftCancelled()"
+        />
+        }
+        <div class="agent-chat-composer">
+            @if (isMainRequired()) {
+            <div class="agent-chat-main-required" data-testid="agent-chat-main-required">
+                {{ 'AGENT_CHAT.MAIN_REQUIRED' | translate }}
+            </div>
+            } @else {
+            <app-message-editor
+                #composer
+                mode="create"
+                change="onaction"
+                [attachmentScope]="null"
+                (messageChange)="onSend($event)"
+            />
+            }
+        </div>
+        } @else if (idConversation() === null) {
+        <div class="agent-chat-placeholder" data-testid="agent-chat-placeholder">
+            {{ 'AGENT_CHAT.SELECT' | translate }}
+        </div>
+        }
+    </section>
+</div>

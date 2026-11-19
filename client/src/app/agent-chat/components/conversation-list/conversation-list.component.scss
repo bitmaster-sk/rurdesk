@@ -1,0 +1,170 @@
+:host {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--ui-color-border);
+    background-color: var(--ui-color-canvas);
+}
+
+.conversation-list-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ui-space);
+    padding: var(--ui-space-l) var(--ui-space-l) var(--ui-space);
+}
+
+.conversation-list-title {
+    margin: 0;
+    font-size: var(--font-size);
+    font-weight: 700;
+    color: var(--ui-color-text);
+}
+
+.conversation-list-scope {
+    margin: 0 var(--ui-space-l) var(--ui-space);
+}
+
+.conversation-list-items {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: var(--ui-space);
+}
+
+.conversation-list-row {
+    position: relative;
+    // The action buttons are as tall as the title row they sit on.
+    --conversation-action-size: 1.5rem;
+
+    &:hover .conversation-list-item-actions,
+    &:focus-within .conversation-list-item-actions {
+        opacity: 1;
+    }
+}
+
+// Inside the item's padding, level with the title row and clear of its border.
+.conversation-list-item-actions {
+    position: absolute;
+    top: calc(1px + var(--ui-space));
+    right: calc(var(--ui-space) + 1px + var(--ui-space-s));
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    height: var(--conversation-action-size);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+// Ghost buttons: no fill at rest, a veil of the text colour on hover so it fits the
+// item's own background, selected or not.
+.conversation-list-item-action {
+    --ui-button-text-secondary-bg-hover: color-mix(in srgb, var(--ui-color-text) 10%, transparent);
+    --ui-button-text-secondary-bg-active: color-mix(in srgb, var(--ui-color-text) 16%, transparent);
+
+    width: var(--conversation-action-size);
+    height: var(--conversation-action-size);
+
+    ::ng-deep .ui-button {
+        width: var(--conversation-action-size);
+        height: var(--conversation-action-size);
+        padding: 0;
+    }
+
+    &--danger:hover ::ng-deep .ui-button,
+    &--danger:focus-within ::ng-deep .ui-button {
+        background: color-mix(in srgb, var(--ui-red-500) 12%, transparent);
+        color: var(--ui-red-600);
+    }
+}
+
+.conversation-list-item-pinned {
+    margin-right: var(--ui-space-s);
+    vertical-align: -2px;
+    color: var(--ui-color-text-muted);
+}
+
+.conversation-list-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 0 var(--ui-space) var(--ui-space-s);
+    padding: var(--ui-space);
+    border: 1px solid transparent;
+    border-radius: var(--ui-radius-md);
+    color: var(--ui-color-text);
+    text-decoration: none;
+    transition: background-color 0.2s;
+
+    &:hover {
+        background-color: var(--ui-color-content-hover);
+    }
+
+    &.is-active {
+        background-color: var(--ui-color-primary-weak-border);
+        border-color: var(--ui-color-border);
+    }
+}
+
+.conversation-list-item-title {
+    // Ends before the two action buttons.
+    min-height: var(--conversation-action-size);
+    padding-right: calc(2 * var(--conversation-action-size) + 2 * var(--ui-space-s));
+    line-height: var(--conversation-action-size);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.conversation-list-item-meta {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+}
+
+.conversation-list-item-unread {
+    position: absolute;
+    right: calc(var(--ui-space) + var(--ui-space-s));
+    bottom: calc(var(--ui-space) + 0.3rem);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ui-color-danger, var(--ui-red-600));
+}
+
+.conversation-list-empty {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ui-space) var(--ui-space-l);
+    color: var(--ui-color-text-muted);
+    text-align: center;
+}
+
+// Touch devices cannot hover, so the actions stay in view.
+@media (hover: none) {
+    .conversation-list-item-actions {
+        opacity: 1;
+    }
+}
+
+// Below the breakpoint the actions are touch-sized and the title row grows to match.
+@media (max-width: 40rem) {
+    .conversation-list-row {
+        --conversation-action-size: 44px;
+    }
+
+    .conversation-list-item {
+        padding-block: var(--ui-space-s);
+    }
+
+    .conversation-list-item-actions {
+        top: calc(1px + var(--ui-space-s));
+        right: calc(var(--ui-space) + 1px);
+        opacity: 1;
+    }
+}

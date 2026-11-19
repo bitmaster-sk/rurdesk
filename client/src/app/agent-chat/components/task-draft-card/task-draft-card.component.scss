@@ -1,0 +1,41 @@
+.task-draft-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-s);
+    padding: var(--ui-space) var(--ui-space-l);
+    border: 1px solid var(--ui-color-border);
+    border-radius: var(--ui-radius-md);
+    background-color: var(--ui-color-surface);
+}
+
+.task-draft-card-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+}
+
+.task-draft-card-title {
+    margin: 0;
+    font-size: var(--font-size-l, 1.05rem);
+    font-weight: 700;
+    color: var(--ui-color-text);
+}
+
+.task-draft-card-body {
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.task-draft-card-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+// A tighter frame on a phone, so the draft keeps the width of the answer.
+@media (max-width: 40rem) {
+    .task-draft-card {
+        padding: var(--ui-space);
+    }
+}

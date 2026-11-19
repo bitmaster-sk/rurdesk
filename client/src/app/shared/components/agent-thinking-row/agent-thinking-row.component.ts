@@ -1,21 +1,17 @@
 import {
     ChangeDetectionStrategy,
     Component,
-    ElementRef,
     OnDestroy,
     computed,
     effect,
     inject,
     input,
-    signal,
-    viewChild
+    signal
 } from '@angular/core';
 import { AgentThinkingApi } from 'src/app/agent/api/agent-thinking.api.service';
 import { AgentThinkingConverter } from 'src/app/agent/converter/agent-thinking.converter';
 import { AgentStageProgress } from 'src/app/agent/model/agent-run.model';
 import { AgentStage, STAGE_LABELS } from 'src/app/agent/model/agent-stage.enum';
-import { AgentThinkingKind } from 'src/app/agent/constants/agent-thinking-kind.enum';
-import { AgentToolKind } from 'src/app/agent/constants/agent-tool-kind.enum';
 import { AgentThinkingEvent } from 'src/app/agent/model/agent-thinking.model';
 import { AgentThinkingStore } from 'src/app/agent/store/agent-thinking.store';
 import { User } from 'src/app/auth/model/user.model';
@@ -37,10 +33,6 @@ export class AgentThinkingRowComponent implements OnDestroy {
 
     private readonly thinkingApi = inject(AgentThinkingApi);
     private readonly store = inject(AgentThinkingStore);
-
-    protected readonly thinkingKind = AgentThinkingKind;
-
-    private readonly body = viewChild<ElementRef<HTMLDivElement>>('body');
 
     private readonly isOpenOverride = signal<boolean | null>(null);
     private readonly storedEvents = signal<AgentThinkingEvent[]>([]);
@@ -87,32 +79,11 @@ export class AgentThinkingRowComponent implements OnDestroy {
             }
         });
         effect(() => this.applyStoredThinking());
-        effect(() => {
-            this.lines();
-            if (this.isLive() && this.isOpen()) {
-                this.scrollToLatest();
-            }
-        });
     }
 
     public ngOnDestroy(): void {
         if (this.ticker !== null) {
             clearInterval(this.ticker);
-        }
-    }
-
-    // Every kind must resolve to an icon registered in the module, or an unmapped
-    // tool renders an empty box.
-    protected toolIcon(kind: AgentToolKind): string {
-        switch (kind) {
-            case AgentToolKind.Run:
-                return 'terminal-2';
-            case AgentToolKind.Write:
-                return 'pencil';
-            case AgentToolKind.Read:
-                return 'search';
-            default:
-                return 'hammer';
         }
     }
 
@@ -150,15 +121,6 @@ export class AgentThinkingRowComponent implements OnDestroy {
                 this.store.applyStored(stage, res.idTask ?? 0, res.events, res.lastSeq ?? 0),
             error: () => (this.appliedStage = null)
         });
-    }
-
-    private scrollToLatest(): void {
-        setTimeout(() => {
-            const element = this.body()?.nativeElement;
-            if (element) {
-                element.scrollTop = element.scrollHeight;
-            }
-        }, 0);
     }
 
     private startedAt(): number | null {

@@ -40,6 +40,11 @@ const routes: Routes = [
                 loadChildren: () => import('../message/message.module').then(m => m.MessageModule)
             },
             {
+                path: 'agent-chat',
+                loadChildren: () =>
+                    import('../agent-chat/agent-chat.module').then(m => m.AgentChatModule)
+            },
+            {
                 path: 'admin',
                 loadChildren: () => import('../admin/admin.module').then(m => m.AdminModule)
             },

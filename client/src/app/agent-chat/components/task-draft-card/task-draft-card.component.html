@@ -1,0 +1,19 @@
+<article class="task-draft-card" data-testid="task-draft-card">
+    <div class="task-draft-card-label">
+        <tabler-icon icon="clipboard-list" [size]="14" />
+        {{ 'AGENT_CHAT.TASK_DRAFT.LABEL' | translate }}
+    </div>
+    <h2 class="task-draft-card-title" data-testid="task-draft-card-title">
+        {{ draft().title || ('AGENT_CHAT.UNTITLED_TASK' | translate) }}
+    </h2>
+    @if (draft().description) {
+        <div class="task-draft-card-body">
+            <app-message-body [body]="draft().description" />
+        </div>
+    }
+    <div class="task-draft-card-actions">
+        <ui-button size="small" data-testid="task-draft-edit" (click)="edit.emit()">
+            {{ 'AGENT_CHAT.TASK_DRAFT.EDIT' | translate }}
+        </ui-button>
+    </div>
+</article>

@@ -1,0 +1,30 @@
+:host {
+    display: block;
+}
+
+.chat-model-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--ui-space-l);
+
+    &.is-compact {
+        gap: var(--ui-space);
+    }
+}
+
+.chat-model-settings-field {
+    display: flex;
+    flex: 1 1 12rem;
+    flex-direction: column;
+    gap: var(--ui-space-s);
+    min-width: 0;
+
+    .is-compact & {
+        flex: 0 1 auto;
+    }
+
+    label {
+        font-size: var(--font-size-s);
+        color: var(--ui-color-text-muted);
+    }
+}
