@@ -51,6 +51,25 @@ type ClaudeCodeConfig struct {
 	// OAuthToken is an optional long-lived subscription token from
 	// `claude setup-token`. Empty means rely on the mounted login creds.
 	OAuthToken string
+	// ThinkingDisplay is passed as --thinking-display (summarized | omitted);
+	// empty omits the flag. Without summarized the CLI streams no thinking text.
+	ThinkingDisplay string
+}
+
+const DefaultClaudeThinkingDisplay = "summarized"
+
+// claudeThinkingDisplay reads CLAUDE_THINKING_DISPLAY: unset means the
+// default, set but empty omits the flag.
+func claudeThinkingDisplay() (string, error) {
+	display, isSet := os.LookupEnv("CLAUDE_THINKING_DISPLAY")
+	if !isSet {
+		return DefaultClaudeThinkingDisplay, nil
+	}
+	switch display {
+	case "", "summarized", "omitted":
+		return display, nil
+	}
+	return "", fmt.Errorf("CLAUDE_THINKING_DISPLAY must be summarized, omitted or empty, got %q", display)
 }
 
 // GooseConfig configures the Goose adapter. Unlike claude, Goose authenticates
@@ -148,8 +167,13 @@ func LoadConfig(adapterType string) (*Config, error) {
 		// Subscription auth only: mounted ~/.claude creds, optionally overridden
 		// by CLAUDE_CODE_OAUTH_TOKEN. No API key is read or required — the CLI
 		// fails hard at first invocation if no usable credential is present.
+		thinkingDisplay, err := claudeThinkingDisplay()
+		if err != nil {
+			return nil, err
+		}
 		cfg.ClaudeCode = &ClaudeCodeConfig{
-			OAuthToken: os.Getenv("CLAUDE_CODE_OAUTH_TOKEN"),
+			OAuthToken:      os.Getenv("CLAUDE_CODE_OAUTH_TOKEN"),
+			ThinkingDisplay: thinkingDisplay,
 		}
 	case "goose":
 		// BYOK: the API key (or OLLAMA_HOST) is passed through to the goose

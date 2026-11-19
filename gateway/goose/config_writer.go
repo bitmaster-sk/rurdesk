@@ -76,17 +76,18 @@ func gooseConfigDir() string {
 }
 
 // writeGooseConfig writes <configDir>/config.yaml with the tracker streamable-
-// HTTP MCP server pointed at mcpURL and carrying the literal agent bearer token.
+// HTTP MCP server pointed at mcpURL and carrying the literal bearer token (the
+// agent key, or a chat turn's run token).
 // Called once per run (the URL differs by stage), overwriting any previous
 // config. Mode 0o600 since the file holds the bearer token. Every plugin in
 // disabledPluginDirs is turned off, otherwise goose enables it on discovery.
-func writeGooseConfig(configDir, mcpURL, agentKey string, idRun int64, disabledPluginDirs []string) (string, error) {
+func writeGooseConfig(configDir, mcpURL, bearerToken string, idRun int64, disabledPluginDirs []string) (string, error) {
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return "", fmt.Errorf("creating goose config dir: %w", err)
 	}
 	path := filepath.Join(configDir, "config.yaml")
 	var content strings.Builder
-	fmt.Fprintf(&content, gooseConfigTemplate, mcpURL, agentKey, common.TrackerRunHeader, idRun)
+	fmt.Fprintf(&content, gooseConfigTemplate, mcpURL, bearerToken, common.TrackerRunHeader, idRun)
 	if len(disabledPluginDirs) > 0 {
 		content.WriteString("plugins:\n")
 		for _, pluginDir := range disabledPluginDirs {

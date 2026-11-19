@@ -228,6 +228,12 @@ func (d *singleRunDispatcher) DispatchStageExecute(ctx context.Context, run *mod
 	}
 }
 
+func (d *singleRunDispatcher) DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) {
+	if run.IdRun == d.idRun {
+		d.real.DispatchChatTurn(ctx, run, task, runToken)
+	}
+}
+
 func TestSchedulerFailsTheRunWithoutGitIntegration(t *testing.T) {
 	fx := newRunGitRepoFixture(t)
 	idProject := fx.project(t, "run-repo-no-integration")
@@ -238,7 +244,7 @@ func TestSchedulerFailsTheRunWithoutGitIntegration(t *testing.T) {
 
 	sched := agent.NewScheduler(fx.app.Pool, injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(), injector.GetIssueRepository(),
-		&singleRunDispatcher{idRun: run.IdRun, real: injector.GetDispatcher()}, injector.GetNotifier())
+		&singleRunDispatcher{idRun: run.IdRun, real: injector.GetDispatcher()}, injector.GetChatTurns(), injector.GetNotifier())
 	require.NoError(t, sched.TickOnce(context.Background()))
 
 	require.Eventually(t, func() bool {

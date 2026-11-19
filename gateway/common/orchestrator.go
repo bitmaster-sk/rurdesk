@@ -215,7 +215,17 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 }
 
 func (o *Orchestrator) runStage(task Task) {
-	isRepoless := task.Stage == StageReleaseNotes
+	if task.Stage == StageChat && task.RunToken == "" {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a chat turn without its run token")
+		o.failTask(task, ErrCodeTrackerMissingRunToken, "the tracker sent no run token for this chat turn; update the tracker")
+		return
+	}
+	if task.RunToken != "" {
+		o.trackerClient.RedactSecret(task.RunToken)
+		defer o.trackerClient.ForgetSecret(task.RunToken)
+	}
+	// A chat without a repo runs in a scratch directory like release notes.
+	isRepoless := task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet())
 	if !isRepoless && !task.Repo.IsSet() {
 		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
 		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
@@ -307,8 +317,13 @@ func (o *Orchestrator) runStage(task Task) {
 	// The agent already posted complete_stage via its MCP tool but rarely
 	// includes tokens/tool-calls/duration — backfill from what the adapter
 	// measured so the stats panel isn't all zeros.
-	if stats.TokensUsed > 0 || stats.DurationMs > 0 || stats.ToolCallsCount > 0 || stats.CostUsd != nil {
-		if err := o.trackerClient.UpdateTaskStats(context.Background(), task.IdTask, stats); err != nil {
+	// A chat turn also reports the commit its worktree is at.
+	headCommit := ""
+	if task.Chat != nil {
+		headCommit = task.Chat.WorktreeHead
+	}
+	if stats.TokensUsed > 0 || stats.DurationMs > 0 || stats.ToolCallsCount > 0 || stats.CostUsd != nil || headCommit != "" {
+		if err := o.trackerClient.UpdateTaskStats(context.Background(), task.IdTask, stats, headCommit); err != nil {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}
 	}
@@ -317,15 +332,15 @@ func (o *Orchestrator) runStage(task Task) {
 // prepareWorkspace returns a cleanup only for the scratch directory of a
 // repoless stage; a run's worktree outlives the stage attempt.
 func (o *Orchestrator) prepareWorkspace(task *Task) (cleanup func(), ok bool) {
-	if task.Stage == StageReleaseNotes {
-		dir, err := os.MkdirTemp("", fmt.Sprintf("release-notes-%d-", task.IdRun))
-		if err != nil {
-			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the scratch directory")
-			o.failTask(*task, "worktree_error", err.Error())
-			return nil, false
+	if task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet()) {
+		return o.prepareScratchDir(task)
+	}
+	if task.Stage == StageChat {
+		hasCode, ok := o.prepareChatWorktree(task)
+		if ok && !hasCode {
+			return o.prepareScratchDir(task)
 		}
-		task.WorktreePath = dir
-		return func() { _ = os.RemoveAll(dir) }, true
+		return nil, ok
 	}
 
 	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
@@ -350,13 +365,76 @@ func (o *Orchestrator) prepareWorkspace(task *Task) (cleanup func(), ok bool) {
 		task.WorktreePath = path
 		task.Branch = branch
 	}
-	// Retention measures idleness by the root's mtime, which edits in
-	// subdirectories never change.
+	markWorktreeUsed(*task)
+	return nil, true
+}
+
+func (o *Orchestrator) prepareScratchDir(task *Task) (cleanup func(), ok bool) {
+	dir, err := os.MkdirTemp("", fmt.Sprintf("%s-%d-", strings.ReplaceAll(task.Stage, "_", "-"), task.IdRun))
+	if err != nil {
+		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the scratch directory")
+		o.failTask(*task, "worktree_error", err.Error())
+		return nil, false
+	}
+	task.WorktreePath = dir
+	return func() { _ = os.RemoveAll(dir) }, true
+}
+
+// markWorktreeUsed touches the worktree root: retention measures idleness by
+// its mtime, which edits in subdirectories never change.
+func markWorktreeUsed(task Task) {
 	now := time.Now()
 	if err := os.Chtimes(task.WorktreePath, now, now); err != nil {
 		log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("failed to mark the worktree as used")
 	}
-	return nil, true
+}
+
+// prepareChatWorktree reuses the chat run's worktree without fetching, reset to the commit the
+// tracker recorded, so nothing the agent did survives the turn. Without a usable recorded commit
+// it is (re)created detached at the current origin/<base>; hasCode is false for an empty origin.
+func (o *Orchestrator) prepareChatWorktree(task *Task) (hasCode, ok bool) {
+	repoPath, err := task.Repo.LocalPath(o.cfg.WorkspaceBase)
+	if err != nil {
+		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("invalid chat repo")
+		o.failTask(*task, "worktree_error", err.Error())
+		return false, false
+	}
+	worktreePath := WorktreePath(repoPath, task.IdRun)
+	head := task.Chat.HeadCommit
+	if err := ResetDetachedWorktree(worktreePath, head); err != nil {
+		if WorktreeExists(repoPath, task.IdRun) {
+			log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("chat worktree cannot be reused — creating a new one")
+			if err := RemoveWorktree(repoPath, task.IdRun); err != nil {
+				log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to remove the chat worktree")
+				o.failTask(*task, "worktree_error", err.Error())
+				return false, false
+			}
+		}
+		head, err = o.createReadOnlyWorktree(task.Repo, task.IdRun)
+		if errors.Is(err, ErrRemoteEmpty) {
+			log.Info().Int64("idRun", task.IdRun).Msg("chat repo is empty — running without code")
+			return false, true
+		}
+		if err != nil {
+			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the chat worktree")
+			o.failTask(*task, "worktree_error", err.Error())
+			return false, false
+		}
+	}
+	task.WorktreePath = worktreePath
+	task.Chat.WorktreeHead = head
+	markWorktreeUsed(*task)
+	return true, true
+}
+
+// createReadOnlyWorktree creates a detached worktree from a clone that is never
+// seeded: an empty origin fails with ErrRemoteEmpty.
+func (o *Orchestrator) createReadOnlyWorktree(repo AgentRunGitRepo, idRun int64) (head string, err error) {
+	repoPath, err := EnsureRepoReadOnly(o.cfg.WorkspaceBase, repo)
+	if err != nil {
+		return "", err
+	}
+	return CreateDetachedWorktree(repoPath, repo.Token, repo.BaseBranch, idRun)
 }
 
 // reuseRunWorktree points the task at the run's existing worktree. A clean
@@ -589,17 +667,18 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		task.Wiki = parseWiki(bundle.Wiki)
 		task.WikiProposals = parseWikiProposals(bundle.WikiProposals)
 		task.Release = parseRelease(bundle.Release)
-		for _, message := range decodeEach[model.Message](bundle.ReviewThread) {
-			creatorName := ""
-			if message.Creator != nil {
-				creatorName = message.Creator.Name
-			}
-			task.Conversation = append(task.Conversation, TaskMessage{
-				CreatorName: creatorName,
-				CreatedAt:   message.CreatedAt,
-				Kind:        message.MessageKind,
-				Message:     conversationBody(message.MessageKind, message.Message),
-			})
+		if payload.Stage == StageChat {
+			task.Chat = parseChat(bundle)
+			task.Conversation = parseChatThread(bundle.ReviewThread)
+		} else {
+			task.Conversation = parseIssueThread(bundle.ReviewThread)
+		}
+	}
+
+	if task.Stage == StageChat {
+		task.RunToken = payload.RunToken
+		if task.Chat == nil {
+			task.Chat = &ChatContext{Mode: ChatModeReply}
 		}
 	}
 
@@ -610,6 +689,38 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 		return Task{}, fmt.Errorf("missing stage")
 	}
 	return task, nil
+}
+
+func parseIssueThread(rawMessages []json.RawMessage) []TaskMessage {
+	var conversation []TaskMessage
+	for _, message := range decodeEach[model.Message](rawMessages) {
+		creatorName := ""
+		if message.Creator != nil {
+			creatorName = message.Creator.Name
+		}
+		conversation = append(conversation, TaskMessage{
+			CreatorName: creatorName,
+			CreatedAt:   message.CreatedAt,
+			Kind:        message.MessageKind,
+			Message:     conversationBody(message.MessageKind, message.Message),
+		})
+	}
+	return conversation
+}
+
+// parseChatThread reads conversation messages; their author (user, agent or
+// system) stands in for the creator name.
+func parseChatThread(rawMessages []json.RawMessage) []TaskMessage {
+	var conversation []TaskMessage
+	for _, message := range decodeEach[model.ChatMessage](rawMessages) {
+		conversation = append(conversation, TaskMessage{
+			CreatorName: message.Author,
+			CreatedAt:   message.CreatedAt,
+			Kind:        message.Kind,
+			Message:     message.Body,
+		})
+	}
+	return conversation
 }
 
 // decodeEach skips elements that do not decode so one malformed entry never fails a stage.
@@ -666,6 +777,27 @@ func parseWiki(promptContext *model.WikiPromptContext) *WikiContext {
 		return nil
 	}
 	return wiki
+}
+
+// parseChat reads the conversation of a chat turn. An unknown mode is answered
+// as an ordinary reply.
+func parseChat(bundle *model.ContextBundle) *ChatContext {
+	chat := &ChatContext{Mode: ChatModeReply, IsHistoryTruncated: bundle.HistoryTruncated}
+	if bundle.Chat != nil {
+		chat.IdConversation = bundle.Chat.IdConversation
+		chat.HeadCommit = bundle.Chat.HeadCommit
+		if bundle.Chat.Mode == ChatModeTaskDraft {
+			chat.Mode = ChatModeTaskDraft
+			if bundle.Chat.DraftFromMessage != nil {
+				source := ChatDraftFromMessage(*bundle.Chat.DraftFromMessage)
+				chat.DraftFromMessage = &source
+			}
+		}
+		for _, project := range bundle.Chat.Projects {
+			chat.Projects = append(chat.Projects, ChatProject(project))
+		}
+	}
+	return chat
 }
 
 func parseRelease(promptContext *model.ReleasePromptContext) *ReleaseContext {

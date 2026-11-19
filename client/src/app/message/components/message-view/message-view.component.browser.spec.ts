@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ComponentRef } from '@angular/core';
+import { Component, ComponentRef, input } from '@angular/core';
 import {
     AvatarStub,
     MessageBodyStub,
@@ -12,6 +12,21 @@ import { Message } from '../../model/message.model';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
 import { MessageKind } from '../../constant/message-kind.enum';
 import { TranslateModule } from '@ngx-translate/core';
+
+@Component({
+    selector: 'app-projecting-host',
+    template: `
+        <app-message-view [message]="message()" [isContinuation]="isContinuation()">
+            <span messageMeta data-testid="projected-meta">pill</span>
+            <div messageLead data-testid="projected-lead">lead</div>
+        </app-message-view>
+    `,
+    standalone: false
+})
+class ProjectingHostComponent {
+    public readonly message = input.required<Message>();
+    public readonly isContinuation = input(false);
+}
 
 const mockMessage = (overrides: Partial<Message> = {}): Message => ({
     idMessage: 1,
@@ -153,6 +168,65 @@ describe('MessageViewComponent', () => {
             fixture.detectChanges();
             const label = fixture.nativeElement.querySelector('.message-edited');
             expect(label).not.toBeNull();
+        });
+    });
+
+    describe('projected slots', () => {
+        it('adds nothing to the author line or the body without projected content', () => {
+            const host = fixture.nativeElement as HTMLElement;
+            const meta = host.querySelector('.message-meta')!;
+            const body = host.querySelector('.message-body')!;
+
+            expect(Array.from(meta.children).map(child => child.className)).toEqual([
+                'message-author',
+                'message-date'
+            ]);
+            expect(Array.from(body.children).map(child => child.tagName.toLowerCase())).toEqual([
+                'div',
+                'app-message-body'
+            ]);
+        });
+
+        function renderProjecting(isContinuation: boolean): HTMLElement {
+            TestBed.resetTestingModule();
+            TestBed.configureTestingModule({
+                declarations: [MessageViewComponent, ProjectingHostComponent],
+                imports: [
+                    TranslateModule.forRoot(),
+                    AvatarStub,
+                    MessageBodyStub,
+                    MessageEditorStub,
+                    TablerIconStub,
+                    UiButtonStub
+                ]
+            });
+            const hostFixture = TestBed.createComponent(ProjectingHostComponent);
+            hostFixture.componentRef.setInput('message', mockMessage());
+            hostFixture.componentRef.setInput('isContinuation', isContinuation);
+            hostFixture.detectChanges();
+            return hostFixture.nativeElement as HTMLElement;
+        }
+
+        it('puts the meta slot after the time and the lead slot between the author line and the text', () => {
+            const host = renderProjecting(false);
+            const meta = host.querySelector('.message-meta')!;
+            const projected = host.querySelector('[data-testid="projected-meta"]')!;
+            const lead = host.querySelector('[data-testid="projected-lead"]')!;
+            const text = host.querySelector('.message-text')!;
+
+            expect(projected.parentElement).toBe(meta);
+            expect(meta.lastElementChild).toBe(projected);
+            expect(projected.previousElementSibling!.className).toBe('message-date');
+            expect(lead.previousElementSibling).toBe(meta);
+            expect(lead.nextElementSibling).toBe(text);
+        });
+
+        it('keeps the lead slot before the text of a continuation', () => {
+            const host = renderProjecting(true);
+            const lead = host.querySelector('[data-testid="projected-lead"]')!;
+
+            expect(host.querySelector('.message-meta')).toBeNull();
+            expect(lead.nextElementSibling).toBe(host.querySelector('.message-text'));
         });
     });
 });

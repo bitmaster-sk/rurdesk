@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/authpolicy"
 	"github.com/bitmaster-sk/rurdesk/api/internal/deactivation"
 	"github.com/bitmaster-sk/rurdesk/api/internal/email"
@@ -24,6 +25,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -37,6 +39,9 @@ type AdminController struct {
 	deactivation *deactivation.Service
 	changeGuard  func() authpolicy.UserChangeGuard
 	pool         *pgxpool.Pool
+	// conversations and dispatcher remove a deleted user's chat runs.
+	conversations *repository.AgentConversationRepository
+	dispatcher    *agent.Dispatcher
 }
 
 func NewAdminController(
@@ -49,17 +54,21 @@ func NewAdminController(
 	deactivationService *deactivation.Service,
 	changeGuard func() authpolicy.UserChangeGuard,
 	pool *pgxpool.Pool,
+	conversations *repository.AgentConversationRepository,
+	dispatcher *agent.Dispatcher,
 ) *AdminController {
 	return &AdminController{
-		userService:  userService,
-		userRepo:     userRepo,
-		projectRepo:  projectRepo,
-		apiKeySvc:    apiKeySvc,
-		acl:          acl,
-		notifier:     notifier,
-		deactivation: deactivationService,
-		changeGuard:  changeGuard,
-		pool:         pool,
+		userService:   userService,
+		userRepo:      userRepo,
+		projectRepo:   projectRepo,
+		apiKeySvc:     apiKeySvc,
+		acl:           acl,
+		notifier:      notifier,
+		deactivation:  deactivationService,
+		changeGuard:   changeGuard,
+		pool:          pool,
+		conversations: conversations,
+		dispatcher:    dispatcher,
 	}
 }
 
@@ -498,7 +507,14 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	var chatRuns []*model.AgentRun
 	err = extctx.RunInTx(ctx, ac.pool, func(ctx context.Context) error {
+		// The user's chat runs go with the conversations the delete cascades away; remove them first so
+		// their events do not count as agent activity below.
+		var gErr error
+		if chatRuns, gErr = ac.conversations.DeleteChatRunsOfOwner(ctx, idUser); gErr != nil {
+			return gErr
+		}
 		// Checked inside the tx so the check→delete window is minimal; a concurrent
 		// agent insert aborts the tx instead of leaving partial state.
 		hasActivity, gErr := ac.userRepo.HasAgentActivity(ctx, idUser)
@@ -562,8 +578,24 @@ func (ac *AdminController) DeleteUser(c *gin.Context) {
 		}
 		ac.apiKeySvc.PurgeCache(ctx, keyHashes)
 		ac.notifier.Disconnect(idUser)
+		ac.discardChatRuns(chatRuns)
 		c.Status(http.StatusOK)
 	}
+}
+
+// discardChatRuns tells the gateways to stop the deleted chat runs and remove their worktrees; a
+// failed delivery is only logged.
+func (ac *AdminController) discardChatRuns(runs []*model.AgentRun) {
+	if len(runs) == 0 {
+		return
+	}
+	go func() {
+		for _, run := range runs {
+			if err := ac.dispatcher.DispatchRunDiscarded(context.Background(), run); err != nil {
+				log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("user delete: failed to tell the gateway to discard a chat run")
+			}
+		}
+	}()
 }
 
 func (ac *AdminController) SetPassword(c *gin.Context) {

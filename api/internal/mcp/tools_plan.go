@@ -11,8 +11,15 @@ import (
 
 // registerPlanTools registers the sole agent-only tool that ends a stage
 // attempt. Available in every stage subset since every productive stage
-// completes through it.
+// completes through it; a chat turn gets its own wording and message kinds.
 func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage string) {
+	handler := func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
+		return handleCompleteStage(ctx, req, dispatcher)
+	}
+	if stage == StageChat {
+		server.AddTool(chatCompleteStageTool(), handler)
+		return
+	}
 	server.AddTool(
 		mcpgo.NewTool("complete_stage",
 			mcpgo.WithDescription(
@@ -41,11 +48,30 @@ func registerPlanTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage s
 			mcpgo.WithString("error_reason", mcpgo.Description("Short machine-friendly reason. Required when outcome=errored.")),
 			mcpgo.WithString("error_detail", mcpgo.Description("Free-form human-readable detail. Optional.")),
 		),
-		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
-			return handleCompleteStage(ctx, req, dispatcher)
-		},
+		handler,
 	)
-	_ = stage // both subsets get the same tool — keep param for signature parity
+}
+
+// chatCompleteStageTool ends a chat turn: the message is the reply shown to the
+// user in the conversation.
+func chatCompleteStageTool() mcpgo.Tool {
+	return mcpgo.NewTool("complete_stage",
+		mcpgo.WithDescription(
+			"End the current chat turn. Required exactly once per turn: output_submitted posts your message into the conversation; errored ends the turn with an error the user sees.",
+		),
+		mcpgo.WithNumber("id_task", mcpgo.Required(), mcpgo.Description("The id_task from the stage_execute event payload.")),
+		mcpgo.WithString("outcome", mcpgo.Required(), mcpgo.Enum(constants.StageOutcomeOutputSubmitted, constants.StageOutcomeErrored),
+			mcpgo.Description("output_submitted with your reply, or errored when you cannot answer.")),
+		mcpgo.WithString("message", mcpgo.Description("Your reply, plain markdown. Required when outcome=output_submitted."+taskLinkHint)),
+		mcpgo.WithString("message_kind",
+			mcpgo.Enum(constants.ChatMessageKinds...),
+			mcpgo.Description("chat_reply: an answer to the user. task_draft: the task draft the user asked for, a Markdown document whose first line is \"# <title>\". Required when message is set.")),
+		mcpgo.WithNumber("tokens_used", mcpgo.Description("Tokens used by this turn.")),
+		mcpgo.WithNumber("duration_ms", mcpgo.Description("Wall time of this turn in milliseconds.")),
+		mcpgo.WithNumber("tool_calls", mcpgo.Description("Tool calls made by this turn.")),
+		mcpgo.WithString("error_reason", mcpgo.Description("Short machine-friendly reason. Required when outcome=errored.")),
+		mcpgo.WithString("error_detail", mcpgo.Description("Free-form human-readable detail. Optional.")),
+	)
 }
 
 func handleCompleteStage(ctx context.Context, req mcpgo.CallToolRequest, dispatcher *Dispatcher) (*mcpgo.CallToolResult, error) {

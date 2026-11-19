@@ -1,0 +1,45 @@
+:host {
+    display: block;
+}
+
+.chat-thinking {
+    font-size: var(--font-size-s);
+}
+
+// Live and finished thinking share this panel, the look of the issue's thinking card.
+.chat-thinking-panel {
+    padding: var(--ui-space) var(--ui-space-l);
+    border: 1px solid var(--ui-surface-200);
+    border-left: 3px solid var(--ui-pink-500);
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-color-surface);
+}
+
+.chat-thinking-head {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    color: var(--ui-color-text-muted);
+}
+
+.chat-thinking-elapsed {
+    margin-left: auto;
+}
+
+.working-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ui-pink-500);
+    animation: chat-thinking-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes chat-thinking-pulse {
+    0%,
+    100% {
+        opacity: 0.35;
+    }
+    50% {
+        opacity: 1;
+    }
+}

@@ -863,6 +863,205 @@ async function openWikiPage(page, P, path) {
 
 const WIKI_TASK = 5;
 
+// ─────────────────────────────── agent chat seed ───────────────────────────────
+
+const CHAT_API = "/api/private/agent/conversation";
+// A local model can take minutes per answer; every turn waits up to this long.
+const CHAT_TURN_TIMEOUT_MS = Number(
+    process.env.CAPTURE_CHAT_TIMEOUT_MS || 15 * 60 * 1000,
+);
+
+// The agents that answer: the demo bots, or any two working agents of the stack
+// (CAPTURE_CHAT_AGENTS="Agent 003,Agent 007").
+const [CHAT_AGENT, CHAT_AGENT_OTHER] = (
+    process.env.CAPTURE_CHAT_AGENTS || `${BOTS[0].name},${BOTS[1].name}`
+)
+    .split(",")
+    .map((name) => name.trim());
+
+// The conversations the agent chat screenshots show. Each one asks something only
+// the project's own tracker data answers (sprint, wiki, backlog), except the last,
+// which has no project and stays unread so the menu badge has something to count.
+const CHATS = {
+    sprint: {
+        bot: CHAT_AGENT,
+        inProject: true,
+        pin: true,
+        read: true,
+        messages: [
+            "Which tasks in the current sprint are still open, and who works on them?",
+            "Which of them do the others wait for? Link the task ids so I can open them.",
+        ],
+    },
+    security: {
+        bot: CHAT_AGENT,
+        inProject: true,
+        read: true,
+        messages: [
+            "Does the JWT Decoder task follow the rules on our Security basics wiki page?",
+        ],
+        // Sent by the live-thinking shot, so the screenshot catches the turn running.
+        liveFollowUp:
+            "Quote the rule it is closest to breaking, and say what the task should add to stay within it.",
+    },
+    backlog: {
+        bot: CHAT_AGENT,
+        inProject: true,
+        read: true,
+        draft: true,
+        messages: [
+            "Do we have backlog tasks for the UUID and numeric ID generators from the wiki?",
+        ],
+    },
+    general: {
+        bot: CHAT_AGENT_OTHER,
+        inProject: false,
+        read: false,
+        messages: [
+            "When should a team squash commits before merging a pull request?",
+        ],
+    },
+};
+
+// The server titles a conversation with the first 80 characters of its first message.
+function chatTitle(chat) {
+    return chat.messages[0].split(/\s+/).join(" ").slice(0, 80);
+}
+
+async function chatAgents(page, idProject) {
+    const query = idProject ? `?idProject=${idProject}` : "";
+    const r = await L.api(page, "GET", `${CHAT_API}/agents${query}`);
+    if (!r.ok) throw new Error(`loading chat agents failed: ${r.status}`);
+    return r.data ?? [];
+}
+
+async function findChat(page, chat) {
+    const r = await L.api(page, "GET", CHAT_API);
+    if (!r.ok) throw new Error(`loading conversations failed: ${r.status}`);
+    return (r.data ?? []).find((c) => c.title === chatTitle(chat)) ?? null;
+}
+
+async function requireChat(page, key) {
+    const conversation = await findChat(page, CHATS[key]);
+    if (!conversation)
+        throw new Error(
+            `conversation "${key}" missing — run agent-chat-seed first`,
+        );
+    return conversation;
+}
+
+async function chatMessages(page, idConversation) {
+    const r = await L.api(
+        page,
+        "GET",
+        `${CHAT_API}/${idConversation}/message`,
+    );
+    if (!r.ok) throw new Error(`loading messages failed: ${r.status}`);
+    return r.data ?? [];
+}
+
+// Waits until the agent answers the newest owner message with a message of `kind`;
+// a system error line after it fails the step instead of waiting out the timeout.
+async function waitChatAnswer(page, idConversation, kind, log) {
+    const deadline = Date.now() + CHAT_TURN_TIMEOUT_MS;
+    let lastLog = 0;
+    while (Date.now() < deadline) {
+        const messages = await chatMessages(page, idConversation);
+        let lastAsk = -1;
+        messages.forEach((m, i) => {
+            if (m.author === "user") lastAsk = i;
+        });
+        const after = messages.slice(lastAsk + 1);
+        const error = after.find(
+            (m) => m.author === "system" && m.kind === "error",
+        );
+        if (error) throw new Error(`the turn failed: ${error.body}`);
+        const answer = after.find(
+            (m) => m.author === "agent" && m.kind === kind,
+        );
+        if (answer) return answer;
+        if (Date.now() - lastLog > 30000) {
+            log(`waiting for ${kind} in conversation ${idConversation}…`);
+            lastLog = Date.now();
+        }
+        await page.waitForTimeout(3000);
+    }
+    throw new Error(
+        `no ${kind} answer within ${CHAT_TURN_TIMEOUT_MS / 1000}s`,
+    );
+}
+
+async function sendChat(page, idConversation, message, log) {
+    const r = await L.api(
+        page,
+        "POST",
+        `${CHAT_API}/${idConversation}/message`,
+        { message },
+    );
+    if (!r.ok) throw new Error(`sending a message failed: ${r.status}`);
+    return waitChatAnswer(page, idConversation, "text", log);
+}
+
+// Creates the conversation and plays its messages; an existing one only gets the
+// messages it does not hold yet, so a re-run continues where a timeout stopped it.
+async function ensureChat(page, P, chat, log) {
+    let conversation = await findChat(page, chat);
+    if (!conversation) {
+        const agents = await chatAgents(page, chat.inProject ? P : null);
+        const agent = agents.find((a) => a.name === chat.bot);
+        if (!agent)
+            throw new Error(
+                `${chat.bot} is not offered for chat — it must be a member of ${PROJECT_NAME} (project-teams step)`,
+            );
+        const r = await L.api(page, "POST", CHAT_API, {
+            idUserAgent: agent.idUser,
+            idProject: chat.inProject ? Number(P) : null,
+        });
+        if (!r.ok)
+            throw new Error(`creating a conversation failed: ${r.status}`);
+        conversation = r.data;
+        log(`created "${chatTitle(chat)}" (id ${conversation.idConversation})`);
+    }
+    const id = conversation.idConversation;
+    const sent = (await chatMessages(page, id)).filter(
+        (m) => m.author === "user",
+    );
+    for (const message of chat.messages.slice(sent.length)) {
+        log(`asking ${chat.bot}: ${message}`);
+        await sendChat(page, id, message, log);
+    }
+    if (chat.draft) {
+        const messages = await chatMessages(page, id);
+        if (!messages.some((m) => m.kind === "task_draft")) {
+            const answer = messages.filter((m) => m.author === "agent").at(-1);
+            const r = await L.api(page, "POST", `${CHAT_API}/${id}/task-draft`, {
+                idMessage: answer.idMessage,
+            });
+            if (!r.ok)
+                throw new Error(`asking for a task draft failed: ${r.status}`);
+            log("asked for a task draft");
+            await waitChatAnswer(page, id, "task_draft", log);
+        }
+    }
+    if (chat.pin)
+        await L.api(page, "PUT", `${CHAT_API}/${id}/pin`, { isPinned: true });
+    if (chat.read) await L.api(page, "POST", `${CHAT_API}/${id}/read`, {});
+    return id;
+}
+
+async function openChat(page, key) {
+    const conversation = await requireChat(page, key);
+    await L.gotoApp(
+        page,
+        `${L.BASE}/agent-chat/${conversation.idConversation}`,
+    );
+    await page
+        .locator('[data-testid="chat-header-title"]')
+        .waitFor({ state: "visible", timeout: 15000 });
+    await L.settle(page);
+    return conversation;
+}
+
 // ─────────────────────────────────── steps ───────────────────────────────────
 // Each: { id, type, title, file, run(ctx) }. ctx = { page, cursor, mark, log }.
 
@@ -3331,6 +3530,139 @@ const STEPS = [
                 .waitFor({ state: "visible", timeout: 10000 });
             await page.waitForTimeout(600);
             await L.shootPage(page, "wiki-proposals.png");
+        },
+    },
+
+    // ── H · Agent chat ──
+    {
+        id: "agent-chat-seed",
+        type: "generate",
+        title: "Agent chat: 4 conversations (sprint, security, backlog + task draft, no project) — waits for real answers",
+        run: async ({ page, log }) => {
+            const P = await getProject(page);
+            for (const [key, chat] of Object.entries(CHATS)) {
+                log(`── ${key}`);
+                await ensureChat(page, P, chat, log);
+            }
+        },
+    },
+    {
+        id: "agent-chat-menu",
+        type: "screenshot",
+        file: "agent-chat-menu.png",
+        title: "Robot menu in the top bar: unread badge, pinned and project conversations",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/table`);
+            await L.settle(page);
+            const hasBadge = await page
+                .locator('[data-testid="agent-chat-badge"]')
+                .waitFor({ state: "visible", timeout: 10000 })
+                .then(() => true)
+                .catch(() => false);
+            if (!hasBadge)
+                throw new Error(
+                    'no unread badge — the "general" conversation was read; send it a new message',
+                );
+            await page.getByTestId("agent-chat-menu").click();
+            await page
+                .getByRole("menuitem")
+                .first()
+                .waitFor({ state: "visible", timeout: 8000 });
+            await page.waitForTimeout(500);
+            await L.shootPage(page, "agent-chat-menu.png");
+            await page.keyboard.press("Escape");
+        },
+    },
+    {
+        id: "agent-chat-overview",
+        type: "screenshot",
+        file: "agent-chat-overview.png",
+        title: "Agent chat page: the list and the sprint conversation",
+        run: async ({ page }) => {
+            await openChat(page, "sprint");
+            await L.shootPage(page, "agent-chat-overview.png");
+        },
+    },
+    {
+        id: "agent-chat-new",
+        type: "screenshot",
+        file: "agent-chat-new.png",
+        title: "New conversation form with the project and the agent picked",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/agent-chat?new=1&idProject=${P}`);
+            await page
+                .getByTestId("new-conversation-chip")
+                .first()
+                .waitFor({ state: "visible", timeout: 10000 });
+            await L.pickDropdownOption(
+                page,
+                page.locator("#new-conversation-agent"),
+                CHAT_AGENT,
+            );
+            await page.mouse.click(5, 5);
+            await page.waitForTimeout(500);
+            await L.shootPage(page, "agent-chat-new.png");
+        },
+    },
+    {
+        id: "agent-chat-live-thinking",
+        type: "screenshot",
+        file: "agent-chat-live-thinking.png",
+        title: "Live thinking while the agent answers — SENDS a follow-up in the security conversation",
+        run: async ({ page, log }) => {
+            const conversation = await openChat(page, "security");
+            await page
+                .locator('.agent-chat-composer [contenteditable="true"]')
+                .fill(CHATS.security.liveFollowUp);
+            await page
+                .locator(".agent-chat-composer")
+                .getByTestId("message-editor-send")
+                .click();
+            const live = page.locator('[data-testid="chat-thinking"].is-live');
+            await live.waitFor({
+                state: "visible",
+                timeout: CHAT_TURN_TIMEOUT_MS,
+            });
+            // A few streamed lines, so the shot shows the agent reading the project.
+            await page
+                .waitForFunction(
+                    (sel) =>
+                        (document.querySelector(sel)?.textContent?.length ??
+                            0) > 400,
+                    '[data-testid="chat-thinking"].is-live',
+                    { timeout: 5 * 60 * 1000 },
+                )
+                .catch(() => log("few thinking lines yet — shooting them"));
+            await L.shootPage(page, "agent-chat-live-thinking.png");
+            await waitChatAnswer(
+                page,
+                conversation.idConversation,
+                "text",
+                log,
+            );
+        },
+    },
+    {
+        id: "agent-chat-task-draft",
+        type: "screenshot",
+        file: ["agent-chat-task-draft.png", "agent-chat-task-dialog.png"],
+        title: "Task draft card in the backlog conversation, then its save dialog (cancelled)",
+        run: async ({ page }) => {
+            await openChat(page, "backlog");
+            const card = page.getByTestId("task-draft-card").last();
+            await card.waitFor({ state: "visible", timeout: 15000 });
+            await card.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(500);
+            await L.shootPage(page, "agent-chat-task-draft.png");
+            await card.getByTestId("task-draft-edit").click();
+            await page
+                .getByTestId("task-draft-title")
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(600);
+            await L.shootPage(page, "agent-chat-task-dialog.png");
+            await page.getByTestId("task-draft-cancel").click();
         },
     },
 ];

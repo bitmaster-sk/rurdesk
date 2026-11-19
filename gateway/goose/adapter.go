@@ -67,7 +67,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// ${ENV} substitution, which goose doesn't apply to the extension uri).
 	// The config path is shared, which is safe only because the orchestrator
 	// runs one stage at a time.
-	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, a.cfg.AgentApiKey, task.IdRun, repoPluginDirs(task.WorktreePath)); err != nil {
+	if _, err := writeGooseConfig(gooseConfigDir(), mcpURL, task.MCPBearer(a.cfg.AgentApiKey), task.IdRun, repoPluginDirs(task.WorktreePath)); err != nil {
 		return stats, fmt.Errorf("writing goose config: %w", err)
 	}
 
@@ -110,7 +110,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Effort, task.Repo.Token, stageMarker)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Effort, task.AgentGitToken(), stageMarker)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -345,7 +345,9 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 	return nil
 }
 
-// childEnv builds the goose subprocess env: inherited env plus goose wiring.
+// childEnv builds the goose subprocess env: common.AgentEnv (inherited env
+// without the gateway secrets, plus the run's git token unless it is empty)
+// plus goose wiring.
 // Unlike the claude adapter it does NOT scrub ANTHROPIC_API_KEY — for goose
 // the API key IS the BYOK billing path. GIT_PAGER=cat avoids the implement
 // stage's `git log`/`git diff` blocking on a pager; GOOSE_DISABLE_KEYRING=1
@@ -355,7 +357,7 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
 func childEnv(cfg *common.GooseConfig, provider, effort, gitToken, stageMarker string) []string {
-	out := append([]string{}, os.Environ()...)
+	out := common.AgentEnv(os.Environ(), gitToken)
 	out = append(out,
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",
@@ -364,7 +366,6 @@ func childEnv(cfg *common.GooseConfig, provider, effort, gitToken, stageMarker s
 		fmt.Sprintf("GOOSE_DEFAULT_EXTENSION_TIMEOUT=%d", cfg.DefaultExtensionTimeoutSeconds),
 		fmt.Sprintf("GOOSE_STOP_HOOK_BLOCK_CAP=%d", cfg.StopHookBlockCap),
 		stageMarkerEnv+"="+stageMarker,
-		common.GitTokenEnv(gitToken),
 	)
 	if cfg.AnthropicAPIKey != "" {
 		out = append(out, "ANTHROPIC_API_KEY="+cfg.AnthropicAPIKey)

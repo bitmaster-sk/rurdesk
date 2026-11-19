@@ -94,8 +94,9 @@ func (tc *TrackerClient) ReportModelThinking(ctx context.Context, isThinkingByMo
 
 // UpdateTaskStats overwrites tokens / duration / tool-call counters on the
 // agent_task row with what the adapter measured — the agent rarely passes
-// these via complete_stage, so without this call they stay zero.
-func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stats RunStats) error {
+// these via complete_stage, so without this call they stay zero. headCommit is
+// the commit of a chat turn's worktree, omitted when empty.
+func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stats RunStats, headCommit string) error {
 	type body struct {
 		TokensUsed       int      `json:"tokensUsed"`
 		DurationMs       int      `json:"durationMs"`
@@ -106,8 +107,9 @@ func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stat
 		CacheWriteTokens int      `json:"cacheWriteTokens"`
 		CostUsd          *float64 `json:"costUsd"`
 		CostEstimated    bool     `json:"costEstimated"`
+		HeadCommit       string   `json:"headCommit,omitempty"`
 	}
-	statsBody := body{ //nolint:staticcheck
+	statsBody := body{
 		TokensUsed:       stats.TokensUsed,
 		DurationMs:       stats.DurationMs,
 		ToolCallsCount:   stats.ToolCallsCount,
@@ -117,6 +119,7 @@ func (tc *TrackerClient) UpdateTaskStats(ctx context.Context, idTask int64, stat
 		CacheWriteTokens: stats.CacheWriteTokens,
 		CostUsd:          stats.CostUsd,
 		CostEstimated:    stats.CostEstimated,
+		HeadCommit:       headCommit,
 	}
 	return tc.post(ctx, fmt.Sprintf("/agent/task/%d/stats", idTask), statsBody)
 }

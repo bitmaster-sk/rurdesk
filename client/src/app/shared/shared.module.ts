@@ -28,6 +28,7 @@ import { TeammateSelectorComponent } from './teammate-selector/teammate-selector
 import { StagedIssueComponent } from './staged-issue/staged-issue.component';
 import { MockupCardComponent } from './components/mockup-card/mockup-card.component';
 import { AgentThinkingRowComponent } from './components/agent-thinking-row/agent-thinking-row.component';
+import { AgentThinkingLinesComponent } from './components/agent-thinking-lines/agent-thinking-lines.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
@@ -104,6 +105,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         StagedIssueComponent,
         MockupCardComponent,
         AgentThinkingRowComponent,
+        AgentThinkingLinesComponent,
         MessageBodyComponent,
         MarkdownCodeCopyDirective,
         MermaidDiagramComponent,
@@ -189,6 +191,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         StagedIssueComponent,
         MockupCardComponent,
         AgentThinkingRowComponent,
+        AgentThinkingLinesComponent,
         MessageBodyComponent,
         MarkdownCodeCopyDirective,
         MermaidDiagramComponent,

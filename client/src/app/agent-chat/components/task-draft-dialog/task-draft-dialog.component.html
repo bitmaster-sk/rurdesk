@@ -1,0 +1,67 @@
+<ui-dialog
+    [header]="'AGENT_CHAT.TASK_DRAFT.DIALOG_TITLE' | translate"
+    [visible]="true"
+    width="640px"
+    (hide)="cancelled.emit()"
+>
+    <form [formGroup]="form" class="task-draft-form" (ngSubmit)="onSave()">
+        <div class="ui-field">
+            <label for="task-draft-title" class="required">
+                {{ 'AGENT_CHAT.TASK_DRAFT.TITLE' | translate }}
+            </label>
+            <input
+                id="task-draft-title"
+                uiInput
+                data-testid="task-draft-title"
+                formControlName="title"
+                class="w-full"
+                [attr.maxlength]="titleMax"
+            />
+        </div>
+        <div class="ui-field">
+            <label for="task-draft-description">
+                {{ 'AGENT_CHAT.TASK_DRAFT.DESCRIPTION' | translate }}
+            </label>
+            <textarea
+                id="task-draft-description"
+                uiTextarea
+                data-testid="task-draft-description"
+                formControlName="description"
+                class="w-full task-draft-description"
+                rows="12"
+            ></textarea>
+        </div>
+        <div class="ui-field">
+            <label for="task-draft-project" class="required">
+                {{ 'AGENT_CHAT.TASK_DRAFT.PROJECT' | translate }}
+            </label>
+            <ui-select
+                data-testid="task-draft-project"
+                inputId="task-draft-project"
+                optionLabel="name"
+                optionValue="idProject"
+                formControlName="idProject"
+                [filter]="true"
+                [options]="projects()"
+                [placeholder]="'AGENT_CHAT.TASK_DRAFT.PICK_PROJECT' | translate"
+            />
+        </div>
+    </form>
+
+    <ng-template #footer>
+        <ui-button
+            variant="text"
+            severity="secondary"
+            data-testid="task-draft-cancel"
+            [label]="'AGENT_CHAT.TASK_DRAFT.CANCEL' | translate"
+            (click)="cancelled.emit()"
+        />
+        <ui-button
+            data-testid="task-draft-save"
+            [label]="'AGENT_CHAT.TASK_DRAFT.SAVE' | translate"
+            [loading]="isSaving()"
+            [disabled]="form.invalid"
+            (click)="onSave()"
+        />
+    </ng-template>
+</ui-dialog>

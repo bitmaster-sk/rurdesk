@@ -70,15 +70,6 @@
                     margin-bottom: 0;
                 }
 
-                :not(pre) > code {
-                    font-size: var(--font-size);
-                    background-color: var(--ui-surface-200);
-                    border: 1px solid var(--ui-surface-300);
-                    border-radius: var(--ui-radius-md);
-                    padding: var(--font-size-xs) var(--ui-space-s);
-                    color: var(--ui-color-primary-active);
-                }
-
                 ul,
                 ol {
                     margin: var(--ui-space-s) 0 var(--ui-space-s) var(--ui-space-l);
@@ -105,6 +96,10 @@
         opacity: 0;
         transition: opacity 0.1s;
         align-self: flex-start;
+
+        &:empty {
+            display: none;
+        }
 
         .edit-btn {
             padding: var(--ui-space-xs);

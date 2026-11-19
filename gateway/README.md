@@ -150,7 +150,7 @@ contract.
 
 | Var                        | Purpose                                                                                                                                                                                                                                                                                                                          |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; every other stage gets the restricted `/mcp/plan/sse` subset automatically) and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
+| `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; every other stage gets the restricted `/mcp/plan/sse` subset automatically), `/mcp/chat/sse` (and `/mcp/chat/http`) for chat stages, with a conversation-scoped read-only `rdr_…` token that expires every turn, and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (agent credentials).                                                                                                                      |
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
 | `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the subscription. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |
@@ -161,7 +161,10 @@ contract.
 > first use into `<WORKSPACE_BASE>/<host>/<repoPath>`. The clone's config holds a
 > credential helper that reads `RURDESK_GIT_TOKEN` from the git process env, so
 > the token never reaches disk; the agent process gets the token of its run in
-> the same variable. The `TrackerClient` replaces the tokens of running stages
+> the same variable, except in chat (none). `AgentEnv` strips
+> `GATEWAY_TO_TRACKER_TOKEN`, `TRACKER_TO_GATEWAY_TOKEN` and `RURDESK_GIT_TOKEN`
+> from the agent's environment for every stage, and credential helpers found in
+> the clone's config are reset. The `TrackerClient` replaces the tokens of running stages
 > with `***` in every body it posts. A `stage_execute` without `repo` fails with
 > `tracker_missing_repo`.
 
@@ -179,6 +182,7 @@ contract.
 | `MAX_TURNS_LIMIT`                      | no limit         | Ceiling on the `maxTurns` the tracker sends. Reported in `ReportRecovered` so the tracker caps at it; a higher value still fails with `max_turns_over_limit`. Without `maxTurns` the gateway uses 250 / 500 (implementation), capped by this limit. |
 | `ANTHROPIC_API_KEY` / `GOOGLE_API_KEY` | unset            | BYOK credential for the `anthropic` / `google` provider.                                                                             |
 | `OLLAMA_HOST`                          | unset            | For the `ollama` provider (keyless).                                                                                                 |
+| `CLAUDE_THINKING_DISPLAY`              | `summarized`     | claude-code: passed as `--thinking-display` (`summarized` \| `omitted`) so live thinking has text; unset means `summarized`, empty omits the flag, any other value stops the gateway at startup. |
 | `GOOSE_DEFAULT_EXTENSION_TIMEOUT`      | `1800`           | Seconds one goose `shell` command may run before goose kills it. |
 | `GOOSE_STOP_HOOK_BLOCK_CAP`            | `3`              | How many times the `rurdesk-guard` Stop hook may send the agent back to call `complete_stage`. |
 

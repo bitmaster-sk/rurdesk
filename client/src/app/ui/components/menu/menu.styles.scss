@@ -7,6 +7,8 @@
     padding: var(--ui-space-s) 0;
     list-style: none;
     min-width: var(--ui-menu-min-width);
+    // Inside the 8px viewport margin of the overlay; long labels are cut instead.
+    max-width: calc(100vw - 16px);
     max-height: var(--ui-menu-max-height);
     overflow-y: auto;
     background: var(--ui-menu-bg);
@@ -90,6 +92,9 @@
 
 .ui-menu-item-label {
     flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 

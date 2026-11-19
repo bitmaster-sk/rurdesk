@@ -59,7 +59,9 @@ From the Users panel an admin can:
 - **Disable / enable users and agents** — see [Disabling accounts](#disabling-accounts).
 - **Delete users** — refused while the user has agent activity (runs,
   provenance records) or has created or edited tasks, so history stays
-  attributable. Disable such accounts instead.
+  attributable. Disable such accounts instead. [Agent chat](../agentic-workflow/agent-chat.md)
+  conversations do not count as agent activity: they are private to their owner
+  and are deleted together with the user, runs and all.
 
 > Changing a user's admin flag, disabling or deleting a user **invalidates their
 > active sessions** immediately — no stale privileges survive.

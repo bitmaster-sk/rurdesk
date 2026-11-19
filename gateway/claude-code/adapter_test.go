@@ -1,21 +1,30 @@
 package claudecode
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/gateway/claude-code/model"
 	"github.com/bitmaster-sk/rurdesk/gateway/common"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func TestClaudeCodeReportsEveryModelAsThinking(t *testing.T) {
-	isThinkingByModel, unanswered := NewClaudeCodeAdapter(&common.Config{}).ModelThinking(context.Background(), []common.Model{{Name: "sonnet"}, {Name: "opus"}})
+	isThinkingByModel, unanswered := NewClaudeCodeAdapter(&common.Config{}, nil).ModelThinking(context.Background(), []common.Model{{Name: "sonnet"}, {Name: "opus"}})
 
 	if len(isThinkingByModel) != 2 || !isThinkingByModel["sonnet"] || !isThinkingByModel["opus"] {
 		t.Errorf("thinking by model = %v, want sonnet and opus thinking", isThinkingByModel)
@@ -58,12 +67,12 @@ func TestMapTerminalStatus(t *testing.T) {
 }
 
 func TestExtractResultUsage(t *testing.T) {
-	ev := func(line string) map[string]any {
-		var m map[string]any
-		if err := json.Unmarshal([]byte(line), &m); err != nil {
+	ev := func(line string) model.StreamLine {
+		var event model.StreamLine
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			t.Fatalf("unmarshal: %v", err)
 		}
-		return m
+		return event
 	}
 
 	withCost := extractResultUsage(ev(
@@ -109,6 +118,7 @@ func TestDrainEventsExtractsStatsFromStreamJSON(t *testing.T) {
 				tokens = tk
 			}
 		},
+		nil,
 		nil,
 	)
 
@@ -160,6 +170,7 @@ func TestDrainEventsDetectsCompleteStage(t *testing.T) {
 						saw = true
 					}
 				},
+				nil,
 				nil,
 				nil,
 			)
@@ -316,7 +327,7 @@ func TestRunWithStubBinary(t *testing.T) {
 				AgentApiKey:   "deadbeef",
 				ClaudeCode:    &common.ClaudeCodeConfig{},
 			}
-			adapter := NewClaudeCodeAdapter(cfg)
+			adapter := NewClaudeCodeAdapter(cfg, nil)
 			task := common.Task{
 				IdRun:        7,
 				IdTask:       1,
@@ -404,7 +415,7 @@ func TestCancelAlwaysEndsARunningStage(t *testing.T) {
 		AgentApiKey:   "deadbeef",
 		ClaudeCode:    &common.ClaudeCodeConfig{},
 	}
-	adapter := NewClaudeCodeAdapter(cfg)
+	adapter := NewClaudeCodeAdapter(cfg, nil)
 
 	for attempt := range 20 {
 		_ = os.Remove(startedFile)
@@ -465,6 +476,7 @@ func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 	)
 	if subtype != "success" {
 		t.Errorf("subtype = %q, want the result event after the long line to be read", subtype)
@@ -491,7 +503,7 @@ func TestRunPassesTheEffortOnlyWhenSet(t *testing.T) {
 		cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
 		task := common.Task{IdRun: 7, IdTask: 1, Stage: common.StageDesign, WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60, Effort: tt.effort}
 
-		if _, err := NewClaudeCodeAdapter(cfg).Run(context.Background(), task); err != nil {
+		if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
 			t.Fatalf("Run: %v", err)
 		}
 
@@ -528,7 +540,7 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 		AgentApiKey:   "deadbeef",
 		ClaudeCode:    &common.ClaudeCodeConfig{},
 	}
-	adapter := NewClaudeCodeAdapter(cfg)
+	adapter := NewClaudeCodeAdapter(cfg, nil)
 	task := common.Task{
 		IdRun:        7,
 		IdTask:       1,
@@ -568,5 +580,537 @@ func TestRunPassesPromptOnStdinNotInArgs(t *testing.T) {
 	}
 	if string(stdin) != wantPrompt {
 		t.Errorf("claude stdin is not the full prompt\n--- got ---\n%s\n--- want ---\n%s", stdin, wantPrompt)
+	}
+}
+
+const testRunToken = "rdr_0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+// writeRecordingStub writes a claude stub that copies its MCP config to
+// mcpCopy, its env to envFile and its args to argsFile, then submits the stage.
+func writeRecordingStub(t *testing.T, dir string) (stub, mcpCopy, envFile, argsFile string) {
+	t.Helper()
+	stub = filepath.Join(dir, "claude-stub.sh")
+	mcpCopy = filepath.Join(dir, "mcp.json")
+	envFile = filepath.Join(dir, "env.txt")
+	argsFile = filepath.Join(dir, "args.txt")
+	script := "#!/bin/sh\n" +
+		`printf '%s\n' "$@" > ` + argsFile + "\n" +
+		"env > " + envFile + "\n" +
+		`while [ $# -gt 0 ]; do if [ "$1" = "--mcp-config" ]; then cp "$2" ` + mcpCopy + `; fi; shift; done` + "\n" +
+		"cat > /dev/null\n" +
+		`echo '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__tracker__complete_stage"}]}}'` + "\n" +
+		`echo '{"type":"result","subtype":"success","is_error":false}'` + "\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	return stub, mcpCopy, envFile, argsFile
+}
+
+func TestClaudeAdapter_ChatUsesRunTokenAndURL(t *testing.T) {
+	stub, mcpCopy, envFile, argsFile := writeRecordingStub(t, t.TempDir())
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	t.Setenv("GATEWAY_TO_TRACKER_TOKEN", "deadbeef")
+	t.Setenv("TRACKER_TO_GATEWAY_TOKEN", "webhook-secret-hex")
+	t.Setenv("RURDESK_GIT_TOKEN", "inherited-git-token")
+	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+	task := common.Task{
+		IdRun: 7, IdTask: 31, Stage: common.StageChat, AttemptNo: 12,
+		WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60,
+		RunToken: testRunToken,
+		Repo:     common.AgentRunGitRepo{Token: "run-git-token"},
+		Chat:     &common.ChatContext{Mode: common.ChatModeReply},
+	}
+
+	if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	data, err := os.ReadFile(mcpCopy)
+	if err != nil {
+		t.Fatalf("reading the MCP config the CLI got: %v", err)
+	}
+	var parsed struct {
+		McpServers map[string]struct {
+			URL     string            `json:"url"`
+			Headers map[string]string `json:"headers"`
+		} `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(data, &parsed); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	tracker := parsed.McpServers["tracker"]
+	if tracker.URL != "http://issue.proxy/mcp/chat/sse" {
+		t.Errorf("url = %q, want the chat endpoint", tracker.URL)
+	}
+	if got := tracker.Headers["Authorization"]; got != "Bearer "+testRunToken {
+		t.Errorf("Authorization = %q, want the run token", got)
+	}
+	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token", "run-git-token")
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "--session-id\n" + common.TaskSessionUUID(task) + "\n"; !strings.Contains(string(args), want) {
+		t.Errorf("claude args lack %q\n%s", want, args)
+	}
+}
+
+func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
+	stub, _, envFile, _ := writeRecordingStub(t, t.TempDir())
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	t.Setenv("GATEWAY_TO_TRACKER_TOKEN", "deadbeef")
+	t.Setenv("TRACKER_TO_GATEWAY_TOKEN", "webhook-secret-hex")
+	t.Setenv("RURDESK_GIT_TOKEN", "inherited-git-token")
+	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+	task := common.Task{
+		IdRun: 7, IdTask: 1, Stage: common.StageImplementation,
+		WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60,
+		Repo: common.AgentRunGitRepo{Token: "run-git-token"},
+	}
+
+	if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token")
+	env, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(env), "RURDESK_GIT_TOKEN=run-git-token\n") {
+		t.Error("an issue stage lost the git token of its run")
+	}
+}
+
+func assertAgentEnvHasNoSecrets(t *testing.T, envFile string, secrets ...string) {
+	t.Helper()
+	env, err := os.ReadFile(envFile)
+	if err != nil {
+		t.Fatalf("reading the agent env: %v", err)
+	}
+	for _, secret := range secrets {
+		if strings.Contains(string(env), secret) {
+			t.Errorf("the agent env holds %q", secret)
+		}
+	}
+}
+
+// A chat turn reads only: its built-in tools are an allow-list (Read, Grep, Glob, web) backed by a
+// deny list, and it leaves no session transcript on the gateway host. Issue stages keep every tool and session.
+func TestClaudeAdapter_ChatRestrictsToolsAndSkipsSessionPersistence(t *testing.T) {
+	chatArgs := []string{
+		"--no-session-persistence",
+		"--tools", "Read,Grep,Glob,WebSearch,WebFetch",
+		"--disallowedTools", "Bash,Write,Edit,MultiEdit,NotebookEdit,Task",
+	}
+	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+	for _, tt := range []struct {
+		name         string
+		task         common.Task
+		isRestricted bool
+	}{
+		{"chat", common.Task{Stage: common.StageChat, RunToken: testRunToken, Chat: &common.ChatContext{Mode: common.ChatModeReply}}, true},
+		{"design", common.Task{Stage: common.StageDesign}, false},
+		{"implementation", common.Task{Stage: common.StageImplementation}, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			stub, _, _, argsFile := writeRecordingStub(t, t.TempDir())
+			t.Setenv("CLAUDE_CODE_BINARY", stub)
+			task := tt.task
+			task.IdRun, task.IdTask, task.WorktreePath, task.Model, task.MaxTurns = 7, 1, t.TempDir(), common.Model{Name: "opus"}, 60
+
+			if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+
+			raw, err := os.ReadFile(argsFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			args := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
+			if tt.isRestricted {
+				if len(args) < len(chatArgs) || !slices.Equal(args[len(args)-len(chatArgs):], chatArgs) {
+					t.Errorf("chat argv must end with %q\n--- args ---\n%s", chatArgs, raw)
+				}
+				return
+			}
+			for _, flag := range []string{"--no-session-persistence", "--tools", "--disallowedTools"} {
+				if slices.Contains(args, flag) {
+					t.Errorf("an issue stage got %s\n--- args ---\n%s", flag, raw)
+				}
+			}
+		})
+	}
+}
+
+func TestClaudeAdapter_ChatPassesTheModelAndEffort(t *testing.T) {
+	stub, _, _, argsFile := writeRecordingStub(t, t.TempDir())
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+	task := common.Task{
+		IdRun: 7, IdTask: 1, Stage: common.StageChat, WorktreePath: t.TempDir(), MaxTurns: 60,
+		RunToken: testRunToken, Chat: &common.ChatContext{Mode: common.ChatModeReply},
+		Model: common.Model{Name: "sonnet"}, Effort: "high",
+	}
+
+	if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"--model\nsonnet\n", "--effort\nhigh\n", "--tools\nRead,Grep,Glob,WebSearch,WebFetch\n"} {
+		if !strings.Contains(string(args), want) {
+			t.Errorf("chat args missing %q\n--- args ---\n%s", want, args)
+		}
+	}
+}
+
+const streamFixturePath = "testdata/stream_partial.jsonl"
+
+// readStreamFixture returns the recorded `--include-partial-messages` stream
+// (a thought, one Glob call, the answer) with the tool renamed to toolName.
+func readStreamFixture(t *testing.T, toolName string) string {
+	t.Helper()
+	data, err := os.ReadFile(streamFixturePath)
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+	return strings.ReplaceAll(string(data), `"name":"Glob"`, `"name":"`+toolName+`"`)
+}
+
+type recordingThinkingSender struct {
+	mu     sync.Mutex
+	events []common.ThinkingEvent
+}
+
+func (s *recordingThinkingSender) SendThinking(_ context.Context, _ int64, _ int, events []common.ThinkingEvent) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.events = append(s.events, events...)
+	return nil
+}
+
+func (s *recordingThinkingSender) received() []common.ThinkingEvent {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]common.ThinkingEvent(nil), s.events...)
+}
+
+func TestDrainEvents_ForwardsThinkingDeltasAndToolUse(t *testing.T) {
+	sender := &recordingThinkingSender{}
+	batcher := common.NewThinkingBatcher(sender, 31)
+	batcher.Start(context.Background())
+
+	drainEvents(strings.NewReader(readStreamFixture(t, "Glob")), common.DefaultMaxOutputLineBytes, 7,
+		nil, nil, nil, nil, batcher.Add)
+	batcher.Stop()
+
+	// The 13 recorded fragments arrive merged into one thought, before the tool.
+	want := []common.ThinkingEvent{
+		{Kind: common.ThinkingKindThinking, Text: "I'm going to call Glob once with the '*.txt' pattern and then answer with just the" +
+			" file name. Since Glob may return several matches, I'll keep my reasoning short and just make the call.\n\n"},
+		{Kind: common.ThinkingKindTool, Tool: "Glob", Text: "*.txt"},
+	}
+
+	got := sender.received()
+	for index := range got {
+		got[index].At = 0
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d events, want %d\n%+v", len(got), len(want), got)
+	}
+	for index := range want {
+		if got[index] != want[index] {
+			t.Errorf("event %d = %+v, want %+v", index, got[index], want[index])
+		}
+	}
+}
+
+func TestToolDetail(t *testing.T) {
+	tests := []struct {
+		name  string
+		tool  string
+		input map[string]any
+		want  string
+	}{
+		{"bash command", "Bash", map[string]any{"command": "go test ./...", "description": "run tests"}, "go test ./..."},
+		{"multi-line command keeps the first line", "Bash", map[string]any{"command": "cat <<EOF\nbody\nEOF"}, "cat <<EOF…"},
+		{"read path", "Read", map[string]any{"file_path": "/w/main.go"}, "/w/main.go"},
+		{"edit path", "Edit", map[string]any{"file_path": "/w/a.go", "old_string": "x"}, "/w/a.go"},
+		{"write path", "Write", map[string]any{"file_path": "/w/b.go", "content": "y"}, "/w/b.go"},
+		{"grep pattern", "Grep", map[string]any{"pattern": "func main", "path": "/w"}, "func main"},
+		{"glob pattern", "Glob", map[string]any{"pattern": "**/*.go"}, "**/*.go"},
+		{"other tool", "mcp__tracker__get_issue", map[string]any{"idIssue": 3}, ""},
+		{"no input", "Bash", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var input json.RawMessage
+			if tt.input != nil {
+				encoded, err := json.Marshal(tt.input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				input = encoded
+			}
+			if got := toolDetail(model.ContentBlock{Type: "tool_use", Name: tt.tool, Input: input}); got != tt.want {
+				t.Errorf("toolDetail = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func thinkingDeltaLine(fragment string) string {
+	encoded, err := json.Marshal(fragment)
+	if err != nil {
+		panic(err)
+	}
+	return `{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":` + string(encoded) + `}}}`
+}
+
+func TestDrainEvents_CoalescesThinkingFragments(t *testing.T) {
+	fiftyChars := strings.Repeat("x", 49) + " "
+	const progress = `{"type":"system","subtype":"thinking_tokens","estimated_tokens":5}`
+	const blockStop = `{"type":"stream_event","event":{"type":"content_block_stop","index":0}}`
+	const toolCall = `{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/w/a.go"}}]}}`
+	thinking := func(text string) common.ThinkingEvent {
+		return common.ThinkingEvent{Kind: common.ThinkingKindThinking, Text: text}
+	}
+	tests := []struct {
+		name  string
+		lines []string
+		want  []common.ThinkingEvent
+	}{
+		{
+			name:  "flushes once the merged thought reaches 200 chars",
+			lines: []string{thinkingDeltaLine(fiftyChars), progress, thinkingDeltaLine(fiftyChars), thinkingDeltaLine(fiftyChars), progress, thinkingDeltaLine(fiftyChars), thinkingDeltaLine("tail")},
+			want:  []common.ThinkingEvent{thinking(strings.Repeat(fiftyChars, 4)), thinking("tail")},
+		},
+		{
+			name:  "flushes when the thinking block ends",
+			lines: []string{thinkingDeltaLine("first "), thinkingDeltaLine("block"), blockStop, thinkingDeltaLine("second")},
+			want:  []common.ThinkingEvent{thinking("first block"), thinking("second")},
+		},
+		{
+			name:  "sends the thought before the tool call that follows it",
+			lines: []string{thinkingDeltaLine("read it"), toolCall, thinkingDeltaLine("done")},
+			want: []common.ThinkingEvent{
+				thinking("read it"),
+				{Kind: common.ThinkingKindTool, Tool: "Read", Text: "/w/a.go"},
+				thinking("done"),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got []common.ThinkingEvent
+			drainEvents(strings.NewReader(strings.Join(tt.lines, "\n")+"\n"), common.DefaultMaxOutputLineBytes, 7,
+				nil, nil, nil, nil, func(event common.ThinkingEvent) { got = append(got, event) })
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d events, want %d\n%+v", len(got), len(tt.want), got)
+			}
+			for index := range tt.want {
+				if got[index] != tt.want[index] {
+					t.Errorf("event %d = %+v, want %+v", index, got[index], tt.want[index])
+				}
+			}
+		})
+	}
+}
+
+func TestDrainEvents_LogsNoThinkingAtInfo(t *testing.T) {
+	var buffer bytes.Buffer
+	previous := log.Logger
+	log.Logger = zerolog.New(&buffer).Level(zerolog.InfoLevel)
+	t.Cleanup(func() { log.Logger = previous })
+
+	drainEvents(strings.NewReader(readStreamFixture(t, "Glob")), common.DefaultMaxOutputLineBytes, 7,
+		nil, nil, nil, nil, nil)
+
+	logged := buffer.String()
+	for _, thought := range []string{"keep my reasoning short", "going to call", "reasoning"} {
+		if strings.Contains(logged, thought) {
+			t.Errorf("the info log holds thinking text %q\n%s", thought, logged)
+		}
+	}
+	for _, noise := range []string{`"type":"stream_event"`, `"subtype":"thinking_tokens"`} {
+		if strings.Contains(logged, noise) {
+			t.Errorf("the info log holds %s events", noise)
+		}
+	}
+	if !strings.Contains(logged, `"type":"assistant"`) || !strings.Contains(logged, `"type":"result"`) {
+		t.Errorf("the info log lost the assistant and result events\n%s", logged)
+	}
+}
+
+func TestDrainEvents_SkipsEmptyThinkingDeltas(t *testing.T) {
+	// Without --thinking-display summarized the CLI streams thinking as empty
+	// fragments; they carry nothing worth sending.
+	line := `{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":""}}}`
+	var events []common.ThinkingEvent
+	drainEvents(strings.NewReader(line+"\n"), common.DefaultMaxOutputLineBytes, 7,
+		nil, nil, nil, nil, func(event common.ThinkingEvent) { events = append(events, event) })
+	if len(events) != 0 {
+		t.Errorf("events = %+v, want none", events)
+	}
+}
+
+func TestDrainEvents_PartialMessagesDoNotDoubleCountTools(t *testing.T) {
+	for _, tt := range []struct {
+		tool                 string
+		wantSawCompleteStage bool
+	}{
+		{"Glob", false},
+		{"mcp__tracker__complete_stage", true},
+	} {
+		t.Run(tt.tool, func(t *testing.T) {
+			withPartials := readStreamFixture(t, tt.tool)
+			var withoutPartials strings.Builder
+			for line := range strings.Lines(withPartials) {
+				if !strings.Contains(line, `"type":"stream_event"`) {
+					withoutPartials.WriteString(line)
+				}
+			}
+
+			for name, stream := range map[string]string{"with partial messages": withPartials, "without": withoutPartials.String()} {
+				toolCalls, sawCompleteStage := 0, false
+				drainEvents(strings.NewReader(stream), common.DefaultMaxOutputLineBytes, 7,
+					nil,
+					func(count int, isCompleteStage bool) {
+						toolCalls += count
+						sawCompleteStage = sawCompleteStage || isCompleteStage
+					},
+					nil, nil, nil)
+				if toolCalls != 1 {
+					t.Errorf("%s: toolCalls = %d, want 1", name, toolCalls)
+				}
+				if sawCompleteStage != tt.wantSawCompleteStage {
+					t.Errorf("%s: sawCompleteStage = %v, want %v", name, sawCompleteStage, tt.wantSawCompleteStage)
+				}
+			}
+		})
+	}
+}
+
+// writeStreamStub writes a claude stub that records its args and prints stream.
+func writeStreamStub(t *testing.T, stream string) (stub, argsFile string) {
+	t.Helper()
+	dir := t.TempDir()
+	streamFile := filepath.Join(dir, "stream.jsonl")
+	if err := os.WriteFile(streamFile, []byte(stream), 0o600); err != nil {
+		t.Fatalf("writing stream: %v", err)
+	}
+	stub = filepath.Join(dir, "claude-stub.sh")
+	argsFile = filepath.Join(dir, "args.txt")
+	script := "#!/bin/sh\n" +
+		`printf '%s\n' "$@" > ` + argsFile + "\n" +
+		"cat > /dev/null\n" +
+		"cat " + streamFile + "\n"
+	if err := os.WriteFile(stub, []byte(script), 0o755); err != nil {
+		t.Fatalf("writing stub: %v", err)
+	}
+	return stub, argsFile
+}
+
+func TestClaudeAdapter_NilThinkingSender_RunsStage(t *testing.T) {
+	stub, _ := writeStreamStub(t, readStreamFixture(t, "mcp__tracker__complete_stage"))
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{ThinkingDisplay: "summarized"}}
+	task := common.Task{IdRun: 7, IdTask: 31, Stage: common.StageImplementation, WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60}
+
+	stats, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if stats.ToolCallsCount != 1 {
+		t.Errorf("ToolCallsCount = %d, want 1", stats.ToolCallsCount)
+	}
+}
+
+func TestRunPassesTheThinkingDisplayOnlyWhenSet(t *testing.T) {
+	for _, tt := range []struct {
+		display  string
+		wantArgs string
+	}{
+		{"summarized", "--thinking-display\nsummarized\n"},
+		{"omitted", "--thinking-display\nomitted\n"},
+		{"", ""},
+	} {
+		t.Run("display "+tt.display, func(t *testing.T) {
+			stub, argsFile := writeStreamStub(t, readStreamFixture(t, "mcp__tracker__complete_stage"))
+			t.Setenv("CLAUDE_CODE_BINARY", stub)
+			cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{ThinkingDisplay: tt.display}}
+			task := common.Task{IdRun: 7, IdTask: 31, Stage: common.StageImplementation, WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60}
+
+			if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+
+			args, err := os.ReadFile(argsFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(args), "--include-partial-messages\n") {
+				t.Errorf("claude args lack --include-partial-messages\n--- args ---\n%s", args)
+			}
+			if tt.wantArgs == "" && strings.Contains(string(args), "--thinking-display") {
+				t.Errorf("no thinking display is configured, but claude got --thinking-display\n--- args ---\n%s", args)
+			}
+			if tt.wantArgs != "" && !strings.Contains(string(args), tt.wantArgs) {
+				t.Errorf("claude args lack %q\n--- args ---\n%s", tt.wantArgs, args)
+			}
+		})
+	}
+}
+
+func TestClaudeAdapter_ThinkingMasksSecrets(t *testing.T) {
+	var mu sync.Mutex
+	var thinkingBodies []string
+	tracker := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		body, err := io.ReadAll(request.Body)
+		if err != nil {
+			http.Error(writer, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if request.URL.Path == "/agent/task/31/thinking" {
+			mu.Lock()
+			thinkingBodies = append(thinkingBodies, string(body))
+			mu.Unlock()
+		}
+		writer.WriteHeader(http.StatusOK)
+	}))
+	defer tracker.Close()
+
+	stream := `{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"the MCP token is ` + testRunToken + `"}}}` + "\n" +
+		`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"t1","name":"mcp__tracker__complete_stage"}]}}` + "\n" +
+		`{"type":"result","subtype":"success","is_error":false}` + "\n"
+	stub, _ := writeStreamStub(t, stream)
+	t.Setenv("CLAUDE_CODE_BINARY", stub)
+	cfg := &common.Config{
+		TrackerMCPUrl: "http://issue.proxy/mcp/sse", TrackerAPIUrl: tracker.URL,
+		AgentApiKey: "deadbeef", WebhookSecret: []byte("webhook-secret"), ClaudeCode: &common.ClaudeCodeConfig{},
+	}
+	trackerClient := common.NewTrackerClient(cfg)
+	trackerClient.RedactSecret(testRunToken)
+	task := common.Task{
+		IdRun: 7, IdTask: 31, Stage: common.StageChat, WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60,
+		RunToken: testRunToken, Chat: &common.ChatContext{Mode: common.ChatModeReply},
+	}
+
+	if _, err := NewClaudeCodeAdapter(cfg, trackerClient).Run(context.Background(), task); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	sent := strings.Join(thinkingBodies, "\n")
+	if !strings.Contains(sent, "the MCP token is ***") {
+		t.Errorf("thinking sent to the tracker lacks the masked fragment\n%s", sent)
+	}
+	if strings.Contains(sent, testRunToken) {
+		t.Errorf("thinking sent to the tracker holds the run token\n%s", sent)
 	}
 }

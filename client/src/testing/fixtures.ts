@@ -9,6 +9,7 @@ import { AgentStageOptionsByStage } from 'src/app/agent/model/agent-stage-option
 import { SwimlaneCell } from 'src/app/issue/components/issue-kanban/entity/swimlane-cell.entity';
 import { ExtendedIssue } from 'src/app/issue/model/extended-issue.model';
 import { Issue } from 'src/app/issue/model/issue.model';
+import { Project } from 'src/app/project/model/project.model';
 import { Skill } from 'src/app/shared/model/skill.model';
 import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 import { IssueSeverity } from 'src/app/severity/model/issue-severity.model';
@@ -114,6 +115,10 @@ export abstract class Fixtures {
             isAgent: true,
             ...overrides
         });
+    }
+
+    public static project(overrides: Partial<Project> = {}): Project {
+        return { idProject: 7, name: 'rurdesk', color: '#1a3263', ...overrides };
     }
 
     public static skill(overrides: Partial<Skill> = {}): Skill {

@@ -16,6 +16,10 @@ import { Notice } from './model/notice.model';
 import { WikiSavedNotice } from 'src/app/wiki/model/wiki-page.model';
 import { WikiProposalNotice } from 'src/app/wiki/model/wiki-proposal.model';
 import { Release } from 'src/app/release/model/release.model';
+import {
+    AgentConversationMessage,
+    AgentConversationTurnNotice
+} from 'src/app/agent-chat/model/agent-conversation.model';
 
 @Injectable({
     providedIn: 'root'
@@ -52,6 +56,14 @@ export class NoticeService {
 
     private agentThinkingSubject = new Subject<Notice<unknown>>();
     public agentThinking$: Observable<Notice<unknown>> = this.agentThinkingSubject.asObservable();
+
+    private agentConversationSubject = new Subject<Notice<AgentConversationMessage>>();
+    public agentConversation$: Observable<Notice<AgentConversationMessage>> =
+        this.agentConversationSubject.asObservable();
+
+    private agentConversationTurnSubject = new Subject<Notice<AgentConversationTurnNotice>>();
+    public agentConversationTurn$: Observable<Notice<AgentConversationTurnNotice>> =
+        this.agentConversationTurnSubject.asObservable();
 
     private participantSubject = new Subject<
         Notice<{ idIssue: number; participants: IssueParticipantModel[] }>
@@ -214,6 +226,14 @@ export class NoticeService {
                 break;
             case NoticeSubject.AgentThinking:
                 this.agentThinkingSubject.next(notice);
+                break;
+            case NoticeSubject.AgentConversation:
+                this.agentConversationSubject.next(notice as Notice<AgentConversationMessage>);
+                break;
+            case NoticeSubject.AgentConversationTurn:
+                this.agentConversationTurnSubject.next(
+                    notice as Notice<AgentConversationTurnNotice>
+                );
                 break;
             case NoticeSubject.Participant:
                 this.participantSubject.next(

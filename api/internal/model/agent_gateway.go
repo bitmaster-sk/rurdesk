@@ -19,6 +19,25 @@ type AgentGateway struct {
 	CreatedAt             time.Time                    `json:"createdAt"         db:"created_at"`
 }
 
+// AgentModelChoices is what an agent's gateway offers: its models and the default one.
+type AgentModelChoices struct {
+	Models       []string `json:"models"`
+	ModelDefault *string  `json:"modelDefault"`
+}
+
+// ModelChoices is what the gateway offers to pick from; a nil gateway offers nothing.
+func (gw *AgentGateway) ModelChoices() AgentModelChoices {
+	choices := AgentModelChoices{Models: []string{}}
+	if gw == nil {
+		return choices
+	}
+	if gw.Models != nil {
+		choices.Models = gw.Models
+	}
+	choices.ModelDefault = gw.ModelDefault
+	return choices
+}
+
 func (gw *AgentGateway) IsSupportedModel(model string) bool {
 	return slices.Contains(gw.Models, model)
 }

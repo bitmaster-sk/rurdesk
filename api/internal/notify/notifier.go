@@ -35,6 +35,10 @@ const (
 	SubjectWikiPage         NoticeSubject = "wiki_page"
 	SubjectWikiProposal     NoticeSubject = "wiki_proposal"
 	SubjectRelease          NoticeSubject = "release"
+	// SubjectAgentConversation and SubjectAgentConversationTurn go to the conversation owner only:
+	// a new message, and a turn the agent took up.
+	SubjectAgentConversation     NoticeSubject = "agent_conversation"
+	SubjectAgentConversationTurn NoticeSubject = "agent_conversation_turn"
 )
 
 const (

@@ -1,4 +1,13 @@
-import { Component, Directive, forwardRef, input, output } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import {
+    Component,
+    contentChild,
+    Directive,
+    forwardRef,
+    input,
+    output,
+    TemplateRef
+} from '@angular/core';
 import { User } from 'src/app/auth/model/user.model';
 import { IssueType } from 'src/app/issue-type/model/issue-type.model';
 import { IssueState } from 'src/app/state/model/issue-state.model';
@@ -50,6 +59,12 @@ export class MessageEditorStub {
     public readonly attachmentScope = input<unknown>(null);
     public readonly messageChange = output<string>();
     public readonly cancelled = output<void>();
+    /** Text the host put back into the editor through `writeValue`. */
+    public written: string | null = null;
+
+    public writeValue(value: string): void {
+        this.written = value;
+    }
 }
 
 @Component({ selector: 'app-message-body', template: '', standalone: true })
@@ -102,8 +117,20 @@ export class UiLoaderStub {
     public readonly ariaLabel = input<string>('');
 }
 
-@Component({ selector: 'ui-dialog', template: '<ng-content></ng-content>', standalone: true })
+// Keeps the real dialog's slots: the scrolling body and the fixed `#footer`.
+@Component({
+    selector: 'ui-dialog',
+    template: `
+        <div class="ui-dialog__content"><ng-content></ng-content></div>
+        @if (footer(); as footer) {
+            <div class="ui-dialog__footer"><ng-container [ngTemplateOutlet]="footer" /></div>
+        }
+    `,
+    standalone: true,
+    imports: [NgTemplateOutlet]
+})
 export class UiDialogStub {
+    protected readonly footer = contentChild<TemplateRef<unknown>>('footer');
     public readonly visible = input<boolean>(false);
     public readonly header = input<string>('');
     public readonly dismissable = input<boolean>(true);
@@ -116,9 +143,17 @@ export class UiDialogStub {
     public readonly visibleChange = output<boolean>();
 }
 
+@Directive({ selector: '[uiConfirm]', standalone: true })
+export class UiConfirmStub {
+    public readonly confirmText = input<string>();
+    public readonly acceptLabel = input<string>();
+    public readonly rejectLabel = input<string>();
+    public readonly confirmed = output<void>();
+}
+
 @Directive({ selector: '[uiTooltip]', standalone: true })
 export class UiTooltipStub {
-    public readonly uiTooltip = input<string>('');
+    public readonly uiTooltip = input<string | TemplateRef<unknown>>('');
     public readonly uiTooltipPosition = input<string>('top');
 }
 
@@ -212,4 +247,68 @@ export class IssueTypeBadgeStub {
 export class TagChipStub {
     public readonly name = input<string>('');
     public readonly color = input<string | null>(null);
+}
+
+/**
+ * Form-bound pickers. `pick()` stands in for the user choosing an option;
+ * `value` and `isDisabled` show what the form wrote into the control.
+ */
+abstract class FormPickerStub implements ControlValueAccessor {
+    public value: unknown = null;
+    public isDisabled = false;
+    private onChange: (value: unknown) => void = () => {};
+
+    public pick(value: unknown): void {
+        this.value = value;
+        this.onChange(value);
+    }
+
+    public writeValue(value: unknown): void {
+        this.value = value;
+    }
+
+    public registerOnChange(fn: (value: unknown) => void): void {
+        this.onChange = fn;
+    }
+
+    public registerOnTouched(): void {}
+
+    public setDisabledState(isDisabled: boolean): void {
+        this.isDisabled = isDisabled;
+    }
+}
+
+@Component({
+    selector: 'ui-choice',
+    template: '',
+    standalone: true,
+    providers: [
+        { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UiChoiceStub), multi: true }
+    ]
+})
+export class UiChoiceStub extends FormPickerStub {
+    public readonly options = input<readonly unknown[]>([]);
+    public readonly optionLabel = input<string>('');
+    public readonly optionValue = input<string>('');
+    public readonly size = input<string>('default');
+    public readonly allowEmpty = input<boolean>(true);
+}
+
+@Component({
+    selector: 'ui-select',
+    template: '',
+    standalone: true,
+    providers: [
+        { provide: NG_VALUE_ACCESSOR, useExisting: forwardRef(() => UiSelectStub), multi: true }
+    ]
+})
+export class UiSelectStub extends FormPickerStub {
+    public readonly options = input<readonly unknown[] | null>([]);
+    public readonly optionLabel = input<string>('');
+    public readonly optionValue = input<string>('');
+    public readonly placeholder = input<string>('');
+    public readonly filter = input<boolean>(false);
+    public readonly size = input<string | undefined>(undefined);
+    public readonly emptyMessage = input<string>('');
+    public readonly inputId = input<string>('');
 }

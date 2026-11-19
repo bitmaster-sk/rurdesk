@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -15,23 +16,29 @@ import (
 )
 
 type AgentThinkingController struct {
-	thinking     *agent.ThinkingService
-	tasks        *agent.TaskService
-	agentRunRepo *repository.AgentRunRepository
-	acl          *service.AclService
+	thinking      *agent.ThinkingService
+	tasks         *agent.TaskService
+	agentRunRepo  *repository.AgentRunRepository
+	agentTaskRepo *repository.AgentTaskRepository
+	conversations *service.AgentConversationService
+	acl           *service.AclService
 }
 
 func NewAgentThinkingController(
 	thinking *agent.ThinkingService,
 	tasks *agent.TaskService,
 	agentRunRepo *repository.AgentRunRepository,
+	agentTaskRepo *repository.AgentTaskRepository,
+	conversations *service.AgentConversationService,
 	acl *service.AclService,
 ) *AgentThinkingController {
 	return &AgentThinkingController{
-		thinking:     thinking,
-		tasks:        tasks,
-		agentRunRepo: agentRunRepo,
-		acl:          acl,
+		thinking:      thinking,
+		tasks:         tasks,
+		agentRunRepo:  agentRunRepo,
+		agentTaskRepo: agentTaskRepo,
+		conversations: conversations,
+		acl:           acl,
 	}
 }
 
@@ -83,7 +90,8 @@ func (ctrl *AgentThinkingController) Get(c *gin.Context) {
 	}
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
-	if err != nil {
+	// A chat run is read per turn by its owner (GetChatTurn) and does not exist here.
+	if err != nil || run.Kind == constants.RunKindChat {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return
@@ -99,6 +107,49 @@ func (ctrl *AgentThinkingController) Get(c *gin.Context) {
 	if err != nil {
 		_ = c.Error(err)
 		c.Status(http.StatusInternalServerError)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+// GetChatTurn returns the thinking of one turn of the caller's conversation; another user's
+// conversation or a task outside its run is not found.
+func (ctrl *AgentThinkingController) GetChatTurn(c *gin.Context) {
+	ctx := c.Request.Context()
+	idConversation, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		ResponseErr(c, errs.ErrBadRequest)
+		return
+	}
+	idTask, err := strconv.ParseInt(c.Query("idTask"), 10, 64)
+	if err != nil {
+		ResponseErr(c, errs.ErrValidation)
+		return
+	}
+
+	user, _ := extctx.GetUser(ctx)
+	conversation, err := ctrl.conversations.LoadConversation(ctx, &user, idConversation)
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	task, err := ctrl.agentTaskRepo.LoadById(ctx, idTask)
+	if errors.Is(err, repository.ErrTaskNotFound) {
+		ResponseErr(c, errs.ErrNotFound)
+		return
+	}
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if conversation.IdRun == nil || task.IdRun != *conversation.IdRun {
+		ResponseErr(c, errs.ErrNotFound)
+		return
+	}
+
+	res, err := ctrl.thinking.LoadForTask(ctx, idTask)
+	if err != nil {
+		ResponseErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, res)

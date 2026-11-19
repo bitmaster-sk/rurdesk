@@ -13,6 +13,8 @@ export interface AgentThinkingNotice {
     stage: string;
     seq: number;
     events: AgentThinkingEvent[];
+    /** Set for a chat turn, whose notice reaches only the conversation owner. */
+    idConversation?: number;
 }
 
 export interface AgentThinkingRes {

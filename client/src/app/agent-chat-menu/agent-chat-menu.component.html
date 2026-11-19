@@ -1,0 +1,16 @@
+<ui-button
+    variant="text"
+    severity="secondary"
+    class="relative"
+    data-testid="agent-chat-menu"
+    [isIconOnly]="true"
+    [ariaLabel]="'AGENT_CHAT.MENU_LABEL' | translate"
+    (click)="onClick($event)"
+>
+    <tabler-icon icon="robot" [size]="16" />
+    @if (count() > 0) {
+        <span class="chat-badge" data-testid="agent-chat-badge">{{ badgeText() }}</span>
+    }
+</ui-button>
+
+<ui-menu #agentMenu [model]="items()"></ui-menu>

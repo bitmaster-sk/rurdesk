@@ -107,9 +107,10 @@ func (s *WikiAgentService) RecordReads(ctx context.Context, reads []*model.Agent
 	return s.readRepo.Insert(ctx, reads)
 }
 
+// LoadRunReads lists the wiki pages an issue or release run read; a chat run is not found here.
 func (s *WikiAgentService) LoadRunReads(ctx context.Context, user model.User, idRun int64) ([]*model.AgentRunWikiRead, error) {
 	run, err := s.runRepo.LoadById(ctx, idRun)
-	if errors.Is(err, repository.ErrRunNotFound) {
+	if errors.Is(err, repository.ErrRunNotFound) || (err == nil && run.Kind == constants.RunKindChat) {
 		return nil, errs.ErrNotFound
 	}
 	if err != nil {

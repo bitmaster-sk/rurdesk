@@ -1,0 +1,87 @@
+:host {
+    display: block;
+}
+
+// Same geometry as `app-message-view`, so rows line up with the messages.
+.chat-row {
+    display: flex;
+    gap: var(--ui-space-l);
+    padding: var(--ui-space-s) var(--ui-space-l);
+    border-left: 3px solid transparent;
+
+    &.is-continuation {
+        padding-top: var(--ui-space-xs);
+        padding-bottom: var(--ui-space-xs);
+    }
+}
+
+.chat-row-avatar {
+    flex-shrink: 0;
+    width: 2.25rem;
+    padding-top: var(--ui-space-xs);
+}
+
+.chat-row-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.chat-row-meta {
+    display: flex;
+    align-items: baseline;
+    gap: var(--ui-space);
+    margin-bottom: var(--ui-space-s);
+}
+
+.chat-row-author {
+    font-weight: 700;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+}
+
+.chat-row-date {
+    font-size: var(--font-size-s);
+    color: var(--ui-surface-600);
+}
+
+// The author line carries a small avatar and the content takes the whole width.
+@media (max-width: 40rem) {
+    .chat-row {
+        display: grid;
+        grid-template-columns: 1.75rem minmax(0, 1fr);
+        column-gap: var(--ui-space);
+        row-gap: var(--ui-space);
+        align-items: center;
+    }
+
+    .chat-row-avatar {
+        width: 1.75rem;
+        padding-top: 0;
+
+        ::ng-deep .initials-avatar {
+            width: 1.75rem !important;
+            height: 1.75rem !important;
+            border-radius: 50% !important;
+            font-size: 0.875rem !important;
+        }
+    }
+
+    .chat-row.is-continuation .chat-row-avatar {
+        display: none;
+    }
+
+    .chat-row-content {
+        display: contents;
+    }
+
+    .chat-row-meta {
+        grid-column: 2;
+        grid-row: 1;
+        margin-bottom: 0;
+    }
+
+    .chat-row-content > ::ng-deep :not(.chat-row-meta) {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+}

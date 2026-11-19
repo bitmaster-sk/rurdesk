@@ -588,6 +588,8 @@ func GetAdminController() *controller.AdminController {
 			GetDeactivationService(),
 			GetUserChangeGuard,
 			mustDb(),
+			GetAgentConversationRepository(),
+			GetDispatcher(),
 		), nil
 	})
 	return instance.(*controller.AdminController)
@@ -690,6 +692,7 @@ func GetAgentThinkingService() (*agent.ThinkingService, error) {
 			GetAgentThinkingRepository(),
 			GetAgentTaskRepository(),
 			GetAgentRunRepository(),
+			GetAgentConversationRepository(),
 			GetAgentThinkingNotifier(),
 			settings,
 		), nil
@@ -730,6 +733,43 @@ func GetAgentGatewayRepository() *repository.AgentGatewayRepository {
 	return instance.(*repository.AgentGatewayRepository)
 }
 
+func GetAgentConversationRepository() *repository.AgentConversationRepository {
+	instance, _ := di.GetWithNew("agent-conversation-repository", func() (any, error) {
+		pool := mustDb()
+		return repository.NewAgentConversationRepository(pool), nil
+	})
+	return instance.(*repository.AgentConversationRepository)
+}
+
+func GetAgentConversationService() *service.AgentConversationService {
+	instance, _ := di.GetWithNew("agent-conversation-service", func() (any, error) {
+		pool := mustDb()
+		return service.NewAgentConversationService(
+			pool,
+			GetAgentConversationRepository(),
+			GetAgentRunRepository(),
+			GetAgentTaskRepository(),
+			GetUserRepository(),
+			GetAgentGatewayRepository(),
+			GetProjectRepository(),
+			GetAclService(),
+		), nil
+	})
+	return instance.(*service.AgentConversationService)
+}
+
+func GetRunTokenAuth() *agent.RunTokenAuth {
+	instance, _ := di.GetWithNew("run-token-auth", func() (any, error) {
+		return agent.NewRunTokenAuth(
+			GetAgentRunRepository(),
+			GetAgentConversationRepository(),
+			GetUserRepository(),
+			GetAgentConversationService(),
+		), nil
+	})
+	return instance.(*agent.RunTokenAuth)
+}
+
 func GetGatewayClient() *agent.GatewayClient {
 	instance, _ := di.GetWithNew("gateway-client", func() (any, error) {
 		return agent.NewGatewayClient(), nil
@@ -754,11 +794,28 @@ func GetDispatcher() *agent.Dispatcher {
 			GetWikiProposalService(),
 			GetReleaseService(),
 			GetAgentTaskConfigService(),
+			GetAgentConversationRepository(),
+			GetAgentConversationService(),
+			GetChatTurns(),
 			GetGatewayClient(),
 			GetNotifier(),
 		), nil
 	})
 	return instance.(*agent.Dispatcher)
+}
+
+func GetChatTurns() *agent.ChatTurns {
+	instance, _ := di.GetWithNew("chat-turns", func() (any, error) {
+		return agent.NewChatTurns(
+			mustDb(),
+			GetAgentConversationRepository(),
+			GetAgentRunRepository(),
+			GetAgentTaskRepository(),
+			mustAgentThinkingService(),
+			GetNotifier(),
+		), nil
+	})
+	return instance.(*agent.ChatTurns)
 }
 
 func GetSweep() *agent.Sweep {
@@ -768,6 +825,7 @@ func GetSweep() *agent.Sweep {
 			GetAgentRunRepository(),
 			GetProjectRepository(),
 			GetIssueRepository(),
+			GetChatTurns(),
 			GetNotifier(),
 		), nil
 	})
@@ -783,6 +841,7 @@ func GetScheduler() *agent.Scheduler {
 			GetProjectRepository(),
 			GetIssueRepository(),
 			GetDispatcher(),
+			GetChatTurns(),
 			GetNotifier(),
 		), nil
 	})
@@ -872,6 +931,7 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAgentStagePlanService(),
 			GetAgentTaskConfigService(),
 			GetDispatcher(),
+			GetChatTurns(),
 			GetWikiProposalService(),
 			GetReleaseService(),
 			GetNotifier(),
@@ -1404,6 +1464,8 @@ func GetAgentThinkingController() (*controller.AgentThinkingController, error) {
 			thinking,
 			GetAgentTaskService(),
 			GetAgentRunRepository(),
+			GetAgentTaskRepository(),
+			GetAgentConversationService(),
 			GetAclService(),
 		), nil
 	})
@@ -1411,6 +1473,13 @@ func GetAgentThinkingController() (*controller.AgentThinkingController, error) {
 		return nil, err
 	}
 	return instance.(*controller.AgentThinkingController), nil
+}
+
+func GetAgentConversationController() *controller.AgentConversationController {
+	instance, _ := di.GetWithNew("agent-conversation-controller", func() (any, error) {
+		return controller.NewAgentConversationController(GetAgentConversationService(), GetDispatcher()), nil
+	})
+	return instance.(*controller.AgentConversationController)
 }
 
 func GetAgentOverviewController() *controller.AgentOverviewController {
@@ -1552,6 +1621,7 @@ func GetRouter() (*router.Router, error) {
 			GetBaseLogger(),
 			cache,
 			GetApiKeyService(),
+			GetRunTokenAuth(),
 			GetUserController(),
 			GetTeamController(),
 			GetProjectController(),
@@ -1587,6 +1657,7 @@ func GetRouter() (*router.Router, error) {
 			GetGitIntegrationController(),
 			agentRunController,
 			agentThinkingController,
+			GetAgentConversationController(),
 			GetAgentGatewayController(),
 			GetWorkflowEventMapController(),
 			GetSkillController(),

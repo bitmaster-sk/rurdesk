@@ -21,6 +21,13 @@ type ApiKeyAuthenticator interface {
 	CheckRateLimit(ctx context.Context, idApiKey int64, limitPerMin int) error
 }
 
+// RunTokenAuthenticator resolves a conversation-scoped run token to the agent and
+// the scope of its running turn. A nil user means the token does not authenticate;
+// a non-nil error means the lookup itself failed.
+type RunTokenAuthenticator interface {
+	LookupRunToken(ctx context.Context, rawToken string) (*model.User, *extctx.RunScope, error)
+}
+
 // SessionCache is the narrow slice of *redis.Client the Auth middleware needs
 // to resolve an opaque, Redis-backed session token.
 type SessionCache interface {
@@ -62,7 +69,7 @@ func bearerFromWebsocketProtocol(header string) string {
 	return strings.TrimSpace(parts[1])
 }
 
-func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
+func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator, runTokenAuth RunTokenAuthenticator) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		bearer := extctx.BearerToken(c.GetHeader("Authorization"))
 		if bearer == "" {
@@ -70,6 +77,12 @@ func Auth(cache SessionCache, apiKeyAuth ApiKeyAuthenticator) gin.HandlerFunc {
 		}
 		if bearer == "" {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// A run token never falls through to the session or API-key lookups.
+		if strings.HasPrefix(bearer, extctx.RunTokenPrefix) {
+			authenticateRunToken(c, runTokenAuth, bearer)
 			return
 		}
 

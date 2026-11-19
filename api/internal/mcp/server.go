@@ -29,12 +29,15 @@ func NewMCPServer(config *Config, engine *gin.Engine) *MCPServer {
 //   - /mcp/plan/sse + /mcp/plan/message → read-only context tools plus
 //     submit_plan / request_clarification (plan stage), no writes. This bounds
 //     a misbehaving model's blast radius by tool surface, not prompt compliance.
+//   - /mcp/chat/sse + /mcp/chat/message → the same read tools plus complete_stage
+//     for the agent chat, minus the reads its token cannot reach (chat stage).
 //
 // Must mount ahead of the global Logger/CORS middleware (see
 // router.registerMCPHandler).
 func (s *MCPServer) Handler() http.Handler {
 	fullServer := buildMCPServer(s.dispatcher, StageAll)
 	planServer := buildMCPServer(s.dispatcher, StagePlan)
+	chatServer := buildMCPServer(s.dispatcher, StageChat)
 
 	internalBase := s.config.internalBaseURL()
 	fullSSE := mcpsdk.NewSSEServer(fullServer,
@@ -44,6 +47,11 @@ func (s *MCPServer) Handler() http.Handler {
 	planSSE := mcpsdk.NewSSEServer(planServer,
 		mcpsdk.WithBaseURL(internalBase),
 		mcpsdk.WithStaticBasePath("/mcp/plan"),
+	)
+
+	chatSSE := mcpsdk.NewSSEServer(chatServer,
+		mcpsdk.WithBaseURL(internalBase),
+		mcpsdk.WithStaticBasePath("/mcp/chat"),
 	)
 
 	// Streamable HTTP transport (one endpoint per server): Goose rejects SSE
@@ -57,17 +65,24 @@ func (s *MCPServer) Handler() http.Handler {
 		mcpsdk.WithEndpointPath("/mcp/plan/http"),
 	)
 
+	chatHTTP := mcpsdk.NewStreamableHTTPServer(chatServer,
+		mcpsdk.WithEndpointPath("/mcp/chat/http"),
+	)
+
 	// Exact patterns (the /http endpoints) win over the SSE subtree patterns
-	// (/mcp/plan/, /mcp/), so streamable requests aren't swallowed by SSE.
+	// (/mcp/plan/, /mcp/chat/, /mcp/), so streamable requests aren't swallowed by SSE.
 	mux := http.NewServeMux()
 	mux.Handle("/mcp/plan/http", planHTTP)
+	mux.Handle("/mcp/chat/http", chatHTTP)
 	mux.Handle("/mcp/http", fullHTTP)
 	mux.Handle("/mcp/plan/", planSSE)
+	mux.Handle("/mcp/chat/", chatSSE)
 	mux.Handle("/mcp/", fullSSE)
 
 	log.Info().
 		Str("fullSsePath", fullSSE.CompleteSsePath()).
 		Str("planSsePath", planSSE.CompleteSsePath()).
+		Str("chatSsePath", chatSSE.CompleteSsePath()).
 		Msg("MCP handler mounted")
 
 	return &originRewriteHandler{
@@ -79,8 +94,11 @@ func (s *MCPServer) Handler() http.Handler {
 
 func buildMCPServer(dispatcher *Dispatcher, stage string) *mcpsdk.MCPServer {
 	name := "Issue Tracker"
-	if stage == StagePlan {
+	switch stage {
+	case StagePlan:
 		name = "Issue Tracker (Plan)"
+	case StageChat:
+		name = "Issue Tracker (Chat)"
 	}
 	srv := mcpsdk.NewMCPServer(
 		name,
@@ -97,6 +115,9 @@ func buildMCPServer(dispatcher *Dispatcher, stage string) *mcpsdk.MCPServer {
 	registerTrackerTools(srv, dispatcher, stage)
 	registerWikiTools(srv, dispatcher, stage)
 	registerPlanTools(srv, dispatcher, stage)
+	if stage == StageChat {
+		srv.DeleteTools(chatExcludedReads...)
+	}
 	return srv
 }
 

@@ -22,6 +22,10 @@ func git(t *testing.T, dir string, args ...string) {
 
 func newGitEnv(t *testing.T) string {
 	t.Helper()
+	// HOME and GIT_CONFIG_NOSYSTEM also hide configs the two variables miss,
+	// e.g. the osxkeychain helper Apple git reads from its vendor config.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
 	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
 	t.Setenv("GIT_AUTHOR_NAME", "test")

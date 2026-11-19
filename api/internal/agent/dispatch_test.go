@@ -1,8 +1,10 @@
 package agent
 
 import (
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -237,4 +239,35 @@ func TestReviewThreadDropsArtifactBodiesWithoutTouchingTheOriginals(t *testing.T
 
 func TestReviewThreadOnEmptyFeed(t *testing.T) {
 	assert.Empty(t, reviewThread(nil))
+}
+
+func TestCapChatMessage(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		maxBytes int
+		wantKept string
+		isCut    bool
+	}{
+		{name: "short body is kept whole", body: "hello", maxBytes: 10, wantKept: "hello"},
+		{name: "body at the cap is kept whole", body: "0123456789", maxBytes: 10, wantKept: "0123456789"},
+		{name: "long body is cut at the cap", body: "0123456789abc", maxBytes: 10, wantKept: "0123456789", isCut: true},
+		// "é" is two bytes; a cut in its middle moves back to the rune start.
+		{name: "cut never splits a rune", body: "abcdé" + "fgh", maxBytes: 5, wantKept: "abcd", isCut: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original := &model.AgentConversationMessage{IdMessage: 7, Body: tt.body}
+			capped := capChatMessage(original, tt.maxBytes)
+
+			assert.Equal(t, tt.body, original.Body, "the original is never modified")
+			assert.True(t, strings.HasPrefix(capped.Body, tt.wantKept))
+			assert.True(t, utf8.ValidString(capped.Body))
+			if tt.isCut {
+				assert.Contains(t, capped.Body, "[message truncated")
+			} else {
+				assert.Equal(t, tt.body, capped.Body)
+			}
+		})
+	}
 }

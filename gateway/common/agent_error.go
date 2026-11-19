@@ -33,6 +33,8 @@ const (
 	ErrCodeEffortNotAllowed   = "effort_not_allowed"
 	ErrCodeTrackerMissingRepo = "tracker_missing_repo"
 	ErrCodeGitTokenUnreadable = "git_token_unreadable"
+	// ErrCodeTrackerMissingRunToken: a chat turn came without its run token.
+	ErrCodeTrackerMissingRunToken = "tracker_missing_run_token"
 	// ErrCodeWorktreeUnusable: the run's worktree has no branch checked out or
 	// is not a git worktree, and may hold work the gateway must not delete.
 	ErrCodeWorktreeUnusable = "worktree_unusable"

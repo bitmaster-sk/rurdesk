@@ -23,6 +23,7 @@ func TestMCPURLForStage(t *testing.T) {
 		{"implementation_plan uses plan subset", StageImplementationPlan, "http://issue.proxy/mcp/plan/sse"},
 		{"pickup uses plan subset", StagePickup, "http://issue.proxy/mcp/plan/sse"},
 		{"release_notes uses plan subset", StageReleaseNotes, "http://issue.proxy/mcp/plan/sse"},
+		{"chat uses the read-only chat endpoint", StageChat, "http://issue.proxy/mcp/chat/sse"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -156,6 +156,17 @@ var (
 	ErrAgentModelNotOffered       = newErr("AGENT_MODEL_NOT_OFFERED", "the agent's gateway does not offer this model", "error.agent_model_not_offered", http.StatusBadRequest)
 	ErrGatewayExists              = newErr("GATEWAY_EXISTS", "agent already has a gateway", "error.gateway_exists", http.StatusConflict)
 
+	// ── Agent conversations ────────────────────────────────────────────────
+
+	ErrAgentConversationLocked       = newErr("AGENT_CONVERSATION_LOCKED", "the main project cannot change after the first message", "error.agent_conversation_locked", http.StatusConflict)
+	ErrAgentConversationNoAccess     = newErr("AGENT_CONVERSATION_NO_ACCESS", "you no longer have access to this project", "error.agent_conversation_no_access", http.StatusForbidden)
+	ErrAgentNotInProject             = newErr("AGENT_NOT_IN_PROJECT", "both you and the agent must be members of the project", "error.agent_not_in_project", http.StatusUnprocessableEntity)
+	ErrAgentConversationMainRequired = newErr("AGENT_CONVERSATION_MAIN_REQUIRED", "choose a main project before continuing the conversation", "error.agent_conversation_main_required", http.StatusUnprocessableEntity)
+	ErrAgentConversationNotRetryable = newErr("AGENT_CONVERSATION_NOT_RETRYABLE", "the conversation has no failed turn to retry", "error.agent_conversation_not_retryable", http.StatusConflict)
+	ErrAgentConversationBusy         = newErr("AGENT_CONVERSATION_BUSY", "the agent is answering; change the settings when it is done", "error.agent_conversation_busy", http.StatusConflict)
+	ErrAgentConversationDraftPending = newErr("AGENT_CONVERSATION_DRAFT_PENDING", "a task draft is already being prepared", "error.agent_conversation_draft_pending", http.StatusConflict)
+	ErrAgentChatModelNotOffered      = newErr("AGENT_MODEL_NOT_OFFERED", "the agent's gateway does not offer this model", "error.agent_model_not_offered", http.StatusUnprocessableEntity)
+
 	// ── Project scoping ────────────────────────────────────────────────────
 
 	ErrStateNotInProject     = newErr("STATE_NOT_IN_PROJECT", "state does not belong to this project", "error.state_not_in_project", http.StatusUnprocessableEntity)

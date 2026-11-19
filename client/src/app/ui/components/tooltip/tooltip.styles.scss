@@ -12,3 +12,11 @@
     white-space: pre-line;
     pointer-events: none;
 }
+
+// Template content lays out its own lines.
+.ui-tooltip.is-rich {
+    max-width: 20rem;
+    padding: var(--ui-space) var(--ui-space-m);
+    line-height: 1.4;
+    white-space: normal;
+}

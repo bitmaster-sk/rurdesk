@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { HomeRoutingModule } from './home-routing.module';
 import { CoreModule } from '../core/core.module';
 import { MessageModule } from '../message/message.module';
+import { AgentChatMenuModule } from '../agent-chat-menu/agent-chat-menu.module';
 import { SharedModule } from '../shared/shared.module';
 import { NgClickOutsideDirective } from 'ng-click-outside2';
 import { ProjectModule } from '../project/project.module';
@@ -45,6 +46,7 @@ import {
         SharedModule,
         HomeRoutingModule,
         MessageModule,
+        AgentChatMenuModule,
         ProjectModule,
         NgClickOutsideDirective,
         FormsModule,

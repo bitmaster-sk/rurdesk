@@ -94,10 +94,13 @@ type AgentThinkingRes struct {
 	IsComplete bool                `json:"isComplete"`
 }
 
+// AgentThinkingNotice carries IdConversation for a chat turn, so the owner's
+// client routes the batch to the conversation rather than to an issue run.
 type AgentThinkingNotice struct {
-	IdRun  int64               `json:"idRun"`
-	IdTask int64               `json:"idTask"`
-	Stage  string              `json:"stage"`
-	Seq    int                 `json:"seq"`
-	Events AgentThinkingEvents `json:"events"`
+	IdRun          int64               `json:"idRun"`
+	IdTask         int64               `json:"idTask"`
+	IdConversation *int64              `json:"idConversation,omitempty"`
+	Stage          string              `json:"stage"`
+	Seq            int                 `json:"seq"`
+	Events         AgentThinkingEvents `json:"events"`
 }

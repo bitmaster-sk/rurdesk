@@ -1,0 +1,34 @@
+:host {
+    display: inline-flex;
+}
+
+// The shape of the filter chips of the issue activity feed.
+.chat-thinking-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: var(--ui-space-xs) var(--ui-space);
+    border: 1px solid var(--ui-surface-300);
+    border-radius: 12px;
+    background: var(--ui-color-surface);
+    color: var(--ui-color-text);
+    font-family: inherit;
+    font-size: var(--font-size-s);
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        background 0.15s,
+        color 0.15s;
+
+    // Open: outlined in the brand colour, like the main project chip.
+    &.active {
+        border-color: var(--ui-color-primary);
+        color: var(--ui-select-option-selected-fg);
+    }
+
+    &:hover:not(.active) {
+        background: var(--ui-color-surface-hover);
+    }
+}

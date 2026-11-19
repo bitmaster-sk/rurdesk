@@ -102,7 +102,7 @@ func setupLogger(level string) {
 func selectAdapter(cfg *common.Config, thinkingSender common.ThinkingSender) common.Adapter {
 	switch cfg.AdapterType {
 	case "claude-code":
-		return claudecode.NewClaudeCodeAdapter(cfg)
+		return claudecode.NewClaudeCodeAdapter(cfg, thinkingSender)
 	case "goose":
 		return goose.NewGooseAdapter(cfg, thinkingSender)
 	default:

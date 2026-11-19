@@ -1,0 +1,346 @@
+.chat-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space);
+    padding: var(--ui-space) var(--ui-space-l);
+    border-bottom: 1px solid var(--ui-color-border);
+    background-color: var(--ui-color-surface);
+}
+
+.chat-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space);
+}
+
+// Title with the pin and delete at the far right.
+.chat-header-top {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    min-width: 0;
+}
+
+.chat-header-back {
+    display: none;
+}
+
+.chat-header-title {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    font-size: var(--font-size-l, 1.05rem);
+    font-weight: 700;
+    color: var(--ui-color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--ui-space-s);
+}
+
+// Quiet at rest; the delete turns to the danger colour only on hover and focus.
+.chat-header-action--danger {
+    &:hover ::ng-deep .ui-button,
+    &:focus-within ::ng-deep .ui-button {
+        background: color-mix(in srgb, var(--ui-red-500) 12%, transparent);
+        color: var(--ui-red-600);
+    }
+}
+
+// One line: agent and status, usage, then the model; the groups are told apart by hairlines.
+.chat-header-meta {
+    column-gap: var(--ui-space-l);
+    row-gap: var(--ui-space-s);
+}
+
+.chat-header-meta > * + * {
+    position: relative;
+}
+
+app-chat-model-settings {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.chat-header-meta > * + *::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--ui-space-l) / -2);
+    top: 15%;
+    bottom: 15%;
+    border-left: 1px solid var(--ui-color-border);
+}
+
+.chat-header-usage {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space);
+}
+
+.chat-header-agent {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+}
+
+.chat-header-agent-name {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+}
+
+.chat-header-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+
+    .chat-header-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ui-surface-300, var(--ui-color-border));
+    }
+
+    &[data-state='idle'] .chat-header-status-dot {
+        background: var(--ui-green-500, #16a34a);
+    }
+
+    &[data-state='answering'] .chat-header-status-dot {
+        background: var(--ui-pink-500);
+    }
+
+    &[data-state='busy'] .chat-header-status-dot,
+    &[data-state='queued'] .chat-header-status-dot {
+        background: var(--ui-amber-500, #f59e0b);
+    }
+}
+
+.chat-header-tokens {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+// Beside the projects in the header; above them in the settings panel, labelled like the model.
+.chat-header-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ui-space);
+
+    &:not(.is-stacked) .chat-header-chips {
+        display: contents;
+    }
+
+    &.is-stacked {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--ui-space-s);
+
+        .chat-header-label {
+            font-weight: inherit;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+    }
+}
+
+.chat-header-label {
+    font-size: var(--font-size-s);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ui-color-text-muted);
+}
+
+.chat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ui-space-s);
+    padding: 0 var(--ui-space);
+    min-height: 1.75rem;
+    border: 1px solid var(--ui-color-border);
+    border-radius: 999px;
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text);
+
+    &.is-main {
+        border-color: var(--ui-color-primary);
+    }
+}
+
+.chat-chip-main {
+    color: var(--ui-color-text-muted);
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: help;
+
+    &:focus-visible {
+        outline: 2px solid var(--ui-color-primary);
+        outline-offset: 2px;
+        border-radius: var(--ui-radius-sm);
+    }
+}
+
+// Inside the tooltip overlay; the template keeps this component's encapsulation.
+.chat-main-help {
+    display: grid;
+    gap: var(--ui-space);
+}
+
+.chat-main-help-title {
+    font-weight: 700;
+}
+
+.chat-main-help-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--ui-space) var(--ui-space);
+    margin: 0;
+
+    tabler-icon {
+        margin-top: 1px;
+    }
+
+    dt {
+        font-weight: 700;
+    }
+
+    dd {
+        margin: 0;
+        opacity: 0.85;
+    }
+}
+
+.chat-main-help-note {
+    margin: 0;
+    padding-top: var(--ui-space);
+    border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+    opacity: 0.85;
+}
+
+.chat-chip-make-main {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    color: var(--ui-color-primary);
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.chat-chip-remove {
+    display: inline-grid;
+    place-items: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    margin-inline-end: calc(var(--ui-space-s) - var(--ui-space));
+    background: none;
+    color: var(--ui-color-text-muted);
+    cursor: pointer;
+
+    &:hover {
+        background: var(--ui-color-content-hover);
+        color: var(--ui-color-text);
+    }
+}
+
+.chat-header-muted {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-text-muted);
+}
+
+.chat-header-error {
+    font-size: var(--font-size-s);
+    color: var(--ui-color-danger, var(--ui-red-600));
+}
+
+// Model and projects, stacked in the settings panel.
+.chat-header-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-space-l);
+}
+
+@media (max-width: 40rem) {
+    .chat-header {
+        gap: var(--ui-space-s);
+    }
+
+    // Pulled left so the arrow lines up with the agent avatar: half of the 44px target
+    // around the 18px icon, plus the 3px inside the icon before its stroke.
+    .chat-header-back {
+        display: inline-flex;
+        margin-inline-start: -16px;
+    }
+
+    .chat-touch ::ng-deep .ui-button {
+        min-width: 44px;
+        height: 44px;
+    }
+
+    // The hairlines only separate groups that share a line.
+    .chat-header-meta > * + *::before {
+        display: none;
+    }
+
+    // One line: agent, status and usage; what does not fit is cut, never wrapped.
+    .chat-header-meta {
+        flex-wrap: nowrap;
+        column-gap: var(--ui-space);
+        min-width: 0;
+    }
+
+    .chat-header-agent {
+        flex: 0 1 auto;
+        min-width: 0;
+    }
+
+    .chat-header-agent-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .chat-header-status {
+        display: block;
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        .chat-header-status-dot {
+            display: inline-block;
+            margin-inline-end: var(--ui-space-s);
+        }
+    }
+
+    .chat-header-usage {
+        flex: 0 0 auto;
+        gap: var(--ui-space-s);
+    }
+
+    .chat-header-tokens {
+        white-space: nowrap;
+    }
+
+    .chat-header-usage .chat-header-tokens + .chat-header-tokens::before {
+        content: '\00b7\00a0';
+    }
+}

@@ -22,6 +22,8 @@ approving stages.
 | **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                                |
 | **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                    |
 
+You can also talk to an agent without starting a run, see [Agent chat](./agent-chat.md).
+
 An agent can also write the [release notes](../using-the-tracker/releases.md#letting-an-agent-write-the-release-notes) of a version.
 
 ## 1. Create an agent user

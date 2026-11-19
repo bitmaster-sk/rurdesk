@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/rs/zerolog/log"
 )
@@ -15,6 +16,8 @@ type thinkingStore interface {
 	LoadEventsByStage(ctx context.Context, idRun int64, stage string) (events model.AgentThinkingEvents, idTask int64, lastSeq int, err error)
 	Compact(ctx context.Context, idTask int64, blob []byte, tail string) error
 	LoadCompacted(ctx context.Context, idRun int64, stage string) (blob []byte, tail string, err error)
+	LoadCompactedByTask(ctx context.Context, idTask int64) (blob []byte, tail string, err error)
+	LoadLiveByTask(ctx context.Context, idTask int64) (events model.AgentThinkingEvents, lastSeq int, err error)
 	OrphanedTaskIds(ctx context.Context) ([]int64, error)
 }
 
@@ -27,8 +30,15 @@ type thinkingRunLoader interface {
 	LoadById(ctx context.Context, idRun int64) (*model.AgentRun, error)
 }
 
+// thinkingConversationLoader finds the conversation of a chat run, whose owner
+// is the only audience of its thinking.
+type thinkingConversationLoader interface {
+	LoadConversationByRun(ctx context.Context, idRun int64) (*model.AgentConversation, error)
+}
+
 type thinkingNotifier interface {
-	Broadcast(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice)
+	BroadcastToProject(ctx context.Context, idProject int64, notice *model.AgentThinkingNotice)
+	BroadcastToUser(ctx context.Context, idUser int64, notice *model.AgentThinkingNotice)
 }
 
 type thinkingSettings interface {
@@ -37,28 +47,31 @@ type thinkingSettings interface {
 }
 
 type ThinkingService struct {
-	store    thinkingStore
-	tasks    thinkingTaskLoader
-	runs     thinkingRunLoader
-	notifier thinkingNotifier
-	settings thinkingSettings
-	tails    *thinkingTails
+	store         thinkingStore
+	tasks         thinkingTaskLoader
+	runs          thinkingRunLoader
+	conversations thinkingConversationLoader
+	notifier      thinkingNotifier
+	settings      thinkingSettings
+	tails         *thinkingTails
 }
 
 func NewThinkingService(
 	store thinkingStore,
 	tasks thinkingTaskLoader,
 	runs thinkingRunLoader,
+	conversations thinkingConversationLoader,
 	notifier thinkingNotifier,
 	settings thinkingSettings,
 ) *ThinkingService {
 	return &ThinkingService{
-		store:    store,
-		tasks:    tasks,
-		runs:     runs,
-		notifier: notifier,
-		settings: settings,
-		tails:    newThinkingTails(),
+		store:         store,
+		tasks:         tasks,
+		runs:          runs,
+		conversations: conversations,
+		notifier:      notifier,
+		settings:      settings,
+		tails:         newThinkingTails(),
 	}
 }
 
@@ -131,13 +144,25 @@ func (s *ThinkingService) broadcast(ctx context.Context, idTask int64, seq int, 
 		log.Warn().Err(err).Int64("idRun", task.IdRun).Msg("loading run to broadcast thinking")
 		return
 	}
-	s.notifier.Broadcast(ctx, run.IdProject, &model.AgentThinkingNotice{
+	notice := &model.AgentThinkingNotice{
 		IdRun:  run.IdRun,
 		IdTask: idTask,
 		Stage:  task.Stage,
 		Seq:    seq,
 		Events: events,
-	})
+	}
+	if run.Kind != constants.RunKindChat {
+		s.notifier.BroadcastToProject(ctx, run.IdProject, notice)
+		return
+	}
+	// A chat's thinking is its owner's alone; an owner that cannot be resolved drops the notice.
+	conversation, err := s.conversations.LoadConversationByRun(ctx, run.IdRun)
+	if err != nil || conversation == nil || conversation.IdUser == 0 {
+		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("no conversation owner to send chat thinking to")
+		return
+	}
+	notice.IdConversation = &conversation.IdConversation
+	s.notifier.BroadcastToUser(ctx, conversation.IdUser, notice)
 }
 
 // Compact folds each task's live event rows into one compressed blob plus a
@@ -234,6 +259,42 @@ func (s *ThinkingService) LoadForStage(ctx context.Context, idRun int64, stage s
 		return tailThinkingRes(idRun, stage, tail), nil
 	}
 	return model.AgentThinkingRes{IdRun: idRun, Stage: stage, Events: events, IsComplete: true}, nil
+}
+
+// LoadForTask returns the recorded thinking of one task, with the fallbacks of LoadForStage.
+func (s *ThinkingService) LoadForTask(ctx context.Context, idTask int64) (model.AgentThinkingRes, error) {
+	task, err := s.tasks.LoadById(ctx, idTask)
+	if err != nil {
+		return model.AgentThinkingRes{}, err
+	}
+	blob, tail, err := s.store.LoadCompactedByTask(ctx, idTask)
+	if err != nil {
+		return model.AgentThinkingRes{}, err
+	}
+	tailRes := tailThinkingRes(task.IdRun, task.Stage, tail)
+	tailRes.IdTask = idTask
+	if len(blob) == 0 {
+		events, lastSeq, err := s.store.LoadLiveByTask(ctx, idTask)
+		if err != nil {
+			return model.AgentThinkingRes{}, err
+		}
+		if len(events) == 0 {
+			return tailRes, nil
+		}
+		return model.AgentThinkingRes{
+			IdRun:   task.IdRun,
+			IdTask:  idTask,
+			Stage:   task.Stage,
+			Events:  events,
+			LastSeq: lastSeq,
+		}, nil
+	}
+	var events model.AgentThinkingEvents
+	if err := events.Gunzip(blob); err != nil {
+		log.Warn().Err(err).Int64("idTask", idTask).Msg("reading thinking blob")
+		return tailRes, nil
+	}
+	return model.AgentThinkingRes{IdRun: task.IdRun, IdTask: idTask, Stage: task.Stage, Events: events, IsComplete: true}, nil
 }
 
 func tailThinkingRes(idRun int64, stage string, tail string) model.AgentThinkingRes {

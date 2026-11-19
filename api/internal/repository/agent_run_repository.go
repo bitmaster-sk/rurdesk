@@ -79,8 +79,10 @@ func (r *AgentRunRepository) phaseWrite(
 	return run, nil
 }
 
+// id_project is NULL for a chat without a project; model.AgentRun.IdProject reads
+// it as 0, so every loader built on this list handles chat runs.
 const agentRunColumns = `
-	id_run, id_issue, id_release, id_user_agent, id_project, kind, id_git_integration, base_branch,
+	id_run, id_issue, id_release, id_user_agent, coalesce(id_project, 0) AS id_project, kind, id_git_integration, base_branch,
 	phase, stage_plan, queue_position,
 	pr_url, pr_host_type, pr_id, branch_name, error_message,
 	approved_mockup_ref,
@@ -107,6 +109,31 @@ func (r *AgentRunRepository) InsertForIssue(ctx context.Context, idIssue, idUser
 
 func (r *AgentRunRepository) InsertForRelease(ctx context.Context, idRelease, idUserAgent, idProject int64, stagePlan json.RawMessage) (*model.AgentRun, error) {
 	return r.Insert(ctx, &model.AgentRun{IdRelease: &idRelease, IdUserAgent: idUserAgent, IdProject: idProject, Kind: constants.RunKindReleaseNotes}, stagePlan)
+}
+
+// InsertForConversation creates the chat run of a conversation, queued for its
+// first turn. A chat without a main project has no project (NULL).
+func (r *AgentRunRepository) InsertForConversation(ctx context.Context, idUserAgent int64, idProject *int64) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, fmt.Sprintf(`
+		INSERT INTO agent.run (id_user_agent, id_project, kind, phase, stage_plan)
+		VALUES ($1, $2, $3, $4, '{"stages":[]}')
+		RETURNING %s`, agentRunColumns),
+		idUserAgent, idProject, constants.RunKindChat, constants.PhaseQueued,
+	)
+	return scanAgentRun(row)
+}
+
+// SetChatProject gives a chat run the main project its conversation got after
+// the first message (a chat may start without one).
+func (r *AgentRunRepository) SetChatProject(ctx context.Context, idRun, idProject int64) error {
+	if _, err := extctx.GetDb(ctx, r.pool).Exec(ctx, `
+		UPDATE agent.run SET id_project = $2
+		WHERE id_run = $1 AND kind = $3 AND id_project IS NULL`,
+		idRun, idProject, constants.RunKindChat,
+	); err != nil {
+		return fmt.Errorf("setting project of chat run %d: %w", idRun, err)
+	}
+	return nil
 }
 
 func (r *AgentRunRepository) Insert(ctx context.Context, subject *model.AgentRun, stagePlan json.RawMessage) (*model.AgentRun, error) {
@@ -194,6 +221,59 @@ func (r *AgentRunRepository) LoadById(ctx context.Context, idRun int64) (*model.
 		return nil, ErrRunNotFound
 	}
 	return run, err
+}
+
+// SetRunToken binds a freshly minted run token to a chat run; it replaces the
+// previous turn's token.
+func (r *AgentRunRepository) SetRunToken(ctx context.Context, idRun int64, hash []byte, expiresAt time.Time) error {
+	tag, err := extctx.GetDb(ctx, r.pool).Exec(ctx, `
+		UPDATE agent.run SET run_token_hash = $2, run_token_expires_at = $3
+		WHERE id_run = $1 AND kind = $4`,
+		idRun, hash, expiresAt, constants.RunKindChat,
+	)
+	if err != nil {
+		return fmt.Errorf("setting run token of run %d: %w", idRun, err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrRunNotFound
+	}
+	return nil
+}
+
+// LoadByRunTokenHash returns the chat run holding this unexpired token while one
+// of its tasks is active, or nil. A chat run may have no project, read as 0.
+func (r *AgentRunRepository) LoadByRunTokenHash(ctx context.Context, hash []byte) (*model.AgentRun, error) {
+	row := extctx.GetDb(ctx, r.pool).QueryRow(ctx, `
+		SELECT r.id_run, r.id_issue, r.id_release, r.id_user_agent, coalesce(r.id_project, 0), r.kind, r.id_git_integration, r.base_branch,
+		       r.phase, r.stage_plan, r.queue_position,
+		       r.pr_url, r.pr_host_type, r.pr_id, r.branch_name, r.error_message,
+		       r.approved_mockup_ref,
+		       r.started_at, r.finished_at, r.created_at
+		FROM agent.run r
+		WHERE r.run_token_hash = $1
+		  AND r.kind = $2
+		  AND r.run_token_expires_at > now()
+		  AND EXISTS (SELECT 1 FROM agent.task t WHERE t.id_run = r.id_run AND t.status = $3)`,
+		hash, constants.RunKindChat, constants.TaskStatusActive,
+	)
+	run, err := scanAgentRun(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	return run, err
+}
+
+// ExpireRunToken ends the run token of a turn that completed or failed, so it
+// never works again even if the run gets a new active task.
+func (r *AgentRunRepository) ExpireRunToken(ctx context.Context, idRun int64) error {
+	if _, err := extctx.GetDb(ctx, r.pool).Exec(ctx, `
+		UPDATE agent.run SET run_token_expires_at = now()
+		WHERE id_run = $1 AND kind = $2 AND run_token_expires_at > now()`,
+		idRun, constants.RunKindChat,
+	); err != nil {
+		return fmt.Errorf("expiring run token of run %d: %w", idRun, err)
+	}
+	return nil
 }
 
 func (r *AgentRunRepository) LoadActiveByIssue(ctx context.Context, idIssue int64) (*model.AgentRun, error) {
@@ -284,14 +364,16 @@ func (r *AgentRunRepository) LoadLatestWithPrByIssue(ctx context.Context, idIssu
 	return run, err
 }
 
+// LoadByProject lists the project's issue and release runs. Chat runs are private
+// to their conversation owner and never listed here.
 func (r *AgentRunRepository) LoadByProject(ctx context.Context, idProject int64, limit int) ([]*model.AgentRun, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, fmt.Sprintf(`
 		SELECT %s FROM agent.run
-		WHERE id_project = $1
+		WHERE id_project = $1 AND kind <> $3
 		ORDER BY created_at DESC
 		LIMIT $2`, agentRunColumns),
-		idProject, limit,
+		idProject, limit, constants.RunKindChat,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying runs by project: %w", err)
@@ -411,7 +493,7 @@ func (r *AgentRunRepository) LoadActiveAgentIds(ctx context.Context) ([]int64, e
 }
 
 // LoadNextEligible returns the next run for an agent needing a stage dispatched. Order:
-// manual queue_position ASC NULLS LAST, then severity order_rank ASC (lower = higher
+// chat turns first, then manual queue_position ASC NULLS LAST, then severity order_rank ASC (lower = higher
 // priority), then created_at ASC. Excludes passive (awaiting_*) and terminal phases,
 // which wait for user action before the scheduler can act again.
 //
@@ -422,7 +504,7 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserAgent i
 	// order_rank lives on projects.project_issue_severity, not issues.severity, so we
 	// join through it. Issues without severity get a sentinel rank to sort last.
 	row := db.QueryRow(ctx, `
-		SELECT r.id_run, r.id_issue, r.id_release, r.id_user_agent, r.id_project, r.kind, r.id_git_integration, r.base_branch,
+		SELECT r.id_run, r.id_issue, r.id_release, r.id_user_agent, coalesce(r.id_project, 0), r.kind, r.id_git_integration, r.base_branch,
 		       r.phase, r.stage_plan, r.queue_position,
 		       r.pr_url, r.pr_host_type, r.pr_id, r.branch_name, r.error_message,
 		       r.approved_mockup_ref,
@@ -435,11 +517,12 @@ func (r *AgentRunRepository) LoadNextEligible(ctx context.Context, idUserAgent i
 		WHERE r.id_user_agent = $1
 		  AND r.phase IN ('queued', 'in_progress')
 		  AND (r.id_issue IS NULL OR i.assigned_to = r.id_user_agent)
-		ORDER BY r.queue_position ASC NULLS LAST,
+		ORDER BY (r.kind = $2) DESC,
+		         r.queue_position ASC NULLS LAST,
 		         COALESCE(pis.order_rank, 1000000) ASC,
 		         r.created_at ASC
 		LIMIT 1`,
-		idUserAgent,
+		idUserAgent, constants.RunKindChat,
 	)
 	run, err := scanAgentRun(row)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -51,7 +52,7 @@ func executeStage(target *configuredAgent, idRun, idProject int64, payload map[s
 		}
 	}
 
-	if err := sendComplete(ctx, target, idTask, stagedCannedBody(target, stage)); err != nil {
+	if err := sendComplete(ctx, completionTarget(target, payload), idTask, stagedCannedBody(target, stage, payload)); err != nil {
 		log.Printf("[stub-gw] complete error: %v", err)
 	}
 }
@@ -81,8 +82,8 @@ func sendThinking(ctx context.Context, target *configuredAgent, idTask int64, st
 }
 
 // stagedCannedBody overlays the agent's script for a stage on that stage's canned default.
-func stagedCannedBody(target *configuredAgent, stage string) map[string]any {
-	body := defaultCannedBody(stage)
+func stagedCannedBody(target *configuredAgent, stage string, payload map[string]any) map[string]any {
+	body := defaultCannedBody(stage, payload)
 	script, ok := target.script[stage]
 	if !ok {
 		return body
@@ -103,7 +104,7 @@ func overrideField(body map[string]any, key, value string) {
 	}
 }
 
-func defaultCannedBody(stage string) map[string]any {
+func defaultCannedBody(stage string, payload map[string]any) map[string]any {
 	switch stage {
 	case constants.StagePickup:
 		return map[string]any{"outcome": "no_action_needed", "tokensUsed": 0, "durationMs": 100, "toolCallsCount": 0}
@@ -145,6 +146,8 @@ func defaultCannedBody(stage string) map[string]any {
 			"durationMs":     12000,
 			"toolCallsCount": 14,
 		}
+	case constants.StageChat:
+		return chatCannedBody(payload)
 	case constants.StageReleaseNotes:
 		return map[string]any{
 			"outcome":        "output_submitted",
@@ -156,4 +159,65 @@ func defaultCannedBody(stage string) map[string]any {
 	default:
 		return map[string]any{"outcome": "no_action_needed"}
 	}
+}
+
+// chatCannedBody answers a chat turn: a reply echoing the owner's last message, or a task draft when the turn asks for one.
+func chatCannedBody(payload map[string]any) map[string]any {
+	bundle, _ := payload["contextBundle"].(map[string]any)
+	chat, _ := bundle["chat"].(map[string]any)
+	body := map[string]any{"outcome": "output_submitted", "tokensUsed": 300, "durationMs": 800, "toolCallsCount": 0}
+	if mode, _ := chat["mode"].(string); mode == constants.ChatModeTaskDraft {
+		body["messageKind"] = constants.ChatMessageKindTaskDraft
+		title := "Stub task draft"
+		if quoted, _ := chat["draftFromMessage"].(map[string]any); quoted != nil {
+			if text, _ := quoted["body"].(string); strings.TrimSpace(text) != "" {
+				title = "Stub task draft: " + quotedTitle(text)
+			}
+		}
+		body["message"] = "# " + title + "\n\nDescribe the work the conversation agreed on here."
+		return body
+	}
+	body["messageKind"] = constants.ChatMessageKindReply
+	body["message"] = "Stub reply: " + lastUserMessage(bundle)
+	return body
+}
+
+// quotedTitle is the first non-empty line of a quoted answer without its Markdown heading marks,
+// cut to a short title.
+func quotedTitle(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.TrimSpace(strings.TrimLeft(strings.TrimSpace(line), "#"))
+		if line == "" {
+			continue
+		}
+		if runes := []rune(line); len(runes) > 80 {
+			return string(runes[:80])
+		}
+		return line
+	}
+	return ""
+}
+
+// lastUserMessage returns the newest owner message of the conversation thread, oldest first.
+func lastUserMessage(bundle map[string]any) string {
+	thread, _ := bundle["reviewThread"].([]any)
+	for index := len(thread) - 1; index >= 0; index-- {
+		message, _ := thread[index].(map[string]any)
+		if message["author"] == constants.ConversationAuthorUser {
+			text, _ := message["body"].(string)
+			return text
+		}
+	}
+	return ""
+}
+
+// completionTarget is the identity a stage completes under; a chat turn uses its run token.
+func completionTarget(target *configuredAgent, payload map[string]any) *configuredAgent {
+	runToken, _ := payload["runToken"].(string)
+	if runToken == "" {
+		return target
+	}
+	chatTarget := *target
+	chatTarget.apiKey = runToken
+	return &chatTarget
 }

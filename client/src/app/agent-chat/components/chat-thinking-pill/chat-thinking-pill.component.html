@@ -1,0 +1,11 @@
+<button
+    type="button"
+    class="chat-thinking-pill"
+    data-testid="chat-thinking-toggle"
+    [class.active]="isOpen()"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggled.emit()"
+>
+    <tabler-icon icon="brain" [size]="14" />
+    <span>{{ 'AGENT_CHAT.THINKING.LABEL' | translate }}</span>
+</button>

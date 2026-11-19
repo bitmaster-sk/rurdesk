@@ -10,7 +10,9 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates procps ripgrep tini && rm -rf /var/lib/apt/lists/*
 
 # Pin the claude CLI version so a surprise upstream release can't flip flags
-# under us. Bump deliberately after testing the new release locally.
+# under us. Bump deliberately after testing the new release locally, including the flags live
+# thinking depends on (--include-partial-messages, --thinking-display summarized) and the chat
+# restrictions (--tools Read,Grep,Glob,WebSearch,WebFetch, --no-session-persistence).
 RUN npm install -g @anthropic-ai/claude-code@2.1.161
 
 COPY --from=gateway-builder /gateway /usr/local/bin/gateway

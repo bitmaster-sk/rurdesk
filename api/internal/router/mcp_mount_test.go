@@ -11,8 +11,8 @@ import (
 )
 
 // buildFakeMCPMux mirrors the real MCP server's http.ServeMux pattern layout:
-// exact /mcp/http and /mcp/plan/http endpoints alongside the /mcp/ and
-// /mcp/plan/ SSE subtrees. It lets the spike verify that gin.WrapH preserves
+// exact /mcp/http, /mcp/plan/http and /mcp/chat/http endpoints alongside the
+// /mcp/, /mcp/plan/ and /mcp/chat/ SSE subtrees. It lets the spike verify that gin.WrapH preserves
 // the ServeMux's exact-vs-subtree precedence when mounted under a wildcard.
 func buildFakeMCPMux() http.Handler {
 	mux := http.NewServeMux()
@@ -21,6 +21,12 @@ func buildFakeMCPMux() http.Handler {
 	})
 	mux.HandleFunc("/mcp/http", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("full-http"))
+	})
+	mux.HandleFunc("/mcp/chat/http", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("chat-http"))
+	})
+	mux.HandleFunc("/mcp/chat/", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("chat-sse"))
 	})
 	mux.HandleFunc("/mcp/plan/", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("plan-sse"))
@@ -60,6 +66,8 @@ func TestMCPMountPreservesExactVsSubtreePrecedence(t *testing.T) {
 		{"/mcp/plan/http", "plan-http"},
 		{"/mcp/sse", "full-sse"},
 		{"/mcp/plan/sse", "plan-sse"},
+		{"/mcp/chat/http", "chat-http"},
+		{"/mcp/chat/sse", "chat-sse"},
 	}
 	for _, tc := range cases {
 		w := httptest.NewRecorder()
