@@ -1832,7 +1832,7 @@
         "NOT_LINKED": "No change request linked yet."
     },
     "AGENT_CHAT": {
-        "TOOLTIP": "Agent",
+        "MENU_LABEL": "Agent chat",
         "NEW": "New conversation",
         "ALL": "All conversations",
         "TITLE": "Conversations",
