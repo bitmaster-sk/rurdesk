@@ -34,6 +34,20 @@ func TestMCPURLForStage(t *testing.T) {
 	}
 }
 
+func TestToStreamableHTTP(t *testing.T) {
+	tests := []struct{ in, want string }{
+		{"http://issue.proxy/mcp/sse", "http://issue.proxy/mcp/http"},
+		{"http://issue.proxy/mcp/plan/sse", "http://issue.proxy/mcp/plan/http"},
+		{"http://issue.proxy/mcp/chat/sse", "http://issue.proxy/mcp/chat/http"},
+		{"http://issue.proxy/mcp/http", "http://issue.proxy/mcp/http"},
+	}
+	for _, tt := range tests {
+		if got := ToStreamableHTTP(tt.in); got != tt.want {
+			t.Errorf("ToStreamableHTTP(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
 func TestSessionUUIDIsValidUUID(t *testing.T) {
 	stages := []string{
 		StagePickup, StageBrainstorming, StageDesign,

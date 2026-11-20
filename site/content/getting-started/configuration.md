@@ -196,7 +196,8 @@ small dense model.
 
 > The **agent gateway** is independent of this provider — it runs the Goose agent
 > against the providers named in its own `MODELS` list (local Ollama, Ollama
-> Cloud, Anthropic, or Gemini), not `AI_API_KEY`. See [Agent Gateway](./gateway.md).
+> Cloud, Anthropic, or Gemini), or Claude Code on a Claude Console account, not
+> `AI_API_KEY`. See [Agent Gateway](./gateway.md).
 
 ## Public URL
 

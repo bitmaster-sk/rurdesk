@@ -9,8 +9,8 @@ This page covers the human side of the **AI Agent workflow**: creating an agent,
 connecting it to a [gateway](./gateway.md), starting a run on a task, and
 approving stages.
 
-> Prerequisite: a running [gateway](./gateway.md) container (Goose, pointed at
-> your chosen provider) that you can reach from the API over the compose network.
+> Prerequisite: a running [gateway](./gateway.md) container (Goose pointed at
+> your chosen provider, or Claude Code on a Claude Console account) that you can reach from the API over the compose network.
 
 ## Concepts
 
@@ -18,7 +18,7 @@ approving stages.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent user**              | A non-human user account the agent acts as. Its writes are attributed to the agent (provenance).                                |
 | **Gateway → Tracker token** | The agent's API token; the gateway sends it as `GATEWAY_TO_TRACKER_TOKEN` on every tracker call.                                |
-| **Agent gateway**           | The agent's single gateway record (the Goose gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with. |
+| **Agent gateway**           | The agent's single gateway record (the gateway's URL). Holds the Tracker → Gateway token the tracker signs webhooks with.       |
 | **Agent run**               | One execution against one task: moves through stages, ends in a PR (or failure).                                                |
 | **Stage**                   | A phase of work: brainstorm → design → plan → implement. Some are skippable.                                                    |
 
@@ -29,7 +29,7 @@ An agent can also write the [release notes](../using-the-tracker/releases.md#let
 ## 1. Create an agent user
 
 In **Administration → Users** click **Create user**, toggle **Agent**, give it a
-name, and enter its **Gateway URL** — the Goose gateway's base URL, e.g.
+name, and enter its **Gateway URL** — the gateway's base URL, e.g.
 `http://gateway-agent-007:9090`. Each agent has exactly **one** gateway
 and can work on any project it is a member of.
 More detail in [User management](./user-management.md#agents).
@@ -225,11 +225,9 @@ stage waiting for your review and the next stage to start are open from the
 start. A skipped stage is struck through and has nothing to open.
 
 The cost is the price computed from the provider's rate card when the agent
-runs on an API key (shown as `$0.42`). Claude Code always runs on a
-subscription, so its reported `total_cost_usd` is only an estimate — it is
-shown with an `≈` prefix (`≈ $0.42`) and a tooltip explains it is not what you
-actually pay. When the agent runs on a local model (for example Ollama), no
-price is reported and the cost shows as `—` instead of `$0.00`.
+runs on an API key or a Claude Console account (shown as `$0.42`). When the
+agent runs on a local model (for example Ollama), no price is reported and the
+cost shows as `—` instead of `$0.00`.
 
 ![Agent run card — run block, stage cards and phase badge](../../site/assets/img/run-card.png)
 
@@ -401,12 +399,12 @@ a run that has a PR** — use **Continue** instead.
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Webhook returns `401`                                             | `TRACKER_TO_GATEWAY_TOKEN` mismatch between tracker and gateway                                                                                                |
 | Tracker calls rejected                                            | Wrong/expired `GATEWAY_TO_TRACKER_TOKEN`                                                                                                                       |
-| Run fails immediately with auth error, or "rejected the API key"  | Wrong/missing provider credential — check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)) |
+| Run fails immediately with auth error, or "rejected the API key"  | Wrong/missing credential — for Goose, check the provider of each `MODELS` entry matches the keys you set ([connection options](./gateway.md#connection-options)); for Claude Code, check the [API key](./gateway.md#claude-code-api-key) |
 | Agent can't push                                                  | The project's git integration token lacks write on the repo, see [token scopes](../using-the-tracker/git-integration.md#token-scopes)                          |
 | Run fails at the first stage with "no git integration"           | The project has no git integration; add one in **Project settings → Git integrations**                                                                       |
 | Nothing happens after assigning                                   | Gateway not running / not reachable at the configured Gateway URL                                                                                              |
 | Run briefly shows `failed` after a tracker restart, then recovers | Expected — the tracker reconciles the live gateway's completion automatically                                                                                  |
 | **Restart** is refused / shows "use Continue"                     | The run already has an open PR — use **Continue**                                                                                                              |
 
-See the [gateway verifying-a-deploy steps](./gateway.md#healthcheck--verifying-a-deploy)
+See the [gateway verifying-a-deploy steps](./gateway.md#healthcheck-verifying-a-deploy)
 to confirm the gateway side is healthy.

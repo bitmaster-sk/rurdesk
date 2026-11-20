@@ -45,19 +45,6 @@ func TestMapTerminalStatus(t *testing.T) {
 	}
 }
 
-func TestToStreamableHTTP(t *testing.T) {
-	tests := []struct{ in, want string }{
-		{"http://issue.proxy/mcp/sse", "http://issue.proxy/mcp/http"},
-		{"http://issue.proxy/mcp/plan/sse", "http://issue.proxy/mcp/plan/http"},
-		{"http://issue.proxy/mcp/http", "http://issue.proxy/mcp/http"},
-	}
-	for _, tt := range tests {
-		if got := toStreamableHTTP(tt.in); got != tt.want {
-			t.Errorf("toStreamableHTTP(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
-
 func TestWriteGooseConfig(t *testing.T) {
 	dir := t.TempDir()
 	const mcpURL = "http://issue.proxy/mcp/plan/http"
@@ -200,7 +187,7 @@ func TestChildEnvWiresProvider(t *testing.T) {
 		DefaultExtensionTimeoutSeconds: 1800,
 		StopHookBlockCap:               3,
 	}
-	env := childEnv(cfg, "anthropic", "high", "git-token-of-the-run", "/tmp/rurdesk-stage-9.submitted")
+	env := childEnv(cfg, "anthropic", "high", "git-token-of-the-run", "", "/tmp/rurdesk-stage-9.submitted")
 
 	mustHave := []string{
 		"GIT_PAGER=cat",
@@ -236,7 +223,7 @@ func TestChildEnvInheritsProcessEnv(t *testing.T) {
 	t.Setenv("OPENAI_HOST", "https://ollama.com")
 	t.Setenv("OPENAI_API_KEY", "sk-passthrough")
 
-	env := childEnv(&common.GooseConfig{}, "openai", "", "", "")
+	env := childEnv(&common.GooseConfig{}, "openai", "", "", "", "")
 	for _, want := range []string{"OPENAI_HOST=https://ollama.com", "OPENAI_API_KEY=sk-passthrough"} {
 		if !hasEnv(env, want) {
 			t.Errorf("childEnv did not inherit %q from the process env", want)
@@ -245,7 +232,7 @@ func TestChildEnvInheritsProcessEnv(t *testing.T) {
 }
 
 func TestChildEnvLeavesTheEffortToTheModelWhenNoneIsSet(t *testing.T) {
-	env := childEnv(&common.GooseConfig{}, "ollama", "", "", "")
+	env := childEnv(&common.GooseConfig{}, "ollama", "", "", "", "")
 
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "GOOSE_THINKING_EFFORT=") {
@@ -817,6 +804,9 @@ func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
 	}
 	if !strings.Contains(string(env), "RURDESK_GIT_TOKEN=run-git-token\n") {
 		t.Error("an issue stage lost the git token of its run")
+	}
+	if !strings.Contains(string(env), "RURDESK_WORKTREE="+task.WorktreePath+"\n") {
+		t.Errorf("agent env does not name the run's worktree %q", task.WorktreePath)
 	}
 }
 

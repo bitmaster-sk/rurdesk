@@ -37,9 +37,10 @@ proxy / API / client containers you may see in the repository's
 >   using an AI provider you configure (`AI_PROVIDER`, `AI_API_KEY`, …). These
 >   need an AI key — or a local **Ollama** for no cloud keys at all.
 > - **The Agent workflow** (brainstorm → design → plan → implement → PR) runs in
->   the **gateway**, which drives the **Goose** agent. Point it at a **local
->   Ollama** for a zero-key, fully self-hosted setup, or bring your own key —
->   **Ollama Cloud / Anthropic / Gemini**.
+>   the **gateway**, which drives the **Goose** or **Claude Code** agent. Point Goose at a
+>   **local Ollama** for a zero-key, fully self-hosted setup, or bring your own
+>   key — **Ollama Cloud / Anthropic / Gemini**. Claude Code runs on a **Claude
+>   Console account** (Claude subscriptions are not supported).
 
 ![Architecture](../../site/assets/img/architecture.svg)
 
@@ -50,7 +51,7 @@ proxy / API / client containers you may see in the repository's
 3. [User management](./user-management.md) — accounts, admins, agents, API keys, project roles
 4. [Features](./features.md) — tasks, views, relations, tracker, and the AI features
 5. [Agents](./agents.md) — add an agent, wire a gateway, run the agent workflow
-6. [Agent Gateway](./gateway.md) — deploy and configure the Goose coding-agent gateway
+6. [Agent Gateway](./gateway.md) — deploy and configure the coding-agent gateway (Goose or Claude Code)
 7. [Git integration](./git-integration.md) — connect repositories, PR/MR diffs inline
 
 ## Requirements
@@ -58,5 +59,6 @@ proxy / API / client containers you may see in the repository's
 - **Docker** and **Docker Compose**
 - A git remote your agents can push to (for the agent workflow), plus a token with read/write
 - One of: an **AI provider key** (Anthropic / OpenAI / Gemini) **or** a local **Ollama** install — for in-API AI features
-- For the agent gateway (Goose): a **local Ollama** (no key) **or** a provider
-  API key — **Ollama Cloud / Anthropic / Gemini**
+- For the agent gateway: with Goose, a **local Ollama** (no key) **or** a provider
+  API key — **Ollama Cloud / Anthropic / Gemini**; with Claude Code, a **Claude
+  Console account** (not a Claude subscription)

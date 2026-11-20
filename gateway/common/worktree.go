@@ -94,6 +94,9 @@ func prepareRepo(workspaceBase string, repo AgentRunGitRepo, canSeed bool) (stri
 		}
 	}
 
+	if err := restoreMainCheckout(repoPath); err != nil {
+		return "", fmt.Errorf("restoring main checkout of %s: %w", repoPath, err)
+	}
 	if err := InstallHooks(repoPath); err != nil {
 		return "", fmt.Errorf("installing hooks in %s: %w", repoPath, err)
 	}
@@ -164,6 +167,86 @@ func remoteIsEmpty(repoPath, token string) (bool, error) {
 		return false, err
 	}
 	return strings.TrimSpace(out) == "", nil
+}
+
+// restoreMainCheckout puts the main clone back on a detached HEAD with no
+// changes, untracked or ignored files outside .agent-runs/. No run works in it,
+// but an agent can wander up from its worktree into it; whatever it left there
+// must not reach the next run. Uncommitted changes are dropped and logged;
+// commits stay on their branch. Run worktrees are never touched.
+func restoreMainCheckout(repoPath string) error {
+	if err := excludeAgentRunsDir(repoPath); err != nil {
+		return err
+	}
+	branch, err := branchOfWorktree(repoPath)
+	if err != nil {
+		return fmt.Errorf("reading the branch of the main clone: %w", err)
+	}
+	changes, err := mainCheckoutChanges(repoPath)
+	if err != nil {
+		return err
+	}
+	if len(changes) == 0 && branch == "" {
+		return nil
+	}
+	if len(changes) > 0 || IsAgentBranch(branch) {
+		head, err := runGitOutput(repoPath, "rev-parse", "--short", "HEAD")
+		if err != nil {
+			return fmt.Errorf("reading HEAD of the main clone: %w", err)
+		}
+		log.Warn().Str("repo", repoPath).Str("branch", branch).Str("head", strings.TrimSpace(head)).
+			Strs("changes", changes).
+			Msg("main clone was changed outside a run worktree; discarding the changes")
+	}
+	if err := runGit(repoPath, "checkout", "--force", "--detach"); err != nil {
+		return fmt.Errorf("detaching the main clone: %w", err)
+	}
+	if err := runGit(repoPath, "clean", "-ffdx", "-e", "/"+agentRunsDir+"/"); err != nil {
+		return fmt.Errorf("cleaning the main clone: %w", err)
+	}
+	return nil
+}
+
+// mainCheckoutChanges lists the changed, untracked and ignored paths of the
+// main clone in `git status --porcelain` form, without the run worktrees.
+func mainCheckoutChanges(repoPath string) ([]string, error) {
+	out, err := runGitOutput(repoPath, "status", "--porcelain", "--ignored")
+	if err != nil {
+		return nil, fmt.Errorf("reading the status of the main clone: %w", err)
+	}
+	var changes []string
+	for _, line := range strings.Split(out, "\n") {
+		if line == "" || line == "!! "+agentRunsDir+"/" {
+			continue
+		}
+		changes = append(changes, line)
+	}
+	return changes, nil
+}
+
+// excludeAgentRunsDir lists .agent-runs/ in the clone's info/exclude, so the
+// run worktrees inside it don't make the main clone look dirty.
+func excludeAgentRunsDir(repoPath string) error {
+	excludePath := filepath.Join(repoPath, ".git", "info", "exclude")
+	entry := "/" + agentRunsDir + "/"
+	content, err := os.ReadFile(excludePath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("reading %s: %w", excludePath, err)
+	}
+	if slices.Contains(strings.Split(string(content), "\n"), entry) {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(excludePath), 0o755); err != nil {
+		return fmt.Errorf("creating %s: %w", filepath.Dir(excludePath), err)
+	}
+	if len(content) > 0 && !strings.HasSuffix(string(content), "\n") {
+		content = append(content, '\n')
+	}
+	content = append(content, entry+"\n"...)
+	if err := os.WriteFile(excludePath, content, 0o644); err != nil {
+		return fmt.Errorf("writing %s: %w", excludePath, err)
+	}
+	return nil
 }
 
 // InstallHooks copies the pre-push hook into the repo's .git/hooks/ directory.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,11 +32,11 @@ const chatDisallowedTools = "Bash,Write,Edit,MultiEdit,NotebookEdit,Task"
 
 // ClaudeCodeAdapter implements common.Agent by driving the official Claude
 // Code CLI (`claude`, installed via npm) headlessly. It authenticates against
-// a Claude Pro/Max subscription via OAuth credentials in
-// $HOME/.claude/.credentials.json (volume-mounted, seeded by an interactive
-// login) or an optional CLAUDE_CODE_OAUTH_TOKEN override. ANTHROPIC_API_KEY is
-// scrubbed from the child env so calls never silently bill the Console
-// pay-per-token bucket.
+// a Claude Console account, billed per token, via CLAUDE_CODE_OAUTH_TOKEN or a
+// Console `/login` kept in the mounted $HOME/.claude volume. Claude
+// subscriptions are not supported: Anthropic's terms forbid routing them
+// through a shared service. ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are
+// scrubbed from the child env so a stray key cannot switch the billed account.
 type ClaudeCodeAdapter struct {
 	cfg            *common.Config
 	thinkingSender common.ThinkingSender
@@ -75,7 +76,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}
 	defer os.RemoveAll(mcpConfigDir)
 
-	mcpURL := common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage)
+	mcpURL := common.ToStreamableHTTP(common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage))
 	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, task.MCPBearer(a.cfg.AgentApiKey), task.IdRun)
 	if err != nil {
 		return stats, fmt.Errorf("writing claude MCP settings: %w", err)
@@ -125,7 +126,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.AgentGitToken())
+	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.AgentGitToken(), task.WorktreePath)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -152,13 +153,12 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		return stats, fmt.Errorf("starting claude: %w", err)
 	}
 
-	// finalSubtype/finalIsError are set by drainEvents and read after Wait. The
-	// exit code is authoritative for success; the result event only refines
-	// the error message (e.g. "error_max_turns") on non-zero exit. A mutex
-	// guards the cross-goroutine writes.
+	// final is set by drainEvents and read after Wait. The exit code is
+	// authoritative for success; the result event only refines the error
+	// (e.g. "error_max_turns", the API error text) on failure. A mutex guards
+	// the cross-goroutine writes.
 	var statsMu sync.Mutex
-	finalSubtype := ""
-	finalIsError := false
+	var final finalResult
 	var toolCalls int
 	var tokensUsed int
 	var usage resultUsage
@@ -169,10 +169,9 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	done := make(chan struct{})
 	go func() {
 		drainEvents(stdoutPipe, a.cfg.MaxOutputLineBytes, task.IdRun,
-			func(subtype string, isError bool) {
+			func(result finalResult) {
 				statsMu.Lock()
-				finalSubtype = subtype
-				finalIsError = isError
+				final = result
 				statsMu.Unlock()
 			},
 			func(n int, sawCompleteStage bool) {
@@ -226,11 +225,8 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	stats.CacheReadTokens = usage.CacheReadTokens
 	stats.CacheWriteTokens = usage.CacheWriteTokens
 	stats.CostUsd = usage.CostUsd
-	if usage.CostUsd != nil {
-		stats.CostEstimated = true
-	}
-	subtype := finalSubtype
-	isError := finalIsError
+	stats.CostEstimated = false
+	terminal := final
 	submitted := completeStageCalled
 	statsMu.Unlock()
 
@@ -248,7 +244,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		}
 	}
 
-	if termErr := mapTerminalStatus(exitCode, subtype, isError); termErr != nil {
+	if termErr := mapTerminalStatus(exitCode, terminal); termErr != nil {
 		return stats, termErr
 	}
 	if !submitted {
@@ -262,39 +258,71 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	return stats, nil
 }
 
-// mapTerminalStatus converts (exit code, subtype, is_error) into an error.
-// The CLI exits zero on success; the `result` event's subtype refines the
-// message for soft failures (max-turns, execution error) on non-zero exit.
-func mapTerminalStatus(exitCode int, subtype string, isError bool) error {
-	if subtype == "error_max_turns" {
+// finalResult is what the closing `result` event says about the run.
+type finalResult struct {
+	Subtype        string
+	IsError        bool
+	Text           string
+	ApiErrorStatus int
+}
+
+// mapTerminalStatus converts the exit code and the `result` event into an
+// error. The CLI exits zero on success. On failure an API error is classified
+// by its HTTP status, and the error text the CLI reported is preferred over
+// the subtype, which stays "success" for an API error.
+func mapTerminalStatus(exitCode int, final finalResult) error {
+	if final.Subtype == "error_max_turns" {
 		return &common.AgentError{
 			Code:   common.ErrCodeTurnLimitExhausted,
 			Detail: "agent reached --max-turns before calling complete_stage",
 		}
 	}
-	if exitCode == 0 && !isError && (subtype == "" || subtype == "success") {
+	if exitCode == 0 && !final.IsError && (final.Subtype == "" || final.Subtype == "success") {
 		return nil
 	}
-	if subtype != "" {
-		return fmt.Errorf("claude code ended with result %q (exit %d)", subtype, exitCode)
+	detail := firstLine(final.Text)
+	if final.ApiErrorStatus != 0 {
+		return &common.AgentError{Code: apiErrorCode(final.ApiErrorStatus), Detail: detail}
 	}
-	if isError {
+	if detail != "" {
+		return fmt.Errorf("claude code failed (exit %d): %s", exitCode, detail)
+	}
+	if final.Subtype != "" && final.Subtype != "success" {
+		return fmt.Errorf("claude code ended with result %q (exit %d)", final.Subtype, exitCode)
+	}
+	if final.IsError {
 		return fmt.Errorf("claude code reported an error (exit %d)", exitCode)
 	}
 	return fmt.Errorf("claude code exited with code %d", exitCode)
+}
+
+func apiErrorCode(status int) string {
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return common.ErrCodeProviderAuthFailed
+	case http.StatusTooManyRequests:
+		return common.ErrCodeProviderRateLimited
+	default:
+		return common.ErrCodeProviderError
+	}
+}
+
+func firstLine(text string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
+	return strings.TrimSpace(line)
 }
 
 // drainEvents reads stream-json events from claude stdout, forwarding each
 // well-formed line to zerolog so the operator sees the agent's timeline.
 // tool_use blocks in `assistant` messages fire onToolCalls; usage totals fire
 // onTokens (caller keeps the max); the final `result` event fires onFinal
-// with its subtype/is_error for error mapping. Thinking fragments (merged by thinkingCoalescer)
+// with its subtype, is_error, text and API status for error mapping. Thinking fragments (merged by thinkingCoalescer)
 // and tool calls fire onThinking; answer text is skipped. Thinking text is logged only at debug level.
 func drainEvents(
 	r io.Reader,
 	maxLineBytes int,
 	idRun int64,
-	onFinal func(subtype string, isError bool),
+	onFinal func(finalResult),
 	onToolCalls func(count int, sawCompleteStage bool),
 	onTokens func(int),
 	onUsage func(resultUsage),
@@ -348,7 +376,7 @@ func drainEvents(
 			}
 		case "result":
 			if onFinal != nil {
-				onFinal(ev.Subtype, ev.IsError)
+				onFinal(finalResult{Subtype: ev.Subtype, IsError: ev.IsError, Text: ev.Result, ApiErrorStatus: ev.ApiErrorStatus})
 			}
 			if onTokens != nil {
 				if tokens := totalTokens(ev); tokens > 0 {
@@ -543,7 +571,8 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 }
 
 // childEnv builds the subprocess env: common.AgentEnv (inherited env without
-// the gateway secrets, plus the run's git token unless it is empty) with
+// the gateway secrets, plus the run's git token unless it is empty and the
+// run's worktree path) with
 // ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN removed (a stray host var can't
 // flip billing to the Console pay-per-token bucket), plus GIT_PAGER=cat (the
 // implement stage's `git log`/`git diff` would otherwise block on a pager),
@@ -554,8 +583,8 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 // container is a disposable per-run worktree sandbox where headless
 // auto-approve is intended, so we opt into the root bypass instead of
 // re-plumbing the image to non-root.
-func childEnv(oauthToken, gitToken string) []string {
-	base := common.AgentEnv(os.Environ(), gitToken)
+func childEnv(oauthToken, gitToken, worktreePath string) []string {
+	base := common.AgentEnv(os.Environ(), gitToken, worktreePath)
 	out := make([]string, 0, len(base)+3)
 	for _, kv := range base {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") ||
@@ -584,7 +613,7 @@ type mcpServer struct {
 }
 
 // writeMCPSettings writes <dir>/mcp.json with the "tracker" MCP server entry
-// (stage-scoped SSE endpoint, the agent key — or a chat turn's run token — as
+// (stage-scoped streamable-HTTP endpoint, the agent key — or a chat turn's run token — as
 // an Authorization: Bearer header; the tracker API strips the prefix and matches
 // by shape) and returns its path for --mcp-config.
 //
@@ -597,7 +626,7 @@ func writeMCPSettings(dir, mcpURL, bearerToken string, idRun int64) (string, err
 	}
 	settings := mcpSettings{McpServers: map[string]mcpServer{
 		"tracker": {
-			Type: "sse",
+			Type: "http",
 			Url:  mcpURL,
 			Headers: map[string]string{
 				"Authorization":         "Bearer " + bearerToken,

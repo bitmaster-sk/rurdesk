@@ -128,6 +128,21 @@ services:
         networks:
             rurdesk_network:
 
+    gateway-agent-010:
+        image: rurdesk-gateway-claude:latest
+        container_name: gateway_agent_010
+        env_file:
+            - ./docker/gateway-agent-010/.env
+        volumes:
+            - gateway-agent-010-workspace:/worktrees
+            - gateway-agent-010-state:/var/lib/gateway
+            - gateway-agent-010-creds:/root/.claude
+        depends_on:
+            - rurdesk.api
+            - rurdesk.proxy
+        networks:
+            rurdesk_network:
+
 volumes:
     rurdesk_data:
     cache_data:
@@ -135,6 +150,9 @@ volumes:
     gateway-agent-007-state:
     gateway-agent-003-workspace:
     gateway-agent-003-state:
+    gateway-agent-010-workspace:
+    gateway-agent-010-state:
+    gateway-agent-010-creds:
 
 networks:
     rurdesk_network:

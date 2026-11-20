@@ -35,34 +35,69 @@ func TestClaudeCodeReportsEveryModelAsThinking(t *testing.T) {
 }
 
 func TestMapTerminalStatus(t *testing.T) {
+	const workspaceError = "API Error: 400 This API key is not scoped to a workspace, so this request must include the anthropic-workspace-id header."
 	tests := []struct {
 		name     string
 		exitCode int
-		subtype  string
-		isError  bool
+		final    finalResult
 		wantErr  bool
+		wantCode string
 		wantMsg  string
+		denyMsg  string
 	}{
-		{"success subtype", 0, "success", false, false, ""},
-		{"empty subtype zero exit", 0, "", false, false, ""},
-		{"max turns", 1, "error_max_turns", true, true, "turn_limit_exhausted"},
-		{"execution error", 1, "error_during_execution", true, true, "error_during_execution"},
-		{"is_error no subtype", 1, "", true, true, "reported an error"},
-		{"nonzero exit only", 2, "", false, true, "exited with code 2"},
+		{"success subtype", 0, finalResult{Subtype: "success"}, false, "", "", ""},
+		{"empty subtype zero exit", 0, finalResult{}, false, "", "", ""},
+		{"max turns", 1, finalResult{Subtype: "error_max_turns", IsError: true}, true, common.ErrCodeTurnLimitExhausted, "", ""},
+		{"execution error", 1, finalResult{Subtype: "error_during_execution", IsError: true}, true, "", "error_during_execution", ""},
+		{"is_error no subtype", 1, finalResult{IsError: true}, true, "", "reported an error", ""},
+		{"nonzero exit only", 2, finalResult{}, true, "", "exited with code 2", ""},
+		{
+			"API error shows its text, not the success subtype", 1,
+			finalResult{Subtype: "success", IsError: true, Text: workspaceError, ApiErrorStatus: 400},
+			true, common.ErrCodeProviderError, "not scoped to a workspace", `"success"`,
+		},
+		{"API auth error", 1, finalResult{Subtype: "success", IsError: true, Text: "API Error: 401 invalid x-api-key", ApiErrorStatus: 401}, true, common.ErrCodeProviderAuthFailed, "invalid x-api-key", ""},
+		{"API forbidden", 1, finalResult{Subtype: "success", IsError: true, Text: "API Error: 403 forbidden", ApiErrorStatus: 403}, true, common.ErrCodeProviderAuthFailed, "forbidden", ""},
+		{"API rate limit", 1, finalResult{Subtype: "success", IsError: true, Text: "API Error: 429 rate_limit_error", ApiErrorStatus: 429}, true, common.ErrCodeProviderRateLimited, "rate_limit_error", ""},
+		{"error text without API status", 1, finalResult{Subtype: "success", IsError: true, Text: "Invalid API key · Please run /login\nmore"}, true, "", "Invalid API key · Please run /login", `"success"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := mapTerminalStatus(tt.exitCode, tt.subtype, tt.isError)
+			err := mapTerminalStatus(tt.exitCode, tt.final)
 			if tt.wantErr && err == nil {
 				t.Fatalf("expected error, got nil")
 			}
 			if !tt.wantErr && err != nil {
 				t.Fatalf("expected nil, got %v", err)
 			}
+			if tt.wantCode != "" {
+				var agentErr *common.AgentError
+				if !errors.As(err, &agentErr) || agentErr.Code != tt.wantCode {
+					t.Errorf("error %v, want code %q", err, tt.wantCode)
+				}
+			}
 			if tt.wantMsg != "" && !strings.Contains(err.Error(), tt.wantMsg) {
 				t.Errorf("error %q does not contain %q", err.Error(), tt.wantMsg)
 			}
+			if tt.denyMsg != "" && strings.Contains(err.Error(), tt.denyMsg) {
+				t.Errorf("error %q still contains %q", err.Error(), tt.denyMsg)
+			}
+			if strings.Contains(tt.final.Text, "\n") && strings.Contains(err.Error(), "\n") {
+				t.Errorf("error %q is not a single line", err.Error())
+			}
 		})
+	}
+}
+
+func TestDrainEventsPassesTheResultErrorText(t *testing.T) {
+	line := `{"type":"result","subtype":"success","is_error":true,"api_error_status":400,"result":"API Error: 400 bad request"}`
+	var final finalResult
+	drainEvents(strings.NewReader(line+"\n"), common.DefaultMaxOutputLineBytes, 7,
+		func(result finalResult) { final = result }, nil, nil, nil, nil)
+
+	want := finalResult{Subtype: "success", IsError: true, Text: "API Error: 400 bad request", ApiErrorStatus: 400}
+	if final != want {
+		t.Errorf("final = %+v, want %+v", final, want)
 	}
 }
 
@@ -111,7 +146,7 @@ func TestDrainEventsExtractsStatsFromStreamJSON(t *testing.T) {
 	var toolCalls int
 	var tokens int
 	drainEvents(r, common.DefaultMaxOutputLineBytes, 42,
-		func(s string, e bool) { subtype = s; isError = e },
+		func(final finalResult) { subtype = final.Subtype; isError = final.IsError },
 		func(n int, _ bool) { toolCalls += n },
 		func(tk int) {
 			if tk > tokens {
@@ -183,7 +218,7 @@ func TestDrainEventsDetectsCompleteStage(t *testing.T) {
 
 func TestWriteMCPSettings(t *testing.T) {
 	configDir := t.TempDir()
-	const mcpURL = "http://issue.proxy/mcp/plan/sse"
+	const mcpURL = "http://issue.proxy/mcp/plan/http"
 	const agentKey = "deadbeef"
 
 	path, err := writeMCPSettings(configDir, mcpURL, agentKey, 42)
@@ -221,8 +256,8 @@ func TestWriteMCPSettings(t *testing.T) {
 	if !ok {
 		t.Fatal("missing tracker server entry")
 	}
-	if tracker.Type != "sse" {
-		t.Errorf("type = %q, want sse", tracker.Type)
+	if tracker.Type != "http" {
+		t.Errorf("type = %q, want http", tracker.Type)
 	}
 	if tracker.URL != mcpURL {
 		t.Errorf("url = %q, want %q", tracker.URL, mcpURL)
@@ -239,7 +274,7 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-should-be-removed")
 	t.Setenv("ANTHROPIC_AUTH_TOKEN", "tok-should-be-removed")
 
-	env := childEnv("my-oauth-token", "git-token-of-the-run")
+	env := childEnv("my-oauth-token", "git-token-of-the-run", "")
 
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") {
@@ -261,7 +296,7 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 }
 
 func TestChildEnvOmitsTokenWhenEmpty(t *testing.T) {
-	env := childEnv("", "")
+	env := childEnv("", "", "")
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "CLAUDE_CODE_OAUTH_TOKEN=") {
 			t.Errorf("CLAUDE_CODE_OAUTH_TOKEN should be absent, got %q", kv)
@@ -293,7 +328,7 @@ func TestRunWithStubBinary(t *testing.T) {
 	}{
 		{
 			name:         "success",
-			resultLine:   `{"type":"result","subtype":"success","is_error":false,"usage":{"input_tokens":10,"output_tokens":5}}`,
+			resultLine:   `{"type":"result","subtype":"success","is_error":false,"usage":{"input_tokens":10,"output_tokens":5},"total_cost_usd":0.01}`,
 			exitCode:     0,
 			submitsStage: true,
 			wantErr:      false,
@@ -369,6 +404,11 @@ func TestRunWithStubBinary(t *testing.T) {
 			}
 			if stats.DurationMs < 0 {
 				t.Errorf("DurationMs = %d, want >= 0", stats.DurationMs)
+			}
+			// Billed per token on a Console account, so the reported cost is
+			// what is paid and the UI must not mark it as an estimate.
+			if stats.CostEstimated {
+				t.Errorf("CostEstimated = true, want false (costUsd %v)", stats.CostUsd)
 			}
 			// The MCP config carries the agent's bearer token and the agent
 			// commits from this worktree, so the run must leave nothing
@@ -472,7 +512,7 @@ func TestDrainEventsKeepsReadingAfterALineOverTheLimit(t *testing.T) {
 		`{"type":"result","subtype":"success","is_error":false}` + "\n"
 	var subtype string
 	drainEvents(strings.NewReader(input), 1024, 42,
-		func(s string, _ bool) { subtype = s },
+		func(final finalResult) { subtype = final.Subtype },
 		nil,
 		nil,
 		nil,
@@ -639,19 +679,72 @@ func TestClaudeAdapter_ChatUsesRunTokenAndURL(t *testing.T) {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	tracker := parsed.McpServers["tracker"]
-	if tracker.URL != "http://issue.proxy/mcp/chat/sse" {
+	if tracker.URL != "http://issue.proxy/mcp/chat/http" {
 		t.Errorf("url = %q, want the chat endpoint", tracker.URL)
 	}
 	if got := tracker.Headers["Authorization"]; got != "Bearer "+testRunToken {
 		t.Errorf("Authorization = %q, want the run token", got)
 	}
 	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token", "run-git-token")
+	if env, err := os.ReadFile(envFile); err != nil || !strings.Contains(string(env), "RURDESK_WORKTREE="+task.WorktreePath+"\n") {
+		t.Errorf("chat env does not name the turn's worktree %q (err %v)", task.WorktreePath, err)
+	}
 	args, err := os.ReadFile(argsFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := "--session-id\n" + common.TaskSessionUUID(task) + "\n"; !strings.Contains(string(args), want) {
 		t.Errorf("claude args lack %q\n%s", want, args)
+	}
+}
+
+// The SSE transport makes the CLI post to the message URL the tracker
+// advertises, built from PUBLIC_BASE_URL, which the gateway may not reach.
+// Streamable HTTP only ever talks to the configured URL.
+func TestClaudeAdapter_TrackerMCPUsesStreamableHTTP(t *testing.T) {
+	tests := []struct {
+		name    string
+		stage   string
+		wantURL string
+	}{
+		{"implementation gets the full endpoint", common.StageImplementation, "http://issue.proxy/mcp/http"},
+		{"plan stage gets the plan subset", common.StageBrainstorming, "http://issue.proxy/mcp/plan/http"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stub, mcpCopy, _, _ := writeRecordingStub(t, t.TempDir())
+			t.Setenv("CLAUDE_CODE_BINARY", stub)
+			cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
+			task := common.Task{
+				IdRun: 7, IdTask: 1, Stage: tt.stage,
+				WorktreePath: t.TempDir(), Model: common.Model{Name: "opus"}, MaxTurns: 60,
+			}
+
+			if _, err := NewClaudeCodeAdapter(cfg, nil).Run(context.Background(), task); err != nil {
+				t.Fatalf("Run: %v", err)
+			}
+
+			data, err := os.ReadFile(mcpCopy)
+			if err != nil {
+				t.Fatalf("reading the MCP config the CLI got: %v", err)
+			}
+			var parsed struct {
+				McpServers map[string]struct {
+					Type string `json:"type"`
+					URL  string `json:"url"`
+				} `json:"mcpServers"`
+			}
+			if err := json.Unmarshal(data, &parsed); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			tracker := parsed.McpServers["tracker"]
+			if tracker.Type != "http" {
+				t.Errorf("type = %q, want http", tracker.Type)
+			}
+			if tracker.URL != tt.wantURL {
+				t.Errorf("url = %q, want %q", tracker.URL, tt.wantURL)
+			}
+		})
 	}
 }
 
@@ -679,6 +772,9 @@ func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
 	}
 	if !strings.Contains(string(env), "RURDESK_GIT_TOKEN=run-git-token\n") {
 		t.Error("an issue stage lost the git token of its run")
+	}
+	if !strings.Contains(string(env), "RURDESK_WORKTREE="+task.WorktreePath+"\n") {
+		t.Errorf("agent env does not name the run's worktree %q", task.WorktreePath)
 	}
 }
 
