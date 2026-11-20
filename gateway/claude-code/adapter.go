@@ -126,7 +126,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	cmd := exec.CommandContext(runCtx, claudeBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.AgentGitToken())
+	cmd.Env = childEnv(a.cfg.ClaudeCode.OAuthToken, task.AgentGitToken(), task.WorktreePath)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill claude.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -573,7 +573,8 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 }
 
 // childEnv builds the subprocess env: common.AgentEnv (inherited env without
-// the gateway secrets, plus the run's git token unless it is empty) with
+// the gateway secrets, plus the run's git token unless it is empty and the
+// run's worktree path) with
 // ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN removed (a stray host var can't
 // flip billing to the Console pay-per-token bucket), plus GIT_PAGER=cat (the
 // implement stage's `git log`/`git diff` would otherwise block on a pager),
@@ -584,8 +585,8 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 // container is a disposable per-run worktree sandbox where headless
 // auto-approve is intended, so we opt into the root bypass instead of
 // re-plumbing the image to non-root.
-func childEnv(oauthToken, gitToken string) []string {
-	base := common.AgentEnv(os.Environ(), gitToken)
+func childEnv(oauthToken, gitToken, worktreePath string) []string {
+	base := common.AgentEnv(os.Environ(), gitToken, worktreePath)
 	out := make([]string, 0, len(base)+3)
 	for _, kv := range base {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") ||

@@ -82,11 +82,15 @@ const TrackerRunHeader = "X-Rurdesk-Run"
 // key, the webhook secret and a git token the gateway itself was given.
 var agentEnvSecrets = []string{"GATEWAY_TO_TRACKER_TOKEN", "TRACKER_TO_GATEWAY_TOKEN", gitTokenEnvName}
 
+// WorktreeEnvName names the run's worktree in the agent env. The pre-push hook
+// rejects a push from any other checkout, e.g. the main clone next to it.
+const WorktreeEnvName = "RURDESK_WORKTREE"
+
 // AgentEnv is the base env of an agent process: base without the gateway
-// secrets, plus the git token of the run when there is one. A chat passes no
-// git token, so its agent cannot push.
-func AgentEnv(base []string, gitToken string) []string {
-	env := make([]string, 0, len(base)+1)
+// secrets, plus the git token of the run when there is one and the run's
+// worktree path. A chat passes no git token, so its agent cannot push.
+func AgentEnv(base []string, gitToken, worktreePath string) []string {
+	env := make([]string, 0, len(base)+2)
 	for _, entry := range base {
 		name, _, _ := strings.Cut(entry, "=")
 		if slices.Contains(agentEnvSecrets, name) {
@@ -96,6 +100,9 @@ func AgentEnv(base []string, gitToken string) []string {
 	}
 	if gitToken != "" {
 		env = append(env, GitTokenEnv(gitToken))
+	}
+	if worktreePath != "" {
+		env = append(env, WorktreeEnvName+"="+worktreePath)
 	}
 	return env
 }

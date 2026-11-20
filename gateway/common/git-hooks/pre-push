@@ -9,4 +9,18 @@ while read local_ref local_sha remote_ref remote_sha; do
     exit 1
   fi
 done
+
+# Reject a push from any checkout other than the run's worktree, e.g. the main
+# clone it sits in. The gateway sets RURDESK_WORKTREE for the agent process only.
+if [ -n "$RURDESK_WORKTREE" ]; then
+  toplevel="$(git rev-parse --show-toplevel 2>/dev/null)"
+  pushing="$(cd "$toplevel" 2>/dev/null && pwd -P)"
+  expected="$(cd "$RURDESK_WORKTREE" 2>/dev/null && pwd -P)"
+  if [ -z "$pushing" ] || [ "$pushing" != "$expected" ]; then
+    echo "ERROR: Push from '${toplevel:-$PWD}' rejected."
+    echo "Your worktree is '$RURDESK_WORKTREE'. Commit and push from there; the repository around it is not yours."
+    echo "This is a local pre-push hook (.git/hooks/pre-push), not a server rule."
+    exit 1
+  fi
+fi
 exit 0

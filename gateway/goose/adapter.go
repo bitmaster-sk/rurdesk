@@ -110,7 +110,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	cmd := exec.CommandContext(runCtx, gooseBinary(), args...)
 	common.StopGracefully(cmd, common.ProcessKillGrace)
 	cmd.Dir = task.WorktreePath
-	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Effort, task.AgentGitToken(), stageMarker)
+	cmd.Env = childEnv(a.cfg.Goose, task.Model.Provider, task.Effort, task.AgentGitToken(), task.WorktreePath, stageMarker)
 	// The prompt must never be an argument: the agent's own `pkill -f <word>` would match it and kill goose.
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -337,7 +337,8 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 }
 
 // childEnv builds the goose subprocess env: common.AgentEnv (inherited env
-// without the gateway secrets, plus the run's git token unless it is empty)
+// without the gateway secrets, plus the run's git token unless it is empty
+// and the run's worktree path)
 // plus goose wiring.
 // Unlike the claude adapter it does NOT scrub ANTHROPIC_API_KEY — for goose
 // the API key IS the BYOK billing path. GIT_PAGER=cat avoids the implement
@@ -347,8 +348,8 @@ func (a *GooseAdapter) Cancel(_ context.Context, runID common.RunID) error {
 // The tracker MCP URL + bearer are NOT set here — writeGooseConfig writes
 // them literally into config.yaml per run (goose doesn't substitute ${ENV} in
 // the extension uri).
-func childEnv(cfg *common.GooseConfig, provider, effort, gitToken, stageMarker string) []string {
-	out := common.AgentEnv(os.Environ(), gitToken)
+func childEnv(cfg *common.GooseConfig, provider, effort, gitToken, worktreePath, stageMarker string) []string {
+	out := common.AgentEnv(os.Environ(), gitToken, worktreePath)
 	out = append(out,
 		"GIT_PAGER=cat",
 		"GOOSE_DISABLE_KEYRING=1",

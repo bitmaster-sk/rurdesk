@@ -324,15 +324,17 @@ func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
 		"HOME=/root",
 	}
 	for _, tt := range []struct {
-		name     string
-		gitToken string
-		want     []string
+		name         string
+		gitToken     string
+		worktreePath string
+		want         []string
 	}{
-		{"chat gets no git token", "", []string{"PATH=/usr/bin", "HOME=/root"}},
-		{"issue stage gets the git token of its run", "run-token", []string{"PATH=/usr/bin", "HOME=/root", "RURDESK_GIT_TOKEN=run-token"}},
+		{"chat gets no git token", "", "", []string{"PATH=/usr/bin", "HOME=/root"}},
+		{"issue stage gets the git token of its run", "run-token", "", []string{"PATH=/usr/bin", "HOME=/root", "RURDESK_GIT_TOKEN=run-token"}},
+		{"the run's worktree is named for the pre-push hook", "run-token", "/worktrees/repo/.agent-runs/7", []string{"PATH=/usr/bin", "HOME=/root", "RURDESK_GIT_TOKEN=run-token", "RURDESK_WORKTREE=/worktrees/repo/.agent-runs/7"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			env := AgentEnv(base, tt.gitToken)
+			env := AgentEnv(base, tt.gitToken, tt.worktreePath)
 			if strings.Join(env, "\n") != strings.Join(tt.want, "\n") {
 				t.Errorf("AgentEnv = %q, want %q", env, tt.want)
 			}
@@ -422,7 +424,7 @@ func TestChatWorktree_PushFails(t *testing.T) {
 	t.Setenv("GATEWAY_TO_TRACKER_TOKEN", "agent-key")
 	t.Setenv(gitTokenEnvName, testGitToken)
 
-	if err := push(AgentEnv(os.Environ(), "")); err == nil {
+	if err := push(AgentEnv(os.Environ(), "", "")); err == nil {
 		t.Fatal("a push from the chat worktree with the chat agent env succeeded")
 	}
 	if out, _ := runGitQuietOutput(originPath, "branch", "--list", "agent/*"); strings.TrimSpace(out) != "" {
@@ -430,7 +432,7 @@ func TestChatWorktree_PushFails(t *testing.T) {
 	}
 	// The same push with the token in the env goes through, so the missing
 	// token is what stopped it.
-	if err := push(AgentEnv(os.Environ(), testGitToken)); err != nil {
+	if err := push(AgentEnv(os.Environ(), testGitToken, "")); err != nil {
 		t.Fatalf("control push with the git token failed: %v", err)
 	}
 	assertNoFileHolds(t, filepath.Join(tmp, "ws"), testGitToken)

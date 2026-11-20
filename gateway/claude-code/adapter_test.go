@@ -274,7 +274,7 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-should-be-removed")
 	t.Setenv("ANTHROPIC_AUTH_TOKEN", "tok-should-be-removed")
 
-	env := childEnv("my-oauth-token", "git-token-of-the-run")
+	env := childEnv("my-oauth-token", "git-token-of-the-run", "")
 
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") {
@@ -296,7 +296,7 @@ func TestChildEnvScrubsAPIKeysAndSetsToken(t *testing.T) {
 }
 
 func TestChildEnvOmitsTokenWhenEmpty(t *testing.T) {
-	env := childEnv("", "")
+	env := childEnv("", "", "")
 	for _, kv := range env {
 		if strings.HasPrefix(kv, "CLAUDE_CODE_OAUTH_TOKEN=") {
 			t.Errorf("CLAUDE_CODE_OAUTH_TOKEN should be absent, got %q", kv)
@@ -681,6 +681,9 @@ func TestClaudeAdapter_ChatUsesRunTokenAndURL(t *testing.T) {
 		t.Errorf("Authorization = %q, want the run token", got)
 	}
 	assertAgentEnvHasNoSecrets(t, envFile, "deadbeef", "webhook-secret-hex", "inherited-git-token", "run-git-token")
+	if env, err := os.ReadFile(envFile); err != nil || !strings.Contains(string(env), "RURDESK_WORKTREE="+task.WorktreePath+"\n") {
+		t.Errorf("chat env does not name the turn's worktree %q (err %v)", task.WorktreePath, err)
+	}
 	args, err := os.ReadFile(argsFile)
 	if err != nil {
 		t.Fatal(err)
@@ -764,6 +767,9 @@ func TestAgentEnv_StripsTrackerAndGitTokens(t *testing.T) {
 	}
 	if !strings.Contains(string(env), "RURDESK_GIT_TOKEN=run-git-token\n") {
 		t.Error("an issue stage lost the git token of its run")
+	}
+	if !strings.Contains(string(env), "RURDESK_WORKTREE="+task.WorktreePath+"\n") {
+		t.Errorf("agent env does not name the run's worktree %q", task.WorktreePath)
 	}
 }
 
