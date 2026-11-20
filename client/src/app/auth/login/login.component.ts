@@ -17,7 +17,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { catchError, finalize, map } from 'rxjs/operators';
 
 interface LoginForm {
     email: FormControl<string | null>;
@@ -45,6 +45,10 @@ export class LoginComponent implements OnInit {
     public readonly hasFailed = signal(false);
     public readonly passwordVisible = signal(false);
     private readonly isPasswordChosen = signal(false);
+    // True while a login request is in flight — the handler guard and the
+    // button loading state both key off it, so Enter/ngSubmit/direct calls
+    // cannot fire a second request before the first one settles.
+    public readonly isSubmitting = signal(false);
 
     public readonly methods = toSignal<AuthMethods | null>(
         this.authApi.loadMethods$().pipe(catchError(() => of(PASSWORD_ONLY))),
@@ -130,13 +134,15 @@ export class LoginComponent implements OnInit {
     }
 
     public onLogin(): void {
-        if (this.form.invalid) {
+        if (this.form.invalid || this.isSubmitting()) {
             return;
         }
         this.hasFailed.set(false);
+        this.isSubmitting.set(true);
         const { email, password, hasExtendedSessionLifetime } = this.form.value;
         this.authApi
             .login$(email ?? '', password ?? '', hasExtendedSessionLifetime ?? false)
+            .pipe(finalize(() => this.isSubmitting.set(false)))
             .subscribe({
                 next: token => this.session.start(token),
                 error: () => this.hasFailed.set(true)

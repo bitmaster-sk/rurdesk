@@ -101,6 +101,7 @@
                         type="submit"
                         [label]="'LOGIN.LABEL' | translate"
                         [disabled]="form.invalid"
+                        [loading]="isSubmitting()"
                         [fluid]="true"
                         data-testid="login-submit"
                     ></ui-button>
