@@ -10,7 +10,7 @@ Two adapters exist today:
 | Adapter         | Status            | Auth                                                                    | Docs                          |
 | --------------- | ----------------- | ----------------------------------------------------------------------- | ----------------------------- |
 | **goose**       | Reference adapter | **API key (BYOK)** — Anthropic / Google / Ollama                        | [below](#goose-adapter)       |
-| **claude-code** | Available         | Claude subscription OAuth (interactive, one-off) + optional setup-token | not yet documented            |
+| **claude-code** | Available         | Claude Console account (subscriptions not supported): `CLAUDE_CODE_OAUTH_TOKEN` created in the Console, or a Console `/login` kept in the `/root/.claude` volume | [site docs](../site/content/agentic-workflow/gateway.md#claude-code) |
 
 All adapters share the same `common/` runtime (webhook receiver, orchestrator,
 worktree management, prompt rendering, MCP wiring) and differ only in how they
@@ -100,9 +100,10 @@ the tracker MCP server lives in `~/.config/goose/config.yaml`. It is a
 stage-scoped URL + bearer token — goose does _not_ substitute `${ENV}` in an
 extension `uri` (an unsubstituted value fails with a reqwest "builder error"),
 and the URL differs by stage anyway: `/mcp/plan/http` for plan stages, `/mcp/http` for
-implementation (converted from the `/sse` base by `toStreamableHTTP`). The config path is shared, which is safe because the
-gateway runs one stage at a time. The API serves both transports: SSE (`/mcp/sse`) for the
-claude-code adapter and streamable HTTP (`/mcp/http`) for goose.
+implementation (converted from the `/sse` base by `common.ToStreamableHTTP`). The config path is shared, which is safe because the
+gateway runs one stage at a time. Both adapters use streamable HTTP (`/mcp/http`). The API still
+serves SSE (`/mcp/sse`), but the SSE message URL it advertises is built from `PUBLIC_BASE_URL`,
+which the gateway may not reach.
 
 > **Output mode:** the adapter runs goose with `--output-format stream-json`, so
 > stdout is a per-token NDJSON event stream. A [`streamAggregator`](goose/stream.go)
@@ -153,7 +154,7 @@ contract.
 | `TRACKER_URL`              | Base URL of the tracker, e.g. `http://rurdesk.proxy`. The fixed endpoint paths are appended in code: `/mcp/sse` for the agent's MCP client (implement stage; every other stage gets the restricted `/mcp/plan/sse` subset automatically), `/mcp/chat/sse` (and `/mcp/chat/http`) for chat stages, with a conversation-scoped read-only `rdr_…` token that expires every turn, and `/api/private` for REST calls (status reports, heartbeats, recovery report). |
 | `GATEWAY_TO_TRACKER_TOKEN` | The agent's API token. Sent as Bearer on every tracker request and embedded in the agent's per-run MCP config so its MCP client authenticates the same way. Issued in the tracker admin UI (agent credentials).                                                                                                                      |
 | `TRACKER_TO_GATEWAY_TOKEN` | **Hex-encoded** 32-byte HMAC token shared with the tracker. Used to verify the `X-Tracker-Signature` header on incoming `POST /event` calls. Mismatch → 401.                                                                                                                                                                     |
-| `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the subscription. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |
+| `MODELS`                   | Comma-separated models this gateway allows. goose: `provider/model`, split on the first `/` (`ollama/qwen3:8b`). claude-code: bare model names (`sonnet,opus`), always on the Console account. Reported to the tracker in `ReportRecovered`; a `stage_execute` naming another model fails with `model_not_allowed` before the agent starts. |
 
 > **Repositories come from the tracker.** Every `stage_execute` carries `repo`
 > (`cloneUrl`, `host`, `repoPath`, `baseBranch`, `token`) from the project's git
@@ -167,6 +168,21 @@ contract.
 > the clone's config are reset. The `TrackerClient` replaces the tokens of running stages
 > with `***` in every body it posts. A `stage_execute` without `repo` fails with
 > `tracker_missing_repo`.
+
+> **The agent works only in its run worktree.** Each run gets a worktree in
+> `<clone>/.agent-runs/<idRun>`; nobody works in the main clone around it. Two
+> guards keep an agent that wanders up into the main clone from doing harm:
+> - The agent env carries `RURDESK_WORKTREE=<worktree path>`, and the pre-push
+>   hook rejects a push from any other checkout. Without the variable (the
+>   gateway's own git calls, a person in the container) the hook only checks
+>   the branch name.
+> - Before every run `EnsureRepo` puts the main clone back on a detached HEAD
+>   and removes changed, untracked and ignored files outside `.agent-runs/`
+>   (listed in the clone's `.git/info/exclude`). It logs a warning with the
+>   previous branch and the dropped paths; commits stay on their branch.
+>
+> These guard against a mix-up, not against an agent that bypasses them on
+> purpose (`--no-verify`): the agent runs as root.
 
 ### Optional environment variables
 
@@ -184,6 +200,7 @@ contract.
 | `OLLAMA_HOST`                          | unset            | For the `ollama` provider (keyless).                                                                                                 |
 | `CLAUDE_THINKING_DISPLAY`              | `summarized`     | claude-code: passed as `--thinking-display` (`summarized` \| `omitted`) so live thinking has text; unset means `summarized`, empty omits the flag, any other value stops the gateway at startup. |
 | `GOOSE_DEFAULT_EXTENSION_TIMEOUT`      | `1800`           | Seconds one goose `shell` command may run before goose kills it. |
+| `BASH_DEFAULT_TIMEOUT_MS` / `BASH_MAX_TIMEOUT_MS` | `1800000` | claude-code: set in the image (CLI defaults 2 / 10 min are too short for test suites); the default and the ceiling of one `Bash` command, in ms. |
 | `GOOSE_STOP_HOOK_BLOCK_CAP`            | `3`              | How many times the `rurdesk-guard` Stop hook may send the agent back to call `complete_stage`. |
 
 ### docker-compose snippet

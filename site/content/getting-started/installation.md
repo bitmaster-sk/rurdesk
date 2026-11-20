@@ -92,7 +92,8 @@ services:
             rurdesk_network:
 
     # Optional — only needed for the AI Agent workflow. Uncomment once the core
-    # stack runs and you have issued the two tokens in the app.
+    # stack runs and you have issued the two tokens in the app. For Claude Code
+    # on a Claude Console account use the gateway-claude service from Agent Gateway.
     # gateway-goose:
     #     image: ghcr.io/bitmaster-sk/rurdesk/gateway-goose:latest
     #     restart: unless-stopped
