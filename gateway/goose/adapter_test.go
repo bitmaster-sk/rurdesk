@@ -45,19 +45,6 @@ func TestMapTerminalStatus(t *testing.T) {
 	}
 }
 
-func TestToStreamableHTTP(t *testing.T) {
-	tests := []struct{ in, want string }{
-		{"http://issue.proxy/mcp/sse", "http://issue.proxy/mcp/http"},
-		{"http://issue.proxy/mcp/plan/sse", "http://issue.proxy/mcp/plan/http"},
-		{"http://issue.proxy/mcp/http", "http://issue.proxy/mcp/http"},
-	}
-	for _, tt := range tests {
-		if got := toStreamableHTTP(tt.in); got != tt.want {
-			t.Errorf("toStreamableHTTP(%q) = %q, want %q", tt.in, got, tt.want)
-		}
-	}
-}
-
 func TestWriteGooseConfig(t *testing.T) {
 	dir := t.TempDir()
 	const mcpURL = "http://issue.proxy/mcp/plan/http"

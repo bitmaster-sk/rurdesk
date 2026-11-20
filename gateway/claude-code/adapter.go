@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,7 +76,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	}
 	defer os.RemoveAll(mcpConfigDir)
 
-	mcpURL := common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage)
+	mcpURL := common.ToStreamableHTTP(common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage))
 	mcpConfigPath, err := writeMCPSettings(mcpConfigDir, mcpURL, task.MCPBearer(a.cfg.AgentApiKey), task.IdRun)
 	if err != nil {
 		return stats, fmt.Errorf("writing claude MCP settings: %w", err)
@@ -152,13 +153,12 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		return stats, fmt.Errorf("starting claude: %w", err)
 	}
 
-	// finalSubtype/finalIsError are set by drainEvents and read after Wait. The
-	// exit code is authoritative for success; the result event only refines
-	// the error message (e.g. "error_max_turns") on non-zero exit. A mutex
-	// guards the cross-goroutine writes.
+	// final is set by drainEvents and read after Wait. The exit code is
+	// authoritative for success; the result event only refines the error
+	// (e.g. "error_max_turns", the API error text) on failure. A mutex guards
+	// the cross-goroutine writes.
 	var statsMu sync.Mutex
-	finalSubtype := ""
-	finalIsError := false
+	var final finalResult
 	var toolCalls int
 	var tokensUsed int
 	var usage resultUsage
@@ -169,10 +169,9 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	done := make(chan struct{})
 	go func() {
 		drainEvents(stdoutPipe, a.cfg.MaxOutputLineBytes, task.IdRun,
-			func(subtype string, isError bool) {
+			func(result finalResult) {
 				statsMu.Lock()
-				finalSubtype = subtype
-				finalIsError = isError
+				final = result
 				statsMu.Unlock()
 			},
 			func(n int, sawCompleteStage bool) {
@@ -229,8 +228,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	if usage.CostUsd != nil {
 		stats.CostEstimated = true
 	}
-	subtype := finalSubtype
-	isError := finalIsError
+	terminal := final
 	submitted := completeStageCalled
 	statsMu.Unlock()
 
@@ -248,7 +246,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 		}
 	}
 
-	if termErr := mapTerminalStatus(exitCode, subtype, isError); termErr != nil {
+	if termErr := mapTerminalStatus(exitCode, terminal); termErr != nil {
 		return stats, termErr
 	}
 	if !submitted {
@@ -262,39 +260,71 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	return stats, nil
 }
 
-// mapTerminalStatus converts (exit code, subtype, is_error) into an error.
-// The CLI exits zero on success; the `result` event's subtype refines the
-// message for soft failures (max-turns, execution error) on non-zero exit.
-func mapTerminalStatus(exitCode int, subtype string, isError bool) error {
-	if subtype == "error_max_turns" {
+// finalResult is what the closing `result` event says about the run.
+type finalResult struct {
+	Subtype        string
+	IsError        bool
+	Text           string
+	ApiErrorStatus int
+}
+
+// mapTerminalStatus converts the exit code and the `result` event into an
+// error. The CLI exits zero on success. On failure an API error is classified
+// by its HTTP status, and the error text the CLI reported is preferred over
+// the subtype, which stays "success" for an API error.
+func mapTerminalStatus(exitCode int, final finalResult) error {
+	if final.Subtype == "error_max_turns" {
 		return &common.AgentError{
 			Code:   common.ErrCodeTurnLimitExhausted,
 			Detail: "agent reached --max-turns before calling complete_stage",
 		}
 	}
-	if exitCode == 0 && !isError && (subtype == "" || subtype == "success") {
+	if exitCode == 0 && !final.IsError && (final.Subtype == "" || final.Subtype == "success") {
 		return nil
 	}
-	if subtype != "" {
-		return fmt.Errorf("claude code ended with result %q (exit %d)", subtype, exitCode)
+	detail := firstLine(final.Text)
+	if final.ApiErrorStatus != 0 {
+		return &common.AgentError{Code: apiErrorCode(final.ApiErrorStatus), Detail: detail}
 	}
-	if isError {
+	if detail != "" {
+		return fmt.Errorf("claude code failed (exit %d): %s", exitCode, detail)
+	}
+	if final.Subtype != "" && final.Subtype != "success" {
+		return fmt.Errorf("claude code ended with result %q (exit %d)", final.Subtype, exitCode)
+	}
+	if final.IsError {
 		return fmt.Errorf("claude code reported an error (exit %d)", exitCode)
 	}
 	return fmt.Errorf("claude code exited with code %d", exitCode)
+}
+
+func apiErrorCode(status int) string {
+	switch status {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return common.ErrCodeProviderAuthFailed
+	case http.StatusTooManyRequests:
+		return common.ErrCodeProviderRateLimited
+	default:
+		return common.ErrCodeProviderError
+	}
+}
+
+func firstLine(text string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(text), "\n")
+	return strings.TrimSpace(line)
 }
 
 // drainEvents reads stream-json events from claude stdout, forwarding each
 // well-formed line to zerolog so the operator sees the agent's timeline.
 // tool_use blocks in `assistant` messages fire onToolCalls; usage totals fire
 // onTokens (caller keeps the max); the final `result` event fires onFinal
-// with its subtype/is_error for error mapping. Thinking fragments (merged by thinkingCoalescer)
+// with its subtype, is_error, text and API status for error mapping. Thinking fragments (merged by thinkingCoalescer)
 // and tool calls fire onThinking; answer text is skipped. Thinking text is logged only at debug level.
 func drainEvents(
 	r io.Reader,
 	maxLineBytes int,
 	idRun int64,
-	onFinal func(subtype string, isError bool),
+	onFinal func(finalResult),
 	onToolCalls func(count int, sawCompleteStage bool),
 	onTokens func(int),
 	onUsage func(resultUsage),
@@ -348,7 +378,7 @@ func drainEvents(
 			}
 		case "result":
 			if onFinal != nil {
-				onFinal(ev.Subtype, ev.IsError)
+				onFinal(finalResult{Subtype: ev.Subtype, IsError: ev.IsError, Text: ev.Result, ApiErrorStatus: ev.ApiErrorStatus})
 			}
 			if onTokens != nil {
 				if tokens := totalTokens(ev); tokens > 0 {
@@ -584,7 +614,7 @@ type mcpServer struct {
 }
 
 // writeMCPSettings writes <dir>/mcp.json with the "tracker" MCP server entry
-// (stage-scoped SSE endpoint, the agent key — or a chat turn's run token — as
+// (stage-scoped streamable-HTTP endpoint, the agent key — or a chat turn's run token — as
 // an Authorization: Bearer header; the tracker API strips the prefix and matches
 // by shape) and returns its path for --mcp-config.
 //
@@ -597,7 +627,7 @@ func writeMCPSettings(dir, mcpURL, bearerToken string, idRun int64) (string, err
 	}
 	settings := mcpSettings{McpServers: map[string]mcpServer{
 		"tracker": {
-			Type: "sse",
+			Type: "http",
 			Url:  mcpURL,
 			Headers: map[string]string{
 				"Authorization":         "Bearer " + bearerToken,

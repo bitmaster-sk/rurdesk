@@ -40,7 +40,10 @@ ENV GIT_PAGER=cat
 # /root/.claude holds the Claude subscription OAuth credentials — seed it once
 # with an interactive `claude` login into the mounted named volume, otherwise
 # the CLI refuses to start (unless CLAUDE_CODE_OAUTH_TOKEN is supplied).
+# CLAUDE_CONFIG_DIR moves the CLI state file (.claude.json) from /root into the
+# same volume, so a recreated container keeps it instead of warning it is missing.
 # /worktrees holds per-run git worktrees; /var/lib/gateway holds runtime state.
+ENV CLAUDE_CONFIG_DIR=/root/.claude
 VOLUME ["/worktrees", "/var/lib/gateway", "/root/.claude"]
 
 EXPOSE 9090

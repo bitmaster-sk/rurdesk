@@ -9,8 +9,7 @@
 #         ./script/build-gateway.sh goose      # build only the goose gateway
 #         ./script/build-gateway.sh claude     # build only the claude gateway
 #
-# The dev docker-compose.yml uses the GOOSE image; claude is built for parity
-# with CI / in case you switch a bot's gateway.
+# The dev docker-compose.yml uses both: GOOSE for agents 003 and 007, CLAUDE for agent 010.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -35,4 +34,4 @@ case "$target" in
   *) echo "unknown target: $target (use: goose | claude | all)" >&2; exit 2 ;;
 esac
 
-echo "==> Done. docker-compose.yml references rurdesk-gateway-goose:latest."
+echo "==> Done. docker-compose.yml references rurdesk-gateway-goose:latest and rurdesk-gateway-claude:latest."

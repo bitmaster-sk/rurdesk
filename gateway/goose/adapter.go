@@ -61,7 +61,7 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 
 	// Stage-scoped tracker MCP endpoint, converted to the streamable-HTTP path
 	// goose ≥ v1.30 requires (it dropped SSE remote extensions).
-	mcpURL := toStreamableHTTP(common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage))
+	mcpURL := common.ToStreamableHTTP(common.MCPURLForStage(a.cfg.TrackerMCPUrl, task.Stage))
 
 	// Writes config.yaml with the stage URL + bearer token per run (not via
 	// ${ENV} substitution, which goose doesn't apply to the extension uri).
@@ -306,15 +306,6 @@ func firstLine(s string) string {
 		}
 	}
 	return strings.TrimSpace(s)
-}
-
-// toStreamableHTTP converts a tracker MCP SSE URL to the streamable-HTTP path
-// goose ≥ v1.30 requires (".../sse" → ".../http"); other URLs pass through.
-func toStreamableHTTP(mcpURL string) string {
-	if strings.HasSuffix(mcpURL, "/sse") {
-		return strings.TrimSuffix(mcpURL, "/sse") + "/http"
-	}
-	return mcpURL
 }
 
 // tokensFromMap sums a token total, tolerating a couple of key layouts

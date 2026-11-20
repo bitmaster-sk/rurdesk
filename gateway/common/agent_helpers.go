@@ -20,6 +20,18 @@ func MCPURLForStage(baseURL, stage string) string {
 	return baseURL
 }
 
+// ToStreamableHTTP converts a tracker MCP SSE URL to its streamable-HTTP path
+// (".../sse" → ".../http"); other URLs pass through. Both adapters use it:
+// goose ≥ v1.30 dropped SSE, and over SSE the claude CLI posts to the message
+// URL the tracker advertises (built from PUBLIC_BASE_URL), which the gateway
+// may not reach.
+func ToStreamableHTTP(mcpURL string) string {
+	if strings.HasSuffix(mcpURL, "/sse") {
+		return strings.TrimSuffix(mcpURL, "/sse") + "/http"
+	}
+	return mcpURL
+}
+
 // SessionUUID returns a deterministic, CLI-acceptable v4 UUID derived from
 // (run, stage, attempt). The Claude CLI requires a UUID-shaped --session-id;
 // mapping each tuple to a unique value keeps a retry from colliding with the

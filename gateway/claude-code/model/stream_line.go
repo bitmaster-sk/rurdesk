@@ -8,13 +8,17 @@ import "encoding/json"
 // TotalCostUsd. The embedded TokenUsage catches token counts a CLI version puts
 // on the result event itself instead of under "usage".
 type StreamLine struct {
-	Type         string        `json:"type"`
-	Subtype      string        `json:"subtype,omitempty"`
-	IsError      bool          `json:"is_error,omitempty"`
-	Message      *Message      `json:"message,omitempty"`
-	Event        *PartialEvent `json:"event,omitempty"`
-	Usage        *TokenUsage   `json:"usage,omitempty"`
-	TotalCostUsd *float64      `json:"total_cost_usd,omitempty"`
+	Type    string `json:"type"`
+	Subtype string `json:"subtype,omitempty"`
+	IsError bool   `json:"is_error,omitempty"`
+	// Result is the final answer of a `result` event, or the error text when IsError.
+	Result string `json:"result,omitempty"`
+	// ApiErrorStatus is the HTTP status of the Anthropic API error that ended the run.
+	ApiErrorStatus int           `json:"api_error_status,omitempty"`
+	Message        *Message      `json:"message,omitempty"`
+	Event          *PartialEvent `json:"event,omitempty"`
+	Usage          *TokenUsage   `json:"usage,omitempty"`
+	TotalCostUsd   *float64      `json:"total_cost_usd,omitempty"`
 	TokenUsage
 }
 

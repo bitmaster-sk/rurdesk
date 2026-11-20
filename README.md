@@ -124,7 +124,7 @@ built locally, not pulled).
 # 1. One .env per service folder that ships an .env.example, then fill in the values.
 for d in docker/api docker/gateway-agent-*; do cp "$d/.env.example" "$d/.env"; done
 
-# 2. Build the gateway image docker-compose.yml refers to by plain tag.
+# 2. Build the gateway images docker-compose.yml refers to by plain tag.
 ./script/build-gateway.sh
 
 # 3. Start everything.
@@ -132,7 +132,8 @@ docker compose up
 ```
 
 Builds and runs the stack from source: nginx proxy (`:80`), API (`:1000`
-internal), Postgres (`:5432`), Redis (`:6379`), and two goose gateway workers.
+internal), Postgres (`:5432`), Redis (`:6379`), two goose gateway workers and one
+claude-code gateway worker (`gateway-agent-010`).
 The UI is then on <http://localhost>. The first start installs the client's npm
 dependencies inside its container, so it takes a few minutes before the proxy
 stops answering 502.
