@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -139,8 +138,7 @@ func (s *AgentConversationDispatchSuite) TestOrphanedRunningChatTurn_SweepCancel
 		event.Payload.IdTask)
 	s.Require().NoError(err)
 
-	agent.FailRunOrChatTurn(ctx, injector.GetNotifier(), injector.GetProjectRepository(), injector.GetIssueRepository(),
-		injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(), injector.GetChatTurns(), event.IdRun, constants.FailReasonHeartbeatStale)
+	s.interruptStale(event.IdRun, event.Payload.IdTask)
 
 	s.Equal(constants.PhaseCancelled, s.runPhase(event.IdRun))
 	s.Equal(http.StatusUnauthorized, s.status("GET", s.issuesURL(s.P1), "", event.Payload.RunToken))

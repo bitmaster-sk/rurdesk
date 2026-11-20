@@ -35,6 +35,14 @@ const (
 	RunKindChat         = "chat"
 )
 
+// privateRunKinds are the kinds of run only their owner sees: nobody else gets their run
+// notices, overview entry, thinking or wiki reads.
+var privateRunKinds = map[string]bool{RunKindChat: true}
+
+func IsPrivateRunKind(kind string) bool {
+	return privateRunKinds[kind]
+}
+
 const (
 	TaskStatusPending   = "pending"
 	TaskStatusActive    = "active"
@@ -173,6 +181,9 @@ const (
 	FailReasonHeartbeatStale = "heartbeat_stale" // no heartbeat within the sweep window
 	FailReasonGatewayRestart = "gateway_restart" // gateway (re)start ReportRecovered
 )
+
+// FailReasonDispatchFailed marks a task whose payload could not be built or delivered to the gateway.
+const FailReasonDispatchFailed = "dispatch_failed"
 
 // RecoverableFailReasons are error_reasons for which a late complete_stage from a
 // still-live gateway is reconciled instead of rejected. heartbeat_stale is

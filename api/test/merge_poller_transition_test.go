@@ -102,13 +102,12 @@ func (s *MergePollerTransitionSuite) SetupSuite() {
 
 	s.poller = agent.NewMergePoller(
 		injector.GetAgentRunRepository(),
-		injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(),
 		injector.GetGitIntegrationRepository(),
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
-		injector.GetWikiProposalService(),
+		injector.GetRunKinds(),
 		s.pollerNotifier,
 	)
 	s.Require().NotNil(s.poller)

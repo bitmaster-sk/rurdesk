@@ -6,34 +6,14 @@ import (
 	"sort"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
-	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
-	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/rs/zerolog/log"
 )
 
-// buildStagePayload builds the stage_execute payload of an issue or release notes stage and
-// returns the wiki pages its prompt carries, recorded once the payload is delivered.
-func (d *Dispatcher) buildStagePayload(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (map[string]any, []*model.AgentRunWikiRead, error) {
-	bundle, wikiReads, err := d.buildContextBundle(ctx, run, task)
-	if err != nil {
-		return nil, nil, fmt.Errorf("context bundle build error: %w", err)
-	}
-
-	var repo *model.AgentRunGitRepo
-	prBranch := ""
-	if run.IdIssue != nil {
-		repo, err = d.agentRunGitRepo(ctx, run)
-		if err != nil {
-			return nil, nil, err
-		}
-		prBranch, err = d.openPrBranch(ctx, run)
-		if err != nil {
-			log.Warn().Err(err).Int64("idRun", run.IdRun).Str("prBranch", prBranch).Msg("resolving the issue's open PR branch")
-		}
-	}
-
+// stagePayload builds the stage_execute payload of an issue or release notes stage around its
+// context bundle.
+func (c *runCommon) stagePayload(ctx context.Context, run *model.AgentRun, task *model.AgentTask, bundle map[string]any, repo *model.AgentRunGitRepo, prBranch string) (map[string]any, error) {
 	payload := map[string]any{
 		"idTask":        task.IdTask,
 		"stage":         task.Stage,
@@ -44,9 +24,9 @@ func (d *Dispatcher) buildStagePayload(ctx context.Context, run *model.AgentRun,
 		"repo":          repo,
 	}
 	if constants.IsSkillStage(task.Stage) {
-		taskConfig, err := d.resolveAgentTaskConfig(ctx, run, task)
+		taskConfig, err := c.resolveAgentTaskConfig(ctx, run, task)
 		if err != nil {
-			return nil, nil, fmt.Errorf("model resolution error: %w", err)
+			return nil, fmt.Errorf("model resolution error: %w", err)
 		}
 		payload["maxTurns"] = taskConfig.MaxTurns
 		if taskConfig.Model != nil {
@@ -56,31 +36,33 @@ func (d *Dispatcher) buildStagePayload(ctx context.Context, run *model.AgentRun,
 			payload["effort"] = *taskConfig.Effort
 		}
 	}
-	return payload, wikiReads, nil
+	return payload, nil
 }
 
-// buildContextBundle assembles the per-stage context for a stage attempt.
-func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (map[string]any, []*model.AgentRunWikiRead, error) {
-	project, err := d.projectRepo.LoadProject(ctx, run.IdProject)
+// contextBundle assembles the context every issue or release notes stage attempt gets; the kind adds
+// what its subject brings. idIssue names the issue whose linked wiki pages lead the prompt. Returns the
+// run's tasks too, which the issue's stage artifacts come from.
+func (c *runCommon) contextBundle(ctx context.Context, run *model.AgentRun, task *model.AgentTask, idIssue *int64) (map[string]any, []*model.AgentRunWikiRead, []*model.AgentTask, error) {
+	project, err := c.projectRepo.LoadProject(ctx, run.IdProject)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading project: %w", err)
+		return nil, nil, nil, fmt.Errorf("loading project: %w", err)
 	}
-	agent, err := d.userRepo.LoadUser(ctx, run.IdUserAgent)
+	agent, err := c.userRepo.LoadUser(ctx, run.IdUserAgent)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading agent user: %w", err)
+		return nil, nil, nil, fmt.Errorf("loading agent user: %w", err)
 	}
 	// Must not be swallowed: without tasks the prompt would
 	// tell the agent to implement an approved plan and attach nothing.
-	priorTasks, err := d.taskRepo.LoadByRun(ctx, run.IdRun)
+	priorTasks, err := c.taskRepo.LoadByRun(ctx, run.IdRun)
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading prior tasks: %w", err)
+		return nil, nil, nil, fmt.Errorf("loading prior tasks: %w", err)
 	}
 
 	// A skill deleted between planning and dispatch is simply absent: a missing
 	// skill must never fail a run.
 	var stageSkills []*model.Skill
-	if ids := d.stagePlan.IdsSkillForStage(run.StagePlan, task.Stage); len(ids) > 0 {
-		loaded, skillErr := d.skillService.LoadByIds(ctx, ids)
+	if ids := c.stagePlan.IdsSkillForStage(run.StagePlan, task.Stage); len(ids) > 0 {
+		loaded, skillErr := c.skillService.LoadByIds(ctx, ids)
 		if skillErr != nil {
 			log.Warn().Err(skillErr).Int64("idRun", run.IdRun).Msg("loading stage skills — dispatching without them")
 		}
@@ -88,7 +70,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 	}
 
 	// Like a missing skill, an unreadable wiki must never fail a run.
-	wiki, wikiReads, err := d.wikiAgent.BuildPromptContext(ctx, run, task)
+	wiki, wikiReads, err := c.wikiAgent.BuildPromptContext(ctx, run, task, idIssue)
 	if err != nil {
 		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("building wiki context — dispatching without it")
 		wiki, wikiReads = nil, nil
@@ -96,7 +78,7 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 
 	var proposals []model.WikiProposalAgentView
 	if task.Stage == constants.StageImplementation {
-		proposals, err = d.proposals.LoadForPrompt(ctx, run.IdRun)
+		proposals, err = c.proposals.LoadForPrompt(ctx, run.IdRun)
 		if err != nil {
 			log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("loading wiki proposals — dispatching without them")
 			proposals = nil
@@ -110,33 +92,10 @@ func (d *Dispatcher) buildContextBundle(ctx context.Context, run *model.AgentRun
 		"skills":            stageSkills,
 		"wiki":              wiki,
 		"wikiProposals":     proposals,
-		"isShortWorkflow":   d.stagePlan.IsShortWorkflow(run.StagePlan),
-	}
-	if run.IdIssue != nil {
-		issue, err := d.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: run.IdIssue})
-		if err != nil {
-			return nil, nil, fmt.Errorf("loading issue: %w", err)
-		}
-		messages, err := d.messageRepo.LoadIssueMessages(ctx, *run.IdIssue, 0, nil)
-		if err != nil {
-			messages = nil
-		}
-		artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
-		bundle["issue"] = issue
-		bundle["reviewThread"] = reviewThread(messages)
-		bundle["approvedDesign"] = artifacts.ApprovedDesign
-		bundle["approvedImplPlan"] = artifacts.ApprovedImplPlan
-		bundle["rejectedOutput"] = artifacts.RejectedOutput
-	}
-	if run.IdRelease != nil {
-		release, err := d.releases.PromptContext(ctx, run)
-		if err != nil {
-			return nil, nil, fmt.Errorf("loading release: %w", err)
-		}
-		bundle["release"] = release
+		"isShortWorkflow":   c.stagePlan.IsShortWorkflow(run.StagePlan),
 	}
 	bundle["resumedAfter"], bundle["isRevision"] = ResolveAttemptContext(priorTasks, task)
-	return bundle, wikiReads, nil
+	return bundle, wikiReads, priorTasks, nil
 }
 
 // reviewThread returns the whole issue conversation oldest-first. Never trim it
@@ -238,24 +197,24 @@ func findMessageById(messages []*model.Message, idMessage int64) *model.Message 
 	return nil
 }
 
-func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (service.AgentTaskConfig, error) {
-	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+func (c *runCommon) resolveAgentTaskConfig(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (service.AgentTaskConfig, error) {
+	gateway, err := c.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil {
 		return service.AgentTaskConfig{}, fmt.Errorf("loading gateway: %w", err)
 	}
 	if gateway == nil {
 		return service.AgentTaskConfig{}, fmt.Errorf("no gateway configured for agent %d", run.IdUserAgent)
 	}
-	plan, err := d.stagePlan.Parse(run.StagePlan)
+	plan, err := c.stagePlan.Parse(run.StagePlan)
 	if err != nil {
 		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("unparseable stage plan, dispatching with defaults")
 	}
 
-	modelsWithoutThinking, err := d.agentTaskConfig.ModelsWithoutThinking(ctx, gateway)
+	modelsWithoutThinking, err := c.agentTaskConfig.ModelsWithoutThinking(ctx, gateway)
 	if err != nil {
 		return service.AgentTaskConfig{}, err
 	}
-	taskConfig := d.agentTaskConfig.BuildAgentTaskConfig(plan, task.Stage, gateway, modelsWithoutThinking)
+	taskConfig := c.agentTaskConfig.BuildAgentTaskConfig(plan, task.Stage, gateway, modelsWithoutThinking)
 	if taskConfig.FallbackFrom != nil {
 		used := ""
 		if taskConfig.Model != nil {
@@ -263,52 +222,14 @@ func (d *Dispatcher) resolveAgentTaskConfig(ctx context.Context, run *model.Agen
 		}
 		log.Warn().Int64("idTask", task.IdTask).Str("requested", *taskConfig.FallbackFrom).Str("used", used).Msg("model no longer offered by the gateway, falling back to its default")
 		fallback := model.ModelFallbackPayload{IdTask: task.IdTask, Requested: *taskConfig.FallbackFrom, Used: used}
-		if err := d.agentRunRepo.InsertEvent(ctx, run.IdRun, run.Phase, run.Phase, constants.ActorTypeSystem, nil, constants.RunEventModelFallback, fallback); err != nil {
+		if err := c.runRepo.InsertEvent(ctx, run.IdRun, run.Phase, run.Phase, constants.ActorTypeSystem, nil, constants.RunEventModelFallback, fallback); err != nil {
 			return service.AgentTaskConfig{}, err
 		}
 	}
-	if err := d.taskRepo.SetRunConfig(ctx, task.IdTask, taskConfig.Model, taskConfig.MaxTurns, taskConfig.Effort); err != nil {
+	if err := c.taskRepo.SetRunConfig(ctx, task.IdTask, taskConfig.Model, taskConfig.MaxTurns, taskConfig.Effort); err != nil {
 		return service.AgentTaskConfig{}, err
 	}
 	task.Model, task.MaxTurns = taskConfig.Model, &taskConfig.MaxTurns
 	task.Effort = taskConfig.Effort
 	return taskConfig, nil
-}
-
-func (d *Dispatcher) openPrBranch(ctx context.Context, run *model.AgentRun) (string, error) {
-	prRun, err := d.agentRunRepo.LoadLatestWithPrByIssue(ctx, *run.IdIssue)
-	if err != nil {
-		return "", fmt.Errorf("loading the issue's latest PR run: %w", err)
-	}
-	if prRun == nil {
-		return "", nil
-	}
-	isOpen, err := d.isPrOpen(ctx, prRun)
-	if err != nil {
-		// A fresh branch here would stick for the whole run and open a duplicate PR.
-		return *prRun.BranchName, err
-	}
-	if !isOpen {
-		return "", nil
-	}
-	return *prRun.BranchName, nil
-}
-
-func (d *Dispatcher) isPrOpen(ctx context.Context, prRun *model.AgentRun) (bool, error) {
-	integration, err := d.gitIntRepo.LoadByID(ctx, *prRun.IdGitIntegration, prRun.IdProject)
-	if err != nil {
-		return false, fmt.Errorf("loading git integration %d: %w", *prRun.IdGitIntegration, err)
-	}
-	if integration == nil {
-		return false, fmt.Errorf("git integration %d not found", *prRun.IdGitIntegration)
-	}
-	host, err := githost.BuildFromIntegration(integration)
-	if err != nil {
-		return false, fmt.Errorf("building git host: %w", err)
-	}
-	status, err := host.GetMergeRequestStatus(ctx, *prRun.PrId)
-	if err != nil {
-		return false, fmt.Errorf("loading PR %s status: %w", *prRun.PrId, err)
-	}
-	return status.State == constants.MrStateOpen, nil
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify/notifytest"
+	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/suite"
@@ -88,7 +89,7 @@ func (s *AgentConversationDispatchSuite) SetupSuite() {
 	// the real dispatcher, so leftovers of other suites never hit a gateway.
 	s.Sched = agent.NewScheduler(s.App.Pool, injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(), injector.GetIssueRepository(),
-		&agentsOnlyDispatcher{suite: s, real: injector.GetDispatcher()}, injector.GetChatTurns(), injector.GetNotifier())
+		&agentsOnlyDispatcher{suite: s, real: injector.GetDispatcher()}, injector.GetRunKinds(), injector.GetNotifier())
 }
 
 func (s *AgentConversationDispatchSuite) TearDownSuite() {
@@ -133,16 +134,24 @@ func (d *agentsOnlyDispatcher) isOurs(run *model.AgentRun) bool {
 	return false
 }
 
-func (d *agentsOnlyDispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask) {
-	if d.isOurs(run) {
-		d.real.DispatchStageExecute(ctx, run, task)
+func (d *agentsOnlyDispatcher) DispatchStage(ctx context.Context, dispatch *agent.Dispatch) {
+	if d.isOurs(dispatch.Run) {
+		d.real.DispatchStage(ctx, dispatch)
 	}
 }
 
-func (d *agentsOnlyDispatcher) DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) {
-	if d.isOurs(run) {
-		d.real.DispatchChatTurn(ctx, run, task, runToken)
-	}
+// interruptStale hands a task to its run's kind the way the heartbeat sweep does once it failed it.
+func (s *AgentConversationDispatchSuite) interruptStale(idRun, idTask int64) {
+	s.T().Helper()
+	s.Require().NoError(agent.InterruptFailedTask(context.Background(), injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
+		injector.GetRunKinds(), repository.FailedTask{IdRun: idRun, IdTask: idTask}, agent.InterruptHeartbeatStale))
+}
+
+// kindsWith builds the run kinds around a recording notifier, so every notice they send is visible.
+func (s *AgentConversationDispatchSuite) kindsWith(recorder *notifytest.Recorder) *agent.RunKinds {
+	deps := injector.GetRunKindDeps()
+	deps.Notifier = recorder
+	return agent.NewRunKinds(deps)
 }
 
 func (s *AgentConversationDispatchSuite) createAgent(name, gatewayURL string) (int64, string) {
@@ -454,8 +463,6 @@ func (s *AgentConversationDispatchSuite) createIssue(title string) model.Issue {
 func (s *AgentConversationDispatchSuite) controllerWith(recorder *notifytest.Recorder) *controller.AgentRunController {
 	thinking, err := injector.GetAgentThinkingService()
 	s.Require().NoError(err)
-	turns := agent.NewChatTurns(s.App.Pool, injector.GetAgentConversationRepository(),
-		injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(), thinking, recorder)
 	return controller.NewAgentRunController(
 		injector.GetAgentRunRepository(),
 		injector.GetAgentTaskRepository(),
@@ -464,16 +471,11 @@ func (s *AgentConversationDispatchSuite) controllerWith(recorder *notifytest.Rec
 		injector.GetAgentGatewayRepository(),
 		injector.GetIssueRepository(),
 		injector.GetProjectRepository(),
-		injector.GetMessageRepository(),
-		injector.GetAttachmentLinkService(),
-		injector.GetGitIntegrationRepository(),
 		injector.GetAclService(),
 		injector.GetAgentStagePlanService(),
 		injector.GetAgentTaskConfigService(),
 		injector.GetDispatcher(),
-		turns,
-		injector.GetWikiProposalService(),
-		injector.GetReleaseService(),
+		s.kindsWith(recorder),
 		recorder,
 		s.App.Pool,
 	)
@@ -501,11 +503,8 @@ func (s *AgentConversationDispatchSuite) TestNotifyTurnStarted_TellsTheOwnerOnly
 	s.Require().NoError(err)
 
 	recorder := &notifytest.Recorder{}
-	thinking, err := injector.GetAgentThinkingService()
-	s.Require().NoError(err)
-	turns := agent.NewChatTurns(s.App.Pool, injector.GetAgentConversationRepository(),
-		injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(), thinking, recorder)
-	turns.NotifyTurnStarted(context.Background(), s.chatRun(conv), task)
+	run := s.chatRun(conv)
+	s.kindsWith(recorder).For(run).Started(context.Background(), &agent.Dispatch{Run: run, Task: task})
 
 	notices := recorder.Notices()
 	s.Require().Len(notices, 1)
@@ -842,8 +841,7 @@ func (s *AgentConversationDispatchSuite) TestHeartbeatSweep_ChatTurnEndsWithErro
 		event.Payload.IdTask)
 	s.Require().NoError(err)
 
-	agent.FailRunOrChatTurn(context.Background(), injector.GetNotifier(), injector.GetProjectRepository(), injector.GetIssueRepository(),
-		injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(), injector.GetChatTurns(), run.IdRun, constants.FailReasonHeartbeatStale)
+	s.interruptStale(run.IdRun, event.Payload.IdTask)
 
 	s.Equal(constants.PhaseAwaitingInput, s.chatRun(conv).Phase, "a stale chat turn does not fail the conversation")
 	messages := s.messages(conv)
@@ -851,6 +849,34 @@ func (s *AgentConversationDispatchSuite) TestHeartbeatSweep_ChatTurnEndsWithErro
 	s.Equal(constants.ConversationMessageError, last.Kind)
 	s.Equal(constants.FailReasonHeartbeatStale, last.Body)
 	s.Equal(http.StatusUnauthorized, s.status("GET", s.issuesURL(s.P1), "", event.Payload.RunToken))
+}
+
+func (s *AgentConversationDispatchSuite) TestUndeliverableChatTurnEndsWithError() {
+	ctx := context.Background()
+	idBot, _ := s.createAgent("chat undeliverable bot", s.Gateway.URL)
+	s.addMember(s.P1, idBot)
+	conv, err := s.Svc.CreateConversation(ctx, s.Owner, model.CreateAgentConversationReq{IdUserAgent: idBot, IdProject: ptr(s.P1)})
+	s.Require().NoError(err)
+	s.post(conv, "anyone there?")
+	_, err = s.App.Pool.Exec(ctx, "DELETE FROM agent.gateway WHERE id_user_agent = $1", idBot)
+	s.Require().NoError(err)
+
+	s.tick()
+
+	s.Require().Eventually(func() bool {
+		messages := s.messages(conv)
+		return messages[len(messages)-1].Kind == constants.ConversationMessageError
+	}, 10*time.Second, 50*time.Millisecond, "an undeliverable turn ends with an error message")
+	messages := s.messages(conv)
+	s.Equal("dispatch_failed", messages[len(messages)-1].Body)
+	run := s.chatRun(conv)
+	s.Equal(constants.PhaseAwaitingInput, run.Phase, "an undeliverable turn does not fail the conversation")
+	tasks := s.tasks(run.IdRun)
+	s.Require().Len(tasks, 1)
+	s.Equal(constants.TaskStatusFailed, tasks[0].Status)
+	s.Require().NotNil(tasks[0].ErrorReason)
+	s.Equal("dispatch_failed", *tasks[0].ErrorReason)
+	s.requireNoEvent()
 }
 
 func (s *AgentConversationDispatchSuite) TestRequestTaskDraft_DispatchesTaskDraftMode() {
@@ -977,7 +1003,7 @@ func (s *AgentConversationDispatchSuite) TestLateDispatchFailure_AfterRestartReq
 	run := s.chatRun(conv)
 	oldTask, err := injector.GetAgentTaskRepository().LoadById(ctx, old.Payload.IdTask)
 	s.Require().NoError(err)
-	_, err = injector.GetChatTurns().Fail(ctx, run, oldTask, "dispatch_failed", "retries exhausted")
+	err = injector.GetRunKinds().For(run).Interrupt(ctx, run, oldTask, agent.InterruptDispatchFailed, "retries exhausted")
 	s.Require().NoError(err)
 
 	s.Equal([]string{"hello"}, bodies(derefMessages(s.messages(conv))), "no error message for a superseded attempt")

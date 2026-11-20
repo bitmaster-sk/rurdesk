@@ -781,41 +781,47 @@ func GetDispatcher() *agent.Dispatcher {
 	instance, _ := di.GetWithNew("dispatcher", func() (any, error) {
 		return agent.NewDispatcher(
 			GetAgentRunRepository(),
-			GetAgentTaskRepository(),
 			GetAgentGatewayRepository(),
-			GetGitIntegrationRepository(),
-			GetIssueRepository(),
-			GetMessageRepository(),
-			GetProjectRepository(),
-			GetUserRepository(),
-			GetSkillService(),
-			GetAgentStagePlanService(),
 			GetWikiAgentService(),
-			GetWikiProposalService(),
-			GetReleaseService(),
-			GetAgentTaskConfigService(),
-			GetAgentConversationRepository(),
-			GetAgentConversationService(),
-			GetChatTurns(),
+			GetRunKinds(),
 			GetGatewayClient(),
-			GetNotifier(),
 		), nil
 	})
 	return instance.(*agent.Dispatcher)
 }
 
-func GetChatTurns() *agent.ChatTurns {
-	instance, _ := di.GetWithNew("chat-turns", func() (any, error) {
-		return agent.NewChatTurns(
-			mustDb(),
-			GetAgentConversationRepository(),
-			GetAgentRunRepository(),
-			GetAgentTaskRepository(),
-			mustAgentThinkingService(),
-			GetNotifier(),
-		), nil
+// GetRunKindDeps returns the dependencies of the run kinds, for building a registry with one of
+// them replaced.
+func GetRunKindDeps() agent.RunKindDeps {
+	return agent.RunKindDeps{
+		Pool:              mustDb(),
+		RunRepo:           GetAgentRunRepository(),
+		TaskRepo:          GetAgentTaskRepository(),
+		AgentGwRepo:       GetAgentGatewayRepository(),
+		GitIntRepo:        GetGitIntegrationRepository(),
+		IssueRepo:         GetIssueRepository(),
+		MessageRepo:       GetMessageRepository(),
+		ProjectRepo:       GetProjectRepository(),
+		UserRepo:          GetUserRepository(),
+		ConversationRepo:  GetAgentConversationRepository(),
+		SkillService:      GetSkillService(),
+		StagePlan:         GetAgentStagePlanService(),
+		WikiAgent:         GetWikiAgentService(),
+		Proposals:         GetWikiProposalService(),
+		Releases:          GetReleaseService(),
+		AgentTaskConfig:   GetAgentTaskConfigService(),
+		Conversations:     GetAgentConversationService(),
+		AttachmentLinkSvc: GetAttachmentLinkService(),
+		Thinking:          mustAgentThinkingService(),
+		Notifier:          GetNotifier(),
+	}
+}
+
+func GetRunKinds() *agent.RunKinds {
+	instance, _ := di.GetWithNew("run-kinds", func() (any, error) {
+		return agent.NewRunKinds(GetRunKindDeps()), nil
 	})
-	return instance.(*agent.ChatTurns)
+	return instance.(*agent.RunKinds)
 }
 
 func GetSweep() *agent.Sweep {
@@ -823,10 +829,7 @@ func GetSweep() *agent.Sweep {
 		return agent.NewSweep(
 			GetAgentTaskRepository(),
 			GetAgentRunRepository(),
-			GetProjectRepository(),
-			GetIssueRepository(),
-			GetChatTurns(),
-			GetNotifier(),
+			GetRunKinds(),
 		), nil
 	})
 	return instance.(*agent.Sweep)
@@ -841,7 +844,7 @@ func GetScheduler() *agent.Scheduler {
 			GetProjectRepository(),
 			GetIssueRepository(),
 			GetDispatcher(),
-			GetChatTurns(),
+			GetRunKinds(),
 			GetNotifier(),
 		), nil
 	})
@@ -924,16 +927,11 @@ func GetAgentRunController() (*controller.AgentRunController, error) {
 			GetAgentGatewayRepository(),
 			GetIssueRepository(),
 			GetProjectRepository(),
-			GetMessageRepository(),
-			GetAttachmentLinkService(),
-			GetGitIntegrationRepository(),
 			GetAclService(),
 			GetAgentStagePlanService(),
 			GetAgentTaskConfigService(),
 			GetDispatcher(),
-			GetChatTurns(),
-			GetWikiProposalService(),
-			GetReleaseService(),
+			GetRunKinds(),
 			GetNotifier(),
 			pool,
 		), nil
@@ -1376,13 +1374,12 @@ func GetMergePoller() *agent.MergePoller {
 	instance, _ := di.GetWithNew("merge-poller", func() (any, error) {
 		return agent.NewMergePoller(
 			GetAgentRunRepository(),
-			GetAgentTaskRepository(),
 			GetProjectRepository(),
 			GetGitIntegrationRepository(),
 			GetIssueRepository(),
 			GetStateRepository(),
 			GetPhaseStateTransitioner(),
-			GetWikiProposalService(),
+			GetRunKinds(),
 			GetNotifier(),
 		), nil
 	})

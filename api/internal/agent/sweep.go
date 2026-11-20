@@ -2,38 +2,48 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
-	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/rs/zerolog/log"
 )
 
+// InterruptFailedTask hands a task a bulk update already failed to its run's kind.
+func InterruptFailedTask(
+	ctx context.Context,
+	runRepo *repository.AgentRunRepository,
+	taskRepo *repository.AgentTaskRepository,
+	kinds *RunKinds,
+	failed repository.FailedTask,
+	reason InterruptReason,
+) error {
+	run, err := runRepo.LoadById(ctx, failed.IdRun)
+	if err != nil {
+		return fmt.Errorf("loading run %d: %w", failed.IdRun, err)
+	}
+	task, err := taskRepo.LoadById(ctx, failed.IdTask)
+	if err != nil {
+		return fmt.Errorf("loading task %d: %w", failed.IdTask, err)
+	}
+	return kinds.For(run).Interrupt(ctx, run, task, reason, "")
+}
+
 type Sweep struct {
 	agentTaskRepo *repository.AgentTaskRepository
 	agentRunRepo  *repository.AgentRunRepository
-	projectRepo   *repository.ProjectRepository
-	issueRepo     *repository.IssueRepository
-	chatTurns     *ChatTurns
-	notifier      notify.INotifier
+	kinds         *RunKinds
 }
 
 func NewSweep(
 	taskRepo *repository.AgentTaskRepository,
 	runRepo *repository.AgentRunRepository,
-	projectRepo *repository.ProjectRepository,
-	issueRepo *repository.IssueRepository,
-	chatTurns *ChatTurns,
-	notifier notify.INotifier,
+	kinds *RunKinds,
 ) *Sweep {
 	return &Sweep{
 		agentTaskRepo: taskRepo,
 		agentRunRepo:  runRepo,
-		projectRepo:   projectRepo,
-		issueRepo:     issueRepo,
-		chatTurns:     chatTurns,
-		notifier:      notifier,
+		kinds:         kinds,
 	}
 }
 
@@ -47,19 +57,22 @@ func (s *Sweep) StartHeartbeatSweep(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			s.runHeartbeatSweep(ctx)
+			s.HeartbeatSweepOnce(ctx)
 		}
 	}
 }
 
-func (s *Sweep) runHeartbeatSweep(ctx context.Context) {
-	runIds, err := s.agentTaskRepo.FailStaleHeartbeats(ctx, 10*time.Minute)
+// HeartbeatSweepOnce fails the active tasks whose heartbeat is older than 10 minutes and interrupts their runs.
+func (s *Sweep) HeartbeatSweepOnce(ctx context.Context) {
+	failed, err := s.agentTaskRepo.FailStaleHeartbeats(ctx, 10*time.Minute)
 	if err != nil {
 		log.Error().Err(err).Msg("heartbeat sweep error")
 		return
 	}
-	for _, idRun := range runIds {
-		log.Warn().Int64("idRun", idRun).Msg("heartbeat sweep: failing run with stale heartbeat")
-		FailRunOrChatTurn(ctx, s.notifier, s.projectRepo, s.issueRepo, s.agentRunRepo, s.agentTaskRepo, s.chatTurns, idRun, constants.FailReasonHeartbeatStale)
+	for _, failedTask := range failed {
+		log.Warn().Int64("idRun", failedTask.IdRun).Msg("heartbeat sweep: interrupting run with stale heartbeat")
+		if err := InterruptFailedTask(ctx, s.agentRunRepo, s.agentTaskRepo, s.kinds, failedTask, InterruptHeartbeatStale); err != nil {
+			log.Error().Err(err).Int64("idRun", failedTask.IdRun).Msg("heartbeat sweep: interrupting run")
+		}
 	}
 }

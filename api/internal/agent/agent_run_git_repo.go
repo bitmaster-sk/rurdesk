@@ -16,8 +16,8 @@ const emptyRepoBaseBranch = "main"
 var ErrProjectHasNoGitIntegration = errors.New("the project has no git integration; add one in the project settings so the agent knows which repository to work in")
 
 // Stamped only at the first dispatch: every stage and the PR must stay on the same repo and base branch.
-func (d *Dispatcher) agentRunGitRepo(ctx context.Context, run *model.AgentRun) (*model.AgentRunGitRepo, error) {
-	integration, err := d.agentRunGitIntegration(ctx, run)
+func (c *runCommon) agentRunGitRepo(ctx context.Context, run *model.AgentRun) (*model.AgentRunGitRepo, error) {
+	integration, err := c.agentRunGitIntegration(ctx, run)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (d *Dispatcher) agentRunGitRepo(ctx context.Context, run *model.AgentRun) (
 		if baseBranch, err = integrationBaseBranch(ctx, integration, token); err != nil {
 			return nil, err
 		}
-		if err := d.agentRunRepo.SetGitIntegrationAndBaseBranch(ctx, run.IdRun, integration.IdGitIntegration, baseBranch); err != nil {
+		if err := c.runRepo.SetGitIntegrationAndBaseBranch(ctx, run.IdRun, integration.IdGitIntegration, baseBranch); err != nil {
 			return nil, err
 		}
 		run.IdGitIntegration = &integration.IdGitIntegration
@@ -45,7 +45,7 @@ func (d *Dispatcher) agentRunGitRepo(ctx context.Context, run *model.AgentRun) (
 	if err != nil {
 		return nil, err
 	}
-	encryptedToken, err := d.encryptGitTokenForGateway(ctx, run, token)
+	encryptedToken, err := c.encryptGitTokenForGateway(ctx, run, token)
 	if err != nil {
 		return nil, err
 	}
@@ -58,9 +58,9 @@ func (d *Dispatcher) agentRunGitRepo(ctx context.Context, run *model.AgentRun) (
 	}, nil
 }
 
-func (d *Dispatcher) agentRunGitIntegration(ctx context.Context, run *model.AgentRun) (*model.GitIntegration, error) {
+func (c *runCommon) agentRunGitIntegration(ctx context.Context, run *model.AgentRun) (*model.GitIntegration, error) {
 	if run.IdGitIntegration != nil {
-		integration, err := d.gitIntRepo.LoadByID(ctx, *run.IdGitIntegration, run.IdProject)
+		integration, err := c.gitIntRepo.LoadByID(ctx, *run.IdGitIntegration, run.IdProject)
 		if err != nil {
 			return nil, fmt.Errorf("loading git integration %d: %w", *run.IdGitIntegration, err)
 		}
@@ -69,7 +69,7 @@ func (d *Dispatcher) agentRunGitIntegration(ctx context.Context, run *model.Agen
 		}
 		return integration, nil
 	}
-	integration, err := d.gitIntRepo.LoadByProject(ctx, run.IdProject)
+	integration, err := c.gitIntRepo.LoadByProject(ctx, run.IdProject)
 	if err != nil {
 		return nil, err
 	}
@@ -79,8 +79,8 @@ func (d *Dispatcher) agentRunGitIntegration(ctx context.Context, run *model.Agen
 	return integration, nil
 }
 
-func (d *Dispatcher) encryptGitTokenForGateway(ctx context.Context, run *model.AgentRun, token string) (string, error) {
-	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+func (c *runCommon) encryptGitTokenForGateway(ctx context.Context, run *model.AgentRun, token string) (string, error) {
+	gateway, err := c.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil {
 		return "", fmt.Errorf("loading gateway: %w", err)
 	}

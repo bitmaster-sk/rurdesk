@@ -297,9 +297,8 @@ func (r *AgentTaskRepository) RecordHeartbeat(ctx context.Context, idTask int64)
 }
 
 // FailStaleHeartbeats marks active tasks with no heartbeat for longer than
-// maxAge as failed, returning the distinct affected run ids so the caller can
-// fail those runs too.
-func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge time.Duration) ([]int64, error) {
+// maxAge as failed and returns them, so the caller can interrupt their runs.
+func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge time.Duration) ([]FailedTask, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		UPDATE agent.task
@@ -308,22 +307,21 @@ func (r *AgentTaskRepository) FailStaleHeartbeats(ctx context.Context, maxAge ti
 		    error_reason = COALESCE(error_reason, 'heartbeat_stale')
 		WHERE status = 'active'
 		  AND last_heartbeat_at < now() - $1::interval
-		RETURNING id_run`,
+		RETURNING id_run, id_task`,
 		fmt.Sprintf("%d milliseconds", maxAge.Milliseconds()),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failing stale heartbeats: %w", err)
 	}
 	defer rows.Close()
-
-	return distinctRunIds(rows)
+	return scanFailedTasks(rows)
 }
 
 // FailActiveForAgent marks every active task of the agent's runs as failed and
-// returns the affected run ids. Used when a gateway reports a (re)start: its
+// returns them. Used when a gateway reports a (re)start: its
 // in-flight subprocesses are gone, so the caller fails those runs so the user
 // sees Continue/Restart.
-func (r *AgentTaskRepository) FailActiveForAgent(ctx context.Context, idUserAgent int64) ([]int64, error) {
+func (r *AgentTaskRepository) FailActiveForAgent(ctx context.Context, idUserAgent int64) ([]FailedTask, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		UPDATE agent.task t
@@ -334,33 +332,35 @@ func (r *AgentTaskRepository) FailActiveForAgent(ctx context.Context, idUserAgen
 		WHERE t.id_run = r.id_run
 		  AND r.id_user_agent = $1
 		  AND t.status = 'active'
-		RETURNING t.id_run`,
+		RETURNING t.id_run, t.id_task`,
 		idUserAgent,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failing active tasks for agent: %w", err)
 	}
 	defer rows.Close()
-	return distinctRunIds(rows)
+	return scanFailedTasks(rows)
 }
 
-func distinctRunIds(rows pgx.Rows) ([]int64, error) {
-	seen := map[int64]bool{}
-	var ids []int64
+// FailedTask is a task a bulk update failed, with the run it belongs to.
+type FailedTask struct {
+	IdRun  int64
+	IdTask int64
+}
+
+func scanFailedTasks(rows pgx.Rows) ([]FailedTask, error) {
+	var failed []FailedTask
 	for rows.Next() {
-		var idRun int64
-		if scanErr := rows.Scan(&idRun); scanErr != nil {
-			return nil, fmt.Errorf("scanning run id: %w", scanErr)
+		var task FailedTask
+		if err := rows.Scan(&task.IdRun, &task.IdTask); err != nil {
+			return nil, fmt.Errorf("scanning failed task: %w", err)
 		}
-		if !seen[idRun] {
-			seen[idRun] = true
-			ids = append(ids, idRun)
-		}
+		failed = append(failed, task)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating run ids: %w", err)
+		return nil, fmt.Errorf("iterating failed tasks: %w", err)
 	}
-	return ids, nil
+	return failed, nil
 }
 
 // AgentHasActiveTask reports whether the agent has any task currently active,

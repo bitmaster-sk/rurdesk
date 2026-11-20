@@ -41,7 +41,9 @@ func NewWikiAgentService(
 	return &WikiAgentService{wiki: wiki, readRepo: readRepo, runRepo: runRepo, taskRepo: taskRepo}
 }
 
-func (s *WikiAgentService) BuildPromptContext(ctx context.Context, run *model.AgentRun, task *model.AgentTask) (*model.WikiPromptContext, []*model.AgentRunWikiRead, error) {
+// BuildPromptContext returns the wiki pages a stage's prompt carries. Pages linked to idIssue, when
+// set, lead the prompt.
+func (s *WikiAgentService) BuildPromptContext(ctx context.Context, run *model.AgentRun, task *model.AgentTask, idIssue *int64) (*model.WikiPromptContext, []*model.AgentRunWikiRead, error) {
 	instance, err := s.wiki.spaceRepo.LoadInstanceSpace(ctx)
 	if err != nil {
 		return nil, nil, err
@@ -51,8 +53,8 @@ func (s *WikiAgentService) BuildPromptContext(ctx context.Context, run *model.Ag
 		return nil, nil, err
 	}
 	var linked []*repository.WikiIssuePageRef
-	if run.IdIssue != nil {
-		linked, err = s.wiki.issuePageRepo.LoadByIssue(ctx, *run.IdIssue, true)
+	if idIssue != nil {
+		linked, err = s.wiki.issuePageRepo.LoadByIssue(ctx, *idIssue, true)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -107,10 +109,10 @@ func (s *WikiAgentService) RecordReads(ctx context.Context, reads []*model.Agent
 	return s.readRepo.Insert(ctx, reads)
 }
 
-// LoadRunReads lists the wiki pages an issue or release run read; a chat run is not found here.
+// LoadRunReads lists the wiki pages a run read; a private run is not found here.
 func (s *WikiAgentService) LoadRunReads(ctx context.Context, user model.User, idRun int64) ([]*model.AgentRunWikiRead, error) {
 	run, err := s.runRepo.LoadById(ctx, idRun)
-	if errors.Is(err, repository.ErrRunNotFound) || (err == nil && run.Kind == constants.RunKindChat) {
+	if errors.Is(err, repository.ErrRunNotFound) || (err == nil && run.IsPrivate()) {
 		return nil, errs.ErrNotFound
 	}
 	if err != nil {

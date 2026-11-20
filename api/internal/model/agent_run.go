@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 )
 
 type AgentRun struct {
@@ -26,6 +28,11 @@ type AgentRun struct {
 	StartedAt         *time.Time      `json:"startedAt"        db:"started_at"`
 	FinishedAt        *time.Time      `json:"finishedAt"       db:"finished_at"`
 	CreatedAt         time.Time       `json:"createdAt"        db:"created_at"`
+}
+
+// IsPrivate tells whether only the run's owner may see it.
+func (r *AgentRun) IsPrivate() bool {
+	return constants.IsPrivateRunKind(r.Kind)
 }
 
 type AgentRunGitRepo struct {

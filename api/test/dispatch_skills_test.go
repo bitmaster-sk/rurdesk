@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"io"
 	"net/http"
@@ -36,13 +37,13 @@ func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	agentRes := Request(t, app, "POST", "/api/private/admin/user",
 		`{"name":"dispatchskillbot","isAgent":true}`, token)
 	require.Equal(t, http.StatusOK, agentRes.StatusCode)
-	var agent struct {
+	var agentUser struct {
 		IdUser int64 `json:"idUser"`
 	}
-	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agent))
+	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agentUser))
 
 	gwRes := Request(t, app, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/gateway", agent.IdUser),
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", agentUser.IdUser),
 		fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), token)
 	require.Equal(t, http.StatusOK, gwRes.StatusCode)
 
@@ -50,7 +51,7 @@ func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	ensureGitIntegration(t, app, token, idProject)
 	member := Request(t, app, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agentUser.IdUser), token)
 	require.Equal(t, http.StatusOK, member.StatusCode)
 
 	issRes := Request(t, app, "POST", fmt.Sprintf("/api/private/project/%d/issue", idProject),
@@ -62,13 +63,13 @@ func TestDispatchCarriesResolvedSkillsAndWorkflowLength(t *testing.T) {
 	skill := skillByName(t, listSkills(t, app, token), "Verification rules")
 	stagePlan, err := injector.GetAgentStagePlanService().BuildFromChoices(constants.RunKindIssue, model.RunChoices{IdsSkillByStage: map[string][]int64{"implementation": {skill.IdSkill}}, IsShortWorkflow: true})
 	require.NoError(t, err)
-	run, err := injector.GetAgentRunRepository().InsertForIssue(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
+	run, err := injector.GetAgentRunRepository().InsertForIssue(ctx, iss.IdIssue, agentUser.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 
-	task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, agent.IdUser, "implementation", 1)
+	task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, agentUser.IdUser, "implementation", 1)
 	require.NoError(t, err)
 
-	injector.GetDispatcher().DispatchStageExecute(ctx, run, task)
+	injector.GetDispatcher().DispatchStage(ctx, &agent.Dispatch{Run: run, Task: task})
 
 	var raw []byte
 	select {

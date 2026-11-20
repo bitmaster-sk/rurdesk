@@ -26,12 +26,8 @@ type stubStageDispatcher struct {
 	dispatched []*model.AgentTask
 }
 
-func (d *stubStageDispatcher) DispatchStageExecute(_ context.Context, _ *model.AgentRun, task *model.AgentTask) {
-	d.dispatched = append(d.dispatched, task)
-}
-
-func (d *stubStageDispatcher) DispatchChatTurn(_ context.Context, _ *model.AgentRun, task *model.AgentTask, _ string) {
-	d.dispatched = append(d.dispatched, task)
+func (d *stubStageDispatcher) DispatchStage(_ context.Context, dispatch *agent.Dispatch) {
+	d.dispatched = append(d.dispatched, dispatch.Task)
 }
 
 // SchedulerBroadcastSuite covers the "timeline doesn't spin after approval" bug:
@@ -151,7 +147,7 @@ func (s *SchedulerBroadcastSuite) TestDispatchOnInProgressRunBroadcastsActiveSta
 	s.Require().NoError(err)
 
 	dispatcher := &stubStageDispatcher{}
-	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, injector.GetIssueRepository(), dispatcher, injector.GetChatTurns(), injector.GetNotifier())
+	sched := agent.NewScheduler(s.App.Pool, runRepo, taskRepo, projectRepo, injector.GetIssueRepository(), dispatcher, injector.GetRunKinds(), injector.GetNotifier())
 
 	s.Require().NoError(sched.TickOnce(ctx))
 

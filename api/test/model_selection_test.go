@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -59,13 +60,13 @@ func (s *ModelSelectionSuite) SetupSuite() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user",
 		`{"name":"modelbot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
-	var agent struct {
+	var agentUser struct {
 		IdUser int64  `json:"idUser"`
 		RawKey string `json:"rawKey"`
 	}
-	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))
-	s.AgentUserID = agent.IdUser
-	s.AgentApiKey = agent.RawKey
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agentUser))
+	s.AgentUserID = agentUser.IdUser
+	s.AgentApiKey = agentUser.RawKey
 
 	gw := Request(s.T(), s.App, "POST",
 		fmt.Sprintf("/api/private/admin/user/%d/gateway", s.AgentUserID),
@@ -184,7 +185,7 @@ func (s *ModelSelectionSuite) dispatch(run model.AgentRun, stage string) (*model
 	task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, s.AgentUserID, stage, 1)
 	s.Require().NoError(err)
 
-	injector.GetDispatcher().DispatchStageExecute(ctx, loaded, task)
+	injector.GetDispatcher().DispatchStage(ctx, &agent.Dispatch{Run: loaded, Task: task})
 
 	var got dispatchedStage
 	select {
@@ -263,14 +264,14 @@ func (s *ModelSelectionSuite) TestTurnsNeverExceedTheGatewayLimit() {
 func (s *ModelSelectionSuite) TestCreatingAGatewayStoresItsTurnLimits() {
 	res := Request(s.T(), s.App, "POST", "/api/private/admin/user", `{"name":"turnsbot","isAgent":true}`, s.Token)
 	s.Require().Equal(http.StatusOK, res.StatusCode)
-	var agent struct {
+	var agentUser struct {
 		IdUser int64 `json:"idUser"`
 	}
-	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agent))
-	defer s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE id_user = $1", agent.IdUser)
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&agentUser))
+	defer s.App.Pool.Exec(context.Background(), "DELETE FROM users.user WHERE id_user = $1", agentUser.IdUser)
 
 	created := Request(s.T(), s.App, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/gateway", agent.IdUser),
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", agentUser.IdUser),
 		`{"gatewayUrl":"http://gw:9090","stageDefaults":{"design":{"maxTurns":90},"implementation":{"maxTurns":null,"effort":null}}}`, s.Token)
 	body := readBody(s.T(), created)
 	s.Require().Equal(http.StatusOK, created.StatusCode, body)

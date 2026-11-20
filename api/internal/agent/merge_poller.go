@@ -11,23 +11,21 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
-	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
-// MergePoller polls GitHost.GetMergeRequestStatus for runs in pr_open phase,
-// advancing them to merged or failed based on PR state. Runs as a background
-// goroutine on a 60s interval.
+// MergePoller polls GitHost.GetMergeRequestStatus for runs in pr_open phase and hands the status
+// to the run's kind, and for issues with a manually linked MR. It keeps the MR badges of both up
+// to date. Runs as a background goroutine on a 60s interval.
 type MergePoller struct {
 	agentRunRepo     *repository.AgentRunRepository
-	agentTaskRepo    *repository.AgentTaskRepository
 	projectRepo      *repository.ProjectRepository
 	gitIntRepo       *repository.GitIntegrationRepository
 	issueRepo        *repository.IssueRepository
 	stateRepo        *repository.StateRepository
 	transitioner     *PhaseStateTransitioner
-	wikiProposals    *service.WikiProposalService
+	kinds            *RunKinds
 	notifier         notify.INotifier
 	lastMrStatus     map[int64]*githost.Status
 	lastMrStatusLock sync.Mutex
@@ -35,24 +33,22 @@ type MergePoller struct {
 
 func NewMergePoller(
 	agentRunRepo *repository.AgentRunRepository,
-	agentTaskRepo *repository.AgentTaskRepository,
 	projectRepo *repository.ProjectRepository,
 	gitIntRepo *repository.GitIntegrationRepository,
 	issueRepo *repository.IssueRepository,
 	stateRepo *repository.StateRepository,
 	transitioner *PhaseStateTransitioner,
-	wikiProposals *service.WikiProposalService,
+	kinds *RunKinds,
 	notifier notify.INotifier,
 ) *MergePoller {
 	return &MergePoller{
 		agentRunRepo:     agentRunRepo,
-		agentTaskRepo:    agentTaskRepo,
 		projectRepo:      projectRepo,
 		gitIntRepo:       gitIntRepo,
 		issueRepo:        issueRepo,
 		stateRepo:        stateRepo,
 		transitioner:     transitioner,
-		wikiProposals:    wikiProposals,
+		kinds:            kinds,
 		notifier:         notifier,
 		lastMrStatus:     make(map[int64]*githost.Status),
 		lastMrStatusLock: sync.Mutex{},
@@ -112,36 +108,24 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 			continue
 		}
 
+		badge, err := p.kinds.For(run).ApplyPrStatus(ctx, run, status)
+		if err != nil {
+			log.Error().Err(err).Int64("idRun", run.IdRun).Str("state", status.State).Msg("merge poller: applying PR status")
+			continue
+		}
 		switch status.State {
-		case "merged":
-			updated, err := p.agentRunRepo.TransitionPhase(ctx, run.IdRun, constants.PhasePrOpen, constants.PhaseDone, constants.ActorTypeSystem, nil, "PR merged")
-			if err != nil {
-				log.Error().Err(err).Int64("idRun", run.IdRun).Msg("merge poller: failed to transition to done")
-				continue
-			}
-			p.notifyRunUpdate(updated)
-			p.broadcastRunMrStatus(ctx, run, status)
-			p.wikiProposals.RunFinished(ctx, updated)
+		case constants.MrStateMerged:
+			p.broadcastFinalMrStatus(ctx, badge, status)
 			merged++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to done")
-
-		case "closed":
-			updated, err := p.agentRunRepo.TransitionPhase(ctx, run.IdRun, constants.PhasePrOpen, constants.PhaseFailed, constants.ActorTypeSystem, nil, "PR closed without merge")
-			if err != nil {
-				log.Error().Err(err).Int64("idRun", run.IdRun).Msg("merge poller: failed to transition to failed")
-				continue
-			}
-			if setErr := p.agentRunRepo.SetErrorMessage(ctx, run.IdRun, "PR closed without merge"); setErr != nil {
-				log.Error().Err(setErr).Int64("idRun", run.IdRun).Msg("merge poller: failed to set error message")
-			}
-			p.notifyRunUpdate(updated)
-			p.broadcastRunMrStatus(ctx, run, status)
-			p.wikiProposals.RunFinished(ctx, updated)
+		case constants.MrStateClosed:
+			p.broadcastFinalMrStatus(ctx, badge, status)
 			closed++
 			log.Info().Int64("idRun", run.IdRun).Msg("merge poller: run transitioned to failed (PR closed)")
-
 		default:
-			p.broadcastRunMrStatusIfChanged(ctx, run, status)
+			if badge != nil {
+				p.broadcastMrStatusIfChanged(ctx, badge, status)
+			}
 			open++
 		}
 	}
@@ -158,41 +142,17 @@ func (p *MergePoller) PollOnce(ctx context.Context) error {
 	return nil
 }
 
-func (p *MergePoller) notifyRunUpdate(run *model.AgentRun) {
-	BroadcastRunUpdate(context.Background(), p.notifier, p.projectRepo, p.issueRepo, p.agentRunRepo, p.agentTaskRepo, run)
-}
-
-// broadcastRunMrStatus sends the final MR status of a run whose PR merged or
-// closed. The run notice carries no MR state, so the badge needs this one.
-func (p *MergePoller) broadcastRunMrStatus(ctx context.Context, run *model.AgentRun, status *githost.Status) {
-	if run.IdIssue == nil {
+// broadcastFinalMrStatus sends the final status of a merged or closed MR to its badge. The run
+// notice carries no MR state, so the badge needs this one.
+func (p *MergePoller) broadcastFinalMrStatus(ctx context.Context, badge *model.Issue, status *githost.Status) {
+	if badge == nil {
 		return
 	}
-	issue, err := p.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: run.IdIssue})
-	if err != nil || issue == nil {
-		log.Debug().Err(err).Int64("idRun", run.IdRun).Int64("idIssue", *run.IdIssue).
-			Msg("merge poller: issue load failed, skipping mr status broadcast")
-		return
-	}
-
 	p.lastMrStatusLock.Lock()
-	delete(p.lastMrStatus, issue.IdIssue)
+	delete(p.lastMrStatus, badge.IdIssue)
 	p.lastMrStatusLock.Unlock()
 
-	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, issue, status)
-}
-
-func (p *MergePoller) broadcastRunMrStatusIfChanged(ctx context.Context, run *model.AgentRun, status *githost.Status) {
-	if run.IdIssue == nil {
-		return
-	}
-	runMr := &model.Issue{
-		IdIssue:          *run.IdIssue,
-		IdProject:        run.IdProject,
-		IdGitIntegration: run.IdGitIntegration,
-		MrId:             run.PrId,
-	}
-	p.broadcastMrStatusIfChanged(ctx, runMr, status)
+	BroadcastMrStatusUpdate(ctx, p.notifier, p.projectRepo, badge, status)
 }
 
 func (p *MergePoller) hostFor(ctx context.Context, encKey []byte, idGitIntegration, idProject int64) (githost.GitHost, error) {

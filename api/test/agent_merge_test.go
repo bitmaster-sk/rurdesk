@@ -133,13 +133,12 @@ func (s *MergePollerSuite) SetupSuite() {
 
 	s.poller = agent.NewMergePoller(
 		injector.GetAgentRunRepository(),
-		injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(),
 		injector.GetGitIntegrationRepository(),
 		injector.GetIssueRepository(),
 		injector.GetStateRepository(),
 		injector.GetPhaseStateTransitioner(),
-		injector.GetWikiProposalService(),
+		injector.GetRunKinds(),
 		injector.GetNotifier(),
 	)
 }

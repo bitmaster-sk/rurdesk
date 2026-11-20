@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
@@ -105,7 +106,7 @@ func TestWikiAgent_PromptCarriesAlwaysAndLinkedPagesAndIndexesTheRest(t *testing
 	require.Equal(t, len(wiki.Index), len(indexRows[0].Pages))
 	require.Positive(t, indexRows[0].Tokens)
 
-	_, again, err := injector.GetWikiAgentService().BuildPromptContext(context.Background(), run, task)
+	_, again, err := injector.GetWikiAgentService().BuildPromptContext(context.Background(), run, task, run.IdIssue)
 	require.NoError(t, err)
 	require.NoError(t, injector.GetWikiAgentService().RecordReads(context.Background(), again))
 	require.Len(t, f.reads(t, run.IdRun), len(reads), "dispatching the same attempt again adds no rows")
@@ -355,7 +356,7 @@ func (f *wikiAgentFixture) dispatchTask(t *testing.T, run *model.AgentRun, task 
 	}
 
 	ensureGitIntegration(t, f.app, f.adminToken, run.IdProject)
-	injector.GetDispatcher().DispatchStageExecute(context.Background(), run, task)
+	injector.GetDispatcher().DispatchStage(context.Background(), &agent.Dispatch{Run: run, Task: task})
 
 	var raw []byte
 	select {
