@@ -29,7 +29,24 @@
             <form [formGroup]="form" (ngSubmit)="onLogin()" class="login__form">
                 <div class="login__field">
                     <label for="email">{{ 'EMAIL' | translate }}</label>
-                    <input id="email" formControlName="email" type="text" autocomplete="email" />
+                    <input
+                        id="email"
+                        formControlName="email"
+                        type="email"
+                        inputmode="email"
+                        autocomplete="email"
+                        [attr.aria-invalid]="emailErrorKey() ? 'true' : null"
+                        [attr.aria-describedby]="emailErrorKey() ? 'login-email-error' : null"
+                    />
+                    @if (emailErrorKey(); as errorKey) {
+                        <p
+                            class="login__field-error"
+                            id="login-email-error"
+                            data-testid="login-email-error"
+                        >
+                            {{ errorKey | translate }}
+                        </p>
+                    }
                 </div>
 
                 <div class="login__field login__field--password">
@@ -40,6 +57,10 @@
                             formControlName="password"
                             [type]="passwordVisible() ? 'text' : 'password'"
                             autocomplete="current-password"
+                            [attr.aria-invalid]="passwordErrorKey() ? 'true' : null"
+                            [attr.aria-describedby]="
+                                passwordErrorKey() ? 'login-password-error' : null
+                            "
                         />
                         <ui-button
                             type="button"
@@ -60,6 +81,15 @@
                             ></tabler-icon>
                         </ui-button>
                     </div>
+                    @if (passwordErrorKey(); as errorKey) {
+                        <p
+                            class="login__field-error"
+                            id="login-password-error"
+                            data-testid="login-password-error"
+                        >
+                            {{ errorKey | translate }}
+                        </p>
+                    }
                 </div>
 
                 @if (hasFailed()) {

@@ -2273,6 +2273,14 @@
         "LABEL": "Login",
         "SHOW_PASSWORD": "Show password",
         "HIDE_PASSWORD": "Hide password",
+        "ERRORS": {
+            "EMAIL_REQUIRED": "Enter your e-mail address.",
+            "EMAIL_INVALID": "Enter a valid e-mail address, e.g. name@company.com.",
+            "EMAIL_TOO_LONG": "The e-mail address is limited to 250 characters.",
+            "PASSWORD_REQUIRED": "Enter your password.",
+            "PASSWORD_TOO_SHORT": "The password must be at least 5 characters.",
+            "PASSWORD_TOO_LONG": "The password is limited to 100 characters."
+        },
         "SSO_BUTTON": "Sign in with your company account",
         "USE_PASSWORD": "Sign in with email and password",
         "BACK_TO_SSO": "Back to company sign-in",
