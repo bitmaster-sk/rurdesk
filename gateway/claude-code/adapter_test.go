@@ -328,7 +328,7 @@ func TestRunWithStubBinary(t *testing.T) {
 	}{
 		{
 			name:         "success",
-			resultLine:   `{"type":"result","subtype":"success","is_error":false,"usage":{"input_tokens":10,"output_tokens":5}}`,
+			resultLine:   `{"type":"result","subtype":"success","is_error":false,"usage":{"input_tokens":10,"output_tokens":5},"total_cost_usd":0.01}`,
 			exitCode:     0,
 			submitsStage: true,
 			wantErr:      false,
@@ -404,6 +404,11 @@ func TestRunWithStubBinary(t *testing.T) {
 			}
 			if stats.DurationMs < 0 {
 				t.Errorf("DurationMs = %d, want >= 0", stats.DurationMs)
+			}
+			// Billed per token on a Console account, so the reported cost is
+			// what is paid and the UI must not mark it as an estimate.
+			if stats.CostEstimated {
+				t.Errorf("CostEstimated = true, want false (costUsd %v)", stats.CostUsd)
 			}
 			// The MCP config carries the agent's bearer token and the agent
 			// commits from this worktree, so the run must leave nothing

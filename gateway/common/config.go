@@ -40,16 +40,15 @@ type Config struct {
 }
 
 // ClaudeCodeConfig configures the Claude Code CLI adapter, which authenticates
-// against a Claude Pro/Max subscription rather than a pay-per-token API key.
-// In the CLI's native precedence order, an optional CLAUDE_CODE_OAUTH_TOKEN
-// (from `claude setup-token`) overrides the mounted
-// ~/.claude/.credentials.json from an interactive `claude` login.
+// against a Claude Console account billed per token. Claude subscriptions are
+// not supported. An optional CLAUDE_CODE_OAUTH_TOKEN (a token created in the
+// Console) overrides a Console `/login` stored in the mounted ~/.claude volume.
 // ANTHROPIC_API_KEY is deliberately not read here and is scrubbed from the
 // child env by the adapter — if set it would take precedence over both and
-// silently switch billing to the Console pay-per-token bucket.
+// silently switch the billed account.
 type ClaudeCodeConfig struct {
-	// OAuthToken is an optional long-lived subscription token from
-	// `claude setup-token`. Empty means rely on the mounted login creds.
+	// OAuthToken is an optional token created in the Claude Console.
+	// Empty means rely on the mounted login creds.
 	OAuthToken string
 	// ThinkingDisplay is passed as --thinking-display (summarized | omitted);
 	// empty omits the flag. Without summarized the CLI streams no thinking text.
@@ -164,7 +163,7 @@ func LoadConfig(adapterType string) (*Config, error) {
 
 	switch adapterType {
 	case "claude-code":
-		// Subscription auth only: mounted ~/.claude creds, optionally overridden
+		// Console account auth: mounted ~/.claude creds, optionally overridden
 		// by CLAUDE_CODE_OAUTH_TOKEN. No API key is read or required — the CLI
 		// fails hard at first invocation if no usable credential is present.
 		thinkingDisplay, err := claudeThinkingDisplay()

@@ -32,11 +32,11 @@ const chatDisallowedTools = "Bash,Write,Edit,MultiEdit,NotebookEdit,Task"
 
 // ClaudeCodeAdapter implements common.Agent by driving the official Claude
 // Code CLI (`claude`, installed via npm) headlessly. It authenticates against
-// a Claude Pro/Max subscription via OAuth credentials in
-// $HOME/.claude/.credentials.json (volume-mounted, seeded by an interactive
-// login) or an optional CLAUDE_CODE_OAUTH_TOKEN override. ANTHROPIC_API_KEY is
-// scrubbed from the child env so calls never silently bill the Console
-// pay-per-token bucket.
+// a Claude Console account, billed per token, via CLAUDE_CODE_OAUTH_TOKEN or a
+// Console `/login` kept in the mounted $HOME/.claude volume. Claude
+// subscriptions are not supported: Anthropic's terms forbid routing them
+// through a shared service. ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN are
+// scrubbed from the child env so a stray key cannot switch the billed account.
 type ClaudeCodeAdapter struct {
 	cfg            *common.Config
 	thinkingSender common.ThinkingSender
@@ -225,9 +225,7 @@ func (a *ClaudeCodeAdapter) Run(ctx context.Context, task common.Task) (common.R
 	stats.CacheReadTokens = usage.CacheReadTokens
 	stats.CacheWriteTokens = usage.CacheWriteTokens
 	stats.CostUsd = usage.CostUsd
-	if usage.CostUsd != nil {
-		stats.CostEstimated = true
-	}
+	stats.CostEstimated = false
 	terminal := final
 	submitted := completeStageCalled
 	statsMu.Unlock()

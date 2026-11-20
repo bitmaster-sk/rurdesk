@@ -37,9 +37,15 @@ RUN chmod +x /etc/git-hooks/pre-push
 # this they block on the pager and the run hangs.
 ENV GIT_PAGER=cat
 
-# /root/.claude holds the Claude subscription OAuth credentials — seed it once
-# with an interactive `claude` login into the mounted named volume, otherwise
-# the CLI refuses to start (unless CLAUDE_CODE_OAUTH_TOKEN is supplied).
+# Claude Code ends a Bash command after 2 min by default and caps a requested
+# timeout at 10 min, too short for full builds and test suites. 30 min matches
+# Goose's GOOSE_DEFAULT_EXTENSION_TIMEOUT; override either in the service env.
+ENV BASH_DEFAULT_TIMEOUT_MS=1800000 \
+    BASH_MAX_TIMEOUT_MS=1800000
+
+# /root/.claude holds the Claude Console login when CLAUDE_CODE_OAUTH_TOKEN is
+# not supplied — seed it once with an interactive `claude` login into the
+# mounted named volume, otherwise the CLI refuses to start.
 # CLAUDE_CONFIG_DIR moves the CLI state file (.claude.json) from /root into the
 # same volume, so a recreated container keeps it instead of warning it is missing.
 # /worktrees holds per-run git worktrees; /var/lib/gateway holds runtime state.

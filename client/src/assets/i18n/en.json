@@ -205,7 +205,7 @@
             "DURATION": "Duration",
             "TOOL_CALLS": "Tool calls",
             "COST": "Cost",
-            "COST_ESTIMATED_HINT": "Estimate. Claude Code runs on a subscription, so this is not what you pay.",
+            "COST_ESTIMATED_HINT": "Estimate. It may differ from what you are billed.",
             "INPUT_TOKENS": "Input",
             "OUTPUT_TOKENS": "Output",
             "CACHE_READ_TOKENS": "Cache read",
