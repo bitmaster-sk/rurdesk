@@ -93,6 +93,42 @@ export class LoginComponent implements OnInit {
         this.passwordVisible.update(value => !value);
     }
 
+    /**
+     * First translated message to show under the e-mail field, or null while the
+     * field is valid or still untouched — messages appear only after blur (#237).
+     */
+    public emailErrorKey(): string | null {
+        const { errors, touched } = this.form.controls.email;
+        if (!touched || !errors) {
+            return null;
+        }
+        if (errors['required']) {
+            return 'LOGIN.ERRORS.EMAIL_REQUIRED';
+        }
+        if (errors['email']) {
+            return 'LOGIN.ERRORS.EMAIL_INVALID';
+        }
+        return errors['maxlength'] ? 'LOGIN.ERRORS.EMAIL_TOO_LONG' : null;
+    }
+
+    /**
+     * First translated message to show under the password field, or null while
+     * the field is valid or still untouched — messages appear only after blur.
+     */
+    public passwordErrorKey(): string | null {
+        const { errors, touched } = this.form.controls.password;
+        if (!touched || !errors) {
+            return null;
+        }
+        if (errors['required']) {
+            return 'LOGIN.ERRORS.PASSWORD_REQUIRED';
+        }
+        if (errors['minlength']) {
+            return 'LOGIN.ERRORS.PASSWORD_TOO_SHORT';
+        }
+        return errors['maxlength'] ? 'LOGIN.ERRORS.PASSWORD_TOO_LONG' : null;
+    }
+
     public onLogin(): void {
         if (this.form.invalid) {
             return;

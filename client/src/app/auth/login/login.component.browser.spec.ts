@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { Subject, of, throwError } from 'rxjs';
 import { UiModule } from '../../ui/ui.module';
 import { AuthRobotStub } from 'src/testing/stubs';
+import en from 'src/assets/i18n/en.json';
 import { AuthApi } from '../api/auth.api.service';
 import { PASSWORD_ONLY } from '../constants/sso.constants';
 import {
@@ -26,6 +27,21 @@ describe('LoginComponent (browser)', () => {
 
     function error(): HTMLElement | null {
         return document.querySelector('.login__error');
+    }
+
+    function query(testId: string): HTMLElement | null {
+        return document.querySelector(`[data-testid="${testId}"]`);
+    }
+
+    function fieldInput(id: string): HTMLInputElement {
+        return document.querySelector(`#${id}`) as HTMLInputElement;
+    }
+
+    /** Real input: focus the field, set its value and let the form hear the event. */
+    function typeIn(input: HTMLInputElement, value: string): void {
+        input.focus();
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
     }
 
     beforeEach(async () => {
@@ -53,6 +69,12 @@ describe('LoginComponent (browser)', () => {
     });
 
     function setup() {
+        // Translations are wired here, not in beforeEach: TestBed.inject would
+        // instantiate the module before the SSO tests can override providers.
+        const translate = TestBed.inject(TranslateService);
+        translate.setTranslation('en', en);
+        translate.use('en');
+
         const fixture = TestBed.createComponent(LoginComponent);
         fixture.detectChanges();
         return fixture;
@@ -72,6 +94,144 @@ describe('LoginComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(error()).not.toBeNull();
+        expect(error()?.textContent).toContain('Incorrect email or password');
+        // A server failure is not a field error; the fields keep their values and stay valid.
+        expect(query('login-email-error')).toBeNull();
+        expect(query('login-password-error')).toBeNull();
+    });
+
+    it('starts with no validation messages and an e-mail-typed field', () => {
+        setup();
+
+        expect(query('login-email-error')).toBeNull();
+        expect(query('login-password-error')).toBeNull();
+        const email = fieldInput('email');
+        const password = fieldInput('password');
+        expect(email.type).toBe('email');
+        expect(email.getAttribute('inputmode')).toBe('email');
+        expect(email.getAttribute('autocomplete')).toBe('email');
+        expect(password.getAttribute('autocomplete')).toBe('current-password');
+        expect(email.getAttribute('aria-invalid')).toBeNull();
+        expect(email.getAttribute('aria-describedby')).toBeNull();
+        expect(password.getAttribute('aria-invalid')).toBeNull();
+        expect(password.getAttribute('aria-describedby')).toBeNull();
+    });
+
+    it('explains a missing e-mail once the empty field loses focus', () => {
+        const fixture = setup();
+        const email = fieldInput('email');
+
+        email.focus();
+        email.blur();
+        fixture.detectChanges();
+
+        expect(query('login-email-error')?.textContent).toContain('Enter your e-mail address.');
+        expect(email.getAttribute('aria-invalid')).toBe('true');
+        expect(email.getAttribute('aria-describedby')).toBe('login-email-error');
+    });
+
+    it('explains an invalid e-mail format once the field loses focus', () => {
+        const fixture = setup();
+        const email = fieldInput('email');
+
+        typeIn(email, 'not-an-email');
+        email.blur();
+        fixture.detectChanges();
+
+        expect(query('login-email-error')?.textContent).toContain('Enter a valid e-mail address');
+    });
+
+    it('explains an e-mail that runs past the length limit', () => {
+        const fixture = setup();
+        const email = fieldInput('email');
+        // 253 characters that still match the e-mail format, so only maxLength(250) fails.
+        const tooLong = `${'a'.repeat(64)}@${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(60)}`;
+
+        typeIn(email, tooLong);
+        email.blur();
+        fixture.detectChanges();
+
+        expect(query('login-email-error')?.textContent).toContain(
+            'The e-mail address is limited to 250 characters.'
+        );
+    });
+
+    it('withdraws the e-mail message as soon as the value becomes valid', () => {
+        const fixture = setup();
+        const email = fieldInput('email');
+
+        typeIn(email, 'not-an-email');
+        email.blur();
+        fixture.detectChanges();
+        expect(query('login-email-error')).not.toBeNull();
+
+        typeIn(email, 'user@example.com');
+        fixture.detectChanges();
+
+        expect(query('login-email-error')).toBeNull();
+        expect(email.getAttribute('aria-invalid')).toBeNull();
+        expect(email.getAttribute('aria-describedby')).toBeNull();
+    });
+
+    it('explains a missing password once the empty field loses focus', () => {
+        const fixture = setup();
+        const password = fieldInput('password');
+
+        password.focus();
+        password.blur();
+        fixture.detectChanges();
+
+        expect(query('login-password-error')?.textContent).toContain('Enter your password.');
+        expect(password.getAttribute('aria-invalid')).toBe('true');
+        expect(password.getAttribute('aria-describedby')).toBe('login-password-error');
+    });
+
+    it('explains a password shorter than the minimum', () => {
+        const fixture = setup();
+        const password = fieldInput('password');
+
+        typeIn(password, '1234');
+        password.blur();
+        fixture.detectChanges();
+
+        expect(query('login-password-error')?.textContent).toContain(
+            'The password must be at least 5 characters.'
+        );
+    });
+
+    it('explains a password longer than the limit', () => {
+        const fixture = setup();
+        const password = fieldInput('password');
+
+        typeIn(password, 'x'.repeat(101));
+        password.blur();
+        fixture.detectChanges();
+
+        expect(query('login-password-error')?.textContent).toContain(
+            'The password is limited to 100 characters.'
+        );
+    });
+
+    it('keeps submit blocked while the fields are invalid and frees it when they are fixed', () => {
+        const fixture = setup();
+        const email = fieldInput('email');
+        const password = fieldInput('password');
+        const submit = () => query('login-submit')?.querySelector('button') as HTMLButtonElement;
+
+        typeIn(email, 'not-an-email');
+        typeIn(password, '1234');
+        email.blur();
+        fixture.detectChanges();
+
+        expect(submit().disabled).toBe(true);
+        fixture.componentInstance.onLogin();
+        expect(authApi.login$).not.toHaveBeenCalled();
+
+        typeIn(email, 'user@example.com');
+        typeIn(password, 'secret');
+        fixture.detectChanges();
+
+        expect(submit().disabled).toBe(false);
     });
 
     it('does not call login$ when the form is empty', () => {
@@ -167,12 +327,12 @@ describe('LoginComponent (browser)', () => {
             '[data-testid="login-password-toggle"] button'
         ) as HTMLButtonElement;
 
-        expect(toggle.getAttribute('aria-label')).toBe('LOGIN.SHOW_PASSWORD');
+        expect(toggle.getAttribute('aria-label')).toBe('Show password');
 
         toggle.click();
         fixture.detectChanges();
 
-        expect(toggle.getAttribute('aria-label')).toBe('LOGIN.HIDE_PASSWORD');
+        expect(toggle.getAttribute('aria-label')).toBe('Hide password');
     });
 
     it('clears the error once the user edits the form', () => {
@@ -198,10 +358,6 @@ describe('LoginComponent (browser)', () => {
         });
     }
 
-    function query(testId: string): HTMLElement | null {
-        return document.querySelector(`[data-testid="${testId}"]`);
-    }
-
     function withSso(sso: { isEnforced: boolean; canStaySignedIn: boolean }): void {
         authApi.loadMethods$.mockReturnValue(
             of({ password: true, sso: { protocol: 'oidc', ...sso }, ssoUnavailable: false })
@@ -218,7 +374,9 @@ describe('LoginComponent (browser)', () => {
 
         expect(query('login-sso')?.classList).toContain('ui-button--primary');
         expect(document.querySelector('#password')).toBeNull();
-        expect(query('login-use-password')?.textContent).toContain('LOGIN.USE_PASSWORD');
+        expect(query('login-use-password')?.textContent).toContain(
+            'Sign in with email and password'
+        );
 
         click('login-use-password');
         fixture.detectChanges();
@@ -274,14 +432,18 @@ describe('LoginComponent (browser)', () => {
         withSso({ isEnforced: true, canStaySignedIn: false });
         const fixture = setup();
 
-        expect(query('login-use-password')?.textContent).toContain('LOGIN.EMERGENCY');
+        expect(query('login-use-password')?.textContent).toContain(
+            'Emergency sign-in with a password'
+        );
         expect(query('login-break-glass-hint')).toBeNull();
 
         click('login-use-password');
         fixture.detectChanges();
 
         expect(document.querySelector('#password')).not.toBeNull();
-        expect(query('login-break-glass-hint')?.textContent).toContain('LOGIN.BREAK_GLASS_ONLY');
+        expect(query('login-break-glass-hint')?.textContent).toContain(
+            'only break-glass accounts can sign in with a password'
+        );
     });
 
     it('shows no company sign-in for password-only instances', () => {
@@ -316,7 +478,9 @@ describe('LoginComponent (browser)', () => {
         );
         setup();
 
-        expect(query('login-sso-unavailable')?.textContent).toContain('LOGIN.SSO_UNAVAILABLE');
+        expect(query('login-sso-unavailable')?.textContent).toContain(
+            'Company sign-in is temporarily unavailable'
+        );
     });
 
     it('translates the SSO error from the query string', () => {
@@ -324,7 +488,7 @@ describe('LoginComponent (browser)', () => {
         setup();
 
         expect(query('login-sso-error')?.textContent).toContain(
-            'LOGIN.SSO_ERROR.ACCOUNT_NOT_PROVISIONED'
+            'You have no account here yet. Ask your administrator for access.'
         );
     });
 });
