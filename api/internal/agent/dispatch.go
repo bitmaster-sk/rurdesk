@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
-	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
 	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/rs/zerolog/log"
@@ -16,128 +14,67 @@ import (
 var retryBackoffs = []time.Duration{5 * time.Second, 15 * time.Second, 45 * time.Second}
 
 type Dispatcher struct {
-	agentRunRepo     *repository.AgentRunRepository
-	taskRepo         *repository.AgentTaskRepository
-	agentGwRepo      *repository.AgentGatewayRepository
-	gitIntRepo       *repository.GitIntegrationRepository
-	issueRepo        *repository.IssueRepository
-	messageRepo      *repository.MessageRepository
-	projectRepo      *repository.ProjectRepository
-	userRepo         *repository.UserRepository
-	skillService     *service.SkillService
-	stagePlan        *service.AgentStagePlanService
-	wikiAgent        *service.WikiAgentService
-	proposals        *service.WikiProposalService
-	releases         *service.ReleaseService
-	agentTaskConfig  *service.AgentTaskConfigService
-	conversationRepo *repository.AgentConversationRepository
-	conversations    *service.AgentConversationService
-	chatTurns        *ChatTurns
-	gwClient         *GatewayClient
-	notifier         notify.INotifier
+	agentRunRepo *repository.AgentRunRepository
+	agentGwRepo  *repository.AgentGatewayRepository
+	wikiAgent    *service.WikiAgentService
+	kinds        *RunKinds
+	gwClient     *GatewayClient
 }
 
 func NewDispatcher(
 	agentRunRepo *repository.AgentRunRepository,
-	taskRepo *repository.AgentTaskRepository,
 	agentGwRepo *repository.AgentGatewayRepository,
-	gitIntRepo *repository.GitIntegrationRepository,
-	issueRepo *repository.IssueRepository,
-	messageRepo *repository.MessageRepository,
-	projectRepo *repository.ProjectRepository,
-	userRepo *repository.UserRepository,
-	skillService *service.SkillService,
-	stagePlan *service.AgentStagePlanService,
 	wikiAgent *service.WikiAgentService,
-	proposals *service.WikiProposalService,
-	releases *service.ReleaseService,
-	agentTaskConfig *service.AgentTaskConfigService,
-	conversationRepo *repository.AgentConversationRepository,
-	conversations *service.AgentConversationService,
-	chatTurns *ChatTurns,
+	kinds *RunKinds,
 	gwClient *GatewayClient,
-	notifier notify.INotifier,
 ) *Dispatcher {
 	return &Dispatcher{
-		agentRunRepo:     agentRunRepo,
-		taskRepo:         taskRepo,
-		agentGwRepo:      agentGwRepo,
-		gitIntRepo:       gitIntRepo,
-		issueRepo:        issueRepo,
-		messageRepo:      messageRepo,
-		projectRepo:      projectRepo,
-		userRepo:         userRepo,
-		skillService:     skillService,
-		stagePlan:        stagePlan,
-		wikiAgent:        wikiAgent,
-		proposals:        proposals,
-		releases:         releases,
-		agentTaskConfig:  agentTaskConfig,
-		conversationRepo: conversationRepo,
-		conversations:    conversations,
-		chatTurns:        chatTurns,
-		gwClient:         gwClient,
-		notifier:         notifier,
+		agentRunRepo: agentRunRepo,
+		agentGwRepo:  agentGwRepo,
+		wikiAgent:    wikiAgent,
+		kinds:        kinds,
+		gwClient:     gwClient,
 	}
 }
 
-// DispatchStageExecute fires the per-stage execution webhook for an agent_task,
-// carrying the resolved stage plan and context bundle. On final failure it
-// marks both the task and the run failed.
-func (d *Dispatcher) DispatchStageExecute(_ context.Context, run *model.AgentRun, task *model.AgentTask) {
+// DispatchStage fires the stage_execute webhook of an activated task. A task that cannot be
+// delivered interrupts its run with dispatch_failed.
+func (d *Dispatcher) DispatchStage(_ context.Context, dispatch *Dispatch) {
 	go func() {
 		bgCtx := context.Background()
-		payload, wikiReads, err := d.buildStagePayload(bgCtx, run, task)
-		if err != nil {
-			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("building stage_execute payload")
-			d.failTaskAndRun(bgCtx, run, task, err.Error())
+		kind := d.kinds.For(dispatch.Run)
+		if err := d.deliverStage(bgCtx, kind, dispatch); err != nil {
+			log.Error().Err(err).Int64("idTask", dispatch.Task.IdTask).Msg("dispatching stage_execute")
+			if err := kind.Interrupt(bgCtx, dispatch.Run, dispatch.Task, InterruptDispatchFailed, err.Error()); err != nil {
+				log.Error().Err(err).Int64("idTask", dispatch.Task.IdTask).Msg("interrupting an undeliverable stage")
+			}
 			return
 		}
-
-		event := WebhookEvent{
-			IdRun:       run.IdRun,
-			IdProject:   run.IdProject,
-			IdIssue:     run.IdIssue,
-			IdUserAgent: run.IdUserAgent,
-			Event:       "stage_execute",
-			Payload:     payload,
-		}
-		if err := d.DispatchEvent(bgCtx, run, event); err != nil {
-			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("dispatching stage_execute event")
-			d.failTaskAndRun(bgCtx, run, task, fmt.Sprintf("dispatch failed: %v", err))
-			return
-		}
-		if err := d.wikiAgent.RecordReads(bgCtx, wikiReads); err != nil {
-			log.Error().Err(err).Int64("idTask", task.IdTask).Msg("recording wiki reads of the prompt")
-		}
-		BroadcastRunUpdate(bgCtx, d.notifier, d.projectRepo, d.issueRepo, d.agentRunRepo, d.taskRepo, run)
+		kind.Started(bgCtx, dispatch)
 	}()
 }
 
-// DispatchChatTurn fires stage_execute for a chat turn with the conversation as history and the
-// turn's run token. A turn that cannot be delivered ends with an error message.
-func (d *Dispatcher) DispatchChatTurn(_ context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) {
-	go func() {
-		bgCtx := context.Background()
-		payload, err := d.buildChatPayload(bgCtx, run, task, runToken)
-		if err == nil {
-			err = d.DispatchEvent(bgCtx, run, WebhookEvent{
-				IdRun:       run.IdRun,
-				IdProject:   run.IdProject,
-				IdUserAgent: run.IdUserAgent,
-				Event:       "stage_execute",
-				Payload:     payload,
-			})
-		}
-		if err == nil {
-			d.chatTurns.NotifyTurnStarted(bgCtx, run, task)
-			return
-		}
-		log.Error().Err(err).Int64("idTask", task.IdTask).Msg("dispatching chat turn")
-		if _, failErr := d.chatTurns.Fail(bgCtx, run, task, "dispatch_failed", err.Error()); failErr != nil {
-			log.Error().Err(failErr).Int64("idTask", task.IdTask).Msg("ending undeliverable chat turn")
-		}
-	}()
+func (d *Dispatcher) deliverStage(ctx context.Context, kind RunKind, dispatch *Dispatch) error {
+	payload, wikiReads, err := kind.Payload(ctx, dispatch)
+	if err != nil {
+		return err
+	}
+	run := dispatch.Run
+	event := WebhookEvent{
+		IdRun:       run.IdRun,
+		IdProject:   run.IdProject,
+		IdIssue:     run.IdIssue,
+		IdUserAgent: run.IdUserAgent,
+		Event:       "stage_execute",
+		Payload:     payload,
+	}
+	if err := d.DispatchEvent(ctx, run, event); err != nil {
+		return fmt.Errorf("dispatch failed: %w", err)
+	}
+	if err := d.wikiAgent.RecordReads(ctx, wikiReads); err != nil {
+		log.Error().Err(err).Int64("idTask", dispatch.Task.IdTask).Msg("recording wiki reads of the prompt")
+	}
+	return nil
 }
 
 func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun) error {
@@ -179,15 +116,6 @@ func (d *Dispatcher) DispatchEvent(ctx context.Context, run *model.AgentRun, eve
 	event.Sequence = seq + 1
 
 	return d.gwClient.DeliverEvent(ctx, gateway, event, retryBackoffs)
-}
-
-func (d *Dispatcher) failTaskAndRun(ctx context.Context, run *model.AgentRun, task *model.AgentTask, reason string) {
-	_, _ = d.taskRepo.TransitionStatus(ctx, task.IdTask, constants.TaskStatusActive, constants.TaskStatusFailed)
-	_ = d.taskRepo.SetError(ctx, task.IdTask, "dispatch_failed", reason)
-	updated, err := d.agentRunRepo.TransitionPhase(ctx, run.IdRun, run.Phase, constants.PhaseFailed, constants.ActorTypeSystem, nil, reason)
-	if err == nil {
-		BroadcastRunUpdate(ctx, d.notifier, d.projectRepo, d.issueRepo, d.agentRunRepo, d.taskRepo, updated)
-	}
 }
 
 func retryWithBackoff(ctx context.Context, fn func() error, backoffs []time.Duration) error {

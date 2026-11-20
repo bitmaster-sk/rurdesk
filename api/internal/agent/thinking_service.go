@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/rs/zerolog/log"
 )
@@ -151,11 +150,11 @@ func (s *ThinkingService) broadcast(ctx context.Context, idTask int64, seq int, 
 		Seq:    seq,
 		Events: events,
 	}
-	if run.Kind != constants.RunKindChat {
+	if !run.IsPrivate() {
 		s.notifier.BroadcastToProject(ctx, run.IdProject, notice)
 		return
 	}
-	// A chat's thinking is its owner's alone; an owner that cannot be resolved drops the notice.
+	// A private run's thinking is its owner's alone; an owner that cannot be resolved drops the notice.
 	conversation, err := s.conversations.LoadConversationByRun(ctx, run.IdRun)
 	if err != nil || conversation == nil || conversation.IdUser == 0 {
 		log.Warn().Err(err).Int64("idRun", run.IdRun).Msg("no conversation owner to send chat thinking to")

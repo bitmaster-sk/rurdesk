@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
@@ -36,8 +35,8 @@ func BroadcastRunUpdate(
 	taskRepo *repository.AgentTaskRepository,
 	run *model.AgentRun,
 ) {
-	// A chat run is private to its owner; project members are never notified.
-	if run == nil || run.Kind == constants.RunKindChat {
+	// A private run is its owner's alone; project members are never notified.
+	if run == nil || run.IsPrivate() {
 		return
 	}
 	events, err := runRepo.LoadEvents(ctx, run.IdRun)
@@ -216,61 +215,4 @@ func BroadcastMrStatusUpdate(
 			HeadSHA:          status.HeadSHA,
 		},
 	})
-}
-
-// FailRun transitions a non-terminal run to failed and broadcasts the
-// snapshot so the card surfaces the error and Continue/Restart. No-op if
-// already terminal. Used for gateway-loss recovery (restart, stale
-// heartbeat, crash) where an in-flight stage was orphaned.
-func FailRun(
-	ctx context.Context,
-	notifier notify.INotifier,
-	projectRepo *repository.ProjectRepository,
-	issueRepo assigneeLoader,
-	runRepo *repository.AgentRunRepository,
-	taskRepo *repository.AgentTaskRepository,
-	idRun int64,
-	reason string,
-) {
-	run, err := runRepo.LoadById(ctx, idRun)
-	if err != nil || run == nil || constants.TerminalPhases[run.Phase] {
-		return
-	}
-	updated, err := runRepo.TransitionPhase(ctx, idRun, run.Phase, constants.PhaseFailed, constants.ActorTypeSystem, nil, reason)
-	if err != nil {
-		log.Debug().Err(err).Int64("idRun", idRun).Msg("FailRun: transition skipped")
-		return
-	}
-	if msg := reason; msg != "" {
-		_ = runRepo.SetErrorMessage(ctx, idRun, msg)
-		updated.ErrorMessage = &msg
-	}
-	BroadcastRunUpdate(ctx, notifier, projectRepo, issueRepo, runRepo, taskRepo, updated)
-}
-
-// FailRunOrChatTurn is FailRun for a run whose stage the heartbeat sweep already failed; a chat
-// run is not failed, its turn ends with an error message.
-func FailRunOrChatTurn(
-	ctx context.Context,
-	notifier notify.INotifier,
-	projectRepo *repository.ProjectRepository,
-	issueRepo assigneeLoader,
-	runRepo *repository.AgentRunRepository,
-	taskRepo *repository.AgentTaskRepository,
-	chatTurns *ChatTurns,
-	idRun int64,
-	reason string,
-) {
-	run, err := runRepo.LoadById(ctx, idRun)
-	if err != nil {
-		log.Debug().Err(err).Int64("idRun", idRun).Msg("FailRunOrChatTurn: run load failed")
-		return
-	}
-	if run.Kind != constants.RunKindChat {
-		FailRun(ctx, notifier, projectRepo, issueRepo, runRepo, taskRepo, idRun, reason)
-		return
-	}
-	if err := chatTurns.FailRun(ctx, idRun, reason); err != nil {
-		log.Error().Err(err).Int64("idRun", idRun).Msg("ending a lost chat turn")
-	}
 }

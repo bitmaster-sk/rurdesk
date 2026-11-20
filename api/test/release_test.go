@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/injector"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -209,7 +210,7 @@ func (f *releaseFixture) dispatchPayload(t *testing.T, run *model.AgentRun, task
 	for len(f.received) > 0 {
 		<-f.received
 	}
-	injector.GetDispatcher().DispatchStageExecute(context.Background(), run, task)
+	injector.GetDispatcher().DispatchStage(context.Background(), &agent.Dispatch{Run: run, Task: task})
 	select {
 	case raw := <-f.received:
 		var event struct {

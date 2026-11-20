@@ -80,7 +80,7 @@ func (s *AgentConversationApiSuite) SetupSuite() {
 
 	s.Sched = agent.NewScheduler(s.App.Pool, injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(), injector.GetIssueRepository(),
-		&suiteAgentsDispatcher{agents: &s.Agents, real: injector.GetDispatcher()}, injector.GetChatTurns(), injector.GetNotifier())
+		&suiteAgentsDispatcher{agents: &s.Agents, real: injector.GetDispatcher()}, injector.GetRunKinds(), injector.GetNotifier())
 }
 
 func (s *AgentConversationApiSuite) TearDownSuite() {
@@ -118,15 +118,9 @@ type suiteAgentsDispatcher struct {
 	real   agent.StageDispatcher
 }
 
-func (d *suiteAgentsDispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask) {
-	if slices.Contains(*d.agents, run.IdUserAgent) {
-		d.real.DispatchStageExecute(ctx, run, task)
-	}
-}
-
-func (d *suiteAgentsDispatcher) DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) {
-	if slices.Contains(*d.agents, run.IdUserAgent) {
-		d.real.DispatchChatTurn(ctx, run, task, runToken)
+func (d *suiteAgentsDispatcher) DispatchStage(ctx context.Context, dispatch *agent.Dispatch) {
+	if slices.Contains(*d.agents, dispatch.Run.IdUserAgent) {
+		d.real.DispatchStage(ctx, dispatch)
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
-	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -90,8 +89,8 @@ func (ctrl *AgentThinkingController) Get(c *gin.Context) {
 	}
 
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
-	// A chat run is read per turn by its owner (GetChatTurn) and does not exist here.
-	if err != nil || run.Kind == constants.RunKindChat {
+	// A private run is read per turn by its owner (GetChatTurn) and does not exist here.
+	if err != nil || run.IsPrivate() {
 		_ = c.Error(errs.ErrNotFound)
 		c.Status(http.StatusNotFound)
 		return

@@ -189,7 +189,7 @@ func (s *ShortWorkflowSuite) TestSchedulerGoesFromBrainstormingToImplementation(
 
 	dispatcher := &stubStageDispatcher{}
 	sched := agent.NewScheduler(s.App.Pool, injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
-		injector.GetProjectRepository(), injector.GetIssueRepository(), dispatcher, injector.GetChatTurns(), injector.GetNotifier())
+		injector.GetProjectRepository(), injector.GetIssueRepository(), dispatcher, injector.GetRunKinds(), injector.GetNotifier())
 	s.Require().NoError(sched.TickOnce(context.Background()))
 
 	var dispatchedStages []string

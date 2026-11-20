@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -17,11 +16,9 @@ import (
 )
 
 // StageDispatcher seams the scheduler to the real Dispatcher, kept as an
-// interface for testability. A chat turn carries the raw run token the
-// scheduler minted for it; only its hash is stored.
+// interface for testability.
 type StageDispatcher interface {
-	DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask)
-	DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string)
+	DispatchStage(ctx context.Context, dispatch *Dispatch)
 }
 
 type Scheduler struct {
@@ -31,7 +28,7 @@ type Scheduler struct {
 	projectRepo *repository.ProjectRepository
 	issueRepo   *repository.IssueRepository
 	dispatcher  StageDispatcher
-	chatTurns   *ChatTurns
+	kinds       *RunKinds
 	notifier    notify.INotifier
 
 	mu sync.Mutex
@@ -44,7 +41,7 @@ func NewScheduler(
 	projectRepo *repository.ProjectRepository,
 	issueRepo *repository.IssueRepository,
 	dispatcher StageDispatcher,
-	chatTurns *ChatTurns,
+	kinds *RunKinds,
 	notifier notify.INotifier,
 ) *Scheduler {
 	return &Scheduler{
@@ -54,7 +51,7 @@ func NewScheduler(
 		projectRepo: projectRepo,
 		issueRepo:   issueRepo,
 		dispatcher:  dispatcher,
-		chatTurns:   chatTurns,
+		kinds:       kinds,
 		notifier:    notifier,
 	}
 }
@@ -126,29 +123,8 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 		if err != nil {
 			return err
 		}
-		if locked.Kind == constants.RunKindChat {
-			task, err = s.chatTask(ctx, locked, existing)
-			return err
-		}
-
-		// A pending task can already exist (a revision or other re-queue created
-		// it directly). Dispatch it — ResolveNextStage may miss it if its stage
-		// already shows completed, and without this the run stays queued
-		// forever, shadowing newer runs for the same agent.
-		if pending := latestPendingTask(existing); pending != nil {
-			task = pending
-			return nil
-		}
-
-		stage, err := ResolveNextStage(locked, existing)
-		if err != nil {
-			return err
-		}
-		if stage == "" {
-			isDrained = true
-			return nil
-		}
-		task, err = s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, stage, ResolveNextAttemptNo(existing, stage))
+		task, err = s.kinds.For(locked).NextTask(ctx, locked, existing)
+		isDrained = err == nil && task == nil
 		return err
 	})
 	if err != nil {
@@ -167,58 +143,11 @@ func (s *Scheduler) dispatchOneForAgent(ctx context.Context, idUserAgent int64) 
 		}
 		return nil
 	}
-	if run.Kind == constants.RunKindChat {
-		return s.activateChatTurn(ctx, run, task)
-	}
-	return s.activateAndDispatch(ctx, run, task)
-}
-
-// chatTask returns the turn to run: a pending one or a new one. Every chat turn is a stage = chat task.
-func (s *Scheduler) chatTask(ctx context.Context, run *model.AgentRun, existing []*model.AgentTask) (*model.AgentTask, error) {
-	if pending := latestPendingTask(existing); pending != nil {
-		return pending, nil
-	}
-	return s.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, constants.StageChat, ResolveNextAttemptNo(existing, constants.StageChat))
-}
-
-// activateChatTurn starts the turn and dispatches it. No run snapshot is broadcast, as a chat run
-// is private to its owner.
-func (s *Scheduler) activateChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask) error {
-	running, active, rawToken, err := s.chatTurns.Activate(ctx, run, task)
-	if errors.Is(err, ErrChatRunOrphaned) {
-		log.Warn().Int64("idRun", run.IdRun).Msg("scheduler: chat run without a conversation cancelled")
-		return nil
-	}
-	if err != nil {
+	dispatch, err := s.kinds.For(run).Activate(ctx, run, task)
+	if err != nil || dispatch == nil {
 		return err
 	}
-	s.dispatcher.DispatchChatTurn(ctx, running, active, rawToken)
-	return nil
-}
-
-// activateAndDispatch marks the task active, moves the run queued→in_progress,
-// broadcasts the snapshot, and fires stage_execute.
-func (s *Scheduler) activateAndDispatch(ctx context.Context, run *model.AgentRun, task *model.AgentTask) error {
-	if task.Status != constants.TaskStatusActive {
-		if _, err := s.taskRepo.TransitionStatus(ctx, task.IdTask, constants.TaskStatusPending, constants.TaskStatusActive); err != nil {
-			return err
-		}
-	}
-	broadcastRun := run
-	if run.Phase == constants.PhaseQueued {
-		updated, err := s.runRepo.TransitionPhase(ctx, run.IdRun, constants.PhaseQueued, constants.PhaseInProgress, constants.ActorTypeSystem, nil, "dispatch stage "+task.Stage)
-		if err != nil {
-			log.Debug().Err(err).Int64("idRun", run.IdRun).Msg("scheduler: queued→in_progress transition skipped")
-		} else {
-			broadcastRun = updated
-		}
-	}
-	// Must fire even when the run was already in_progress (e.g. dispatching
-	// the next stage right after a user approval) — otherwise the timeline
-	// shows the prior stage as pending until it completes.
-	BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.issueRepo, s.runRepo, s.taskRepo, broadcastRun)
-	// The dispatcher fails the run from this phase, so it must be the current one.
-	s.dispatcher.DispatchStageExecute(ctx, broadcastRun, task)
+	s.dispatcher.DispatchStage(ctx, dispatch)
 	return nil
 }
 

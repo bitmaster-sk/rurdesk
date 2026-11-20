@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
@@ -545,11 +544,8 @@ func (s *ReleaseService) stopNotesRun(ctx context.Context, user model.User, rele
 	return nil
 }
 
-func (s *ReleaseService) PromptContext(ctx context.Context, run *model.AgentRun) (*model.ReleasePromptContext, error) {
-	if run.IdRelease == nil {
-		return nil, fmt.Errorf("run %d writes no release notes", run.IdRun)
-	}
-	release, err := s.releaseRepo.LoadById(ctx, *run.IdRelease)
+func (s *ReleaseService) PromptContext(ctx context.Context, idRelease int64) (*model.ReleasePromptContext, error) {
+	release, err := s.releaseRepo.LoadById(ctx, idRelease)
 	if err != nil {
 		return nil, err
 	}

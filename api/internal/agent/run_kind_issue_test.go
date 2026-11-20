@@ -1,4 +1,4 @@
-package controller
+package agent
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 )
 
-// fakeGitHost implements githost.GitHost for controller-level orchestration tests.
+// fakeGitHost implements githost.GitHost for the PR steps of an issue run.
 type fakeGitHost struct {
 	findId, findUrl string
 	found           bool

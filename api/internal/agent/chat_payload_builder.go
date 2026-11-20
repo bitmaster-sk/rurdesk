@@ -15,8 +15,8 @@ import (
 
 // buildChatPayload builds the turn's stage_execute payload. The conversation's main project goes with
 // its repository when it has a git integration; a chat without one runs in a scratch directory.
-func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) (map[string]any, error) {
-	conversation, err := d.conversationRepo.LoadConversationByRun(ctx, run.IdRun)
+func (r *ChatRun) buildChatPayload(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) (map[string]any, error) {
+	conversation, err := r.conversationRepo.LoadConversationByRun(ctx, run.IdRun)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 		return nil, fmt.Errorf("chat run %d has no conversation", run.IdRun)
 	}
 	if conversation.IdProject != nil && run.IdProject != *conversation.IdProject {
-		if err := d.agentRunRepo.SetChatProject(ctx, run.IdRun, *conversation.IdProject); err != nil {
+		if err := r.runRepo.SetChatProject(ctx, run.IdRun, *conversation.IdProject); err != nil {
 			return nil, err
 		}
 		run.IdProject = *conversation.IdProject
@@ -33,7 +33,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 	if task.ChatMode != nil {
 		mode = *task.ChatMode
 	}
-	agentUser, err := d.userRepo.LoadUser(ctx, run.IdUserAgent)
+	agentUser, err := r.userRepo.LoadUser(ctx, run.IdUserAgent)
 	if err != nil {
 		return nil, fmt.Errorf("loading agent user: %w", err)
 	}
@@ -41,7 +41,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 	if task.StartedAt != nil {
 		since = *task.StartedAt
 	}
-	messages, err := d.conversationRepo.LoadMessagesUntil(ctx, conversation.IdConversation, since)
+	messages, err := r.conversationRepo.LoadMessagesUntil(ctx, conversation.IdConversation, since)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 	if err != nil {
 		return nil, err
 	}
-	projects, err := d.chatProjects(ctx, conversation)
+	projects, err := r.chatProjects(ctx, conversation)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 		"headCommit":     conversation.HeadCommit,
 	}
 	if mode == constants.ChatModeTaskDraft && conversation.IdTaskDraftMessage != nil {
-		quoted, err := d.conversationRepo.LoadMessage(ctx, conversation.IdConversation, *conversation.IdTaskDraftMessage)
+		quoted, err := r.conversationRepo.LoadMessage(ctx, conversation.IdConversation, *conversation.IdTaskDraftMessage)
 		if err != nil {
 			return nil, err
 		}
@@ -83,7 +83,7 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 		"contextBundle": bundle,
 		"runToken":      runToken,
 	}
-	chatModel, err := d.chatModel(ctx, run, task, conversation)
+	chatModel, err := r.chatModel(ctx, run, task, conversation)
 	if err != nil {
 		return nil, err
 	}
@@ -93,12 +93,12 @@ func (d *Dispatcher) buildChatPayload(ctx context.Context, run *model.AgentRun, 
 	if conversation.IdProject == nil {
 		return payload, nil
 	}
-	project, err := d.projectRepo.LoadProject(ctx, *conversation.IdProject)
+	project, err := r.projectRepo.LoadProject(ctx, *conversation.IdProject)
 	if err != nil {
 		return nil, fmt.Errorf("loading project: %w", err)
 	}
 	bundle["project"] = project
-	repo, err := d.agentRunGitRepo(ctx, run)
+	repo, err := r.agentRunGitRepo(ctx, run)
 	if errors.Is(err, ErrProjectHasNoGitIntegration) {
 		return payload, nil
 	}
@@ -120,8 +120,8 @@ type chatProject struct {
 // chatModel returns the conversation's model as it is now, nil leaving the default to the gateway,
 // and records on the task what the turn runs with, the gateway default model included, like an issue
 // stage. A model the gateway no longer offers is left out. A chat turn sends no effort.
-func (d *Dispatcher) chatModel(ctx context.Context, run *model.AgentRun, task *model.AgentTask, conversation *model.AgentConversation) (*string, error) {
-	gateway, err := d.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
+func (r *ChatRun) chatModel(ctx context.Context, run *model.AgentRun, task *model.AgentTask, conversation *model.AgentConversation) (*string, error) {
+	gateway, err := r.agentGwRepo.LoadByAgentUser(ctx, run.IdUserAgent)
 	if err != nil {
 		return nil, fmt.Errorf("loading gateway: %w", err)
 	}
@@ -137,7 +137,7 @@ func (d *Dispatcher) chatModel(ctx context.Context, run *model.AgentRun, task *m
 	if chatModel != nil {
 		usedModel = chatModel
 	}
-	if err := d.taskRepo.SetModel(ctx, task.IdTask, usedModel); err != nil {
+	if err := r.taskRepo.SetModel(ctx, task.IdTask, usedModel); err != nil {
 		return nil, err
 	}
 	task.Model, task.Effort = usedModel, nil
@@ -145,14 +145,14 @@ func (d *Dispatcher) chatModel(ctx context.Context, run *model.AgentRun, task *m
 }
 
 // chatProjects lists the projects the turn may read, recomputed now.
-func (d *Dispatcher) chatProjects(ctx context.Context, conversation *model.AgentConversation) ([]chatProject, error) {
-	idsProject, err := d.conversations.LoadReadableProjects(ctx, conversation)
+func (r *ChatRun) chatProjects(ctx context.Context, conversation *model.AgentConversation) ([]chatProject, error) {
+	idsProject, err := r.conversations.LoadReadableProjects(ctx, conversation)
 	if err != nil {
 		return nil, err
 	}
 	projects := make([]chatProject, 0, len(idsProject))
 	for _, idProject := range idsProject {
-		project, err := d.projectRepo.LoadProject(ctx, idProject)
+		project, err := r.projectRepo.LoadProject(ctx, idProject)
 		if err != nil {
 			return nil, fmt.Errorf("loading project %d: %w", idProject, err)
 		}

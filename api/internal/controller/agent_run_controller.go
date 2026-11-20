@@ -6,16 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
-	"slices"
 	"strconv"
-	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
-	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/notify"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
@@ -26,25 +22,20 @@ import (
 )
 
 type AgentRunController struct {
-	agentRunRepo      *repository.AgentRunRepository
-	agentTaskRepo     *repository.AgentTaskRepository
-	tasks             *agent.TaskService
-	thinking          *agent.ThinkingService
-	agentGwRepo       *repository.AgentGatewayRepository
-	issueRepo         *repository.IssueRepository
-	projectRepo       *repository.ProjectRepository
-	messageRepo       *repository.MessageRepository
-	attachmentLinkSvc *service.AttachmentLinkService
-	gitIntRepo        *repository.GitIntegrationRepository
-	acl               *service.AclService
-	stagePlan         *service.AgentStagePlanService
-	agentTaskConfig   *service.AgentTaskConfigService
-	dispatcher        *agent.Dispatcher
-	chatTurns         *agent.ChatTurns
-	proposals         *service.WikiProposalService
-	releases          *service.ReleaseService
-	notifier          notify.INotifier
-	pool              *pgxpool.Pool
+	agentRunRepo    *repository.AgentRunRepository
+	agentTaskRepo   *repository.AgentTaskRepository
+	tasks           *agent.TaskService
+	thinking        *agent.ThinkingService
+	agentGwRepo     *repository.AgentGatewayRepository
+	issueRepo       *repository.IssueRepository
+	projectRepo     *repository.ProjectRepository
+	acl             *service.AclService
+	stagePlan       *service.AgentStagePlanService
+	agentTaskConfig *service.AgentTaskConfigService
+	dispatcher      *agent.Dispatcher
+	kinds           *agent.RunKinds
+	notifier        notify.INotifier
+	pool            *pgxpool.Pool
 }
 
 func NewAgentRunController(
@@ -55,39 +46,29 @@ func NewAgentRunController(
 	agentGwRepo *repository.AgentGatewayRepository,
 	issueRepo *repository.IssueRepository,
 	projectRepo *repository.ProjectRepository,
-	messageRepo *repository.MessageRepository,
-	attachmentLinkSvc *service.AttachmentLinkService,
-	gitIntRepo *repository.GitIntegrationRepository,
 	acl *service.AclService,
 	stagePlan *service.AgentStagePlanService,
 	agentTaskConfig *service.AgentTaskConfigService,
 	dispatcher *agent.Dispatcher,
-	chatTurns *agent.ChatTurns,
-	proposals *service.WikiProposalService,
-	releases *service.ReleaseService,
+	kinds *agent.RunKinds,
 	notifier notify.INotifier,
 	pool *pgxpool.Pool,
 ) *AgentRunController {
 	return &AgentRunController{
-		agentRunRepo:      agentRunRepo,
-		agentTaskRepo:     agentTaskRepo,
-		tasks:             tasks,
-		thinking:          thinking,
-		agentGwRepo:       agentGwRepo,
-		issueRepo:         issueRepo,
-		projectRepo:       projectRepo,
-		messageRepo:       messageRepo,
-		attachmentLinkSvc: attachmentLinkSvc,
-		gitIntRepo:        gitIntRepo,
-		acl:               acl,
-		stagePlan:         stagePlan,
-		agentTaskConfig:   agentTaskConfig,
-		dispatcher:        dispatcher,
-		chatTurns:         chatTurns,
-		proposals:         proposals,
-		releases:          releases,
-		notifier:          notifier,
-		pool:              pool,
+		agentRunRepo:    agentRunRepo,
+		agentTaskRepo:   agentTaskRepo,
+		tasks:           tasks,
+		thinking:        thinking,
+		agentGwRepo:     agentGwRepo,
+		issueRepo:       issueRepo,
+		projectRepo:     projectRepo,
+		acl:             acl,
+		stagePlan:       stagePlan,
+		agentTaskConfig: agentTaskConfig,
+		dispatcher:      dispatcher,
+		kinds:           kinds,
+		notifier:        notifier,
+		pool:            pool,
 	}
 }
 
@@ -685,11 +666,6 @@ func (ctrl *AgentRunController) Stats(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
-// errReconcileSuperseded signals a concurrent Restart/Continue moved the run
-// out of `failed` between the pre-tx guard and the reconcile CAS. The tx rolls
-// back and the caller responds 200 no-op, not 500.
-var errReconcileSuperseded = errors.New("reconcile superseded by concurrent run transition")
-
 // requireAssignedAgent authorizes a callback addressed by task id, writing the
 // response when the caller is not the task's agent. A task that does not exist
 // is a 404, not a refusal — a typo in a task id must not read as revoked access.
@@ -758,250 +734,12 @@ func (ctrl *AgentRunController) CompleteStage(c *gin.Context) {
 		c.Status(http.StatusBadRequest)
 		return
 	}
-	if run.Kind == constants.RunKindChat {
-		ctrl.completeChatTurn(c, run, task, &body)
-		return
-	}
-	if run.IdIssue != nil {
-		if err := validateMessageKind(body.Message, body.MessageKind); err != nil {
-			ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
-			return
-		}
-	}
-
-	agentUser, _ := extctx.GetUser(ctx)
-
-	// reconcilability gate. A still-live gateway may report completion for a
-	// task an API/gateway restart already blanket-failed (crash recovery). Decide
-	// how to treat the task's status BEFORE any host I/O, so we never create an
-	// orphan PR for a completion we won't apply.
-	switch {
-	case task.Status == constants.TaskStatusActive:
-		// normal path — fall through to resolve + apply
-	case task.Status == constants.TaskStatusCompleted:
-		// Idempotent no-op: a retried complete_stage after a successful one.
-		// Return the terminal state instead of erroring.
-		c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
-		return
-	case task.Status == constants.TaskStatusFailed && run.Phase == constants.PhaseFailed &&
-		task.ErrorReason != nil && constants.RecoverableFailReasons[*task.ErrorReason]:
-		// Reconcile a restart-orphaned task, but ONLY while the run is still `failed`.
-		// If Continue already moved it out, or the user Restarted (a newer
-		// non-terminal run exists), reconciling would resurrect/duplicate: no-op.
-		// (The in-tx CAS is the final authority for the race after this check.)
-		if active, aerr := ctrl.agentRunRepo.LoadActiveOfSubject(ctx, run); aerr == nil && active != nil && active.IdRun != run.IdRun {
-			c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
-			return
-		}
-	default:
-		// Genuine failure or cancellation: no-op, no PR — don't resurrect an
-		// abandoned run.
-		c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
-		return
-	}
-	reconcile := task.Status == constants.TaskStatusFailed
-
-	if isImplementationWithoutPr(run, task, &body) {
-		_ = c.Error(errs.ErrImplementationNoBranch)
-		c.Status(errs.ErrImplementationNoBranch.HttpStatus())
-		return
-	}
-
-	// Resolve the PR OUTSIDE the DB transaction — it makes git-host HTTP calls
-	// and must not hold a transaction open. A host failure converts to an
-	// `errored` outcome so the normal failure path records it.
-	pr := ctrl.resolvePrForCompletion(ctx, run, task, &body)
-
-	var res completeStageResult
-	txErr := extctx.RunInTx(ctx, ctrl.pool, func(ctx context.Context) error {
-		var err error
-		res, err = ctrl.applyCompleteStage(ctx, run, task, &body, pr, reconcile, &agentUser)
-		return err
-	})
-	if txErr != nil {
-		if errors.Is(txErr, errReconcileSuperseded) {
-			// A concurrent Restart/Continue moved the run out of `failed` mid-reconcile;
-			// the tx rolled back — respond 200 no-op.
-			c.JSON(http.StatusOK, model.CompleteStageRes{IdTask: idTask, Status: task.Status, NextPhase: run.Phase})
-			return
-		}
-		if errors.Is(txErr, errs.ErrAttachmentLinkInvalid) {
-			ResponseErr(c, txErr)
-			return
-		}
-		_ = c.Error(errs.ErrInternal.WithMessage(txErr.Error()))
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-
-	ctrl.thinking.Compact(ctx, idTask)
-
-	members, _ := ctrl.projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
-	var idsUser []int64
-	if len(members) > 0 {
-		idsUser = make([]int64, len(members))
-		for i, m := range members {
-			idsUser[i] = m.IdUser
-		}
-	}
-
-	if res.notifierMsg != nil {
-		ctrl.notifier.Send(&notify.Notice{
-			IdsUser: idsUser,
-			Subject: notify.SubjectMessage,
-			Action:  notify.ActionCreate,
-			Payload: res.notifierMsg,
-			Source:  "agent",
-		})
-	}
-	// The local `run` is the pre-transition snapshot; reload so the broadcast
-	// carries the phase applyCompleteStage set.
-	if updated, loadErr := ctrl.agentRunRepo.LoadById(ctx, run.IdRun); loadErr == nil {
-		ctrl.notifyRunUpdate(updated)
-	}
-	// applyCompleteStage mutates the issue out-of-band (PR link, phase→state
-	// mirror); push the fresh issue so the detail page updates live.
-	if run.IdIssue != nil {
-		agent.BroadcastIssueUpdate(context.Background(), ctrl.notifier, ctrl.issueRepo, ctrl.projectRepo, *run.IdIssue)
-	}
-
-	c.JSON(http.StatusOK, model.CompleteStageRes{
-		IdTask:    idTask,
-		Status:    res.targetStatus,
-		NextPhase: res.nextPhase,
-	})
-}
-
-// completeChatTurn ends a chat turn: the reply becomes a conversation message for
-// its owner. No issue state, PR, run notice or project-wide message is involved.
-func (ctrl *AgentRunController) completeChatTurn(c *gin.Context, run *model.AgentRun, task *model.AgentTask, body *model.CompleteStageReq) {
-	ctx := c.Request.Context()
-	res, err := ctrl.chatTurns.Complete(ctx, run, task, body)
+	res, err := ctrl.kinds.For(run).Complete(ctx, run, task, &body)
 	if err != nil {
 		ResponseErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, res)
-}
-
-func (ctrl *AgentRunController) applyCompleteStage(
-	ctx context.Context,
-	run *model.AgentRun,
-	task *model.AgentTask,
-	body *model.CompleteStageReq,
-	pr *prComputed,
-	reconcile bool,
-	agentUser *model.User,
-) (completeStageResult, error) {
-	var res completeStageResult
-	var idMessage *int64
-	if body.Message != "" && run.IdIssue != nil {
-		msg, err := ctrl.messageRepo.InsertIssueAgentMessage(
-			ctx, body.Message, agentUser, *run.IdIssue, constants.MessageKind(body.MessageKind),
-		)
-		if err != nil {
-			return completeStageResult{}, fmt.Errorf("writing message: %w", err)
-		}
-		if err := ctrl.attachmentLinkSvc.LinkMessageAttachments(ctx, msg); err != nil {
-			return completeStageResult{}, fmt.Errorf("linking message attachments: %w", err)
-		}
-		id := msg.IdMessage
-		idMessage = &id
-		res.notifierMsg = msg
-	}
-
-	prWritten := false
-	if pr != nil {
-		if err := ctrl.writePrInfo(ctx, run, pr, body.BranchName); err != nil {
-			// The run may have been moved out of `failed` by a concurrent
-			// Restart/Continue between the pre-tx guard and this CAS — treat that
-			// as a superseded no-op (roll back, respond 200), not a 500.
-			if reconcile && errors.Is(err, repository.ErrPhaseMismatch) {
-				return completeStageResult{}, errReconcileSuperseded
-			}
-			return completeStageResult{}, fmt.Errorf("applying PR info: %w", err)
-		}
-		prWritten = true
-	}
-
-	if run.IdRelease != nil && body.Outcome == constants.StageOutcomeOutputSubmitted {
-		if err := ctrl.releases.NotesWritten(ctx, *run.IdRelease, body.Message); err != nil {
-			return completeStageResult{}, fmt.Errorf("writing release notes: %w", err)
-		}
-	}
-
-	targetStatus := constants.TaskStatusCompleted
-	if body.Outcome == constants.StageOutcomeErrored {
-		targetStatus = constants.TaskStatusFailed
-	}
-	if err := ctrl.agentTaskRepo.SetResultAndStats(ctx, task.IdTask, idMessage, body.TokensUsed, body.DurationMs, body.ToolCallsCount); err != nil {
-		return completeStageResult{}, err
-	}
-	// CompleteReconcilable accepts the task from `active` (normal completion) or
-	// from `failed` with a recoverable error_reason (a late completion reconciled
-	// after a restart orphaned it); genuine/cancelled tasks never reach
-	// here (gated in CompleteStage). MUST run BEFORE SetError: SetError overwrites
-	// error_reason, which could push the row out of the recoverable allowlist and
-	// mismatch this CAS.
-	if _, err := ctrl.agentTaskRepo.CompleteReconcilable(ctx, task.IdTask, targetStatus, constants.RecoverableFailReasonList); err != nil {
-		// A concurrent complete_stage (dual caller: gateway + MCP tool, or a retry)
-		// already completed or reconciled this task after our pre-tx gate. The
-		// winner is recording the work — no-op this call instead of 500.
-		if errors.Is(err, repository.ErrTaskStatusMismatch) {
-			return completeStageResult{}, errReconcileSuperseded
-		}
-		return completeStageResult{}, fmt.Errorf("transitioning task status: %w", err)
-	}
-	// Record the error reason/detail AFTER the status CAS (errored outcome only).
-	if body.Outcome == constants.StageOutcomeErrored {
-		reason := "agent_reported_error"
-		if body.ErrorReason != nil {
-			reason = *body.ErrorReason
-		}
-		detail := ""
-		if body.ErrorDetail != nil {
-			detail = *body.ErrorDetail
-		}
-		if err := ctrl.agentTaskRepo.SetError(ctx, task.IdTask, reason, detail); err != nil {
-			return completeStageResult{}, err
-		}
-	}
-
-	nextPhase := decideNextRunPhase(task.Stage, body.Outcome)
-	// When PR info was written, SetPrInfoFrom already performed the phase transition
-	// to pr_open; a second one here would fail the phase guard.
-	if !prWritten {
-		if reconcile && !constants.TerminalPhases[nextPhase] {
-			// Reconcile a crash-orphaned run: move it out of `failed` back into the
-			// pipeline, clearing the stale failure stamp. If a concurrent
-			// Restart/Continue already moved the run, the CAS mismatches →
-			// superseded no-op, not a partial commit.
-			if _, err := ctrl.agentRunRepo.ReconcileToPhase(ctx, run.IdRun, run.Phase, nextPhase, constants.ActorTypeAgent, "complete_stage:reconcile:"+body.Outcome); err != nil {
-				if errors.Is(err, repository.ErrPhaseMismatch) {
-					return completeStageResult{}, errReconcileSuperseded
-				}
-				return completeStageResult{}, fmt.Errorf("reconcile phase transition: %w", err)
-			}
-		} else if _, err := ctrl.agentRunRepo.TransitionPhase(ctx, run.IdRun, run.Phase, nextPhase, constants.ActorTypeAgent, nil, "complete_stage:"+body.Outcome); err != nil {
-			log.Debug().Err(err).Int64("idRun", run.IdRun).Str("toPhase", nextPhase).Msg("phase transition tolerated")
-		}
-	}
-	if nextPhase == constants.PhaseDone {
-		idRun := run.IdRun
-		extctx.AfterCommit(ctx, func(detached context.Context) {
-			if finished, err := ctrl.agentRunRepo.LoadById(detached, idRun); err == nil {
-				ctrl.proposals.RunFinished(detached, finished)
-			}
-		})
-	}
-
-	return completeStageResult{notifierMsg: res.notifierMsg, targetStatus: targetStatus, nextPhase: nextPhase}, nil
-}
-
-type completeStageResult struct {
-	notifierMsg  *model.Message
-	targetStatus string
-	nextPhase    string
 }
 
 // GatewayRecovered is called when a gateway (re)starts. Its in-flight
@@ -1027,23 +765,19 @@ func (ctrl *AgentRunController) GatewayRecovered(c *gin.Context) {
 		}
 	}
 
-	runIds, err := ctrl.agentTaskRepo.FailActiveForAgent(ctx, agentUser.IdUser)
+	failed, err := ctrl.agentTaskRepo.FailActiveForAgent(ctx, agentUser.IdUser)
 	if err != nil {
 		ResponseErr(c, err)
 		return
 	}
-	for _, idRun := range runIds {
-		run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
-		if err == nil && run.Kind == constants.RunKindChat {
-			// A chat turn is re-queued rather than failed so the conversation survives the restart.
-			if err := ctrl.chatTurns.GatewayRestarted(ctx, idRun); err != nil {
-				log.Error().Err(err).Int64("idRun", idRun).Msg("re-queueing a chat turn after a gateway restart")
-			}
-			continue
+	idsRun := map[int64]bool{}
+	for _, failedTask := range failed {
+		idsRun[failedTask.IdRun] = true
+		if err := agent.InterruptFailedTask(ctx, ctrl.agentRunRepo, ctrl.agentTaskRepo, ctrl.kinds, failedTask, agent.InterruptGatewayRestart); err != nil {
+			log.Error().Err(err).Int64("idRun", failedTask.IdRun).Msg("interrupting a run after a gateway restart")
 		}
-		agent.FailRun(ctx, ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, idRun, constants.FailReasonGatewayRestart)
 	}
-	ResponseOk(c, gin.H{"failedRuns": len(runIds)})
+	ResponseOk(c, gin.H{"failedRuns": len(idsRun)})
 }
 
 func (ctrl *AgentRunController) GatewayModelThinking(c *gin.Context) {
@@ -1109,11 +843,13 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	// directly — no client refetch needed.
 	if task, err := ctrl.agentTaskRepo.LoadById(ctx, idTask); err == nil {
 		if run, err := ctrl.agentRunRepo.LoadById(ctx, task.IdRun); err == nil {
-			if run.Kind == constants.RunKindChat && body.HeadCommit != nil && *body.HeadCommit != "" {
-				if err := ctrl.chatTurns.ReportHeadCommit(ctx, run, idTask, *body.HeadCommit); err != nil {
-					ResponseErr(c, err)
-					return
-				}
+			report := &agent.TaskReport{}
+			if body.HeadCommit != nil {
+				report.HeadCommit = *body.HeadCommit
+			}
+			if err := ctrl.kinds.For(run).ApplyReport(ctx, run, task, report); err != nil {
+				ResponseErr(c, err)
+				return
 			}
 			if stats, err := ctrl.agentTaskRepo.StatsForRun(ctx, task.IdRun); err == nil {
 				ctrl.sendStatsNotice(ctx, run, &model.AgentStatsNotice{IdRun: task.IdRun, Stats: stats})
@@ -1123,21 +859,11 @@ func (ctrl *AgentRunController) TaskStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
-// sendStatsNotice tells the run's audience about new stats: the project members, or only the
-// owner of a chat run; nothing when the audience cannot be resolved.
+// sendStatsNotice tells the run's audience about new stats; nothing when the audience cannot be resolved.
 func (ctrl *AgentRunController) sendStatsNotice(ctx context.Context, run *model.AgentRun, payload *model.AgentStatsNotice) {
-	var idsUser []int64
-	if run.Kind == constants.RunKindChat {
-		idOwner, err := ctrl.chatTurns.OwnerOf(ctx, run.IdRun)
-		if err != nil || idOwner == 0 {
-			return
-		}
-		idsUser = []int64{idOwner}
-	} else {
-		members, _ := ctrl.projectRepo.LoadProjectsMembers(ctx, []int64{run.IdProject})
-		for _, member := range members {
-			idsUser = append(idsUser, member.IdUser)
-		}
+	idsUser, err := ctrl.kinds.For(run).Audience(ctx, run)
+	if err != nil {
+		return
 	}
 	if len(idsUser) == 0 {
 		return
@@ -1194,276 +920,6 @@ func validateOutcomeForStage(outcome, stage string) error {
 	return nil
 }
 
-func validateMessageKind(message, kind string) error {
-	if message == "" {
-		return nil
-	}
-	allowed := strings.Join(constants.AgentMessageKinds, ", ")
-	switch {
-	case slices.Contains(constants.AgentMessageKinds, kind):
-		return nil
-	case kind == "":
-		return fmt.Errorf("messageKind is required when message is set, use one of: %s", allowed)
-	default:
-		return fmt.Errorf("unknown messageKind %q, use one of: %s", kind, allowed)
-	}
-}
-
-func decideNextRunPhase(stage, outcome string) string {
-	if outcome == constants.StageOutcomeErrored {
-		return constants.PhaseFailed
-	}
-	if outcome == constants.StageOutcomeNoActionNeeded {
-		return constants.PhaseInProgress
-	}
-	switch stage {
-	case constants.StagePickup:
-		return constants.PhaseInProgress
-	case constants.StageBrainstorming:
-		if outcome == constants.StageOutcomeQuestionAsked {
-			return constants.PhaseAwaitingInput
-		}
-		return constants.PhaseInProgress
-	case constants.StageDesign, constants.StageImplementationPlan:
-		return constants.PhaseAwaitingApproval
-	case constants.StageImplementation:
-		return constants.PhasePrOpen
-	case constants.StageReleaseNotes:
-		return constants.PhaseDone
-	default:
-		return constants.PhaseInProgress
-	}
-}
-
-// prComputed holds the PR identity resolved (created or found) on the git host
-// before the DB transaction.
-type prComputed struct {
-	prId             string
-	prUrl            string
-	hostType         string
-	idGitIntegration int64
-}
-
-func isImplementationWithoutPr(run *model.AgentRun, task *model.AgentTask, body *model.CompleteStageReq) bool {
-	if task.Stage != constants.StageImplementation || body.Outcome != constants.StageOutcomeOutputSubmitted {
-		return false
-	}
-	if body.BranchName != "" || body.PrUrl != "" {
-		return false
-	}
-	return run.PrId == nil || *run.PrId == ""
-}
-
-// resolvePrForCompletion resolves PR identity for an implementation completion,
-// outside any DB transaction (it makes git-host HTTP calls). Returns nil when no
-// PR applies; on host failure it converts body to an `errored` outcome so the
-// normal failure path records it.
-func (ctrl *AgentRunController) resolvePrForCompletion(ctx context.Context, run *model.AgentRun, task *model.AgentTask, body *model.CompleteStageReq) *prComputed {
-	if task.Stage != constants.StageImplementation || body.Outcome != constants.StageOutcomeOutputSubmitted {
-		return nil
-	}
-	var pr *prComputed
-	var err error
-	switch {
-	case body.PrUrl != "":
-		// Deprecated path: agent supplied a URL directly. Guard and use it.
-		var hostType, prId string
-		hostType, prId, err = derivePrHostAndId(body.PrUrl)
-		if err == nil {
-			var idGi int64
-			if idGi, err = ctrl.resolveIntegrationId(ctx, run); err == nil {
-				pr = &prComputed{prId: prId, prUrl: body.PrUrl, hostType: hostType, idGitIntegration: idGi}
-			}
-		}
-	case body.BranchName != "":
-		pr, err = ctrl.createOrFindPr(ctx, run, body)
-	default:
-		return nil // no branch, no URL — nothing to open
-	}
-	if err != nil {
-		log.Error().Err(err).Int64("idRun", run.IdRun).Msg("PR creation failed; marking stage errored")
-		body.Outcome = constants.StageOutcomeErrored
-		reason := "pr_creation_failed"
-		detail := err.Error()
-		body.ErrorReason = &reason
-		body.ErrorDetail = &detail
-		return nil
-	}
-	return pr
-}
-
-// createOrFindPr opens (or reuses, for a re-invoked run) the PR/MR for the run's
-// pushed branch. Host I/O — must be called OUTSIDE the DB transaction.
-func (ctrl *AgentRunController) createOrFindPr(ctx context.Context, run *model.AgentRun, body *model.CompleteStageReq) (*prComputed, error) {
-	idGi, err := ctrl.resolveIntegrationId(ctx, run)
-	if err != nil {
-		return nil, err
-	}
-	integration, err := ctrl.gitIntRepo.LoadByID(ctx, idGi, run.IdProject)
-	if err != nil {
-		return nil, err
-	}
-	if integration == nil {
-		return nil, fmt.Errorf("git_integration %d not found", idGi)
-	}
-	host, err := githost.BuildFromIntegration(integration)
-	if err != nil {
-		return nil, err
-	}
-	title := body.PrTitle
-	if title == "" {
-		title = ctrl.fallbackPrTitle(ctx, run.IdIssue, body.BranchName)
-	}
-	prId, prUrl, err := openOrReusePr(ctx, host, run.BaseBranch, body.BranchName, title, body.PrBody)
-	if err != nil {
-		return nil, err
-	}
-	return &prComputed{prId: prId, prUrl: prUrl, hostType: integration.HostType, idGitIntegration: integration.IdGitIntegration}, nil
-}
-
-// openOrReusePr reuses an open PR/MR for branch if one exists, otherwise opens a
-// new one against baseBranch, or the repo's default branch for a run dispatched
-// before base branches were stamped on runs.
-func openOrReusePr(ctx context.Context, host githost.GitHost, baseBranch *string, branch, title, body string) (string, string, error) {
-	prId, prUrl, found, err := host.FindOpenPullRequest(ctx, branch)
-	if err != nil {
-		return "", "", fmt.Errorf("looking up existing PR: %w", err)
-	}
-	if found {
-		return prId, prUrl, nil
-	}
-	base, err := prTargetBranch(ctx, host, baseBranch)
-	if err != nil {
-		return "", "", err
-	}
-	prId, prUrl, err = host.CreatePullRequest(ctx, branch, base, title, body)
-	if err != nil {
-		return "", "", fmt.Errorf("opening PR: %w", err)
-	}
-	return prId, prUrl, nil
-}
-
-// resolveIntegrationId returns the git_integration to use for PR creation: the
-// one stamped on the run at dispatch, or the project's only integration for a run
-// dispatched before that.
-func (ctrl *AgentRunController) resolveIntegrationId(ctx context.Context, run *model.AgentRun) (int64, error) {
-	if run.IdGitIntegration != nil {
-		return *run.IdGitIntegration, nil
-	}
-	gitInts, err := ctrl.gitIntRepo.ListByProject(ctx, run.IdProject)
-	if err != nil {
-		return 0, err
-	}
-	if len(gitInts) == 1 {
-		return gitInts[0].IdGitIntegration, nil
-	}
-	return 0, fmt.Errorf("no git_integration resolved for the pushed repo (run %d, project has %d integrations)", run.IdRun, len(gitInts))
-}
-
-func prTargetBranch(ctx context.Context, host githost.GitHost, baseBranch *string) (string, error) {
-	if baseBranch != nil && *baseBranch != "" {
-		return *baseBranch, nil
-	}
-	base, err := host.DefaultBranch(ctx)
-	if err != nil {
-		return "", fmt.Errorf("resolving base branch: %w", err)
-	}
-	return base, nil
-}
-
-// fallbackPrTitle is used only when the agent did not supply a pr_title.
-func (ctrl *AgentRunController) fallbackPrTitle(ctx context.Context, idIssue *int64, branchName string) string {
-	issue, err := ctrl.issueRepo.LoadIssue(ctx, &repository.LoadIssueFilter{IdIssue: idIssue})
-	if err == nil && issue != nil && issue.Title != "" {
-		return issue.Title
-	}
-	return "Agent changes (" + branchName + ")"
-}
-
-// writePrInfo persists the resolved PR onto the run (flipping its phase →
-// pr_open) and mirrors it onto the issue. DB-only — safe inside the transaction.
-// Uses run.Phase as the CAS from-phase: `in_progress` normally, `failed` when
-// reconciling a crash-orphaned run, in which case SetPrInfoFrom clears
-// the stale failure stamp too.
-func (ctrl *AgentRunController) writePrInfo(ctx context.Context, run *model.AgentRun, pr *prComputed, branchName string) error {
-	dto := model.SetRunPrReq{
-		PrUrl:            pr.prUrl,
-		PrId:             pr.prId,
-		PrHostType:       pr.hostType,
-		BranchName:       branchName,
-		IdGitIntegration: pr.idGitIntegration,
-	}
-	if _, err := ctrl.agentRunRepo.SetPrInfoFrom(ctx, run.IdRun, dto, run.Phase); err != nil {
-		return err
-	}
-	// Mirror onto issues.issue.{id_git_integration, mr_id} best-effort.
-	if run.IdIssue != nil {
-		_ = ctrl.issueRepo.LinkMr(ctx, *run.IdIssue, dto.IdGitIntegration, dto.PrId)
-	}
-	return nil
-}
-
-// derivePrHostAndId parses a PR URL into (host_type, pr_id). The path tail
-// varies by host (/pull/N vs /merge_requests/N), so it checks host first,
-// then path.
-func derivePrHostAndId(prUrl string) (hostType, prId string, err error) {
-	u, parseErr := url.Parse(prUrl)
-	if parseErr != nil {
-		return "", "", fmt.Errorf("invalid pr_url: %w", parseErr)
-	}
-	host := strings.ToLower(u.Host)
-
-	switch {
-	case strings.Contains(host, "github."):
-		hostType = "github"
-	case strings.Contains(host, "gitlab."):
-		hostType = "gitlab"
-	case strings.Contains(host, "gitea."):
-		hostType = "gitea"
-	default:
-		hostType = ""
-	}
-
-	segments := strings.Split(strings.Trim(u.Path, "/"), "/")
-	for i, seg := range segments {
-		if (seg == "pull" || seg == "merge_requests" || seg == "pulls") &&
-			i+1 < len(segments) {
-			prId = segments[i+1]
-			if hostType == "" {
-				if seg == "merge_requests" {
-					hostType = "gitlab"
-				} else {
-					hostType = "github"
-				}
-			}
-			break
-		}
-	}
-	if prId == "" {
-		return "", "", fmt.Errorf("could not extract pr_id from %s — expected /pull/<n> or /merge_requests/<n>", prUrl)
-	}
-	if !isAllDigits(prId) {
-		return "", "", fmt.Errorf("pr_id %q is not numeric in %s — got a PR-creation/compare URL, not an actual PR", prId, prUrl)
-	}
-	if hostType == "" {
-		return "", "", fmt.Errorf("could not infer pr_host_type from %s — host must contain github/gitlab/gitea", prUrl)
-	}
-	return hostType, prId, nil
-}
-
-// isAllDigits reports whether s is non-empty and consists only of ASCII digits.
-func isAllDigits(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
-}
-
 func (ctrl *AgentRunController) notifyRunUpdate(run *model.AgentRun) {
 	agent.BroadcastRunUpdate(context.Background(), ctrl.notifier, ctrl.projectRepo, ctrl.issueRepo, ctrl.agentRunRepo, ctrl.agentTaskRepo, run)
 }
@@ -1490,14 +946,14 @@ func (ctrl *AgentRunController) respondRunSnapshot(ctx context.Context, c *gin.C
 	ResponseOk(c, agent.BuildRunSnapshot(run, events, tasks, idAssignee))
 }
 
-// loadAgentRun loads a run for the issue and release run endpoints; a chat run has its own
+// loadAgentRun loads a run for the issue and release run endpoints; a private run has its own
 // endpoints and does not exist here.
 func (ctrl *AgentRunController) loadAgentRun(ctx context.Context, idRun int64) (*model.AgentRun, error) {
 	run, err := ctrl.agentRunRepo.LoadById(ctx, idRun)
 	if err != nil {
 		return nil, err
 	}
-	if run.Kind == constants.RunKindChat {
+	if run.IsPrivate() {
 		return nil, repository.ErrRunNotFound
 	}
 	return run, nil

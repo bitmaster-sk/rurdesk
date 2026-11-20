@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"io"
 	"net/http"
@@ -66,20 +67,20 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 	agentRes := Request(t, app, "POST", "/api/private/admin/user",
 		`{"name":"prbranchbot","isAgent":true}`, token)
 	require.Equal(t, http.StatusOK, agentRes.StatusCode)
-	var agent struct {
+	var agentUser struct {
 		IdUser int64 `json:"idUser"`
 	}
-	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agent))
+	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agentUser))
 
 	gwRes := Request(t, app, "POST",
-		fmt.Sprintf("/api/private/admin/user/%d/gateway", agent.IdUser),
+		fmt.Sprintf("/api/private/admin/user/%d/gateway", agentUser.IdUser),
 		fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), token)
 	require.Equal(t, http.StatusOK, gwRes.StatusCode)
 
 	idProject := createProject(t, app, token, "dispatch-pr-branch-project")
 	member := Request(t, app, "POST",
 		fmt.Sprintf("/api/private/project/%d/member/user", idProject),
-		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agent.IdUser), token)
+		fmt.Sprintf(`{"idUser":%d,"role":"member"}`, agentUser.IdUser), token)
 	require.Equal(t, http.StatusOK, member.StatusCode)
 
 	intRes := Request(t, app, "POST",
@@ -104,9 +105,9 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 	dispatchPrBranch := func(t *testing.T, run *model.AgentRun) string {
 		t.Helper()
 		attemptNo++
-		task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, agent.IdUser, "implementation", attemptNo)
+		task, err := injector.GetAgentTaskRepository().Insert(ctx, run.IdRun, agentUser.IdUser, "implementation", attemptNo)
 		require.NoError(t, err)
-		injector.GetDispatcher().DispatchStageExecute(ctx, run, task)
+		injector.GetDispatcher().DispatchStage(ctx, &agent.Dispatch{Run: run, Task: task})
 
 		var raw []byte
 		select {
@@ -123,7 +124,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 		return event.Payload.PrBranch
 	}
 
-	firstRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
+	firstRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agentUser.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 	require.Empty(t, dispatchPrBranch(t, firstRun), "an issue without a PR must get a new branch")
 
@@ -136,7 +137,7 @@ func TestDispatchCarriesBranchOfOpenPr(t *testing.T) {
 		firstRun.IdRun, prBranch, integration.IdGitIntegration)
 	require.NoError(t, err)
 
-	secondRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agent.IdUser, idProject, stagePlan)
+	secondRun, err := runRepo.InsertForIssue(ctx, iss.IdIssue, agentUser.IdUser, idProject, stagePlan)
 	require.NoError(t, err)
 
 	tests := []struct {

@@ -31,6 +31,7 @@ type runGitRepoFixture struct {
 	app              *issue.Application
 	token            string
 	idAgent          int64
+	agentKey         string
 	gitHost          *httptest.Server
 	repoLookups      atomic.Int32
 	received         chan []byte
@@ -69,11 +70,10 @@ func newRunGitRepoFixture(t *testing.T) *runGitRepoFixture {
 
 	agentRes := Request(t, fx.app, "POST", "/api/private/admin/user", `{"name":"runrepobot","isAgent":true}`, fx.token)
 	require.Equal(t, http.StatusOK, agentRes.StatusCode)
-	var agentUser struct {
-		IdUser int64 `json:"idUser"`
-	}
+	var agentUser model.AdminCreateUserRes
 	require.NoError(t, json.NewDecoder(agentRes.Body).Decode(&agentUser))
 	fx.idAgent = agentUser.IdUser
+	fx.agentKey = agentUser.RawKey
 
 	gwRes := Request(t, fx.app, "POST", fmt.Sprintf("/api/private/admin/user/%d/gateway", fx.idAgent),
 		fmt.Sprintf(`{"gatewayUrl":%q}`, gateway.URL), fx.token)
@@ -129,7 +129,7 @@ func (fx *runGitRepoFixture) dispatch(t *testing.T, run *model.AgentRun) {
 	fx.dispatchAttempts++
 	task, err := injector.GetAgentTaskRepository().Insert(context.Background(), run.IdRun, fx.idAgent, "implementation", fx.dispatchAttempts)
 	require.NoError(t, err)
-	injector.GetDispatcher().DispatchStageExecute(context.Background(), run, task)
+	injector.GetDispatcher().DispatchStage(context.Background(), &agent.Dispatch{Run: run, Task: task})
 }
 
 func (fx *runGitRepoFixture) receivedRepo(t *testing.T) model.AgentRunGitRepo {
@@ -222,15 +222,9 @@ type singleRunDispatcher struct {
 	real  agent.StageDispatcher
 }
 
-func (d *singleRunDispatcher) DispatchStageExecute(ctx context.Context, run *model.AgentRun, task *model.AgentTask) {
-	if run.IdRun == d.idRun {
-		d.real.DispatchStageExecute(ctx, run, task)
-	}
-}
-
-func (d *singleRunDispatcher) DispatchChatTurn(ctx context.Context, run *model.AgentRun, task *model.AgentTask, runToken string) {
-	if run.IdRun == d.idRun {
-		d.real.DispatchChatTurn(ctx, run, task, runToken)
+func (d *singleRunDispatcher) DispatchStage(ctx context.Context, dispatch *agent.Dispatch) {
+	if dispatch.Run.IdRun == d.idRun {
+		d.real.DispatchStage(ctx, dispatch)
 	}
 }
 
@@ -244,7 +238,7 @@ func TestSchedulerFailsTheRunWithoutGitIntegration(t *testing.T) {
 
 	sched := agent.NewScheduler(fx.app.Pool, injector.GetAgentRunRepository(), injector.GetAgentTaskRepository(),
 		injector.GetProjectRepository(), injector.GetIssueRepository(),
-		&singleRunDispatcher{idRun: run.IdRun, real: injector.GetDispatcher()}, injector.GetChatTurns(), injector.GetNotifier())
+		&singleRunDispatcher{idRun: run.IdRun, real: injector.GetDispatcher()}, injector.GetRunKinds(), injector.GetNotifier())
 	require.NoError(t, sched.TickOnce(context.Background()))
 
 	require.Eventually(t, func() bool {

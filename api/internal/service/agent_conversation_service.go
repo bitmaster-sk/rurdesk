@@ -366,7 +366,7 @@ func (s *AgentConversationService) agentStatus(ctx context.Context, owner *model
 		case isOwnTurn:
 			status.Stage = &active.Stage
 			status.IdTask = &active.IdTask
-		case active.Kind != constants.RunKindChat && active.IdProject != 0 &&
+		case !constants.IsPrivateRunKind(active.Kind) && active.IdProject != 0 &&
 			s.acl.CanReadProject(ctx, owner.IdUser, active.IdProject):
 			status.IdProject = &active.IdProject
 			status.IdIssuePublic = active.IdIssuePublic
