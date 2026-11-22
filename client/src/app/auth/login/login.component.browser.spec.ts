@@ -239,8 +239,13 @@ describe('LoginComponent (browser)', () => {
         const fixture = setup();
 
         fixture.componentInstance.onLogin();
+        fixture.detectChanges();
 
         expect(authApi.login$).not.toHaveBeenCalled();
+        const submit = query('login-submit')?.querySelector('button') as HTMLButtonElement;
+        expect(submit.classList).not.toContain('ui-button--loading');
+        expect(submit.disabled).toBe(true);
+        expect(fixture.componentInstance.isSubmitting()).toBe(false);
     });
 
     it('does not show an error message on a successful login', () => {
@@ -286,6 +291,75 @@ describe('LoginComponent (browser)', () => {
         fixture.componentInstance.onLogin();
 
         expect(authApi.login$).toHaveBeenCalledWith('a@b.sk', 'secret', true);
+    });
+
+    it('shows waiting on the button and sends one request for repeated submits', () => {
+        const response$ = new Subject<string>();
+        authApi.login$.mockReturnValue(response$);
+        const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: true
+        });
+        const submit = () => query('login-submit')?.querySelector('button') as HTMLButtonElement;
+
+        fixture.componentInstance.onLogin();
+        fixture.detectChanges();
+
+        expect(authApi.login$).toHaveBeenCalledTimes(1);
+        expect(authApi.login$).toHaveBeenCalledWith('a@b.sk', 'secret', true);
+        expect(submit().classList).toContain('ui-button--loading');
+        expect(submit().disabled).toBe(true);
+
+        // A disabled button swallows clicks, but Enter still fires ngSubmit and
+        // the handler can be re-invoked — the in-flight guard is what keeps
+        // these at one request.
+        (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(
+            new Event('submit')
+        );
+        fixture.componentInstance.onLogin();
+        fixture.detectChanges();
+
+        expect(authApi.login$).toHaveBeenCalledTimes(1);
+
+        response$.next('a-token');
+        response$.complete();
+        fixture.detectChanges();
+
+        expect(authApi.login$).toHaveBeenCalledTimes(1);
+        expect(session.start).toHaveBeenCalledTimes(1);
+        expect(session.start).toHaveBeenCalledWith('a-token');
+        expect(submit().classList).not.toContain('ui-button--loading');
+        expect(submit().disabled).toBe(false);
+    });
+
+    it('stops waiting after a failure so the user can submit again', () => {
+        authApi.login$
+            .mockReturnValueOnce(throwError(() => new Error('401')))
+            .mockReturnValueOnce(of('a-token'));
+        const fixture = setup();
+        fixture.componentInstance.form.setValue({
+            email: 'a@b.sk',
+            password: 'secret',
+            hasExtendedSessionLifetime: false
+        });
+        const submit = () => query('login-submit')?.querySelector('button') as HTMLButtonElement;
+
+        fixture.componentInstance.onLogin();
+        fixture.detectChanges();
+
+        expect(error()).not.toBeNull();
+        expect(submit().classList).not.toContain('ui-button--loading');
+        expect(submit().disabled).toBe(false);
+
+        fixture.componentInstance.onLogin();
+        fixture.detectChanges();
+
+        expect(authApi.login$).toHaveBeenCalledTimes(2);
+        expect(error()).toBeNull();
+        expect(session.start).toHaveBeenCalledTimes(1);
+        expect(session.start).toHaveBeenCalledWith('a-token');
     });
 
     it('toggles the password field type without changing its value or submitting', () => {
