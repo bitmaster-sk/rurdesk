@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -238,6 +239,41 @@ func TestRunStage_FailsAStageWhoseGitTokenTheGatewayCannotRead(t *testing.T) {
 	complete, ok := recorder.complete("/agent/task/1/complete")
 	if !ok || complete.Outcome != OutcomeErrored || complete.ErrorReason != ErrCodeGitTokenUnreadable {
 		t.Errorf("complete = %+v (sent %v), want errored with %s", complete, ok, ErrCodeGitTokenUnreadable)
+	}
+}
+
+func TestRunStage_FailsAStageWhoseWorkspaceCannotBePrepared(t *testing.T) {
+	tests := []struct {
+		name string
+		task func(repo AgentRunGitRepo) Task
+	}{
+		{
+			name: "issue stage",
+			task: func(repo AgentRunGitRepo) Task {
+				return Task{Repo: repo, IdTask: 1, IdRun: 2, IdUserAgent: 1, IdIssue: 3, Stage: StageDesign}
+			},
+		},
+		{
+			name: "chat turn",
+			task: func(repo AgentRunGitRepo) Task { return chatTask(repo, 1) },
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder, trackerURL := newTrackerRecorder(t)
+			orchestrator, agent, repo := modelTestOrchestrator(t, trackerURL, 0)
+			repo.CloneUrl = filepath.Join(t.TempDir(), "missing-origin")
+
+			orchestrator.runStage(tt.task(repo))
+
+			if ran := agent.ran(); len(ran) != 0 {
+				t.Fatalf("agent ran %d times, want it never started", len(ran))
+			}
+			complete, ok := recorder.complete("/agent/task/1/complete")
+			if !ok || complete.Outcome != OutcomeErrored || complete.ErrorReason != "worktree_error" || complete.ErrorDetail == "" {
+				t.Errorf("complete = %+v (sent %v), want errored with worktree_error and a detail", complete, ok)
+			}
+		})
 	}
 }
 

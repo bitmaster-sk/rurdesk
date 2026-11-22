@@ -2,18 +2,14 @@ package common
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/bitmaster-sk/rurdesk/gateway/model"
 	"github.com/rs/zerolog/log"
 )
 
@@ -214,57 +210,144 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 	}
 }
 
+// repoUse tells what a kind of stage needs a repo for.
+type repoUse int
+
+const (
+	repoRequired repoUse = iota
+	// repoOptional runs in a scratch directory when the tracker sends no repo.
+	repoOptional
+	repoUnused
+)
+
+// stageRules is what differs between the kinds of stage the gateway runs: a stage of an issue run,
+// release notes and a chat turn.
+type stageRules struct {
+	isRunTokenRequired bool
+	repo               repoUse
+	// prepareWorkspace points the task at the directory the agent runs in. It returns a cleanup
+	// only for a scratch directory; a run's worktree outlives the stage attempt.
+	prepareWorkspace func(o *Orchestrator, task *Task) (cleanup func(), ok bool)
+}
+
+func stageRulesOf(stage string) stageRules {
+	switch stage {
+	case StageReleaseNotes:
+		return stageRules{repo: repoUnused, prepareWorkspace: (*Orchestrator).prepareScratchDir}
+	case StageChat:
+		return stageRules{isRunTokenRequired: true, repo: repoOptional, prepareWorkspace: (*Orchestrator).prepareChatWorkspace}
+	default:
+		return stageRules{repo: repoRequired, prepareWorkspace: (*Orchestrator).prepareRunWorkspace}
+	}
+}
+
+func (r stageRules) isRepoUsed(task Task) bool {
+	return r.repo == repoRequired || (r.repo == repoOptional && task.Repo.IsSet())
+}
+
 func (o *Orchestrator) runStage(task Task) {
-	if task.Stage == StageChat && task.RunToken == "" {
-		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a chat turn without its run token")
-		o.failTask(task, ErrCodeTrackerMissingRunToken, "the tracker sent no run token for this chat turn; update the tracker")
+	rules := stageRulesOf(task.Stage)
+	forgetSecrets, ok := o.validateTask(&task, rules)
+	defer forgetSecrets()
+	if !ok {
 		return
-	}
-	if task.RunToken != "" {
-		o.trackerClient.RedactSecret(task.RunToken)
-		defer o.trackerClient.ForgetSecret(task.RunToken)
-	}
-	// A chat without a repo runs in a scratch directory like release notes.
-	isRepoless := task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet())
-	if !isRepoless && !task.Repo.IsSet() {
-		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
-		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
-		return
-	}
-	if err := o.applyStageOptions(&task); err != nil {
-		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
-		reason, detail := agentErrorReason(err)
-		o.failTask(task, reason, detail)
-		return
-	}
-	if !isRepoless {
-		token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
-		if err != nil {
-			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
-			o.failTask(task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
-			return
-		}
-		task.Repo.Token = token
-		o.trackerClient.RedactSecret(task.Repo.Token)
-		defer o.trackerClient.ForgetSecret(task.Repo.Token)
 	}
 
-	ctx, cancel := context.WithCancelCause(context.Background())
-	o.mu.Lock()
-	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
-	o.mu.Unlock()
-	defer func() {
-		cancel(nil)
-		o.mu.Lock()
-		delete(o.activeTasks, task.IdTask)
-		o.mu.Unlock()
-	}()
+	ctx, cancel := o.registerActiveTask(task)
+	defer o.unregisterActiveTask(task.IdTask, cancel)
 
 	// Starts before the concurrency gate so a task waiting for a free slot
 	// still reports liveness — otherwise the API stale-sweep would fail it
 	// while queued. Covers the whole stage attempt.
+	stopHeartbeat := o.startHeartbeat(ctx, &task, cancel)
+	defer stopHeartbeat()
+
+	if !o.acquireSlot(ctx, task) {
+		return
+	}
+	defer func() { <-o.sem }()
+	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
+
+	cleanup, ok := rules.prepareWorkspace(o, &task)
+	if !ok {
+		return
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	stats, ok := o.runAgent(ctx, task)
+	if !ok {
+		return
+	}
+	o.reportStats(task, stats)
+}
+
+// validateTask rejects a task the gateway cannot run, applies the stage options and decrypts the
+// git token. The task's secrets stay masked in what reaches the tracker until forgetSecrets runs.
+func (o *Orchestrator) validateTask(task *Task, rules stageRules) (forgetSecrets func(), ok bool) {
+	var secrets []string
+	forgetSecrets = func() {
+		for _, secret := range secrets {
+			o.trackerClient.ForgetSecret(secret)
+		}
+	}
+	redactSecret := func(secret string) {
+		o.trackerClient.RedactSecret(secret)
+		secrets = append(secrets, secret)
+	}
+
+	if rules.isRunTokenRequired && task.RunToken == "" {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a chat turn without its run token")
+		o.failTask(*task, ErrCodeTrackerMissingRunToken, "the tracker sent no run token for this chat turn; update the tracker")
+		return forgetSecrets, false
+	}
+	if task.RunToken != "" {
+		redactSecret(task.RunToken)
+	}
+	if rules.repo == repoRequired && !task.Repo.IsSet() {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
+		o.failTask(*task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
+		return forgetSecrets, false
+	}
+	if err := o.applyStageOptions(task); err != nil {
+		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
+		reason, detail := agentErrorReason(err)
+		o.failTask(*task, reason, detail)
+		return forgetSecrets, false
+	}
+	if rules.isRepoUsed(*task) {
+		token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
+		if err != nil {
+			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
+			o.failTask(*task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
+			return forgetSecrets, false
+		}
+		task.Repo.Token = token
+		redactSecret(task.Repo.Token)
+	}
+	return forgetSecrets, true
+}
+
+func (o *Orchestrator) registerActiveTask(task Task) (context.Context, context.CancelCauseFunc) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	o.mu.Lock()
+	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
+	o.mu.Unlock()
+	return ctx, cancel
+}
+
+func (o *Orchestrator) unregisterActiveTask(idTask int64, cancel context.CancelCauseFunc) {
+	cancel(nil)
+	o.mu.Lock()
+	delete(o.activeTasks, idTask)
+	o.mu.Unlock()
+}
+
+// startHeartbeat reports the task alive until stop, and stops the agent once the tracker no longer
+// runs the task, unless the agent already submitted the stage.
+func (o *Orchestrator) startHeartbeat(ctx context.Context, task *Task, cancel context.CancelCauseFunc) (stop func()) {
 	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
-	defer cancelHeartbeat()
 	var isStageSubmitted atomic.Bool
 	task.OnStageSubmitted = func() { isStageSubmitted.Store(true) }
 	go o.heartbeatLoop.Start(heartbeatCtx, task.IdTask, func() {
@@ -274,28 +357,25 @@ func (o *Orchestrator) runStage(task Task) {
 		log.Warn().Int64("idTask", task.IdTask).Msg("tracker no longer runs this task — stopping the agent")
 		cancel(errTaskGone)
 	})
+	return cancelHeartbeat
+}
 
-	// One stage attempt runs the agent at a time; respects
-	// cancellation so a `cancelled` event releases a queued task.
+// acquireSlot waits for the one stage slot; the caller releases it. One stage attempt runs the
+// agent at a time; respects cancellation so a `cancelled` event releases a queued task.
+func (o *Orchestrator) acquireSlot(ctx context.Context, task Task) bool {
 	select {
 	case o.sem <- struct{}{}:
+		return true
 	case <-ctx.Done():
 		if o.finishCleanup(task.IdTask) {
 			go o.removeDiscardedWorktree(task.IdRun)
 		}
-		return
+		return false
 	}
-	defer func() { <-o.sem }()
-	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
+}
 
-	cleanup, ok := o.prepareWorkspace(&task)
-	if !ok {
-		return
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
+// runAgent reports a failed attempt itself; ok is false when there are no stats to report.
+func (o *Orchestrator) runAgent(ctx context.Context, task Task) (stats RunStats, ok bool) {
 	log.Info().
 		Int64("idTask", task.IdTask).
 		Str("stage", task.Stage).
@@ -305,19 +385,22 @@ func (o *Orchestrator) runStage(task Task) {
 	stats, err := o.agent.Run(ctx, task)
 	// A failed or dropped attempt keeps its worktree for Continue.
 	if errors.Is(context.Cause(ctx), errTaskGone) {
-		return
+		return stats, false
 	}
 	if err != nil {
 		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("agent run failed")
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
-		return
+		return stats, false
 	}
 	o.state.RecordRunDuration(time.Since(start))
-	// The agent already posted complete_stage via its MCP tool but rarely
-	// includes tokens/tool-calls/duration — backfill from what the adapter
-	// measured so the stats panel isn't all zeros.
-	// A chat turn also reports the commit its worktree is at.
+	return stats, true
+}
+
+// reportStats backfills what the adapter measured: the agent already posted complete_stage via its
+// MCP tool but rarely includes tokens/tool-calls/duration, so the stats panel isn't all zeros.
+// A chat turn also reports the commit its worktree is at.
+func (o *Orchestrator) reportStats(task Task, stats RunStats) {
 	headCommit := ""
 	if task.Chat != nil {
 		headCommit = task.Chat.WorktreeHead
@@ -326,147 +409,6 @@ func (o *Orchestrator) runStage(task Task) {
 		if err := o.trackerClient.UpdateTaskStats(context.Background(), task.IdTask, stats, headCommit); err != nil {
 			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("failed to update task stats")
 		}
-	}
-}
-
-// prepareWorkspace returns a cleanup only for the scratch directory of a
-// repoless stage; a run's worktree outlives the stage attempt.
-func (o *Orchestrator) prepareWorkspace(task *Task) (cleanup func(), ok bool) {
-	if task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet()) {
-		return o.prepareScratchDir(task)
-	}
-	if task.Stage == StageChat {
-		hasCode, ok := o.prepareChatWorktree(task)
-		if ok && !hasCode {
-			return o.prepareScratchDir(task)
-		}
-		return nil, ok
-	}
-
-	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
-	if err != nil {
-		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to prepare the repo")
-		o.failTask(*task, "worktree_error", err.Error())
-		return nil, false
-	}
-
-	isReused, ok := o.reuseRunWorktree(repoPath, task)
-	if !ok {
-		return nil, false
-	}
-	// A run without a worktree resumes the branch of the issue's open PR, or starts a new one.
-	if !isReused {
-		path, branch, err := o.createRunWorktree(repoPath, *task)
-		if err != nil {
-			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create worktree")
-			o.failTask(*task, "worktree_error", err.Error())
-			return nil, false
-		}
-		task.WorktreePath = path
-		task.Branch = branch
-	}
-	markWorktreeUsed(*task)
-	return nil, true
-}
-
-func (o *Orchestrator) prepareScratchDir(task *Task) (cleanup func(), ok bool) {
-	dir, err := os.MkdirTemp("", fmt.Sprintf("%s-%d-", strings.ReplaceAll(task.Stage, "_", "-"), task.IdRun))
-	if err != nil {
-		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the scratch directory")
-		o.failTask(*task, "worktree_error", err.Error())
-		return nil, false
-	}
-	task.WorktreePath = dir
-	return func() { _ = os.RemoveAll(dir) }, true
-}
-
-// markWorktreeUsed touches the worktree root: retention measures idleness by
-// its mtime, which edits in subdirectories never change.
-func markWorktreeUsed(task Task) {
-	now := time.Now()
-	if err := os.Chtimes(task.WorktreePath, now, now); err != nil {
-		log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("failed to mark the worktree as used")
-	}
-}
-
-// prepareChatWorktree reuses the chat run's worktree without fetching, reset to the commit the
-// tracker recorded, so nothing the agent did survives the turn. Without a usable recorded commit
-// it is (re)created detached at the current origin/<base>; hasCode is false for an empty origin.
-func (o *Orchestrator) prepareChatWorktree(task *Task) (hasCode, ok bool) {
-	repoPath, err := task.Repo.LocalPath(o.cfg.WorkspaceBase)
-	if err != nil {
-		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("invalid chat repo")
-		o.failTask(*task, "worktree_error", err.Error())
-		return false, false
-	}
-	worktreePath := WorktreePath(repoPath, task.IdRun)
-	head := task.Chat.HeadCommit
-	if err := ResetDetachedWorktree(worktreePath, head); err != nil {
-		if WorktreeExists(repoPath, task.IdRun) {
-			log.Warn().Int64("idRun", task.IdRun).Err(err).Msg("chat worktree cannot be reused — creating a new one")
-			if err := RemoveWorktree(repoPath, task.IdRun); err != nil {
-				log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to remove the chat worktree")
-				o.failTask(*task, "worktree_error", err.Error())
-				return false, false
-			}
-		}
-		head, err = o.createReadOnlyWorktree(task.Repo, task.IdRun)
-		if errors.Is(err, ErrRemoteEmpty) {
-			log.Info().Int64("idRun", task.IdRun).Msg("chat repo is empty — running without code")
-			return false, true
-		}
-		if err != nil {
-			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to create the chat worktree")
-			o.failTask(*task, "worktree_error", err.Error())
-			return false, false
-		}
-	}
-	task.WorktreePath = worktreePath
-	task.Chat.WorktreeHead = head
-	markWorktreeUsed(*task)
-	return true, true
-}
-
-// createReadOnlyWorktree creates a detached worktree from a clone that is never
-// seeded: an empty origin fails with ErrRemoteEmpty.
-func (o *Orchestrator) createReadOnlyWorktree(repo AgentRunGitRepo, idRun int64) (head string, err error) {
-	repoPath, err := EnsureRepoReadOnly(o.cfg.WorkspaceBase, repo)
-	if err != nil {
-		return "", err
-	}
-	return CreateDetachedWorktree(repoPath, repo.Token, repo.BaseBranch, idRun)
-}
-
-// reuseRunWorktree points the task at the run's existing worktree. A clean
-// detached worktree is removed so the caller creates a new one; any other
-// worktree without a branch fails the stage and stays on disk for an operator.
-func (o *Orchestrator) reuseRunWorktree(repoPath string, task *Task) (isReused, ok bool) {
-	if !WorktreeExists(repoPath, task.IdRun) {
-		return false, true
-	}
-	worktreePath := WorktreePath(repoPath, task.IdRun)
-	branch, isDisposable, err := worktreeState(worktreePath)
-	switch {
-	case err == nil && branch != "":
-		task.WorktreePath = worktreePath
-		task.Branch = branch
-		task.ResumedWorktree = true
-		return true, true
-	case err == nil && isDisposable:
-		log.Info().Int64("idRun", task.IdRun).Msg("worktree is detached and holds no work — creating a new one")
-		if err := RemoveWorktree(repoPath, task.IdRun); err != nil {
-			log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to remove the detached worktree")
-			o.failTask(*task, "worktree_error", err.Error())
-			return false, false
-		}
-		return false, true
-	default:
-		log.Warn().Int64("idTask", task.IdTask).Str("path", worktreePath).AnErr("cause", err).Msg("worktree cannot be reused")
-		o.failTask(*task, ErrCodeWorktreeUnusable, fmt.Sprintf(
-			"the worktree of run %d at %s has no branch checked out or is not a git worktree, so this run cannot continue on it; "+
-				"another run has likely taken over its branch. To retry, remove that directory on the gateway host; anything not pushed is then lost",
-			task.IdRun, worktreePath))
-		return false, false
 	}
 }
 
@@ -511,32 +453,6 @@ func defaultMaxTurns(stage string) int {
 		return defaultMaxTurnsImplement
 	}
 	return defaultMaxTurnsPlan
-}
-
-func (o *Orchestrator) createRunWorktree(repoPath string, task Task) (path, branch string, err error) {
-	if o.canResumePrBranch(repoPath, task) {
-		path, err = ResumeWorktree(repoPath, task.Repo.Token, task.PrBranch, task.IdRun)
-		return path, task.PrBranch, err
-	}
-	branch = GenerateBranchName(task.IdUserAgent, task.IdIssue)
-	path, err = CreateWorktree(repoPath, task.Repo.Token, task.Repo.BaseBranch, branch, task.IdRun)
-	return path, branch, err
-}
-
-func (o *Orchestrator) canResumePrBranch(repoPath string, task Task) bool {
-	if task.PrBranch == "" {
-		return false
-	}
-	if !IsAgentBranch(task.PrBranch) {
-		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Msg("PR branch is not an agent branch — starting a new one")
-		return false
-	}
-	hasBranch, err := remoteHasBranch(repoPath, task.Repo.Token, task.PrBranch)
-	if err != nil {
-		log.Warn().Int64("idRun", task.IdRun).Str("branch", task.PrBranch).Err(err).Msg("checking PR branch on origin failed — starting a new one")
-		return false
-	}
-	return hasBranch
 }
 
 // agentErrorReason extracts the stable error-reason code + detail from an
@@ -604,256 +520,4 @@ func (o *Orchestrator) activeRunIDs() map[int64]bool {
 		out[at.task.IdRun] = true
 	}
 	return out
-}
-
-func parseStageExecutePayload(event WebhookEvent) (Task, error) {
-	if event.IdRun == 0 {
-		return Task{}, fmt.Errorf("missing idRun")
-	}
-	if len(event.Payload) == 0 {
-		return Task{}, fmt.Errorf("empty payload")
-	}
-
-	var payload model.StageExecutePayload
-	if err := json.Unmarshal(event.Payload, &payload); err != nil {
-		return Task{}, fmt.Errorf("decoding stage_execute payload: %w", err)
-	}
-
-	task := Task{
-		IdRun:          event.IdRun,
-		IdIssue:        event.IdIssue,
-		IdUserAgent:    event.IdUserAgent,
-		IdProject:      event.IdProject,
-		IdTask:         payload.IdTask,
-		Stage:          payload.Stage,
-		AttemptNo:      payload.AttemptNo,
-		PrBranch:       payload.PrBranch,
-		RequestedModel: payload.Model,
-		MaxTurns:       payload.MaxTurns,
-		Effort:         payload.Effort,
-	}
-
-	if payload.Repo != nil {
-		task.Repo = AgentRunGitRepo{
-			CloneUrl:       payload.Repo.CloneUrl,
-			Host:           payload.Repo.Host,
-			RepoPath:       payload.Repo.RepoPath,
-			BaseBranch:     payload.Repo.BaseBranch,
-			EncryptedToken: payload.Repo.EncryptedToken,
-		}
-	}
-
-	if bundle := payload.ContextBundle; bundle != nil {
-		if bundle.Issue != nil {
-			task.IdIssuePublic = bundle.Issue.IdIssuePublic
-			task.IssueTitle = bundle.Issue.Title
-			task.IssueDesc = bundle.Issue.Description
-		}
-		task.ApprovedDesign = messageBody(bundle.ApprovedDesign)
-		task.ApprovedImplPlan = messageBody(bundle.ApprovedImplPlan)
-		task.RejectedOutput = messageBody(bundle.RejectedOutput)
-		if bundle.ApprovedMockupRef != nil {
-			task.ApprovedMockupRef = *bundle.ApprovedMockupRef
-		}
-		task.IsShortWorkflow = bundle.IsShortWorkflow
-		task.ResumedAfter = bundle.ResumedAfter
-		task.IsRevision = bundle.IsRevision
-		for _, skill := range decodeEach[model.Skill](bundle.Skills) {
-			if skill.Name == "" || skill.Content == "" {
-				continue
-			}
-			task.Skills = append(task.Skills, Skill(skill))
-		}
-		task.Wiki = parseWiki(bundle.Wiki)
-		task.WikiProposals = parseWikiProposals(bundle.WikiProposals)
-		task.Release = parseRelease(bundle.Release)
-		if payload.Stage == StageChat {
-			task.Chat = parseChat(bundle)
-			task.Conversation = parseChatThread(bundle.ReviewThread)
-		} else {
-			task.Conversation = parseIssueThread(bundle.ReviewThread)
-		}
-	}
-
-	if task.Stage == StageChat {
-		task.RunToken = payload.RunToken
-		if task.Chat == nil {
-			task.Chat = &ChatContext{Mode: ChatModeReply}
-		}
-	}
-
-	if task.IdTask == 0 {
-		return Task{}, fmt.Errorf("missing idTask")
-	}
-	if task.Stage == "" {
-		return Task{}, fmt.Errorf("missing stage")
-	}
-	return task, nil
-}
-
-func parseIssueThread(rawMessages []json.RawMessage) []TaskMessage {
-	var conversation []TaskMessage
-	for _, message := range decodeEach[model.Message](rawMessages) {
-		creatorName := ""
-		if message.Creator != nil {
-			creatorName = message.Creator.Name
-		}
-		conversation = append(conversation, TaskMessage{
-			CreatorName: creatorName,
-			CreatedAt:   message.CreatedAt,
-			Kind:        message.MessageKind,
-			Message:     conversationBody(message.MessageKind, message.Message),
-		})
-	}
-	return conversation
-}
-
-// parseChatThread reads conversation messages; their author (user, agent or
-// system) stands in for the creator name.
-func parseChatThread(rawMessages []json.RawMessage) []TaskMessage {
-	var conversation []TaskMessage
-	for _, message := range decodeEach[model.ChatMessage](rawMessages) {
-		conversation = append(conversation, TaskMessage{
-			CreatorName: message.Author,
-			CreatedAt:   message.CreatedAt,
-			Kind:        message.Kind,
-			Message:     message.Body,
-		})
-	}
-	return conversation
-}
-
-// decodeEach skips elements that do not decode so one malformed entry never fails a stage.
-func decodeEach[T any](rawItems []json.RawMessage) []T {
-	var items []T
-	for _, rawItem := range rawItems {
-		var item T
-		if err := json.Unmarshal(rawItem, &item); err != nil {
-			continue
-		}
-		items = append(items, item)
-	}
-	return items
-}
-
-func messageBody(message *model.Message) string {
-	if message == nil {
-		return ""
-	}
-	return message.Message
-}
-
-// conversationBody drops the body of artifacts the prompt already renders in
-// full sections of their own, keeping only their place in the thread.
-func conversationBody(kind, message string) string {
-	switch kind {
-	case MessageKindDesign:
-		return "(design document — body omitted here)"
-	case MessageKindImplementationPlan:
-		return "(implementation plan — body omitted here)"
-	default:
-		return message
-	}
-}
-
-func parseWiki(promptContext *model.WikiPromptContext) *WikiContext {
-	if promptContext == nil {
-		return nil
-	}
-	wiki := &WikiContext{IndexMore: promptContext.IndexMore}
-	for _, page := range decodeEach[model.WikiPromptPage](promptContext.Pages) {
-		if page.Slug == "" || page.Body == "" {
-			continue
-		}
-		wiki.Pages = append(wiki.Pages, WikiPage(page))
-	}
-	for _, entry := range decodeEach[model.WikiPromptIndexEntry](promptContext.Index) {
-		if entry.Slug == "" {
-			continue
-		}
-		wiki.Index = append(wiki.Index, WikiIndexEntry(entry))
-	}
-	if len(wiki.Pages) == 0 && len(wiki.Index) == 0 && wiki.IndexMore == 0 {
-		return nil
-	}
-	return wiki
-}
-
-// parseChat reads the conversation of a chat turn. An unknown mode is answered
-// as an ordinary reply.
-func parseChat(bundle *model.ContextBundle) *ChatContext {
-	chat := &ChatContext{Mode: ChatModeReply, IsHistoryTruncated: bundle.HistoryTruncated}
-	if bundle.Chat != nil {
-		chat.IdConversation = bundle.Chat.IdConversation
-		chat.HeadCommit = bundle.Chat.HeadCommit
-		if bundle.Chat.Mode == ChatModeTaskDraft {
-			chat.Mode = ChatModeTaskDraft
-			if bundle.Chat.DraftFromMessage != nil {
-				source := ChatDraftFromMessage(*bundle.Chat.DraftFromMessage)
-				chat.DraftFromMessage = &source
-			}
-		}
-		for _, project := range bundle.Chat.Projects {
-			chat.Projects = append(chat.Projects, ChatProject(project))
-		}
-	}
-	return chat
-}
-
-func parseRelease(promptContext *model.ReleasePromptContext) *ReleaseContext {
-	if promptContext == nil {
-		return nil
-	}
-	release := &ReleaseContext{Name: promptContext.Name, Tag: promptContext.Tag}
-	for _, issue := range promptContext.OpenIssues {
-		release.OpenIssues = append(release.OpenIssues, ReleaseIssue(issue))
-	}
-	for _, section := range promptContext.Sections {
-		name := ""
-		if section.Name != nil {
-			name = *section.Name
-		}
-		issues := make([]ReleaseIssue, len(section.Issues))
-		for i, issue := range section.Issues {
-			issues[i] = ReleaseIssue(issue)
-		}
-		release.Sections = append(release.Sections, ReleaseSection{Name: name, Issues: issues})
-	}
-	return release
-}
-
-func parseWikiProposals(rawProposals []json.RawMessage) []WikiProposal {
-	var proposals []WikiProposal
-	for _, proposal := range decodeEach[model.WikiProposalAgentView](rawProposals) {
-		if proposal.Slug == "" {
-			continue
-		}
-		parent := ""
-		if proposal.Parent != nil {
-			parent = *proposal.Parent
-		}
-		proposals = append(proposals, WikiProposal{
-			Kind:   proposal.Kind,
-			Slug:   proposal.Slug,
-			Title:  proposal.Title,
-			Parent: parent,
-			Reason: proposal.Reason,
-		})
-	}
-	return proposals
-}
-
-// branchOfWorktree returns the branch checked out in a worktree, or "" if
-// detached HEAD or unreadable.
-func branchOfWorktree(worktreePath string) (string, error) {
-	cmd := exec.Command("git", "-C", worktreePath, "rev-parse", "--abbrev-ref", "HEAD")
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
-	}
-	branch := strings.TrimSpace(string(out))
-	if branch == "HEAD" {
-		return "", nil
-	}
-	return branch, nil
 }

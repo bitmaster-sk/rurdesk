@@ -226,6 +226,59 @@ func TestRunStage_ReleasesTheSlotWhenTheTrackerNoLongerRunsTheTask(t *testing.T)
 	}
 }
 
+// A stage waiting for the slot keeps reporting liveness, so the API's stale sweep never fails it
+// before it starts.
+func TestRunStage_QueuedStageSendsHeartbeats(t *testing.T) {
+	const runningTask, queuedTask = int64(100), int64(101)
+	queuedHeartbeat := make(chan struct{}, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == fmt.Sprintf("/agent/task/%d/heartbeat", queuedTask) {
+			select {
+			case queuedHeartbeat <- struct{}{}:
+			default:
+			}
+		}
+		writer.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(server.Close)
+
+	workspaceBase, repo := stageTestWorkspace(t)
+	cfg := &Config{
+		TrackerAPIUrl: server.URL,
+		WebhookSecret: testWebhookSecret,
+		WorkspaceBase: workspaceBase,
+	}
+	agent := &blockingAgent{entered: make(chan int64, 2), release: make(chan struct{})}
+	orchestrator := NewOrchestrator(cfg, agent, NewTrackerClient(cfg), NewState())
+	orchestrator.heartbeatLoop.interval = 20 * time.Millisecond
+
+	go orchestrator.runStage(Task{Repo: repo, IdTask: runningTask, IdRun: 200, IdUserAgent: 1, IdIssue: 300, Stage: StageDesign, AttemptNo: 1})
+	select {
+	case <-agent.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("no agent.Run started within timeout")
+	}
+	go orchestrator.runStage(Task{Repo: repo, IdTask: queuedTask, IdRun: 201, IdUserAgent: 1, IdIssue: 301, Stage: StageDesign, AttemptNo: 1})
+
+	select {
+	case <-queuedHeartbeat:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the queued stage sent no heartbeat while it waited for the slot")
+	}
+	select {
+	case id := <-agent.entered:
+		t.Fatalf("stage %d ran while another one held the slot", id)
+	default:
+	}
+
+	close(agent.release)
+	select {
+	case <-agent.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the queued stage never ran after the slot was released")
+	}
+}
+
 type submittingAgent struct {
 	entered   chan struct{}
 	release   chan struct{}
