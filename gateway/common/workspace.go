@@ -10,20 +10,20 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// prepareWorkspace returns a cleanup only for the scratch directory of a
-// repoless stage; a run's worktree outlives the stage attempt.
-func (o *Orchestrator) prepareWorkspace(task *Task) (cleanup func(), ok bool) {
-	if task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet()) {
+// prepareChatWorkspace runs a chat without a repo, or with an empty one, in a scratch directory
+// like release notes.
+func (o *Orchestrator) prepareChatWorkspace(task *Task) (cleanup func(), ok bool) {
+	if !task.Repo.IsSet() {
 		return o.prepareScratchDir(task)
 	}
-	if task.Stage == StageChat {
-		hasCode, ok := o.prepareChatWorktree(task)
-		if ok && !hasCode {
-			return o.prepareScratchDir(task)
-		}
-		return nil, ok
+	hasCode, ok := o.prepareChatWorktree(task)
+	if ok && !hasCode {
+		return o.prepareScratchDir(task)
 	}
+	return nil, ok
+}
 
+func (o *Orchestrator) prepareRunWorkspace(task *Task) (cleanup func(), ok bool) {
 	repoPath, err := EnsureRepo(o.cfg.WorkspaceBase, task.Repo)
 	if err != nil {
 		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("failed to prepare the repo")

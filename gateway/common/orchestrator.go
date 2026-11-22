@@ -210,57 +210,144 @@ func (o *Orchestrator) completeTaskNoAction(task Task) {
 	}
 }
 
+// repoUse tells what a kind of stage needs a repo for.
+type repoUse int
+
+const (
+	repoRequired repoUse = iota
+	// repoOptional runs in a scratch directory when the tracker sends no repo.
+	repoOptional
+	repoUnused
+)
+
+// stageRules is what differs between the kinds of stage the gateway runs: a stage of an issue run,
+// release notes and a chat turn.
+type stageRules struct {
+	isRunTokenRequired bool
+	repo               repoUse
+	// prepareWorkspace points the task at the directory the agent runs in. It returns a cleanup
+	// only for a scratch directory; a run's worktree outlives the stage attempt.
+	prepareWorkspace func(o *Orchestrator, task *Task) (cleanup func(), ok bool)
+}
+
+func stageRulesOf(stage string) stageRules {
+	switch stage {
+	case StageReleaseNotes:
+		return stageRules{repo: repoUnused, prepareWorkspace: (*Orchestrator).prepareScratchDir}
+	case StageChat:
+		return stageRules{isRunTokenRequired: true, repo: repoOptional, prepareWorkspace: (*Orchestrator).prepareChatWorkspace}
+	default:
+		return stageRules{repo: repoRequired, prepareWorkspace: (*Orchestrator).prepareRunWorkspace}
+	}
+}
+
+func (r stageRules) isRepoUsed(task Task) bool {
+	return r.repo == repoRequired || (r.repo == repoOptional && task.Repo.IsSet())
+}
+
 func (o *Orchestrator) runStage(task Task) {
-	if task.Stage == StageChat && task.RunToken == "" {
-		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a chat turn without its run token")
-		o.failTask(task, ErrCodeTrackerMissingRunToken, "the tracker sent no run token for this chat turn; update the tracker")
+	rules := stageRulesOf(task.Stage)
+	forgetSecrets, ok := o.validateTask(&task, rules)
+	defer forgetSecrets()
+	if !ok {
 		return
-	}
-	if task.RunToken != "" {
-		o.trackerClient.RedactSecret(task.RunToken)
-		defer o.trackerClient.ForgetSecret(task.RunToken)
-	}
-	// A chat without a repo runs in a scratch directory like release notes.
-	isRepoless := task.Stage == StageReleaseNotes || (task.Stage == StageChat && !task.Repo.IsSet())
-	if !isRepoless && !task.Repo.IsSet() {
-		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
-		o.failTask(task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
-		return
-	}
-	if err := o.applyStageOptions(&task); err != nil {
-		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
-		reason, detail := agentErrorReason(err)
-		o.failTask(task, reason, detail)
-		return
-	}
-	if !isRepoless {
-		token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
-		if err != nil {
-			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
-			o.failTask(task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
-			return
-		}
-		task.Repo.Token = token
-		o.trackerClient.RedactSecret(task.Repo.Token)
-		defer o.trackerClient.ForgetSecret(task.Repo.Token)
 	}
 
-	ctx, cancel := context.WithCancelCause(context.Background())
-	o.mu.Lock()
-	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
-	o.mu.Unlock()
-	defer func() {
-		cancel(nil)
-		o.mu.Lock()
-		delete(o.activeTasks, task.IdTask)
-		o.mu.Unlock()
-	}()
+	ctx, cancel := o.registerActiveTask(task)
+	defer o.unregisterActiveTask(task.IdTask, cancel)
 
 	// Starts before the concurrency gate so a task waiting for a free slot
 	// still reports liveness — otherwise the API stale-sweep would fail it
 	// while queued. Covers the whole stage attempt.
+	stopHeartbeat := o.startHeartbeat(ctx, &task, cancel)
+	defer stopHeartbeat()
+
+	if !o.acquireSlot(ctx, task) {
+		return
+	}
+	defer func() { <-o.sem }()
+	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
+
+	cleanup, ok := rules.prepareWorkspace(o, &task)
+	if !ok {
+		return
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	stats, ok := o.runAgent(ctx, task)
+	if !ok {
+		return
+	}
+	o.reportStats(task, stats)
+}
+
+// validateTask rejects a task the gateway cannot run, applies the stage options and decrypts the
+// git token. The task's secrets stay masked in what reaches the tracker until forgetSecrets runs.
+func (o *Orchestrator) validateTask(task *Task, rules stageRules) (forgetSecrets func(), ok bool) {
+	var secrets []string
+	forgetSecrets = func() {
+		for _, secret := range secrets {
+			o.trackerClient.ForgetSecret(secret)
+		}
+	}
+	redactSecret := func(secret string) {
+		o.trackerClient.RedactSecret(secret)
+		secrets = append(secrets, secret)
+	}
+
+	if rules.isRunTokenRequired && task.RunToken == "" {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a chat turn without its run token")
+		o.failTask(*task, ErrCodeTrackerMissingRunToken, "the tracker sent no run token for this chat turn; update the tracker")
+		return forgetSecrets, false
+	}
+	if task.RunToken != "" {
+		redactSecret(task.RunToken)
+	}
+	if rules.repo == repoRequired && !task.Repo.IsSet() {
+		log.Warn().Int64("idTask", task.IdTask).Msg("rejecting a stage without a repo")
+		o.failTask(*task, ErrCodeTrackerMissingRepo, "the tracker sent no repository for this run; update the tracker")
+		return forgetSecrets, false
+	}
+	if err := o.applyStageOptions(task); err != nil {
+		log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting stage the gateway does not allow")
+		reason, detail := agentErrorReason(err)
+		o.failTask(*task, reason, detail)
+		return forgetSecrets, false
+	}
+	if rules.isRepoUsed(*task) {
+		token, err := DecryptGitToken(o.cfg.WebhookSecret, task.Repo.EncryptedToken)
+		if err != nil {
+			log.Warn().Int64("idTask", task.IdTask).Err(err).Msg("rejecting a stage whose git token the gateway cannot read")
+			o.failTask(*task, ErrCodeGitTokenUnreadable, "the gateway could not decrypt the git token; check that TRACKER_TO_GATEWAY_TOKEN matches the token shown for this gateway in the tracker")
+			return forgetSecrets, false
+		}
+		task.Repo.Token = token
+		redactSecret(task.Repo.Token)
+	}
+	return forgetSecrets, true
+}
+
+func (o *Orchestrator) registerActiveTask(task Task) (context.Context, context.CancelCauseFunc) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	o.mu.Lock()
+	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
+	o.mu.Unlock()
+	return ctx, cancel
+}
+
+func (o *Orchestrator) unregisterActiveTask(idTask int64, cancel context.CancelCauseFunc) {
+	cancel(nil)
+	o.mu.Lock()
+	delete(o.activeTasks, idTask)
+	o.mu.Unlock()
+}
+
+// startHeartbeat reports the task alive until stop, and stops the agent once the tracker no longer
+// runs the task, unless the agent already submitted the stage.
+func (o *Orchestrator) startHeartbeat(ctx context.Context, task *Task, cancel context.CancelCauseFunc) (stop func()) {
 	heartbeatCtx, cancelHeartbeat := context.WithCancel(ctx)
-	defer cancelHeartbeat()
 	var isStageSubmitted atomic.Bool
 	task.OnStageSubmitted = func() { isStageSubmitted.Store(true) }
 	go o.heartbeatLoop.Start(heartbeatCtx, task.IdTask, func() {
@@ -270,28 +357,25 @@ func (o *Orchestrator) runStage(task Task) {
 		log.Warn().Int64("idTask", task.IdTask).Msg("tracker no longer runs this task — stopping the agent")
 		cancel(errTaskGone)
 	})
+	return cancelHeartbeat
+}
 
-	// One stage attempt runs the agent at a time; respects
-	// cancellation so a `cancelled` event releases a queued task.
+// acquireSlot waits for the one stage slot; the caller releases it. One stage attempt runs the
+// agent at a time; respects cancellation so a `cancelled` event releases a queued task.
+func (o *Orchestrator) acquireSlot(ctx context.Context, task Task) bool {
 	select {
 	case o.sem <- struct{}{}:
+		return true
 	case <-ctx.Done():
 		if o.finishCleanup(task.IdTask) {
 			go o.removeDiscardedWorktree(task.IdRun)
 		}
-		return
+		return false
 	}
-	defer func() { <-o.sem }()
-	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
+}
 
-	cleanup, ok := o.prepareWorkspace(&task)
-	if !ok {
-		return
-	}
-	if cleanup != nil {
-		defer cleanup()
-	}
-
+// runAgent reports a failed attempt itself; ok is false when there are no stats to report.
+func (o *Orchestrator) runAgent(ctx context.Context, task Task) (stats RunStats, ok bool) {
 	log.Info().
 		Int64("idTask", task.IdTask).
 		Str("stage", task.Stage).
@@ -301,19 +385,22 @@ func (o *Orchestrator) runStage(task Task) {
 	stats, err := o.agent.Run(ctx, task)
 	// A failed or dropped attempt keeps its worktree for Continue.
 	if errors.Is(context.Cause(ctx), errTaskGone) {
-		return
+		return stats, false
 	}
 	if err != nil {
 		log.Error().Int64("idTask", task.IdTask).Err(err).Msg("agent run failed")
 		reason, detail := agentErrorReason(err)
 		o.failTask(task, reason, detail)
-		return
+		return stats, false
 	}
 	o.state.RecordRunDuration(time.Since(start))
-	// The agent already posted complete_stage via its MCP tool but rarely
-	// includes tokens/tool-calls/duration — backfill from what the adapter
-	// measured so the stats panel isn't all zeros.
-	// A chat turn also reports the commit its worktree is at.
+	return stats, true
+}
+
+// reportStats backfills what the adapter measured: the agent already posted complete_stage via its
+// MCP tool but rarely includes tokens/tool-calls/duration, so the stats panel isn't all zeros.
+// A chat turn also reports the commit its worktree is at.
+func (o *Orchestrator) reportStats(task Task, stats RunStats) {
 	headCommit := ""
 	if task.Chat != nil {
 		headCommit = task.Chat.WorktreeHead
