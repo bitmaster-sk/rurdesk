@@ -258,7 +258,7 @@ func (s *WikiProposalService) Reject(ctx context.Context, user model.User, idPro
 			return s.decideErr(err)
 		}
 		if proposal.IdIssue != nil {
-			message, err := s.messageRepo.InsertIssueMessage(ctx, rejectionComment(proposal, reason), &user, *proposal.IdIssue, nil)
+			message, err := s.messageRepo.InsertIssueMessage(ctx, rejectionComment(proposal, reason), &user, *proposal.IdIssue)
 			if err != nil {
 				return err
 			}

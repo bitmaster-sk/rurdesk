@@ -169,7 +169,9 @@ func (r *MessageRepository) LoadProjectMessages(ctx context.Context, idsProject 
 	return scanMessages(rows, model.ProjectRecipientType)
 }
 
-func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64, _ int64, _ *bool) ([]*model.Message, error) {
+// LoadIssueMessages returns the issue's messages newest first. read is per idReader: another
+// author's message newer than the reader's last read of the issue is unread.
+func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64, idReader int64, _ *bool) ([]*model.Message, error) {
 	db := extctx.GetDb(ctx, r.pool)
 	rows, err := db.Query(ctx, `
 		SELECT
@@ -184,21 +186,23 @@ func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64
 			usr.color_avatar_bg,
 			usr.avatar_initials,
 			usr.is_active,
-			true AS read,
+			CASE WHEN msg.created_at > COALESCE(ire.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			ism.id_issue_to,
 			a.id_parent_message,
 			a.parent_version,
 			a.anchor_line_start,
 			a.anchor_line_end,
-			parent.version AS parent_current_version
+			a.anchor_text,
+			a.quote,
+			a.id_thread_message
 		FROM messages.message msg
 		INNER JOIN messages.issue_message ism ON ism.id_message = msg.id_message
 		INNER JOIN users.user usr ON msg.id_user_from = usr.id_user
 		LEFT JOIN messages.message_anchor a ON a.id_message = msg.id_message
-		LEFT JOIN messages.message parent ON parent.id_message = a.id_parent_message
+		LEFT JOIN messages.issue_read ire ON ire.id_issue_to = ism.id_issue_to AND ire.id_user = $2
 		WHERE ism.id_issue_to = $1
 		ORDER BY msg.created_at DESC
-	`, idIssue)
+	`, idIssue, idReader)
 	if err != nil {
 		return nil, fmt.Errorf("querying issue messages: %w", err)
 	}
@@ -274,7 +278,14 @@ func (r *MessageRepository) InsertIssueAgentMessage(
 	return msg, nil
 }
 
-func (r *MessageRepository) InsertIssueMessage(ctx context.Context, message string, creator *model.User, idRecipient int64, anchor *model.MessageAnchor) (*model.Message, error) {
+type AnchorParent struct {
+	IdIssue    int64
+	Body       string
+	Version    int
+	IsAnchored bool
+}
+
+func (r *MessageRepository) InsertIssueMessage(ctx context.Context, message string, creator *model.User, idRecipient int64) (*model.Message, error) {
 	msg, err := r.insertMessage(ctx, message, creator, constants.MessageKindComment)
 	if err != nil {
 		return nil, err
@@ -285,45 +296,64 @@ func (r *MessageRepository) InsertIssueMessage(ctx context.Context, message stri
 		return nil, fmt.Errorf("inserting issue message: %w", err)
 	}
 
-	if anchor != nil {
-		var parentIssueID int64
-		guardErr := db.QueryRow(ctx,
-			`SELECT ism.id_issue_to FROM messages.issue_message ism WHERE ism.id_message = $1`,
-			anchor.IdParentMessage,
-		).Scan(&parentIssueID)
-		if guardErr != nil {
-			if errors.Is(guardErr, pgx.ErrNoRows) {
-				return nil, ErrAnchorWrongThread
-			}
-			return nil, fmt.Errorf("checking anchor parent thread: %w", guardErr)
-		}
-		if parentIssueID != idRecipient {
-			return nil, ErrAnchorWrongThread
-		}
-
-		var capturedParentVersion int
-		anchorErr := db.QueryRow(ctx, `
-			INSERT INTO messages.message_anchor (id_message, id_parent_message, parent_version, anchor_line_start, anchor_line_end)
-			VALUES ($1, $2, (SELECT version FROM messages.message WHERE id_message = $2), $3, $4)
-			RETURNING parent_version
-		`, msg.IdMessage, anchor.IdParentMessage, anchor.AnchorLineStart, anchor.AnchorLineEnd).Scan(&capturedParentVersion)
-		if anchorErr != nil {
-			return nil, fmt.Errorf("inserting message anchor: %w", anchorErr)
-		}
-
-		msg.Anchor = &model.MessageAnchor{
-			IdParentMessage: anchor.IdParentMessage,
-			ParentVersion:   capturedParentVersion,
-			AnchorLineStart: anchor.AnchorLineStart,
-			AnchorLineEnd:   anchor.AnchorLineEnd,
-			IsOutdated:      false,
-		}
-	}
-
 	msg.IdRecipient = idRecipient
 	msg.IdMessageRecipientType = model.IssueRecipientType
 	msg.IsRead = true
 	return msg, nil
+}
+
+func (r *MessageRepository) LoadAnchorParentForShare(ctx context.Context, idParentMessage int64) (*AnchorParent, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var parent AnchorParent
+	err := db.QueryRow(ctx, `
+		SELECT ism.id_issue_to, p.message, p.version,
+		       EXISTS (SELECT 1 FROM messages.message_anchor pa WHERE pa.id_message = p.id_message)
+		FROM messages.message p
+		INNER JOIN messages.issue_message ism ON ism.id_message = p.id_message
+		WHERE p.id_message = $1
+		FOR SHARE OF p
+	`, idParentMessage).Scan(&parent.IdIssue, &parent.Body, &parent.Version, &parent.IsAnchored)
+	if err != nil {
+		return nil, err
+	}
+	return &parent, nil
+}
+
+func (r *MessageRepository) LoadThreadRootAnchor(ctx context.Context, idThreadMessage int64) (*model.MessageAnchor, int64, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var (
+		idRoot      int64
+		rootIssueId int64
+		anchor      model.MessageAnchor
+	)
+	err := db.QueryRow(ctx, `
+		SELECT root.id_message, ism.id_issue_to, root.id_parent_message, root.parent_version,
+		       root.anchor_line_start, root.anchor_line_end, root.anchor_text, root.quote
+		FROM messages.message_anchor reply
+		INNER JOIN messages.message_anchor root ON root.id_message = COALESCE(reply.id_thread_message, reply.id_message)
+		INNER JOIN messages.issue_message ism ON ism.id_message = root.id_message
+		WHERE reply.id_message = $1
+	`, idThreadMessage).Scan(&idRoot, &rootIssueId, &anchor.IdParentMessage, &anchor.ParentVersion,
+		&anchor.AnchorLineStart, &anchor.AnchorLineEnd, &anchor.AnchorText, &anchor.Quote)
+	if err != nil {
+		return nil, 0, err
+	}
+	anchor.IdThreadMessage = &idRoot
+	return &anchor, rootIssueId, nil
+}
+
+func (r *MessageRepository) InsertMessageAnchor(ctx context.Context, idMessage int64, anchor *model.MessageAnchor) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO messages.message_anchor
+			(id_message, id_parent_message, parent_version, anchor_line_start, anchor_line_end, anchor_text, quote, id_thread_message)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`, idMessage, anchor.IdParentMessage, anchor.ParentVersion, anchor.AnchorLineStart, anchor.AnchorLineEnd,
+		anchor.AnchorText, anchor.Quote, anchor.IdThreadMessage)
+	if err != nil {
+		return fmt.Errorf("inserting message anchor: %w", err)
+	}
+	return nil
 }
 
 func (r *MessageRepository) insertMessage(ctx context.Context, message string, creator *model.User, kind constants.MessageKind) (*model.Message, error) {
@@ -431,6 +461,19 @@ func (r *MessageRepository) InsertReadProjectMessages(ctx context.Context, idRec
 	return nil
 }
 
+func (r *MessageRepository) InsertReadIssueMessages(ctx context.Context, idIssue int64, idReader int64) error {
+	db := extctx.GetDb(ctx, r.pool)
+	_, err := db.Exec(ctx, `
+		INSERT INTO messages.issue_read(id_issue_to, id_user)
+		VALUES ($1, $2)
+		ON CONFLICT (id_issue_to, id_user) DO UPDATE SET read_at = now() at time zone 'utc'
+	`, idIssue, idReader)
+	if err != nil {
+		return fmt.Errorf("marking issue messages read: %w", err)
+	}
+	return nil
+}
+
 func scanMessages(rows pgx.Rows, recipientType model.MessageRecipientType) ([]*model.Message, error) {
 	defer rows.Close()
 	var msgs []*model.Message
@@ -457,18 +500,20 @@ func scanIssueMessages(rows pgx.Rows) ([]*model.Message, error) {
 		m := &model.Message{}
 		u := &model.User{}
 		var (
-			idParentMessage  *int64
-			parentVersion    *int
-			anchorLineStart  *int
-			anchorLineEnd    *int
-			parentCurrentVer *int
-			kind             string
+			idParentMessage *int64
+			parentVersion   *int
+			anchorLineStart *int
+			anchorLineEnd   *int
+			anchorText      *string
+			quote           *string
+			idThreadMessage *int64
+			kind            string
 		)
 		if err := rows.Scan(
 			&m.IdMessage, &m.Message, &kind, &m.CreatedAt, &m.UpdatedAt, &m.Version,
 			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &u.IsActive,
 			&m.IsRead, &m.IdRecipient,
-			&idParentMessage, &parentVersion, &anchorLineStart, &anchorLineEnd, &parentCurrentVer,
+			&idParentMessage, &parentVersion, &anchorLineStart, &anchorLineEnd, &anchorText, &quote, &idThreadMessage,
 		); err != nil {
 			return nil, fmt.Errorf("scanning issue message: %w", err)
 		}
@@ -476,13 +521,14 @@ func scanIssueMessages(rows pgx.Rows) ([]*model.Message, error) {
 		m.Creator = u
 		m.IdMessageRecipientType = model.IssueRecipientType
 		if idParentMessage != nil {
-			isOutdated := parentCurrentVer != nil && *parentVersion < *parentCurrentVer
 			m.Anchor = &model.MessageAnchor{
 				IdParentMessage: *idParentMessage,
 				ParentVersion:   *parentVersion,
 				AnchorLineStart: *anchorLineStart,
 				AnchorLineEnd:   *anchorLineEnd,
-				IsOutdated:      isOutdated,
+				AnchorText:      *anchorText,
+				Quote:           quote,
+				IdThreadMessage: idThreadMessage,
 			}
 		}
 		msgs = append(msgs, m)

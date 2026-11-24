@@ -801,6 +801,7 @@ func GetRunKindDeps() agent.RunKindDeps {
 		GitIntRepo:        GetGitIntegrationRepository(),
 		IssueRepo:         GetIssueRepository(),
 		MessageRepo:       GetMessageRepository(),
+		MessageAnchorSvc:  GetMessageAnchorService(),
 		ProjectRepo:       GetProjectRepository(),
 		UserRepo:          GetUserRepository(),
 		ConversationRepo:  GetAgentConversationRepository(),
@@ -964,6 +965,7 @@ func GetMessageController() (*controller.MessageController, error) {
 			GetNotifier(),
 			GetAclService(),
 			GetMessageAccessService(),
+			GetMessageAnchorService(),
 			GetAttachmentLinkService(),
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
@@ -981,6 +983,13 @@ func GetMessageAccessService() *service.MessageAccessService {
 		return service.NewMessageAccessService(GetAclService(), GetProjectRepository(), GetUserRepository()), nil
 	})
 	return instance.(*service.MessageAccessService)
+}
+
+func GetMessageAnchorService() *service.MessageAnchorService {
+	instance, _ := di.GetWithNew("message-anchor-service", func() (any, error) {
+		return service.NewMessageAnchorService(GetMessageRepository()), nil
+	})
+	return instance.(*service.MessageAnchorService)
 }
 
 func GetAttachmentLinkService() *service.AttachmentLinkService {
