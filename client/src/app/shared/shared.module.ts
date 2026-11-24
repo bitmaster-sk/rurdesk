@@ -31,6 +31,7 @@ import { AgentThinkingRowComponent } from './components/agent-thinking-row/agent
 import { AgentThinkingLinesComponent } from './components/agent-thinking-lines/agent-thinking-lines.component';
 
 import { MessageBodyComponent } from './mention/message-body/message-body.component';
+import { MessageAnchorsDirective } from './mention/message-body/message-anchors.directive';
 import { MermaidDiagramComponent } from './mermaid/mermaid-diagram.component';
 import { PlantUmlDiagramComponent } from './plantuml/plantuml-diagram.component';
 import { AttachmentRenderDirective } from './attachment/directives/attachment-render.directive';
@@ -107,6 +108,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         AgentThinkingRowComponent,
         AgentThinkingLinesComponent,
         MessageBodyComponent,
+        MessageAnchorsDirective,
         MarkdownCodeCopyDirective,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,
@@ -193,6 +195,7 @@ import { MarkdownCodeCopyDirective } from './markdown/markdown-code-copy.directi
         AgentThinkingRowComponent,
         AgentThinkingLinesComponent,
         MessageBodyComponent,
+        MessageAnchorsDirective,
         MarkdownCodeCopyDirective,
         MermaidDiagramComponent,
         PlantUmlDiagramComponent,

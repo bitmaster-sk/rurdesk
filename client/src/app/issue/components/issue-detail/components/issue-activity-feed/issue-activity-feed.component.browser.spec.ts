@@ -38,7 +38,12 @@ class ActivityCommentItemStub {
     public readonly message = input<unknown>(undefined);
     public readonly isOwnMessage = input<boolean>(false);
     public readonly isEditing = input<boolean>(false);
-    public readonly anchoredChildren = input<unknown[]>([]);
+    public readonly threads = input<unknown[]>([]);
+    public readonly draft = input<unknown>(null);
+    public readonly expandedThreads = input<unknown>(undefined);
+    public readonly unreadByThread = input<unknown>(undefined);
+    public readonly currentUserId = input<unknown>(undefined);
+    public readonly idThreadMessageEdit = input<unknown>(undefined);
     public readonly agentRun = input<unknown>(undefined);
     public readonly isLatestPlanForStage = input<boolean>(false);
     public readonly candidates = input<unknown>(undefined);
@@ -46,7 +51,14 @@ class ActivityCommentItemStub {
     public readonly editRequest = output<void>();
     public readonly editSave = output<string>();
     public readonly editCancel = output<void>();
-    public readonly addAnchor = output<unknown>();
+    public readonly anchorRequest = output<unknown>();
+    public readonly draftSend = output<string>();
+    public readonly draftCancel = output<void>();
+    public readonly threadToggle = output<number>();
+    public readonly threadReply = output<unknown>();
+    public readonly threadEditRequest = output<unknown>();
+    public readonly threadEditSave = output<{ message: never; text: string }>();
+    public readonly threadEditCancel = output<void>();
     public readonly approve = output<void>();
     public readonly approveMockup = output<string>();
 }
@@ -265,7 +277,10 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
             message: '`![shot.png](attachment:11111111-1111-1111-1111-111111111111)`'
         };
         TestBed.overrideProvider(MessageApi, {
-            useValue: { load$: () => of([withImage, plain, inCode]) }
+            useValue: {
+                load$: () => of([withImage, plain, inCode]),
+                markRead$: () => of(undefined)
+            }
         });
         TestBed.overrideProvider(TrackerService, {
             useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
@@ -486,7 +501,10 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
                 },
                 ...lookupStoreProviders(),
                 { provide: WikiApi, useValue: { loadIssueProposals$: () => of([]) } },
-                { provide: MessageApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: MessageApi,
+                    useValue: { load$: () => of([]), markRead$: () => of(undefined) }
+                },
                 {
                     provide: TrackerService,
                     useValue: {
@@ -603,7 +621,10 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
                 },
                 ...lookupStoreProviders(),
                 { provide: WikiApi, useValue: { loadIssueProposals$: loadIssueProposals } },
-                { provide: MessageApi, useValue: { load$: () => of([]) } },
+                {
+                    provide: MessageApi,
+                    useValue: { load$: () => of([]), markRead$: () => of(undefined) }
+                },
                 {
                     provide: TrackerService,
                     useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
@@ -696,6 +717,7 @@ describe('IssueActivityFeedComponent history (browser)', () => {
                 {
                     provide: MessageApi,
                     useValue: {
+                        markRead$: () => of(undefined),
                         load$: () =>
                             of([
                                 {

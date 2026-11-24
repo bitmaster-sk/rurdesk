@@ -1,31 +1,49 @@
 @for (seg of segments(); track $index) {
-    @if (seg.type === 'diff') {
-        <app-diff-viewer [rawPatch]="seg.content" />
-    } @else if (seg.type === 'mockup') {
-        <app-mockup-card
-            [html]="seg.content"
-            [title]="seg.title"
-            [approvable]="approvable()"
-            [selected]="selectedMockupRef() === seg.ref"
-            [rejected]="selectedMockupRef() !== null && selectedMockupRef() !== seg.ref"
-            (useAndApprove)="useMockup.emit(seg.ref)"
-        />
-    } @else if (seg.type === 'mermaid') {
-        <app-mermaid-diagram [source]="seg.content" />
-    } @else if (seg.type === 'plantuml') {
-        <app-plantuml-diagram [source]="seg.content" />
-    } @else {
-        <div
-            class="text-run"
-            markdown
-            appMarkdownCodeCopy
-            appAttachmentRender
-            appIssueLinkRender
-            [data]="seg.content"
-            ngPreserveWhitespaces
-            (click)="onTextClick($event)"
-        ></div>
-    }
+    <div class="segment">
+        @if (seg.type === 'diff') {
+            <app-diff-viewer data-anchor-blocked [rawPatch]="seg.content" />
+        } @else if (seg.type === 'mockup') {
+            <app-mockup-card
+                data-anchor-blocked
+                [html]="seg.content"
+                [title]="seg.title"
+                [approvable]="approvable()"
+                [selected]="selectedMockupRef() === seg.ref"
+                [rejected]="selectedMockupRef() !== null && selectedMockupRef() !== seg.ref"
+                (useAndApprove)="useMockup.emit(seg.ref)"
+            />
+        } @else if (seg.type === 'mermaid') {
+            <app-mermaid-diagram data-anchor-blocked [source]="seg.content" />
+        } @else if (seg.type === 'plantuml') {
+            <app-plantuml-diagram data-anchor-blocked [source]="seg.content" />
+        } @else {
+            <div
+                class="text-run"
+                markdown
+                appMarkdownCodeCopy
+                appAttachmentRender
+                appIssueLinkRender
+                appMessageAnchors
+                [data]="seg.content"
+                [anchorContent]="seg.content"
+                [anchorLineStart]="seg.lineStart"
+                [anchorLineEnd]="seg.lineEnd"
+                [anchorHighlights]="highlightsBySegment()[$index]"
+                [anchorSlotHost]="slot"
+                ngPreserveWhitespaces
+                (click)="onTextClick($event)"
+                (anchorClick)="anchorClick.emit($event)"
+            ></div>
+        }
+        <div #slot class="anchor-slot">
+            @if (anchorSlot() && seg.breaks.length > 0) {
+                <ng-container
+                    [ngTemplateOutlet]="anchorSlot()"
+                    [ngTemplateOutletContext]="{ $implicit: seg.breaks }"
+                />
+            }
+        </div>
+    </div>
 }
 @if (gallery.isOpen()) {
     <app-attachment-lightbox />

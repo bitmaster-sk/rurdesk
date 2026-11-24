@@ -1,0 +1,41 @@
+<div class="activity-item" [id]="'anchor-card-' + reply().idMessage">
+    <div class="activity-marker">
+        <app-avatar
+            [disabled]="reply().creator.isActive === false"
+            [name]="reply().creator.name"
+            [bgColor]="reply().creator.colorAvatarBg"
+            [manualInitials]="reply().creator.avatarInitials"
+            [height]="1.875"
+            [width]="1.875"
+            [radius]="0.9375"
+        ></app-avatar>
+    </div>
+    <!-- Not a <button>: the reply body may hold links, which cannot nest in one. -->
+    <div
+        class="reply-card"
+        role="button"
+        tabindex="0"
+        data-testid="anchor-reply-card"
+        (click)="onClick($event)"
+        (keydown.enter)="open.emit()"
+    >
+        <span class="reply-header">
+            <span class="author">{{ reply().creator.name }}</span>
+            <span class="context">
+                {{ 'MESSAGE.ANCHOR.IN_THREAD' | translate: { author: parentAuthor()?.name ?? '' } }}
+            </span>
+            @if (reply().anchor?.isOutdated) {
+                <ui-tag
+                    severity="secondary"
+                    data-testid="anchor-reply-card-outdated"
+                    [value]="'MESSAGE.ANCHOR.OLDER_VERSION' | translate"
+                ></ui-tag>
+            }
+            <span class="timestamp">{{ reply().createdAt | date: 'medium' }}</span>
+        </span>
+        <span class="quote" [class.outdated]="reply().anchor?.isOutdated">{{ quote() }}</span>
+        <span class="body">
+            <app-message-body [body]="reply().message" [candidates]="candidates()" />
+        </span>
+    </div>
+</div>

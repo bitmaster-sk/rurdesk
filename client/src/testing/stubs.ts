@@ -74,7 +74,11 @@ export class MessageBodyStub {
     public readonly candidates = input<unknown>(undefined);
     public readonly approvable = input<boolean>(false);
     public readonly selectedMockupRef = input<string | null>(null);
+    public readonly anchorBreaks = input<number[]>([]);
+    public readonly anchorSlot = input<unknown>(null);
+    public readonly anchorHighlights = input<unknown[]>([]);
     public readonly useMockup = output<string>();
+    public readonly anchorClick = output<number>();
 }
 
 @Component({ selector: 'app-auth-robot', template: '', standalone: true })

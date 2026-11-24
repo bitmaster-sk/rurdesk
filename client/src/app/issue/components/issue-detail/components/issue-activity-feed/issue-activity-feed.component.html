@@ -54,7 +54,7 @@
     </div>
 
     <div class="feed-scroll" #scrollContainer>
-        @for (group of displayGroups(); track group.item) {
+        @for (group of displayGroups(); track trackItem(group.item)) {
             @if (group.showSeparator) {
                 <div class="date-separator">
                     <div class="separator-line"></div>
@@ -78,7 +78,14 @@
                         [message]="group.item.data"
                         [isOwnMessage]="group.item.data.creator.idUser === currentUserId"
                         [isEditing]="idMessageEdit() === group.item.data.idMessage"
-                        [anchoredChildren]="childrenByParent().get(group.item.data.idMessage) ?? []"
+                        [threads]="threadsByParent().get(group.item.data.idMessage) ?? []"
+                        [draft]="
+                            draft()?.idParentMessage === group.item.data.idMessage ? draft() : null
+                        "
+                        [expandedThreads]="expandedThreads()"
+                        [unreadByThread]="unreadByThread()"
+                        [currentUserId]="currentUserId"
+                        [idThreadMessageEdit]="idMessageEdit()"
                         [agentRun]="agentRun()"
                         [isLatestPlanForStage]="group.item.data.idMessage === idLatestPlanMessage()"
                         [candidates]="usersMap()"
@@ -86,53 +93,27 @@
                         (editRequest)="onEditRequest(group.item.data)"
                         (editSave)="onEditSave(group.item.data, $event)"
                         (editCancel)="onEditCancel()"
-                        (addAnchor)="onAddAnchor(group.item.data, $event)"
+                        (anchorRequest)="onAnchorRequest($event)"
+                        (draftSend)="onDraftSend($event)"
+                        (draftCancel)="onDraftCancel()"
+                        (threadToggle)="onThreadToggle($event)"
+                        (threadReply)="onThreadReply($event)"
+                        (threadEditRequest)="onEditRequest($event)"
+                        (threadEditSave)="onEditSave($event.message, $event.text)"
+                        (threadEditCancel)="onEditCancel()"
                         (approve)="approveAgentRun.emit()"
                         (approveMockup)="approveAgentRunMockup.emit($event)"
                     ></app-activity-comment-item>
-                    @if (anchorTarget()?.idParentMessage === group.item.data.idMessage) {
-                        <div class="anchor-editor">
-                            <div class="anchor-editor-header">
-                                <span>
-                                    {{
-                                        'MESSAGE.ANCHOR.REPLYING_TO'
-                                            | translate
-                                                : {
-                                                      start: anchorTarget()!.lineStart,
-                                                      end: anchorTarget()!.lineEnd,
-                                                      author: group.item.data.creator.name
-                                                  }
-                                    }}
-                                </span>
-                                <button
-                                    type="button"
-                                    class="anchor-cancel-btn"
-                                    [attr.aria-label]="'CANCEL' | translate"
-                                    (click)="onCancelAnchor()"
-                                >
-                                    <tabler-icon icon="x" [size]="14" />
-                                </button>
-                            </div>
-                            <app-message-editor
-                                [mentionCandidates]="mentionCandidates()"
-                                [attachmentScope]="attachmentScope()"
-                                (messageChange)="onMessage($event)"
-                            ></app-message-editor>
-                        </div>
-                    }
-                } @else if (group.item.data.anchor.isOutdated) {
-                    <div class="anchor-outdated-row">
-                        ↳
-                        {{
-                            'MESSAGE.ANCHOR.LINES'
-                                | translate
-                                    : {
-                                          start: group.item.data.anchor.anchorLineStart,
-                                          end: group.item.data.anchor.anchorLineEnd
-                                      }
-                        }}
-                        — {{ group.item.data.creator.name }}
-                    </div>
+                } @else {
+                    <app-anchor-reply-card
+                        [reply]="group.item.data"
+                        [parentAuthor]="
+                            messagesById().get(group.item.data.anchor.idParentMessage)?.creator ??
+                            null
+                        "
+                        [candidates]="usersMap()"
+                        (open)="onOpenThread(group.item.data)"
+                    ></app-anchor-reply-card>
                 }
             } @else if (group.item.type === 'time') {
                 <app-activity-time-item
@@ -166,6 +147,12 @@
     </div>
 
     <div class="feed-editor">
+        @if (backTarget() !== null) {
+            <button type="button" class="back-pill" data-testid="anchor-back" (click)="onBack()">
+                <tabler-icon icon="arrow-back-up" [size]="14" />
+                {{ 'MESSAGE.ANCHOR.BACK' | translate }}
+            </button>
+        }
         <app-message-editor
             [mentionCandidates]="mentionCandidates()"
             [attachmentScope]="attachmentScope()"

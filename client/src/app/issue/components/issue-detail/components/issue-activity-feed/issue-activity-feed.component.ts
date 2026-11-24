@@ -17,7 +17,7 @@ import { combineLatest } from 'rxjs';
 import { filter, first, startWith, switchMap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageRecipientType } from 'src/app/message/constant/message-recipient-type.enum';
-import { MessageApi } from 'src/app/message/api/message.api.service';
+import { MessageAnchorReq, MessageApi } from 'src/app/message/api/message.api.service';
 import { Message } from 'src/app/message/model/message.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -54,6 +54,12 @@ import { SeverityStore } from 'src/app/severity/store/severity.store';
 import { IssueTypeStore } from 'src/app/issue-type/store/issue-type.store';
 import { TagStore } from 'src/app/tag/store/tag.store';
 import { HistoryGroupConverter } from './converter/history-group.converter';
+import { AnchorThreadConverter } from './converter/anchor-thread.converter';
+import { AnchorDraft, AnchorThread } from 'src/app/issue/entity/anchor-thread.entity';
+import { ANCHOR_THREAD } from 'src/app/shared/mention/message-body/anchor-dom';
+
+const FLASH_CLASS = 'anchor-flash';
+const FLASH_MS = 2400;
 
 @Component({
     selector: 'app-issue-activity-feed',
@@ -167,11 +173,13 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         return live ? `${this.agentRun()?.idRun}:${live.stage.stage}` : null;
     });
 
-    public readonly anchorTarget = signal<{
-        idParentMessage: number;
-        lineStart: number;
-        lineEnd: number;
-    } | null>(null);
+    /** A thread being started from a selection; its composer shows under the range. */
+    public readonly draft = signal<AnchorDraft | null>(null);
+    public readonly expandedThreads = signal<ReadonlySet<number>>(new Set());
+    /** Replies read in this session by expanding their thread. */
+    private readonly readReplies = signal<ReadonlySet<number>>(new Set());
+    /** Feed card to return to after jumping into its thread. */
+    public readonly backTarget = signal<number | null>(null);
 
     // idMessage of the most recent plan-kind comment in the thread. Used by the
     // template to scope the Approve button to a single comment even after a
@@ -205,23 +213,36 @@ export class IssueActivityFeedComponent implements AfterViewInit {
         idRecipient: this.idIssue()
     }));
 
-    public readonly childrenByParent = computed<Map<number, Message[]>>(() => {
-        const result = new Map<number, Message[]>();
-        for (const item of this.displayItems()) {
-            if (item.type === 'comment') {
-                const msg = item.data;
-                if (msg.anchor) {
-                    const parentId = msg.anchor.idParentMessage;
-                    const existing = result.get(parentId);
-                    if (existing) {
-                        existing.push(msg);
-                    } else {
-                        result.set(parentId, [msg]);
-                    }
+    private readonly commentMessages = computed<Message[]>(() =>
+        this.displayItems().flatMap(item => (item.type === 'comment' ? [item.data] : []))
+    );
+
+    public readonly messagesById = computed<Map<number, Message>>(
+        () => new Map(this.commentMessages().map(message => [message.idMessage, message]))
+    );
+
+    public readonly threadsByParent = computed<Map<number, AnchorThread[]>>(() =>
+        AnchorThreadConverter.toThreadsByParent(this.commentMessages())
+    );
+
+    public readonly unreadByThread = computed<Map<number, number>>(() => {
+        const readReplies = this.readReplies();
+        const expanded = this.expandedThreads();
+        const unread = new Map<number, number>();
+        for (const threads of this.threadsByParent().values()) {
+            for (const thread of threads) {
+                if (expanded.has(thread.idThread)) {
+                    continue;
+                }
+                const count = thread.replies.filter(
+                    reply => !reply.isRead && !readReplies.has(reply.idMessage)
+                ).length;
+                if (count > 0) {
+                    unread.set(thread.idThread, count);
                 }
             }
         }
-        return result;
+        return unread;
     });
 
     public readonly displayGroups = computed<TimelineDisplayItem[]>(() => {
@@ -288,6 +309,7 @@ export class IssueActivityFeedComponent implements AfterViewInit {
                 this.usersMap.set(usersMap);
                 this.setHistoryUsers(history);
                 this.allItems.set(this.mergeItems(messages, tracks, history.history));
+                this.messageApi.markRead$(this.idIssue(), MessageRecipientType.issue).subscribe();
             });
 
         this.listenLookupMaps();
@@ -361,20 +383,35 @@ export class IssueActivityFeedComponent implements AfterViewInit {
             takeUntilDestroyed(this.destroyRef)
         ).subscribe(notice => {
             if (notice.action === NoticeAction.Update) {
-                this.updateComment({
+                this.applyUpdate({
                     ...notice.payload,
                     createdAt: new Date(notice.payload.createdAt)
                 });
                 return;
             }
             const msg = notice.payload;
+            if (this.messagesById().has(msg.idMessage)) {
+                return;
+            }
             const item: CommentTimelineItem = {
                 type: 'comment',
                 date: new Date(msg.createdAt),
-                data: { ...msg, createdAt: new Date(msg.createdAt) }
+                // The notice carries the author's own read flag; for anyone else it is new.
+                data: {
+                    ...msg,
+                    createdAt: new Date(msg.createdAt),
+                    isRead: msg.creator.idUser === this.currentUserId
+                }
             };
             this.liveItems.update(items => [...items, item]);
-            this.scrollToBottom();
+            if (!msg.anchor) {
+                this.scrollToBottom();
+                return;
+            }
+            const idThread = AnchorThreadConverter.threadOf(msg);
+            if (this.expandedThreads().has(idThread)) {
+                this.markThreadRead(idThread);
+            }
         });
     }
 
@@ -398,42 +435,129 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     }
 
     public onMessage(text: string): void {
-        const anchor = this.anchorTarget();
-        const anchorParam = anchor
-            ? {
-                  idParentMessage: anchor.idParentMessage,
-                  anchorLineStart: anchor.lineStart,
-                  anchorLineEnd: anchor.lineEnd
-              }
-            : undefined;
-        this.messageApi
-            .insert$(this.idIssue(), MessageRecipientType.issue, text, anchorParam)
-            .subscribe(msg => {
-                msg.isRead = true;
-                const item: CommentTimelineItem = {
-                    type: 'comment',
-                    date: new Date(msg.createdAt),
-                    data: msg
-                };
-                this.liveItems.update(items => [...items, item]);
-                this.anchorTarget.set(null);
-                this.scrollToBottom();
-            });
+        this.postComment(text, undefined, () => this.scrollToBottom());
     }
 
-    public onAddAnchor(
-        parentMessage: Message,
-        event: { lineStart: number; lineEnd: number }
-    ): void {
-        this.anchorTarget.set({
-            idParentMessage: parentMessage.idMessage,
-            lineStart: event.lineStart,
-            lineEnd: event.lineEnd
+    public onAnchorRequest(draft: AnchorDraft): void {
+        this.draft.set(draft);
+    }
+
+    public onDraftCancel(): void {
+        this.draft.set(null);
+    }
+
+    public onDraftSend(text: string): void {
+        const draft = this.draft();
+        if (!draft) {
+            return;
+        }
+        this.postComment(
+            text,
+            {
+                idParentMessage: draft.idParentMessage,
+                anchorLineStart: draft.lineStart,
+                anchorLineEnd: draft.lineEnd,
+                anchorQuote: draft.quote
+            },
+            message => {
+                this.draft.set(null);
+                this.expandThread(AnchorThreadConverter.threadOf(message));
+            }
+        );
+    }
+
+    public onThreadReply(event: { thread: AnchorThread; text: string }): void {
+        this.postComment(event.text, { idThreadMessage: event.thread.idThread });
+    }
+
+    public onThreadToggle(idThread: number): void {
+        if (this.expandedThreads().has(idThread)) {
+            // Replies that arrived while the thread was open have been seen.
+            this.markThreadRead(idThread);
+            this.expandedThreads.update(ids => new Set([...ids].filter(id => id !== idThread)));
+            return;
+        }
+        this.expandThread(idThread);
+    }
+
+    /** Opens the thread of a feed card, scrolls to it and flashes its text. */
+    public onOpenThread(reply: Message): void {
+        const idThread = AnchorThreadConverter.threadOf(reply);
+        const idParent = reply.anchor?.idParentMessage;
+        const isParentShown = this.filteredItems().some(
+            item => item.type === 'comment' && item.data.idMessage === idParent
+        );
+        if (!isParentShown) {
+            this.activeFilters.set(new Set());
+        }
+        this.expandThread(idThread);
+        this.backTarget.set(reply.idMessage);
+        setTimeout(() => {
+            const container = this.scrollContainer()?.nativeElement;
+            container
+                ?.querySelector(`#anchor-thread-${idThread}`)
+                ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            const marks = Array.from(
+                container?.querySelectorAll(`[${ANCHOR_THREAD}="${idThread}"]`) ?? []
+            );
+            for (const mark of marks) {
+                mark.classList.add(FLASH_CLASS);
+            }
+            setTimeout(() => marks.forEach(mark => mark.classList.remove(FLASH_CLASS)), FLASH_MS);
         });
     }
 
-    public onCancelAnchor(): void {
-        this.anchorTarget.set(null);
+    public onBack(): void {
+        const idMessage = this.backTarget();
+        this.backTarget.set(null);
+        this.scrollContainer()
+            ?.nativeElement.querySelector(`#anchor-card-${idMessage}`)
+            ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+
+    /** Keys comments by id so reloads preserve rendered card state. */
+    public trackItem(item: TimelineItem): TimelineItem | string {
+        return item.type === 'comment' ? `comment:${item.data.idMessage}` : item;
+    }
+
+    private expandThread(idThread: number): void {
+        this.expandedThreads.update(ids => new Set([...ids, idThread]));
+        this.markThreadRead(idThread);
+    }
+
+    private markThreadRead(idThread: number): void {
+        const readReplies = this.readReplies();
+        const unseen = [...this.threadsByParent().values()]
+            .flat()
+            .find(candidate => candidate.idThread === idThread)
+            ?.replies.filter(reply => !reply.isRead && !readReplies.has(reply.idMessage));
+        if (!unseen?.length) {
+            return;
+        }
+        this.readReplies.update(ids => new Set([...ids, ...unseen.map(reply => reply.idMessage)]));
+        // The server keeps one read time per issue; moving it keeps these replies read on reload.
+        this.messageApi.markRead$(this.idIssue(), MessageRecipientType.issue).subscribe();
+    }
+
+    private postComment(
+        text: string,
+        anchor?: MessageAnchorReq,
+        onPosted?: (message: Message) => void
+    ): void {
+        this.messageApi
+            .insert$(this.idIssue(), MessageRecipientType.issue, text, anchor)
+            .subscribe(msg => {
+                msg.isRead = true;
+                if (!this.messagesById().has(msg.idMessage)) {
+                    const item: CommentTimelineItem = {
+                        type: 'comment',
+                        date: new Date(msg.createdAt),
+                        data: msg
+                    };
+                    this.liveItems.update(items => [...items, item]);
+                }
+                onPosted?.(msg);
+            });
     }
 
     public onEditRequest(message: Message): void {
@@ -446,9 +570,42 @@ export class IssueActivityFeedComponent implements AfterViewInit {
 
     public onEditSave(message: Message, newText: string): void {
         this.messageApi.update$(message.idMessage, newText).subscribe(updated => {
-            this.updateComment(updated);
+            this.applyUpdate(updated);
             this.idMessageEdit.set(null);
         });
+    }
+
+    /** Reloads messages when the edited message has threads so server-resolved positions update. */
+    private applyUpdate(updated: Message): void {
+        if (this.threadsByParent().has(updated.idMessage)) {
+            this.reloadMessages();
+            return;
+        }
+        this.updateComment(updated);
+    }
+
+    private reloadMessages(): void {
+        this.messageApi
+            .load$(this.idIssue(), MessageRecipientType.issue)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(messages => {
+                // The server already counts this session as read; a loaded message keeps the
+                // flag it was shown with, so an unopened thread stays new.
+                const readById = new Map(
+                    this.commentMessages().map(message => [message.idMessage, message.isRead])
+                );
+                const comments: TimelineItem[] = messages.map(message => ({
+                    type: 'comment' as const,
+                    date: new Date(message.createdAt),
+                    data: { ...message, isRead: readById.get(message.idMessage) ?? message.isRead }
+                }));
+                this.liveItems.update(items => items.filter(item => item.type !== 'comment'));
+                this.allItems.update(items =>
+                    [...items.filter(item => item.type !== 'comment'), ...comments].sort(
+                        (a, b) => a.date.getTime() - b.date.getTime()
+                    )
+                );
+            });
     }
 
     public getDateLabel(date: Date): string {

@@ -20,6 +20,12 @@ export interface MessageSegment {
     ref?: string;
 }
 
+/** A segment with the 1-based source lines it covers, CRLF counted as one break. */
+export interface LinedMessageSegment extends MessageSegment {
+    lineStart: number;
+    lineEnd: number;
+}
+
 /** Which fence kinds a parse call recognizes; see `MessageSegmentParser.parse`. */
 export type FenceFilter = 'all' | 'diagrams';
 
@@ -44,13 +50,28 @@ export abstract class MessageSegmentParser {
      * string.
      */
     public static parse(raw: string, fences: FenceFilter = 'all'): MessageSegment[] {
+        return MessageSegmentParser.parseLines(raw, fences).map(
+            ({ lineStart: _lineStart, lineEnd: _lineEnd, ...segment }) => segment
+        );
+    }
+
+    /**
+     * Same split as `parse`, with each segment's source lines. A text segment that starts right
+     * after a fence starts on the fence's closing line, because it carries that line's newline.
+     */
+    public static parseLines(raw: string, fences: FenceFilter = 'all'): LinedMessageSegment[] {
         if (!raw) {
-            return [{ type: 'text', content: '' }];
+            return [{ type: 'text', content: '', lineStart: 1, lineEnd: 1 }];
         }
         // marked lexes CRLF as LF, so token offsets only match an LF body.
         const body = raw.replace(/\r\n?/g, '\n');
 
-        const segments: MessageSegment[] = [];
+        const segments: LinedMessageSegment[] = [];
+        const lineAt = (offset: number): number => MessageSegmentParser.lineAt(body, offset);
+        const lines = (start: number, end: number): { lineStart: number; lineEnd: number } => ({
+            lineStart: lineAt(start),
+            lineEnd: lineAt(Math.max(start, end - 1))
+        });
         let mockupNo = 0;
         // Token raws tile the source, so the running offset tracks each
         // token's start position in the body.
@@ -60,7 +81,7 @@ export abstract class MessageSegmentParser {
         const pushText = (end: number): void => {
             const text = body.slice(textStart, end);
             if (text.length > 0) {
-                segments.push({ type: 'text', content: text });
+                segments.push({ type: 'text', content: text, ...lines(textStart, end) });
             }
         };
 
@@ -79,10 +100,15 @@ export abstract class MessageSegmentParser {
                         type: 'mockup',
                         content: fence.content,
                         title,
-                        ref: title ? `${title} #${mockupNo}` : `#${mockupNo}`
+                        ref: title ? `${title} #${mockupNo}` : `#${mockupNo}`,
+                        ...lines(offset, end)
                     });
                 } else {
-                    segments.push({ type: fence.kind, content: fence.content });
+                    segments.push({
+                        type: fence.kind,
+                        content: fence.content,
+                        ...lines(offset, end)
+                    });
                 }
                 // A recognized block ends at its closing fence: marked absorbs
                 // the newline behind the fence into the token raw, but it
@@ -95,6 +121,17 @@ export abstract class MessageSegmentParser {
 
         pushText(body.length);
         return segments;
+    }
+
+    /** 1-based line of the character at offset; a newline belongs to the line it ends. */
+    public static lineAt(body: string, offset: number): number {
+        let line = 1;
+        for (let index = 0; index < offset && index < body.length; index++) {
+            if (body[index] === '\n') {
+                line++;
+            }
+        }
+        return line;
     }
 
     private static recognize(

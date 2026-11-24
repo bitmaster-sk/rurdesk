@@ -1925,12 +1925,15 @@
     },
     "MESSAGE": {
         "ANCHOR": {
-            "OUTDATED": "↑ refers to an earlier version",
-            "LINES": "lines {{start}}–{{end}}",
+            "REPLY": "Reply",
+            "REPLY_TO_SELECTION": "Reply to the selected text",
             "REPLIES_ONE": "{{count}} reply",
             "REPLIES_OTHER": "{{count}} replies",
-            "COMMENT_ON_LINES": "Comment on this line",
-            "REPLYING_TO": "Replying to lines {{start}}–{{end}} of {{author}}'s message"
+            "NEW": "{{count}} new",
+            "IN_THREAD": "in a thread on {{author}}'s message",
+            "OLDER_VERSION": "older version",
+            "OLDER_SECTION": "To an older version of this message",
+            "BACK": "Back"
         },
         "EDITED": "edited {{time}}",
         "EDIT": "Edit comment"

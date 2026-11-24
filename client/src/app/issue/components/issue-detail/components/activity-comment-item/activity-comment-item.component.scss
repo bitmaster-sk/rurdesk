@@ -33,10 +33,6 @@
     border-radius: var(--ui-radius-md);
     position: relative;
 
-    &.unread {
-        border-left: 3px solid var(--ui-color-primary);
-    }
-
     // Each productive stage gets a tinted left border + matching kind-badge color.
     // Colors lean on --ui-* palette tokens so dark/light themes follow automatically.
     &.kind-brainstorming-question {
@@ -173,57 +169,80 @@
         }
     }
 
-    .line-mode {
-        font-family: monospace;
-        font-size: var(--font-size-s);
+    // The marks are created by a directive at runtime, so they carry no view attributes.
+    ::ng-deep {
+        mark.anchor-mark,
+        .anchor-highlight {
+            color: inherit;
+            background: var(--ui-color-primary-weak);
+            border-bottom: 2px solid var(--ui-color-primary-weak-border);
+            border-radius: 2px;
+            cursor: pointer;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
 
-        .msg-line {
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-            padding: 1px 0;
-
-            &:hover .anchor-add-btn {
-                opacity: 1;
+            &:hover {
+                border-bottom-color: var(--ui-color-primary);
             }
 
-            .gutter {
-                min-width: 2rem;
-                text-align: right;
-                color: var(--ui-color-text-muted);
-                user-select: none;
-                flex-shrink: 0;
-            }
-
-            .anchor-add-btn {
-                opacity: 0;
-                background: none;
-                border: none;
-                cursor: pointer;
-                padding: 0 2px;
-                color: var(--ui-color-primary);
-                display: flex;
-                align-items: center;
-                flex-shrink: 0;
-                transition: opacity 0.1s;
-            }
-
-            .line-text {
-                white-space: pre-wrap;
-                word-break: break-word;
+            &.anchor-flash {
+                animation: anchor-flash 2.4s ease-out both;
             }
         }
 
-        .anchor-replies {
-            margin-left: 2.5rem;
-            border-left: 2px solid var(--ui-color-primary);
-            padding-left: 8px;
-            margin-bottom: 4px;
+        mark.anchor-mark {
+            padding: 0 1px;
+        }
+    }
 
-            &.outdated {
-                border-left-color: var(--ui-color-text-muted);
-                opacity: 0.7;
-            }
+    // The threads are laid over a gap in the text, measured from here.
+    .body-host {
+        position: relative;
+    }
+
+    .selection-reply {
+        position: absolute;
+        z-index: 5;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border: 0;
+        border-radius: var(--ui-radius-md);
+        background: var(--ui-surface-900);
+        color: var(--ui-surface-0);
+        font: inherit;
+        font-size: var(--font-size-s);
+        font-weight: 700;
+        cursor: pointer;
+        transform: translate(-50%, calc(-100% - 6px));
+        box-shadow: 0 8px 22px -8px rgb(0 0 0 / 45%);
+    }
+
+    .anchor-outdated {
+        margin-top: var(--ui-space-m);
+        padding-top: var(--ui-space-s);
+        border-top: 1px dashed var(--ui-surface-300);
+
+        .anchor-outdated-title {
+            margin-bottom: var(--ui-space-xs);
+            color: var(--ui-color-text-muted);
+            font-size: var(--font-size-xs);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .anchor-outdated-quote {
+            margin-top: var(--ui-space-s);
+            color: var(--ui-color-text-muted);
+            font-size: var(--font-size-s);
+            text-decoration: line-through;
+            white-space: pre-wrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
     }
 
@@ -239,5 +258,21 @@
         color: var(--ui-color-text-muted);
         margin-top: var(--ui-space-xs);
         display: block;
+    }
+}
+
+@keyframes anchor-flash {
+    0%,
+    35% {
+        background: var(--ui-color-primary-weak-border);
+    }
+    100% {
+        background: var(--ui-color-primary-weak);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .comment-card ::ng-deep .anchor-flash {
+        animation: none;
     }
 }
