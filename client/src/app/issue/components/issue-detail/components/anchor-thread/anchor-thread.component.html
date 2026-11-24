@@ -1,0 +1,134 @@
+@if (thread(); as thread) {
+    <div
+        class="anchor-thread"
+        data-testid="anchor-thread"
+        [id]="'anchor-thread-' + thread.idThread"
+        [attr.data-thread]="thread.idThread"
+        [class.expanded]="isExpanded()"
+    >
+        <button
+            type="button"
+            class="thread-toggle"
+            data-testid="anchor-thread-toggle"
+            [attr.aria-expanded]="isExpanded()"
+            (click)="toggleExpand.emit()"
+        >
+            <span class="stack">
+                @for (user of avatars(); track user.idUser) {
+                    <app-avatar
+                        [name]="user.name"
+                        [bgColor]="user.colorAvatarBg"
+                        [manualInitials]="user.avatarInitials"
+                        [height]="1.25"
+                        [width]="1.25"
+                        [radius]="0.625"
+                    ></app-avatar>
+                }
+            </span>
+            <span class="count">
+                {{ replyCountKey() | translate: { count: thread.replies.length } }}
+            </span>
+            @if (!isExpanded() && lastReply(); as last) {
+                <span class="last">
+                    <strong>{{ last.creator.name }}:</strong>
+                    {{ lastReplyText() }}
+                </span>
+            }
+            @if (unreadCount() > 0) {
+                <span class="new" data-testid="anchor-thread-new">
+                    {{ 'MESSAGE.ANCHOR.NEW' | translate: { count: unreadCount() } }}
+                </span>
+            }
+            <tabler-icon
+                class="chevron"
+                [icon]="isExpanded() ? 'chevron-up' : 'chevron-down'"
+                [size]="14"
+            />
+        </button>
+        @if (isExpanded()) {
+            <div class="thread-body">
+                @for (message of thread.replies; track message.idMessage) {
+                    <div class="thread-reply" data-testid="anchor-thread-reply">
+                        <app-avatar
+                            [disabled]="message.creator.isActive === false"
+                            [name]="message.creator.name"
+                            [bgColor]="message.creator.colorAvatarBg"
+                            [manualInitials]="message.creator.avatarInitials"
+                            [height]="1.5"
+                            [width]="1.5"
+                            [radius]="0.75"
+                        ></app-avatar>
+                        <div class="reply-main">
+                            <div class="reply-header">
+                                <span class="author">{{ message.creator.name }}</span>
+                                <span class="timestamp">
+                                    {{ message.createdAt | date: 'short' }}
+                                </span>
+                                @if (
+                                    message.creator.idUser === currentUserId() &&
+                                    idMessageEdit() !== message.idMessage
+                                ) {
+                                    <button
+                                        type="button"
+                                        class="tool-btn"
+                                        data-testid="anchor-thread-edit"
+                                        [attr.aria-label]="'MESSAGE.EDIT' | translate"
+                                        (click)="editRequest.emit(message)"
+                                    >
+                                        <tabler-icon icon="pencil" [size]="13" />
+                                    </button>
+                                }
+                            </div>
+                            @if (idMessageEdit() === message.idMessage) {
+                                <div (keydown.escape)="editCancel.emit()">
+                                    <app-message-editor
+                                        mode="edit"
+                                        change="onaction"
+                                        [message]="message.message"
+                                        [mentionCandidates]="mentionCandidates()"
+                                        [attachmentScope]="attachmentScope()"
+                                        sendIcon="device-floppy"
+                                        sendLabel="{{ 'SAVE' | translate }}"
+                                        [disableCancelButton]="false"
+                                        (messageChange)="editSave.emit({ message, text: $event })"
+                                        (cancelled)="editCancel.emit()"
+                                    ></app-message-editor>
+                                </div>
+                            } @else {
+                                <app-message-body
+                                    [body]="message.message"
+                                    [candidates]="candidates()"
+                                />
+                            }
+                        </div>
+                    </div>
+                }
+                <div class="thread-input">
+                    <app-message-editor
+                        [mentionCandidates]="mentionCandidates()"
+                        [attachmentScope]="attachmentScope()"
+                        (messageChange)="reply.emit($event)"
+                    ></app-message-editor>
+                </div>
+            </div>
+        }
+    </div>
+} @else if (draft(); as draft) {
+    <div
+        class="anchor-thread expanded draft"
+        data-testid="anchor-thread-draft"
+        data-thread="0"
+        (keydown.escape)="cancelDraft.emit()"
+    >
+        <div class="draft-quote">{{ draft.quote }}</div>
+        <div class="thread-input">
+            <app-message-editor
+                [mentionCandidates]="mentionCandidates()"
+                [attachmentScope]="attachmentScope()"
+                [disableCancelButton]="false"
+                (messageChange)="reply.emit($event)"
+                (cancelled)="cancelDraft.emit()"
+            ></app-message-editor>
+        </div>
+    </div>
+}

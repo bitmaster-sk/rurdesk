@@ -17,7 +17,6 @@ import { MessageBodyComponent } from 'src/app/shared/mention/message-body/messag
 import { MockupCardComponent } from 'src/app/shared/components/mockup-card/mockup-card.component';
 import { MessageKind } from 'src/app/message/constant/message-kind.enum';
 import { Message } from 'src/app/message/model/message.model';
-import { User } from 'src/app/auth/model/user.model';
 import { AgentRun } from 'src/app/agent/model/agent-run.model';
 import { AgentPhase } from 'src/app/agent/model/agent-phase.enum';
 
@@ -32,12 +31,6 @@ function awaitingApprovalRun(approvedMockupRef: string | null = null): AgentRun 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
 class DiffViewerStub {
     public readonly rawPatch = input<string>('');
-}
-
-@Component({ selector: 'app-anchor-reply', template: '', standalone: true })
-class AnchorReplyStub {
-    public readonly reply = input<unknown>(undefined);
-    public readonly candidates = input<unknown>(undefined);
 }
 
 @Component({ selector: 'app-plan-actions', template: '', standalone: true })
@@ -68,24 +61,6 @@ function plainMessage(body: string): Message {
     } as unknown as Message;
 }
 
-// A stub anchor message so showLineMode() returns true.
-function anchorChildStub(): Message {
-    return {
-        message: 'reply',
-        messageKind: MessageKind.Comment,
-        isRead: true,
-        createdAt: new Date(),
-        creator: { name: 'User' },
-        anchor: {
-            idParentMessage: 1,
-            parentVersion: 1,
-            anchorLineStart: 1,
-            anchorLineEnd: 1,
-            isOutdated: false
-        }
-    } as unknown as Message;
-}
-
 describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
@@ -101,7 +76,6 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
                 TablerIconStub,
                 AttachmentLightboxStub,
                 DiffViewerStub,
-                AnchorReplyStub,
                 PlanActionsStub
             ],
             declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
@@ -196,52 +170,6 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
     });
 });
 
-describe('ActivityCommentItemComponent line-mode @mention rendering (browser)', () => {
-    beforeEach(async () => {
-        await TestBed.configureTestingModule({
-            imports: [
-                MarkdownModule.forRoot({
-                    markedOptions: MARKDOWN_MARKED_OPTIONS,
-                    markedExtensions: [MARKDOWN_MENTION_EXTENSION]
-                }),
-                UiModule,
-                TranslateModule.forRoot(),
-                AvatarStub,
-                MessageEditorStub,
-                TablerIconStub,
-                AttachmentLightboxStub,
-                DiffViewerStub,
-                AnchorReplyStub,
-                PlanActionsStub
-            ],
-            declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
-        }).compileComponents();
-    });
-
-    it('renders a .mention-chip inside a line-mode line', async () => {
-        const fixture = TestBed.createComponent(ActivityCommentItemComponent);
-        const candidates = new Map<number, User>([
-            [1, { idUser: 1, name: 'Jan', email: '', colorAvatarBg: '' }]
-        ]);
-        // Message with a mention token on the first line.
-        fixture.componentRef.setInput('message', plainMessage('cc @[Jan](user:1) please'));
-        fixture.componentRef.setInput('candidates', candidates);
-        // Provide an anchor child so showLineMode() returns true.
-        fixture.componentRef.setInput('anchoredChildren', [anchorChildStub()]);
-        fixture.detectChanges();
-        await fixture.whenStable();
-        fixture.detectChanges();
-
-        // Line mode should be active.
-        const lineMode = fixture.nativeElement.querySelector('.line-mode');
-        expect(lineMode).not.toBeNull();
-
-        // The mention chip must appear inside the line-mode lines.
-        const chips = fixture.nativeElement.querySelectorAll('.mention-chip');
-        expect(chips.length).toBeGreaterThan(0);
-    });
-});
-
 describe('ActivityCommentItemComponent editing (browser)', () => {
     beforeEach(async () => {
         await TestBed.configureTestingModule({
@@ -254,7 +182,6 @@ describe('ActivityCommentItemComponent editing (browser)', () => {
                 TablerIconStub,
                 AttachmentLightboxStub,
                 DiffViewerStub,
-                AnchorReplyStub,
                 PlanActionsStub
             ],
             declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]

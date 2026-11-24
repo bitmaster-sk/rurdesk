@@ -6,6 +6,16 @@ import { MessageRecipientType } from '../constant/message-recipient-type.enum';
 import { MessageConverter } from '../converter/message.converter';
 import { Message } from '../model/message.model';
 
+/** A new thread on a range of a parent message, or a reply in an existing thread. */
+export type MessageAnchorReq =
+    | {
+          idParentMessage: number;
+          anchorLineStart: number;
+          anchorLineEnd: number;
+          anchorQuote?: string;
+      }
+    | { idThreadMessage: number };
+
 @Injectable({
     providedIn: 'root'
 })
@@ -25,14 +35,14 @@ export class MessageApi {
         idRecipient: number,
         idMessageRecipientType: MessageRecipientType,
         message: string,
-        anchor?: { idParentMessage: number; anchorLineStart: number; anchorLineEnd: number }
+        anchor?: MessageAnchorReq
     ): Observable<Message> {
-        const body: Record<string, unknown> = { idRecipient, idMessageRecipientType, message };
-        if (anchor) {
-            body['idParentMessage'] = anchor.idParentMessage;
-            body['anchorLineStart'] = anchor.anchorLineStart;
-            body['anchorLineEnd'] = anchor.anchorLineEnd;
-        }
+        const body: Record<string, unknown> = {
+            idRecipient,
+            idMessageRecipientType,
+            message,
+            ...anchor
+        };
         return this.http
             .post<Message>('/api/private/message', body)
             .pipe(map(msg => MessageConverter.toMessage(msg)));

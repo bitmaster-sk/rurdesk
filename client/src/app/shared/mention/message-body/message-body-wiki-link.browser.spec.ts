@@ -67,7 +67,8 @@ const tree: WikiTree = {
 
 async function render(
     body: string,
-    idProject: number | null
+    idProject: number | null,
+    anchorBreaks: number[] = []
 ): Promise<{
     fixture: ComponentFixture<MessageBodyComponent>;
     loadTree: ReturnType<typeof vi.fn>;
@@ -95,6 +96,7 @@ async function render(
     TestBed.inject(LinkScope).idProject.set(idProject);
     const fixture = TestBed.createComponent(MessageBodyComponent);
     fixture.componentRef.setInput('body', body);
+    fixture.componentRef.setInput('anchorBreaks', anchorBreaks);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -118,6 +120,20 @@ describe('MessageBodyComponent wiki links', () => {
             ['Nope', '/project/7/wiki/new?space=project&title=Nope']
         ]);
         expect(links(fixture)[2].getAttribute('title')).toBe('missing');
+    });
+
+    it('resolves wiki links the same way in a body split by a thread', async () => {
+        const body = 'read [[Deploy runbook]]\n\nand [[security]]';
+        const whole = await render(body, 7);
+        const expected = links(whole.fixture).map(link => link.getAttribute('href'));
+        TestBed.resetTestingModule();
+
+        const { fixture } = await render(body, 7, [1]);
+
+        expect((fixture.nativeElement as HTMLElement).querySelectorAll('.text-run')).toHaveLength(
+            2
+        );
+        expect(links(fixture).map(link => link.getAttribute('href'))).toEqual(expected);
     });
 
     it('opens a wiki link inside the app instead of reloading the page', async () => {

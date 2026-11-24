@@ -44,7 +44,7 @@ func (r *IssueRun) Payload(ctx context.Context, dispatch *Dispatch) (map[string]
 	if err != nil {
 		return nil, nil, fmt.Errorf("context bundle build error: loading issue: %w", err)
 	}
-	messages, err := r.messageRepo.LoadIssueMessages(ctx, *run.IdIssue, 0, nil)
+	messages, err := r.messageAnchorSvc.LoadIssueMessages(ctx, *run.IdIssue, 0)
 	if err != nil {
 		messages = nil
 	}

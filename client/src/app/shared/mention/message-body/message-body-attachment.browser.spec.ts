@@ -35,7 +35,7 @@ const blobs = new Map<string, Blob>([
 
 let lastFixture: ComponentFixture<MessageBodyComponent>;
 
-async function render(body: string): Promise<HTMLElement> {
+async function render(body: string, anchorBreaks: number[] = []): Promise<HTMLElement> {
     await TestBed.configureTestingModule({
         imports: [
             MarkdownModule.forRoot({
@@ -68,6 +68,7 @@ async function render(body: string): Promise<HTMLElement> {
     const fixture: ComponentFixture<MessageBodyComponent> =
         TestBed.createComponent(MessageBodyComponent);
     fixture.componentRef.setInput('body', body);
+    fixture.componentRef.setInput('anchorBreaks', anchorBreaks);
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -169,6 +170,20 @@ describe('MessageBodyComponent lightbox', () => {
         press('ArrowLeft');
         await settle();
         expect(lightboxAlt()).toBe('one.png');
+    });
+
+    it('keeps one gallery when a thread splits the images apart', async () => {
+        const el = await render(
+            `![one.png](attachment:${idImage})\n\n![two.png](attachment:${idImage2})`,
+            [1]
+        );
+        expect(el.querySelectorAll('.text-run')).toHaveLength(2);
+        el.querySelector<HTMLElement>('[data-testid="attachment-thumb"]')?.click();
+        await settle();
+
+        document.querySelector<HTMLElement>('[data-testid="ui-lightbox-next"]')?.click();
+        await settle();
+        expect(lightboxAlt()).toBe('two.png');
     });
 
     it('renders the lightbox only while an image is open', async () => {

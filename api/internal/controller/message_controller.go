@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
@@ -36,6 +37,7 @@ type MessageController struct {
 	notifier          notify.INotifier
 	acl               *service.AclService
 	messageAccess     *service.MessageAccessService
+	messageAnchorSvc  *service.MessageAnchorService
 	attachmentLinkSvc *service.AttachmentLinkService
 	notifSvc          *service.NotificationService
 	pool              *pgxpool.Pool
@@ -50,6 +52,7 @@ func NewMessageController(
 	nf notify.INotifier,
 	acl *service.AclService,
 	messageAccess *service.MessageAccessService,
+	messageAnchorSvc *service.MessageAnchorService,
 	attachmentLinkSvc *service.AttachmentLinkService,
 	notifSvc *service.NotificationService,
 	participantRepo *repository.IssueParticipantRepository,
@@ -64,6 +67,7 @@ func NewMessageController(
 		notifier:          nf,
 		acl:               acl,
 		messageAccess:     messageAccess,
+		messageAnchorSvc:  messageAnchorSvc,
 		attachmentLinkSvc: attachmentLinkSvc,
 		notifSvc:          notifSvc,
 		participantRepo:   participantRepo,
@@ -119,7 +123,7 @@ func (mc *MessageController) GetMessages(c *gin.Context) {
 	case model.ProjectRecipientType:
 		msgs, err = mc.messageRepo.LoadProjectMessages(ctx, []int64{idRecipient}, user.IdUser, nil)
 	case model.IssueRecipientType:
-		msgs, err = mc.messageRepo.LoadIssueMessages(ctx, idRecipient, user.IdUser, nil)
+		msgs, err = mc.messageAnchorSvc.LoadIssueMessages(ctx, idRecipient, user.IdUser)
 	}
 
 	if err != nil {
@@ -254,8 +258,15 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 					AnchorLineStart: *dto.AnchorLineStart,
 					AnchorLineEnd:   *dto.AnchorLineEnd,
 				}
+				if dto.AnchorQuote != nil {
+					quote := strings.TrimSpace(*dto.AnchorQuote)
+					anchor.Quote = &quote
+				}
 			}
-			msg, err = mc.messageRepo.InsertIssueMessage(ctx, dto.Message, &user, dto.IdRecipient, anchor)
+			if dto.IdThreadMessage != nil {
+				anchor = &model.MessageAnchor{IdThreadMessage: dto.IdThreadMessage}
+			}
+			msg, err = mc.messageAnchorSvc.CreateIssueMessage(ctx, dto.Message, &user, dto.IdRecipient, anchor)
 			if err != nil {
 				return err
 			}
@@ -295,7 +306,8 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		}
 		return mc.attachmentLinkSvc.LinkMessageAttachments(ctx, msg)
 	})
-	if errors.Is(err, repository.ErrAnchorWrongThread) {
+	if errors.Is(err, service.ErrAnchorWrongThread) || errors.Is(err, service.ErrAnchorNestedParent) ||
+		errors.Is(err, service.ErrAnchorLineOutOfRange) || errors.Is(err, service.ErrAnchorInvalidThread) {
 		ResponseErr(c, errs.ErrBadRequest.WithMessage(err.Error()))
 		return
 	}
@@ -446,6 +458,11 @@ func (mc *MessageController) SetReadMessages(c *gin.Context) {
 	// mistake, and falling through marked nothing read while answering 200.
 	switch dto.IdMessageRecipientType {
 	case model.TeammateRecipientType, model.TeamRecipientType, model.ProjectRecipientType:
+	case model.IssueRecipientType:
+		if accessErr := mc.messageAccess.CheckContextAccess(ctx, user.IdUser, dto.IdMessageRecipientType, dto.IdRecipient); accessErr != nil {
+			ResponseErr(c, accessErr)
+			return
+		}
 	default:
 		_ = c.Error(errs.ErrBadRequest)
 		c.Status(http.StatusBadRequest)
@@ -458,6 +475,8 @@ func (mc *MessageController) SetReadMessages(c *gin.Context) {
 			return mc.messageRepo.InsertReadTeammatesMessages(ctx, dto.IdRecipient, user.IdUser)
 		case model.TeamRecipientType:
 			return mc.messageRepo.InsertReadTeamMessages(ctx, dto.IdRecipient, user.IdUser)
+		case model.IssueRecipientType:
+			return mc.messageRepo.InsertReadIssueMessages(ctx, dto.IdRecipient, user.IdUser)
 		default:
 			return mc.messageRepo.InsertReadProjectMessages(ctx, dto.IdRecipient, user.IdUser)
 		}

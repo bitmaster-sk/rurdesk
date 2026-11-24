@@ -107,6 +107,29 @@ peer (in direct messages). Click to insert a mention as a structured token
 Mentions are reliably detected by user ID — no false positives from similar names,
 case sensitivity, or word boundaries.
 
+### Replying to part of a message
+
+Select text in any task comment, and a **Reply** button appears above the
+selection. Click it to write a reply under that text. The selected text stays
+highlighted, and a thread row under it shows who replied, how many replies there
+are, the latest one, and how many are new since you last opened the task. Click
+the row or the highlight to open the thread and reply in it.
+
+![Inline reply threads under highlighted text in a task comment](../../site/assets/img/message-threads.png)
+
+Every reply also shows in the activity feed, in time order, as a card with the
+quoted text. Click the card to jump to its thread; **Back** returns you to the
+card.
+
+When the message is edited, a thread stays with its text even if lines above it
+moved. If the text itself changed or was removed, the thread moves to **To an
+older version of this message** at the end of the message, with the original
+text struck through, and its feed cards say **older version**.
+
+A selection maps to whole blocks: selecting part of a paragraph or of a list item
+anchors the reply to that paragraph or item. Diagrams, diffs and mockups cannot
+be selected for a reply.
+
 ### Task references
 
 Type `#` anywhere you write Markdown to link a task: task descriptions, task

@@ -2287,6 +2287,168 @@ const STEPS = [
     },
 
     {
+        id: "message-threads",
+        type: "screenshot",
+        file: "message-threads.png",
+        title: "Inline anchored reply threads on a task comment — MUTATES",
+        run: async ({ page, log }) => {
+            const P = await getProject(page);
+            const title = "URL Parser & Query Builder";
+            const list = await L.api(
+                page,
+                "GET",
+                `/api/private/project/${P}/issue`,
+            );
+            const issues = Array.isArray(list.data)
+                ? list.data
+                : (list.data?.items ?? list.data?.data ?? []);
+            let issue = issues.find((x) => x.title === title);
+            if (!issue) {
+                const created = await L.api(
+                    page,
+                    "POST",
+                    `/api/private/project/${P}/issue`,
+                    {
+                        title,
+                        description:
+                            "Add a URL parser and query-string builder to DevToolbox so developers can inspect, edit, and copy query parameters without manual percent-encoding.",
+                        estimated: 4,
+                    },
+                );
+                if (!created.ok)
+                    throw new Error(
+                        `create issue failed: ${created.status} ${JSON.stringify(created.data)}`,
+                    );
+                issue = created.data;
+                log(`created issue #${issue.idIssuePublic ?? issue.idIssue}: ${title}`);
+            }
+            const issueId = issue.idIssue ?? issue.id;
+            const issuePublicId = issue.idIssuePublic ?? issue.publicId ?? issueId;
+            const existing = await L.api(
+                page,
+                "GET",
+                `/api/private/message?idRecipient=${issueId}&idMessageRecipientType=4`,
+            );
+            const msgs = Array.isArray(existing.data) ? existing.data : [];
+            if (msgs.length === 0) {
+                const parentBody = [
+                    "Proposed behavior for the **URL Parser & Query Builder** tool:",
+                    "",
+                    "- Parse any pasted URL into protocol, host, port, path, hash, and an editable key/value table of query parameters.",
+                    "- Decode values with `URLSearchParams` so `+` becomes a space, and re-encode live as the user edits any row.",
+                    "- Keep a **Copy URL** button in the header and show a subtle warning when duplicate query keys are present.",
+                ].join("\n");
+                const parentRes = await L.api(
+                    page,
+                    "POST",
+                    "/api/private/message",
+                    {
+                        idRecipient: issueId,
+                        idMessageRecipientType: 4,
+                        message: parentBody,
+                    },
+                );
+                if (!parentRes.ok)
+                    throw new Error(
+                        `post parent failed: ${parentRes.status}`,
+                    );
+                const idParent = parentRes.data.idMessage;
+
+                // Robert Stark starts thread 1
+                await L.loginAs(page, PEOPLE[1].email, PEOPLE[1].password);
+                const t1Root = await L.api(
+                    page,
+                    "POST",
+                    "/api/private/message",
+                    {
+                        idRecipient: issueId,
+                        idMessageRecipientType: 4,
+                        message:
+                            "Watch out for OAuth callback URLs — some providers expect `%20` instead of `+` when re-encoding.",
+                        idParentMessage: idParent,
+                        anchorLineStart: 4,
+                        anchorLineEnd: 4,
+                        anchorQuote:
+                            "Decode values with URLSearchParams so + becomes a space",
+                    },
+                );
+                if (!t1Root.ok)
+                    throw new Error(
+                        `post thread 1 root failed: ${t1Root.status}`,
+                    );
+
+                // John Snow replies in thread 1 and marks the issue read
+                await L.loginAs(page, ADMIN.email, ADMIN.password);
+                const t1Reply = await L.api(
+                    page,
+                    "POST",
+                    "/api/private/message",
+                    {
+                        idRecipient: issueId,
+                        idMessageRecipientType: 4,
+                        message:
+                            "Good catch — let's encode spaces as `%20` on output and still accept both on input.",
+                        idThreadMessage: t1Root.data.idMessage,
+                    },
+                );
+                if (!t1Reply.ok)
+                    throw new Error(
+                        `post thread 1 reply failed: ${t1Reply.status}`,
+                    );
+                await L.api(page, "POST", "/api/private/message/read", {
+                    idRecipient: issueId,
+                    idMessageRecipientType: 4,
+                });
+
+                // Robert Baratheon starts thread 2 (shows as 1 new for John Snow)
+                await L.loginAs(page, PEOPLE[0].email, PEOPLE[0].password);
+                const t2Root = await L.api(
+                    page,
+                    "POST",
+                    "/api/private/message",
+                    {
+                        idRecipient: issueId,
+                        idMessageRecipientType: 4,
+                        message:
+                            "Duplicate keys are valid in REST filters like `?tag=a&tag=b` — let's allow editing them instead of warning.",
+                        idParentMessage: idParent,
+                        anchorLineStart: 5,
+                        anchorLineEnd: 5,
+                        anchorQuote: "when duplicate query keys are present",
+                    },
+                );
+                if (!t2Root.ok)
+                    throw new Error(
+                        `post thread 2 root failed: ${t2Root.status}`,
+                    );
+
+                await L.loginAs(page, ADMIN.email, ADMIN.password);
+            }
+
+            await L.gotoApp(
+                page,
+                `${L.BASE}/project/${P}/issue/${issuePublicId}`,
+            );
+            await L.settle(page);
+
+            const comment = page.locator("app-activity-comment-item").first();
+            await comment.waitFor({ state: "visible", timeout: 10000 });
+            // Expand the first thread (2 replies) while keeping the second collapsed (1 new)
+            const firstToggle = comment
+                .locator("app-anchor-thread .thread-toggle")
+                .first();
+            await firstToggle.waitFor({ state: "visible", timeout: 10000 });
+            await firstToggle.click();
+            await page.waitForTimeout(600);
+            await comment.scrollIntoViewIfNeeded();
+            await page.waitForTimeout(400);
+            await comment.screenshot({
+                path: `${L.IMG}/message-threads.png`,
+            });
+        },
+    },
+
+    {
         id: "participants-panel",
         type: "screenshot",
         file: "participants-panel.png",

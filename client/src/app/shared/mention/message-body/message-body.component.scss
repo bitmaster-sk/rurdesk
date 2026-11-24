@@ -8,6 +8,22 @@
 // ng-deep so it doesn't break the flow. Block-level children (ul, ol, pre,
 // blockquote) inside the <p> naturally break out of the inline context, so
 // lists and code fences still render as blocks.
+// Each segment scopes its overlaid anchor slot so earlier segments resizing cannot
+// shift later slots, and keeps split chunks stacked as blocks.
+.segment {
+    display: block;
+    position: relative;
+}
+
+// Threads of the piece before; laid over a gap in its text by the anchors directive.
+.anchor-slot {
+    display: flow-root;
+
+    &:empty {
+        display: none;
+    }
+}
+
 .text-run {
     display: inline;
 

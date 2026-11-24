@@ -17,8 +17,6 @@ var (
 	ErrGitIntegrationDuplicate    = errors.New("git integration duplicate")
 	ErrGitIntegrationLimitReached = errors.New("git integration limit reached")
 
-	ErrAnchorWrongThread = errors.New("anchor parent message belongs to a different thread")
-
 	ErrWikiProposalDecided = errors.New("wiki proposal is already decided")
 
 	ErrAttachmentNotFound = errors.New("attachment not found")

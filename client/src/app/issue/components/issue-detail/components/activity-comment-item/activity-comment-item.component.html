@@ -12,8 +12,8 @@
         <div class="connector"></div>
     </div>
     <div
+        #card
         class="comment-card"
-        [class.unread]="!message().isRead"
         [class.kind-brainstorming-question]="
             message().messageKind === MessageKind.BrainstormingQuestion
         "
@@ -76,44 +76,50 @@
                 ></app-message-editor>
             </div>
         } @else {
-            @if (showLineMode()) {
-                <div class="line-mode">
-                    @for (line of lines(); track $index) {
-                        <div class="msg-line">
-                            <span class="gutter">{{ $index + 1 }}</span>
-                            <button
-                                type="button"
-                                class="anchor-add-btn"
-                                [attr.aria-label]="'MESSAGE.ANCHOR.COMMENT_ON_LINES' | translate"
-                                (click)="onAddAnchor($index + 1)"
-                            >
-                                <tabler-icon icon="plus" [size]="12" />
-                            </button>
-                            <span class="line-text">
-                                <app-message-body [body]="line" [candidates]="candidates()" />
-                            </span>
-                        </div>
-                        @if (childrenByLine().get($index + 1); as replies) {
-                            <div class="anchor-replies" [class.outdated]="isOutdated(replies)">
-                                @for (reply of replies; track reply.idMessage) {
-                                    <app-anchor-reply
-                                        [reply]="reply"
-                                        [candidates]="candidates()"
-                                    ></app-anchor-reply>
-                                }
-                            </div>
-                        }
-                    }
-                </div>
-            } @else {
+            <div #bodyHost class="body-host">
                 <app-message-body
                     [body]="message().message"
                     [messageKind]="message().messageKind"
                     [candidates]="candidates()"
                     [approvable]="mockupApprovable()"
                     [selectedMockupRef]="selectedMockupRef()"
+                    [anchorBreaks]="anchorBreaks()"
+                    [anchorSlot]="anchorSlot"
+                    [anchorHighlights]="anchorHighlights()"
                     (useMockup)="approveMockup.emit($event)"
+                    (anchorClick)="onAnchorClick($event)"
                 />
+            </div>
+            @if (selectionReply(); as reply) {
+                <button
+                    type="button"
+                    class="selection-reply"
+                    data-testid="anchor-selection-reply"
+                    [style.left.px]="reply.left"
+                    [style.top.px]="reply.top"
+                    [attr.aria-label]="'MESSAGE.ANCHOR.REPLY_TO_SELECTION' | translate"
+                    (mousedown)="$event.preventDefault()"
+                    (click)="onReplyToSelection()"
+                >
+                    <tabler-icon icon="message-reply" [size]="14" />
+                    {{ 'MESSAGE.ANCHOR.REPLY' | translate }}
+                </button>
+            }
+            @if (outdatedThreads().length > 0) {
+                <div class="anchor-outdated" data-testid="anchor-outdated-section">
+                    <div class="anchor-outdated-title">
+                        {{ 'MESSAGE.ANCHOR.OLDER_SECTION' | translate }}
+                    </div>
+                    @for (thread of outdatedThreads(); track thread.idThread) {
+                        <div class="anchor-outdated-quote">
+                            {{ thread.quote ?? thread.anchorText }}
+                        </div>
+                        <ng-container
+                            [ngTemplateOutlet]="threadTemplate"
+                            [ngTemplateOutletContext]="{ $implicit: thread }"
+                        />
+                    }
+                </div>
             }
             @if (message().updatedAt) {
                 <span class="message-edited">edited {{ message().updatedAt | date: 'short' }}</span>
@@ -124,3 +130,43 @@
         }
     </div>
 </div>
+
+<ng-template #anchorSlot let-lines>
+    @for (line of lines; track line) {
+        @for (thread of threadsByEnd().get(line) ?? []; track thread.idThread) {
+            <ng-container
+                [ngTemplateOutlet]="threadTemplate"
+                [ngTemplateOutletContext]="{ $implicit: thread }"
+            />
+        }
+        @if (draft(); as draft) {
+            @if (draft.lineEnd === line) {
+                <app-anchor-thread
+                    [draft]="draft"
+                    [mentionCandidates]="mentionCandidates()"
+                    [attachmentScope]="attachmentScope()"
+                    (reply)="draftSend.emit($event)"
+                    (cancelDraft)="draftCancel.emit()"
+                ></app-anchor-thread>
+            }
+        }
+    }
+</ng-template>
+
+<ng-template #threadTemplate let-thread>
+    <app-anchor-thread
+        [thread]="thread"
+        [isExpanded]="expandedThreads().has(thread.idThread)"
+        [unreadCount]="unreadByThread().get(thread.idThread) ?? 0"
+        [currentUserId]="currentUserId()"
+        [idMessageEdit]="idThreadMessageEdit()"
+        [candidates]="candidates()"
+        [mentionCandidates]="mentionCandidates()"
+        [attachmentScope]="attachmentScope()"
+        (toggleExpand)="threadToggle.emit(thread.idThread)"
+        (reply)="threadReply.emit({ thread, text: $event })"
+        (editRequest)="threadEditRequest.emit($event)"
+        (editSave)="threadEditSave.emit($event)"
+        (editCancel)="threadEditCancel.emit()"
+    ></app-anchor-thread>
+</ng-template>

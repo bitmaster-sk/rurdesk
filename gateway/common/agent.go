@@ -184,6 +184,9 @@ type TaskMessage struct {
 	CreatedAt   string
 	Kind        string
 	Message     string
+	// Reference identifies an issue message in the prompt header, and for an anchored comment
+	// the text it reacts to, e.g. ` · #13 · on #12 "step 2"`. Empty for chat messages.
+	Reference string
 }
 
 type RunStatus struct {

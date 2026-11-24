@@ -16,7 +16,7 @@ const taskLinkHint = " Link a task as [#123](/project/{idProject}/issue/123), wh
 func registerMessageTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stage string) {
 	server.AddTool(
 		mcpgo.NewTool("list_issue_messages",
-			mcpgo.WithDescription("List all messages for an issue. Each message includes a version field and an optional anchor field (idParentMessage, anchorLineStart, anchorLineEnd, isOutdated) for messages that reply to a specific line range of another message."),
+			mcpgo.WithDescription("List all messages for an issue. Each message includes a version field and an optional anchor field for a comment that reacts to part of another message: idParentMessage, anchorLineStart and anchorLineEnd (the lines in the parent's current text), anchorText (the anchored source lines, possibly cut), quote (the selected text, if any), idThreadMessage (the thread's first reply; absent on that first reply) and isOutdated (the anchored text no longer exists in the parent)."),
 			mcpgo.WithNumber("issue_id", mcpgo.Required(), mcpgo.Description("Internal issue ID (idIssue)")),
 			mcpgo.WithReadOnlyHintAnnotation(true),
 		),
@@ -29,12 +29,14 @@ func registerMessageTools(server *mcpsdk.MCPServer, dispatcher *Dispatcher, stag
 	}
 	server.AddTool(
 		mcpgo.NewTool("post_issue_message",
-			mcpgo.WithDescription("Post a message on an issue. Optionally anchor this message to a line range of an earlier message in the thread (e.g. to reply to a specific section of the agent's plan). When replying to a specific part of the user's message or your own earlier plan, prefer anchoring over inline quoting — pass parent_message_id with anchor_line_start and anchor_line_end together."),
+			mcpgo.WithDescription("Post a message on an issue. A plain message needs no anchor. Anchor only when reacting to a specific part of a long message: pass parent_message_id with anchor_line_start and anchor_line_end, and optionally anchor_quote. Never anchor a whole message. To answer inside an existing thread, pass thread_message_id (any message of that thread) instead of the anchor fields."),
 			mcpgo.WithNumber("issue_id", mcpgo.Required(), mcpgo.Description("Internal issue ID (idIssue)")),
 			mcpgo.WithString("message", mcpgo.Required(), mcpgo.Description("Message text, Markdown."+taskLinkHint)),
 			mcpgo.WithNumber("parent_message_id", mcpgo.Description("ID of the message to anchor this reply to. Must be provided together with anchor_line_start and anchor_line_end, or all three must be omitted.")),
 			mcpgo.WithNumber("anchor_line_start", mcpgo.Description("First line number (1-based) of the anchor range in the parent message.")),
 			mcpgo.WithNumber("anchor_line_end", mcpgo.Description("Last line number (1-based, >= anchor_line_start) of the anchor range in the parent message.")),
+			mcpgo.WithString("anchor_quote", mcpgo.Description("Exact text within the anchored lines this reply is about, at most 2000 characters. Optional; needs the anchor fields.")),
+			mcpgo.WithNumber("thread_message_id", mcpgo.Description("ID of a message in the thread to continue. The reply takes that thread's anchor. Do not combine with the anchor fields.")),
 		),
 		func(ctx context.Context, req mcpgo.CallToolRequest) (*mcpgo.CallToolResult, error) {
 			return handlePostIssueMessage(ctx, req, dispatcher)
@@ -96,6 +98,14 @@ func handlePostIssueMessage(ctx context.Context, req mcpgo.CallToolRequest, disp
 	if hasParent != hasStart || hasStart != hasEnd {
 		return mcpgo.NewToolResultError("anchor fields parent_message_id, anchor_line_start, and anchor_line_end must all be provided together or all omitted"), nil
 	}
+	anchorQuote := req.GetString("anchor_quote", "")
+	if anchorQuote != "" && !hasParent {
+		return mcpgo.NewToolResultError("anchor_quote needs parent_message_id, anchor_line_start and anchor_line_end"), nil
+	}
+	threadMessageID := req.GetInt("thread_message_id", 0)
+	if threadMessageID != 0 && hasParent {
+		return mcpgo.NewToolResultError("thread_message_id cannot be combined with the anchor fields; the reply takes the thread's anchor"), nil
+	}
 
 	body := map[string]any{
 		"idRecipient":            issueID,
@@ -106,6 +116,12 @@ func handlePostIssueMessage(ctx context.Context, req mcpgo.CallToolRequest, disp
 		body["idParentMessage"] = parentMessageID
 		body["anchorLineStart"] = anchorLineStart
 		body["anchorLineEnd"] = anchorLineEnd
+	}
+	if anchorQuote != "" {
+		body["anchorQuote"] = anchorQuote
+	}
+	if threadMessageID != 0 {
+		body["idThreadMessage"] = threadMessageID
 	}
 
 	resp, err := dispatcher.Request(ctx, RequestOpts{

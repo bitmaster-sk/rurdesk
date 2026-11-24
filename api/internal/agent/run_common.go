@@ -23,6 +23,7 @@ type RunKindDeps struct {
 	GitIntRepo        *repository.GitIntegrationRepository
 	IssueRepo         *repository.IssueRepository
 	MessageRepo       *repository.MessageRepository
+	MessageAnchorSvc  *service.MessageAnchorService
 	ProjectRepo       *repository.ProjectRepository
 	UserRepo          *repository.UserRepository
 	ConversationRepo  *repository.AgentConversationRepository
@@ -48,6 +49,7 @@ type runCommon struct {
 	gitIntRepo        *repository.GitIntegrationRepository
 	issueRepo         *repository.IssueRepository
 	messageRepo       *repository.MessageRepository
+	messageAnchorSvc  *service.MessageAnchorService
 	projectRepo       *repository.ProjectRepository
 	userRepo          *repository.UserRepository
 	conversationRepo  *repository.AgentConversationRepository
@@ -72,6 +74,7 @@ func newRunCommon(deps RunKindDeps) *runCommon {
 		gitIntRepo:        deps.GitIntRepo,
 		issueRepo:         deps.IssueRepo,
 		messageRepo:       deps.MessageRepo,
+		messageAnchorSvc:  deps.MessageAnchorSvc,
 		projectRepo:       deps.ProjectRepo,
 		userRepo:          deps.UserRepo,
 		conversationRepo:  deps.ConversationRepo,

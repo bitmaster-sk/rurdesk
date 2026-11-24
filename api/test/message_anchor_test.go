@@ -14,6 +14,7 @@ import (
 	"github.com/bitmaster-sk/rurdesk/api/internal/issue"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
 	"github.com/bitmaster-sk/rurdesk/api/internal/repository"
+	"github.com/bitmaster-sk/rurdesk/api/internal/service"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/suite"
 )
@@ -247,6 +248,239 @@ func (s *MessageAnchorSuite) Test_07_ListMessagesEmbedsVersionAndAnchor() {
 	s.False(foundChild.Anchor.IsOutdated)
 }
 
+func (s *MessageAnchorSuite) postParent(body string) model.Message {
+	payload, err := json.Marshal(map[string]any{"idRecipient": s.IdIssue, "idMessageRecipientType": 4, "message": body})
+	s.Require().NoError(err)
+	res := s.postMessage(string(payload))
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var parent model.Message
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&parent))
+	return parent
+}
+
+func (s *MessageAnchorSuite) postReply(fields map[string]any) *http.Response {
+	payload := map[string]any{"idRecipient": s.IdIssue, "idMessageRecipientType": 4, "message": "reply"}
+	for key, value := range fields {
+		payload[key] = value
+	}
+	body, err := json.Marshal(payload)
+	s.Require().NoError(err)
+	return s.postMessage(string(body))
+}
+
+func (s *MessageAnchorSuite) postReplyOk(fields map[string]any) model.Message {
+	res := s.postReply(fields)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+	var reply model.Message
+	s.Require().NoError(json.NewDecoder(res.Body).Decode(&reply))
+	return reply
+}
+
+func (s *MessageAnchorSuite) editMessage(idMessage int64, body string) {
+	payload, err := json.Marshal(map[string]string{"message": body})
+	s.Require().NoError(err)
+	res := Request(s.T(), s.App, "PATCH", fmt.Sprintf("/api/private/message/%d", idMessage), string(payload), s.Token)
+	s.Require().Equal(http.StatusOK, res.StatusCode)
+}
+
+func (s *MessageAnchorSuite) listedAnchor(idMessage int64) *model.MessageAnchor {
+	for _, message := range s.listMessages() {
+		if message.IdMessage == idMessage {
+			s.Require().NotNil(message.Anchor)
+			return message.Anchor
+		}
+	}
+	s.FailNow("message not listed", "id %d", idMessage)
+	return nil
+}
+
+func lineFields(idParent int64, lineStart int, lineEnd int) map[string]any {
+	return map[string]any{"idParentMessage": idParent, "anchorLineStart": lineStart, "anchorLineEnd": lineEnd}
+}
+
+func (s *MessageAnchorSuite) Test_09_QuoteAndAnchorTextReturned() {
+	parent := s.postParent("# Plan\n\n1. first step\n2. second step\n")
+	fields := lineFields(parent.IdMessage, 3, 4)
+	fields["anchorQuote"] = "  first step  "
+
+	reply := s.postReplyOk(fields)
+
+	s.Require().NotNil(reply.Anchor)
+	s.Equal("1. first step\n2. second step", reply.Anchor.AnchorText)
+	s.Require().NotNil(reply.Anchor.Quote)
+	s.Equal("first step", *reply.Anchor.Quote)
+	s.Nil(reply.Anchor.IdThreadMessage)
+
+	listed := s.listedAnchor(reply.IdMessage)
+	s.Equal("1. first step\n2. second step", listed.AnchorText)
+	s.Equal("first step", *listed.Quote)
+	s.False(listed.IsOutdated)
+}
+
+func (s *MessageAnchorSuite) Test_10_ThreadReplyCopiesRootAnchor() {
+	parent := s.postParent("alpha\nbeta\ngamma")
+	fields := lineFields(parent.IdMessage, 2, 2)
+	fields["anchorQuote"] = "beta"
+	root := s.postReplyOk(fields)
+
+	reply := s.postReplyOk(map[string]any{"idThreadMessage": root.IdMessage})
+	s.Require().NotNil(reply.Anchor)
+	s.Equal(parent.IdMessage, reply.Anchor.IdParentMessage)
+	s.Equal(2, reply.Anchor.AnchorLineStart)
+	s.Equal(2, reply.Anchor.AnchorLineEnd)
+	s.Equal("beta", reply.Anchor.AnchorText)
+	s.Equal("beta", *reply.Anchor.Quote)
+	s.Require().NotNil(reply.Anchor.IdThreadMessage)
+	s.Equal(root.IdMessage, *reply.Anchor.IdThreadMessage)
+
+	replyToReply := s.postReplyOk(map[string]any{"idThreadMessage": reply.IdMessage})
+	s.Require().NotNil(replyToReply.Anchor.IdThreadMessage)
+	s.Equal(root.IdMessage, *replyToReply.Anchor.IdThreadMessage, "a reply to a reply joins the root's thread")
+}
+
+func (s *MessageAnchorSuite) Test_11_InvalidAnchorCombinationsRejected() {
+	parent := s.postParent("one\ntwo\nthree\n")
+	root := s.postReplyOk(lineFields(parent.IdMessage, 1, 1))
+	plain := s.postParent("not anchored")
+
+	otherIssueRes := Request(s.T(), s.App, "POST", fmt.Sprintf("/api/private/project/%d/issue", s.IdProject),
+		`{"title":"other thread issue","description":"body","estimated":0}`, s.Token)
+	s.Require().Equal(http.StatusOK, otherIssueRes.StatusCode)
+	var otherIssue model.Issue
+	s.Require().NoError(json.NewDecoder(otherIssueRes.Body).Decode(&otherIssue))
+	otherParentRes := s.postMessage(fmt.Sprintf(`{"idRecipient":%d,"idMessageRecipientType":4,"message":"x"}`, otherIssue.IdIssue))
+	var otherParent model.Message
+	s.Require().NoError(json.NewDecoder(otherParentRes.Body).Decode(&otherParent))
+	otherRootRes := s.postMessage(fmt.Sprintf(`{"idRecipient":%d,"idMessageRecipientType":4,"message":"y","idParentMessage":%d,"anchorLineStart":1,"anchorLineEnd":1}`,
+		otherIssue.IdIssue, otherParent.IdMessage))
+	s.Require().Equal(http.StatusOK, otherRootRes.StatusCode)
+	var otherRoot model.Message
+	s.Require().NoError(json.NewDecoder(otherRootRes.Body).Decode(&otherRoot))
+
+	withQuote := func(fields map[string]any, quote string) map[string]any {
+		fields["anchorQuote"] = quote
+		return fields
+	}
+	threadAndLines := lineFields(parent.IdMessage, 1, 1)
+	threadAndLines["idThreadMessage"] = root.IdMessage
+
+	cases := []struct {
+		name   string
+		fields map[string]any
+	}{
+		{"thread together with lines", threadAndLines},
+		{"quote without anchor", map[string]any{"anchorQuote": "one"}},
+		{"quote with thread", map[string]any{"idThreadMessage": root.IdMessage, "anchorQuote": "one"}},
+		{"thread of another issue", map[string]any{"idThreadMessage": otherRoot.IdMessage}},
+		{"thread of a non-anchored message", map[string]any{"idThreadMessage": plain.IdMessage}},
+		{"line end past the last line", lineFields(parent.IdMessage, 3, 4)},
+		{"anchored to an anchored reply", lineFields(root.IdMessage, 1, 1)},
+		{"blank quote", withQuote(lineFields(parent.IdMessage, 1, 1), "   ")},
+		{"quote of 2001 characters", withQuote(lineFields(parent.IdMessage, 1, 1), strings.Repeat("a", 2001))},
+	}
+	for _, testCase := range cases {
+		s.Run(testCase.name, func() {
+			s.Equal(http.StatusBadRequest, s.postReply(testCase.fields).StatusCode)
+		})
+	}
+
+	s.Run("quote of 2000 multibyte characters", func() {
+		s.Equal(http.StatusOK, s.postReply(withQuote(lineFields(parent.IdMessage, 3, 3), strings.Repeat("ž", 2000))).StatusCode)
+	})
+	s.Run("trailing newline is not a line", func() {
+		s.Equal(http.StatusOK, s.postReply(lineFields(parent.IdMessage, 3, 3)).StatusCode)
+	})
+}
+
+func (s *MessageAnchorSuite) Test_12_RelocationAfterParentEdits() {
+	s.Run("lines inserted above move the thread", func() {
+		parent := s.postParent("intro\nkeep me\noutro")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 2))
+		reply := s.postReplyOk(map[string]any{"idThreadMessage": root.IdMessage})
+
+		s.editMessage(parent.IdMessage, "new 1\nnew 2\nintro\nkeep me\noutro")
+
+		for _, idMessage := range []int64{root.IdMessage, reply.IdMessage} {
+			anchor := s.listedAnchor(idMessage)
+			s.False(anchor.IsOutdated)
+			s.Equal(4, anchor.AnchorLineStart)
+			s.Equal(4, anchor.AnchorLineEnd)
+		}
+
+		s.editMessage(parent.IdMessage, "new 1\nintro\nkeep me\noutro")
+		anchor := s.listedAnchor(root.IdMessage)
+		s.False(anchor.IsOutdated)
+		s.Equal(3, anchor.AnchorLineStart)
+	})
+
+	s.Run("text changed inside the range", func() {
+		parent := s.postParent("intro\nkeep me\noutro")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 2))
+		s.editMessage(parent.IdMessage, "intro\nchanged\noutro")
+
+		anchor := s.listedAnchor(root.IdMessage)
+		s.True(anchor.IsOutdated)
+		s.Equal("keep me", anchor.AnchorText)
+
+		reply := s.postReplyOk(map[string]any{"idThreadMessage": root.IdMessage})
+		s.True(reply.Anchor.IsOutdated, "a reply to an outdated thread stays in it")
+		s.True(s.listedAnchor(reply.IdMessage).IsOutdated)
+	})
+
+	s.Run("range deleted", func() {
+		parent := s.postParent("intro\nkeep me\noutro")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 2))
+		s.editMessage(parent.IdMessage, "intro\noutro")
+		s.True(s.listedAnchor(root.IdMessage).IsOutdated)
+	})
+
+	s.Run("anchor text twice picks the copy nearest to the stored start", func() {
+		parent := s.postParent("a\n---\nb\nc\nd")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 2))
+		s.editMessage(parent.IdMessage, "a\nx\n---\nb\nc\nd\n---")
+
+		anchor := s.listedAnchor(root.IdMessage)
+		s.False(anchor.IsOutdated)
+		s.Equal(3, anchor.AnchorLineStart)
+	})
+
+	s.Run("edit without changes keeps the lines", func() {
+		parent := s.postParent("intro\nkeep me\noutro")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 3))
+		s.editMessage(parent.IdMessage, "intro\nkeep me\noutro")
+
+		anchor := s.listedAnchor(root.IdMessage)
+		s.False(anchor.IsOutdated)
+		s.Equal(2, anchor.AnchorLineStart)
+		s.Equal(3, anchor.AnchorLineEnd)
+	})
+
+	s.Run("CRLF parent follows the LF rule", func() {
+		parent := s.postParent("intro\r\nkeep me\r\noutro\r\n")
+		root := s.postReplyOk(lineFields(parent.IdMessage, 2, 3))
+		s.Equal("keep me\noutro", root.Anchor.AnchorText)
+
+		s.editMessage(parent.IdMessage, "top\nintro\nkeep me\noutro\n")
+		anchor := s.listedAnchor(root.IdMessage)
+		s.False(anchor.IsOutdated)
+		s.Equal(3, anchor.AnchorLineStart)
+	})
+}
+
+func (s *MessageAnchorSuite) Test_13_LongAnchorTextIsCut() {
+	longLine := strings.Repeat("ab", 400)
+	parent := s.postParent(longLine)
+	root := s.postReplyOk(lineFields(parent.IdMessage, 1, 1))
+
+	s.Equal(strings.Repeat("ab", 250)+"…", root.Anchor.AnchorText)
+	s.Equal(strings.Repeat("ab", 250)+"…", s.listedAnchor(root.IdMessage).AnchorText)
+
+	s.editMessage(parent.IdMessage, "above\n"+longLine)
+	anchor := s.listedAnchor(root.IdMessage)
+	s.False(anchor.IsOutdated, "relocation uses the full stored anchor text, not the cut one")
+	s.Equal(2, anchor.AnchorLineStart)
+}
+
 // errRow is a pgx.Row that always returns a fixed error from Scan.
 type errRow struct{ err error }
 
@@ -287,7 +521,7 @@ func (s *MessageAnchorSuite) Test_08_GuardDBErrorPropagatesAsNonWrongThread() {
 	idUser := idOfUser(s.T(), s.App, token, "test@test.sk")
 	creator := &model.User{IdUser: idUser}
 
-	repo := repository.NewMessageRepository(s.App.Pool)
+	anchorSvc := service.NewMessageAnchorService(repository.NewMessageRepository(s.App.Pool))
 	anchor := &model.MessageAnchor{
 		IdParentMessage: parent.IdMessage,
 		AnchorLineStart: 1,
@@ -303,12 +537,12 @@ func (s *MessageAnchorSuite) Test_08_GuardDBErrorPropagatesAsNonWrongThread() {
 	failingTx := &guardFailingTx{Tx: tx}
 	txCtx := extctx.WithTx(ctx, failingTx)
 
-	_, err = repo.InsertIssueMessage(txCtx, "guard-fail child", creator, s.IdIssue, anchor)
+	_, err = anchorSvc.CreateIssueMessage(txCtx, "guard-fail child", creator, s.IdIssue, anchor)
 
 	// The error must NOT be ErrAnchorWrongThread — it must propagate as a
 	// wrapped infrastructure error.
-	s.Require().Error(err, "InsertIssueMessage should return an error")
-	s.False(errors.Is(err, repository.ErrAnchorWrongThread),
+	s.Require().Error(err, "CreateIssueMessage should return an error")
+	s.False(errors.Is(err, service.ErrAnchorWrongThread),
 		"DB infrastructure error must not be collapsed to ErrAnchorWrongThread, got: %v", err)
 }
 

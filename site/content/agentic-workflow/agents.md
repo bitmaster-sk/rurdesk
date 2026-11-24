@@ -348,6 +348,12 @@ re-posted — the run advances straight to the next stage with your choice.
 
 ![Mockup cards in the design comment — one chosen, the other dimmed](../../site/assets/img/message-mockup.png)
 
+To give feedback on one part of a design or plan, select that text and
+[reply to it](../using-the-tracker/features.md#replying-to-part-of-a-message).
+The agent sees the quoted text next to your comment. While the run waits for
+approval, your first comment starts a revision right away, so the agent answers
+by posting a revised design or plan; the threads stay on the old message.
+
 ### The pull request
 
 After the implement stage the agent pushes a branch, and **the tracker opens the

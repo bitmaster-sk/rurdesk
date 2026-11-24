@@ -2,7 +2,9 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 )
@@ -32,12 +34,17 @@ type Message struct {
 	Anchor                 *MessageAnchor        `json:"anchor,omitempty"`
 }
 
+const MaxAnchorQuoteLength = 2000
+
 type MessageAnchor struct {
-	IdParentMessage int64 `json:"idParentMessage"`
-	ParentVersion   int   `json:"parentVersion"`
-	AnchorLineStart int   `json:"anchorLineStart"`
-	AnchorLineEnd   int   `json:"anchorLineEnd"`
-	IsOutdated      bool  `json:"isOutdated"`
+	IdParentMessage int64   `json:"idParentMessage"`
+	ParentVersion   int     `json:"parentVersion"`
+	AnchorLineStart int     `json:"anchorLineStart"`
+	AnchorLineEnd   int     `json:"anchorLineEnd"`
+	IsOutdated      bool    `json:"isOutdated"`
+	AnchorText      string  `json:"anchorText"`
+	Quote           *string `json:"quote,omitempty"`
+	IdThreadMessage *int64  `json:"idThreadMessage,omitempty"`
 }
 
 type CreateMessageReq struct {
@@ -47,18 +54,33 @@ type CreateMessageReq struct {
 	IdParentMessage        *int64               `json:"idParentMessage,omitempty"`
 	AnchorLineStart        *int                 `json:"anchorLineStart,omitempty"`
 	AnchorLineEnd          *int                 `json:"anchorLineEnd,omitempty"`
+	AnchorQuote            *string              `json:"anchorQuote,omitempty"`
+	IdThreadMessage        *int64               `json:"idThreadMessage,omitempty"`
 }
 
 func (req *CreateMessageReq) Validate() error {
 	hasParent := req.IdParentMessage != nil
 	hasStart := req.AnchorLineStart != nil
 	hasEnd := req.AnchorLineEnd != nil
+	hasQuote := req.AnchorQuote != nil
 
 	allSet := hasParent && hasStart && hasEnd
 	noneSet := !hasParent && !hasStart && !hasEnd
 
 	if !allSet && !noneSet {
 		return ErrInvalidAnchor
+	}
+	if req.IdThreadMessage != nil && (!noneSet || hasQuote) {
+		return ErrInvalidAnchor
+	}
+	if hasQuote {
+		if !allSet {
+			return ErrInvalidAnchor
+		}
+		quote := strings.TrimSpace(*req.AnchorQuote)
+		if quote == "" || utf8.RuneCountInString(quote) > MaxAnchorQuoteLength {
+			return ErrInvalidAnchor
+		}
 	}
 	if allSet {
 		if *req.AnchorLineStart < 1 {
@@ -83,5 +105,5 @@ type GetMessagesReq struct {
 
 type SetReadMessageReq struct {
 	IdRecipient            int64                `json:"idRecipient" binding:"required"`
-	IdMessageRecipientType MessageRecipientType `json:"idMessageRecipientType" binding:"required,lte=3,gte=1"`
+	IdMessageRecipientType MessageRecipientType `json:"idMessageRecipientType" binding:"required,lte=4,gte=1"`
 }

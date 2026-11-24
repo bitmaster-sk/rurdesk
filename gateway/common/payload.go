@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/model"
 )
@@ -104,9 +105,31 @@ func parseIssueThread(rawMessages []json.RawMessage) []TaskMessage {
 			CreatedAt:   message.CreatedAt,
 			Kind:        message.MessageKind,
 			Message:     conversationBody(message.MessageKind, message.Message),
+			Reference:   messageReference(message),
 		})
 	}
 	return conversation
+}
+
+// messageReference gives the agent the message id and, for an anchored comment, the text it is
+// about: the selected quote, or the anchored source lines when the whole range was meant.
+func messageReference(message model.Message) string {
+	if message.IdMessage == 0 {
+		return ""
+	}
+	reference := fmt.Sprintf(" · #%d", message.IdMessage)
+	if message.Anchor == nil {
+		return reference
+	}
+	anchoredText := message.Anchor.AnchorText
+	if message.Anchor.Quote != nil {
+		anchoredText = *message.Anchor.Quote
+	}
+	reference += fmt.Sprintf(" · on #%d %q", message.Anchor.IdParentMessage, strings.Join(strings.Fields(anchoredText), " "))
+	if message.Anchor.IsOutdated {
+		reference += " (that text has changed since)"
+	}
+	return reference
 }
 
 // parseChatThread reads conversation messages; their author (user, agent or
