@@ -25,9 +25,10 @@ const promptHeader = `You are an AI agent working on issue #{{.IdIssuePublic}} i
 
 ## Conversation (oldest first)
 This is the full thread, your own submissions included. Read it in order: when
-two messages conflict, the later one is what the user wants now.
+two messages conflict, the later one is what the user wants now. A header with
+` + "`on #12 \"…\"`" + ` marks a comment about that quoted part of message #12.
 {{range .Conversation}}
-[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}]: {{.Message}}
+[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}{{.Reference}}]: {{.Message}}
 {{end}}
 
 ## Identifiers (use exactly these values when calling tools)
