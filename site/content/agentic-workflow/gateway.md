@@ -102,7 +102,8 @@ needs no repository.
   `/worktrees/github.com/your-org/your-repo`. Every run gets its own worktree in
   that clone, branched from the freshly fetched base branch.
 - **Worktree lifetime.** A run keeps its worktree when a stage fails or is
-  cancelled, so **Continue** resumes the unfinished work: uncommitted changes and
+  cancelled, so **Continue**, or assigning an agent to the task again, resumes the
+  unfinished work, a cancelled revision included: uncommitted changes and
   commits that were never pushed, or a rebase the agent stopped in the middle of.
   **Restart** removes the old run's worktree as soon as the gateway is not running
   another stage. Otherwise the gateway removes a worktree once nothing has used it for

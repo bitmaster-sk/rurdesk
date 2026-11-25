@@ -425,7 +425,7 @@ events are grouped by what can trigger them:
 
 | Event | Fires when |
 | --- | --- |
-| **Queued** | A run is queued: when it starts, when you press Continue, or when a new comment sends it back |
+| **Queued** | A run is queued: when it starts, when you press Continue or assign an agent to a failed or cancelled run, or when you send it your comments |
 | **In progress** | The agent starts working on a step, including right after you approve one |
 | **Awaiting input** | The agent asks a question and waits for your answer |
 | **Awaiting approval** | The agent's output waits for your review |
