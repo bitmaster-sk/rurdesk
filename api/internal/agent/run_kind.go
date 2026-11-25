@@ -36,6 +36,10 @@ type RunKind interface {
 	ApplyPrStatus(ctx context.Context, run *model.AgentRun, status *githost.Status) (*model.Issue, error)
 	// Audience returns the users notified about the run.
 	Audience(ctx context.Context, run *model.AgentRun) ([]int64, error)
+	// SendFeedback hands a run waiting for a person the comments its agent has not seen: a new
+	// attempt of the latest completed stage, and the run back to queued. Called under the run row
+	// lock; a kind that takes no feedback refuses with errs.ErrRunNotAwaitingFeedback.
+	SendFeedback(ctx context.Context, run *model.AgentRun, idUser int64) (*model.AgentRun, error)
 }
 
 // Dispatch is an activated task on its way to the gateway.

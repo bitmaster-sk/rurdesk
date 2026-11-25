@@ -92,6 +92,67 @@ func TestResolveNextStage_FailedAttempt_RetriesSameStage(t *testing.T) {
 	}
 }
 
+func TestResolveNextStage_CancelledRevision_RedoesTheStage(t *testing.T) {
+	now := time.Now()
+	completed := func(stage string, age time.Duration) *model.AgentTask {
+		return &model.AgentTask{Stage: stage, Status: constants.TaskStatusCompleted, AttemptNo: 1, CreatedAt: now.Add(-age)}
+	}
+	tests := []struct {
+		name  string
+		tasks []*model.AgentTask
+		want  string
+	}{
+		{"plan revision", []*model.AgentTask{
+			completed(constants.StagePickup, 5*time.Minute),
+			completed(constants.StageBrainstorming, 4*time.Minute),
+			completed(constants.StageDesign, 3*time.Minute),
+			completed(constants.StageImplementationPlan, 2*time.Minute),
+			{Stage: constants.StageImplementationPlan, Status: constants.TaskStatusCancelled, AttemptNo: 2, CreatedAt: now},
+		}, constants.StageImplementationPlan},
+		{"revision with the PR open", []*model.AgentTask{
+			completed(constants.StagePickup, 6*time.Minute),
+			completed(constants.StageBrainstorming, 5*time.Minute),
+			completed(constants.StageDesign, 4*time.Minute),
+			completed(constants.StageImplementationPlan, 3*time.Minute),
+			completed(constants.StageImplementation, 2*time.Minute),
+			{Stage: constants.StageImplementation, Status: constants.TaskStatusCancelled, AttemptNo: 2, CreatedAt: now},
+		}, constants.StageImplementation},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			next, err := ResolveNextStage(&model.AgentRun{StagePlan: planJSON(t, false, false)}, tc.tasks)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if next != tc.want {
+				t.Errorf("got %q, want %q (a cancelled revision is redone, not skipped)", next, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveNextStage_CancelledStageSkippedSince_MovesOn(t *testing.T) {
+	plan, err := json.Marshal(model.AgentStagePlan{Stages: []model.AgentStagePlanEntry{
+		{Name: constants.StagePickup},
+		{Name: constants.StageBrainstorming, Skip: true},
+		{Name: constants.StageDesign},
+	}})
+	if err != nil {
+		t.Fatalf("marshal plan: %v", err)
+	}
+	tasks := []*model.AgentTask{
+		{Stage: constants.StagePickup, Status: constants.TaskStatusCompleted, AttemptNo: 1, CreatedAt: time.Now().Add(-time.Minute)},
+		{Stage: constants.StageBrainstorming, Status: constants.TaskStatusCancelled, AttemptNo: 1, CreatedAt: time.Now()},
+	}
+	next, err := ResolveNextStage(&model.AgentRun{StagePlan: plan}, tasks)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if next != constants.StageDesign {
+		t.Errorf("got %q, want %q", next, constants.StageDesign)
+	}
+}
+
 func TestResolveNextStage_AllCompleted_ReturnsEmpty(t *testing.T) {
 	run := &model.AgentRun{StagePlan: planJSON(t, false, false)}
 	now := time.Now()

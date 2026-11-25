@@ -45,9 +45,12 @@ type AgentRunGitRepo struct {
 
 type AgentRunWithEvents struct {
 	AgentRun
-	Events   []*AgentRunEvent     `json:"events"`
-	Stages   []AgentStageProgress `json:"stages"`
-	IsParked bool                 `json:"isParked"`
+	Events          []*AgentRunEvent     `json:"events"`
+	Stages          []AgentStageProgress `json:"stages"`
+	IsParked        bool                 `json:"isParked"`
+	IsAgentAssigned bool                 `json:"isAgentAssigned"`
+	// IdMessageSeen is the newest issue message the latest completed attempt was given; nil until one completes.
+	IdMessageSeen *int64 `json:"idMessageSeen"`
 }
 
 // AgentStageProgress is one row of the run timeline, derived server-side from
@@ -132,6 +135,7 @@ type AgentTask struct {
 	MaxTurns         *int       `json:"maxTurns"        db:"max_turns"`
 	Effort           *string    `json:"effort"          db:"effort"`
 	ChatMode         *string    `json:"chatMode,omitempty" db:"chat_mode"`
+	IdMessageSeen    *int64     `json:"idMessageSeen"   db:"id_message_seen"`
 }
 
 type AgentStagePlan struct {

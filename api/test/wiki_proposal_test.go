@@ -283,6 +283,9 @@ func TestWikiProposal_RejectingLeavesACommentInTheTask(t *testing.T) {
 	messagesBody := readBody(t, messages)
 	require.Contains(t, messagesBody, "Rejected the wiki proposal")
 	require.Contains(t, messagesBody, "we keep tabs")
+	newFeedback, err := injector.GetMessageRepository().CountNewFeedback(context.Background(), iss.IdIssue, 0)
+	require.NoError(t, err)
+	require.Equal(t, 1, newFeedback, "the rejection is feedback for the agent, sent with Send to agent")
 
 	require.Equal(t, http.StatusConflict, f.accept(t, f.adminToken, proposal.Id, model.WikiProposalAcceptReq{}).StatusCode)
 	require.Equal(t, "tabs", f.view(t, f.adminToken, "project", page.Slug).Page.Body)

@@ -186,6 +186,7 @@ func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64
 			usr.color_avatar_bg,
 			usr.avatar_initials,
 			usr.is_active,
+			usr.is_agent,
 			CASE WHEN msg.created_at > COALESCE(ire.read_at, '1900-1-1') AND msg.id_user_from != $2 THEN FALSE ELSE TRUE END AS read,
 			ism.id_issue_to,
 			a.id_parent_message,
@@ -207,6 +208,27 @@ func (r *MessageRepository) LoadIssueMessages(ctx context.Context, idIssue int64
 		return nil, fmt.Errorf("querying issue messages: %w", err)
 	}
 	return scanIssueMessages(rows)
+}
+
+// CountNewFeedback counts the issue's comments by people (anchored replies included) newer than
+// idMessageSeen: the feedback an agent has not been given yet.
+func (r *MessageRepository) CountNewFeedback(ctx context.Context, idIssue, idMessageSeen int64) (int, error) {
+	db := extctx.GetDb(ctx, r.pool)
+	var count int
+	err := db.QueryRow(ctx, `
+		SELECT COUNT(*)
+		FROM messages.message msg
+		INNER JOIN messages.issue_message ism ON ism.id_message = msg.id_message
+		INNER JOIN users.user usr ON usr.id_user = msg.id_user_from
+		WHERE ism.id_issue_to = $1
+		  AND msg.id_message > $2
+		  AND msg.message_kind = $3
+		  AND NOT usr.is_agent
+	`, idIssue, idMessageSeen, constants.MessageKindComment).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("counting new feedback of issue %d: %w", idIssue, err)
+	}
+	return count, nil
 }
 
 func (r *MessageRepository) InsertTeammateMessage(ctx context.Context, message string, creator *model.User, idRecipient int64) (*model.Message, error) {
@@ -511,7 +533,7 @@ func scanIssueMessages(rows pgx.Rows) ([]*model.Message, error) {
 		)
 		if err := rows.Scan(
 			&m.IdMessage, &m.Message, &kind, &m.CreatedAt, &m.UpdatedAt, &m.Version,
-			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &u.IsActive,
+			&u.IdUser, &u.Name, &u.ColorAvatarBg, &u.AvatarInitials, &u.IsActive, &u.IsAgent,
 			&m.IsRead, &m.IdRecipient,
 			&idParentMessage, &parentVersion, &anchorLineStart, &anchorLineEnd, &anchorText, &quote, &idThreadMessage,
 		); err != nil {

@@ -962,6 +962,7 @@ func GetMessageController() (*controller.MessageController, error) {
 			GetProjectRepository(),
 			GetUserRepository(),
 			GetIssueRepository(),
+			GetAgentRunRepository(),
 			GetNotifier(),
 			GetAclService(),
 			GetMessageAccessService(),
@@ -970,7 +971,7 @@ func GetMessageController() (*controller.MessageController, error) {
 			GetNotificationService(),
 			GetIssueParticipantRepository(),
 			pool,
-		).WithAgentRun(GetAgentRunRepository(), GetAgentTaskRepository(), GetAgentGatewayRepository(), GetDispatcher(), GetNotifier()), nil
+		), nil
 	})
 	if err != nil {
 		return nil, err

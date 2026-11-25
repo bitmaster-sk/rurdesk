@@ -47,10 +47,15 @@ func (r *IssueRun) Payload(ctx context.Context, dispatch *Dispatch) (map[string]
 	messages, err := r.messageAnchorSvc.LoadIssueMessages(ctx, *run.IdIssue, 0)
 	if err != nil {
 		messages = nil
+	} else {
+		r.stampMessageSeen(ctx, task, messages)
 	}
 	artifacts := stageArtifactContext(task.Stage, priorTasks, messages)
 	bundle["issue"] = issue
 	bundle["reviewThread"] = reviewThread(messages)
+	if previous := previousCompletedAttempt(priorTasks, task); previous != nil {
+		bundle["idMessageSeen"] = IdMessageSeen(previous)
+	}
 	bundle["approvedDesign"] = artifacts.ApprovedDesign
 	bundle["approvedImplPlan"] = artifacts.ApprovedImplPlan
 	bundle["rejectedOutput"] = artifacts.RejectedOutput
@@ -65,6 +70,55 @@ func (r *IssueRun) Payload(ctx context.Context, dispatch *Dispatch) (map[string]
 	}
 	payload, err := r.stagePayload(ctx, run, task, bundle, repo, prBranch)
 	return payload, wikiReads, err
+}
+
+// stampMessageSeen records the newest message of the conversation the attempt is given; comments
+// above it stay new feedback. A failed stamp only makes more comments count as new.
+func (r *IssueRun) stampMessageSeen(ctx context.Context, task *model.AgentTask, messages []*model.Message) {
+	var idNewest int64
+	for _, message := range messages {
+		idNewest = max(idNewest, message.IdMessage)
+	}
+	if idNewest == 0 {
+		return
+	}
+	if err := r.taskRepo.SetIdMessageSeen(ctx, task.IdTask, idNewest); err != nil {
+		log.Warn().Err(err).Int64("idTask", task.IdTask).Msg("stamping the conversation the attempt was given")
+	}
+}
+
+// SendFeedback refuses a run that does not wait for a person, whose agent no longer holds the issue,
+// or with nothing new to send.
+func (r *IssueRun) SendFeedback(ctx context.Context, run *model.AgentRun, idUser int64) (*model.AgentRun, error) {
+	if !constants.PassivePhases[run.Phase] {
+		return nil, errs.ErrRunNotAwaitingFeedback
+	}
+	idAssignee, err := r.issueRepo.LoadAssignee(ctx, *run.IdIssue)
+	if err != nil {
+		return nil, err
+	}
+	if idAssignee == nil || *idAssignee != run.IdUserAgent {
+		return nil, errs.ErrRunParked
+	}
+	tasks, err := r.taskRepo.LoadByRun(ctx, run.IdRun)
+	if err != nil {
+		return nil, err
+	}
+	completed := LatestCompletedTask(tasks)
+	if completed == nil {
+		return nil, errs.ErrRunNotAwaitingFeedback
+	}
+	count, err := r.messageRepo.CountNewFeedback(ctx, *run.IdIssue, IdMessageSeen(completed))
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, errs.ErrNoNewFeedback
+	}
+	if _, err := r.taskRepo.Insert(ctx, run.IdRun, run.IdUserAgent, completed.Stage, ResolveNextAttemptNo(tasks, completed.Stage)); err != nil {
+		return nil, err
+	}
+	return r.runRepo.TransitionPhase(ctx, run.IdRun, run.Phase, constants.PhaseQueued, constants.ActorTypeUser, &idUser, "feedback_sent")
 }
 
 func (r *IssueRun) Started(ctx context.Context, dispatch *Dispatch) {
