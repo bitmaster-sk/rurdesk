@@ -34,6 +34,9 @@ type ContextBundle struct {
 	// earlier attempt completed and the user sent the stage back.
 	ResumedAfter string `json:"resumedAfter"`
 	IsRevision   bool   `json:"isRevision"`
+	// IdMessageSeen is the newest message the previous completed attempt of this stage was given;
+	// people's comments above it are feedback that attempt has not seen. Absent on a first attempt.
+	IdMessageSeen *int64 `json:"idMessageSeen"`
 	// HistoryTruncated is set when a chat turn's reviewThread lost its oldest messages.
 	HistoryTruncated bool         `json:"historyTruncated"`
 	Chat             *ChatContext `json:"chat"`
