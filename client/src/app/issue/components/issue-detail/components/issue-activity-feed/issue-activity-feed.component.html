@@ -101,7 +101,6 @@
                         (threadEditRequest)="onEditRequest($event)"
                         (threadEditSave)="onEditSave($event.message, $event.text)"
                         (threadEditCancel)="onEditCancel()"
-                        (approve)="approveAgentRun.emit()"
                         (approveMockup)="approveAgentRunMockup.emit($event)"
                     ></app-activity-comment-item>
                 } @else {
@@ -153,6 +152,15 @@
                 {{ 'MESSAGE.ANCHOR.BACK' | translate }}
             </button>
         }
+        <app-agent-feedback-bar
+            [run]="agentRun()"
+            [feedback]="newAgentFeedback()"
+            [agentName]="agentCreator()?.name ?? null"
+            [hasMockups]="isLatestPlanWithMockups()"
+            [isSending]="isSendingAgentFeedback()"
+            (send)="sendAgentFeedback.emit()"
+            (approve)="approveAgentRun.emit()"
+        ></app-agent-feedback-bar>
         <app-message-editor
             [mentionCandidates]="mentionCandidates()"
             [attachmentScope]="attachmentScope()"

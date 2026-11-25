@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { NEVER, Subject, of } from 'rxjs';
 import { TranslateModule } from '@ngx-translate/core';
 import {
+    AgentFeedbackBarStub,
     AvatarStub,
     MessageBodyStub,
     MessageEditorStub,
@@ -148,6 +149,7 @@ describe('IssueActivityFeedComponent anchored threads (browser)', () => {
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
+                AgentFeedbackBarStub,
                 TablerIconStub,
                 AvatarStub,
                 MessageBodyStub,

@@ -35,6 +35,10 @@ export class AgentRunApi {
         return this.http.post<AgentRun>(`/api/private/agent/run/${idRun}/approve`, body);
     }
 
+    public sendFeedback$(idRun: number): Observable<AgentRun> {
+        return this.http.post<AgentRun>(`/api/private/agent/run/${idRun}/feedback`, {});
+    }
+
     public cancel$(idRun: number): Observable<AgentRun> {
         return this.http.post<AgentRun>(`/api/private/agent/run/${idRun}/cancel`, {});
     }

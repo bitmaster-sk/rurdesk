@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, Observable, Subject, catchError, of, switchMap } from 'rxjs';
+import { EMPTY, Observable, Subject, catchError, finalize, of, switchMap } from 'rxjs';
 import { AgentRunApi } from '../api/agent-run.api.service';
 import { AgentRun } from '../model/agent-run.model';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
@@ -16,6 +16,7 @@ export class AgentRunStore {
 
     public readonly run = signal<AgentRun | null>(null);
     public readonly isLoading = signal(false);
+    public readonly isSendingFeedback = signal(false);
 
     private idProject: number | null = null;
     private idIssuePublic: number | null = null;
@@ -71,6 +72,25 @@ export class AgentRunStore {
 
     public cancel(): void {
         this.act$(run => this.agentRunApi.cancel$(run.idRun));
+    }
+
+    /** Sends the comments the agent has not seen yet; a refusal is toasted and the run refetched. */
+    public sendFeedback(): void {
+        const current = this.run();
+        if (!current || this.isSendingFeedback()) {
+            return;
+        }
+        this.isSendingFeedback.set(true);
+        this.agentRunApi
+            .sendFeedback$(current.idRun)
+            .pipe(
+                finalize(() => this.isSendingFeedback.set(false)),
+                takeUntilDestroyed(this.destroyRef)
+            )
+            .subscribe({
+                next: updated => this.run.set(updated),
+                error: () => this.refetchIfLoaded()
+            });
     }
 
     public continue(): void {

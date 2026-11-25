@@ -40,8 +40,10 @@ class ActivityFeedStub {
     public readonly idProject = input<number>(0);
     public readonly pendingTrack = input<Track | null>(null);
     public readonly agentRun = input<unknown>(null);
+    public readonly isSendingAgentFeedback = input<boolean>(false);
     public readonly approveAgentRun = output<void>();
     public readonly approveAgentRunMockup = output<unknown>();
+    public readonly sendAgentFeedback = output<void>();
 }
 
 describe('IssueDetailPage split dialog (browser)', () => {
@@ -95,7 +97,11 @@ describe('IssueDetailPage split dialog (browser)', () => {
                     providers: [
                         {
                             provide: AgentRunStore,
-                            useValue: { run: () => null, loadForIssue: vi.fn() }
+                            useValue: {
+                                run: () => null,
+                                isSendingFeedback: () => false,
+                                loadForIssue: vi.fn()
+                            }
                         },
                         LinkScope
                     ]

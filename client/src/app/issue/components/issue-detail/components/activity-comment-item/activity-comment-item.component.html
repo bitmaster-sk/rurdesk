@@ -124,9 +124,6 @@
             @if (message().updatedAt) {
                 <span class="message-edited">edited {{ message().updatedAt | date: 'short' }}</span>
             }
-            @if (showApproveActions()) {
-                <app-plan-actions [run]="agentRun()" (approve)="approve.emit()"></app-plan-actions>
-            }
         }
     </div>
 </div>

@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentRunApi } from '../../../agent/api/agent-run.api.service';
 import { AgentRun } from '../../../agent/model/agent-run.model';
 import { AgentStage } from '../../../agent/model/agent-stage.enum';
+import { AgentPhase } from '../../../agent/model/agent-phase.enum';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { ProjectSkillApi } from '../../../project/api/project-skill.api.service';
 import { UiModule } from '../../../ui/ui.module';
@@ -245,6 +246,51 @@ describe('AgentDockComponent (browser)', () => {
             isShortWorkflow: true
         });
     });
+
+    it.each([AgentPhase.Failed, AgentPhase.Cancelled])(
+        'a %s run prefills its own choices, so continuing keeps its workflow',
+        async phase => {
+            agentRunApi.loadByIssue$ = vi.fn().mockReturnValue(
+                of({
+                    ...RUN,
+                    phase,
+                    isParked: false,
+                    stagePlan: {
+                        stages: [
+                            { name: AgentStage.Design, skippable: true, skip: true, idsSkill: [] },
+                            {
+                                name: AgentStage.ImplementationPlan,
+                                skippable: false,
+                                skip: true,
+                                idsSkill: []
+                            },
+                            {
+                                name: AgentStage.Implementation,
+                                skippable: false,
+                                skip: false,
+                                idsSkill: [2]
+                            }
+                        ]
+                    }
+                })
+            );
+            const fixture = await setup(AgentDockKind.Skills);
+            const root = fixture.nativeElement as HTMLElement;
+
+            expect(projectSkillApi.load$).not.toHaveBeenCalled();
+            expect(Dom.text(root, 'agent-dock-prefilled')).toBe(
+                'AGENT_DOCK.PREFILLED_FROM_STOPPED_RUN'
+            );
+            Dom.byTestId(root, 'agent-dock-assign').click();
+            fixture.detectChanges();
+
+            expect(agentRunApi.assignAgent$).toHaveBeenCalledWith(7, 42, {
+                idUserAgent: 8,
+                idsSkillByStage: { implementation: [2] },
+                isShortWorkflow: true
+            });
+        }
+    );
 
     it('a run that is not paused keeps the project defaults', async () => {
         agentRunApi.loadByIssue$ = vi.fn().mockReturnValue(of({ ...RUN, isParked: false }));

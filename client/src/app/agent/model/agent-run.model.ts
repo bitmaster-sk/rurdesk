@@ -23,6 +23,9 @@ export interface AgentRun {
     events?: AgentRunEvent[];
     stages?: AgentStageProgress[];
     isParked?: boolean;
+    isAgentAssigned?: boolean;
+    /** Newest issue message the latest completed attempt was given; null until one completes. */
+    idMessageSeen?: number | null;
 }
 
 export type AgentStageStatus =
