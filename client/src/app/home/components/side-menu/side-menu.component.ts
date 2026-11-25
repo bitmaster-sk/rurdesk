@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
+import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { AclStore } from 'src/app/project/store/acl.store';
 import { ProjectContextStore } from '../../store/project-context.store';
 
@@ -15,6 +16,7 @@ import { ProjectContextStore } from '../../store/project-context.store';
 export class SideMenuComponent {
     private readonly router = inject(Router);
     private readonly projectContext = inject(ProjectContextStore);
+    private readonly palette = inject(CommandPaletteService);
     protected readonly aclStore = inject(AclStore);
 
     protected readonly idProject = this.projectContext.idProject;
@@ -28,6 +30,10 @@ export class SideMenuComponent {
         ),
         { initialValue: this.readCollapsed() }
     );
+
+    protected onSearch(): void {
+        this.palette.open();
+    }
 
     protected onMenuClick(): void {
         this.isResting.set(true);

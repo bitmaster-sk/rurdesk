@@ -16,6 +16,10 @@ export interface ListSelectionHandler {
     clear(): boolean;
 }
 
+export interface ProjectPickerHandler {
+    open(): void;
+}
+
 const BLOCKING_OVERLAY =
     '.cdk-overlay-container [aria-modal="true"], .cdk-overlay-container .ui-popover, .cdk-overlay-container .ui-menu';
 
@@ -25,6 +29,7 @@ export class HotkeyService {
     private started = false;
     private listHandler: ListNavigationHandler | null = null;
     private selectionHandler: ListSelectionHandler | null = null;
+    private projectPicker: ProjectPickerHandler | null = null;
 
     public registerListHandler(handler: ListNavigationHandler | null): void {
         this.listHandler = handler;
@@ -32,6 +37,10 @@ export class HotkeyService {
 
     public registerSelectionHandler(handler: ListSelectionHandler | null): void {
         this.selectionHandler = handler;
+    }
+
+    public registerProjectPicker(handler: ProjectPickerHandler | null): void {
+        this.projectPicker = handler;
     }
 
     public start(): void {
@@ -65,6 +74,12 @@ export class HotkeyService {
             case 'help':
                 event.preventDefault();
                 this.palette.openHelp();
+                break;
+            case 'project-picker':
+                if (this.projectPicker && !HotkeyService.isOverlayOpen()) {
+                    event.preventDefault();
+                    this.projectPicker.open();
+                }
                 break;
             case 'list-move':
                 if (this.listHandler) {

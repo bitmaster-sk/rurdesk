@@ -15,6 +15,46 @@ ul {
     border-right: 1px solid var(--ui-color-border);
     overflow: hidden;
 
+    .menu-head {
+        padding: var(--ui-space-m) 0 var(--ui-space);
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: 0 var(--ui-space) var(--ui-space-m) var(--ui-space-l);
+        color: var(--ui-color-text);
+    }
+
+    .brand-name {
+        flex: 1;
+        font-weight: bold;
+    }
+
+    .brand-search {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space-s);
+        padding: var(--ui-space-s) var(--ui-space);
+        border: 1px solid transparent;
+        border-radius: var(--ui-radius-md);
+        background: transparent;
+        color: var(--ui-color-text-muted);
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            border-color: var(--ui-color-border);
+            color: var(--ui-color-text);
+        }
+
+        kbd {
+            font-family: var(--ui-font-mono);
+            font-size: var(--font-size-xs);
+        }
+    }
+
     .navigation {
         .menu-section-title {
             color: var(--ui-color-text-muted);
@@ -101,6 +141,20 @@ ul {
         transition-delay: 100ms;
     }
 
+    // The header keeps its full width so the rail clips it to the logo and the project tile.
+    .menu-head {
+        width: 12rem;
+        --project-switcher-border: transparent;
+        --project-switcher-bg: transparent;
+    }
+
+    .brand-name,
+    .brand-search {
+        opacity: 0;
+        transition: opacity 140ms ease-out;
+        transition-delay: 100ms;
+    }
+
     .navigation {
         width: 12rem;
 
@@ -162,6 +216,17 @@ ul {
             transition-delay: 150ms;
         }
 
+        .menu-head {
+            --project-switcher-border: var(--ui-color-border);
+            --project-switcher-bg: var(--ui-color-surface);
+        }
+
+        .brand-name,
+        .brand-search {
+            opacity: 1;
+            transition-delay: 220ms;
+        }
+
         .navigation {
             .menu-section-title {
                 color: var(--ui-color-text-muted);
@@ -189,6 +254,8 @@ ul {
 
     @media (prefers-reduced-motion: reduce) {
         .menu-panel,
+        .brand-name,
+        .brand-search,
         .navigation .menu-section-title,
         .navigation .menu-section-title::after,
         .navigation .menu-item,

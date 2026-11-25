@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } fro
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
+import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { AclStore } from 'src/app/project/store/acl.store';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
@@ -11,6 +12,11 @@ import { SideMenuComponent } from './side-menu.component';
 
 @Component({ selector: 'app-page-stub', template: '', standalone: true })
 class PageStub {}
+
+@Component({ selector: 'app-project-switcher', template: '', standalone: false })
+class ProjectSwitcherStub {}
+
+const openPalette = vi.fn();
 
 class EmptyLoader implements TranslateLoader {
     public getTranslation(): Observable<Record<string, string>> {
@@ -23,7 +29,7 @@ async function render(
     { idProject = 1, isOwner = false }: { idProject?: number | null; isOwner?: boolean } = {}
 ): Promise<HTMLElement> {
     await TestBed.configureTestingModule({
-        declarations: [SideMenuComponent],
+        declarations: [SideMenuComponent, ProjectSwitcherStub],
         imports: [
             TranslateModule.forRoot({
                 loader: { provide: TranslateLoader, useClass: EmptyLoader }
@@ -43,7 +49,8 @@ async function render(
                 { path: '**', component: PageStub }
             ]),
             { provide: ProjectContextStore, useValue: { idProject: signal(idProject) } },
-            { provide: AclStore, useValue: { canUpdateProject: signal(isOwner) } }
+            { provide: AclStore, useValue: { canUpdateProject: signal(isOwner) } },
+            { provide: CommandPaletteService, useValue: { open: openPalette } }
         ]
     }).compileComponents();
     await TestBed.inject(Router).navigateByUrl(url);
@@ -63,6 +70,14 @@ describe('SideMenuComponent', () => {
 
         expect(href(element, 'sidebar-link-overview')).toBe('/project/4/view');
         expect(href(element, 'sidebar-link-table')).toBe('/project/4/issue/view/table');
+    });
+
+    it('opens the command palette from the search button in the header', async () => {
+        const element = await render('/table');
+
+        element.querySelector<HTMLElement>('[data-testid="side-menu-search"]')?.click();
+
+        expect(openPalette).toHaveBeenCalled();
     });
 
     it('shows project settings only to the project owner', async () => {

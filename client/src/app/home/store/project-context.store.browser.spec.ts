@@ -17,12 +17,18 @@ const PROJECTS = [project(1, 'Alpha'), project(2, 'Beta'), project(3, 'Gamma')];
 
 function setup(
     storedId: string | null,
-    projects: Project[] = PROJECTS
+    projects: Project[] = PROJECTS,
+    storedRecent: string | null = null
 ): { store: ProjectContextStore; router: Router; project$: Subject<Project> } {
     if (storedId === null) {
         localStorage.removeItem('lastProjectId');
     } else {
         localStorage.setItem('lastProjectId', storedId);
+    }
+    if (storedRecent === null) {
+        localStorage.removeItem('recentProjectIds');
+    } else {
+        localStorage.setItem('recentProjectIds', storedRecent);
     }
     const project$ = new Subject<Project>();
     TestBed.configureTestingModule({
@@ -40,7 +46,10 @@ function setup(
 }
 
 describe('ProjectContextStore', () => {
-    afterEach(() => localStorage.removeItem('lastProjectId'));
+    afterEach(() => {
+        localStorage.removeItem('lastProjectId');
+        localStorage.removeItem('recentProjectIds');
+    });
 
     it('uses the project from the URL on project pages', async () => {
         const { store, router } = setup('2');
@@ -106,5 +115,32 @@ describe('ProjectContextStore', () => {
 
         expect(store.project()?.name).toBe('Zeta');
         expect(store.projects().map(p => p.name)).toEqual(['Beta', 'Gamma', 'Zeta']);
+    });
+
+    it('lists the three most recently visited projects, newest first', async () => {
+        const { store, router } = setup(null, [...PROJECTS, project(4, 'Delta')]);
+        store.load();
+        for (const id of [1, 2, 3, 2, 4]) {
+            await router.navigateByUrl(`/project/${id}/view`);
+        }
+
+        expect(store.recent().map(p => p.idProject)).toEqual([4, 2, 3]);
+        expect(localStorage.getItem('recentProjectIds')).toBe('[4,2,3]');
+    });
+
+    it('starts the recent list from the last visited project', async () => {
+        const { store, router } = setup('2');
+        await router.navigateByUrl('/agent-chat');
+        store.load();
+
+        expect(store.recent().map(p => p.idProject)).toEqual([2]);
+    });
+
+    it('leaves deleted projects out of the recent list', async () => {
+        const { store, router } = setup('3', PROJECTS, '[9,3]');
+        await router.navigateByUrl('/agent-chat');
+        store.load();
+
+        expect(store.recent().map(p => p.idProject)).toEqual([3]);
     });
 });

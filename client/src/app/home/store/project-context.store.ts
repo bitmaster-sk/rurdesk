@@ -8,6 +8,8 @@ import { Project } from 'src/app/project/model/project.model';
 import { ProjectStore } from 'src/app/project/project.store';
 
 const LAST_PROJECT_KEY = 'lastProjectId';
+const RECENT_PROJECTS_KEY = 'recentProjectIds';
+const MAX_RECENT = 3;
 const PROJECT_URL = /^\/project\/(\d+)(?:[/?#]|$)/;
 
 /**
@@ -23,8 +25,18 @@ export class ProjectContextStore {
     private readonly _projects = signal<Project[]>([]);
     private readonly url = signal(this.router.url);
     private readonly idLastProject = signal<number | null>(ProjectContextStore.readLastId());
+    private readonly idsRecent = signal<number[]>(
+        ProjectContextStore.readRecentIds(this.idLastProject())
+    );
 
     public readonly projects = this._projects.asReadonly();
+
+    /** Most recently visited projects first, for the project picker. */
+    public readonly recent = computed<Project[]>(() =>
+        this.idsRecent()
+            .map(id => this._projects().find(p => p.idProject === id))
+            .filter((p): p is Project => p !== undefined)
+    );
 
     private readonly idRouteProject = computed(() => ProjectContextStore.idFromUrl(this.url()));
 
@@ -77,6 +89,11 @@ export class ProjectContextStore {
             this.idLastProject.set(idProject);
             ProjectContextStore.writeLastId(idProject);
         }
+        if (idProject !== null && idProject !== this.idsRecent()[0]) {
+            const ids = [idProject, ...this.idsRecent().filter(id => id !== idProject)];
+            this.idsRecent.set(ids.slice(0, MAX_RECENT));
+            ProjectContextStore.writeRecentIds(this.idsRecent());
+        }
     }
 
     private forgetUnknownLastProject(projects: Project[]): void {
@@ -105,6 +122,29 @@ export class ProjectContextStore {
             return Number.isInteger(id) && id > 0 ? id : null;
         } catch {
             return null;
+        }
+    }
+
+    /** Falls back to the last project so the first picker after this release is not empty. */
+    private static readRecentIds(idLast: number | null): number[] {
+        try {
+            const ids: unknown = JSON.parse(localStorage.getItem(RECENT_PROJECTS_KEY) ?? 'null');
+            if (Array.isArray(ids)) {
+                return ids
+                    .filter((id: unknown): id is number => Number.isInteger(id) && Number(id) > 0)
+                    .slice(0, MAX_RECENT);
+            }
+        } catch {
+            // Blocked storage or a damaged value: start over.
+        }
+        return idLast === null ? [] : [idLast];
+    }
+
+    private static writeRecentIds(ids: number[]): void {
+        try {
+            localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(ids));
+        } catch {
+            // Storage blocked (private mode): the list lives until reload.
         }
     }
 

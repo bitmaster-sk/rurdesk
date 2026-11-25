@@ -4,9 +4,7 @@ import { I18nService } from 'src/app/shared/i18n/i18n.service';
 import { TopMenuComponent } from './top-menu.component';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { ProjectContextStore } from '../../store/project-context.store';
-import { WindowService } from 'src/app/shared/window/window.service';
 import { TrackerService } from 'src/app/shared/tracker/tracker.service';
-import { Router } from '@angular/router';
 import { User } from 'src/app/auth/model/user.model';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 
@@ -27,14 +25,11 @@ function setup(user: User) {
             {
                 provide: ProjectContextStore,
                 useValue: {
-                    projects: signal([]),
                     idProject: signal(null),
                     isOnProjectRoute: signal(false)
                 }
             },
-            { provide: WindowService, useValue: { open: () => ({ onClose: of() }) } },
-            { provide: TrackerService, useValue: { isTracking$: of(false) } },
-            { provide: Router, useValue: {} }
+            { provide: TrackerService, useValue: { isTracking$: of(false) } }
         ]
     });
     const component = runInInjectionContext(injector, () => new TopMenuComponent());

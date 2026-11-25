@@ -110,4 +110,36 @@ describe('HotkeyService', () => {
         expect(across.defaultPrevented).toBe(true);
         service.registerListHandler(null);
     });
+
+    it('opens the registered project picker on p, but not while typing or with an overlay open', () => {
+        const service = TestBed.inject(HotkeyService);
+        const open = vi.fn();
+        service.registerProjectPicker({ open });
+
+        const p = new KeyboardEvent('keydown', { key: 'p', cancelable: true });
+        document.dispatchEvent(p);
+        expect(open).toHaveBeenCalledTimes(1);
+        expect(p.defaultPrevented).toBe(true);
+
+        const input = document.createElement('input');
+        document.body.appendChild(input);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', bubbles: true }));
+        input.remove();
+
+        const container = document.createElement('div');
+        container.className = 'cdk-overlay-container';
+        container.innerHTML = '<div class="ui-menu"></div>';
+        document.body.appendChild(container);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p' }));
+        container.remove();
+
+        expect(open).toHaveBeenCalledTimes(1);
+        service.registerProjectPicker(null);
+    });
+
+    it('leaves p alone when no project picker is on the page', () => {
+        const p = new KeyboardEvent('keydown', { key: 'p', cancelable: true });
+        document.dispatchEvent(p);
+        expect(p.defaultPrevented).toBe(false);
+    });
 });

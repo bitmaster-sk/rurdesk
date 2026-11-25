@@ -6,12 +6,12 @@ import { AgentChatMenuModule } from '../agent-chat-menu/agent-chat-menu.module';
 import { SharedModule } from '../shared/shared.module';
 import { NgClickOutsideDirective } from 'ng-click-outside2';
 import { ProjectModule } from '../project/project.module';
-import { FormsModule } from '@angular/forms';
 import { NotificationModule } from '../notification/notification.module';
 import { TopMenuComponent } from './components/top-menu/top-menu.component';
 import { LicenseBannerComponent } from './components/license-banner/license-banner.component';
 import { ShellLayoutComponent } from './layouts/shell-layout/shell-layout.component';
 import { SideMenuComponent } from './components/side-menu/side-menu.component';
+import { ProjectSwitcherComponent } from './components/project-switcher/project-switcher.component';
 import {
     TablerIconComponent,
     provideTablerIcons,
@@ -31,7 +31,10 @@ import {
     IconInfoCircle,
     IconAlertTriangle,
     IconBan,
-    IconX
+    IconX,
+    IconSearch,
+    IconSelector,
+    IconCheck
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -39,7 +42,8 @@ import {
         TopMenuComponent,
         LicenseBannerComponent,
         ShellLayoutComponent,
-        SideMenuComponent
+        SideMenuComponent,
+        ProjectSwitcherComponent
     ],
     imports: [
         CoreModule,
@@ -49,7 +53,6 @@ import {
         AgentChatMenuModule,
         ProjectModule,
         NgClickOutsideDirective,
-        FormsModule,
         NotificationModule,
         TablerIconComponent
     ],
@@ -71,7 +74,10 @@ import {
             IconInfoCircle,
             IconAlertTriangle,
             IconBan,
-            IconX
+            IconX,
+            IconSearch,
+            IconSelector,
+            IconCheck
         })
     ]
 })

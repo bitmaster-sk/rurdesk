@@ -28,6 +28,7 @@ export class UiCommandHelpComponent {
                 { labelKey: 'COMMAND.HELP.OPEN_PALETTE', keys: ['⌘', 'K'] },
                 { labelKey: 'COMMAND.HELP.OPEN_NAV', keys: ['/'] },
                 { labelKey: 'COMMAND.HELP.OPEN_HELP', keys: ['?'] },
+                { labelKey: 'COMMAND.HELP.OPEN_PROJECT_PICKER', keys: ['p'] },
                 { labelKey: 'COMMAND.HELP.CLOSE', keys: ['esc'] }
             ]
         },
