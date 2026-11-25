@@ -285,9 +285,9 @@ func (rc *ReleaseController) broadcast(ctx context.Context, result *service.Rele
 	}
 	if result.CancelledRun != nil {
 		rc.thinking.Compact(ctx, result.IdsTaskStopped...)
-		cancelled := result.CancelledRun
+		cancelled, idsTaskStopped := result.CancelledRun, result.IdsTaskStopped
 		go func() {
-			_ = rc.dispatcher.DispatchCancelled(context.Background(), cancelled)
+			_ = rc.dispatcher.DispatchCancelled(context.Background(), cancelled, idsTaskStopped)
 		}()
 		agent.BroadcastRunUpdate(ctx, rc.notifier, rc.projectRepo, rc.issueRepo, rc.agentRunRepo, rc.agentTaskRepo, cancelled)
 	}

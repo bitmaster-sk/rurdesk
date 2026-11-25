@@ -767,10 +767,13 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	if oldIssue.AssignedTo != nil && existing != nil {
 		oldUser, err := ic.userRepo.LoadUser(ctx, *oldIssue.AssignedTo)
 		if err == nil && oldUser.IsAgent {
-			_, _ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			idsTask, cancelErr := ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			if cancelErr != nil {
+				log.Warn().Err(cancelErr).Int64("idRun", existing.IdRun).Msg("unassigning the agent: cancelling its stage")
+			}
 			runForAbort := existing // still points at the old agent
 			go func() {
-				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort)
+				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort, idsTask)
 			}()
 		}
 	}

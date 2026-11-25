@@ -289,14 +289,15 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
+	idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun)
+	if err != nil {
 		log.Warn().Err(err).Int64("idRun", idRun).Msg("cancel: failed to cancel non-terminal tasks")
 	} else {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
 	go func() {
-		_ = ctrl.dispatcher.DispatchCancelled(context.Background(), run)
+		_ = ctrl.dispatcher.DispatchCancelled(context.Background(), run, idsTask)
 	}()
 
 	ctrl.notifyRunUpdate(updated)
