@@ -4,33 +4,24 @@ import { SeverityResolver } from '../severity/severity.resolver';
 import { StateResolver } from '../state/state.resolver';
 import { IssueTypeResolver } from '../issue-type/issue-type.resolver';
 import { TagResolver } from '../tag/tag.resolver';
-import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
-import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
+import { ShellLayoutComponent } from './layouts/shell-layout/shell-layout.component';
 import { FirstProjectGuard } from '../onboarding/first-project.guard';
-import { ProjectLayoutGuard } from './project-layout.guard';
 
 const routes: Routes = [
     {
         path: '',
-        component: ProjectLayoutComponent,
-        canMatch: [ProjectLayoutGuard.canMatch],
-        resolve: {
-            severities: SeverityResolver,
-            state: StateResolver,
-            issueTypes: IssueTypeResolver,
-            tags: TagResolver
-        },
+        component: ShellLayoutComponent,
         children: [
             {
                 path: 'project',
+                resolve: {
+                    severities: SeverityResolver,
+                    state: StateResolver,
+                    issueTypes: IssueTypeResolver,
+                    tags: TagResolver
+                },
                 loadChildren: () => import('../project/project.module').then(m => m.ProjectModule)
-            }
-        ]
-    },
-    {
-        path: '',
-        component: AppLayoutComponent,
-        children: [
+            },
             {
                 path: 'user',
                 loadChildren: () => import('../user/user.module').then(m => m.UserModule)

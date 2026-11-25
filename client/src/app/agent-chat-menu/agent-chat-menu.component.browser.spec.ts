@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { AgentConversationApi } from 'src/app/agent-chat/api/agent-conversation.api.service';
 import { AgentConversationListItem } from 'src/app/agent-chat/model/agent-conversation.model';
 import { AgentConversationUnreadStore } from 'src/app/agent-chat/store/agent-conversation-unread.store';
+import { ProjectContextStore } from 'src/app/home/store/project-context.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { AgentChatMenuComponent } from './agent-chat-menu.component';
@@ -34,7 +35,8 @@ interface Internals {
 async function setup(
     conversations: AgentConversationListItem[],
     count = 0,
-    idProject: number | null = null
+    idProject: number | null = null,
+    idContextProject: number | null = null
 ): Promise<{
     menu: Internals;
     navigate: ReturnType<typeof vi.fn>;
@@ -54,7 +56,8 @@ async function setup(
                 useValue: { count: signal(count), load: () => {}, changed$ }
             },
             { provide: NoticeService, useValue: { agentConversation$: new Subject() } },
-            { provide: Router, useValue: { navigate } }
+            { provide: Router, useValue: { navigate } },
+            { provide: ProjectContextStore, useValue: { idProject: signal(idContextProject) } }
         ]
     })
         .overrideComponent(AgentChatMenuComponent, { set: { template: '' } })
@@ -96,6 +99,16 @@ describe('AgentChatMenuComponent (browser)', () => {
             'AGENT_CHAT.NEW',
             'AGENT_CHAT.ALL'
         ]);
+    });
+
+    it('takes the side menu project when the top menu has none selected', async () => {
+        const { menu } = await setup(
+            [conversation(1, 'Other', 2), conversation(2, 'Context', 7)],
+            0,
+            null,
+            7
+        );
+        expect(labels(menu.items()).slice(0, 2)).toEqual(['Context', 'Other']);
     });
 
     it('lists pinned conversations first with a pin icon, then the rest in the usual order', async () => {

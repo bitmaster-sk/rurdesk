@@ -2,22 +2,22 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { ProjectStore } from 'src/app/project/project.store';
 import { AclStore } from 'src/app/project/store/acl.store';
+import { ProjectContextStore } from '../../store/project-context.store';
 
 @Component({
-    selector: 'app-project-layout',
-    templateUrl: './project-layout.component.html',
-    styleUrls: ['./project-layout.component.scss'],
+    selector: 'app-side-menu',
+    templateUrl: './side-menu.component.html',
+    styleUrls: ['./side-menu.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProjectLayoutComponent {
-    private readonly projectStore = inject(ProjectStore);
+export class SideMenuComponent {
     private readonly router = inject(Router);
+    private readonly projectContext = inject(ProjectContextStore);
     protected readonly aclStore = inject(AclStore);
 
-    protected readonly project = toSignal(this.projectStore.project$);
+    protected readonly idProject = this.projectContext.idProject;
 
     protected readonly isResting = signal(false);
 

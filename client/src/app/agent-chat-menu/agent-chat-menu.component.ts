@@ -15,13 +15,13 @@ import { merge } from 'rxjs';
 import { AgentConversationApi } from 'src/app/agent-chat/api/agent-conversation.api.service';
 import { AgentConversationListItem } from 'src/app/agent-chat/model/agent-conversation.model';
 import { AgentConversationUnreadStore } from 'src/app/agent-chat/store/agent-conversation-unread.store';
+import { ProjectContextStore } from 'src/app/home/store/project-context.store';
 import { MessageFormatter } from 'src/app/message/formatter/message.formatter';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 
 const MAX_RECENT = 5;
-const LAST_PROJECT_KEY = 'lastProjectId';
 
 @Component({
     selector: 'app-agent-chat-menu',
@@ -36,8 +36,9 @@ export class AgentChatMenuComponent implements OnInit {
     private readonly sNotice = inject(NoticeService);
     private readonly router = inject(Router);
     private readonly destroyRef = inject(DestroyRef);
+    private readonly projectContext = inject(ProjectContextStore);
 
-    /** The project selected in the top menu; the last used project stands in when none is. */
+    /** The project selected in the top menu; the side menu's project stands in when none is. */
     public readonly idProject = input<number | null>(null);
 
     private readonly menu = viewChild.required<UiMenuComponent>('agentMenu');
@@ -45,7 +46,7 @@ export class AgentChatMenuComponent implements OnInit {
     private readonly conversations = signal<AgentConversationListItem[]>([]);
 
     private readonly currentProject = computed<number | null>(
-        () => this.idProject() ?? AgentChatMenuComponent.lastProject()
+        () => this.idProject() ?? this.projectContext.idProject()
     );
 
     protected readonly count = this.unreadStore.count;
@@ -122,14 +123,5 @@ export class AgentChatMenuComponent implements OnInit {
 
     private static titleOf(conversation: AgentConversationListItem): string {
         return conversation.title.trim() || `#${conversation.idConversation}`;
-    }
-
-    private static lastProject(): number | null {
-        try {
-            const id = Number(localStorage.getItem(LAST_PROJECT_KEY));
-            return Number.isInteger(id) && id > 0 ? id : null;
-        } catch {
-            return null;
-        }
     }
 }

@@ -10,8 +10,8 @@ import { FormsModule } from '@angular/forms';
 import { NotificationModule } from '../notification/notification.module';
 import { TopMenuComponent } from './components/top-menu/top-menu.component';
 import { LicenseBannerComponent } from './components/license-banner/license-banner.component';
-import { AppLayoutComponent } from './layouts/app-layout/app-layout.component';
-import { ProjectLayoutComponent } from './layouts/project-layout/project-layout.component';
+import { ShellLayoutComponent } from './layouts/shell-layout/shell-layout.component';
+import { SideMenuComponent } from './components/side-menu/side-menu.component';
 import {
     TablerIconComponent,
     provideTablerIcons,
@@ -38,8 +38,8 @@ import {
     declarations: [
         TopMenuComponent,
         LicenseBannerComponent,
-        AppLayoutComponent,
-        ProjectLayoutComponent
+        ShellLayoutComponent,
+        SideMenuComponent
     ],
     imports: [
         CoreModule,
