@@ -393,6 +393,11 @@ func (r *ChatRun) ApplyPrStatus(_ context.Context, run *model.AgentRun, _ *githo
 	return nil, fmt.Errorf("chat run %d: %w", run.IdRun, errRunHasNoPr)
 }
 
+// SendFeedback refuses: a chat turn answers each message on its own.
+func (r *ChatRun) SendFeedback(context.Context, *model.AgentRun, int64) (*model.AgentRun, error) {
+	return nil, errs.ErrRunNotAwaitingFeedback
+}
+
 // Audience is the conversation owner alone; nobody when the conversation is gone.
 func (r *ChatRun) Audience(ctx context.Context, run *model.AgentRun) ([]int64, error) {
 	conversation, err := r.conversationRepo.LoadConversationByRun(ctx, run.IdRun)

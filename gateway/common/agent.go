@@ -72,6 +72,8 @@ type Task struct {
 	ResumedAfter    string
 	IsRevision      bool
 	ResumedWorktree bool
+	// HasNewFeedback is set when the conversation marks comments the previous attempt has not seen.
+	HasNewFeedback bool
 
 	// RejectedOutput is the markdown body of this stage's previous, rejected
 	// attempt — shipped only when re-executing after rejection. Rendered with
@@ -187,6 +189,8 @@ type TaskMessage struct {
 	// Reference identifies an issue message in the prompt header, and for an anchored comment
 	// the text it reacts to, e.g. ` · #13 · on #12 "step 2"`. Empty for chat messages.
 	Reference string
+	// IsNew marks a person's comment written after the previous attempt of the stage was dispatched.
+	IsNew bool
 }
 
 type RunStatus struct {

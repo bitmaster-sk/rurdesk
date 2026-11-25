@@ -9,7 +9,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/bitmaster-sk/rurdesk/api/internal/agent"
 	"github.com/bitmaster-sk/rurdesk/api/internal/attachmenttext"
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
 	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
@@ -30,10 +29,7 @@ type MessageController struct {
 	userRepo          *repository.UserRepository
 	issueRepo         *repository.IssueRepository
 	agentRunRepo      *repository.AgentRunRepository
-	agentTaskRepo     *repository.AgentTaskRepository
-	agentGwRepo       *repository.AgentGatewayRepository
 	participantRepo   *repository.IssueParticipantRepository
-	dispatcher        *agent.Dispatcher
 	notifier          notify.INotifier
 	acl               *service.AclService
 	messageAccess     *service.MessageAccessService
@@ -49,6 +45,7 @@ func NewMessageController(
 	pr *repository.ProjectRepository,
 	ur *repository.UserRepository,
 	ir *repository.IssueRepository,
+	agentRunRepo *repository.AgentRunRepository,
 	nf notify.INotifier,
 	acl *service.AclService,
 	messageAccess *service.MessageAccessService,
@@ -64,6 +61,7 @@ func NewMessageController(
 		projectRepo:       pr,
 		userRepo:          ur,
 		issueRepo:         ir,
+		agentRunRepo:      agentRunRepo,
 		notifier:          nf,
 		acl:               acl,
 		messageAccess:     messageAccess,
@@ -73,21 +71,6 @@ func NewMessageController(
 		participantRepo:   participantRepo,
 		pool:              pool,
 	}
-}
-
-func (mc *MessageController) WithAgentRun(
-	agentRunRepo *repository.AgentRunRepository,
-	agentTaskRepo *repository.AgentTaskRepository,
-	agentGwRepo *repository.AgentGatewayRepository,
-	dispatcher *agent.Dispatcher,
-	notifier notify.INotifier,
-) *MessageController {
-	mc.agentRunRepo = agentRunRepo
-	mc.agentTaskRepo = agentTaskRepo
-	mc.agentGwRepo = agentGwRepo
-	mc.dispatcher = dispatcher
-	mc.notifier = notifier
-	return mc
 }
 
 func (mc *MessageController) GetMessages(c *gin.Context) {
@@ -215,7 +198,7 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 	// user (awaiting_approval or awaiting_input) — plan submissions go through
 	// submit_plan, clarifications through request_clarification. A raw
 	// post_issue_message in a paused phase indicates a misbehaving model.
-	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil && user.IsAgent {
+	if dto.IdMessageRecipientType == model.IssueRecipientType && user.IsAgent {
 		activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, dto.IdRecipient)
 		if err == nil && activeRun != nil && activeRun.IdUserAgent == user.IdUser &&
 			(activeRun.Phase == constants.PhaseAwaitingApproval || activeRun.Phase == constants.PhaseAwaitingInput) {
@@ -435,11 +418,6 @@ func (mc *MessageController) CreateMessage(c *gin.Context) {
 		}
 	}
 
-	// Agent run hooks for issue messages
-	if dto.IdMessageRecipientType == model.IssueRecipientType && mc.agentRunRepo != nil {
-		mc.handleAgentRunHook(ctx, &user, msg, dto.IdRecipient)
-	}
-
 	c.JSON(http.StatusOK, msg)
 }
 
@@ -597,55 +575,4 @@ func truncate(s string, maxRunes int) string {
 		return s
 	}
 	return string([]rune(s)[:maxRunes]) + "..."
-}
-
-// handleAgentRunHook reacts to a user comment on an issue with an active agent
-// run in a passive phase (awaiting_approval or awaiting_input): it enqueues a
-// new agent_task for the same stage as the last completed task and returns
-// the run to queued so the scheduler picks it up. Agent-authored plan/
-// clarification messages do NOT come through here — those go through
-// submit_plan / request_clarification, which own their own phase transitions.
-func (mc *MessageController) handleAgentRunHook(ctx context.Context, author *model.User, msg *model.Message, idIssue int64) {
-	if author.IsAgent {
-		return
-	}
-	if msg.MessageKind != constants.MessageKindComment {
-		return
-	}
-	activeRun, err := mc.agentRunRepo.LoadActiveByIssue(ctx, idIssue)
-	if err != nil || activeRun == nil {
-		return
-	}
-	if !constants.PassivePhases[activeRun.Phase] {
-		return
-	}
-
-	tasks, err := mc.agentTaskRepo.LoadByRun(ctx, activeRun.IdRun)
-	if err != nil {
-		return
-	}
-	var lastCompleted *model.AgentTask
-	for _, t := range tasks {
-		if t.Status == constants.TaskStatusCompleted {
-			if lastCompleted == nil || t.CreatedAt.After(lastCompleted.CreatedAt) {
-				lastCompleted = t
-			}
-		}
-	}
-	if lastCompleted == nil {
-		return
-	}
-
-	attemptNo := agent.ResolveNextAttemptNo(tasks, lastCompleted.Stage)
-	if _, err := mc.agentTaskRepo.Insert(ctx, activeRun.IdRun, activeRun.IdUserAgent, lastCompleted.Stage, attemptNo); err != nil {
-		return
-	}
-	idUser := author.IdUser
-	updated, transErr := mc.agentRunRepo.TransitionPhase(
-		ctx, activeRun.IdRun, activeRun.Phase, constants.PhaseQueued,
-		constants.ActorTypeUser, &idUser, "comment_triggered_revision",
-	)
-	if transErr == nil {
-		agent.BroadcastRunUpdate(ctx, mc.notifier, mc.projectRepo, mc.issueRepo, mc.agentRunRepo, mc.agentTaskRepo, updated)
-	}
 }

@@ -1,0 +1,73 @@
+@let barView = view();
+@if (barView) {
+    @let agent = agentName() ?? ('AGENT.FEEDBACK_BAR.THE_AGENT' | translate);
+    <div
+        class="ui-color-text-muted mb-2 flex items-center gap-2 rounded-[var(--ui-radius-md)] border border-[var(--ui-surface-200)] bg-[var(--ui-surface-50)] py-1 pr-1 pl-2 text-sm"
+        role="status"
+        data-testid="agent-feedback-bar"
+    >
+        <tabler-icon icon="robot" [size]="15" class="shrink-0 text-[var(--ui-color-primary)]" />
+        <span class="min-w-0 flex-1 truncate">
+            <span data-testid="agent-feedback-bar-text">
+                @if (barView.stageKey) {
+                    {{ barView.textKey | translate: { stage: (barView.stageKey | translate) } }}
+                } @else {
+                    {{ barView.textKey | translate: { agent: agent } }}
+                }
+            </span>
+            @if (total() > 0) {
+                ·
+                <span
+                    class="font-bold text-[var(--ui-color-primary-strong)]"
+                    data-testid="agent-feedback-bar-count"
+                >
+                    {{ 'AGENT.FEEDBACK_BAR.NEW' | translate: { count: total() } }}
+                </span>
+            }
+        </span>
+        @if (barView.action === AgentFeedbackAction.Send) {
+            @if (barView.isApproveAnywayOffered) {
+                <ui-button
+                    size="small"
+                    severity="secondary"
+                    variant="outlined"
+                    data-testid="agent-feedback-approve-anyway"
+                    uiConfirm
+                    [label]="'AGENT.FEEDBACK_BAR.APPROVE_ANYWAY' | translate"
+                    [confirmText]="
+                        'AGENT.FEEDBACK_BAR.APPROVE_ANYWAY_CONFIRM'
+                            | translate: { count: total(), agent: agent }
+                    "
+                    [acceptLabel]="'AGENT.ACTIONS.APPROVE' | translate"
+                    [disabled]="isSending()"
+                    (confirmed)="approve.emit()"
+                ></ui-button>
+            }
+            <ui-button
+                size="small"
+                data-testid="agent-feedback-send"
+                [label]="'AGENT.FEEDBACK_BAR.SEND' | translate: { agent: agent }"
+                [loading]="isSending()"
+                [disabled]="isSending()"
+                [uiTooltip]="
+                    'AGENT.FEEDBACK_BAR.BREAKDOWN'
+                        | translate
+                            : {
+                                  comments: feedback().comments,
+                                  replies: feedback().replies,
+                                  threads: feedback().threads
+                              }
+                "
+                (click)="onSend()"
+            ></ui-button>
+        } @else if (barView.action === AgentFeedbackAction.Approve) {
+            <ui-button
+                size="small"
+                severity="success"
+                data-testid="agent-feedback-approve"
+                [label]="'AGENT.ACTIONS.APPROVE' | translate"
+                (click)="approve.emit()"
+            ></ui-button>
+        }
+    </div>
+}

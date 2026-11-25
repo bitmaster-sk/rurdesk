@@ -30,7 +30,6 @@ import {
     IconHelpCircle
 } from '@tabler/icons-angular';
 import { AgentRunCardComponent } from './components/agent-run-card/agent-run-card.component';
-import { PlanActionsComponent } from './components/plan-actions/plan-actions.component';
 import { RunRecoveryBannerComponent } from './components/run-recovery-banner/run-recovery-banner.component';
 import { RunWikiStageComponent } from './components/run-wiki-stage/run-wiki-stage.component';
 import { AgentRunSummaryComponent } from './components/agent-run-summary/agent-run-summary.component';
@@ -41,11 +40,11 @@ import { AgentEffortMeterComponent } from './components/agent-effort-meter/agent
 import { AgentEffortHintComponent } from './components/agent-effort-hint/agent-effort-hint.component';
 import { AgentEffortPickerComponent } from './components/agent-effort-picker/agent-effort-picker.component';
 import { AgentEffortLabelComponent } from './components/agent-effort-label/agent-effort-label.component';
+import { AgentFeedbackBarComponent } from './components/agent-feedback-bar/agent-feedback-bar.component';
 
 @NgModule({
     declarations: [
         AgentRunCardComponent,
-        PlanActionsComponent,
         RunRecoveryBannerComponent,
         RunWikiStageComponent,
         AgentRunSummaryComponent,
@@ -55,7 +54,8 @@ import { AgentEffortLabelComponent } from './components/agent-effort-label/agent
         AgentEffortMeterComponent,
         AgentEffortHintComponent,
         AgentEffortPickerComponent,
-        AgentEffortLabelComponent
+        AgentEffortLabelComponent,
+        AgentFeedbackBarComponent
     ],
     imports: [
         CommonModule,
@@ -93,14 +93,14 @@ import { AgentEffortLabelComponent } from './components/agent-effort-label/agent
     ],
     exports: [
         AgentRunCardComponent,
-        PlanActionsComponent,
         RunRecoveryBannerComponent,
         AgentStagePlanEditorComponent,
         AgentStagePlanFormComponent,
         AgentEffortMeterComponent,
         AgentEffortHintComponent,
         AgentEffortPickerComponent,
-        AgentEffortLabelComponent
+        AgentEffortLabelComponent,
+        AgentFeedbackBarComponent
     ]
 })
 export class AgentModule {}

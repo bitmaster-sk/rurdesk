@@ -57,6 +57,9 @@ import { HistoryGroupConverter } from './converter/history-group.converter';
 import { AnchorThreadConverter } from './converter/anchor-thread.converter';
 import { AnchorDraft, AnchorThread } from 'src/app/issue/entity/anchor-thread.entity';
 import { ANCHOR_THREAD } from 'src/app/shared/mention/message-body/anchor-dom';
+import { MessageSegmentParser } from 'src/app/shared/mention/message-segment.parser';
+import { AgentFeedback } from 'src/app/agent/entity/agent-feedback.entity';
+import { AgentFeedbackConverter } from 'src/app/agent/converter/agent-feedback.converter';
 
 const FLASH_CLASS = 'anchor-flash';
 const FLASH_MS = 2400;
@@ -75,9 +78,11 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     public readonly idProject = input.required<number>();
     public readonly pendingTrack = input<Track | null>(null);
     public readonly agentRun = input<AgentRun | null>(null);
+    public readonly isSendingAgentFeedback = input<boolean>(false);
 
     public readonly approveAgentRun = output<void>();
     public readonly approveAgentRunMockup = output<string>();
+    public readonly sendAgentFeedback = output<void>();
 
     private readonly scrollContainer = viewChild<ElementRef<HTMLDivElement>>('scrollContainer');
 
@@ -216,6 +221,24 @@ export class IssueActivityFeedComponent implements AfterViewInit {
     private readonly commentMessages = computed<Message[]>(() =>
         this.displayItems().flatMap(item => (item.type === 'comment' ? [item.data] : []))
     );
+
+    /** Comments the agent has not been given yet; counted from every message, whatever the filter. */
+    public readonly newAgentFeedback = computed<AgentFeedback>(() =>
+        AgentFeedbackConverter.toNewFeedback(this.commentMessages(), this.agentRun())
+    );
+
+    /** The design waiting for review is approved on its mockup cards. */
+    public readonly isLatestPlanWithMockups = computed(() => {
+        const idLatestPlan = this.idLatestPlanMessage();
+        const latestPlan =
+            idLatestPlan === null ? undefined : this.messagesById().get(idLatestPlan);
+        return (
+            !!latestPlan &&
+            MessageSegmentParser.parse(latestPlan.message).some(
+                segment => segment.type === 'mockup'
+            )
+        );
+    });
 
     public readonly messagesById = computed<Map<number, Message>>(
         () => new Map(this.commentMessages().map(message => [message.idMessage, message]))

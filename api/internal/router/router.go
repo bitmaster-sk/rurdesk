@@ -361,6 +361,7 @@ func New(
 	pri.POST("/agent/run/:idRun/approve", agentRunCtrl.Approve)
 	pri.POST("/agent/run/:idRun/cancel", agentRunCtrl.Cancel)
 	pri.POST("/agent/run/:idRun/continue", agentRunCtrl.Continue)
+	pri.POST("/agent/run/:idRun/feedback", agentRunCtrl.SendFeedback)
 	pri.POST("/agent/run/:idRun/restart", agentRunCtrl.Restart)
 	pri.GET("/agent/run/:idRun/stats", agentRunCtrl.Stats)
 	pri.GET("/agent/run/:idRun/thinking", agentThinkingCtrl.Get)

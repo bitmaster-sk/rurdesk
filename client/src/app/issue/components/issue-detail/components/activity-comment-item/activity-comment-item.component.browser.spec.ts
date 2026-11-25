@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { MarkdownModule } from 'ngx-markdown';
@@ -31,12 +31,6 @@ function awaitingApprovalRun(approvedMockupRef: string | null = null): AgentRun 
 @Component({ selector: 'app-diff-viewer', template: '', standalone: true })
 class DiffViewerStub {
     public readonly rawPatch = input<string>('');
-}
-
-@Component({ selector: 'app-plan-actions', template: '', standalone: true })
-class PlanActionsStub {
-    public readonly run = input<unknown>(undefined);
-    public readonly approve = output<void>();
 }
 
 function designMessage(body: string): Message {
@@ -75,8 +69,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
                 MessageEditorStub,
                 TablerIconStub,
                 AttachmentLightboxStub,
-                DiffViewerStub,
-                PlanActionsStub
+                DiffViewerStub
             ],
             declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
         }).compileComponents();
@@ -124,7 +117,7 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
         expect(fixture.nativeElement.querySelector('[data-testid="author-disabled"]')).toBeNull();
     });
 
-    it('hides the global approve and re-emits approveMockup for a design message with mockups', () => {
+    it('re-emits approveMockup from the card of a design message with mockups', () => {
         const fixture = TestBed.createComponent(ActivityCommentItemComponent);
         fixture.componentRef.setInput(
             'message',
@@ -136,29 +129,24 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
         fixture.componentInstance.approveMockup.subscribe(r => (ref = r));
         fixture.detectChanges();
 
-        // No single global approve control for a mockup message.
-        expect(fixture.nativeElement.querySelector('app-plan-actions')).toBeFalsy();
-
         const btn = fixture.nativeElement.querySelector('.mockup-card__approve') as HTMLElement;
         expect(btn).toBeTruthy();
         btn.click();
         expect(ref).toBe('B #1');
     });
 
-    it('still shows the global approve for a design message WITHOUT mockups', () => {
+    it('offers no Approve of its own for a design without mockups: the feedback bar has it', () => {
         const fixture = TestBed.createComponent(ActivityCommentItemComponent);
         fixture.componentRef.setInput('message', designMessage('Plain design, no mockup.'));
         fixture.componentRef.setInput('agentRun', awaitingApprovalRun());
         fixture.componentRef.setInput('isLatestPlanForStage', true);
         fixture.detectChanges();
 
-        expect(fixture.nativeElement.querySelector('app-plan-actions')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('ui-button')).toBeNull();
+        expect(fixture.nativeElement.querySelector('.mockup-card__approve')).toBeNull();
     });
 
-    it('keeps the global approve when the mockup fence is malformed (no real card rendered)', () => {
-        // "```mockup" appears but the fence is never closed → the parser yields no
-        // mockup segment. The global approve must NOT be suppressed, else the run
-        // would be unapprovable.
+    it('renders no mockup card when the mockup fence is malformed', () => {
         const fixture = TestBed.createComponent(ActivityCommentItemComponent);
         fixture.componentRef.setInput('message', designMessage('See ```mockup\n<p>unclosed'));
         fixture.componentRef.setInput('agentRun', awaitingApprovalRun());
@@ -166,7 +154,6 @@ describe('ActivityCommentItemComponent mockup rendering (browser)', () => {
         fixture.detectChanges();
 
         expect(fixture.nativeElement.querySelectorAll('app-mockup-card').length).toBe(0);
-        expect(fixture.nativeElement.querySelector('app-plan-actions')).toBeTruthy();
     });
 });
 
@@ -181,8 +168,7 @@ describe('ActivityCommentItemComponent editing (browser)', () => {
                 MessageEditorStub,
                 TablerIconStub,
                 AttachmentLightboxStub,
-                DiffViewerStub,
-                PlanActionsStub
+                DiffViewerStub
             ],
             declarations: [ActivityCommentItemComponent, MessageBodyComponent, MockupCardComponent]
         }).compileComponents();

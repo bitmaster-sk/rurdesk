@@ -29,7 +29,7 @@ const agentTaskColumns = `
 	cost_usd, cost_estimated,
 	started_at, finished_at, last_heartbeat_at, created_at,
 	thinking_tail, thinking_blob IS NOT NULL,
-	model, max_turns, effort, chat_mode`
+	model, max_turns, effort, chat_mode, id_message_seen`
 
 func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 	task := &model.AgentTask{}
@@ -41,7 +41,7 @@ func scanAgentTask(row pgx.Row) (*model.AgentTask, error) {
 		&task.CostUsd, &task.CostEstimated,
 		&task.StartedAt, &task.FinishedAt, &task.LastHeartbeatAt, &task.CreatedAt,
 		&task.ThinkingTail, &task.HasThinking,
-		&task.Model, &task.MaxTurns, &task.Effort, &task.ChatMode,
+		&task.Model, &task.MaxTurns, &task.Effort, &task.ChatMode, &task.IdMessageSeen,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("scanning agent task: %w", err)
@@ -77,6 +77,15 @@ func (r *AgentTaskRepository) SetModel(ctx context.Context, idTask int64, model 
 	db := extctx.GetDb(ctx, r.pool)
 	if _, err := db.Exec(ctx, `UPDATE agent.task SET model = $2 WHERE id_task = $1`, idTask, model); err != nil {
 		return fmt.Errorf("setting task model: %w", err)
+	}
+	return nil
+}
+
+// SetIdMessageSeen records the newest issue message of the conversation the task was dispatched with.
+func (r *AgentTaskRepository) SetIdMessageSeen(ctx context.Context, idTask, idMessageSeen int64) error {
+	db := extctx.GetDb(ctx, r.pool)
+	if _, err := db.Exec(ctx, `UPDATE agent.task SET id_message_seen = $2 WHERE id_task = $1`, idTask, idMessageSeen); err != nil {
+		return fmt.Errorf("setting id_message_seen of task %d: %w", idTask, err)
 	}
 	return nil
 }

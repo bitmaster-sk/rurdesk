@@ -3,9 +3,9 @@
         <div class="font-semibold">
             {{ 'AGENT_DOCK.SKILLS_TITLE' | translate: { name: agent().name } }}
         </div>
-        @if (isPrefilledFromRun()) {
+        @if (prefilledNoticeKey(); as noticeKey) {
             <div class="ui-color-text-muted text-xs" data-testid="agent-dock-prefilled">
-                {{ 'AGENT_DOCK.PREFILLED_FROM_RUN' | translate }}
+                {{ noticeKey | translate }}
             </div>
         }
         <div

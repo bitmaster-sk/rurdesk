@@ -10,7 +10,7 @@ import (
 
 // ResolveNextStage returns the next stage to execute for a run: "" when every
 // non-skipped stage is completed, or the most recent task's stage if it
-// failed (Continue redoes it).
+// failed or was cancelled (Continue redoes it, a cancelled revision included).
 func ResolveNextStage(run *model.AgentRun, tasks []*model.AgentTask) (string, error) {
 	var plan model.AgentStagePlan
 	if err := json.Unmarshal(run.StagePlan, &plan); err != nil {
@@ -24,8 +24,15 @@ func ResolveNextStage(run *model.AgentRun, tasks []*model.AgentTask) (string, er
 		}
 	}
 
-	if latest := latestTask(tasks); latest != nil && latest.Status == constants.TaskStatusFailed {
-		return latest.Stage, nil
+	if latest := latestTask(tasks); latest != nil {
+		switch latest.Status {
+		case constants.TaskStatusFailed:
+			return latest.Stage, nil
+		case constants.TaskStatusCancelled:
+			if !isStageSkipped(plan, latest.Stage) {
+				return latest.Stage, nil
+			}
+		}
 	}
 
 	for _, entry := range plan.Stages {
@@ -91,4 +98,51 @@ func latestTask(tasks []*model.AgentTask) *model.AgentTask {
 		}
 	}
 	return latest
+}
+
+// isStageSkipped tells whether the plan skips the stage, e.g. a choice made after its attempt was cancelled.
+func isStageSkipped(plan model.AgentStagePlan, stage string) bool {
+	for _, entry := range plan.Stages {
+		if entry.Name == stage {
+			return entry.Skip
+		}
+	}
+	return false
+}
+
+// LatestCompletedTask returns the run's newest completed task, nil when none completed.
+func LatestCompletedTask(tasks []*model.AgentTask) *model.AgentTask {
+	var latest *model.AgentTask
+	for _, t := range tasks {
+		if t.Status != constants.TaskStatusCompleted {
+			continue
+		}
+		if latest == nil || t.CreatedAt.After(latest.CreatedAt) {
+			latest = t
+		}
+	}
+	return latest
+}
+
+// IdMessageSeen returns the newest issue message the task was dispatched with; 0 when it saw none.
+func IdMessageSeen(task *model.AgentTask) int64 {
+	if task.IdMessageSeen == nil {
+		return 0
+	}
+	return *task.IdMessageSeen
+}
+
+// previousCompletedAttempt returns the newest completed attempt of the task's stage before it, nil on
+// the stage's first completion.
+func previousCompletedAttempt(tasks []*model.AgentTask, task *model.AgentTask) *model.AgentTask {
+	var previous *model.AgentTask
+	for _, t := range tasks {
+		if t.Stage != task.Stage || t.AttemptNo >= task.AttemptNo || t.Status != constants.TaskStatusCompleted {
+			continue
+		}
+		if previous == nil || t.AttemptNo > previous.AttemptNo {
+			previous = t
+		}
+	}
+	return previous
 }

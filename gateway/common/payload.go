@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/bitmaster-sk/rurdesk/gateway/model"
@@ -73,7 +74,8 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 			task.Chat = parseChat(bundle)
 			task.Conversation = parseChatThread(bundle.ReviewThread)
 		} else {
-			task.Conversation = parseIssueThread(bundle.ReviewThread)
+			task.Conversation = parseIssueThread(bundle.ReviewThread, bundle.IdMessageSeen)
+			task.HasNewFeedback = slices.ContainsFunc(task.Conversation, func(message TaskMessage) bool { return message.IsNew })
 		}
 	}
 
@@ -93,12 +95,16 @@ func parseStageExecutePayload(event WebhookEvent) (Task, error) {
 	return task, nil
 }
 
-func parseIssueThread(rawMessages []json.RawMessage) []TaskMessage {
+// parseIssueThread marks the people's comments above idMessageSeen as new: the feedback the previous
+// attempt of the stage has not seen. Nothing is marked without idMessageSeen.
+func parseIssueThread(rawMessages []json.RawMessage, idMessageSeen *int64) []TaskMessage {
 	var conversation []TaskMessage
 	for _, message := range decodeEach[model.Message](rawMessages) {
 		creatorName := ""
+		isAgent := false
 		if message.Creator != nil {
 			creatorName = message.Creator.Name
+			isAgent = message.Creator.IsAgent
 		}
 		conversation = append(conversation, TaskMessage{
 			CreatorName: creatorName,
@@ -106,6 +112,8 @@ func parseIssueThread(rawMessages []json.RawMessage) []TaskMessage {
 			Kind:        message.MessageKind,
 			Message:     conversationBody(message.MessageKind, message.Message),
 			Reference:   messageReference(message),
+			IsNew: idMessageSeen != nil && !isAgent && message.MessageKind == MessageKindComment &&
+				message.IdMessage > *idMessageSeen,
 		})
 	}
 	return conversation

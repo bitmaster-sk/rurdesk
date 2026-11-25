@@ -27,8 +27,12 @@ const promptHeader = `You are an AI agent working on issue #{{.IdIssuePublic}} i
 This is the full thread, your own submissions included. Read it in order: when
 two messages conflict, the later one is what the user wants now. A header with
 ` + "`on #12 \"…\"`" + ` marks a comment about that quoted part of message #12.
+{{- if .HasNewFeedback}}
+Comments marked ` + "`[NEW]`" + ` were written after your previous attempt of this stage started; it has
+not seen them, even those that sit above its output. Address every one of them.
+{{- end}}
 {{range .Conversation}}
-[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}{{.Reference}}]: {{.Message}}
+{{if .IsNew}}[NEW] {{end}}[{{.CreatorName}} · {{.Kind}} · {{.CreatedAt}}{{.Reference}}]: {{.Message}}
 {{end}}
 
 ## Identifiers (use exactly these values when calling tools)
@@ -59,7 +63,7 @@ Same rule as the design: a later instruction in the conversation wins over this 
 {{.ApprovedImplPlan}}
 {{end}}{{if .RejectedOutput}}
 ## Your previous {{.Stage}} output (REJECTED — revise it)
-The user reviewed the version below and REJECTED it. Revise it according to the user feedback in the conversation above. Do not resubmit it unchanged and do not treat it as final.
+The user reviewed the version below and REJECTED it. Revise it according to the user feedback in the conversation above{{if .HasNewFeedback}}: the comments marked ` + "`[NEW]`" + ` are the feedback on this version{{end}}. Do not resubmit it unchanged and do not treat it as final.
 {{.RejectedOutput}}
 {{end}}{{if .ApprovedMockupRef}}
 ## Chosen mockup (user picked this variant)

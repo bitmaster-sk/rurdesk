@@ -67,6 +67,17 @@ export class MessageEditorStub {
     }
 }
 
+@Component({ selector: 'app-agent-feedback-bar', template: '', standalone: true })
+export class AgentFeedbackBarStub {
+    public readonly run = input<unknown>(null);
+    public readonly feedback = input<unknown>(undefined);
+    public readonly agentName = input<string | null>(null);
+    public readonly hasMockups = input<boolean>(false);
+    public readonly isSending = input<boolean>(false);
+    public readonly send = output<void>();
+    public readonly approve = output<void>();
+}
+
 @Component({ selector: 'app-message-body', template: '', standalone: true })
 export class MessageBodyStub {
     public readonly body = input<string>('');

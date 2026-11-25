@@ -1,7 +1,7 @@
 import { Component, Pipe, PipeTransform, input, output, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
-import { MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
+import { AgentFeedbackBarStub, MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
 import { IssueActivityFeedComponent } from './issue-activity-feed.component';
 import { User } from 'src/app/auth/model/user.model';
 import { MessageApi } from 'src/app/message/api/message.api.service';
@@ -94,6 +94,14 @@ class ActivityHistoryItemStub {
     public readonly lookups = input<unknown>(undefined);
 }
 
+@Component({ selector: 'app-anchor-reply-card', template: '', standalone: true })
+class AnchorReplyCardStub {
+    public readonly reply = input<unknown>(undefined);
+    public readonly parentAuthor = input<unknown>(undefined);
+    public readonly candidates = input<unknown>(undefined);
+    public readonly open = output<void>();
+}
+
 function lookupStoreProviders() {
     return [
         { provide: StateStore, useValue: { statesMapByProject$: () => NEVER } },
@@ -140,12 +148,14 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
+                AgentFeedbackBarStub,
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
                 AgentThinkingRowStub,
                 WikiProposalCardStub,
-                ActivityHistoryItemStub
+                ActivityHistoryItemStub,
+                AnchorReplyCardStub
             ],
             providers: [
                 { provide: AgentThinkingApi, useValue: { load$: () => NEVER } },
@@ -300,6 +310,118 @@ describe('IssueActivityFeedComponent mentionCandidates (browser)', () => {
 
         expect(comp.filteredItems().map(item => item.data)).toEqual([withImage]);
     });
+
+    it('counts the comments new for the agent whatever the chips hide', async () => {
+        const person = makeUser(2, 'Ann');
+        const agent = { ...makeUser(7, 'Kimi'), isAgent: true };
+        const seen = {
+            idMessage: 1,
+            creator: person,
+            createdAt: new Date(1),
+            message: 'seen',
+            messageKind: 'comment'
+        };
+        const fresh = {
+            idMessage: 3,
+            creator: person,
+            createdAt: new Date(3),
+            message: 'new',
+            messageKind: 'comment'
+        };
+        const reply = {
+            idMessage: 4,
+            creator: person,
+            createdAt: new Date(4),
+            message: 'on a line',
+            messageKind: 'comment',
+            anchor: { idParentMessage: 1, anchorLineStart: 1, anchorLineEnd: 1 }
+        };
+        const fromAgent = {
+            idMessage: 5,
+            creator: agent,
+            createdAt: new Date(5),
+            message: 'noted',
+            messageKind: 'comment'
+        };
+        TestBed.overrideProvider(MessageApi, {
+            useValue: {
+                load$: () => of([seen, fresh, reply, fromAgent]),
+                markRead$: () => of(undefined)
+            }
+        });
+        TestBed.overrideProvider(TrackerService, {
+            useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
+        });
+        TestBed.overrideProvider(ProjectMemberStore, {
+            useValue: { load: () => {}, usersMap$: of(new Map()) }
+        });
+        const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+        fixture.componentRef.setInput('idIssue', 1);
+        fixture.componentRef.setInput('idIssuePublic', 31);
+        fixture.componentRef.setInput('idProject', 10);
+        fixture.componentRef.setInput('agentRun', {
+            idRun: 5,
+            idUserAgent: 7,
+            phase: 'awaiting_approval',
+            idMessageSeen: 2
+        });
+        fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        const bar = (): AgentFeedbackBarStub =>
+            fixture.debugElement.query(By.directive(AgentFeedbackBarStub)).componentInstance;
+        const expected = { comments: 1, replies: 1, threads: 1 };
+        expect(bar().feedback()).toEqual(expected);
+
+        fixture.componentInstance.setFilter('time');
+        fixture.detectChanges();
+        expect(bar().feedback()).toEqual(expected);
+    });
+
+    it.each([
+        { body: '```mockup title="A"\n<p>a</p>\n```', hasMockups: true },
+        { body: 'See ```mockup\n<p>unclosed', hasMockups: false }
+    ])(
+        'leaves Approve to the mockup cards only when the design renders one: $hasMockups',
+        async ({ body, hasMockups }) => {
+            const agent = { ...makeUser(7, 'Kimi'), isAgent: true };
+            const design = {
+                idMessage: 1,
+                creator: agent,
+                createdAt: new Date(1),
+                message: body,
+                messageKind: 'design'
+            };
+            TestBed.overrideProvider(MessageApi, {
+                useValue: { load$: () => of([design]), markRead$: () => of(undefined) }
+            });
+            TestBed.overrideProvider(TrackerService, {
+                useValue: { loadTracks$: () => of([]), tracksChanged$: NEVER }
+            });
+            TestBed.overrideProvider(ProjectMemberStore, {
+                useValue: { load: () => {}, usersMap$: of(new Map()) }
+            });
+            const fixture = TestBed.createComponent(IssueActivityFeedComponent);
+            fixture.componentRef.setInput('idIssue', 1);
+            fixture.componentRef.setInput('idIssuePublic', 31);
+            fixture.componentRef.setInput('idProject', 10);
+            fixture.componentRef.setInput('agentRun', {
+                idRun: 5,
+                idUserAgent: 7,
+                phase: 'awaiting_approval',
+                idMessageSeen: 1
+            });
+            fixture.detectChanges();
+            await fixture.whenStable();
+            fixture.detectChanges();
+
+            const bar: AgentFeedbackBarStub = fixture.debugElement.query(
+                By.directive(AgentFeedbackBarStub)
+            ).componentInstance;
+            expect(bar.hasMockups()).toBe(hasMockups);
+        }
+    );
 
     it('does not offer a thinking row for a stage that produced none', () => {
         const fixture = TestBed.createComponent(IssueActivityFeedComponent);
@@ -486,6 +608,7 @@ describe('IssueActivityFeedComponent track refresh (browser)', () => {
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
+                AgentFeedbackBarStub,
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
@@ -606,6 +729,7 @@ describe('IssueActivityFeedComponent wiki proposals (browser)', () => {
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
+                AgentFeedbackBarStub,
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,
@@ -702,6 +826,7 @@ describe('IssueActivityFeedComponent history (browser)', () => {
             imports: [
                 TranslateModule.forRoot(),
                 MessageEditorStub,
+                AgentFeedbackBarStub,
                 TablerIconStub,
                 ActivityCommentItemStub,
                 ActivityTimeItemStub,

@@ -713,6 +713,14 @@ func (ic *IssueController) AssignAgent(c *gin.Context) {
 			run, txErr = ic.stagePlan.ApplyChoices(ctx, existing.IdRun, dto.RunChoices)
 			return txErr
 		}
+		idUser := user.IdUser
+		run, txErr = ic.continueLatestRun(ctx, issue.IdIssue, agentUser.IdUser, &idUser, &dto.RunChoices)
+		if errors.Is(txErr, repository.ErrPhaseMismatch) {
+			return errs.ErrIssueHasActiveRun
+		}
+		if txErr != nil || run != nil {
+			return txErr
+		}
 		stagePlan, txErr := ic.stagePlan.BuildFromChoices(constants.RunKindIssue, dto.RunChoices)
 		if txErr != nil {
 			return txErr
@@ -767,10 +775,13 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 	if oldIssue.AssignedTo != nil && existing != nil {
 		oldUser, err := ic.userRepo.LoadUser(ctx, *oldIssue.AssignedTo)
 		if err == nil && oldUser.IsAgent {
-			_, _ = ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			idsTask, cancelErr := ic.agentTaskRepo.CancelNonTerminalForRun(ctx, existing.IdRun)
+			if cancelErr != nil {
+				log.Warn().Err(cancelErr).Int64("idRun", existing.IdRun).Msg("unassigning the agent: cancelling its stage")
+			}
 			runForAbort := existing // still points at the old agent
 			go func() {
-				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort)
+				_ = ic.dispatcher.DispatchCancelled(context.Background(), runForAbort, idsTask)
 			}()
 		}
 	}
@@ -812,6 +823,25 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 		return
 	}
 
+	var continued *model.AgentRun
+	idUser := newIssue.UpdateBy
+	err = extctx.RunInTx(ctx, ic.pool, func(ctx context.Context) error {
+		var txErr error
+		continued, txErr = ic.continueLatestRun(ctx, newIssue.IdIssue, newUser.IdUser, &idUser, nil)
+		return txErr
+	})
+	if errors.Is(err, repository.ErrPhaseMismatch) {
+		return // a concurrent assignment already continued it
+	}
+	if err != nil {
+		log.Error().Err(err).Int64("idIssue", newIssue.IdIssue).Msg("continuing the issue's latest run — run not continued")
+		return
+	}
+	if continued != nil {
+		agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, continued)
+		return
+	}
+
 	// A failing matrix read must not block the run: skills are an enhancement.
 	idsSkillByStage, skillErr := ic.projectSkillService.LoadDefaultIdsSkillByStage(ctx, newIssue.IdProject)
 	if skillErr != nil {
@@ -829,6 +859,46 @@ func (ic *IssueController) handleAgentAssignment(ctx context.Context, oldIssue, 
 		return
 	}
 	agent.BroadcastRunUpdate(ctx, ic.notifier, ic.projectRepo, ic.issueRepo, ic.agentRunRepo, ic.agentTaskRepo, run)
+}
+
+// continueLatestRun continues the issue's latest failed or cancelled run with the agent now assigned,
+// applying choices to the stages not started yet. Nil when there is nothing to continue.
+func (ic *IssueController) continueLatestRun(ctx context.Context, idIssue, idUserAgent int64, idUser *int64, choices *model.RunChoices) (*model.AgentRun, error) {
+	latest, err := ic.agentRunRepo.LoadLatestByIssue(ctx, idIssue)
+	if err != nil {
+		return nil, err
+	}
+	if latest == nil || !isContinuable(latest) {
+		return nil, nil
+	}
+	locked, err := ic.agentRunRepo.LoadByIdForUpdate(ctx, latest.IdRun)
+	if err != nil {
+		return nil, err
+	}
+	if !isContinuable(locked) {
+		return nil, repository.ErrPhaseMismatch
+	}
+	if choices != nil {
+		if locked, err = ic.stagePlan.ApplyChoices(ctx, locked.IdRun, *choices); err != nil {
+			return nil, err
+		}
+	}
+	continued, _, err := agent.ContinueRun(ctx, ic.agentRunRepo, ic.agentTaskRepo, locked, constants.ActorTypeUser, idUser, "agent assigned")
+	if errors.Is(err, errs.ErrNoStageToContinue) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if continued.IdUserAgent == idUserAgent {
+		return continued, nil
+	}
+	// After the transition: ReassignAgent skips terminal runs.
+	return ic.agentRunRepo.ReassignAgent(ctx, continued.IdRun, idUserAgent)
+}
+
+func isContinuable(run *model.AgentRun) bool {
+	return run.Phase == constants.PhaseFailed || run.Phase == constants.PhaseCancelled
 }
 
 func (ic *IssueController) DeleteIssue(c *gin.Context) {

@@ -289,14 +289,15 @@ func (ctrl *AgentRunController) Cancel(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
-	if idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun); err != nil {
+	idsTask, err := ctrl.agentTaskRepo.CancelNonTerminalForRun(ctx, idRun)
+	if err != nil {
 		log.Warn().Err(err).Int64("idRun", idRun).Msg("cancel: failed to cancel non-terminal tasks")
 	} else {
 		ctrl.thinking.Compact(ctx, idsTask...)
 	}
 
 	go func() {
-		_ = ctrl.dispatcher.DispatchCancelled(context.Background(), run)
+		_ = ctrl.dispatcher.DispatchCancelled(context.Background(), run, idsTask)
 	}()
 
 	ctrl.notifyRunUpdate(updated)
@@ -337,20 +338,13 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 		return
 	}
 
-	tasks, err := ctrl.agentTaskRepo.LoadByRun(ctx, idRun)
-	if err != nil {
-		_ = c.Error(err)
-		c.Status(http.StatusInternalServerError)
-		return
-	}
-	stage, err := agent.ResolveNextStage(run, tasks)
-	if err != nil || stage == "" {
+	idUser := user.IdUser
+	updated, stage, err := agent.ContinueRun(ctx, ctrl.agentRunRepo, ctrl.agentTaskRepo, run, constants.ActorTypeUser, &idUser, "continue")
+	if errors.Is(err, errs.ErrNoStageToContinue) {
 		_ = c.Error(errs.ErrNoStageToContinue)
 		c.Status(http.StatusConflict)
 		return
 	}
-	idUser := user.IdUser
-	updated, err := ctrl.agentRunRepo.TransitionPhase(ctx, idRun, run.Phase, constants.PhaseQueued, constants.ActorTypeUser, &idUser, "continue")
 	if err != nil {
 		_ = c.Error(errs.ErrConflict.WithMessage(err.Error()))
 		c.Status(http.StatusConflict)
@@ -358,6 +352,48 @@ func (ctrl *AgentRunController) Continue(c *gin.Context) {
 	}
 	ctrl.notifyRunUpdate(updated)
 	c.JSON(http.StatusOK, gin.H{"idRun": idRun, "nextStage": stage})
+}
+
+// SendFeedback hands the comments the agent has not seen yet to a run waiting for a person. One
+// transaction on the locked run, so a double send creates one attempt.
+func (ctrl *AgentRunController) SendFeedback(c *gin.Context) {
+	ctx := c.Request.Context()
+	idRun, err := strconv.ParseInt(c.Param("idRun"), 10, 64)
+	if err != nil {
+		ResponseErr(c, errs.ErrValidation.WithMessage(err.Error()))
+		return
+	}
+	user, _ := extctx.GetUser(ctx)
+
+	run, err := ctrl.loadAgentRun(ctx, idRun)
+	if errors.Is(err, repository.ErrRunNotFound) {
+		ResponseErr(c, errs.ErrNotFound)
+		return
+	}
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	if !ctrl.acl.CanUpdateIssue(ctx, user.IdUser, run.IdProject) {
+		ResponseErr(c, errs.ErrForbidden)
+		return
+	}
+
+	var updated *model.AgentRun
+	err = extctx.RunInTx(ctx, ctrl.pool, func(ctx context.Context) error {
+		locked, err := ctrl.agentRunRepo.LoadByIdForUpdate(ctx, idRun)
+		if err != nil {
+			return err
+		}
+		updated, err = ctrl.kinds.For(locked).SendFeedback(ctx, locked, user.IdUser)
+		return err
+	})
+	if err != nil {
+		ResponseErr(c, err)
+		return
+	}
+	ctrl.notifyRunUpdate(updated)
+	ctrl.respondRunSnapshot(ctx, c, updated)
 }
 
 // Restart soft-cancels the existing run and its tasks, then creates a fresh

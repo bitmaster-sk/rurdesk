@@ -38,8 +38,10 @@
             [idProject]="project.idProject"
             [pendingTrack]="pendingTrack()"
             [agentRun]="agentRunStore.run()"
+            [isSendingAgentFeedback]="agentRunStore.isSendingFeedback()"
             (approveAgentRun)="agentRunStore.approve()"
             (approveAgentRunMockup)="agentRunStore.approve($event)"
+            (sendAgentFeedback)="agentRunStore.sendFeedback()"
         ></app-issue-activity-feed>
         }
     </div>

@@ -29,6 +29,8 @@ type Result struct {
 	keyHashes        []string
 	cancelledRuns    []*model.AgentRun
 	cancelledTaskIds []int64
+	// idsTaskByRun keeps the cancelled tasks per run: the gateway stops only the tasks listed.
+	idsTaskByRun map[int64][]int64
 }
 
 type Service struct {
@@ -169,6 +171,10 @@ func (s *Service) cancelRuns(ctx context.Context, idUser, idActor int64, res *Re
 			return err
 		}
 		res.cancelledTaskIds = append(res.cancelledTaskIds, idsTask...)
+		if res.idsTaskByRun == nil {
+			res.idsTaskByRun = map[int64][]int64{}
+		}
+		res.idsTaskByRun[locked.IdRun] = idsTask
 		res.cancelledRuns = append(res.cancelledRuns, updated)
 	}
 	return nil
@@ -195,10 +201,10 @@ func (s *Service) AfterCommit(ctx context.Context, res *Result) error {
 		s.thinking.Compact(ctx, res.cancelledTaskIds...)
 	}
 	for _, run := range res.cancelledRuns {
-		runForEvent := run
+		runForEvent, idsTask := run, res.idsTaskByRun[run.IdRun]
 		// A gateway that is down must not fail the disable.
 		go func() {
-			_ = s.dispatcher.DispatchCancelled(context.Background(), runForEvent)
+			_ = s.dispatcher.DispatchCancelled(context.Background(), runForEvent, idsTask)
 		}()
 		agent.BroadcastRunUpdate(ctx, s.notifier, s.projectRepo, s.issueRepo, s.agentRunRepo, s.agentTaskRepo, run)
 	}

@@ -77,14 +77,25 @@ func (d *Dispatcher) deliverStage(ctx context.Context, kind RunKind, dispatch *D
 	return nil
 }
 
-func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun) error {
+// cancelledPayload lists the tasks the tracker cancelled.
+type cancelledPayload struct {
+	IdsTask []int64 `json:"idsTask"`
+}
+
+// DispatchCancelled tells the gateway to stop the cancelled tasks of the run. Only the listed tasks
+// stop: a newer attempt of the same run, dispatched before this event arrives, keeps running.
+func (d *Dispatcher) DispatchCancelled(ctx context.Context, run *model.AgentRun, idsTask []int64) error {
+	if idsTask == nil {
+		// null would make the gateway stop every task of the run.
+		idsTask = []int64{}
+	}
 	event := WebhookEvent{
 		IdRun:       run.IdRun,
 		IdProject:   run.IdProject,
 		IdIssue:     run.IdIssue,
 		IdUserAgent: run.IdUserAgent,
 		Event:       "cancelled",
-		Payload:     map[string]any{},
+		Payload:     cancelledPayload{IdsTask: idsTask},
 	}
 	return d.DispatchEvent(ctx, run, event)
 }

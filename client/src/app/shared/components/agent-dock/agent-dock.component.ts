@@ -24,6 +24,7 @@ import { AgentEffort } from '../../../agent/model/agent-effort.enum';
 import { AgentEffortConverter } from '../../../agent/converter/agent-effort.converter';
 import { AgentEffortHintService } from '../../../agent/service/agent-effort-hint.service';
 import { AgentRun } from '../../../agent/model/agent-run.model';
+import { AgentPhase } from '../../../agent/model/agent-phase.enum';
 import { ShortWorkflow } from '../../../agent/util/short-workflow';
 import { ToastNotificationService } from '../../../core/toast-notification.service';
 import { ProjectSkillApi } from '../../../project/api/project-skill.api.service';
@@ -69,7 +70,7 @@ export class AgentDockComponent implements OnInit {
     protected readonly isLoading = signal(false);
     protected readonly isAssigning = signal(false);
     protected readonly isShortWorkflow = signal(false);
-    protected readonly isPrefilledFromRun = signal(false);
+    protected readonly prefilledNoticeKey = signal<string | null>(null);
     protected readonly models = computed(() => this.overview()?.models ?? []);
     protected readonly modelDefault = computed(() => this.overview()?.modelDefault ?? null);
     protected readonly runModelValue = computed(() => this.runModel() ?? this.modelDefault());
@@ -296,12 +297,23 @@ export class AgentDockComponent implements OnInit {
             .loadByIssue$(this.idProject(), this.idIssuePublic())
             .pipe(takeUntilDestroyed(this.destroyRef))
             .subscribe({
-                next: run => (run?.isParked ? this.prefillFromRun(run) : this.loadDefaults()),
+                next: run => this.prefill(run),
                 error: () => this.loadDefaults()
             });
     }
 
-    private prefillFromRun(run: AgentRun): void {
+    // A paused, failed or cancelled run keeps its own choices; any other starts from the project defaults.
+    private prefill(run: AgentRun | null): void {
+        if (run?.isParked) {
+            this.prefillFromRun(run, 'AGENT_DOCK.PREFILLED_FROM_RUN');
+        } else if (run?.phase === AgentPhase.Failed || run?.phase === AgentPhase.Cancelled) {
+            this.prefillFromRun(run, 'AGENT_DOCK.PREFILLED_FROM_STOPPED_RUN');
+        } else {
+            this.loadDefaults();
+        }
+    }
+
+    private prefillFromRun(run: AgentRun, noticeKey: string): void {
         const chosen = new Set<string>();
         (run.stagePlan?.stages ?? []).forEach(entry =>
             (entry.idsSkill ?? []).forEach(idSkill => chosen.add(this.chipKey(idSkill, entry.name)))
@@ -309,7 +321,7 @@ export class AgentDockComponent implements OnInit {
         this.chosen.set(chosen);
         this.prefillModelChoices(run);
         this.isShortWorkflow.set(ShortWorkflow.isShort(run.stagePlan));
-        this.isPrefilledFromRun.set(true);
+        this.prefilledNoticeKey.set(noticeKey);
         this.isLoading.set(false);
     }
 

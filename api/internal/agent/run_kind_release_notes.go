@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/bitmaster-sk/rurdesk/api/internal/constants"
+	"github.com/bitmaster-sk/rurdesk/api/internal/errs"
 	"github.com/bitmaster-sk/rurdesk/api/internal/extctx"
 	"github.com/bitmaster-sk/rurdesk/api/internal/githost"
 	"github.com/bitmaster-sk/rurdesk/api/internal/model"
@@ -83,6 +84,10 @@ func (r *ReleaseNotesRun) ApplyReport(context.Context, *model.AgentRun, *model.A
 // ApplyPrStatus fails: a release notes run opens no PR.
 func (r *ReleaseNotesRun) ApplyPrStatus(_ context.Context, run *model.AgentRun, _ *githost.Status) (*model.Issue, error) {
 	return nil, fmt.Errorf("release notes run %d: %w", run.IdRun, errRunHasNoPr)
+}
+
+func (r *ReleaseNotesRun) SendFeedback(context.Context, *model.AgentRun, int64) (*model.AgentRun, error) {
+	return nil, errs.ErrRunNotAwaitingFeedback
 }
 
 func (r *ReleaseNotesRun) Audience(ctx context.Context, run *model.AgentRun) ([]int64, error) {

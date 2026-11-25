@@ -34,11 +34,6 @@ class DiffViewerStub {
     public readonly rawPatch = input<string>('');
 }
 
-@Component({ selector: 'app-plan-actions', template: '', standalone: true })
-class PlanActionsStub {
-    public readonly run = input<unknown>(undefined);
-}
-
 const AUTHOR: User = { idUser: 2, name: 'Agent', email: '', colorAvatarBg: '' };
 const JAN: User = { idUser: 3, name: 'Jan', email: '', colorAvatarBg: '' };
 
@@ -96,8 +91,7 @@ describe('ActivityCommentItemComponent anchored threads (browser)', () => {
                 TablerIconStub,
                 AttachmentLightboxStub,
                 DiffViewerStub,
-                MermaidDiagramStub,
-                PlanActionsStub
+                MermaidDiagramStub
             ],
             declarations: [
                 ActivityCommentItemComponent,

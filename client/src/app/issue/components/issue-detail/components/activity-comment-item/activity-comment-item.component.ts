@@ -56,15 +56,12 @@ export class ActivityCommentItemComponent {
     public readonly candidates = input<Map<number, User> | User[] | null>(null);
     public readonly mentionCandidates = input<User[]>([]);
     // True only when this message is the most recent plan submitted for the
-    // current plan_stage. The feed computes it (it can see all messages) and
-    // passes it in so the Approve button shows on exactly one plan comment even
-    // after a revision adds a newer plan to the thread.
+    // current plan_stage; only its mockup cards are approvable.
     public readonly isLatestPlanForStage = input(false);
 
     public readonly editRequest = output();
     public readonly editSave = output<string>();
     public readonly editCancel = output();
-    public readonly approve = output<void>();
     public readonly approveMockup = output<string>();
     public readonly anchorRequest = output<AnchorDraft>();
     public readonly draftSend = output<string>();
@@ -134,22 +131,13 @@ export class ActivityCommentItemComponent {
         () => this.message().messageKind === MessageKind.BrainstormingQuestion
     );
 
-    // A design message can embed one or more ```mockup blocks. When it does, the
-    // approval moves onto each mockup card (use & approve) and the single global
-    // Approve button is suppressed to avoid an ambiguous "which mockup?" control.
-    // Derived from the same parser that renders the cards (not a substring check)
-    // so a malformed/unclosed fence can never hide the global approve while
-    // rendering zero cards — which would leave the run unapprovable.
+    // Whether the message embeds a ```mockup block the parser renders as a card;
+    // each card approves its own mockup.
     protected readonly hasMockups = computed(() =>
         MessageSegmentParser.parse(this.message().message).some(s => s.type === 'mockup')
     );
 
-    protected readonly showApproveActions = computed(
-        () => this.isPlanComment() && this.isLatestPlanForStage() && !this.hasMockups()
-    );
-
-    // Mockup cards become approvable in exactly the same window the global Approve
-    // button would have shown, but only for a message that actually has mockups.
+    // Mockup cards are approvable while the latest design waits for review.
     protected readonly mockupApprovable = computed(
         () => this.isPlanComment() && this.isLatestPlanForStage() && this.hasMockups()
     );

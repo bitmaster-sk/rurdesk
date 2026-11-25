@@ -21,12 +21,18 @@ const (
 // and derived stage timeline. Shared by GET endpoints and the websocket
 // broadcast so they never diverge.
 func BuildRunSnapshot(run *model.AgentRun, events []*model.AgentRunEvent, tasks []*model.AgentTask, idAssignee *int64) *model.AgentRunWithEvents {
-	return &model.AgentRunWithEvents{
-		AgentRun: *run,
-		Events:   events,
-		Stages:   BuildStageProgress(run, tasks, events),
-		IsParked: IsParked(run, idAssignee),
+	snapshot := &model.AgentRunWithEvents{
+		AgentRun:        *run,
+		Events:          events,
+		Stages:          BuildStageProgress(run, tasks, events),
+		IsParked:        IsParked(run, idAssignee),
+		IsAgentAssigned: idAssignee != nil && *idAssignee == run.IdUserAgent,
 	}
+	if completed := LatestCompletedTask(tasks); completed != nil {
+		idMessageSeen := IdMessageSeen(completed)
+		snapshot.IdMessageSeen = &idMessageSeen
+	}
+	return snapshot
 }
 
 // An open PR waits for a merge, not for the agent, so it never counts as parked.

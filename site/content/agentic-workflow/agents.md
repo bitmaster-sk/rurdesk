@@ -182,14 +182,28 @@ the whole run is shown next to its model in the run block.
 Assigning the task to someone else, or clearing the assignee, does not cancel
 the run. The stage in progress stops and runs again later; finished stages are
 kept. The run card shows **Paused**; hover over it to see who has the task now.
-The run no longer counts in the agent's queue.
+The run no longer counts in the agent's queue. Comments written meanwhile start
+nothing; they wait to be [sent to the agent](#sending-feedback-to-the-agent).
 
 To continue, press **Assign back** on the card, pick the agent in the assignee
 field, or assign it through its dialog. The dialog opens with the paused run's
-own skills, workflow, models, thinking efforts and turn limits, and applies them to the stages
-that have not started yet. If the workflow switch is already
+own skills, workflow, models, thinking efforts and turn limits — a failed or
+cancelled run's too — and applies them to the stages that have not started yet. If the workflow switch is already
 locked, the dialog says so and nothing changes. Assigning a different agent
 hands the run over to it.
+
+What the agent does when it gets the task back depends on where the run stopped:
+
+| The run | When an agent is assigned |
+| --- | --- |
+| Was working on a stage | The agent redoes that stage right away and is told it continues an interrupted attempt |
+| Waits for your review, an answer or a PR review | Nothing starts. New comments wait for **Send to agent**; with nothing new, the bar offers **Approve** |
+| Failed or was cancelled | The run **continues** where it stopped: finished stages, the branch and the PR are kept |
+| Failed or was cancelled while it waited for your review, an answer or a PR review | The run waits for it again; nothing starts |
+| Is done, or a failed run has nothing left to do | A new run starts with the project defaults |
+
+Assigning an agent never approves a stage and never sends comments on its own.
+**Continue** on a run stopped while it waited puts it back to waiting too.
 
 ### Custom fields in a run
 
@@ -335,12 +349,13 @@ Both settings apply to the next batch of thinking; no restart is needed.
 ### Approving a stage
 
 When a stage reaches `awaiting_approval` (the design and plan gates), review the
-agent's output in the activity feed and click **Approve** to let it continue to
-the next stage. This is the human-in-the-loop gate — nothing proceeds without
+agent's output in the activity feed and click **Approve** in the
+[bar above the comment editor](#sending-feedback-to-the-agent) to let it continue
+to the next stage. This is the human-in-the-loop gate — nothing proceeds without
 your sign-off. A [short workflow](#short-workflow-for-small-tasks) run has no
 such gates.
 
-When a design offers **more than one mockup**, there's no single Approve button
+When a design offers **more than one mockup**, the bar has no Approve button
 — each mockup card carries its own **Use & approve design** action. Click it on
 the variant you want: that mockup is marked as chosen, the others are dimmed, and
 the agent implements the one you picked. No need to comment or have the design
@@ -350,9 +365,39 @@ re-posted — the run advances straight to the next stage with your choice.
 
 To give feedback on one part of a design or plan, select that text and
 [reply to it](../using-the-tracker/features.md#replying-to-part-of-a-message).
-The agent sees the quoted text next to your comment. While the run waits for
-approval, your first comment starts a revision right away, so the agent answers
-by posting a revised design or plan; the threads stay on the old message.
+The agent sees the quoted text next to your comment. Comments and replies do not
+start the agent: write as many as you need, then press **Send to agent** in the
+bar above the comment editor. The agent answers by posting a revised design or
+plan; the threads stay on the old message.
+
+### Sending feedback to the agent
+
+While a run waits for you — a design or plan to review, a question to answer, or
+an open pull request — a thin bar above the comment editor says what the agent
+waits for and how many of your comments it has not seen yet, for example
+*Implementation plan waits for review · 6 new*. It stays in view however far you
+scroll the feed.
+
+- With new comments the bar offers **Send to *agent***. One click hands the agent
+  every comment and reply written since its last attempt, including those you
+  wrote while it was still working. Hover the button to see how many are
+  comments, replies and threads. The agent's prompt marks these comments as new.
+- With nothing new, a design or plan waiting for review offers **Approve**. A
+  design with mockups is approved on its mockup cards, so the bar only reminds
+  you to choose one.
+- With new comments on a design or plan, **Approve anyway** sits next to Send.
+  It asks first: the agent moves on to the next stage and does not get those
+  comments as feedback on the version you approved.
+- A question with no answer yet shows no button; an open pull request with
+  nothing new shows no bar.
+- The bar is hidden while the agent works, after the run ends, and while the
+  task is assigned to someone else.
+
+Comments from agents never count, and editing a comment the agent already saw
+does not make it new again. A rejected wiki proposal leaves a comment that
+counts as new feedback.
+
+![The feedback bar above the comment editor, offering Send to the agent](../../site/assets/img/agent-feedback-bar.png)
 
 ### The pull request
 
@@ -366,8 +411,8 @@ links to the PR.
 
 ### Reviewing the pull request
 
-While the run sits in `pr_open`, commenting on the task starts another implement
-attempt. Review it as a conversation rather than a form: the agent reads the whole
+While the run sits in `pr_open`, comment on the task and press **Send to agent**
+to start another implement attempt. Review it as a conversation rather than a form: the agent reads the whole
 thread from the beginning, its own messages included, and treats the newest
 instruction as the one that counts. Asking for something that departs from the
 approved plan is normal and the agent keeps the change — it will say when a request
@@ -375,7 +420,7 @@ conflicts with an earlier decision instead of quietly reverting to the plan.
 
 Not every comment produces a commit. When you ask a question, or the agent objects
 to a request, it answers with a **review reply** comment and nothing is pushed.
-Your next comment picks the conversation back up.
+Answer it and send again to pick the conversation back up.
 
 Every attempt pushes to the **same branch and PR** for as long as that PR stays
 open, even days later or after the gateway cleaned up its working copy. A new

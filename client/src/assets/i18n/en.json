@@ -28,6 +28,7 @@
     "AGENT_DOCK": {
         "SKILLS_TITLE": "{{name}} — this run",
         "PREFILLED_FROM_RUN": "Settings come from the paused run",
+        "PREFILLED_FROM_STOPPED_RUN": "Settings come from the stopped run",
         "ASSIGN": "Assign",
         "CANCEL": "Cancel",
         "INFO_TITLE": "{{name}} — workload",
@@ -174,6 +175,18 @@
             "RESTART": "Restart",
             "ASSIGN_BACK": "Assign back"
         },
+        "FEEDBACK_BAR": {
+            "WAITS_FOR_REVIEW": "{{stage}} waits for review",
+            "CHOOSE_MOCKUP": "{{stage}} waits for review · choose a mockup",
+            "ASKED_QUESTION": "{{agent}} asked a question",
+            "PR_REVIEW": "Pull request review",
+            "NEW": "{{count}} new",
+            "SEND": "Send to {{agent}}",
+            "APPROVE_ANYWAY": "Approve anyway",
+            "APPROVE_ANYWAY_CONFIRM": "Approve without sending? {{agent}} moves on and does not get the {{count}} new comments as feedback on this version.",
+            "BREAKDOWN": "New since the agent's last attempt — comments: {{comments}}, replies: {{replies}} in threads: {{threads}}",
+            "THE_AGENT": "the agent"
+        },
         "RESTART_HAS_PR": "This run already has a pull request. Use Continue instead — restarting would open a duplicate.",
         "RESTART_FAILED": "Could not restart the run. Please try again.",
         "RECOVERY": {
@@ -248,7 +261,7 @@
         },
         "BANNER": {},
         "CARD": {
-            "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below.",
+            "AWAITING_INPUT_HINT": "The agent is waiting for your reply — answer in the thread below, then send it to the agent.",
             "PARKED_UNASSIGNED": "The task has no agent assigned. Assign the agent back to continue.",
             "PARKED_REASSIGNED": "The task is assigned to {{name}}. Assign the agent back to continue."
         },
@@ -1418,6 +1431,9 @@
         "run_continue_invalid": "Continue is only valid on failed or cancelled runs.",
         "no_stage_to_continue": "There is no next stage to continue to.",
         "run_has_pr": "This run already has a pull request. Continue or close it instead.",
+        "run_not_awaiting_feedback": "The agent is not waiting for feedback right now. Refresh to see what it is doing.",
+        "run_parked": "The task is not assigned to the agent. Assign it to the agent first, then send.",
+        "no_new_feedback": "There are no new comments to send. Write a comment first.",
         "task_not_found": "Task not found.",
         "issue_has_active_run": "This issue already has an active run.",
         "agent_post_while_run_paused": "The agent cannot post while the run is paused.",

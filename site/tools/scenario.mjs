@@ -54,6 +54,8 @@ const BOTS = [
     }, // amber (pastel)
 ];
 const PROJECT_NAME = process.env.SCENARIO_PROJECT_NAME || "DevToolbox";
+// The agent the agent-run clips assign; its gateway must be running.
+const RUN_AGENT = process.env.CAPTURE_RUN_AGENT || "Kimi";
 
 // shared mutable state threaded across steps
 const state = {
@@ -3257,7 +3259,7 @@ const STEPS = [
         id: "run-clip-assign",
         type: "video",
         file: "run-clip-1-assign.webm",
-        title: "Agent clip 1/5: assign Kimi through the skills dock — MUTATES",
+        title: `Agent clip 1/5: assign ${RUN_AGENT} through the skills dock — MUTATES`,
         run: async ({ page, cursor, mark }) => {
             const P = await getProject(page);
             const I = await getRunVideoIssue(page);
@@ -3277,7 +3279,7 @@ const STEPS = [
                 .filter({
                     has: page.locator('[data-testid="agent-skills-action"]'),
                 })
-                .filter({ hasText: "Kimi" })
+                .filter({ hasText: RUN_AGENT })
                 .first();
             await cursorMoveTo(page, cursor, agentRow);
             await agentRow.hover({ timeout: 10000 });
@@ -3304,10 +3306,64 @@ const STEPS = [
         },
     },
     {
+        id: "agent-feedback-bar",
+        type: "screenshot",
+        file: "agent-feedback-bar.png",
+        title: "Feedback bar above the editor with one unsent comment (run-video issue) — MUTATES",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            const I = await getRunVideoIssue(page);
+            await waitRunPhase(page, P, I, ["awaiting_approval"]);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/${I}`);
+            await L.settle(page);
+            await feedToBottom(page);
+            await page
+                .locator(
+                    "app-issue-activity-feed .feed-editor app-message-editor .editor-input",
+                )
+                .first()
+                .click();
+            await page.keyboard.type(
+                "Keep the tool list searchable from the keyboard.",
+            );
+            await page
+                .locator(
+                    'app-issue-activity-feed .feed-editor [data-testid="message-editor-send"]',
+                )
+                .first()
+                .click();
+            await page
+                .locator('[data-testid="agent-feedback-send"]')
+                .waitFor({ state: "visible", timeout: 10000 });
+            await page.waitForTimeout(800);
+            await feedToBottom(page);
+            // Keep the send button's shortcut tooltip out of the shot.
+            await page.mouse.move(5, 5);
+            await page.waitForTimeout(400);
+            // The bar and the editor, with the comment it counts just above them.
+            const box = await page
+                .locator("app-issue-activity-feed .feed-editor")
+                .first()
+                .boundingBox();
+            if (!box) throw new Error("no feed editor");
+            const above = 220;
+            const y = Math.max(0, box.y - above);
+            await page.screenshot({
+                path: `${L.IMG}/agent-feedback-bar.png`,
+                clip: {
+                    x: box.x,
+                    y,
+                    width: box.width,
+                    height: box.y + box.height - y,
+                },
+            });
+        },
+    },
+    {
         id: "run-clip-revise",
         type: "video",
         file: "run-clip-2-revise.webm",
-        title: "Agent clip 2/5: read the design, comment, agent redoes the stage — MUTATES",
+        title: "Agent clip 2/5: read the design, comment, send it to the agent, agent redoes the stage — MUTATES",
         run: async ({ page, cursor, mark }) => {
             const P = await getProject(page);
             const I = await getRunVideoIssue(page);
@@ -3337,9 +3393,23 @@ const STEPS = [
                 await page.waitForTimeout(40);
             }
             await page.waitForTimeout(900);
-            // Shift+Enter sends; plain Enter only inserts a newline.
-            await page.keyboard.press("Shift+Enter");
+            await cursorClick(
+                page,
+                cursor,
+                page
+                    .locator(
+                        'app-issue-activity-feed .feed-editor [data-testid="message-editor-send"]',
+                    )
+                    .first(),
+            );
             await page.waitForTimeout(1500);
+            // A comment starts nothing; the bar above the editor sends every unsent one.
+            await cursorClick(
+                page,
+                cursor,
+                page.locator('[data-testid="agent-feedback-send"]'),
+            );
+            await page.waitForTimeout(1200);
             await watchFeed(page, 5000);
             // Leave only once the revision is provably under way, so the next
             // segment cannot approve the design the comment was meant to replace.
@@ -3366,10 +3436,7 @@ const STEPS = [
             await cursorClick(
                 page,
                 cursor,
-                page
-                    .locator("app-plan-actions")
-                    .last()
-                    .getByRole("button", { name: "Approve" }),
+                page.locator('[data-testid="agent-feedback-approve"]'),
                 15000,
             );
             await page.waitForTimeout(1200);
@@ -3396,10 +3463,7 @@ const STEPS = [
             await cursorClick(
                 page,
                 cursor,
-                page
-                    .locator("app-plan-actions")
-                    .last()
-                    .getByRole("button", { name: "Approve" }),
+                page.locator('[data-testid="agent-feedback-approve"]'),
                 15000,
             );
             await page.waitForTimeout(1200);

@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -23,6 +24,8 @@ type activeTask struct {
 	// isPastCleanup is set once runStage no longer checks discarded, so a
 	// later run_discarded has to remove the worktree itself.
 	isPastCleanup bool
+	// hasStageSlot is set while the task holds the stage slot, the only time an agent process runs for it.
+	hasStageSlot bool
 }
 
 // Orchestrator dispatches stage_execute webhook events to the agent and
@@ -100,13 +103,30 @@ func (o *Orchestrator) handleStageExecute(event WebhookEvent) error {
 	return nil
 }
 
-// handleCancelled stops the run's stage but keeps its worktree, so Continue
-// can resume the unfinished work.
+// cancelledPayload lists the tasks the tracker cancelled. An older tracker sends none: every task of
+// the run stops then.
+type cancelledPayload struct {
+	IdsTask *[]int64 `json:"idsTask"`
+}
+
+// handleCancelled stops the cancelled tasks of the run but keeps its worktree. A newer attempt
+// of the run, dispatched before this event arrived, keeps running.
 func (o *Orchestrator) handleCancelled(event WebhookEvent) error {
 	if event.IdRun == 0 {
 		return fmt.Errorf("cancelled event missing idRun")
 	}
+	var payload cancelledPayload
+	if len(event.Payload) > 0 {
+		if err := json.Unmarshal(event.Payload, &payload); err != nil {
+			return fmt.Errorf("parsing cancelled payload: %w", err)
+		}
+	}
 	toCancel, _ := o.activeTasksOfRun(event.IdRun, false)
+	if payload.IdsTask != nil {
+		toCancel = slices.DeleteFunc(toCancel, func(at *activeTask) bool {
+			return !slices.Contains(*payload.IdsTask, at.task.IdTask)
+		})
+	}
 	o.cancelTasks(toCancel)
 	return nil
 }
@@ -142,10 +162,15 @@ func (o *Orchestrator) activeTasksOfRun(idRun int64, isDiscarded bool) (tasks []
 	return tasks, isWorktreeUnowned
 }
 
+// cancelTasks stops each task. The agent is stopped by run, so only for a task holding the slot: a
+// task still waiting for it runs no agent, and stopping the run would kill another attempt of it.
 func (o *Orchestrator) cancelTasks(toCancel []*activeTask) {
 	for _, at := range toCancel {
 		if at.cancel != nil {
 			at.cancel()
+		}
+		if !o.hasStageSlot(at.task.IdTask) {
+			continue
 		}
 		runIDKey := RunID(fmt.Sprintf("%d", at.task.IdRun))
 		if err := o.agent.Cancel(context.Background(), runIDKey); err != nil {
@@ -254,7 +279,15 @@ func (o *Orchestrator) runStage(task Task) {
 	}
 
 	ctx, cancel := o.registerActiveTask(task)
-	defer o.unregisterActiveTask(task.IdTask, cancel)
+	isSlotHeld := false
+	// The slot is released only after the task is unregistered: a newer attempt that takes the
+	// slot must never find this one still listed as active.
+	defer func() {
+		o.unregisterActiveTask(task.IdTask, cancel)
+		if isSlotHeld {
+			<-o.sem
+		}
+	}()
 
 	// Starts before the concurrency gate so a task waiting for a free slot
 	// still reports liveness — otherwise the API stale-sweep would fail it
@@ -265,7 +298,8 @@ func (o *Orchestrator) runStage(task Task) {
 	if !o.acquireSlot(ctx, task) {
 		return
 	}
-	defer func() { <-o.sem }()
+	isSlotHeld = true
+	o.markStageSlotHeld(task.IdTask)
 	defer o.removeWorktreeIfDiscarded(task.IdTask, task.IdRun)
 
 	cleanup, ok := rules.prepareWorkspace(o, &task)
@@ -335,6 +369,21 @@ func (o *Orchestrator) registerActiveTask(task Task) (context.Context, context.C
 	o.activeTasks[task.IdTask] = &activeTask{task: task, cancel: func() { cancel(nil) }}
 	o.mu.Unlock()
 	return ctx, cancel
+}
+
+func (o *Orchestrator) markStageSlotHeld(idTask int64) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if at := o.activeTasks[idTask]; at != nil {
+		at.hasStageSlot = true
+	}
+}
+
+func (o *Orchestrator) hasStageSlot(idTask int64) bool {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	at := o.activeTasks[idTask]
+	return at != nil && at.hasStageSlot
 }
 
 func (o *Orchestrator) unregisterActiveTask(idTask int64, cancel context.CancelCauseFunc) {
