@@ -1,11 +1,13 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
+import { RouteReuseStrategy } from '@angular/router';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import './app.chart';
 import { AuthInterceptor } from './auth/auth.interceptor';
 import { ErrorInterceptor } from './core/error.interceptor';
 import { DynamicImportErrorHandler } from './core/dynamic-import-error-handler';
+import { ProjectRouteReuseStrategy } from './core/project-route-reuse-strategy';
 import { ErrorHandler } from '@angular/core';
 import {
     HTTP_INTERCEPTORS,
@@ -42,6 +44,7 @@ import { UiToastModule } from './ui/ui-toast.module';
         { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
         { provide: HTTP_INTERCEPTORS, useClass: ErrorInterceptor, multi: true },
         { provide: OVERLAY_DEFAULT_CONFIG, useValue: { usePopover: false } },
+        { provide: RouteReuseStrategy, useClass: ProjectRouteReuseStrategy },
         provideTranslateService({
             defaultLanguage: 'en',
             useDefaultLang: true,
