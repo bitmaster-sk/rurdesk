@@ -170,11 +170,21 @@ ul {
     }
 }
 
-.home-left-menu .global {
+// The timer sits right above the divider and pushes the global part to the bottom; while no
+// timer runs it is empty and the global part stays at the bottom alone.
+.home-left-menu .timer {
     flex-shrink: 0;
     margin-top: auto;
+}
+
+.home-left-menu .bottom {
+    flex-shrink: 0;
     padding: var(--ui-space) 0;
     border-top: 1px solid var(--ui-color-border);
+}
+
+.home-left-menu .global {
+    margin-bottom: var(--ui-space);
 }
 
 .home-left-menu--collapsed {
@@ -211,6 +221,12 @@ ul {
         opacity: 0;
         transition: opacity 140ms ease-out;
         transition-delay: 100ms;
+    }
+
+    // The rail clips them until they get rail styles of their own.
+    .timer,
+    app-user-menu {
+        width: 12rem;
     }
 
     .navigation {

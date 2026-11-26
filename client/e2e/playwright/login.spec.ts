@@ -22,7 +22,7 @@ test.describe('login journey', () => {
         // Assert: we left /login and the post-login shell is visible.
         await expect(page).not.toHaveURL(/\/login/);
 
-        // The top-menu avatar renders only after the current user resolves,
+        // The side menu user row renders only after the current user resolves,
         // so its presence proves the session is live in the UI.
         await expect(page.getByTestId('avatar-trigger')).toBeVisible();
         await expect(page.getByTestId('avatar-trigger')).toHaveAttribute('aria-label', user.name);

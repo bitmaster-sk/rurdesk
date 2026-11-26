@@ -160,64 +160,68 @@
                 </li>
             </ul>
         }
-        <!-- The overlays anchor to the whole row, so they open beside the menu edge, not over it. -->
-        <ul class="navigation global">
-            <li class="menu-item" #notificationsRow>
-                <div class="menu-item-border"></div>
-                <button
-                    type="button"
-                    class="link"
-                    data-testid="sidebar-notifications"
-                    aria-haspopup="dialog"
-                    [attr.aria-expanded]="notifications.isOpen()"
-                    (click)="notifications.toggle(notificationsRow)"
-                >
-                    <tabler-icon icon="bell" [size]="16" class="icon" />
-                    <span class="text">{{ 'NOTIFICATION.TITLE' | translate }}</span>
-                    @if (notifications.badge(); as badge) {
-                        <span class="count">{{ badge }}</span>
-                    }
-                </button>
-            </li>
-            <li class="menu-item" #messagesRow>
-                <div class="menu-item-border"></div>
-                <button
-                    type="button"
-                    class="link"
-                    data-testid="sidebar-messages"
-                    aria-haspopup="menu"
-                    [class.active]="isOnMessages()"
-                    [attr.aria-current]="isOnMessages() ? 'page' : null"
-                    [attr.aria-expanded]="messages.isOpen()"
-                    (click)="messages.toggle(messagesRow)"
-                >
-                    <tabler-icon icon="message" [size]="16" class="icon" />
-                    <span class="text">{{ 'HOME.MESSAGES' | translate }}</span>
-                    @if (messages.badge(); as badge) {
-                        <span class="count">{{ badge }}</span>
-                    }
-                </button>
-            </li>
-            <li class="menu-item mb-0" #agentChatRow>
-                <div class="menu-item-border"></div>
-                <button
-                    type="button"
-                    class="link"
-                    data-testid="agent-chat-menu"
-                    aria-haspopup="menu"
-                    [class.active]="isOnAgentChat()"
-                    [attr.aria-current]="isOnAgentChat() ? 'page' : null"
-                    [attr.aria-expanded]="agentChat.isOpen()"
-                    (click)="agentChat.toggle(agentChatRow)"
-                >
-                    <tabler-icon icon="robot" [size]="16" class="icon" />
-                    <span class="text">{{ 'AGENT_CHAT.MENU_LABEL' | translate }}</span>
-                    @if (agentChat.badge(); as badge) {
-                        <span class="count" data-testid="agent-chat-badge">{{ badge }}</span>
-                    }
-                </button>
-            </li>
-        </ul>
+        <app-tracker-control class="timer" [variant]="TrackerControlVariant.Side" />
+        <div class="bottom">
+            <!-- The overlays anchor to the whole row, so they open beside the menu edge, not over it. -->
+            <ul class="navigation global">
+                <li class="menu-item" #notificationsRow>
+                    <div class="menu-item-border"></div>
+                    <button
+                        type="button"
+                        class="link"
+                        data-testid="sidebar-notifications"
+                        aria-haspopup="dialog"
+                        [attr.aria-expanded]="notifications.isOpen()"
+                        (click)="notifications.toggle(notificationsRow)"
+                    >
+                        <tabler-icon icon="bell" [size]="16" class="icon" />
+                        <span class="text">{{ 'NOTIFICATION.TITLE' | translate }}</span>
+                        @if (notifications.badge(); as badge) {
+                            <span class="count">{{ badge }}</span>
+                        }
+                    </button>
+                </li>
+                <li class="menu-item" #messagesRow>
+                    <div class="menu-item-border"></div>
+                    <button
+                        type="button"
+                        class="link"
+                        data-testid="sidebar-messages"
+                        aria-haspopup="menu"
+                        [class.active]="isOnMessages()"
+                        [attr.aria-current]="isOnMessages() ? 'page' : null"
+                        [attr.aria-expanded]="messages.isOpen()"
+                        (click)="messages.toggle(messagesRow)"
+                    >
+                        <tabler-icon icon="message" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.MESSAGES' | translate }}</span>
+                        @if (messages.badge(); as badge) {
+                            <span class="count">{{ badge }}</span>
+                        }
+                    </button>
+                </li>
+                <li class="menu-item mb-0" #agentChatRow>
+                    <div class="menu-item-border"></div>
+                    <button
+                        type="button"
+                        class="link"
+                        data-testid="agent-chat-menu"
+                        aria-haspopup="menu"
+                        [class.active]="isOnAgentChat()"
+                        [attr.aria-current]="isOnAgentChat() ? 'page' : null"
+                        [attr.aria-expanded]="agentChat.isOpen()"
+                        (click)="agentChat.toggle(agentChatRow)"
+                    >
+                        <tabler-icon icon="robot" [size]="16" class="icon" />
+                        <span class="text">{{ 'AGENT_CHAT.MENU_LABEL' | translate }}</span>
+                        @if (agentChat.badge(); as badge) {
+                            <span class="count" data-testid="agent-chat-badge">{{ badge }}</span>
+                        }
+                    </button>
+                </li>
+            </ul>
+            <app-user-menu />
+        </div>
     </div>
 </div>
 <app-notification-menu #notifications />

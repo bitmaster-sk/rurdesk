@@ -2,6 +2,22 @@
     display: inline-flex;
 }
 
+// In the side menu the control spans the row; the clock takes the space pause leaves.
+:host(.tracker-control--side) {
+    display: flex;
+    padding: 0 var(--ui-space);
+
+    .tracker-ctl {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-bottom: var(--ui-space);
+    }
+
+    .ctl-clock {
+        flex: 1 1 auto;
+    }
+}
+
 .tracker-ctl {
     --tt-accent: var(--ui-color-primary);
     display: inline-flex;

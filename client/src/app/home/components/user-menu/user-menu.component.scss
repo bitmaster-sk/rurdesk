@@ -1,0 +1,56 @@
+:host {
+    display: block;
+}
+
+.user-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    width: calc(100% - 2 * var(--ui-space));
+    margin: 0 var(--ui-space);
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 1px solid transparent;
+    border-radius: var(--ui-radius-md);
+    background: transparent;
+    color: var(--ui-color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &[aria-expanded='true'] {
+        background-color: var(--ui-color-content-hover);
+    }
+
+    &[aria-expanded='true'] {
+        border-color: var(--ui-color-border);
+    }
+}
+
+.identity {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.name,
+.role {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.name {
+    font-weight: bold;
+}
+
+.role {
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-s);
+}
+
+.chevron {
+    flex-shrink: 0;
+    color: var(--ui-color-text-muted);
+}

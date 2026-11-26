@@ -1555,6 +1555,7 @@
         "GATEWAY_DELETE_FAILED": "Deleting the gateway failed"
     },
     "ADMIN": {
+        "TITLE": "Administration",
         "SETTINGS": "Application settings",
         "VERSION": "Version",
         "SETTINGS_NAV": {

@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, signal, viewChild } from '@angular/core';
+import { Component, computed, input, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
@@ -7,6 +7,7 @@ import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { TrackerControlVariant } from 'src/app/shared/tracker/constants/tracker-control-variant.enum';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
@@ -48,6 +49,22 @@ class MessageMenuStub {
     }
 }
 
+@Component({
+    selector: 'app-tracker-control',
+    template: '<div data-testid="tracker-control" style="height: 2rem"></div>',
+    standalone: false
+})
+class TrackerControlStub {
+    public readonly variant = input<TrackerControlVariant>(TrackerControlVariant.Bar);
+}
+
+@Component({
+    selector: 'app-user-menu',
+    template: '<button data-testid="avatar-trigger">Me</button>',
+    standalone: false
+})
+class UserMenuStub {}
+
 @Component({ selector: 'app-agent-chat-menu', template: '', standalone: false })
 class AgentChatMenuStub {
     public readonly badge = signal('');
@@ -77,6 +94,8 @@ async function render(
             NotificationMenuStub,
             MessageMenuStub,
             AgentChatMenuStub,
+            TrackerControlStub,
+            UserMenuStub,
             UiMenuComponent
         ],
         imports: [
@@ -160,6 +179,17 @@ describe('SideMenuComponent', () => {
         expect(element.querySelector('[data-testid="project-switcher"]')).toBeNull();
         expect(element.querySelector('[data-testid="sidebar-link-overview"]')).toBeNull();
         expect(element.querySelector('[data-testid="sidebar-messages"]')).not.toBeNull();
+    });
+
+    it('keeps the timer above the global part and the user at the very bottom', async () => {
+        const element = await render('/table');
+        const box = (testId: string): DOMRect =>
+            element.querySelector(`[data-testid="${testId}"]`)!.getBoundingClientRect();
+        const menu = box('project-left-menu');
+
+        expect(box('tracker-control').bottom).toBeLessThanOrEqual(box('sidebar-notifications').top);
+        expect(box('agent-chat-menu').bottom).toBeLessThanOrEqual(box('avatar-trigger').top);
+        expect(menu.bottom - box('avatar-trigger').bottom).toBeLessThan(24);
     });
 
     it('shows the unread count on the row and opens the notification center', async () => {

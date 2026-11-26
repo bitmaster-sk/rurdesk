@@ -49,7 +49,6 @@ test('a timer started on the detail page submits into the timeline and the track
     await page.locator('app-tracker').getByRole('button', { name: 'Start tracking' }).click();
 
     await expect(control).toBeVisible();
-    await expect(page.getByTestId('tracker-control-issue-link')).toContainText(`#${idIssuePublic}`);
     await expect(clock).toHaveText(/00:00:\d{2}/);
 
     await clock.click();
@@ -132,7 +131,7 @@ test('starting a second timer offers to switch instead of failing', async ({
 
     await page.goto(`/project/${idProject}/issue/${idIssueFirst}`);
     await startButton.click();
-    await expect(page.getByTestId('tracker-control-issue-link')).toContainText(`#${idIssueFirst}`);
+    await expect(control).toBeVisible();
     // Let a whole second accrue: a timer submitted at 0s logs nothing to show later.
     await expect(page.getByTestId('tracker-control-clock')).toHaveText(/00:00:0[1-9]/);
 
@@ -148,8 +147,9 @@ test('starting a second timer offers to switch instead of failing', async ({
 
     await page.getByTestId('tracker-switch-confirm').click();
 
-    await expect(page.getByTestId('tracker-control-issue-link')).toContainText(`#${idIssueSecond}`);
-    await expect(control).toBeVisible();
+    // The side menu timer shows no issue; its details name the one it runs on.
+    await page.getByTestId('tracker-control-clock').click();
+    await expect(page.locator('.tracker-panel .tp-ref')).toHaveText(`#${idIssueSecond}`);
 
     await page.goto(`/project/${idProject}/issue/${idIssueFirst}`);
     await expect(page.locator('#issue-tracked')).toHaveText(/\d+s/);

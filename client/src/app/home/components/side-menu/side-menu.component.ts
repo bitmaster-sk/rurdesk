@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRouteSnapshot, NavigationEnd, Router, isActive } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { TrackerControlVariant } from 'src/app/shared/tracker/constants/tracker-control-variant.enum';
 import { ProjectContextStore } from '../../store/project-context.store';
 
 @Component({
@@ -16,6 +17,8 @@ export class SideMenuComponent {
     private readonly router = inject(Router);
     private readonly projectContext = inject(ProjectContextStore);
     private readonly palette = inject(CommandPaletteService);
+
+    protected readonly TrackerControlVariant = TrackerControlVariant;
 
     protected readonly idProject = this.projectContext.idProject;
     protected readonly canUpdateProject = this.projectContext.canUpdateProject;
