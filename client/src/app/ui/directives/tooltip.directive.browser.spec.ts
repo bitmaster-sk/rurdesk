@@ -1,11 +1,19 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { UiModule } from '../ui.module';
+import { UiTooltipPosition } from './tooltip.directive';
 
 @Component({
     standalone: false,
     template: `
-        <button #b [uiTooltip]="text" uiTooltipPosition="top">host</button>
+        <button
+            #b
+            [uiTooltip]="text()"
+            [uiTooltipPosition]="position()"
+            [style.margin-left.px]="offset()"
+        >
+            host
+        </button>
         <button data-testid="rich" [uiTooltip]="richTpl">rich</button>
         <button
             data-testid="edge"
@@ -22,7 +30,9 @@ import { UiModule } from '../ui.module';
     `
 })
 class HostComponent {
-    public text = 'Tip text';
+    public readonly text = signal('Tip text');
+    public readonly position = signal<UiTooltipPosition>('top');
+    public readonly offset = signal(0);
 }
 
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -89,7 +99,7 @@ describe('UiTooltipDirective (browser)', () => {
     });
 
     it('does nothing when the text is empty', async () => {
-        const fixture = setup(host => (host.text = ''));
+        const fixture = setup(host => host.text.set(''));
         host(fixture.nativeElement).dispatchEvent(new MouseEvent('mouseenter'));
         await wait(AFTER_DELAY);
         expect(bubble()).toBeNull();
@@ -136,6 +146,28 @@ describe('UiTooltipDirective (browser)', () => {
         el.dispatchEvent(new MouseEvent('mouseenter'));
         await wait(AFTER_DELAY);
         expect(bubble()!.getBoundingClientRect().left).toBeGreaterThanOrEqual(8);
+    });
+
+    // Regression: a fold button that moved and relabelled itself on click left its bubble behind.
+    it('follows its host to a new place and side when the label changes while shown', async () => {
+        const fixture = setup();
+        const el = host(fixture.nativeElement);
+        el.dispatchEvent(new MouseEvent('mouseenter'));
+        await wait(AFTER_DELAY);
+
+        fixture.componentInstance.text.set('Other tip');
+        fixture.componentInstance.position.set('right');
+        fixture.componentInstance.offset.set(200);
+        fixture.detectChanges();
+        await fixture.whenStable();
+        await wait(50);
+
+        const anchor = el.getBoundingClientRect();
+        const tip = bubble()!.getBoundingClientRect();
+        expect(bubble()!.textContent).toContain('Other tip');
+        expect(tip.left).toBeGreaterThanOrEqual(anchor.right);
+        expect(tip.top).toBeLessThan(anchor.bottom);
+        expect(tip.bottom).toBeGreaterThan(anchor.top);
     });
 
     it('shows a template as structured content in the bubble', async () => {
