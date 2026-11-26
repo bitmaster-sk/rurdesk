@@ -39,7 +39,9 @@ import {
     IconMessage,
     IconRobot,
     IconKeyboard,
-    IconShield
+    IconShield,
+    IconLayoutSidebarLeftCollapse,
+    IconLayoutSidebarLeftExpand
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -87,7 +89,9 @@ import {
             IconMessage,
             IconRobot,
             IconKeyboard,
-            IconShield
+            IconShield,
+            IconLayoutSidebarLeftCollapse,
+            IconLayoutSidebarLeftExpand
         })
     ]
 })

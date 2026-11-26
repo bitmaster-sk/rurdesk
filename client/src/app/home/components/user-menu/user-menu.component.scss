@@ -27,6 +27,17 @@
     }
 }
 
+// The rail leaves room for the avatar only.
+:host(.user-menu--rail) .user-trigger {
+    justify-content: center;
+    padding: var(--ui-space-s) 0;
+
+    .identity,
+    .chevron {
+        display: none;
+    }
+}
+
 .identity {
     display: flex;
     flex: 1 1 auto;

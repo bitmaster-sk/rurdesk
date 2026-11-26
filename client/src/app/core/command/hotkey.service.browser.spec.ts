@@ -137,6 +137,36 @@ describe('HotkeyService', () => {
         service.registerProjectPicker(null);
     });
 
+    it('folds the registered side menu on [, but not while typing or with an overlay open', () => {
+        const service = TestBed.inject(HotkeyService);
+        const toggle = vi.fn();
+        service.registerRailToggle({ toggle });
+
+        const bracket = new KeyboardEvent('keydown', { key: '[', cancelable: true });
+        document.dispatchEvent(bracket);
+        expect(toggle).toHaveBeenCalledTimes(1);
+        expect(bracket.defaultPrevented).toBe(true);
+
+        const input = document.createElement('input');
+        document.body.appendChild(input);
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: '[', bubbles: true }));
+        input.remove();
+
+        const container = document.createElement('div');
+        container.className = 'cdk-overlay-container';
+        container.innerHTML = '<div class="ui-popover"></div>';
+        document.body.appendChild(container);
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: '[' }));
+        container.remove();
+
+        expect(toggle).toHaveBeenCalledTimes(1);
+        service.registerRailToggle(null);
+
+        const unhandled = new KeyboardEvent('keydown', { key: '[', cancelable: true });
+        document.dispatchEvent(unhandled);
+        expect(unhandled.defaultPrevented).toBe(false);
+    });
+
     it('leaves p alone when no project picker is on the page', () => {
         const p = new KeyboardEvent('keydown', { key: 'p', cancelable: true });
         document.dispatchEvent(p);

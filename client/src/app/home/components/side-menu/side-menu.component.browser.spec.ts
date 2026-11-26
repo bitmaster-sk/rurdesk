@@ -4,11 +4,14 @@ import { TestBed } from '@angular/core/testing';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { HotkeyService, RailToggleHandler } from 'src/app/core/command/hotkey.service';
 import { TrackerControlVariant } from 'src/app/shared/tracker/constants/tracker-control-variant.enum';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
+import { UiTooltipComponent } from 'src/app/ui/components/tooltip/tooltip.component';
+import { UiTooltipDirective } from 'src/app/ui/directives/tooltip.directive';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
 import { SideMenuComponent } from './side-menu.component';
@@ -19,7 +22,9 @@ import 'src/styles.scss';
 class PageStub {}
 
 @Component({ selector: 'app-project-switcher', template: '', standalone: false })
-class ProjectSwitcherStub {}
+class ProjectSwitcherStub {
+    public readonly isRail = input(false);
+}
 
 const openPalette = vi.fn();
 const toggleNotifications = vi.fn();
@@ -63,7 +68,9 @@ class TrackerControlStub {
     template: '<button data-testid="avatar-trigger">Me</button>',
     standalone: false
 })
-class UserMenuStub {}
+class UserMenuStub {
+    public readonly isRail = input(false);
+}
 
 @Component({ selector: 'app-agent-chat-menu', template: '', standalone: false })
 class AgentChatMenuStub {
@@ -83,10 +90,20 @@ class RowLabelLoader implements TranslateLoader {
     }
 }
 
+const COLLAPSED_KEY = 'sideMenuCollapsed';
+
+let railToggle: RailToggleHandler | null = null;
+
 async function render(
     url: string,
-    { idProject = 1, isOwner = false }: { idProject?: number | null; isOwner?: boolean } = {}
+    {
+        idProject = 1,
+        isOwner = false,
+        isCollapsed = false
+    }: { idProject?: number | null; isOwner?: boolean; isCollapsed?: boolean } = {}
 ): Promise<HTMLElement> {
+    // Saved by an earlier visit, as the store reads it on load.
+    localStorage.setItem(COLLAPSED_KEY, isCollapsed ? '1' : '0');
     await TestBed.configureTestingModule({
         declarations: [
             SideMenuComponent,
@@ -96,7 +113,9 @@ async function render(
             AgentChatMenuStub,
             TrackerControlStub,
             UserMenuStub,
-            UiMenuComponent
+            UiMenuComponent,
+            UiTooltipDirective,
+            UiTooltipComponent
         ],
         imports: [
             TranslateModule.forRoot({
@@ -110,19 +129,19 @@ async function render(
             TablerIconStub
         ],
         providers: [
-            provideRouter([
-                {
-                    path: 'wiki',
-                    data: { collapsedMenu: true },
-                    children: [{ path: '', component: PageStub }]
-                },
-                { path: '**', component: PageStub }
-            ]),
+            provideRouter([{ path: '**', component: PageStub }]),
             {
                 provide: ProjectContextStore,
                 useValue: { idProject: signal(idProject), canUpdateProject: signal(isOwner) }
             },
-            { provide: CommandPaletteService, useValue: { open: openPalette } }
+            { provide: CommandPaletteService, useValue: { open: openPalette } },
+            {
+                provide: HotkeyService,
+                useValue: {
+                    registerRailToggle: (handler: RailToggleHandler | null) =>
+                        (railToggle = handler)
+                }
+            }
         ]
     }).compileComponents();
     await TestBed.inject(Router).navigateByUrl(url);
@@ -133,10 +152,18 @@ async function render(
     return fixture.nativeElement as HTMLElement;
 }
 
+const menuOf = (element: HTMLElement): HTMLElement =>
+    element.querySelector<HTMLElement>('[data-testid="project-left-menu"]')!;
+
+const tooltip = (): string | undefined =>
+    document.querySelector('.ui-tooltip')?.textContent?.trim();
+
 const href = (element: HTMLElement, testId: string): string | null | undefined =>
     element.querySelector(`[data-testid="${testId}"]`)?.getAttribute('href');
 
 describe('SideMenuComponent', () => {
+    afterEach(() => localStorage.removeItem(COLLAPSED_KEY));
+
     it('links to the context project on a page outside the project', async () => {
         const element = await render('/message/1/team/view', { idProject: 4 });
 
@@ -152,16 +179,39 @@ describe('SideMenuComponent', () => {
         expect(openPalette).toHaveBeenCalled();
     });
 
-    it('shows only the search icon until the pointer is on it', async () => {
-        const element = await render('/table');
-        const search = element.querySelector<HTMLElement>('[data-testid="side-menu-search"]')!;
-        const hint = (): DOMRect => search.querySelector('kbd')!.getBoundingClientRect();
+    // Regression: the shortcut hint grew the search button on hover and pushed the fold button
+    // past the menu edge.
+    it('keeps the fold button clear of the menu edge while the search names its shortcut', async () => {
+        const tokens = document.createElement('style');
+        tokens.textContent =
+            ':root { --ui-space-s: 0.25rem; --ui-space: 0.5rem; --ui-space-m: 0.75rem; --ui-space-l: 1rem; }' +
+            ' tabler-icon { display: inline-block; width: 16px; height: 16px; }';
+        document.head.append(tokens);
+        try {
+            const element = await render('/table');
+            const search = element.querySelector<HTMLElement>('[data-testid="side-menu-search"]')!;
+            const toggle = element.querySelector<HTMLElement>('[data-testid="side-menu-toggle"]')!;
+            const inside = (): number =>
+                menuOf(element).getBoundingClientRect().left +
+                menuOf(element).clientWidth -
+                toggle.getBoundingClientRect().right;
 
-        expect(hint().width).toBe(0);
+            const before = toggle.getBoundingClientRect().left;
+            expect(inside()).toBeGreaterThanOrEqual(8);
 
-        await userEvent.hover(search);
+            await userEvent.hover(search);
 
-        await vi.waitFor(() => expect(hint().width).toBeGreaterThan(10));
+            await vi.waitFor(() => expect(tooltip()).toBe('HOME.SEARCH (⌘K)'));
+            expect(toggle.getBoundingClientRect().left).toBe(before);
+            expect(inside()).toBeGreaterThanOrEqual(8);
+            // The tip must not cover the fold button right next to the search.
+            const tip = document.querySelector('.ui-tooltip')!.getBoundingClientRect();
+            expect(tip.top).toBeGreaterThanOrEqual(toggle.getBoundingClientRect().bottom);
+            // A pointer left here would hover the next test's search button.
+            await userEvent.unhover(search);
+        } finally {
+            tokens.remove();
+        }
     });
 
     it('shows project settings only to the project owner', async () => {
@@ -240,53 +290,131 @@ describe('SideMenuComponent', () => {
         await vi.waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('false'));
     });
 
-    it('collapses the menu to icons on a route that asks for it', async () => {
-        const element = await render('/wiki');
-        const menu = element.querySelector('[data-testid="project-left-menu"]');
-        expect(menu?.classList).toContain('home-left-menu--collapsed');
-        expect(href(element, 'sidebar-link-wiki')).toBe('/project/1/wiki');
+    it('shows the full menu until the user folds it, on the wiki too', async () => {
+        const element = await render('/project/1/wiki');
+
+        expect(menuOf(element).classList).not.toContain('home-left-menu--collapsed');
+        expect(menuOf(element).getBoundingClientRect().width).toBeGreaterThan(150);
     });
 
-    it('keeps the unread count whole on the icon in the collapsed menu', async () => {
-        const element = await render('/wiki');
-        const row = element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!;
-        const count = row.querySelector<HTMLElement>('.count')!.getBoundingClientRect();
-        const rail = element.querySelector<HTMLElement>('.menu-panel')!.getBoundingClientRect();
+    it('folds to an icon rail from the header button and opens again', async () => {
+        const element = await render('/table');
+        const toggle = element.querySelector<HTMLElement>('[data-testid="side-menu-toggle"]')!;
 
-        expect(count.right).toBeLessThanOrEqual(row.getBoundingClientRect().right);
-        expect(count.right).toBeLessThanOrEqual(rail.right);
+        toggle.click();
+
+        await vi.waitFor(() =>
+            expect(menuOf(element).classList).toContain('home-left-menu--collapsed')
+        );
+        expect(menuOf(element).getBoundingClientRect().width).toBeLessThan(60);
+        expect(toggle.getAttribute('aria-label')).toBe('HOME.EXPAND_MENU');
+
+        toggle.click();
+
+        await vi.waitFor(() =>
+            expect(menuOf(element).classList).not.toContain('home-left-menu--collapsed')
+        );
+        expect(toggle.getAttribute('aria-label')).toBe('HOME.COLLAPSE_MENU');
     });
 
-    it('expands the collapsed menu over the content while it has focus', async () => {
-        const element = await render('/wiki');
-        const panel = element.querySelector<HTMLElement>('.menu-panel');
-        const label = element.querySelector<HTMLElement>('[data-testid="sidebar-link-wiki"] .text');
-        const railWidth = panel!.getBoundingClientRect().width;
-        expect(railWidth).toBeLessThan(60);
-        expect(getComputedStyle(label!).opacity).toBe('0');
+    // Regression: the tip stayed where the fold button had been before the menu changed width.
+    it('keeps the tip of the fold button on the button as the menu folds and opens', async () => {
+        const element = await render('/table');
+        const toggle = element.querySelector<HTMLElement>('[data-testid="side-menu-toggle"]')!;
+        const tip = (): DOMRect => document.querySelector('.ui-tooltip')!.getBoundingClientRect();
+        toggle.focus();
+        await vi.waitFor(() => expect(tooltip()).toBe('HOME.COLLAPSE_MENU ([)'));
+        expect(tip().top).toBeGreaterThanOrEqual(toggle.getBoundingClientRect().bottom);
 
-        element.querySelector<HTMLElement>('[data-testid="sidebar-link-wiki"]')?.focus();
+        toggle.click();
 
         await vi.waitFor(() => {
-            expect(panel?.getBoundingClientRect().width).toBeGreaterThan(3 * railWidth);
-            expect(getComputedStyle(label!).opacity).toBe('1');
+            expect(tooltip()).toBe('HOME.EXPAND_MENU ([)');
+            expect(tip().left).toBeGreaterThanOrEqual(toggle.getBoundingClientRect().right);
+        });
+
+        toggle.click();
+
+        await vi.waitFor(() => {
+            expect(tooltip()).toBe('HOME.COLLAPSE_MENU ([)');
+            expect(tip().top).toBeGreaterThanOrEqual(toggle.getBoundingClientRect().bottom);
         });
     });
 
-    it('stays closed after a click until the pointer leaves the menu', async () => {
-        const element = await render('/wiki');
-        const menu = element.querySelector<HTMLElement>('[data-testid="project-left-menu"]')!;
+    it('folds from the [ shortcut', async () => {
+        const element = await render('/table');
 
-        menu.querySelector<HTMLElement>('.menu-section-title')?.click();
-        await vi.waitFor(() => expect(menu.classList).toContain('home-left-menu--resting'));
+        railToggle?.toggle();
 
-        menu.dispatchEvent(new MouseEvent('mouseleave'));
-        await vi.waitFor(() => expect(menu.classList).not.toContain('home-left-menu--resting'));
+        await vi.waitFor(() =>
+            expect(menuOf(element).classList).toContain('home-left-menu--collapsed')
+        );
     });
 
-    it('keeps the full menu everywhere else', async () => {
+    it('opens in the rail when the user left it folded', async () => {
+        const element = await render('/table', { isCollapsed: true });
+
+        expect(menuOf(element).classList).toContain('home-left-menu--collapsed');
+    });
+
+    it('names every rail item and shows the name on focus', async () => {
+        const element = await render('/table', { isCollapsed: true });
+        const controls = [...menuOf(element).querySelectorAll<HTMLElement>('a, button')];
+
+        for (const control of controls) {
+            const name = control.getAttribute('aria-label') ?? control.textContent?.trim();
+            expect(name, control.outerHTML).toBeTruthy();
+        }
+        for (const label of menuOf(element).querySelectorAll('.link .text')) {
+            expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+        }
+
+        element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!.focus();
+        await vi.waitFor(() => expect(tooltip()).toBe('Messages'));
+
+        element.querySelector<HTMLElement>('[data-testid="side-menu-toggle"]')!.focus();
+        await vi.waitFor(() => expect(tooltip()).toBe('HOME.EXPAND_MENU ([)'));
+    });
+
+    it('keeps the row tooltips out of the full menu', async () => {
         const element = await render('/table');
-        const menu = element.querySelector('[data-testid="project-left-menu"]');
-        expect(menu?.classList).not.toContain('home-left-menu--collapsed');
+
+        element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!.focus();
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        expect(tooltip()).toBeUndefined();
+    });
+
+    it('lines every rail icon up on one vertical axis', async () => {
+        // The icon stub has no box of its own; give it the real icon's size.
+        const size = document.createElement('style');
+        size.textContent = 'tabler-icon { display: inline-block; width: 16px; height: 16px; }';
+        document.head.append(size);
+        try {
+            const element = await render('/table', { isCollapsed: true, isOwner: true });
+            // The axis of the rail's inside, without its right border.
+            const axis =
+                menuOf(element).getBoundingClientRect().left + menuOf(element).clientWidth / 2;
+            const icons = [
+                ...menuOf(element).querySelectorAll('.brand svg, .brand tabler-icon, .link .icon')
+            ];
+
+            expect(icons.length).toBeGreaterThan(10);
+            for (const icon of icons) {
+                const box = icon.getBoundingClientRect();
+                expect(box.left + box.width / 2, icon.outerHTML).toBeCloseTo(axis, 0);
+            }
+        } finally {
+            size.remove();
+        }
+    });
+
+    it('keeps the unread count whole on the icon in the rail', async () => {
+        const element = await render('/table', { isCollapsed: true });
+        const row = element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!;
+        const count = row.querySelector<HTMLElement>('.count')!.getBoundingClientRect();
+
+        expect(count.right).toBeLessThanOrEqual(row.getBoundingClientRect().right);
+        expect(count.right).toBeLessThanOrEqual(menuOf(element).getBoundingClientRect().right);
     });
 });

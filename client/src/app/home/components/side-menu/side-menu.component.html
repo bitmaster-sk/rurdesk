@@ -1,10 +1,8 @@
+@let rail = isCollapsed();
 <div
     class="home-left-menu grow-0 shrink-0 flex flex-col justify-between"
     data-testid="project-left-menu"
-    [class.home-left-menu--collapsed]="isCollapsed()"
-    [class.home-left-menu--resting]="isResting()"
-    (click)="onMenuClick()"
-    (mouseleave)="onMenuLeave()"
+    [class.home-left-menu--collapsed]="rail"
 >
     <div class="top menu-panel">
         <div class="menu-head">
@@ -48,15 +46,32 @@
                     class="brand-search"
                     data-testid="side-menu-search"
                     [attr.aria-label]="'HOME.SEARCH' | translate"
-                    [attr.title]="('HOME.SEARCH' | translate) + ' (⌘K)'"
+                    [uiTooltipPosition]="rail ? 'right' : 'bottom'"
+                    [uiTooltip]="('HOME.SEARCH' | translate) + ' (⌘K)'"
                     (click)="onSearch()"
                 >
                     <tabler-icon icon="search" [size]="16" />
-                    <kbd>⌘K</kbd>
+                </button>
+                @let toggleLabel = (rail ? 'HOME.EXPAND_MENU' : 'HOME.COLLAPSE_MENU') | translate;
+                <button
+                    type="button"
+                    class="brand-toggle"
+                    data-testid="side-menu-toggle"
+                    [attr.aria-label]="toggleLabel"
+                    [uiTooltipPosition]="rail ? 'right' : 'bottom'"
+                    [uiTooltip]="toggleLabel + ' ([)'"
+                    (click)="onToggle()"
+                >
+                    <tabler-icon
+                        [icon]="
+                            rail ? 'layout-sidebar-left-expand' : 'layout-sidebar-left-collapse'
+                        "
+                        [size]="16"
+                    />
                 </button>
             </div>
             @if (idProject()) {
-                <app-project-switcher />
+                <app-project-switcher [isRail]="rail" />
             }
         </div>
         @if (idProject(); as idProject) {
@@ -65,6 +80,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.OVERVIEW' | translate) : ''"
                         data-testid="sidebar-link-overview"
                         [routerLink]="['/project', idProject, 'view']"
                         [routerLinkActiveOptions]="{ exact: true }"
@@ -79,6 +96,8 @@
                         <div class="menu-item-border"></div>
                         <a
                             class="link"
+                            uiTooltipPosition="right"
+                            [uiTooltip]="rail ? ('PROJECT.SETTINGS' | translate) : ''"
                             [routerLink]="['/project', idProject, 'settings']"
                             routerLinkActive="active"
                         >
@@ -91,6 +110,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.WIKI' | translate) : ''"
                         data-testid="sidebar-link-wiki"
                         [routerLink]="['/project', idProject, 'wiki']"
                         routerLinkActive="active"
@@ -103,6 +124,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.RELEASES' | translate) : ''"
                         data-testid="sidebar-link-release"
                         [routerLink]="['/project', idProject, 'release']"
                         routerLinkActive="active"
@@ -116,6 +139,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.TABLE' | translate) : ''"
                         data-testid="sidebar-link-table"
                         [routerLink]="['/project', idProject, 'issue', 'view', 'table']"
                         routerLinkActive="active"
@@ -128,6 +153,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.BOARD' | translate) : ''"
                         data-testid="sidebar-link-kanban"
                         [routerLink]="['/project', idProject, 'issue', 'view', 'kanban']"
                         routerLinkActive="active"
@@ -140,6 +167,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.CALENDAR' | translate) : ''"
                         [routerLink]="['/project', idProject, 'issue', 'view', 'calendar']"
                         routerLinkActive="active"
                     >
@@ -151,6 +180,8 @@
                     <div class="menu-item-border"></div>
                     <a
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.GANTT' | translate) : ''"
                         [routerLink]="['/project', idProject, 'issue', 'view', 'gantt']"
                         routerLinkActive="active"
                     >
@@ -160,7 +191,10 @@
                 </li>
             </ul>
         }
-        <app-tracker-control class="timer" [variant]="TrackerControlVariant.Side" />
+        <app-tracker-control
+            class="timer"
+            [variant]="rail ? TrackerControlVariant.Rail : TrackerControlVariant.Side"
+        />
         <div class="bottom">
             <!-- The overlays anchor to the whole row, so they open beside the menu edge, not over it. -->
             <ul class="navigation global">
@@ -169,6 +203,8 @@
                     <button
                         type="button"
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('NOTIFICATION.TITLE' | translate) : ''"
                         data-testid="sidebar-notifications"
                         aria-haspopup="dialog"
                         [attr.aria-expanded]="notifications.isOpen()"
@@ -186,6 +222,8 @@
                     <button
                         type="button"
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.MESSAGES' | translate) : ''"
                         data-testid="sidebar-messages"
                         aria-haspopup="menu"
                         [class.active]="isOnMessages()"
@@ -205,6 +243,8 @@
                     <button
                         type="button"
                         class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('AGENT_CHAT.MENU_LABEL' | translate) : ''"
                         data-testid="agent-chat-menu"
                         aria-haspopup="menu"
                         [class.active]="isOnAgentChat()"
@@ -220,7 +260,7 @@
                     </button>
                 </li>
             </ul>
-            <app-user-menu />
+            <app-user-menu [isRail]="rail" />
         </div>
     </div>
 </div>

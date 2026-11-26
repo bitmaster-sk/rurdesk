@@ -144,13 +144,14 @@ describe('TrackerControlComponent (browser)', () => {
 @Component({
     standalone: false,
     template: `
-        <div style="width: 12rem">
-            <app-tracker-control [variant]="TrackerControlVariant.Side" />
+        <div [style.width]="variant === TrackerControlVariant.Rail ? '3.25rem' : '12rem'">
+            <app-tracker-control [variant]="variant" />
         </div>
     `
 })
 class SideMenuHost {
     protected readonly TrackerControlVariant = TrackerControlVariant;
+    public variant = TrackerControlVariant.Side;
 }
 
 describe('TrackerControlComponent in the side menu (browser)', () => {
@@ -190,8 +191,9 @@ describe('TrackerControlComponent in the side menu (browser)', () => {
         await page.viewport(414, 896);
     });
 
-    async function render(): Promise<HTMLElement> {
+    async function render(variant = TrackerControlVariant.Side): Promise<HTMLElement> {
         const fixture = TestBed.createComponent(SideMenuHost);
+        fixture.componentInstance.variant = variant;
         fixture.autoDetectChanges();
         await fixture.whenStable();
         return fixture.nativeElement as HTMLElement;
@@ -240,6 +242,28 @@ describe('TrackerControlComponent in the side menu (browser)', () => {
         }
         const digits = element.querySelector('.ctl-digits')!.getBoundingClientRect();
         expect(digits.right).toBeLessThanOrEqual(pause.left);
+    });
+
+    it('shows only the clock icon in the rail and tells the time and issue on focus', async () => {
+        const element = await render(TrackerControlVariant.Rail);
+
+        tracker$.next(runningFor(60));
+
+        await vi.waitFor(() => expect(byTestId(element, 'tracker-control-clock')).not.toBeNull());
+        const clock = byTestId(element, 'tracker-control-clock')!;
+        const row = element.firstElementChild!.getBoundingClientRect();
+        const icon = clock.querySelector('.tt-dot')!.getBoundingClientRect();
+        expect(icon.left + icon.width / 2).toBeCloseTo(row.left + row.width / 2, 0);
+        expect(clock.querySelector('.ctl-digits')!.getBoundingClientRect().width).toBe(0);
+        expect(byTestId(element, 'tracker-control-pause')).toBeNull();
+
+        clock.focus();
+
+        await vi.waitFor(() =>
+            expect(document.querySelector('.ui-tooltip')?.textContent?.trim()).toBe(
+                '00:01:00 · #142'
+            )
+        );
     });
 
     it('opens the details beside the menu, not over it', async () => {

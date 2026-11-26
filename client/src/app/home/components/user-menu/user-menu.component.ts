@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    ElementRef,
+    computed,
+    inject,
+    input
+} from '@angular/core';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
@@ -9,9 +16,13 @@ import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
     templateUrl: './user-menu.component.html',
     styleUrls: ['./user-menu.component.scss'],
     standalone: false,
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: { '[class.user-menu--rail]': 'isRail()' }
 })
 export class UserMenuComponent {
+    /** In the folded side menu only the avatar shows; the tooltip names the user. */
+    public readonly isRail = input(false);
+
     private readonly authStore = inject(AuthStore);
     private readonly palette = inject(CommandPaletteService);
 

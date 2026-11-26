@@ -563,7 +563,9 @@
         "WIKI": "Wiki",
         "RELEASES": "Releases",
         "MESSAGES": "Messages",
-        "SEARCH": "Search"
+        "SEARCH": "Search",
+        "COLLAPSE_MENU": "Collapse menu",
+        "EXPAND_MENU": "Expand menu"
     },
     "WIKI": {
         "TITLE": "Wiki",
@@ -2025,6 +2027,7 @@
             "OPEN_NAV": "Jump to navigation",
             "OPEN_HELP": "Show this help",
             "OPEN_PROJECT_PICKER": "Switch project",
+            "TOGGLE_MENU": "Collapse or expand the side menu",
             "CLOSE": "Close / clear query",
             "MOVE": "Move selection",
             "RUN": "Run selected",

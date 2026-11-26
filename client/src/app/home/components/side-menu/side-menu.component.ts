@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRouteSnapshot, NavigationEnd, Router, isActive } from '@angular/router';
-import { filter, map } from 'rxjs';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
+import { Router, isActive } from '@angular/router';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { HotkeyService } from 'src/app/core/command/hotkey.service';
 import { TrackerControlVariant } from 'src/app/shared/tracker/constants/tracker-control-variant.enum';
 import { ProjectContextStore } from '../../store/project-context.store';
+import { SideMenuStore } from '../../store/side-menu.store';
 
 @Component({
     selector: 'app-side-menu',
@@ -13,49 +13,36 @@ import { ProjectContextStore } from '../../store/project-context.store';
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SideMenuComponent {
+export class SideMenuComponent implements OnInit, OnDestroy {
     private readonly router = inject(Router);
     private readonly projectContext = inject(ProjectContextStore);
     private readonly palette = inject(CommandPaletteService);
+    private readonly hotkeys = inject(HotkeyService);
+    private readonly sideMenuStore = inject(SideMenuStore);
 
     protected readonly TrackerControlVariant = TrackerControlVariant;
 
     protected readonly idProject = this.projectContext.idProject;
     protected readonly canUpdateProject = this.projectContext.canUpdateProject;
 
-    protected readonly isResting = signal(false);
-
     protected readonly isOnMessages = isActive('/message', this.router);
     protected readonly isOnAgentChat = isActive('/agent-chat', this.router);
 
-    protected readonly isCollapsed = toSignal(
-        this.router.events.pipe(
-            filter(event => event instanceof NavigationEnd),
-            map(() => this.readCollapsed())
-        ),
-        { initialValue: this.readCollapsed() }
-    );
+    protected readonly isCollapsed = this.sideMenuStore.isCollapsed;
+
+    public ngOnInit(): void {
+        this.hotkeys.registerRailToggle({ toggle: () => this.sideMenuStore.toggle() });
+    }
+
+    public ngOnDestroy(): void {
+        this.hotkeys.registerRailToggle(null);
+    }
 
     protected onSearch(): void {
         this.palette.open();
     }
 
-    protected onMenuClick(): void {
-        this.isResting.set(true);
-    }
-
-    protected onMenuLeave(): void {
-        this.isResting.set(false);
-    }
-
-    private readCollapsed(): boolean {
-        let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
-        while (route) {
-            if (route.data['collapsedMenu'] === true) {
-                return true;
-            }
-            route = route.firstChild;
-        }
-        return false;
+    protected onToggle(): void {
+        this.sideMenuStore.toggle();
     }
 }

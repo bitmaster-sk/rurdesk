@@ -42,6 +42,10 @@ export abstract class KeyboardResolver {
                 return KeyboardResolver.hasModifier(event)
                     ? { type: 'none' }
                     : { type: 'project-picker' };
+            case '[':
+                return KeyboardResolver.hasModifier(event)
+                    ? { type: 'none' }
+                    : { type: 'toggle-rail' };
             case 'j':
             case 'ArrowDown':
                 return { type: 'list-move', delta: 1 };

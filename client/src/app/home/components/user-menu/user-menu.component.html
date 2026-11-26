@@ -6,6 +6,8 @@
         data-testid="avatar-trigger"
         aria-haspopup="menu"
         [attr.aria-label]="user.name"
+        uiTooltipPosition="right"
+        [uiTooltip]="isRail() ? user.name : ''"
         [attr.aria-expanded]="menu.isOpen()"
         (click)="menu.toggle(host)"
     >

@@ -27,6 +27,24 @@
     }
 }
 
+// The rail leaves room for the tile only.
+:host(.project-switcher--rail) .switcher {
+    justify-content: center;
+    padding: var(--ui-space-s) 0;
+    border-color: transparent;
+    background-color: transparent;
+
+    &:hover,
+    &[aria-expanded='true'] {
+        background-color: var(--ui-color-content-hover);
+    }
+
+    .switcher__text,
+    .switcher__chevron {
+        display: none;
+    }
+}
+
 .switcher__text {
     display: flex;
     flex: 1;

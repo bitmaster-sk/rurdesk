@@ -42,7 +42,7 @@ async function saveWikiPageViaApi(
 
 // Scenario:
 // - create a dedicated user, log in and create a blank project
-// - open the wiki and assert the main menu collapsed to icons
+// - open the wiki and assert the main menu stays full; only the user folds it to the rail
 // - create a page with a link to a page that does not exist yet
 // - edit the page and save a second version
 // - open the history, restore v1 and assert the page shows the v1 text again
@@ -57,7 +57,9 @@ test('a wiki page is created, edited and restored from history', async ({
 
     await page.getByTestId('sidebar-link-wiki').click();
     await expect(page.getByTestId('wiki-home')).toBeVisible();
-    await expect(page.getByTestId('project-left-menu')).toHaveClass(/home-left-menu--collapsed/);
+    await expect(page.getByTestId('project-left-menu')).not.toHaveClass(
+        /home-left-menu--collapsed/
+    );
 
     await Interaction.createWikiPage(
         page,

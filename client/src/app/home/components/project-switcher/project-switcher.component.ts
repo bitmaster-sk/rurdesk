@@ -6,6 +6,7 @@ import {
     OnInit,
     computed,
     inject,
+    input,
     signal,
     viewChild
 } from '@angular/core';
@@ -34,10 +35,14 @@ interface ProjectGroup {
     styleUrls: ['./project-switcher.component.scss'],
     providers: [WindowService],
     standalone: false,
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: { '[class.project-switcher--rail]': 'isRail()' }
 })
 export class ProjectSwitcherComponent implements OnInit, OnDestroy {
     private static nextId = 0;
+
+    /** In the folded side menu only the project tile shows; the tooltip names the project. */
+    public readonly isRail = input(false);
 
     private readonly router = inject(Router);
     private readonly i18n = inject(I18nService);

@@ -18,6 +18,18 @@
     }
 }
 
+// In the rail only the clock icon shows, on the rail's axis.
+:host(.tracker-control--rail) {
+    .ctl-clock {
+        justify-content: center;
+        padding: 0;
+    }
+
+    .ctl-digits {
+        display: none;
+    }
+}
+
 .tracker-ctl {
     --tt-accent: var(--ui-color-primary);
     display: inline-flex;

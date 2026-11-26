@@ -6,7 +6,9 @@
     aria-haspopup="dialog"
     [attr.aria-expanded]="isOpen()"
     [attr.aria-label]="('PROJECT.SWITCHER.LABEL' | translate) + ': ' + (project()?.name ?? '')"
-    [attr.title]="('PROJECT.SWITCHER.LABEL' | translate) + ' (P)'"
+    [attr.title]="isRail() ? null : ('PROJECT.SWITCHER.LABEL' | translate) + ' (P)'"
+    uiTooltipPosition="right"
+    [uiTooltip]="isRail() ? (project()?.name ?? '') + ' (P)' : ''"
     (click)="onTriggerClick()"
 >
     @if (project(); as project) {

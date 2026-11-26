@@ -31,12 +31,18 @@ const SPARK_BUCKETS = 10;
     styleUrls: ['./tracker-control.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush,
-    host: { '[class.tracker-control--side]': 'isSide()' }
+    host: {
+        '[class.tracker-control--side]': 'isSide()',
+        '[class.tracker-control--rail]': 'isRail()'
+    }
 })
 export class TrackerControlComponent {
     public readonly variant = input<TrackerControlVariant>(TrackerControlVariant.Bar);
 
-    protected readonly isSide = computed(() => this.variant() === TrackerControlVariant.Side);
+    /** In the side menu, folded to the rail or not. */
+    protected readonly isSide = computed(() => this.variant() !== TrackerControlVariant.Bar);
+
+    protected readonly isRail = computed(() => this.variant() === TrackerControlVariant.Rail);
 
     /** In the side menu the details open beside the menu, elsewhere under the control. */
     protected readonly popoverPlacement = computed<UiOverlayPlacement>(() =>
@@ -70,6 +76,11 @@ export class TrackerControlComponent {
 
     protected readonly elapsedLabel = computed(() =>
         DurationFormatter.secondsToClock(this.elapsedSeconds())
+    );
+
+    /** The rail shows only the clock icon, so its tooltip carries the time and the issue. */
+    protected readonly railTooltip = computed(() =>
+        this.isRail() ? `${this.elapsedLabel()} · #${this.tracker()?.idIssuePublic}` : ''
     );
 
     protected readonly noteControl = new FormControl<string>('');

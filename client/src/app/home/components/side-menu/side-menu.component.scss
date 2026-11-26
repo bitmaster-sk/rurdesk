@@ -30,7 +30,7 @@ ul {
         display: flex;
         align-items: center;
         gap: var(--ui-space);
-        padding: 0 var(--ui-space) var(--ui-space-m) var(--ui-space-l);
+        padding: 0 var(--ui-space-l) var(--ui-space-m);
         color: var(--ui-color-text);
     }
 
@@ -39,11 +39,17 @@ ul {
         font-weight: bold;
     }
 
-    .brand-search {
+    // Both buttons name their shortcut in a tooltip, so they keep one size and the row never
+    // grows past the 12rem menu.
+    .brand-search,
+    .brand-toggle {
         display: flex;
+        flex-shrink: 0;
         align-items: center;
-        gap: var(--ui-space-s);
-        padding: var(--ui-space-s) var(--ui-space);
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
         border: 1px solid transparent;
         border-radius: var(--ui-radius-md);
         background: transparent;
@@ -54,24 +60,6 @@ ul {
         &:focus-visible {
             border-color: var(--ui-color-border);
             color: var(--ui-color-text);
-        }
-
-        // The shortcut shows only on hover and keyboard focus, so the header stays quiet.
-        kbd {
-            max-width: 0;
-            overflow: hidden;
-            opacity: 0;
-            font-family: var(--ui-font-mono);
-            font-size: var(--font-size-xs);
-            transition:
-                max-width 0.15s ease,
-                opacity 0.15s ease;
-        }
-
-        &:hover kbd,
-        &:focus-visible kbd {
-            max-width: 3rem;
-            opacity: 1;
         }
     }
 
@@ -187,90 +175,45 @@ ul {
     margin-bottom: var(--ui-space);
 }
 
+// The rail keeps every row and only hides its label, visually: each icon keeps its accessible
+// name, and the tooltip shows it to sighted users. All icons share one vertical axis.
 .home-left-menu--collapsed {
     flex-basis: 3.25rem;
-    position: relative;
-    z-index: 30;
-    overflow: visible;
-    border-right: none;
 
-    .menu-panel {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        left: 0;
-        width: 3.25rem;
-        overflow: hidden;
-        background-color: var(--ui-color-canvas);
-        border-right: 1px solid var(--ui-color-border);
-        transition:
-            width 180ms ease-out,
-            box-shadow 180ms ease-out;
-        transition-delay: 100ms;
+    .brand {
+        flex-direction: column;
+        padding: 0 0 var(--ui-space-m);
     }
 
-    // The header keeps its full width so the rail clips it to the logo and the project tile.
-    .menu-head {
-        width: 12rem;
-        --project-switcher-border: transparent;
-        --project-switcher-bg: transparent;
-    }
-
-    .brand-name,
-    .brand-search {
-        opacity: 0;
-        transition: opacity 140ms ease-out;
-        transition-delay: 100ms;
-    }
-
-    // The rail clips them until they get rail styles of their own.
-    .timer,
-    app-user-menu {
-        width: 12rem;
+    .brand-name {
+        display: none;
     }
 
     .navigation {
-        width: 12rem;
-
         .menu-section-title {
-            position: relative;
-            padding: var(--ui-space) var(--ui-space-m);
-            line-height: 1rem;
-            white-space: nowrap;
+            height: 1px;
+            margin: var(--ui-space) var(--ui-space-m) var(--ui-space-l);
+            padding: 0;
+            overflow: hidden;
             color: transparent;
-            transition: color 120ms ease-out;
-            transition-delay: 100ms;
-
-            &::after {
-                content: '';
-                position: absolute;
-                top: 50%;
-                left: var(--ui-space-m);
-                width: calc(3.25rem - 2 * var(--ui-space-m));
-                border-top: 1px solid var(--ui-color-border);
-                transition: opacity 120ms ease-out;
-                transition-delay: 100ms;
-            }
+            background-color: var(--ui-color-border);
         }
 
         .menu-item {
-            width: 3.25rem;
-            transition: width 180ms ease-out;
-            transition-delay: 100ms;
+            .menu-item-border {
+                display: none;
+            }
 
             .link {
                 position: relative;
-                margin: 0 var(--ui-space) 0 var(--ui-space-s);
-                white-space: nowrap;
-                overflow: hidden;
+                justify-content: center;
+                margin: 0 var(--ui-space-s);
 
                 .icon {
-                    flex-shrink: 0;
                     margin-right: 0;
                 }
 
-                // In the rail the unread count sits on the icon's corner and grows over the
-                // icon, since the row clips anything past its right edge.
+                // The unread count sits on the icon's corner.
                 .count {
                     position: absolute;
                     top: 0;
@@ -280,77 +223,14 @@ ul {
                 }
 
                 .text {
-                    margin-left: 0;
-                    opacity: 0;
-                    transform: translateX(-0.25rem);
-                    transition:
-                        opacity 140ms ease-out,
-                        transform 140ms ease-out,
-                        margin-left 180ms ease-out;
-                    transition-delay: 100ms;
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                    clip-path: inset(50%);
+                    white-space: nowrap;
                 }
             }
-        }
-    }
-
-    &:not(.home-left-menu--resting):hover,
-    &:has(:focus-visible) {
-        .menu-panel {
-            width: 12rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-            transition-delay: 150ms;
-        }
-
-        .menu-head {
-            --project-switcher-border: var(--ui-color-border);
-            --project-switcher-bg: var(--ui-color-surface);
-        }
-
-        .brand-name,
-        .brand-search {
-            opacity: 1;
-            transition-delay: 220ms;
-        }
-
-        .navigation {
-            .menu-section-title {
-                color: var(--ui-color-text-muted);
-                transition-delay: 250ms;
-
-                &::after {
-                    opacity: 0;
-                    transition-delay: 150ms;
-                }
-            }
-
-            .menu-item {
-                width: 100%;
-                transition-delay: 150ms;
-
-                .link .text {
-                    margin-left: var(--ui-space);
-                    opacity: 1;
-                    transform: none;
-                    transition-delay: 220ms, 220ms, 150ms;
-                }
-
-                .link .count {
-                    position: static;
-                }
-            }
-        }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .menu-panel,
-        .brand-name,
-        .brand-search,
-        .brand-search kbd,
-        .navigation .menu-section-title,
-        .navigation .menu-section-title::after,
-        .navigation .menu-item,
-        .navigation .menu-item .link .text {
-            transition: none;
         }
     }
 }

@@ -9,6 +9,8 @@ import { Project } from 'src/app/project/model/project.model';
 import { WindowService } from 'src/app/shared/window/window.service';
 import { UiDividerComponent } from 'src/app/ui/components/divider/divider.component';
 import { UiPopoverComponent } from 'src/app/ui/components/popover/popover.component';
+import { UiTooltipComponent } from 'src/app/ui/components/tooltip/tooltip.component';
+import { UiTooltipDirective } from 'src/app/ui/directives/tooltip.directive';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
 import { ProjectSwitcherComponent } from './project-switcher.component';
@@ -43,7 +45,12 @@ interface Setup {
     windowClose$: Subject<Project | null>;
 }
 
-async function setup(url: string, idProject = 1, idsRecent = [1, 3]): Promise<Setup> {
+async function setup(
+    url: string,
+    idProject = 1,
+    idsRecent = [1, 3],
+    isRail = false
+): Promise<Setup> {
     const projects = signal<Project[]>(PROJECTS);
     const idRoute = signal(idProject);
     const context = {
@@ -58,7 +65,13 @@ async function setup(url: string, idProject = 1, idsRecent = [1, 3]): Promise<Se
     const windowClose$ = new Subject<Project | null>();
 
     await TestBed.configureTestingModule({
-        declarations: [ProjectSwitcherComponent, UiPopoverComponent, UiDividerComponent],
+        declarations: [
+            ProjectSwitcherComponent,
+            UiPopoverComponent,
+            UiDividerComponent,
+            UiTooltipDirective,
+            UiTooltipComponent
+        ],
         imports: [
             TranslateModule.forRoot({
                 loader: { provide: TranslateLoader, useClass: EmptyLoader }
@@ -91,6 +104,9 @@ async function setup(url: string, idProject = 1, idsRecent = [1, 3]): Promise<Se
     const router = TestBed.inject(Router);
     await router.navigateByUrl(url);
     const fixture = TestBed.createComponent(ProjectSwitcherComponent);
+    fixture.componentRef.setInput('isRail', isRail);
+    // As wide as the side menu, folded or not.
+    (fixture.nativeElement as HTMLElement).style.width = isRail ? '3.25rem' : '12rem';
     fixture.autoDetectChanges();
     await fixture.whenStable();
     return {
@@ -131,6 +147,24 @@ describe('ProjectSwitcherComponent', () => {
 
         expect(trigger(element).textContent).toContain('Beta');
         expect(trigger(element).querySelector('.tile')?.textContent?.trim()).toBe('BE');
+    });
+
+    it('shows only the tile in the rail and names the project on focus', async () => {
+        const { element } = await setup('/project/2/view', 2, [1, 3], true);
+        const button = trigger(element).getBoundingClientRect();
+        const tile = trigger(element).querySelector('.tile')!.getBoundingClientRect();
+
+        expect(tile.left - button.left).toBeCloseTo(button.right - tile.right, 0);
+        expect(
+            trigger(element).querySelector('.switcher__name')!.getBoundingClientRect().width
+        ).toBe(0);
+        expect(trigger(element).getAttribute('aria-label')).toContain('Beta');
+
+        trigger(element).focus();
+
+        await vi.waitFor(() =>
+            expect(document.querySelector('.ui-tooltip')?.textContent?.trim()).toBe('Beta (P)')
+        );
     });
 
     it('lists recent projects first, then the rest, and marks the current one', async () => {

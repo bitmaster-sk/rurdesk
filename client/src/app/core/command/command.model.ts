@@ -57,6 +57,7 @@ export type HotkeyAction =
     | { type: 'close' }
     | { type: 'help' }
     | { type: 'project-picker' }
+    | { type: 'toggle-rail' }
     | { type: 'list-move'; delta: 1 | -1 }
     | { type: 'list-move-across'; delta: 1 | -1 }
     | { type: 'list-extend'; delta: 1 | -1 }

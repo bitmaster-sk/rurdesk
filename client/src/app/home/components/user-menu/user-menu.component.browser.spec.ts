@@ -9,6 +9,8 @@ import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
+import { UiTooltipComponent } from 'src/app/ui/components/tooltip/tooltip.component';
+import { UiTooltipDirective } from 'src/app/ui/directives/tooltip.directive';
 import { AvatarStub, TablerIconStub } from 'src/testing/stubs';
 import { UserMenuComponent } from './user-menu.component';
 // The spacing tokens the row and overlay geometry depend on live in the global styles.
@@ -37,9 +39,9 @@ class LabelLoader implements TranslateLoader {
 
 const openHelp = vi.fn();
 
-async function render(user: User): Promise<HTMLElement> {
+async function render(user: User, isRail = false): Promise<HTMLElement> {
     await TestBed.configureTestingModule({
-        declarations: [UserMenuComponent, UiMenuComponent],
+        declarations: [UserMenuComponent, UiMenuComponent, UiTooltipDirective, UiTooltipComponent],
         imports: [
             TranslateModule.forRoot({
                 loader: { provide: TranslateLoader, useClass: LabelLoader },
@@ -58,8 +60,9 @@ async function render(user: User): Promise<HTMLElement> {
         ]
     }).compileComponents();
     const fixture = TestBed.createComponent(UserMenuComponent);
+    fixture.componentRef.setInput('isRail', isRail);
     // As wide as the side menu it sits in, so the panel has room beside it.
-    (fixture.nativeElement as HTMLElement).style.width = '12rem';
+    (fixture.nativeElement as HTMLElement).style.width = isRail ? '3.25rem' : '12rem';
     fixture.autoDetectChanges();
     await fixture.whenStable();
     return fixture.nativeElement as HTMLElement;
@@ -128,6 +131,21 @@ describe('UserMenuComponent', () => {
 
         expect(openHelp).toHaveBeenCalled();
         await vi.waitFor(() => expect(document.querySelector('.ui-menu')).toBeNull());
+    });
+
+    it('shows only the avatar in the rail and names the user on focus', async () => {
+        const element = await render(regular, true);
+        const button = trigger(element).getBoundingClientRect();
+        const avatar = trigger(element).querySelector('app-avatar')!.getBoundingClientRect();
+
+        expect(avatar.left - button.left).toBeCloseTo(button.right - avatar.right, 0);
+        expect(trigger(element).querySelector('.name')!.getBoundingClientRect().width).toBe(0);
+
+        trigger(element).focus();
+
+        await vi.waitFor(() =>
+            expect(document.querySelector('.ui-tooltip')?.textContent?.trim()).toBe('Rita Regular')
+        );
     });
 
     it('opens beside the row, not over it', async () => {

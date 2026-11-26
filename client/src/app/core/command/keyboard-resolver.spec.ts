@@ -87,6 +87,20 @@ describe('KeyboardResolver.resolveHotkey', () => {
             )
         ).toEqual({ type: 'none' });
     });
+    it('folds the side menu on a bare [ only', () => {
+        expect(KeyboardResolver.resolveHotkey(key({ key: '[' }), ctx())).toEqual({
+            type: 'toggle-rail'
+        });
+        expect(KeyboardResolver.resolveHotkey(key({ key: '[', metaKey: true }), ctx())).toEqual({
+            type: 'none'
+        });
+        expect(
+            KeyboardResolver.resolveHotkey(
+                key({ key: '[', target: target({ tagName: 'TEXTAREA' }) }),
+                ctx()
+            )
+        ).toEqual({ type: 'none' });
+    });
     // Regression: arrows inside an open dropdown moved both its highlight and the
     // task row behind it.
     it('never fires bare keys from inside a CDK overlay', () => {

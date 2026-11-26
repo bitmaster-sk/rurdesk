@@ -11,6 +11,8 @@
             class="ctl-clock"
             data-testid="tracker-control-clock"
             [attr.aria-label]="'TRACK.DETAILS' | translate"
+            uiTooltipPosition="right"
+            [uiTooltip]="railTooltip()"
             (click)="popover.toggle(host); onPopoverOpened()"
         >
             <span class="tt-dot"></span>
@@ -29,15 +31,18 @@
                 <tabler-icon class="ctl-arrow" icon="arrow-up-right" [size]="12" />
             </a>
         }
-        <button
-            type="button"
-            class="ctl-quick"
-            data-testid="tracker-control-pause"
-            [attr.aria-label]="(isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate"
-            (click)="onTogglePause()"
-        >
-            <tabler-icon [icon]="isPaused() ? 'player-play' : 'player-pause'" [size]="14" />
-        </button>
+        <!-- The rail has room for the clock only; the details pause and resume. -->
+        @if (!isRail()) {
+            <button
+                type="button"
+                class="ctl-quick"
+                data-testid="tracker-control-pause"
+                [attr.aria-label]="(isPaused() ? 'TRACK.RESUME' : 'TRACK.PAUSE') | translate"
+                (click)="onTogglePause()"
+            >
+                <tabler-icon [icon]="isPaused() ? 'player-play' : 'player-pause'" [size]="14" />
+            </button>
+        }
     </div>
 
     <ui-popover #popover panelClass="tracker-popover" [placement]="popoverPlacement()">
