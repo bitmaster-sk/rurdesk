@@ -5,6 +5,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } fro
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { TablerIconStub } from 'src/testing/stubs';
@@ -130,6 +131,18 @@ describe('SideMenuComponent', () => {
         element.querySelector<HTMLElement>('[data-testid="side-menu-search"]')?.click();
 
         expect(openPalette).toHaveBeenCalled();
+    });
+
+    it('shows only the search icon until the pointer is on it', async () => {
+        const element = await render('/table');
+        const search = element.querySelector<HTMLElement>('[data-testid="side-menu-search"]')!;
+        const hint = (): DOMRect => search.querySelector('kbd')!.getBoundingClientRect();
+
+        expect(hint().width).toBe(0);
+
+        await userEvent.hover(search);
+
+        await vi.waitFor(() => expect(hint().width).toBeGreaterThan(10));
     });
 
     it('shows project settings only to the project owner', async () => {

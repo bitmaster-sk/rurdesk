@@ -56,9 +56,22 @@ ul {
             color: var(--ui-color-text);
         }
 
+        // The shortcut shows only on hover and keyboard focus, so the header stays quiet.
         kbd {
+            max-width: 0;
+            overflow: hidden;
+            opacity: 0;
             font-family: var(--ui-font-mono);
             font-size: var(--font-size-xs);
+            transition:
+                max-width 0.15s ease,
+                opacity 0.15s ease;
+        }
+
+        &:hover kbd,
+        &:focus-visible kbd {
+            max-width: 3rem;
+            opacity: 1;
         }
     }
 
@@ -316,6 +329,7 @@ ul {
         .menu-panel,
         .brand-name,
         .brand-search,
+        .brand-search kbd,
         .navigation .menu-section-title,
         .navigation .menu-section-title::after,
         .navigation .menu-item,
