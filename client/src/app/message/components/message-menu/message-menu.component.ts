@@ -28,10 +28,10 @@ import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum';
 
+/** Chats menu behind the side menu row; the row itself lives in the side menu. */
 @Component({
     selector: 'app-message-menu',
     templateUrl: './message-menu.component.html',
-    styleUrls: ['./message-menu.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -43,7 +43,10 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
     private readonly projectApi = inject(ProjectApi);
     private readonly sNotice = inject(NoticeService);
 
-    private readonly chatMenu = viewChild.required<UiMenuComponent>('chatMenu');
+    // Not required: the side menu reads isOpen before this component's view query resolves.
+    private readonly chatMenu = viewChild<UiMenuComponent>('chatMenu');
+
+    public readonly isOpen = computed(() => this.chatMenu()?.isOpen() ?? false);
 
     private readonly _projects = signal<Project[]>([]);
     private readonly _teams = signal<Team[]>([]);
@@ -63,14 +66,11 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         ];
     });
 
-    protected readonly messageCount = computed<number>(() => {
+    /** Sum of unread messages over all chats, for the side menu row. */
+    public readonly badge = computed<string>(() => {
         let cnt = 0;
         this.unread().forEach(msgs => (cnt += msgs.length));
-        return cnt;
-    });
-
-    protected readonly messageCountDisplay = computed<string>(() => {
-        return MessageFormatter.formatUnreadBadgeText(this.messageCount()) ?? '';
+        return MessageFormatter.formatUnreadBadgeText(cnt) ?? '';
     });
 
     private readonly subscriptions = new Subscription();
@@ -105,8 +105,8 @@ export class MessageMenuComponent implements OnInit, OnDestroy {
         this.subscriptions.unsubscribe();
     }
 
-    protected onChatClick(event: MouseEvent): void {
-        this.chatMenu().toggle(event);
+    public toggle(origin: HTMLElement): void {
+        this.chatMenu()?.toggle(origin);
     }
 
     private toProjectChatMenuItems(

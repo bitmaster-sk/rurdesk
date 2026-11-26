@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, isActive } from '@angular/router';
 import { filter, map } from 'rxjs';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { AclStore } from 'src/app/project/store/acl.store';
@@ -22,6 +22,9 @@ export class SideMenuComponent {
     protected readonly idProject = this.projectContext.idProject;
 
     protected readonly isResting = signal(false);
+
+    protected readonly isOnMessages = isActive('/message', this.router);
+    protected readonly isOnAgentChat = isActive('/agent-chat', this.router);
 
     protected readonly isCollapsed = toSignal(
         this.router.events.pipe(

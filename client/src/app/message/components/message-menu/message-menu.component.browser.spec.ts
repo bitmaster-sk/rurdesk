@@ -31,7 +31,7 @@ const dmFromGone: Message = {
     anchor: null
 };
 
-async function directChatLabels(unread: Map<string, Message[]>): Promise<string[]> {
+async function setup(unread: Map<string, Message[]>): Promise<MessageMenuComponent> {
     await TestBed.configureTestingModule({
         declarations: [MessageMenuComponent],
         providers: [
@@ -51,7 +51,12 @@ async function directChatLabels(unread: Map<string, Message[]>): Promise<string[
 
     const fixture = TestBed.createComponent(MessageMenuComponent);
     fixture.detectChanges();
-    const chats = (fixture.componentInstance as unknown as { chats(): UiMenuItem[] }).chats();
+    return fixture.componentInstance;
+}
+
+async function directChatLabels(unread: Map<string, Message[]>): Promise<string[]> {
+    const menu = await setup(unread);
+    const chats = (menu as unknown as { chats(): UiMenuItem[] }).chats();
     const direct = chats.find(group => group.labelKey === 'DIRECT.CHATS');
     return (direct?.items ?? []).map(item => item.label ?? '');
 }
@@ -66,5 +71,27 @@ describe('MessageMenuComponent — disabled users (browser)', () => {
         const unread = new Map<string, Message[]>([[key, [dmFromGone]]]);
 
         expect(await directChatLabels(unread)).toEqual(['Ada', 'Gone']);
+    });
+});
+
+describe('MessageMenuComponent — side menu row (browser)', () => {
+    it('sums the unread messages of every chat', async () => {
+        const fromAda = { ...dmFromGone, creator: active };
+        const unread = new Map<string, Message[]>([
+            [
+                MessageKeyConverter.toUnreadKey(ME, gone.idUser, MessageRecipientType.user),
+                [dmFromGone]
+            ],
+            [
+                MessageKeyConverter.toUnreadKey(ME, active.idUser, MessageRecipientType.user),
+                [fromAda, { ...fromAda, idMessage: 11 }]
+            ]
+        ]);
+
+        expect((await setup(unread)).badge()).toBe('3');
+    });
+
+    it('shows no count without unread messages', async () => {
+        expect((await setup(new Map())).badge()).toBe('');
     });
 });

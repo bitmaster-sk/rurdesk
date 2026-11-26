@@ -90,6 +90,11 @@
     }
 }
 
+.ui-menu-item--active {
+    color: var(--ui-menu-item-hover-fg);
+    font-weight: bold;
+}
+
 .ui-menu-item-label {
     flex: 1 1 auto;
     min-width: 0;

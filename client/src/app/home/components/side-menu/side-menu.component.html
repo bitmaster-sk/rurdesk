@@ -1,63 +1,65 @@
-@if (idProject(); as idProject) {
-    <div
-        class="home-left-menu grow-0 shrink-0 flex flex-col justify-between"
-        data-testid="project-left-menu"
-        [class.home-left-menu--collapsed]="isCollapsed()"
-        [class.home-left-menu--resting]="isResting()"
-        (click)="onMenuClick()"
-        (mouseleave)="onMenuLeave()"
-    >
-        <div class="top menu-panel">
-            <div class="menu-head">
-                <div class="brand">
-                    <svg
-                        class="shrink-0"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 64 64"
+<div
+    class="home-left-menu grow-0 shrink-0 flex flex-col justify-between"
+    data-testid="project-left-menu"
+    [class.home-left-menu--collapsed]="isCollapsed()"
+    [class.home-left-menu--resting]="isResting()"
+    (click)="onMenuClick()"
+    (mouseleave)="onMenuLeave()"
+>
+    <div class="top menu-panel">
+        <div class="menu-head">
+            <div class="brand">
+                <svg
+                    class="shrink-0"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                >
+                    <line
+                        x1="32"
+                        y1="18"
+                        x2="32"
+                        y2="11"
+                        stroke="currentColor"
+                        stroke-width="5"
+                        stroke-linecap="round"
+                    />
+                    <circle cx="32" cy="8.5" r="4" fill="#b85814" />
+                    <rect
+                        x="13"
+                        y="21"
+                        width="38"
+                        height="33"
+                        rx="10"
                         fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        aria-hidden="true"
-                    >
-                        <line
-                            x1="32"
-                            y1="18"
-                            x2="32"
-                            y2="11"
-                            stroke="currentColor"
-                            stroke-width="5"
-                            stroke-linecap="round"
-                        />
-                        <circle cx="32" cy="8.5" r="4" fill="#b85814" />
-                        <rect
-                            x="13"
-                            y="21"
-                            width="38"
-                            height="33"
-                            rx="10"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="5"
-                        />
-                        <rect x="20" y="35" width="9" height="5" rx="2.5" fill="currentColor" />
-                        <circle cx="41" cy="37.5" r="8.5" fill="#b85814" opacity="0.25" />
-                        <circle cx="41" cy="37.5" r="4.5" fill="#b85814" />
-                    </svg>
-                    <span class="brand-name">rurdesk</span>
-                    <button
-                        type="button"
-                        class="brand-search"
-                        data-testid="side-menu-search"
-                        [attr.aria-label]="'HOME.SEARCH' | translate"
-                        [attr.title]="('HOME.SEARCH' | translate) + ' (⌘K)'"
-                        (click)="onSearch()"
-                    >
-                        <tabler-icon icon="search" [size]="16" />
-                        <kbd>⌘K</kbd>
-                    </button>
-                </div>
-                <app-project-switcher />
+                        stroke="currentColor"
+                        stroke-width="5"
+                    />
+                    <rect x="20" y="35" width="9" height="5" rx="2.5" fill="currentColor" />
+                    <circle cx="41" cy="37.5" r="8.5" fill="#b85814" opacity="0.25" />
+                    <circle cx="41" cy="37.5" r="4.5" fill="#b85814" />
+                </svg>
+                <span class="brand-name">rurdesk</span>
+                <button
+                    type="button"
+                    class="brand-search"
+                    data-testid="side-menu-search"
+                    [attr.aria-label]="'HOME.SEARCH' | translate"
+                    [attr.title]="('HOME.SEARCH' | translate) + ' (⌘K)'"
+                    (click)="onSearch()"
+                >
+                    <tabler-icon icon="search" [size]="16" />
+                    <kbd>⌘K</kbd>
+                </button>
             </div>
+            @if (idProject()) {
+                <app-project-switcher />
+            }
+        </div>
+        @if (idProject(); as idProject) {
             <ul class="navigation">
                 <li class="menu-item">
                     <div class="menu-item-border"></div>
@@ -157,6 +159,67 @@
                     </a>
                 </li>
             </ul>
-        </div>
+        }
+        <!-- The overlays anchor to the whole row, so they open beside the menu edge, not over it. -->
+        <ul class="navigation global">
+            <li class="menu-item" #notificationsRow>
+                <div class="menu-item-border"></div>
+                <button
+                    type="button"
+                    class="link"
+                    data-testid="sidebar-notifications"
+                    aria-haspopup="dialog"
+                    [attr.aria-expanded]="notifications.isOpen()"
+                    (click)="notifications.toggle(notificationsRow)"
+                >
+                    <tabler-icon icon="bell" [size]="16" class="icon" />
+                    <span class="text">{{ 'NOTIFICATION.TITLE' | translate }}</span>
+                    @if (notifications.badge(); as badge) {
+                        <span class="count">{{ badge }}</span>
+                    }
+                </button>
+            </li>
+            <li class="menu-item" #messagesRow>
+                <div class="menu-item-border"></div>
+                <button
+                    type="button"
+                    class="link"
+                    data-testid="sidebar-messages"
+                    aria-haspopup="menu"
+                    [class.active]="isOnMessages()"
+                    [attr.aria-current]="isOnMessages() ? 'page' : null"
+                    [attr.aria-expanded]="messages.isOpen()"
+                    (click)="messages.toggle(messagesRow)"
+                >
+                    <tabler-icon icon="message" [size]="16" class="icon" />
+                    <span class="text">{{ 'HOME.MESSAGES' | translate }}</span>
+                    @if (messages.badge(); as badge) {
+                        <span class="count">{{ badge }}</span>
+                    }
+                </button>
+            </li>
+            <li class="menu-item mb-0" #agentChatRow>
+                <div class="menu-item-border"></div>
+                <button
+                    type="button"
+                    class="link"
+                    data-testid="agent-chat-menu"
+                    aria-haspopup="menu"
+                    [class.active]="isOnAgentChat()"
+                    [attr.aria-current]="isOnAgentChat() ? 'page' : null"
+                    [attr.aria-expanded]="agentChat.isOpen()"
+                    (click)="agentChat.toggle(agentChatRow)"
+                >
+                    <tabler-icon icon="robot" [size]="16" class="icon" />
+                    <span class="text">{{ 'AGENT_CHAT.MENU_LABEL' | translate }}</span>
+                    @if (agentChat.badge(); as badge) {
+                        <span class="count" data-testid="agent-chat-badge">{{ badge }}</span>
+                    }
+                </button>
+            </li>
+        </ul>
     </div>
-}
+</div>
+<app-notification-menu #notifications />
+<app-message-menu #messages />
+<app-agent-chat-menu #agentChat />

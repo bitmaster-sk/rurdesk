@@ -6,7 +6,6 @@ interface AppMenuItem extends UiMenuItem {
     tablerIcon?: string;
 }
 import { AuthStore } from 'src/app/auth/store/auth.store';
-import { ProjectContextStore } from '../../store/project-context.store';
 
 @Component({
     selector: 'app-top-menu',
@@ -18,11 +17,7 @@ import { ProjectContextStore } from '../../store/project-context.store';
 export class TopMenuComponent {
     private readonly i18n = inject(I18nService);
     private readonly authStore = inject(AuthStore);
-    private readonly projectContext = inject(ProjectContextStore);
 
-    protected readonly idProjectSelected = computed(() =>
-        this.projectContext.isOnProjectRoute() ? this.projectContext.idProject() : null
-    );
     protected readonly user = this.authStore.user;
 
     protected readonly userMenuItems = computed<AppMenuItem[]>(() => {

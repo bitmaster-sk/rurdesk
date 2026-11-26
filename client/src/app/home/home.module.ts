@@ -34,7 +34,10 @@ import {
     IconX,
     IconSearch,
     IconSelector,
-    IconCheck
+    IconCheck,
+    IconBell,
+    IconMessage,
+    IconRobot
 } from '@tabler/icons-angular';
 
 @NgModule({
@@ -77,7 +80,10 @@ import {
             IconX,
             IconSearch,
             IconSelector,
-            IconCheck
+            IconCheck,
+            IconBell,
+            IconMessage,
+            IconRobot
         })
     ]
 })

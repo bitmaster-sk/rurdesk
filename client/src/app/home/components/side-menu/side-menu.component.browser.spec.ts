@@ -1,4 +1,5 @@
-import { Component, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { Component, computed, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
@@ -6,9 +7,12 @@ import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
 import { AclStore } from 'src/app/project/store/acl.store';
+import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
 import { SideMenuComponent } from './side-menu.component';
+// The spacing tokens the row and overlay geometry depend on live in the global styles.
+import 'src/styles.scss';
 
 @Component({ selector: 'app-page-stub', template: '', standalone: true })
 class PageStub {}
@@ -17,10 +21,48 @@ class PageStub {}
 class ProjectSwitcherStub {}
 
 const openPalette = vi.fn();
+const toggleNotifications = vi.fn();
 
-class EmptyLoader implements TranslateLoader {
-    public getTranslation(): Observable<Record<string, string>> {
-        return of({});
+@Component({ selector: 'app-notification-menu', template: '', standalone: false })
+class NotificationMenuStub {
+    public readonly badge = signal('');
+    public readonly isOpen = signal(false);
+    public toggle(origin: HTMLElement): void {
+        toggleNotifications(origin);
+    }
+}
+
+// A real ui-menu, so the row's focus handling is exercised end to end.
+@Component({
+    selector: 'app-message-menu',
+    template: '<ui-menu #menu placement="right" [model]="items" />',
+    standalone: false
+})
+class MessageMenuStub {
+    private readonly menu = viewChild<UiMenuComponent>('menu');
+    public readonly items = [{ label: 'Team A', routerLink: ['/message', 1, 'team', 'view'] }];
+    public readonly badge = signal('12');
+    public readonly isOpen = computed(() => this.menu()?.isOpen() ?? false);
+    public toggle(origin: HTMLElement): void {
+        this.menu()?.toggle(origin);
+    }
+}
+
+@Component({ selector: 'app-agent-chat-menu', template: '', standalone: false })
+class AgentChatMenuStub {
+    public readonly badge = signal('');
+    public readonly isOpen = signal(false);
+    public toggle(): void {}
+}
+
+// The global rows get their real labels so they are as wide as in the app.
+class RowLabelLoader implements TranslateLoader {
+    public getTranslation(): Observable<Record<string, Record<string, string>>> {
+        return of({
+            NOTIFICATION: { TITLE: 'Notifications' },
+            HOME: { MESSAGES: 'Messages' },
+            AGENT_CHAT: { MENU_LABEL: 'Agent chat' }
+        });
     }
 }
 
@@ -29,14 +71,23 @@ async function render(
     { idProject = 1, isOwner = false }: { idProject?: number | null; isOwner?: boolean } = {}
 ): Promise<HTMLElement> {
     await TestBed.configureTestingModule({
-        declarations: [SideMenuComponent, ProjectSwitcherStub],
+        declarations: [
+            SideMenuComponent,
+            ProjectSwitcherStub,
+            NotificationMenuStub,
+            MessageMenuStub,
+            AgentChatMenuStub,
+            UiMenuComponent
+        ],
         imports: [
             TranslateModule.forRoot({
-                loader: { provide: TranslateLoader, useClass: EmptyLoader }
+                loader: { provide: TranslateLoader, useClass: RowLabelLoader },
+                fallbackLang: 'en'
             }),
             RouterOutlet,
             RouterLink,
             RouterLinkActive,
+            NgTemplateOutlet,
             TablerIconStub
         ],
         providers: [
@@ -89,10 +140,60 @@ describe('SideMenuComponent', () => {
         expect(owner.textContent).toContain('PROJECT.SETTINGS');
     });
 
-    it('renders no menu when the user has no project', async () => {
+    it('keeps only the global rows when the user has no project', async () => {
         const element = await render('/user', { idProject: null });
 
-        expect(element.querySelector('[data-testid="project-left-menu"]')).toBeNull();
+        expect(element.querySelector('[data-testid="project-switcher"]')).toBeNull();
+        expect(element.querySelector('[data-testid="sidebar-link-overview"]')).toBeNull();
+        expect(element.querySelector('[data-testid="sidebar-messages"]')).not.toBeNull();
+    });
+
+    it('shows the unread count on the row and opens the notification center', async () => {
+        const element = await render('/table');
+        const messages = element.querySelector('[data-testid="sidebar-messages"]');
+        expect(messages?.querySelector('.count')?.textContent?.trim()).toBe('12');
+        expect(element.querySelector('[data-testid="sidebar-notifications"] .count')).toBeNull();
+
+        element.querySelector<HTMLElement>('[data-testid="sidebar-notifications"]')?.click();
+
+        expect(toggleNotifications).toHaveBeenCalled();
+    });
+
+    it('marks Messages or Agent chat as the current page on their routes', async () => {
+        const current = (element: HTMLElement): string[] =>
+            ['sidebar-messages', 'agent-chat-menu'].filter(
+                id =>
+                    element.querySelector(`[data-testid="${id}"]`)?.getAttribute('aria-current') ===
+                    'page'
+            );
+
+        expect(current(await render('/message/1/team/view'))).toEqual(['sidebar-messages']);
+        TestBed.resetTestingModule();
+        expect(current(await render('/agent-chat/5'))).toEqual(['agent-chat-menu']);
+        TestBed.resetTestingModule();
+        expect(current(await render('/table'))).toEqual([]);
+    });
+
+    it('opens the chats clear of the menu edge and returns focus to the row on Escape', async () => {
+        const element = await render('/table');
+        const menu = element.querySelector<HTMLElement>('[data-testid="project-left-menu"]')!;
+        const row = element.querySelector<HTMLButtonElement>('[data-testid="sidebar-messages"]')!;
+        row.focus();
+
+        row.click();
+        await vi.waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('true'));
+        const panel = document.querySelector<HTMLElement>('.ui-menu')!;
+        expect(panel.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+            menu.getBoundingClientRect().right + 4
+        );
+        await vi.waitFor(() => expect(document.activeElement?.textContent).toContain('Team A'));
+
+        document.activeElement?.dispatchEvent(
+            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+        );
+
+        expect(document.activeElement).toBe(row);
+        await vi.waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('false'));
     });
 
     it('collapses the menu to icons on a route that asks for it', async () => {
@@ -102,17 +203,28 @@ describe('SideMenuComponent', () => {
         expect(href(element, 'sidebar-link-wiki')).toBe('/project/1/wiki');
     });
 
+    it('keeps the unread count whole on the icon in the collapsed menu', async () => {
+        const element = await render('/wiki');
+        const row = element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!;
+        const count = row.querySelector<HTMLElement>('.count')!.getBoundingClientRect();
+        const rail = element.querySelector<HTMLElement>('.menu-panel')!.getBoundingClientRect();
+
+        expect(count.right).toBeLessThanOrEqual(row.getBoundingClientRect().right);
+        expect(count.right).toBeLessThanOrEqual(rail.right);
+    });
+
     it('expands the collapsed menu over the content while it has focus', async () => {
         const element = await render('/wiki');
         const panel = element.querySelector<HTMLElement>('.menu-panel');
         const label = element.querySelector<HTMLElement>('[data-testid="sidebar-link-wiki"] .text');
-        expect(panel?.getBoundingClientRect().width).toBeLessThan(60);
+        const railWidth = panel!.getBoundingClientRect().width;
+        expect(railWidth).toBeLessThan(60);
         expect(getComputedStyle(label!).opacity).toBe('0');
 
         element.querySelector<HTMLElement>('[data-testid="sidebar-link-wiki"]')?.focus();
 
         await vi.waitFor(() => {
-            expect(panel?.getBoundingClientRect().width).toBeGreaterThan(180);
+            expect(panel?.getBoundingClientRect().width).toBeGreaterThan(3 * railWidth);
             expect(getComputedStyle(label!).opacity).toBe('1');
         });
     });

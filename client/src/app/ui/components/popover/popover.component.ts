@@ -13,6 +13,7 @@ import {
     signal,
     viewChild
 } from '@angular/core';
+import { UiOverlayPlacement, UiOverlayPosition } from '../../util/ui-overlay-position';
 
 /**
  * Content-projecting overlay panel. Toggled imperatively from a parent via a
@@ -44,6 +45,8 @@ export class UiPopoverComponent implements OnDestroy {
     public readonly panelClass = input<string>('');
     /** When false, outside clicks / Escape do NOT close (parity with a pinned popover). */
     public readonly dismissable = input(true);
+    /** `right` opens beside the trigger instead of under it. */
+    public readonly placement = input<UiOverlayPlacement>('below');
 
     public readonly maxHeight = input<number | string | null>(null);
     public readonly growAfterOpen = input(false);
@@ -55,7 +58,8 @@ export class UiPopoverComponent implements OnDestroy {
     private readonly vcr = inject(ViewContainerRef);
     private readonly tpl = viewChild.required<TemplateRef<unknown>>('tpl');
 
-    protected readonly isOpen = signal(false);
+    private readonly _isOpen = signal(false);
+    public readonly isOpen = this._isOpen.asReadonly();
     private overlayRef: OverlayRef | null = null;
     /** Anchor element; excluded from outside-dismiss so its own toggle handler
      *  (not the CDK outside-click) governs closing — otherwise a click on the
@@ -82,13 +86,13 @@ export class UiPopoverComponent implements OnDestroy {
         this.disposeOverlay();
     }
 
-    /** Open anchored to the event's `currentTarget`, or close if already open. */
-    public toggle(event: Event): void {
+    /** Open anchored to an element (or the event's `currentTarget`), or close if already open. */
+    public toggle(target: HTMLElement | Event): void {
         if (this.isOpen()) {
             this.hide();
             return;
         }
-        this.show(event);
+        this.show(target);
     }
 
     /** Open anchored to an element (or the `currentTarget` of an event).
@@ -128,24 +132,7 @@ export class UiPopoverComponent implements OnDestroy {
             .withFlexibleDimensions(false)
             .withGrowAfterOpen(this.growAfterOpen())
             .withPush(true)
-            .withPositions([
-                {
-                    originX: 'start',
-                    originY: 'bottom',
-                    overlayX: 'start',
-                    overlayY: 'top',
-                    offsetY: 6
-                },
-                {
-                    originX: 'start',
-                    originY: 'top',
-                    overlayX: 'start',
-                    overlayY: 'bottom',
-                    offsetY: -6
-                },
-                { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-                { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 }
-            ]);
+            .withPositions(UiOverlayPosition.of(this.placement()));
 
         this.overlayRef = this.overlay.create({
             positionStrategy,
@@ -171,7 +158,7 @@ export class UiPopoverComponent implements OnDestroy {
                 this.hide();
             }
         });
-        this.isOpen.set(true);
+        this._isOpen.set(true);
     }
 
     public hide(): void {
@@ -179,7 +166,7 @@ export class UiPopoverComponent implements OnDestroy {
             return;
         }
         this.disposeOverlay();
-        this.isOpen.set(false);
+        this._isOpen.set(false);
         this.closed.emit();
     }
 

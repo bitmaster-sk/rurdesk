@@ -13,6 +13,7 @@ import {
     signal,
     viewChild
 } from '@angular/core';
+import { UiOverlayPlacement, UiOverlayPosition } from '../../util/ui-overlay-position';
 import { UiMenuItem } from './menu-item.model';
 
 /**
@@ -74,6 +75,9 @@ import { UiMenuItem } from './menu-item.model';
                         class="ui-menu-item"
                         role="menuitem"
                         tabindex="-1"
+                        routerLinkActive="ui-menu-item--active"
+                        ariaCurrentWhenActive="page"
+                        [routerLinkActiveOptions]="{ exact: true }"
                         [routerLink]="item.routerLink"
                         (click)="onActivate(item)"
                     >
@@ -125,6 +129,8 @@ export class UiMenuComponent implements OnDestroy {
     public readonly model = input<UiMenuItem[]>([]);
     /** Extra class on both the overlay pane and the `<ul>` (so `.user-menu`-style targeting still hits). */
     public readonly panelClass = input<string>('');
+    /** `right` opens beside the trigger instead of under it. */
+    public readonly placement = input<UiOverlayPlacement>('below');
 
     /** Optional custom row interior: `<ng-template #item let-item>`. */
     protected readonly itemTpl = contentChild<TemplateRef<{ $implicit: UiMenuItem }>>('item');
@@ -133,7 +139,8 @@ export class UiMenuComponent implements OnDestroy {
     private readonly vcr = inject(ViewContainerRef);
     private readonly tpl = viewChild.required<TemplateRef<unknown>>('tpl');
 
-    protected readonly isOpen = signal(false);
+    private readonly _isOpen = signal(false);
+    public readonly isOpen = this._isOpen.asReadonly();
     private overlayRef: OverlayRef | null = null;
     /** Anchor; excluded from outside-dismiss so its toggle handler governs closing. */
     private originEl: HTMLElement | null = null;
@@ -148,13 +155,13 @@ export class UiMenuComponent implements OnDestroy {
         this.disposeOverlay();
     }
 
-    /** Open anchored to the event's `currentTarget`, or close if already open. */
-    public toggle(event: Event): void {
+    /** Open anchored to an element (or the event's `currentTarget`), or close if already open. */
+    public toggle(target: HTMLElement | Event): void {
         if (this.isOpen()) {
             this.hide();
             return;
         }
-        this.show(event);
+        this.show(target);
     }
 
     /** Open anchored to an element (or the `currentTarget` of an event). */
@@ -177,24 +184,7 @@ export class UiMenuComponent implements OnDestroy {
             .withFlexibleDimensions(false)
             .withGrowAfterOpen(false)
             .withPush(true)
-            .withPositions([
-                {
-                    originX: 'start',
-                    originY: 'bottom',
-                    overlayX: 'start',
-                    overlayY: 'top',
-                    offsetY: 6
-                },
-                {
-                    originX: 'start',
-                    originY: 'top',
-                    overlayX: 'start',
-                    overlayY: 'bottom',
-                    offsetY: -6
-                },
-                { originX: 'end', originY: 'bottom', overlayX: 'end', overlayY: 'top', offsetY: 6 },
-                { originX: 'end', originY: 'top', overlayX: 'end', overlayY: 'bottom', offsetY: -6 }
-            ]);
+            .withPositions(UiOverlayPosition.of(this.placement()));
 
         this.overlayRef = this.overlay.create({
             positionStrategy,
@@ -211,12 +201,13 @@ export class UiMenuComponent implements OnDestroy {
             }
         });
         this.overlayRef.keydownEvents().subscribe(event => this.onKeydown(event));
-        this.isOpen.set(true);
+        this._isOpen.set(true);
 
         // Focus the first item once the portal has rendered. The keyboard
         // dispatcher is document-level so Escape/arrows work even without this,
-        // but focus-first is the expected menu UX.
-        queueMicrotask(() => this.rows()[0]?.focus());
+        // but focus-first is the expected menu UX. The overlay is not laid out yet and the
+        // list is only a few pixels tall, so a scrolling focus would leave it scrolled down.
+        queueMicrotask(() => this.rows()[0]?.focus({ preventScroll: true }));
     }
 
     public hide(restoreFocus = false): void {
@@ -225,7 +216,7 @@ export class UiMenuComponent implements OnDestroy {
         }
         const restoreEl = this.restoreFocusEl;
         this.disposeOverlay();
-        this.isOpen.set(false);
+        this._isOpen.set(false);
         if (restoreFocus) {
             restoreEl?.focus();
         }

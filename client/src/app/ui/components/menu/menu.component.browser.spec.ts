@@ -1,9 +1,10 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { UiModule } from '../../ui.module';
+import { UiOverlayPlacement } from '../../util/ui-overlay-position';
 import { UiMenuItem } from './menu-item.model';
 
 /** Minimal static catalogue so `| translate` resolves keys in tests. */
@@ -20,7 +21,7 @@ interface HostMenuItem extends UiMenuItem {
     standalone: false,
     template: `
         <button #trigger (click)="menu.toggle($event)">open</button>
-        <ui-menu #menu [panelClass]="panelClass" [model]="model">
+        <ui-menu #menu [panelClass]="panelClass" [placement]="placement" [model]="model">
             @if (useTemplate) {
                 <ng-template #item let-item>
                     <span class="custom-row">★ {{ item.label }}</span>
@@ -31,6 +32,7 @@ interface HostMenuItem extends UiMenuItem {
 })
 class HostComponent {
     public panelClass = '';
+    public placement: UiOverlayPlacement = 'below';
     public useTemplate = false;
     public lastCommand = '';
     public model: HostMenuItem[] = [
@@ -107,6 +109,53 @@ describe('UiMenuComponent (browser)', () => {
         await open(h => (h.model = [{ label: 'Home', routerLink: ['/'] }]));
         expect(items()[0].tagName).toBe('A');
         expect(items()[0].getAttribute('href')).toBe('/');
+    });
+
+    it('marks the item of the current page with aria-current', async () => {
+        await TestBed.inject(Router).navigateByUrl('/');
+        await open(
+            h =>
+                (h.model = [
+                    { label: 'Home', routerLink: ['/'] },
+                    { label: 'Other', routerLink: ['/other'] }
+                ])
+        );
+        await vi.waitFor(() => expect(items()[0].getAttribute('aria-current')).toBe('page'));
+        expect(items()[1].hasAttribute('aria-current')).toBe(false);
+    });
+
+    it('keeps a long list at its top when it focuses the first item', async () => {
+        // The first item is focused before the overlay is laid out; the panel is only a few
+        // pixels tall then, and a scrolling focus would leave the list scrolled down.
+        const squeeze = document.createElement('style');
+        squeeze.textContent = '.ui-menu { max-height: 9px; overflow-y: auto; }';
+        document.head.append(squeeze);
+        try {
+            await open(
+                h =>
+                    (h.model = [
+                        { labelKey: 'MENU.GROUP', items: [{ label: 'First', command: () => {} }] }
+                    ])
+            );
+            await vi.waitFor(() => expect(document.activeElement).toBe(items()[0]));
+            expect(panel()!.scrollTop).toBe(0);
+        } finally {
+            squeeze.remove();
+        }
+    });
+
+    it('opens under the trigger by default', async () => {
+        const fixture = await open();
+        const button = trigger(fixture.nativeElement).getBoundingClientRect();
+        const menu = panel()!.getBoundingClientRect();
+        expect(menu.top).toBeGreaterThanOrEqual(button.bottom);
+        expect(menu.left).toBeLessThan(button.right);
+    });
+
+    it('opens beside the trigger with placement right', async () => {
+        const fixture = await open(h => (h.placement = 'right'));
+        const button = trigger(fixture.nativeElement).getBoundingClientRect();
+        expect(panel()!.getBoundingClientRect().left).toBeGreaterThanOrEqual(button.right);
     });
 
     it('renders a group as role=group with aria-label; empty group is header-only', async () => {

@@ -4,7 +4,6 @@ import {
     computed,
     DestroyRef,
     inject,
-    input,
     OnInit,
     signal,
     viewChild
@@ -21,12 +20,12 @@ import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 
-const MAX_RECENT = 5;
+const MAX_RECENT = 6;
 
+/** Agent chat menu behind the side menu row; the row itself lives in the side menu. */
 @Component({
     selector: 'app-agent-chat-menu',
     templateUrl: './agent-chat-menu.component.html',
-    styleUrls: ['./agent-chat-menu.component.scss'],
     standalone: false,
     changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -38,25 +37,20 @@ export class AgentChatMenuComponent implements OnInit {
     private readonly destroyRef = inject(DestroyRef);
     private readonly projectContext = inject(ProjectContextStore);
 
-    /** The project selected in the top menu; the side menu's project stands in when none is. */
-    public readonly idProject = input<number | null>(null);
-
-    private readonly menu = viewChild.required<UiMenuComponent>('agentMenu');
+    // Not required: the side menu reads isOpen before this component's view query resolves.
+    private readonly menu = viewChild<UiMenuComponent>('agentMenu');
 
     private readonly conversations = signal<AgentConversationListItem[]>([]);
 
-    private readonly currentProject = computed<number | null>(
-        () => this.idProject() ?? this.projectContext.idProject()
-    );
+    public readonly isOpen = computed(() => this.menu()?.isOpen() ?? false);
 
-    protected readonly count = this.unreadStore.count;
-
-    protected readonly badgeText = computed<string>(
-        () => MessageFormatter.formatUnreadBadgeText(this.count()) ?? ''
+    /** Unread conversations, for the side menu row. */
+    public readonly badge = computed<string>(
+        () => MessageFormatter.formatUnreadBadgeText(this.unreadStore.count()) ?? ''
     );
 
     protected readonly items = computed<UiMenuItem[]>(() => {
-        const idProject = this.currentProject();
+        const idProject = this.projectContext.idProject();
         const recent = this.toConversationItems(this.conversations(), idProject);
         return [
             ...recent,
@@ -85,8 +79,8 @@ export class AgentChatMenuComponent implements OnInit {
             .subscribe(() => this.loadConversations());
     }
 
-    protected onClick(event: MouseEvent): void {
-        this.menu().toggle(event);
+    public toggle(origin: HTMLElement): void {
+        this.menu()?.toggle(origin);
     }
 
     private loadConversations(): void {

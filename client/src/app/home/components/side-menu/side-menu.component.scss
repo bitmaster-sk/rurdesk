@@ -15,6 +15,13 @@ ul {
     border-right: 1px solid var(--ui-color-border);
     overflow: hidden;
 
+    .menu-panel {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
     .menu-head {
         padding: var(--ui-space-m) 0 var(--ui-space);
     }
@@ -56,6 +63,11 @@ ul {
     }
 
     .navigation {
+        // On a short screen the project links scroll so the global rows stay reachable.
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+
         .menu-section-title {
             color: var(--ui-color-text-muted);
             text-transform: uppercase;
@@ -103,6 +115,32 @@ ul {
                 }
             }
 
+            button.link {
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
+            }
+
+            .link[aria-expanded='true'] {
+                color: var(--ui-color-primary);
+                border: 1px solid var(--ui-color-border);
+            }
+
+            .count {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 1.125rem;
+                height: 1.125rem;
+                margin-left: auto;
+                padding: 0 var(--ui-space-xs);
+                border-radius: 999px;
+                background: var(--ui-red-500);
+                color: var(--ui-brand-50);
+                font-size: var(--font-size-xs);
+                font-weight: bold;
+            }
+
             .link:hover {
                 color: var(--ui-color-primary);
                 background-color: var(--ui-color-content-hover);
@@ -117,6 +155,13 @@ ul {
             }
         }
     }
+}
+
+.home-left-menu .global {
+    flex-shrink: 0;
+    margin-top: auto;
+    padding: var(--ui-space) 0;
+    border-top: 1px solid var(--ui-color-border);
 }
 
 .home-left-menu--collapsed {
@@ -185,6 +230,7 @@ ul {
             transition-delay: 100ms;
 
             .link {
+                position: relative;
                 margin: 0 var(--ui-space) 0 var(--ui-space-s);
                 white-space: nowrap;
                 overflow: hidden;
@@ -192,6 +238,16 @@ ul {
                 .icon {
                     flex-shrink: 0;
                     margin-right: 0;
+                }
+
+                // In the rail the unread count sits on the icon's corner and grows over the
+                // icon, since the row clips anything past its right edge.
+                .count {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    min-width: 1rem;
+                    height: 1rem;
                 }
 
                 .text {
@@ -247,6 +303,10 @@ ul {
                     opacity: 1;
                     transform: none;
                     transition-delay: 220ms, 220ms, 150ms;
+                }
+
+                .link .count {
+                    position: static;
                 }
             }
         }

@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { UiPopoverComponent } from '../../../ui/components/popover/popover.component';
 import { NotificationStore } from '../../store/notification.store';
 
+/** Notification center behind the side menu row; the row itself lives in the side menu. */
 @Component({
     selector: 'app-notification-menu',
     templateUrl: './notification-menu.component.html',
@@ -12,11 +13,17 @@ import { NotificationStore } from '../../store/notification.store';
 export class NotificationMenuComponent {
     private readonly store = inject(NotificationStore);
 
-    private overlay = viewChild.required<UiPopoverComponent>('overlay');
+    // Not required: the side menu reads isOpen before this component's view query resolves.
+    private readonly overlay = viewChild<UiPopoverComponent>('overlay');
 
-    protected unreadCount = this.store.unreadCount;
+    public readonly isOpen = computed(() => this.overlay()?.isOpen() ?? false);
 
-    protected onBellClick(event: MouseEvent): void {
-        this.overlay().toggle(event);
+    public readonly badge = computed<string>(() => {
+        const count = this.store.unreadCount();
+        return count > 99 ? '99+' : count > 0 ? String(count) : '';
+    });
+
+    public toggle(origin: HTMLElement): void {
+        this.overlay()?.toggle(origin);
     }
 }

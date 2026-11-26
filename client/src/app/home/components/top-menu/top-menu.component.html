@@ -1,9 +1,6 @@
 <div class="top-menu flex justify-end items-center px-2 py-1">
     <div class="flex gap-2 items-center">
         <app-tracker-control></app-tracker-control>
-        <app-agent-chat-menu [idProject]="idProjectSelected()"></app-agent-chat-menu>
-        <app-message-menu></app-message-menu>
-        <app-notification-menu></app-notification-menu>
 
         @if (user(); as user) {
             <!-- Renders into an overlay; hidden so it claims no flex gap slot. -->

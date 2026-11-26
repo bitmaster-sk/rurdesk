@@ -29,14 +29,13 @@ function conversation(
 
 interface Internals {
     items(): UiMenuItem[];
-    badgeText(): string;
+    badge(): string;
 }
 
 async function setup(
     conversations: AgentConversationListItem[],
     count = 0,
-    idProject: number | null = null,
-    idContextProject: number | null = null
+    idProject: number | null = null
 ): Promise<{
     menu: Internals;
     navigate: ReturnType<typeof vi.fn>;
@@ -57,14 +56,13 @@ async function setup(
             },
             { provide: NoticeService, useValue: { agentConversation$: new Subject() } },
             { provide: Router, useValue: { navigate } },
-            { provide: ProjectContextStore, useValue: { idProject: signal(idContextProject) } }
+            { provide: ProjectContextStore, useValue: { idProject: signal(idProject) } }
         ]
     })
         .overrideComponent(AgentChatMenuComponent, { set: { template: '' } })
         .compileComponents();
 
     const fixture = TestBed.createComponent(AgentChatMenuComponent);
-    fixture.componentRef.setInput('idProject', idProject);
     fixture.detectChanges();
     return {
         menu: fixture.componentInstance as unknown as Internals,
@@ -101,16 +99,6 @@ describe('AgentChatMenuComponent (browser)', () => {
         ]);
     });
 
-    it('takes the side menu project when the top menu has none selected', async () => {
-        const { menu } = await setup(
-            [conversation(1, 'Other', 2), conversation(2, 'Context', 7)],
-            0,
-            null,
-            7
-        );
-        expect(labels(menu.items()).slice(0, 2)).toEqual(['Context', 'Other']);
-    });
-
     it('lists pinned conversations first with a pin icon, then the rest in the usual order', async () => {
         const { menu } = await setup(
             [
@@ -133,20 +121,20 @@ describe('AgentChatMenuComponent (browser)', () => {
         expect(recent.map(i => i.icon)).toEqual(['pin', 'pin', 'robot', 'robot']);
     });
 
-    it('keeps a pinned conversation within the 5 shown even when it is old', async () => {
-        const many = Array.from({ length: 6 }, (_, i) => conversation(i + 1, `T${i + 1}`, 1));
-        many.push(conversation(7, 'Old pinned', 2, '2026-11-16T11:00:00Z'));
+    it('keeps a pinned conversation within the 6 shown even when it is old', async () => {
+        const many = Array.from({ length: 7 }, (_, i) => conversation(i + 1, `T${i + 1}`, 1));
+        many.push(conversation(8, 'Old pinned', 2, '2026-11-16T11:00:00Z'));
         const { menu } = await setup(many, 0, 1);
 
         const recent = menu.items().filter(i => i.routerLink);
-        expect(recent).toHaveLength(5);
+        expect(recent).toHaveLength(6);
         expect(recent[0].label).toBe('Old pinned');
     });
 
-    it('shows at most 5 conversations', async () => {
+    it('shows at most 6 conversations', async () => {
         const many = Array.from({ length: 8 }, (_, i) => conversation(i + 1, `T${i + 1}`, 1));
         const { menu } = await setup(many, 0, 1);
-        expect(menu.items().filter(i => i.routerLink)).toHaveLength(5);
+        expect(menu.items().filter(i => i.routerLink)).toHaveLength(6);
     });
 
     it('suffixes duplicate titles with the id so labels stay unique', async () => {
@@ -195,10 +183,10 @@ describe('AgentChatMenuComponent (browser)', () => {
     });
 
     it('shows no badge at 0 and caps it at 99+', async () => {
-        expect((await setup([], 0)).menu.badgeText()).toBe('');
+        expect((await setup([], 0)).menu.badge()).toBe('');
         TestBed.resetTestingModule();
-        expect((await setup([], 7)).menu.badgeText()).toBe('7');
+        expect((await setup([], 7)).menu.badge()).toBe('7');
         TestBed.resetTestingModule();
-        expect((await setup([], 100)).menu.badgeText()).toBe('99+');
+        expect((await setup([], 100)).menu.badge()).toBe('99+');
     });
 });

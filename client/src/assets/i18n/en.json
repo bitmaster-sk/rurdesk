@@ -562,6 +562,7 @@
         "GANTT": "Gantt",
         "WIKI": "Wiki",
         "RELEASES": "Releases",
+        "MESSAGES": "Messages",
         "SEARCH": "Search"
     },
     "WIKI": {
