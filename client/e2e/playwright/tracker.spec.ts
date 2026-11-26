@@ -145,7 +145,16 @@ test('starting a second timer offers to switch instead of failing', async ({
     await expect(dialog.getByTestId('tracker-switch-elapsed')).toHaveText(/00:00:\d{2}/);
     await expect(page.locator('.ui-toast--error')).toHaveCount(0);
 
+    // The switch submits the running timer and then starts the new one; until the new one is in,
+    // the control re-renders and would drop a popover opened on the old timer.
+    const started = page.waitForResponse(
+        response =>
+            response.url().endsWith('/api/private/tracker') &&
+            response.request().method() === 'POST' &&
+            response.ok()
+    );
     await page.getByTestId('tracker-switch-confirm').click();
+    await started;
 
     // The side menu timer shows no issue; its details name the one it runs on.
     await page.getByTestId('tracker-control-clock').click();
