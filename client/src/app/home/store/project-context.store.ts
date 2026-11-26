@@ -1,11 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import orderBy from 'lodash-es/orderBy';
-import { filter } from 'rxjs';
+import { catchError, filter, map, of, switchMap } from 'rxjs';
+import { ProjectMemberApi } from 'src/app/project/api/project-member.api.service';
 import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectStore } from 'src/app/project/project.store';
+import { ROLE_RANK, Role } from 'src/app/shared/constants/role.enum';
 
 const LAST_PROJECT_KEY = 'lastProjectId';
 const RECENT_PROJECTS_KEY = 'recentProjectIds';
@@ -20,6 +22,7 @@ const PROJECT_URL = /^\/project\/(\d+)(?:[/?#]|$)/;
 export class ProjectContextStore {
     private readonly router = inject(Router);
     private readonly projectApi = inject(ProjectApi);
+    private readonly memberApi = inject(ProjectMemberApi);
     private readonly projectStore = inject(ProjectStore);
 
     private readonly _projects = signal<Project[]>([]);
@@ -50,6 +53,26 @@ export class ProjectContextStore {
     public readonly project = computed<Project | null>(
         () => this._projects().find(p => p.idProject === this.idProject()) ?? null
     );
+
+    /** Loaded here, because AclStore knows the role only while a project page is open. */
+    private readonly role = toSignal(
+        toObservable(this.idProject).pipe(
+            switchMap(idProject =>
+                idProject === null
+                    ? of(null)
+                    : this.memberApi.loadUserRole$(idProject).pipe(
+                          map(res => res.role),
+                          catchError(() => of(null))
+                      )
+            )
+        ),
+        { initialValue: null }
+    );
+
+    public readonly canUpdateProject = computed(() => {
+        const role = this.role();
+        return role !== null && ROLE_RANK[role] >= ROLE_RANK[Role.Owner];
+    });
 
     public constructor() {
         this.router.events

@@ -6,7 +6,6 @@ import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
-import { AclStore } from 'src/app/project/store/acl.store';
 import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { TablerIconStub } from 'src/testing/stubs';
 import { ProjectContextStore } from '../../store/project-context.store';
@@ -99,8 +98,10 @@ async function render(
                 },
                 { path: '**', component: PageStub }
             ]),
-            { provide: ProjectContextStore, useValue: { idProject: signal(idProject) } },
-            { provide: AclStore, useValue: { canUpdateProject: signal(isOwner) } },
+            {
+                provide: ProjectContextStore,
+                useValue: { idProject: signal(idProject), canUpdateProject: signal(isOwner) }
+            },
             { provide: CommandPaletteService, useValue: { open: openPalette } }
         ]
     }).compileComponents();

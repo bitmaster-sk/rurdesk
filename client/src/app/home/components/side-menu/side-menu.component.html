@@ -74,7 +74,7 @@
                         <span class="text">{{ 'HOME.OVERVIEW' | translate }}</span>
                     </a>
                 </li>
-                @if (aclStore.canUpdateProject()) {
+                @if (canUpdateProject()) {
                     <li class="menu-item">
                         <div class="menu-item-border"></div>
                         <a

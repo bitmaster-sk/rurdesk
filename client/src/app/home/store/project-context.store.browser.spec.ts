@@ -1,11 +1,13 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
-import { Subject, of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ProjectMemberApi } from 'src/app/project/api/project-member.api.service';
 import { ProjectApi } from 'src/app/project/api/project.api.service';
 import { Project } from 'src/app/project/model/project.model';
 import { ProjectStore } from 'src/app/project/project.store';
+import { Role } from 'src/app/shared/constants/role.enum';
 import { ProjectContextStore } from './project-context.store';
 
 @Component({ selector: 'app-page-stub', template: '', standalone: true })
@@ -14,6 +16,13 @@ class PageStub {}
 const project = (idProject: number, name: string): Project => ({ idProject, name, color: '' });
 
 const PROJECTS = [project(1, 'Alpha'), project(2, 'Beta'), project(3, 'Gamma')];
+
+/** The user's role per project; project 3 fails to answer. */
+const ROLES: Record<number, Role> = { 1: Role.Member, 2: Role.Owner };
+
+const loadUserRole$ = vi.fn((idProject: number) =>
+    idProject in ROLES ? of({ role: ROLES[idProject] }) : throwError(() => new Error('403'))
+);
 
 function setup(
     storedId: string | null,
@@ -35,7 +44,8 @@ function setup(
         providers: [
             provideRouter([{ path: '**', component: PageStub }]),
             { provide: ProjectApi, useValue: { load$: () => of(projects) } },
-            { provide: ProjectStore, useValue: { project$ } }
+            { provide: ProjectStore, useValue: { project$ } },
+            { provide: ProjectMemberApi, useValue: { loadUserRole$ } }
         ]
     });
     return {
@@ -47,6 +57,7 @@ function setup(
 
 describe('ProjectContextStore', () => {
     afterEach(() => {
+        loadUserRole$.mockClear();
         localStorage.removeItem('lastProjectId');
         localStorage.removeItem('recentProjectIds');
     });
@@ -142,5 +153,42 @@ describe('ProjectContextStore', () => {
         store.load();
 
         expect(store.recent().map(p => p.idProject)).toEqual([3]);
+    });
+    it('lets the owner manage the last project from a page outside it', async () => {
+        const { store, router } = setup(null);
+        store.load();
+        await router.navigateByUrl('/project/2/view');
+        await router.navigateByUrl('/admin/users');
+
+        await vi.waitFor(() => expect(store.canUpdateProject()).toBe(true));
+    });
+
+    it('lets the owner manage the stored project on a fresh load of a page outside it', async () => {
+        const { store, router } = setup('2');
+        await router.navigateByUrl('/user');
+        store.load();
+
+        await vi.waitFor(() => expect(store.canUpdateProject()).toBe(true));
+    });
+
+    it('does not let a member manage the project', async () => {
+        const { store, router } = setup(null);
+        store.load();
+        await router.navigateByUrl('/project/1/view');
+        await router.navigateByUrl('/user');
+
+        await vi.waitFor(() => expect(loadUserRole$).toHaveBeenCalledWith(1));
+        expect(store.canUpdateProject()).toBe(false);
+    });
+
+    it('does not let anyone manage a project whose role does not load', async () => {
+        const { store, router } = setup(null);
+        store.load();
+        await router.navigateByUrl('/project/2/view');
+        await vi.waitFor(() => expect(store.canUpdateProject()).toBe(true));
+        await router.navigateByUrl('/project/3/view');
+
+        await vi.waitFor(() => expect(loadUserRole$).toHaveBeenCalledWith(3));
+        await vi.waitFor(() => expect(store.canUpdateProject()).toBe(false));
     });
 });
