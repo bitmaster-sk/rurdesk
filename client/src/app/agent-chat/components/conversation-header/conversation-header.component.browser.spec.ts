@@ -13,6 +13,7 @@ import {
     UiConfirmStub,
     UiDialogStub,
     UiSelectStub,
+    UiSidePanelShowStub,
     UiTooltipStub
 } from 'src/testing/stubs';
 import { Fixtures } from 'src/testing/fixtures';
@@ -21,6 +22,8 @@ import { ChatModelSettingsComponent } from '../chat-model-settings/chat-model-se
 import { UiModule } from '../../../ui/ui.module';
 import { ConversationHeaderComponent } from './conversation-header.component';
 import { AgentStatusState } from '../../constants/agent-status-state.enum';
+// The real ui-side-panel-show takes no box only with its global style, not loaded by the test setup.
+import 'src/app/ui/components/side-panel/components/side-panel-show/side-panel-show.styles.scss';
 
 function detail(overrides: {
     status?: Partial<AgentStatus>;
@@ -109,6 +112,7 @@ describe('ConversationHeaderComponent (browser)', () => {
                 UiConfirmStub,
                 UiDialogStub,
                 UiSelectStub,
+                UiSidePanelShowStub,
                 UiTooltipStub
             ],
             providers: [provideRouter([])]

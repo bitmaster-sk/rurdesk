@@ -10,6 +10,7 @@ import {
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import {
+    EMPTY,
     Subject,
     catchError,
     debounceTime,
@@ -18,13 +19,15 @@ import {
     map,
     of,
     startWith,
-    switchMap
+    switchMap,
+    tap
 } from 'rxjs';
 import { WikiApi } from '../../api/wiki.api.service';
 import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
 import { WikiSnippetConverter, WikiSnippetPart } from '../../converter/wiki-snippet.converter';
 import { WikiTreeMove } from '../../components/wiki-tree/wiki-tree.component';
 import { WikiSearchHit, WikiTreeNode } from '../../model/wiki-tree.model';
+import { SidePanelControl } from 'src/app/ui/components/side-panel/side-panel.store';
 import { WikiLayoutStore } from '../../store/wiki-layout.store';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 
@@ -33,7 +36,10 @@ import { WikiTreeStore } from '../../store/wiki-tree.store';
     templateUrl: './wiki-shell.page.html',
     styleUrls: ['./wiki-shell.page.scss'],
     changeDetection: ChangeDetectionStrategy.OnPush,
-    standalone: false
+    standalone: false,
+    // The panel's hide button and the pages' show buttons drive the wiki's tree, an overlay on
+    // narrow screens.
+    providers: [{ provide: SidePanelControl, useExisting: WikiLayoutStore }]
 })
 export class WikiShellPage {
     private readonly route = inject(ActivatedRoute);
@@ -48,6 +54,16 @@ export class WikiShellPage {
     protected readonly hits = signal<WikiSearchHit[]>([]);
     private readonly searchedQuery = signal('');
     protected readonly isSearching = computed(() => this.query().trim() !== this.searchedQuery());
+    /**
+     * The panel's loader stands in for the tree until it arrives and for the first results of a
+     * search; a later search keeps the previous results under its small loader.
+     */
+    protected readonly isNavLoading = computed(() =>
+        this.query().trim()
+            ? this.isSearching() && this.hits().length === 0
+            : !this.store.tree() && !this.isTreeFailed()
+    );
+    private readonly isTreeFailed = signal(false);
 
     private readonly queries = new Subject<string>();
 
@@ -79,6 +95,11 @@ export class WikiShellPage {
         );
     });
 
+    protected readonly isOnProposals = computed(() =>
+        /\/wiki\/proposals(?:[/?#]|$)/.test(this.url())
+    );
+    protected readonly isOnTrash = computed(() => /\/wiki\/trash(?:[/?#]|$)/.test(this.url()));
+
     protected readonly canCreate = computed(
         () => !!this.store.projectSpace()?.canEdit || !!this.store.sharedSpace()?.canEdit
     );
@@ -88,7 +109,16 @@ export class WikiShellPage {
             .pipe(
                 map(params => Number(params.get('idProject'))),
                 distinctUntilChanged(),
-                switchMap(idProject => this.store.load$(idProject)),
+                tap(() => this.isTreeFailed.set(false)),
+                switchMap(idProject =>
+                    // A failed load stops the loader and leaves the next project's load working.
+                    this.store.load$(idProject).pipe(
+                        catchError(() => {
+                            this.isTreeFailed.set(true);
+                            return EMPTY;
+                        })
+                    )
+                ),
                 takeUntilDestroyed()
             )
             .subscribe();

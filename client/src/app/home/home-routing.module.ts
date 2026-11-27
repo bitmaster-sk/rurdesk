@@ -6,6 +6,7 @@ import { IssueTypeResolver } from '../issue-type/issue-type.resolver';
 import { TagResolver } from '../tag/tag.resolver';
 import { ShellLayoutComponent } from './layouts/shell-layout/shell-layout.component';
 import { FirstProjectGuard } from '../onboarding/first-project.guard';
+import { LastConversationGuard } from '../message/guards/last-conversation.guard';
 
 const routes: Routes = [
     {
@@ -25,6 +26,12 @@ const routes: Routes = [
             {
                 path: 'user',
                 loadChildren: () => import('../user/user.module').then(m => m.UserModule)
+            },
+            {
+                path: 'message',
+                pathMatch: 'full',
+                canActivate: [LastConversationGuard.canActivate],
+                children: []
             },
             {
                 path: 'message',

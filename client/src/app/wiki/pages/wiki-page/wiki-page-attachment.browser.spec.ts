@@ -22,9 +22,6 @@ import { WikiTreeNode } from '../../model/wiki-tree.model';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 import { WikiPagePage } from './wiki-page.page';
 
-@Component({ selector: 'app-wiki-tree-show', template: '', standalone: true })
-class WikiTreeShowStub {}
-
 @Component({ selector: 'app-wiki-page-aside', template: '', standalone: true })
 class WikiPageAsideStub {
     public readonly idProject = input<number>(0);
@@ -97,7 +94,6 @@ async function render(body: string): Promise<ComponentFixture<WikiPagePage>> {
             RouterModule,
             UiModule,
             TablerIconStub,
-            WikiTreeShowStub,
             WikiPageAsideStub,
             WikiMoveDialogStub
         ],

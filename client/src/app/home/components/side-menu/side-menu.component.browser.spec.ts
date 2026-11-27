@@ -1,15 +1,17 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, input, signal, viewChild } from '@angular/core';
+import { Component, input, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
+import { AgentConversationUnreadStore } from 'src/app/agent-chat/store/agent-conversation-unread.store';
 import { CommandPaletteService } from 'src/app/core/command/command-palette.service';
+import { Message } from 'src/app/message/model/message.model';
+import { MessageUnreadStore } from 'src/app/message/store/message-unread.store';
 import { HotkeyService, RailToggleHandler } from 'src/app/core/command/hotkey.service';
 import { TrackerControlVariant } from 'src/app/shared/tracker/constants/tracker-control-variant.enum';
-import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
 import { UiTooltipComponent } from 'src/app/ui/components/tooltip/tooltip.component';
 import { UiTooltipDirective } from 'src/app/ui/directives/tooltip.directive';
 import { TablerIconStub } from 'src/testing/stubs';
@@ -38,22 +40,6 @@ class NotificationMenuStub {
     }
 }
 
-// A real ui-menu, so the row's focus handling is exercised end to end.
-@Component({
-    selector: 'app-message-menu',
-    template: '<ui-menu #menu placement="right" [model]="items" />',
-    standalone: false
-})
-class MessageMenuStub {
-    private readonly menu = viewChild<UiMenuComponent>('menu');
-    public readonly items = [{ label: 'Team A', routerLink: ['/message', 1, 'team', 'view'] }];
-    public readonly badge = signal('12');
-    public readonly isOpen = computed(() => this.menu()?.isOpen() ?? false);
-    public toggle(origin: HTMLElement): void {
-        this.menu()?.toggle(origin);
-    }
-}
-
 @Component({
     selector: 'app-tracker-control',
     template: '<div data-testid="tracker-control" style="height: 2rem"></div>',
@@ -70,13 +56,6 @@ class TrackerControlStub {
 })
 class UserMenuStub {
     public readonly isRail = input(false);
-}
-
-@Component({ selector: 'app-agent-chat-menu', template: '', standalone: false })
-class AgentChatMenuStub {
-    public readonly badge = signal('');
-    public readonly isOpen = signal(false);
-    public toggle(): void {}
 }
 
 // The global rows get their real labels so they are as wide as in the app.
@@ -109,11 +88,8 @@ async function render(
             SideMenuComponent,
             ProjectSwitcherStub,
             NotificationMenuStub,
-            MessageMenuStub,
-            AgentChatMenuStub,
             TrackerControlStub,
             UserMenuStub,
-            UiMenuComponent,
             UiTooltipDirective,
             UiTooltipComponent
         ],
@@ -135,6 +111,22 @@ async function render(
                 useValue: { idProject: signal(idProject), canUpdateProject: signal(isOwner) }
             },
             { provide: CommandPaletteService, useValue: { open: openPalette } },
+            {
+                provide: MessageUnreadStore,
+                useValue: {
+                    unread$: of(
+                        new Map([
+                            ['1|null|2', new Array<Message>(10)],
+                            ['4|null|3', new Array<Message>(2)]
+                        ])
+                    ),
+                    load: () => undefined
+                }
+            },
+            {
+                provide: AgentConversationUnreadStore,
+                useValue: { count: signal(1), load: () => undefined }
+            },
             {
                 provide: HotkeyService,
                 useValue: {
@@ -242,10 +234,13 @@ describe('SideMenuComponent', () => {
         expect(menu.bottom - box('avatar-trigger').bottom).toBeLessThan(24);
     });
 
-    it('shows the unread count on the row and opens the notification center', async () => {
+    it('shows the unread counts from the stores and opens the notification center', async () => {
         const element = await render('/table');
         const messages = element.querySelector('[data-testid="sidebar-messages"]');
         expect(messages?.querySelector('.count')?.textContent?.trim()).toBe('12');
+        expect(element.querySelector('[data-testid="agent-chat-badge"]')?.textContent?.trim()).toBe(
+            '1'
+        );
         expect(element.querySelector('[data-testid="sidebar-notifications"] .count')).toBeNull();
 
         element.querySelector<HTMLElement>('[data-testid="sidebar-notifications"]')?.click();
@@ -268,26 +263,12 @@ describe('SideMenuComponent', () => {
         expect(current(await render('/table'))).toEqual([]);
     });
 
-    it('opens the chats clear of the menu edge and returns focus to the row on Escape', async () => {
+    it('links Messages and Agent chat to their pages', async () => {
         const element = await render('/table');
-        const menu = element.querySelector<HTMLElement>('[data-testid="project-left-menu"]')!;
-        const row = element.querySelector<HTMLButtonElement>('[data-testid="sidebar-messages"]')!;
-        row.focus();
 
-        row.click();
-        await vi.waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('true'));
-        const panel = document.querySelector<HTMLElement>('.ui-menu')!;
-        expect(panel.getBoundingClientRect().left).toBeGreaterThanOrEqual(
-            menu.getBoundingClientRect().right + 4
-        );
-        await vi.waitFor(() => expect(document.activeElement?.textContent).toContain('Team A'));
-
-        document.activeElement?.dispatchEvent(
-            new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
-        );
-
-        expect(document.activeElement).toBe(row);
-        await vi.waitFor(() => expect(row.getAttribute('aria-expanded')).toBe('false'));
+        expect(href(element, 'sidebar-messages')).toBe('/message');
+        expect(href(element, 'agent-chat-menu')).toBe('/agent-chat');
+        expect(element.querySelector('[aria-haspopup="menu"]')).toBeNull();
     });
 
     it('shows the full menu until the user folds it, on the wiki too', async () => {

@@ -13,8 +13,8 @@ import {
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
-import { combineLatest, Subject, Subscription } from 'rxjs';
-import { debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
+import { combineLatest, of, Subject, Subscription } from 'rxjs';
+import { catchError, debounceTime, filter, map, switchMap, tap } from 'rxjs/operators';
 import { User } from 'src/app/auth/model/user.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { Project } from 'src/app/project/model/project.model';
@@ -30,12 +30,14 @@ import { TeamApi } from 'src/app/team/api/team.api.service';
 import { UserApi } from 'src/app/user/api/user.api.service';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageRecipientType } from '../../constant/message-recipient-type.enum';
+import { Conversation } from '../../entity/conversation.entity';
 import { ConversationGroup } from '../../entity/conversation-group.entity';
 import { MessageApi } from '../../api/message.api.service';
 import { MessageUnreadStore } from '../../store/message-unread.store';
 import { Message } from '../../model/message.model';
 import { MessageFormatter } from '../../formatter/message.formatter';
 import { MessageKeyConverter } from '../../converter/message-key.converter';
+import { LastConversationGuard } from '../../guards/last-conversation.guard';
 
 @Component({
     selector: 'app-message',
@@ -61,7 +63,24 @@ export class MessagePage implements OnInit, OnDestroy {
     private readonly msgList = viewChild<ElementRef<HTMLElement>>('msgList');
     private readonly msgListItems = viewChildren('msgListItems');
 
-    protected readonly conversationGroups = signal<ConversationGroup[]>([]);
+    private readonly allGroups = signal<ConversationGroup[]>([]);
+    protected readonly isLoadingChats = signal(true);
+    protected readonly filter = signal('');
+    /** Chats whose name holds the filter text; a group left with none is dropped. */
+    protected readonly conversationGroups = computed<ConversationGroup[]>(() => {
+        const text = this.filter().trim().toLocaleLowerCase();
+        if (!text) {
+            return this.allGroups();
+        }
+        return this.allGroups()
+            .map(group => ({
+                ...group,
+                conversations: group.conversations.filter(c =>
+                    c.name.toLocaleLowerCase().includes(text)
+                )
+            }))
+            .filter(group => group.conversations.length > 0);
+    });
     protected readonly messages = signal<Message[]>([]);
     protected readonly currentConversationName = signal<string>('');
     protected readonly idMessageEdit = signal<number | null>(null);
@@ -151,12 +170,24 @@ export class MessagePage implements OnInit, OnDestroy {
                             this.teamMemberStore.load(recipientId);
                         }
                     }),
-                    switchMap(params =>
-                        this.messageApi.load$(
-                            Number(params.get('idRecipient')),
-                            Number(params.get('idMessageRecipientType'))
-                        )
-                    )
+                    switchMap(params => {
+                        const idRecipient = Number(params.get('idRecipient'));
+                        const idType = Number(params.get('idMessageRecipientType'));
+                        const url = `/message/${idRecipient}/${idType}/view`;
+                        // Remembered for the next /message only once it loads; a chat the user
+                        // can no longer read is forgotten and leaves the next chats working.
+                        return this.messageApi.load$(idRecipient, idType).pipe(
+                            tap(() => {
+                                if (this.toRecipientType(idType) !== null) {
+                                    LastConversationGuard.save(url);
+                                }
+                            }),
+                            catchError(() => {
+                                LastConversationGuard.forget(url);
+                                return of<Message[]>([]);
+                            })
+                        );
+                    })
                 )
                 .subscribe(messages => {
                     this.messages.set(messages.reverse());
@@ -174,10 +205,14 @@ export class MessagePage implements OnInit, OnDestroy {
                         users
                     }))
                 )
-                .subscribe(({ conversationGroups, users }) => {
-                    this.conversationGroups.set(conversationGroups);
-                    this.allUsers.set(users);
-                    this.findCurrentConversationName();
+                .subscribe({
+                    next: ({ conversationGroups, users }) => {
+                        this.allGroups.set(conversationGroups);
+                        this.allUsers.set(users);
+                        this.isLoadingChats.set(false);
+                        this.findCurrentConversationName();
+                    },
+                    error: () => this.isLoadingChats.set(false)
                 })
         );
 
@@ -241,6 +276,20 @@ export class MessagePage implements OnInit, OnDestroy {
         return this.unread().get(key)?.length ?? 0;
     }
 
+    protected onFilterInput(event: Event): void {
+        if (event.target instanceof HTMLInputElement) {
+            this.filter.set(event.target.value);
+        }
+    }
+
+    protected isOpen(conversation: Conversation): boolean {
+        const [, idRecipient, idMessageRecipientType] = conversation.url;
+        return (
+            idRecipient === this.idActiveRecipient() &&
+            idMessageRecipientType === this.idActiveRecipientType()
+        );
+    }
+
     protected isNewDay(index: number): boolean {
         if (index === 0) return true;
         const prev = this.messages()[index - 1];
@@ -299,7 +348,7 @@ export class MessagePage implements OnInit, OnDestroy {
     private findCurrentConversationName(): void {
         const idRecipient = this.idActiveRecipient();
         const idMessageRecipientType = this.idActiveRecipientType();
-        for (const group of this.conversationGroups()) {
+        for (const group of this.allGroups()) {
             const found = group.conversations.find(
                 c =>
                     c.idRecipient === idRecipient &&

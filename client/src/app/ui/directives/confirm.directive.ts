@@ -27,6 +27,7 @@ import { UiConfirmPopupComponent } from '../components/confirm-popup/confirm-pop
  */
 @Directive({
     selector: '[uiConfirm]',
+    exportAs: 'uiConfirm',
     standalone: false
 })
 export class UiConfirmDirective implements OnDestroy {
@@ -49,9 +50,6 @@ export class UiConfirmDirective implements OnDestroy {
 
     @HostListener('click')
     protected onClick(): void {
-        if (this.overlayRef) {
-            return;
-        }
         this.open();
     }
 
@@ -59,7 +57,11 @@ export class UiConfirmDirective implements OnDestroy {
         this.close();
     }
 
-    private open(): void {
+    /** Opens the popup without a click on the host, e.g. from a menu command. */
+    public open(): void {
+        if (this.overlayRef) {
+            return;
+        }
         const positionStrategy = this.overlay
             .position()
             .flexibleConnectedTo(this.host)

@@ -196,7 +196,7 @@
             [variant]="rail ? TrackerControlVariant.Rail : TrackerControlVariant.Side"
         />
         <div class="bottom">
-            <!-- The overlays anchor to the whole row, so they open beside the menu edge, not over it. -->
+            <!-- The notification center anchors to the whole row, so it opens beside the menu edge. -->
             <ul class="navigation global">
                 <li class="menu-item" #notificationsRow>
                     <div class="menu-item-border"></div>
@@ -217,47 +217,41 @@
                         }
                     </button>
                 </li>
-                <li class="menu-item" #messagesRow>
+                <li class="menu-item">
                     <div class="menu-item-border"></div>
-                    <button
-                        type="button"
+                    <a
                         class="link"
                         uiTooltipPosition="right"
                         [uiTooltip]="rail ? ('HOME.MESSAGES' | translate) : ''"
                         data-testid="sidebar-messages"
-                        aria-haspopup="menu"
+                        routerLink="/message"
                         [class.active]="isOnMessages()"
                         [attr.aria-current]="isOnMessages() ? 'page' : null"
-                        [attr.aria-expanded]="messages.isOpen()"
-                        (click)="messages.toggle(messagesRow)"
                     >
                         <tabler-icon icon="message" [size]="16" class="icon" />
                         <span class="text">{{ 'HOME.MESSAGES' | translate }}</span>
-                        @if (messages.badge(); as badge) {
+                        @if (messagesBadge(); as badge) {
                             <span class="count">{{ badge }}</span>
                         }
-                    </button>
+                    </a>
                 </li>
-                <li class="menu-item mb-0" #agentChatRow>
+                <li class="menu-item mb-0">
                     <div class="menu-item-border"></div>
-                    <button
-                        type="button"
+                    <a
                         class="link"
                         uiTooltipPosition="right"
                         [uiTooltip]="rail ? ('AGENT_CHAT.MENU_LABEL' | translate) : ''"
                         data-testid="agent-chat-menu"
-                        aria-haspopup="menu"
+                        routerLink="/agent-chat"
                         [class.active]="isOnAgentChat()"
                         [attr.aria-current]="isOnAgentChat() ? 'page' : null"
-                        [attr.aria-expanded]="agentChat.isOpen()"
-                        (click)="agentChat.toggle(agentChatRow)"
                     >
                         <tabler-icon icon="robot" [size]="16" class="icon" />
                         <span class="text">{{ 'AGENT_CHAT.MENU_LABEL' | translate }}</span>
-                        @if (agentChat.badge(); as badge) {
+                        @if (agentChatBadge(); as badge) {
                             <span class="count" data-testid="agent-chat-badge">{{ badge }}</span>
                         }
-                    </button>
+                    </a>
                 </li>
             </ul>
             <app-user-menu [isRail]="rail" />
@@ -265,5 +259,3 @@
     </div>
 </div>
 <app-notification-menu #notifications />
-<app-message-menu #messages />
-<app-agent-chat-menu #agentChat />

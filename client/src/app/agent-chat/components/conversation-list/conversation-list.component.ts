@@ -1,16 +1,17 @@
 import {
     ChangeDetectionStrategy,
+    ChangeDetectorRef,
     Component,
-    effect,
+    computed,
     input,
     output,
-    untracked
+    inject,
+    signal
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormControl } from '@angular/forms';
-import { CostFormatter } from 'src/app/agent/entity/cost.formatter';
-import { TokenFormatter } from 'src/app/agent/entity/token.formatter';
-import { AgentChatScope } from '../../constants/agent-chat-scope.enum';
+import { UiMenuItem } from 'src/app/ui/components/menu/menu-item.model';
+import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
+import { UiConfirmDirective } from 'src/app/ui/directives/confirm.directive';
+import { ConversationGrouper, ConversationSection } from '../../entity/conversation-grouper';
 import { AgentConversationListItem } from '../../model/agent-conversation.model';
 
 @Component({
@@ -21,41 +22,87 @@ import { AgentConversationListItem } from '../../model/agent-conversation.model'
     standalone: false
 })
 export class ConversationListComponent {
-    public readonly conversations = input<AgentConversationListItem[]>([]);
-    public readonly idSelected = input<number | null>(null);
-    /** The project the page was opened for; without one the list has no scope toggle. */
-    public readonly idProject = input<number | null>(null);
-    public readonly scope = input<AgentChatScope>(AgentChatScope.All);
+    private readonly cdr = inject(ChangeDetectorRef);
 
-    public readonly scopeChange = output<AgentChatScope>();
+    public readonly conversations = input<AgentConversationListItem[]>([]);
+    public readonly isLoading = input(false);
+    public readonly idSelected = input<number | null>(null);
+    /** The project the owner works in: a new conversation starts in it and its conversations come first. */
+    public readonly idProject = input<number | null>(null);
+    public readonly projectName = input<string | null>(null);
+
     public readonly pinChange = output<{ idConversation: number; isPinned: boolean }>();
     public readonly deleteConversation = output<number>();
 
-    protected readonly scopeControl = new FormControl<AgentChatScope>(AgentChatScope.All, {
-        nonNullable: true
+    protected readonly filter = signal('');
+    /** The conversation whose row menu is open, with the confirmation its Delete opens. */
+    private readonly menuTarget = signal<{
+        conversation: AgentConversationListItem;
+        confirm: UiConfirmDirective;
+    } | null>(null);
+
+    protected readonly sections = computed<ConversationSection[]>(() => {
+        const text = this.filter().trim().toLocaleLowerCase();
+        const list = text
+            ? this.conversations().filter(c => c.title.toLocaleLowerCase().includes(text))
+            : this.conversations();
+        const idProject = this.idProject();
+        const name = this.projectName();
+        return ConversationGrouper.group(
+            list,
+            idProject !== null && name !== null ? { idProject, name } : null
+        );
     });
-    protected readonly scopeOptions = [
-        { labelKey: 'AGENT_CHAT.SCOPE_PROJECT', value: AgentChatScope.Project },
-        { labelKey: 'AGENT_CHAT.SCOPE_ALL', value: AgentChatScope.All }
-    ];
 
-    protected readonly TokenFormatter = TokenFormatter;
-    protected readonly CostFormatter = CostFormatter;
+    protected readonly rowMenu = computed<UiMenuItem[]>(() => {
+        const target = this.menuTarget();
+        if (!target) {
+            return [];
+        }
+        const { conversation, confirm } = target;
+        const isPinned = conversation.pinnedAt !== null;
+        return [
+            {
+                labelKey: isPinned ? 'AGENT_CHAT.UNPIN' : 'AGENT_CHAT.PIN',
+                icon: isPinned ? 'pinned' : 'pin',
+                command: () =>
+                    this.pinChange.emit({
+                        idConversation: conversation.idConversation,
+                        isPinned: !isPinned
+                    })
+            },
+            { labelKey: 'AGENT_CHAT.DELETE', icon: 'trash', command: () => confirm.open() }
+        ];
+    });
 
-    protected onPin(conversation: AgentConversationListItem): void {
-        this.pinChange.emit({
-            idConversation: conversation.idConversation,
-            isPinned: conversation.pinnedAt === null
-        });
+    protected isMenuOpenFor(
+        conversation: AgentConversationListItem,
+        menu: UiMenuComponent
+    ): boolean {
+        return menu.isOpen() && this.menuTarget()?.conversation === conversation;
     }
 
-    public constructor() {
-        effect(() => {
-            const scope = this.scope();
-            untracked(() => this.scopeControl.setValue(scope, { emitEvent: false }));
-        });
-        this.scopeControl.valueChanges
-            .pipe(takeUntilDestroyed())
-            .subscribe(scope => this.scopeChange.emit(scope));
+    protected onFilterInput(event: Event): void {
+        if (event.target instanceof HTMLInputElement) {
+            this.filter.set(event.target.value);
+        }
+    }
+
+    /** One menu serves every row: a click on another row's button moves it there. */
+    protected onActions(
+        event: Event,
+        conversation: AgentConversationListItem,
+        menu: UiMenuComponent,
+        confirm: UiConfirmDirective
+    ): void {
+        if (this.isMenuOpenFor(conversation, menu)) {
+            menu.hide();
+            return;
+        }
+        menu.hide();
+        this.menuTarget.set({ conversation, confirm });
+        // The menu renders its rows as it opens, so it needs this row's items already.
+        this.cdr.detectChanges();
+        menu.show(event);
     }
 }

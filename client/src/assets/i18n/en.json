@@ -565,7 +565,9 @@
         "MESSAGES": "Messages",
         "SEARCH": "Search",
         "COLLAPSE_MENU": "Collapse menu",
-        "EXPAND_MENU": "Expand menu"
+        "EXPAND_MENU": "Expand menu",
+        "HIDE_PANEL": "Hide panel",
+        "SHOW_PANEL": "Show panel"
     },
     "WIKI": {
         "TITLE": "Wiki",
@@ -1866,8 +1868,12 @@
         "NEW": "New conversation",
         "ALL": "All conversations",
         "TITLE": "Conversations",
-        "SCOPE_PROJECT": "This project",
-        "SCOPE_ALL": "All",
+        "PINNED": "Pinned",
+        "RECENT": "Recent",
+        "OTHER_PROJECTS": "Other projects",
+        "ACTIONS": "Conversation actions",
+        "FILTER_PLACEHOLDER": "Search conversations",
+        "FILTER_EMPTY": "No conversation matches",
         "EMPTY_LIST": "No conversations yet.",
         "SELECT": "Pick a conversation or start a new one.",
         "EMPTY_CONVERSATION": "Ask the agent about the code, tasks or wiki. It only reads and never changes anything.",
@@ -1965,7 +1971,9 @@
             "BACK": "Back"
         },
         "EDITED": "edited {{time}}",
-        "EDIT": "Edit comment"
+        "EDIT": "Edit comment",
+        "FILTER_PLACEHOLDER": "Find a chat",
+        "FILTER_EMPTY": "No chat matches"
     },
     "COMMAND": {
         "PALETTE_LABEL": "Command palette",

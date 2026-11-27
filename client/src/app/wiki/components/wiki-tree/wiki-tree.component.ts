@@ -34,6 +34,13 @@ export class WikiTreeComponent {
         return ['/project', this.idProject(), 'wiki', this.spaceKind(), entry.node.slug];
     }
 
+    protected iconOf(entry: WikiTreeEntry): string {
+        if (entry.children.length > 0) {
+            return this.isOpen(entry) ? 'folder-open' : 'folder';
+        }
+        return entry.node.idPage === this.idHomePage() ? 'home' : 'file-text';
+    }
+
     protected isOpen(entry: WikiTreeEntry): boolean {
         return this.expanded().has(entry.node.idPage);
     }

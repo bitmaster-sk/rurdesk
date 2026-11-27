@@ -41,10 +41,10 @@ test.describe('agent chat', () => {
             'chat'
         );
 
-        // Robot menu, then New conversation.
+        // Agent chat from the side menu, then New conversation in its panel.
         await page.goto(`/project/${idProject}/issue/view/table`);
         await page.getByTestId('agent-chat-menu').click();
-        await page.getByRole('menuitem', { name: 'New conversation' }).click();
+        await page.getByTestId('chat-list-new').click();
         await page.waitForURL(/\/agent-chat\?.*new=1/);
         await expect(page.locator('#new-conversation-agent')).toContainText(agent.name);
         await page.getByTestId('new-conversation-start').click();
@@ -92,7 +92,7 @@ test.describe('agent chat', () => {
 
         // Opening the conversation clears the badge.
         await page.getByTestId('agent-chat-menu').click();
-        await page.getByRole('menuitem', { name: 'Ahoj' }).click();
+        await page.getByTestId('chat-list-item').filter({ hasText: 'Ahoj' }).click();
         await page.waitForURL(new RegExp(`/agent-chat/${idConversation}`));
         await expect(
             page.locator('.agent-chat-entry').filter({ hasText: 'Stub reply: A ešte raz' })

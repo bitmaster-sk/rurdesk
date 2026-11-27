@@ -2,10 +2,10 @@
     <app-conversation-list
         class="agent-chat-list"
         [conversations]="conversations()"
+        [isLoading]="isListLoading()"
         [idSelected]="idConversation()"
-        [idProject]="idProject()"
-        [scope]="scope()"
-        (scopeChange)="onScopeChange($event)"
+        [idProject]="idProjectOpen()"
+        [projectName]="projectName()"
         (pinChange)="onPinConversation($event.idConversation, $event.isPinned)"
         (deleteConversation)="onDeleteConversation($event)"
     />
@@ -169,6 +169,9 @@
             }
         </div>
         } @else if (idConversation() === null) {
+        <div class="agent-chat-placeholder-head">
+            <ui-side-panel-show [label]="'HOME.SHOW_PANEL' | translate" />
+        </div>
         <div class="agent-chat-placeholder" data-testid="agent-chat-placeholder">
             {{ 'AGENT_CHAT.SELECT' | translate }}
         </div>

@@ -9,14 +9,16 @@
         @for (entry of entries; track entry.node.idPage) {
             <div class="wiki-tree__item" cdkDrag [cdkDragData]="entry">
                 <a
-                    class="wiki-tree__node"
+                    uiSidePanelRow
                     data-testid="wiki-tree-node"
-                    [class.wiki-tree__node--active]="entry.node.idPage === activeIdPage()"
+                    [icon]="iconOf(entry)"
+                    [label]="entry.node.title"
+                    [isActive]="entry.node.idPage === activeIdPage()"
                     [routerLink]="link(entry)"
-                    [title]="entry.node.title"
                 >
                     @if (entry.children.length > 0) {
                         <button
+                            uiRowLead
                             type="button"
                             class="wiki-tree__chevron"
                             [attr.aria-expanded]="isOpen(entry)"
@@ -28,29 +30,19 @@
                                 [size]="14"
                             />
                         </button>
-                        <tabler-icon
-                            [icon]="isOpen(entry) ? 'folder-open' : 'folder'"
-                            [size]="14"
-                            class="wiki-tree__icon"
-                        />
                     } @else {
-                        <span class="wiki-tree__chevron-space"></span>
-                        <tabler-icon
-                            [icon]="entry.node.idPage === idHomePage() ? 'home' : 'file-text'"
-                            [size]="14"
-                            class="wiki-tree__icon"
-                        />
+                        <span uiRowLead class="wiki-tree__chevron-space"></span>
                     }
-                    <span class="wiki-tree__title">{{ entry.node.title }}</span>
                     @if (entry.node.agentAccess === AgentAccess.Always) {
                         <tabler-icon
+                            uiRowTrail
                             icon="robot"
-                            [size]="13"
-                            class="wiki-tree__agent"
+                            class="ui-side-panel-mark"
+                            [size]="16"
                             [uiTooltip]="'WIKI.ACCESS.ALWAYS' | translate"
                         />
                     } @else if (entry.children.length > 0) {
-                        <span class="wiki-tree__count">{{ entry.descendants }}</span>
+                        <span uiRowTrail class="ui-side-panel-meta">{{ entry.descendants }}</span>
                     }
                 </a>
                 @if (entry.children.length > 0 && isOpen(entry)) {

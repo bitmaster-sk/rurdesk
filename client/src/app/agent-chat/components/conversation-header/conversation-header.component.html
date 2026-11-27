@@ -1,5 +1,6 @@
 <header class="chat-header">
     <div class="chat-header-top">
+        <ui-side-panel-show [label]="'HOME.SHOW_PANEL' | translate" />
         <ui-button
             class="chat-header-back chat-touch"
             variant="text"
@@ -93,6 +94,9 @@
             }
         </span>
         <span class="chat-header-usage">
+            <span class="chat-header-tokens" data-testid="chat-header-updated">
+                {{ detail().conversation.updatedAt | date: 'short' }}
+            </span>
             <span class="chat-header-tokens" data-testid="chat-header-tokens">
                 {{ 'AGENT_CHAT.TOKENS' | translate: { tokens: tokens() } }}
             </span>

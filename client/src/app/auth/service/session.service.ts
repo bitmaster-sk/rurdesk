@@ -5,6 +5,7 @@ import { LicenseStore } from '../../core/license/license.store';
 import { NotificationStore } from '../../notification/store/notification.store';
 import { AttachmentStore } from '../../shared/attachment/store/attachment.store';
 import { NoticeService } from '../../shared/notice/notice.service';
+import { LastConversationGuard } from '../../message/guards/last-conversation.guard';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
 
@@ -37,6 +38,7 @@ export class SessionService {
             this.tokenStore.clearToken();
             this.noticeService.reconnect();
             this.attachmentStore.revokeAll();
+            LastConversationGuard.clear();
             if (redirectTo !== undefined) {
                 void this.router.navigate([redirectTo]);
             }

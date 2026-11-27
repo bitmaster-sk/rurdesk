@@ -1,8 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, input, signal } from '@angular/core';
+import { Component, WritableSignal, input, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, provideRouter } from '@angular/router';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
-import { Observable, Subject, of } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TablerIconStub, UiButtonStub, UiLoaderStub, UiTooltipStub } from 'src/testing/stubs';
 import { WikiApi } from '../../api/wiki.api.service';
@@ -10,6 +10,12 @@ import { WikiSearchHit } from '../../model/wiki-tree.model';
 import { WikiLayoutStore } from '../../store/wiki-layout.store';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 import { WikiShellPage } from './wiki-shell.page';
+import { UiSidePanelComponent } from 'src/app/ui/components/side-panel/side-panel.component';
+import { UiSidePanelRowComponent } from 'src/app/ui/components/side-panel/components/side-panel-row/side-panel-row.component';
+import { UiSidePanelSectionComponent } from 'src/app/ui/components/side-panel/components/side-panel-section/side-panel-section.component';
+import { SidePanelStore } from 'src/app/ui/components/side-panel/side-panel.store';
+// The panel's styles are global (ui.styles.scss) and not loaded by the test setup.
+import 'src/app/ui/components/side-panel/side-panel.styles.scss';
 
 @Component({ selector: 'app-wiki-tree', template: '', standalone: true })
 class WikiTreeStub {
@@ -39,10 +45,16 @@ const hit: WikiSearchHit = {
 };
 
 async function render(
-    responses: Subject<WikiSearchHit[]>
+    responses: Subject<WikiSearchHit[]>,
+    loadTree$: () => Observable<unknown> = () => of(null)
 ): Promise<ComponentFixture<WikiShellPage>> {
     await TestBed.configureTestingModule({
-        declarations: [WikiShellPage],
+        declarations: [
+            WikiShellPage,
+            UiSidePanelComponent,
+            UiSidePanelSectionComponent,
+            UiSidePanelRowComponent
+        ],
         imports: [
             TranslateModule.forRoot({
                 loader: { provide: TranslateLoader, useClass: EmptyLoader }
@@ -67,7 +79,7 @@ async function render(
                     expanded: signal(new Set()),
                     projectSpace: signal(null),
                     sharedSpace: signal(null),
-                    load$: () => of(null),
+                    load$: loadTree$,
                     kindOfSpace: () => 'project',
                     expandPathTo: () => undefined
                 }
@@ -92,6 +104,12 @@ function find(fixture: ComponentFixture<WikiShellPage>, testId: string): Element
     return (fixture.nativeElement as HTMLElement).querySelector(`[data-testid="${testId}"]`);
 }
 
+/** The tree panel is there and takes room; hidden, it keeps its element but no box. */
+function isTreeShown(fixture: ComponentFixture<WikiShellPage>): boolean {
+    const nav = find(fixture, 'wiki-nav');
+    return nav !== null && nav.getBoundingClientRect().width > 0;
+}
+
 async function waitForDebounce(fixture: ComponentFixture<WikiShellPage>): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, 300));
     fixture.detectChanges();
@@ -113,16 +131,16 @@ describe('WikiShellPage search', () => {
         const fixture = await render(responses);
 
         type(fixture, 'deploy');
-        expect(find(fixture, 'wiki-search-loading')).not.toBeNull();
+        expect(find(fixture, 'side-panel-loading')).not.toBeNull();
         expect(find(fixture, 'wiki-search-empty')).toBeNull();
 
         await waitForDebounce(fixture);
-        expect(find(fixture, 'wiki-search-loading')).not.toBeNull();
+        expect(find(fixture, 'side-panel-loading')).not.toBeNull();
         expect(find(fixture, 'wiki-search-empty')).toBeNull();
 
         responses.next([hit]);
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-search-loading')).toBeNull();
+        expect(find(fixture, 'side-panel-loading')).toBeNull();
         expect(find(fixture, 'wiki-search-hit')?.textContent).toContain('Deploy');
     });
 
@@ -135,7 +153,7 @@ describe('WikiShellPage search', () => {
         responses.next([]);
         fixture.detectChanges();
 
-        expect(find(fixture, 'wiki-search-loading')).toBeNull();
+        expect(find(fixture, 'side-panel-loading')).toBeNull();
         expect(find(fixture, 'wiki-search-empty')).not.toBeNull();
     });
 
@@ -154,23 +172,55 @@ describe('WikiShellPage search', () => {
     });
 });
 
+describe('WikiShellPage tree loading', () => {
+    it('shows a loader instead of the tree until it arrives', async () => {
+        const fixture = await render(new Subject<WikiSearchHit[]>());
+        const store = TestBed.inject(WikiTreeStore);
+        expect(find(fixture, 'side-panel-loading')).not.toBeNull();
+
+        (store.tree as WritableSignal<unknown>).set({ spaces: [], nodes: [] });
+        fixture.detectChanges();
+
+        expect(find(fixture, 'side-panel-loading')).toBeNull();
+    });
+
+    it('stops the loader when the tree fails to load', async () => {
+        const fixture = await render(new Subject<WikiSearchHit[]>(), () =>
+            throwError(() => new Error('500'))
+        );
+
+        expect(find(fixture, 'side-panel-loading')).toBeNull();
+    });
+});
+
 describe('WikiShellPage tree toggle', () => {
-    afterEach(() => localStorage.removeItem('wiki.treeHidden'));
+    afterEach(() => localStorage.removeItem('sidePanelHidden'));
 
     it('hides the tree without leaving a strip behind and brings it back', async () => {
-        localStorage.removeItem('wiki.treeHidden');
+        localStorage.removeItem('sidePanelHidden');
         const fixture = await render(new Subject<WikiSearchHit[]>());
         const element = fixture.nativeElement as HTMLElement;
-        expect(find(fixture, 'wiki-nav')).not.toBeNull();
+        expect(isTreeShown(fixture)).toBe(true);
 
-        element.querySelector<HTMLElement>('[data-testid="wiki-tree-hide"]')?.click();
+        element.querySelector<HTMLElement>('[data-testid="side-panel-hide"]')?.click();
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-nav')).toBeNull();
-        expect(element.querySelector('.wiki-shell')?.children.length).toBe(1);
+        expect(isTreeShown(fixture)).toBe(false);
+        expect(element.querySelector('.wiki-main')!.getBoundingClientRect().left).toBe(
+            element.querySelector('.wiki-shell')!.getBoundingClientRect().left
+        );
 
-        TestBed.inject(WikiLayoutStore).toggleTree();
+        TestBed.inject(WikiLayoutStore).show();
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-nav')).not.toBeNull();
+        expect(isTreeShown(fixture)).toBe(true);
+    });
+
+    it('hiding the wiki tree hides the Messages panel too', async () => {
+        localStorage.removeItem('sidePanelHidden');
+        const fixture = await render(new Subject<WikiSearchHit[]>());
+
+        (find(fixture, 'side-panel-hide') as HTMLElement).click();
+
+        expect(TestBed.inject(SidePanelStore).isHidden()).toBe(true);
     });
 });
 
@@ -181,10 +231,10 @@ describe('WikiShellPage tree on narrow screens', () => {
         const fixture = await render(new Subject<WikiSearchHit[]>());
         const element = fixture.nativeElement as HTMLElement;
         const main = element.querySelector<HTMLElement>('.wiki-main')!;
-        expect(find(fixture, 'wiki-nav')).toBeNull();
+        expect(isTreeShown(fixture)).toBe(false);
         const width = main.getBoundingClientRect().width;
 
-        TestBed.inject(WikiLayoutStore).toggleTree();
+        TestBed.inject(WikiLayoutStore).show();
         fixture.detectChanges();
         const nav = find(fixture, 'wiki-nav') as HTMLElement;
         expect(getComputedStyle(nav).position).toBe('absolute');
@@ -192,17 +242,17 @@ describe('WikiShellPage tree on narrow screens', () => {
 
         (find(fixture, 'wiki-nav-backdrop') as HTMLElement).click();
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-nav')).toBeNull();
+        expect(isTreeShown(fixture)).toBe(false);
     });
 
     it('closes the tree after navigating to a page', async () => {
         const fixture = await render(new Subject<WikiSearchHit[]>());
-        TestBed.inject(WikiLayoutStore).toggleTree();
+        TestBed.inject(WikiLayoutStore).show();
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-nav')).not.toBeNull();
+        expect(isTreeShown(fixture)).toBe(true);
 
         await TestBed.inject(Router).navigateByUrl('/project/1/wiki/project/deploy');
         fixture.detectChanges();
-        expect(find(fixture, 'wiki-nav')).toBeNull();
+        expect(isTreeShown(fixture)).toBe(false);
     });
 });

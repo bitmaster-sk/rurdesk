@@ -10,6 +10,7 @@ import {
     IconPin,
     IconPinned,
     IconPlus,
+    IconRobot,
     IconTrash,
     IconX,
     TablerIconComponent,
@@ -64,6 +65,7 @@ import { AgentChatPage } from './pages/agent-chat/agent-chat.page';
             IconPin,
             IconPinned,
             IconPlus,
+            IconRobot,
             IconTrash,
             IconX
         })

@@ -246,15 +246,15 @@ test('the wiki page tree can be hidden and keeps that after a reload', async ({
     const idProject = await Interaction.createBlankProject(page, 'Wiki tree toggle');
     await Interaction.createWikiPage(page, idProject, 'Tree page', 'text');
 
-    await page.getByTestId('wiki-tree-hide').click();
-    await expect(page.getByTestId('wiki-nav')).toHaveCount(0);
-    await expect(page.getByTestId('wiki-tree-show')).toBeVisible();
+    await page.getByTestId('side-panel-hide').click();
+    await expect(page.getByTestId('wiki-nav')).toBeHidden();
+    await expect(page.getByTestId('side-panel-show')).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId('wiki-page-title')).toHaveText('Tree page');
-    await expect(page.getByTestId('wiki-nav')).toHaveCount(0);
+    await expect(page.getByTestId('wiki-nav')).toBeHidden();
 
-    await page.getByTestId('wiki-tree-show').click();
+    await page.getByTestId('side-panel-show').click();
     await expect(page.getByTestId('wiki-tree-project')).toContainText('Tree page');
 });
 

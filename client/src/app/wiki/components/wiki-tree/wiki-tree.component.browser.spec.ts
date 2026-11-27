@@ -5,6 +5,7 @@ import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { Observable, of } from 'rxjs';
 import { describe, expect, it } from 'vitest';
 import { TablerIconStub, UiTooltipStub } from 'src/testing/stubs';
+import { UiSidePanelRowComponent } from 'src/app/ui/components/side-panel/components/side-panel-row/side-panel-row.component';
 import { WikiAgentAccess } from '../../constants/wiki-agent-access.enum';
 import { WikiSpaceKind } from '../../constants/wiki-space-kind.enum';
 import { WikiTreeConverter } from '../../converter/wiki-tree.converter';
@@ -44,7 +45,7 @@ async function setup(expanded: number[]): Promise<{
     toggled: number[];
 }> {
     await TestBed.configureTestingModule({
-        declarations: [WikiTreeComponent],
+        declarations: [WikiTreeComponent, UiSidePanelRowComponent],
         imports: [
             TranslateModule.forRoot({
                 loader: { provide: TranslateLoader, useClass: EmptyLoader }
@@ -72,8 +73,8 @@ function titles(fixture: ComponentFixture<WikiTreeComponent>): string[] {
     return Array.from(
         (fixture.nativeElement as HTMLElement).querySelectorAll('[data-testid="wiki-tree-node"]')
     ).map(element => {
-        const title = element.querySelector('.wiki-tree__title')?.textContent?.trim() ?? '';
-        const count = element.querySelector('.wiki-tree__count')?.textContent?.trim();
+        const title = element.querySelector('.ui-side-panel-row-label')?.textContent?.trim() ?? '';
+        const count = element.querySelector('.ui-side-panel-meta')?.textContent?.trim();
         return count ? `${title} (${count})` : title;
     });
 }
@@ -94,7 +95,17 @@ describe('WikiTreeComponent', () => {
         ]);
         const links = (fixture.nativeElement as HTMLElement).querySelectorAll('a');
         expect(links[2].getAttribute('href')).toBe('/project/7/wiki/project/page-3');
-        expect(links[2].classList).toContain('wiki-tree__node--active');
+    });
+
+    it('marks the open page as the current page', async () => {
+        const { fixture } = await setup([1, 2]);
+
+        const current = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+            '[aria-current="page"]'
+        );
+        expect(Array.from(current).map(link => link.title)).toEqual([
+            'Rollback when a database migration fails'
+        ]);
     });
 
     it('toggles a folder without navigating to it', async () => {

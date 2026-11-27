@@ -1,121 +1,87 @@
-<div class="conversation-list-head">
-    <h2 class="conversation-list-title">{{ 'AGENT_CHAT.TITLE' | translate }}</h2>
-    <ui-button
-        variant="text"
-        severity="secondary"
-        size="small"
+<ui-side-panel
+    [title]="'AGENT_CHAT.MENU_LABEL' | translate"
+    [hideLabel]="'HOME.HIDE_PANEL' | translate"
+    [isLoading]="isLoading()"
+>
+    <a
+        uiPanelActions
+        class="ui-side-panel-button"
         data-testid="chat-list-new"
-        [isIconOnly]="true"
-        [ariaLabel]="'AGENT_CHAT.NEW' | translate"
-        [uiTooltip]="'AGENT_CHAT.NEW' | translate"
         uiTooltipPosition="bottom"
+        [attr.aria-label]="'AGENT_CHAT.NEW' | translate"
+        [uiTooltip]="'AGENT_CHAT.NEW' | translate"
         [routerLink]="['/agent-chat']"
         [queryParams]="{ new: 1, idProject: idProject() }"
     >
         <tabler-icon icon="plus" [size]="16" />
-    </ui-button>
-</div>
-@if (idProject() !== null) {
-    <ui-choice
-        class="conversation-list-scope"
-        size="small"
-        optionValue="value"
-        [allowEmpty]="false"
-        [options]="scopeOptions"
-        [formControl]="scopeControl"
-    >
-        <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
-    </ui-choice>
-}
-<nav class="conversation-list-items">
-    @for (conversation of conversations(); track conversation.idConversation) {
-        <div class="conversation-list-row">
-            <a
-                class="conversation-list-item"
-                data-testid="chat-list-item"
-                [class.is-active]="conversation.idConversation === idSelected()"
-                [routerLink]="['/agent-chat', conversation.idConversation]"
-                [queryParams]="{ idProject: idProject() }"
-            >
-                <span class="conversation-list-item-title" data-testid="chat-list-item-title">
-                    @if (conversation.pinnedAt) {
-                        <tabler-icon
-                            class="conversation-list-item-pinned"
-                            data-testid="chat-list-item-pinned"
-                            icon="pinned"
-                            [size]="14"
-                        />
-                    }
-                    {{ conversation.title.trim() || ('AGENT_CHAT.UNTITLED' | translate) }}
-                </span>
-                <span class="conversation-list-item-meta">
-                    {{ conversation.updatedAt | date: 'short' }} ·
-                    {{
-                        'AGENT_CHAT.TOKENS'
-                            | translate: { tokens: TokenFormatter.format(conversation.tokensUsed) }
-                    }}
-                    @if (
-                        CostFormatter.format(conversation.costUsd, conversation.costEstimated);
-                        as cost
-                    ) {
-                        ·
-                        <span
-                            data-testid="chat-list-item-cost"
-                            [uiTooltip]="
-                                conversation.costEstimated
-                                    ? ('AGENT.STATS.COST_ESTIMATED_HINT' | translate)
-                                    : ''
-                            "
-                        >
-                            {{ cost }}
-                        </span>
-                    }
-                </span>
-                @if (conversation.isUnread) {
-                    <span class="conversation-list-item-unread" data-testid="chat-list-item-unread">
-                        <span class="sr-only">{{ 'AGENT_CHAT.UNREAD' | translate }}</span>
-                    </span>
-                }
-            </a>
-            <div class="conversation-list-item-actions">
-                <ui-button
-                    class="chat-touch conversation-list-item-action"
-                    variant="text"
-                    severity="secondary"
-                    size="small"
-                    data-testid="chat-list-item-pin"
-                    [isIconOnly]="true"
-                    [ariaLabel]="
-                        (conversation.pinnedAt ? 'AGENT_CHAT.UNPIN' : 'AGENT_CHAT.PIN') | translate
-                    "
-                    [uiTooltip]="
-                        (conversation.pinnedAt ? 'AGENT_CHAT.UNPIN' : 'AGENT_CHAT.PIN') | translate
-                    "
-                    (click)="onPin(conversation)"
-                >
-                    <tabler-icon [icon]="conversation.pinnedAt ? 'pinned' : 'pin'" [size]="14" />
-                </ui-button>
-                <ui-button
-                    class="chat-touch conversation-list-item-action conversation-list-item-action--danger"
-                    variant="text"
-                    severity="secondary"
-                    size="small"
-                    data-testid="chat-list-item-delete"
-                    uiConfirm
-                    [isIconOnly]="true"
-                    [ariaLabel]="'AGENT_CHAT.DELETE' | translate"
-                    [uiTooltip]="'AGENT_CHAT.DELETE' | translate"
-                    [confirmText]="'AGENT_CHAT.DELETE_CONFIRM' | translate"
-                    [acceptLabel]="'AGENT_CHAT.DELETE' | translate"
-                    (confirmed)="deleteConversation.emit(conversation.idConversation)"
-                >
-                    <tabler-icon icon="trash" [size]="14" />
-                </ui-button>
-            </div>
-        </div>
+    </a>
+    <label uiPanelFilter class="ui-side-panel-filter">
+        <tabler-icon icon="search" [size]="14" />
+        <input
+            data-testid="chat-list-filter"
+            [attr.aria-label]="'AGENT_CHAT.FILTER_PLACEHOLDER' | translate"
+            [placeholder]="'AGENT_CHAT.FILTER_PLACEHOLDER' | translate"
+            [value]="filter()"
+            (input)="onFilterInput($event)"
+            (keydown.escape)="filter.set('')"
+        />
+    </label>
+    @for (section of sections(); track section.titleKey ?? section.title) {
+        <ui-side-panel-section [title]="section.title ?? (section.titleKey ?? '' | translate)">
+            @for (conversation of section.items; track conversation.idConversation) {
+                <ui-side-panel-item>
+                    <a
+                        uiSidePanelRow
+                        data-testid="chat-list-item"
+                        [icon]="conversation.pinnedAt ? 'pinned' : 'robot'"
+                        [label]="conversation.title.trim() || ('AGENT_CHAT.UNTITLED' | translate)"
+                        [isActive]="conversation.idConversation === idSelected()"
+                        [routerLink]="['/agent-chat', conversation.idConversation]"
+                        [queryParams]="{ idProject: idProject() }"
+                    >
+                        @if (conversation.isUnread) {
+                            <span
+                                uiRowTrail
+                                class="ui-side-panel-dot"
+                                data-testid="chat-list-item-unread"
+                            >
+                                <span class="sr-only">{{ 'AGENT_CHAT.UNREAD' | translate }}</span>
+                            </span>
+                        } @else {
+                            <span uiRowTrail class="ui-side-panel-meta">
+                                {{ conversation.updatedAt | date: 'd MMM' }}
+                            </span>
+                        }
+                    </a>
+                    <button
+                        uiRowActions
+                        type="button"
+                        class="ui-side-panel-button ui-side-panel-button--small"
+                        data-testid="chat-list-item-actions"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="isMenuOpenFor(conversation, rowMenuRef)"
+                        [attr.aria-label]="'AGENT_CHAT.ACTIONS' | translate"
+                        (click)="onActions($event, conversation, rowMenuRef, confirm)"
+                    >
+                        <tabler-icon icon="dots-vertical" [size]="16" />
+                    </button>
+                    <span
+                        uiRowActions
+                        uiConfirm
+                        #confirm="uiConfirm"
+                        [confirmText]="'AGENT_CHAT.DELETE_CONFIRM' | translate"
+                        [acceptLabel]="'AGENT_CHAT.DELETE' | translate"
+                        (confirmed)="deleteConversation.emit(conversation.idConversation)"
+                    ></span>
+                </ui-side-panel-item>
+            }
+        </ui-side-panel-section>
     } @empty {
-        <div class="conversation-list-empty" data-testid="chat-list-empty">
-            {{ 'AGENT_CHAT.EMPTY_LIST' | translate }}
+        <div class="ui-side-panel-empty" data-testid="chat-list-empty">
+            {{
+                (filter().trim() ? 'AGENT_CHAT.FILTER_EMPTY' : 'AGENT_CHAT.EMPTY_LIST') | translate
+            }}
         </div>
     }
-</nav>
+</ui-side-panel>
+<ui-menu #rowMenuRef panelClass="chat-list-menu" [model]="rowMenu()" />

@@ -1,7 +1,7 @@
 @if (isReady()) {
 <div class="wiki-edit" data-testid="wiki-edit">
     <div class="wiki-edit__bar">
-        <app-wiki-tree-show />
+        <ui-side-panel-show [label]="'WIKI.TREE.SHOW' | translate" />
         <input
             uiInput
             class="wiki-edit__title"

@@ -1,5 +1,13 @@
+import { Injector } from '@angular/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SidePanelStore } from 'src/app/ui/components/side-panel/side-panel.store';
 import { WikiLayoutStore } from './wiki-layout.store';
+
+/** A fresh injector reads the saved state like a reload of the app. */
+function load(): { layout: WikiLayoutStore; panel: SidePanelStore } {
+    const injector = Injector.create({ providers: [WikiLayoutStore, SidePanelStore] });
+    return { layout: injector.get(WikiLayoutStore), panel: injector.get(SidePanelStore) };
+}
 
 describe('WikiLayoutStore', () => {
     let saved: Map<string, string>;
@@ -15,27 +23,30 @@ describe('WikiLayoutStore', () => {
     afterEach(() => vi.unstubAllGlobals());
 
     it('starts narrow and remembers the full width choice for the next visit', () => {
-        const store = new WikiLayoutStore();
-        expect(store.isFullWidth()).toBe(false);
+        const { layout } = load();
+        expect(layout.isFullWidth()).toBe(false);
 
-        store.toggleFullWidth();
+        layout.toggleFullWidth();
 
-        expect(store.isFullWidth()).toBe(true);
-        expect(new WikiLayoutStore().isFullWidth()).toBe(true);
+        expect(layout.isFullWidth()).toBe(true);
+        expect(load().layout.isFullWidth()).toBe(true);
     });
 
-    it('shows the page tree until it is hidden and remembers that for the next visit', () => {
-        const store = new WikiLayoutStore();
-        expect(store.isTreeHidden()).toBe(false);
+    it('hides the page tree with the shared panel and remembers that for the next visit', () => {
+        const { layout, panel } = load();
+        expect(layout.isHidden()).toBe(false);
 
-        store.toggleTree();
+        layout.hide();
 
-        expect(store.isTreeHidden()).toBe(true);
-        expect(new WikiLayoutStore().isTreeHidden()).toBe(true);
-        expect(new WikiLayoutStore().isFullWidth()).toBe(false);
+        expect(layout.isHidden()).toBe(true);
+        expect(panel.isHidden()).toBe(true);
+        expect(load().layout.isHidden()).toBe(true);
+
+        panel.show();
+        expect(layout.isHidden()).toBe(false);
     });
 
-    it('opens the tree as an overlay on narrow screens without touching the saved choice', () => {
+    it('opens the tree as an overlay on narrow screens without touching the shared panel', () => {
         const listeners: ((event: { matches: boolean }) => void)[] = [];
         vi.stubGlobal('window', {
             matchMedia: () => ({
@@ -44,20 +55,25 @@ describe('WikiLayoutStore', () => {
                     listeners.push(listener)
             })
         });
-        const store = new WikiLayoutStore();
-        expect(store.isOverlay()).toBe(true);
-        expect(store.isTreeHidden()).toBe(true);
+        const { layout, panel } = load();
+        expect(layout.isOverlay()).toBe(true);
+        expect(layout.isHidden()).toBe(true);
 
-        store.toggleTree();
-        expect(store.isTreeHidden()).toBe(false);
-        expect(saved.has('wiki.treeHidden')).toBe(false);
+        layout.show();
+        expect(layout.isHidden()).toBe(false);
 
-        store.closeOverlayTree();
-        expect(store.isTreeHidden()).toBe(true);
+        layout.closeOverlayTree();
+        expect(layout.isHidden()).toBe(true);
 
-        store.toggleTree();
+        layout.show();
+        layout.hide();
+        expect(layout.isHidden()).toBe(true);
+        expect(panel.isHidden()).toBe(false);
+        expect(saved.has('sidePanelHidden')).toBe(false);
+
+        layout.show();
         listeners.forEach(listener => listener({ matches: false }));
-        expect(store.isOverlay()).toBe(false);
-        expect(store.isTreeHidden()).toBe(false);
+        expect(layout.isOverlay()).toBe(false);
+        expect(layout.isHidden()).toBe(false);
     });
 });
