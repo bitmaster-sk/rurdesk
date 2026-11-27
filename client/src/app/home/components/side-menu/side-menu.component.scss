@@ -67,7 +67,11 @@ ul {
         // On a short screen the project links scroll so the global rows stay reachable.
         flex: 0 1 auto;
         min-height: 0;
+        overflow-x: hidden;
         overflow-y: auto;
+        // Wheel, touch and keyboard scroll it; a scrollbar would eat a third of the 3.25rem rail
+        // and push its icons sideways into a second, horizontal scrollbar.
+        scrollbar-width: none;
 
         .menu-section-title {
             color: var(--ui-color-text-muted);

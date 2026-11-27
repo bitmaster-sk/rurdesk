@@ -390,6 +390,17 @@ describe('SideMenuComponent', () => {
         }
     });
 
+    // Headless Chromium hides scrollbars, so their width cannot be measured here: the styles that
+    // keep them away are the observable part.
+    it('scrolls the project links on a short screen without a scrollbar', async () => {
+        const element = await render('/table', { isCollapsed: true });
+        const navigation = getComputedStyle(menuOf(element).querySelector('.navigation')!);
+
+        expect(navigation.overflowY).toBe('auto');
+        expect(navigation.overflowX).toBe('hidden');
+        expect(navigation.scrollbarWidth).toBe('none');
+    });
+
     it('keeps the unread count whole on the icon in the rail', async () => {
         const element = await render('/table', { isCollapsed: true });
         const row = element.querySelector<HTMLElement>('[data-testid="sidebar-messages"]')!;
