@@ -1,0 +1,29 @@
+// <ui-side-panel-section>. ViewEncapsulation.None → plain global selectors, @used by
+// ../../side-panel.styles.scss.
+
+.ui-side-panel-section {
+    display: block;
+}
+
+.ui-side-panel-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    // 24px of content holds the add button whole: in less it spills its hover onto the first row.
+    height: 36px;
+    // The 24px add button ends its icon level with the row trails below.
+    padding: 10px 4px 2px 8px;
+}
+
+.ui-side-panel-section-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--font-size-s);
+    font-weight: bold;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-color-muted-fg);
+}

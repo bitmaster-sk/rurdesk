@@ -166,6 +166,11 @@ export class UiConfirmStub {
     public readonly confirmed = output<void>();
 }
 
+@Component({ selector: 'ui-side-panel-show', template: '', standalone: true })
+export class UiSidePanelShowStub {
+    public readonly label = input<string>('');
+}
+
 @Directive({ selector: '[uiTooltip]', standalone: true })
 export class UiTooltipStub {
     public readonly uiTooltip = input<string | TemplateRef<unknown>>('');

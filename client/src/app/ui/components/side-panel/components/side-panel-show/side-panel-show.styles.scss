@@ -1,0 +1,7 @@
+// <ui-side-panel-show>. ViewEncapsulation.None → plain global selectors, @used by
+// ../../side-panel.styles.scss.
+
+// No box of its own, so it takes no gap in the header while the panel is shown.
+.ui-side-panel-show {
+    display: contents;
+}

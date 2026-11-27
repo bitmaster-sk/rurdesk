@@ -1,0 +1,52 @@
+// <ui-side-panel-item>. ViewEncapsulation.None → plain global selectors, @used by
+// ../../side-panel.styles.scss.
+
+.ui-side-panel-item {
+    position: relative;
+    display: block;
+}
+
+.ui-side-panel-item-actions {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    display: flex;
+    opacity: 0;
+
+    &:empty {
+        display: none;
+    }
+}
+
+// Above the button's own hover, which is @used later.
+.ui-side-panel-item .ui-side-panel-item-actions .ui-side-panel-button {
+    background: var(--ui-color-surface);
+}
+
+// The actions take the trailing slot while the row is hovered, focused or has its menu open.
+.ui-side-panel-item:has(.ui-side-panel-item-actions > *):is(
+        :hover,
+        :focus-within,
+        :has([aria-expanded='true'])
+    ) {
+    .ui-side-panel-item-actions {
+        opacity: 1;
+    }
+
+    .ui-side-panel-row-trail {
+        visibility: hidden;
+    }
+}
+
+// Touch devices cannot hover, so the actions stay in view.
+@media (hover: none) {
+    .ui-side-panel-item:has(.ui-side-panel-item-actions > *) {
+        .ui-side-panel-item-actions {
+            opacity: 1;
+        }
+
+        .ui-side-panel-row-trail {
+            visibility: hidden;
+        }
+    }
+}
