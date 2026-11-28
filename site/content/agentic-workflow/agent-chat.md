@@ -13,11 +13,15 @@ yourself, see [Create task](#create-task).
 
 ![Agent chat: the conversation list and an answer about the current sprint](../../site/assets/img/agent-chat-overview.png)
 
-Open it from the **robot** icon in the top bar. The menu lists your pinned
-conversations and those of the current project, and a badge counts the
-conversations with an answer you have not read yet.
+Open it from **Agent chat** in the left menu. Its count shows how many
+conversations have an answer you have not read yet.
 
-![The agent chat menu in the top bar](../../site/assets/img/agent-chat-menu.png)
+The panel next to the conversation lists all your conversations: the pinned
+ones first, then those of the current project under its name, then the other
+projects. A dot marks an unread answer; the others show their date. Search the
+list by title with the field on top, start a new conversation with **+**, and
+hide the panel when you want the conversation alone (see
+[Navigation](../using-the-tracker/features.md#navigation)).
 
 ## Starting a conversation
 
@@ -66,7 +70,8 @@ the conversation. No agent starts working on it; you decide who does and when.
 
 ## Pinning and deleting
 
-**Pin** keeps a conversation at the top of the list and of the menu. **Delete**
+The **⋮** button on a conversation in the list offers **Pin to top** and
+**Delete**. A pinned conversation stays at the top of the list. **Delete**
 removes it for good; an answer in progress is cancelled.
 
 ## Privacy

@@ -8,6 +8,43 @@ description: Day-to-day operation — tasks, views, relations, tracker, and AI f
 How to use the platform day to day. For the agent workflow see
 [Agents](./agents.md).
 
+## Navigation
+
+Every page shares one menu on the left. There is no top bar.
+
+![The left menu: project picker and project links on top, the timer, then Notifications, Messages, Agent chat and the user at the bottom](../../site/assets/img/navigation.png)
+
+From top to bottom:
+
+- **Search** opens the [command palette](#command-palette-keyboard-shortcuts).
+- The **project picker** shows the current project. It opens a list with search,
+  your recent projects, all projects and **New project**. Press <kbd>p</kbd> to
+  open it from anywhere.
+- The **project links**: Overview, Project settings (project owners only), Wiki,
+  Releases and the task views Table, Board, Calendar and Gantt.
+- The **running timer**, while one runs (see [The running timer](#the-running-timer)).
+- **Notifications**, **Messages** and **Agent chat**, each with its unread
+  count. They do not depend on the current project.
+- **You**: your name opens a menu with My page, User settings, Keyboard
+  shortcuts, the Administration group (administrators only) and Log out.
+
+Picking another project keeps you in the same section: from the Board of one
+project you land on the Board of the next one. Anywhere else, Messages and
+Agent chat included, you land on the project's Overview.
+
+**Collapse menu** in the menu header, or <kbd>[</kbd>, folds the menu into a
+rail of icons for more room. Each icon names itself in a tooltip on hover and
+on keyboard focus, and the unread counts stay on the icons. The browser
+remembers your choice.
+
+![The menu folded into a rail of icons, with a tooltip on the Board icon](../../site/assets/img/navigation-rail.png)
+
+**Wiki**, **Messages** and **Agent chat** add a second panel next to the menu:
+the page tree, the list of chats, the list of conversations. Its
+**Hide panel** button gives the content the whole width; the button that brings
+it back sits at the top left of the content. The choice applies to all three
+and the browser remembers it.
+
 ## Project overview
 
 Opening a project lands on its **overview dashboard** — a read-at-a-glance
@@ -482,16 +519,18 @@ switch.
 
 ![The switch dialog: the timer running now above, the task about to start below, and the Submit and switch action](../../site/assets/img/timer-switch.png)
 
-While a timer runs it appears in the page header as a small control:
+While a timer runs it appears in the left menu, above Notifications, as a small
+control:
 
-- the **stopwatch and clock** open a panel with today's total, a chart of when
-  the work happened, and the confirm, pause and discard actions;
-- the **task number** is a link straight to the task being worked on;
-- the last segment **pauses and resumes** the timer.
+- the **stopwatch and clock** open a panel with the task (a link to it), today's
+  total, a chart of when the work happened, and the confirm, pause and discard
+  actions;
+- the button next to it **pauses and resumes** the timer.
 
-![The header timer with its panel open: elapsed time, today's total, the day chart, a note field and the confirm, pause and discard actions](../../site/assets/img/running-timer.png)
+![The timer in the left menu with its panel open: elapsed time, today's total, the day chart, a note field and the confirm, pause and discard actions](../../site/assets/img/running-timer.png)
 
-There is nothing in the header when no timer runs. A running timer keeps
+In the folded menu only the clock stays; its tooltip adds the task number, and
+pausing moves into the panel. There is nothing in the menu when no timer runs. A running timer keeps
 counting on its own: reload the page, close the tab, or sign in on another
 device and it is still running, with the time it should have. Have the app open
 in several tabs and they all show the same timer — start, pause or stop it in
