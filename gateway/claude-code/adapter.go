@@ -28,7 +28,7 @@ const defaultClaudeBinary = "claude"
 const chatBuiltinTools = "Read,Grep,Glob,WebSearch,WebFetch"
 
 // chatDisallowedTools is the second fence behind the allow-list: no shell, file edits or subagents.
-const chatDisallowedTools = "Bash,Write,Edit,MultiEdit,NotebookEdit,Task"
+const chatDisallowedTools = "Bash,Write,Edit,NotebookEdit,Task"
 
 // ClaudeCodeAdapter implements common.Agent by driving the official Claude
 // Code CLI (`claude`, installed via npm) headlessly. It authenticates against
@@ -576,25 +576,30 @@ func (a *ClaudeCodeAdapter) Cancel(_ context.Context, runID common.RunID) error 
 // ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN removed (a stray host var can't
 // flip billing to the Console pay-per-token bucket), plus GIT_PAGER=cat (the
 // implement stage's `git log`/`git diff` would otherwise block on a pager),
-// IS_SANDBOX=1, and an optional CLAUDE_CODE_OAUTH_TOKEN.
+// IS_SANDBOX=1, ENABLE_TOOL_SEARCH=false, and an optional CLAUDE_CODE_OAUTH_TOKEN.
 //
 // IS_SANDBOX=1: the container runs as root, and the CLI refuses
 // --dangerously-skip-permissions under uid 0 unless this is set. The
 // container is a disposable per-run worktree sandbox where headless
 // auto-approve is intended, so we opt into the root bypass instead of
 // re-plumbing the image to non-root.
+//
+// ENABLE_TOOL_SEARCH=false: newer CLIs defer MCP tools behind ToolSearch, and
+// stage success rides on complete_stage, so the model must see it up front.
 func childEnv(oauthToken, gitToken, worktreePath string) []string {
 	base := common.AgentEnv(os.Environ(), gitToken, worktreePath)
-	out := make([]string, 0, len(base)+3)
+	out := make([]string, 0, len(base)+4)
 	for _, kv := range base {
 		if strings.HasPrefix(kv, "ANTHROPIC_API_KEY=") ||
-			strings.HasPrefix(kv, "ANTHROPIC_AUTH_TOKEN=") {
+			strings.HasPrefix(kv, "ANTHROPIC_AUTH_TOKEN=") ||
+			strings.HasPrefix(kv, "ENABLE_TOOL_SEARCH=") {
 			continue
 		}
 		out = append(out, kv)
 	}
 	out = append(out, "GIT_PAGER=cat")
 	out = append(out, "IS_SANDBOX=1")
+	out = append(out, "ENABLE_TOOL_SEARCH=false")
 	if oauthToken != "" {
 		out = append(out, "CLAUDE_CODE_OAUTH_TOKEN="+oauthToken)
 	}

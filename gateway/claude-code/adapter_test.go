@@ -304,6 +304,25 @@ func TestChildEnvOmitsTokenWhenEmpty(t *testing.T) {
 	}
 }
 
+// The agent must see complete_stage in its first request, so the CLI's MCP
+// tool search stays off even when the gateway's own env turns it on.
+func TestChildEnvTurnsOffToolSearch(t *testing.T) {
+	if env := childEnv("", "", t.TempDir()); !hasEnv(env, "ENABLE_TOOL_SEARCH=false") {
+		t.Error("ENABLE_TOOL_SEARCH=false not set")
+	}
+
+	t.Setenv("ENABLE_TOOL_SEARCH", "true")
+	var toolSearchEntries []string
+	for _, kv := range childEnv("", "", t.TempDir()) {
+		if strings.HasPrefix(kv, "ENABLE_TOOL_SEARCH=") {
+			toolSearchEntries = append(toolSearchEntries, kv)
+		}
+	}
+	if len(toolSearchEntries) != 1 || toolSearchEntries[0] != "ENABLE_TOOL_SEARCH=false" {
+		t.Errorf("ENABLE_TOOL_SEARCH entries = %q, want exactly [ENABLE_TOOL_SEARCH=false]", toolSearchEntries)
+	}
+}
+
 func hasEnv(env []string, want string) bool {
 	for _, kv := range env {
 		if kv == want {
@@ -797,7 +816,7 @@ func TestClaudeAdapter_ChatRestrictsToolsAndSkipsSessionPersistence(t *testing.T
 	chatArgs := []string{
 		"--no-session-persistence",
 		"--tools", "Read,Grep,Glob,WebSearch,WebFetch",
-		"--disallowedTools", "Bash,Write,Edit,MultiEdit,NotebookEdit,Task",
+		"--disallowedTools", "Bash,Write,Edit,NotebookEdit,Task",
 	}
 	cfg := &common.Config{TrackerMCPUrl: "http://issue.proxy/mcp/sse", AgentApiKey: "deadbeef", ClaudeCode: &common.ClaudeCodeConfig{}}
 	for _, tt := range []struct {

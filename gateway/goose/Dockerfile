@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-cer
 # flags, events and exit codes against the new release. The official install
 # script is not used: it falls back to the latest release when the pinned
 # download fails.
-ARG GOOSE_VERSION=v1.56.0
-ARG GOOSE_SHA256_AMD64=e29544421a6e698aab0fe4becda96096218ff36abe85b83785519d41c555c714
-ARG GOOSE_SHA256_ARM64=30b60a49a534ca7af062ec94b752367494ad3a2824744a6d1e8ec3e1040d9922
+ARG GOOSE_VERSION=v1.61.0
+ARG GOOSE_SHA256_AMD64=493c41b6544817b4c2669c3ba465d9d7161185cacfb9088e83dc26566d36f36d
+ARG GOOSE_SHA256_ARM64=535f240b1193525290045a0a10f93f42986a2999fb6e8183baecdfe17eddc1bb
 RUN case "$(dpkg --print-architecture)" in \
       amd64) goose_arch=x86_64; goose_sha256="${GOOSE_SHA256_AMD64}" ;; \
       arm64) goose_arch=aarch64; goose_sha256="${GOOSE_SHA256_ARM64}" ;; \

@@ -1,0 +1,10 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261128_1 · /w
+     L L     goose is ready
+{"type":"message","message":{"id":"chatcmpl-1","role":"assistant","created":1795880979,"content":[{"type":"toolRequest","id":"call_1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage","arguments":{"id_task":42,"outcome":"output_submitted"}}},"_meta":{"goose.toolCall.providerIndex":0,"goose_extension":"tracker"}}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_80824661-bb0e-4367-af6c-7fa618c371e8","role":"user","created":1795880979,"content":[{"type":"toolResponse","id":"call_1","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"{\"ok\":true}"}]}}}],"metadata":{"userVisible":true,"agentVisible":true}}}
+{"type":"message","message":{"id":"chatcmpl-2","role":"assistant","created":1795880979,"content":[{"type":"toolRequest","id":"call_2","toolCall":{"status":"success","value":{"name":"tracker__get_issue","arguments":{"id_issue":7}}},"_meta":{"goose.toolCall.providerIndex":0,"goose_extension":"tracker"}}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_514d7f36-e7df-48be-b303-e95384d96d4e","role":"user","created":1795880979,"content":[{"type":"toolResponse","id":"call_2","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"{\"ok\":true}"}]}}}],"metadata":{"userVisible":true,"agentVisible":true}}}
+{"type":"message","message":{"id":"msg_0fb8f58f-da3b-4193-9137-5eff06a4d3b0","role":"assistant","created":1795880979,"content":[{"type":"error","kind":"resourceExhausted","message":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"error","error":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}

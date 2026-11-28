@@ -188,6 +188,9 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	if runCtx.Err() != nil {
 		return stats, fmt.Errorf("goose cancelled")
 	}
+	if !result.CompleteSeen {
+		log.Warn().Int64("idRun", task.IdRun).Msg("goose ended without a complete event, token stats missing")
+	}
 
 	// Goose reports exhausted credit (HTTP 402) as a notification with exit 0,
 	// so the exit code alone can't be trusted. A detected provider error takes
@@ -195,6 +198,20 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	if providerError != nil {
 		log.Warn().Int64("idRun", task.IdRun).Str("code", providerError.Code).Str("detail", providerError.Detail).Msg("goose provider error")
 		return stats, providerError
+	}
+
+	// Goose v1.60+ exits 1 on --max-turns, so the turn limit is decided before
+	// the exit code. A stage submitted before the cap still succeeds.
+	if turnLimitHit && !result.CompleteStageCalled {
+		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
+			Msg("goose reached --max-turns before calling complete_stage")
+		return stats, &common.AgentError{
+			Code:   common.ErrCodeTurnLimitExhausted,
+			Detail: "agent reached --max-turns before calling complete_stage",
+		}
+	}
+	if turnLimitHit {
+		return stats, nil
 	}
 
 	exitCode := 0
@@ -217,14 +234,6 @@ func (a *GooseAdapter) Run(ctx context.Context, task common.Task) (common.RunSta
 	// the run and the user gets Continue/Restart.
 	if termErr := mapTerminalStatus(exitCode, status); termErr != nil {
 		return stats, termErr
-	}
-	if turnLimitHit && !result.CompleteStageCalled {
-		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).
-			Msg("goose reached --max-turns before calling complete_stage")
-		return stats, &common.AgentError{
-			Code:   common.ErrCodeTurnLimitExhausted,
-			Detail: "agent reached --max-turns before calling complete_stage",
-		}
 	}
 	if !result.CompleteStageCalled {
 		log.Warn().Int64("idRun", task.IdRun).Str("stage", task.Stage).

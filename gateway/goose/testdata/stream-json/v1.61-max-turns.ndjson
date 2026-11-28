@@ -1,0 +1,10 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261128_1 · /w
+     L L     goose is ready
+{"type":"message","message":{"id":"chatcmpl-1","role":"assistant","created":1795880977,"content":[{"type":"toolRequest","id":"call_1","toolCall":{"status":"success","value":{"name":"tracker__get_issue","arguments":{"id_issue":7}}},"_meta":{"goose.toolCall.providerIndex":0,"goose_extension":"tracker"}}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_966ba76d-fcca-453b-abd6-9031a87e8c45","role":"user","created":1795880977,"content":[{"type":"toolResponse","id":"call_1","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"{\"ok\":true}"}]}}}],"metadata":{"userVisible":true,"agentVisible":true}}}
+{"type":"message","message":{"id":"chatcmpl-2","role":"assistant","created":1795880977,"content":[{"type":"toolRequest","id":"call_2","toolCall":{"status":"success","value":{"name":"tracker__get_issue","arguments":{"id_issue":7}}},"_meta":{"goose.toolCall.providerIndex":0,"goose_extension":"tracker"}}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_8bd56c5c-2111-461c-ac34-305eee15fa2d","role":"user","created":1795880977,"content":[{"type":"toolResponse","id":"call_2","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"{\"ok\":true}"}]}}}],"metadata":{"userVisible":true,"agentVisible":true}}}
+{"type":"message","message":{"id":"msg_0fa57c3a-ce6f-42c4-aa11-845d385a1921","role":"assistant","created":1795880977,"content":[{"type":"error","kind":"resourceExhausted","message":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"error","error":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}
