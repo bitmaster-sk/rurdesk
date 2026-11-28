@@ -1,0 +1,6 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261128_1 · /w
+     L L     goose is ready
+{"type":"message","message":{"id":"msg_46bb98dd-9411-4807-bb60-d54a888f8f8e","role":"assistant","created":1795880959,"content":[{"type":"error","kind":"authentication","message":"Ran into this error: Authentication error: Authentication failed for http://127.0.0.1:8099/v1/chat/completions. Status: 401 Unauthorized. Response: Invalid API key..\n\nPlease retry if you think this is a transient or recoverable error."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"error","error":"Ran into this error: Authentication error: Authentication failed for http://127.0.0.1:8099/v1/chat/completions. Status: 401 Unauthorized. Response: Invalid API key..\n\nPlease retry if you think this is a transient or recoverable error."}

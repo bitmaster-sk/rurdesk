@@ -79,9 +79,11 @@ type streamAggregator struct {
 	providerError   *common.AgentError
 	runErrorMessage string
 
-	// turnLimitHit is set when the agent's answer text contains goose's
-	// turn-limit sentinel ("reached the maximum number of actions").
+	// turnLimitHit is set when goose's turn-limit sentinel ("reached the
+	// maximum number of actions") arrives as answer text or as an error block.
 	turnLimitHit bool
+	// completeSeen is set when the terminal "complete" event was read.
+	completeSeen bool
 
 	onCompleteStage func()
 }
@@ -105,6 +107,7 @@ func (a *streamAggregator) line(raw []byte) {
 	case "message":
 		a.handleMessage(sl)
 	case "complete":
+		a.completeSeen = true
 		a.tokens = tokensFromMap(map[string]any{
 			"total_tokens":  float64(sl.TotalTokens),
 			"input_tokens":  float64(sl.InputTokens),
@@ -130,6 +133,8 @@ func (a *streamAggregator) handleMessage(sl model.StreamLine) {
 			if isTurnLimitSentinel(block.Text) {
 				a.turnLimitHit = true
 			}
+		case block.Type == "error" && block.Kind == "resourceExhausted" && isTurnLimitSentinel(block.Message):
+			a.turnLimitHit = true
 		case block.Type == "error":
 			if a.providerError == nil {
 				a.providerError = classifyProviderErrorKind(block.Kind, block.Message)
@@ -204,12 +209,14 @@ func (a *streamAggregator) finish() entity.StreamResult {
 		RunErrorMessage:     a.runErrorMessage,
 		CompleteStageCalled: a.completeStageAccepted,
 		TurnLimitHit:        a.turnLimitHit,
+		CompleteSeen:        a.completeSeen,
 	}
 }
 
 // isTurnLimitSentinel returns true when text contains goose's turn-limit
-// message. Goose exits 0 on --max-turns, so this sentinel is the only signal
-// that the cap was hit. Matching a stable substring, not the full sentence.
+// message, the only signal that --max-turns was hit: goose v1.56 exits 0 and
+// sends it as answer text, v1.60+ exits 1 and sends it as a resourceExhausted
+// error block. Matching a stable substring, not the full sentence.
 func isTurnLimitSentinel(text string) bool {
 	return strings.Contains(strings.ToLower(text), "reached the maximum number of actions")
 }

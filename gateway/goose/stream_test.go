@@ -498,3 +498,43 @@ func TestQueueThinkingEvent_CarriesToolDetail(t *testing.T) {
 		t.Errorf("relayed event = %+v", sender.events[0])
 	}
 }
+
+// Goose v1.60+ ends --max-turns with an error block of kind resourceExhausted.
+// Only the turn-limit sentence makes it a turn limit; any other exhausted
+// resource stays a provider error.
+func TestStreamAggregator_TurnLimitErrorBlock(t *testing.T) {
+	tests := []struct {
+		name             string
+		message          string
+		wantTurnLimitHit bool
+		wantCode         string
+	}{
+		{"turn limit", "I've reached the maximum number of actions I can do without user input.", true, ""},
+		{"quota", "quota exhausted", false, common.ErrCodeProviderCreditExhausted},
+		{"other resource", "out of memory", false, common.ErrCodeProviderError},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			emit, _ := collectEvents()
+			a := newStreamAggregator(1, emit)
+			a.line([]byte(`{"type":"message","message":{"role":"assistant","content":[{"type":"error","kind":"resourceExhausted","message":` + strconv.Quote(tt.message) + `}]}}`))
+			res := a.finish()
+
+			if res.TurnLimitHit != tt.wantTurnLimitHit {
+				t.Errorf("TurnLimitHit = %v, want %v", res.TurnLimitHit, tt.wantTurnLimitHit)
+			}
+			if tt.wantCode == "" {
+				if res.ProviderError != nil {
+					t.Errorf("providerError = %v, want nil", res.ProviderError)
+				}
+				return
+			}
+			if res.ProviderError == nil {
+				t.Fatal("expected a provider error, got nil")
+			}
+			if res.ProviderError.Code != tt.wantCode {
+				t.Errorf("code = %q, want %q", res.ProviderError.Code, tt.wantCode)
+			}
+		})
+	}
+}

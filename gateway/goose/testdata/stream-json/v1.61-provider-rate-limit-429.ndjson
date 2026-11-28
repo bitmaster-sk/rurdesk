@@ -1,0 +1,6 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261128_1 · /w
+     L L     goose is ready
+{"type":"message","message":{"id":"msg_4439749b-2015-4df6-a77f-46c96734cd74","role":"assistant","created":1795880967,"content":[{"type":"error","kind":"other","message":"Ran into this error: Rate limit exceeded: Rate limit reached for requests..\n\nPlease retry if you think this is a transient or recoverable error."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"error","error":"Ran into this error: Rate limit exceeded: Rate limit reached for requests..\n\nPlease retry if you think this is a transient or recoverable error."}

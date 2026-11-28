@@ -1,0 +1,13 @@
+
+    __( O)>  ● new session · openai gpt-4o
+   \____)    20261128_1 · /w
+     L L     goose is ready
+{"type":"message","message":{"id":"chatcmpl-1","role":"assistant","created":1795880955,"content":[{"type":"text","text":"Here is my plan, no submission."}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_62534add-f453-49c0-bb57-395575795e4f","role":"assistant","created":1795880955,"content":[{"type":"systemNotification","notificationType":"inlineMessage","msg":"Stop hook `rurdesk-guard` blocked ending this turn."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"message","message":{"id":"chatcmpl-2","role":"assistant","created":1795880955,"content":[{"type":"text","text":"Here is my plan, no submission."}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_f3b01861-1219-4104-8885-c6a8eac94982","role":"assistant","created":1795880955,"content":[{"type":"systemNotification","notificationType":"inlineMessage","msg":"Stop hook `rurdesk-guard` blocked ending this turn."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"message","message":{"id":"chatcmpl-3","role":"assistant","created":1795880955,"content":[{"type":"text","text":"Here is my plan, no submission."}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_23dcd547-47ed-4d5b-b87b-66a0bb0bb21f","role":"assistant","created":1795880955,"content":[{"type":"systemNotification","notificationType":"inlineMessage","msg":"Stop hook `rurdesk-guard` blocked ending this turn."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"message","message":{"id":"chatcmpl-4","role":"assistant","created":1795880955,"content":[{"type":"text","text":"Here is my plan, no submission."}],"metadata":{"userVisible":true,"agentVisible":true,"inference":{"provider":"openai","requestedModel":"gpt-4o"}}}}
+{"type":"message","message":{"id":"msg_3af875db-cb17-41f6-94fa-d72b26c8dfbd","role":"assistant","created":1795880955,"content":[{"type":"systemNotification","notificationType":"inlineMessage","msg":"Stop hooks blocked the turn from ending more than 3 consecutive times — overriding and ending turn to avoid an infinite loop. Set GOOSE_STOP_HOOK_BLOCK_CAP to raise this limit."}],"metadata":{"userVisible":true,"agentVisible":false}}}
+{"type":"complete","total_tokens":60,"input_tokens":40,"output_tokens":20,"cache_read_input_tokens":0,"cache_write_input_tokens":0,"cost_usd":0.0003}

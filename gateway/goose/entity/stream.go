@@ -31,4 +31,5 @@ type StreamResult struct {
 	RunErrorMessage     string
 	TurnLimitHit        bool
 	CompleteStageCalled bool
+	CompleteSeen        bool
 }

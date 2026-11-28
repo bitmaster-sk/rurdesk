@@ -276,50 +276,70 @@ func TestRunWithStubBinary(t *testing.T) {
 		`{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage"}}}]}}` + "\n" +
 		`{"type":"message","message":{"role":"user","content":[{"type":"toolResponse","id":"c1","toolResult":{"status":"success","value":{"content":[]}}}]}}` + "\n" +
 		`{"type":"complete","total_tokens":15,"input_tokens":10,"output_tokens":5}`
+	// Goose v1.60+ hit --max-turns after the tracker rejected complete_stage:
+	// an error block, a top-level error, exit 1 and no complete event.
+	const streamOutTurnLimitErrorAfterRejectedSubmit = `{"type":"message","message":{"role":"assistant","content":[{"type":"toolRequest","id":"c1","toolCall":{"status":"success","value":{"name":"tracker__complete_stage"}}}]}}` + "\n" +
+		`{"type":"message","message":{"role":"user","content":[{"type":"toolResponse","id":"c1","toolResult":{"status":"success","value":{"content":[{"type":"text","text":"HTTP 409: branch_name is required"}],"isError":true}}}]}}` + "\n" +
+		`{"type":"message","message":{"role":"assistant","content":[{"type":"error","kind":"resourceExhausted","message":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}]}}` + "\n" +
+		`{"type":"error","error":"I've reached the maximum number of actions I can do without user input. Would you like me to continue?"}`
 	tests := []struct {
-		name      string
-		streamOut string
-		exitCode  int
-		wantErr   bool
-		wantCode  string // expected AgentError.Code when wantErr is set
+		name       string
+		streamOut  string
+		exitCode   int
+		wantErr    bool
+		wantCode   string // expected AgentError.Code when wantErr is set
+		wantTokens int
 	}{
 		{
-			name:      "success",
-			streamOut: streamOut,
-			exitCode:  0,
-			wantErr:   false,
+			name:       "success",
+			streamOut:  streamOut,
+			exitCode:   0,
+			wantErr:    false,
+			wantTokens: 15,
 		},
 		{
-			name:      "crash",
-			streamOut: streamOut,
-			exitCode:  1,
-			wantErr:   true,
+			name:       "crash",
+			streamOut:  streamOut,
+			exitCode:   1,
+			wantErr:    true,
+			wantTokens: 15,
 		},
 		{
 			// Exit 0 but no complete_stage → must fail as stage_not_submitted
 			// instead of silently succeeding and hanging the run.
-			name:      "exit zero without complete_stage",
-			streamOut: streamOutNoSubmit,
-			exitCode:  0,
-			wantErr:   true,
-			wantCode:  common.ErrCodeStageNotSubmitted,
+			name:       "exit zero without complete_stage",
+			streamOut:  streamOutNoSubmit,
+			exitCode:   0,
+			wantErr:    true,
+			wantCode:   common.ErrCodeStageNotSubmitted,
+			wantTokens: 15,
 		},
 		{
 			// Turn limit exhausted, exit 0, no complete_stage → must be
 			// classified as turn_limit_exhausted, not stage_not_submitted.
-			name:      "turn limit exhausted, exit 0",
-			streamOut: streamOutTurnLimit,
-			exitCode:  0,
+			name:       "turn limit exhausted, exit 0",
+			streamOut:  streamOutTurnLimit,
+			exitCode:   0,
+			wantErr:    true,
+			wantCode:   common.ErrCodeTurnLimitExhausted,
+			wantTokens: 15,
+		},
+		{
+			// A rejected submission does not count: the run ran out of turns.
+			name:      "turn limit error block after rejected submit",
+			streamOut: streamOutTurnLimitErrorAfterRejectedSubmit,
+			exitCode:  1,
 			wantErr:   true,
 			wantCode:  common.ErrCodeTurnLimitExhausted,
 		},
 		{
 			// Sentinel present but complete_stage was called → the agent
 			// finished despite the warning; must NOT be a turn-limit error.
-			name:      "turn limit sentinel but complete_stage was called",
-			streamOut: streamOutTurnLimitButSubmitted,
-			exitCode:  0,
-			wantErr:   false,
+			name:       "turn limit sentinel but complete_stage was called",
+			streamOut:  streamOutTurnLimitButSubmitted,
+			exitCode:   0,
+			wantErr:    false,
+			wantTokens: 15,
 		},
 	}
 	for _, tt := range tests {
@@ -370,8 +390,8 @@ func TestRunWithStubBinary(t *testing.T) {
 					t.Errorf("error code = %q, want %q", agentErr.Code, tt.wantCode)
 				}
 			}
-			if stats.TokensUsed != 15 {
-				t.Errorf("TokensUsed = %d, want 15", stats.TokensUsed)
+			if stats.TokensUsed != tt.wantTokens {
+				t.Errorf("TokensUsed = %d, want %d", stats.TokensUsed, tt.wantTokens)
 			}
 			if stats.DurationMs < 0 {
 				t.Errorf("DurationMs = %d, want >= 0", stats.DurationMs)
@@ -423,7 +443,7 @@ func writeFixtureStub(t *testing.T, fixture string, exitCode int) string {
 	return stub
 }
 
-// Real goose v1.56.0 runs: a provider failure must surface as its own code
+// Real goose v1.56.0 and v1.61.0 runs: a provider failure must surface as its own code
 // whatever the exit code, and a submitted stage must succeed.
 func TestRunWithRecordedStreams(t *testing.T) {
 	tests := []struct {
@@ -431,14 +451,26 @@ func TestRunWithRecordedStreams(t *testing.T) {
 		exitCode int
 		wantCode string
 		wantErr  bool
+		// isMissingComplete marks a run goose ended without a complete event:
+		// the tool calls still count, the tokens stay 0.
+		isMissingComplete bool
 	}{
-		{"v1.56-complete-stage-accepted.ndjson", 0, "", false},
-		{"v1.56-complete-stage-rejected.ndjson", 0, common.ErrCodeStageNotSubmitted, true},
-		{"v1.56-complete-stage-never-called.ndjson", 0, common.ErrCodeStageNotSubmitted, true},
-		{"v1.56-provider-credits-402.ndjson", 0, common.ErrCodeProviderCreditExhausted, true},
-		{"v1.56-provider-auth-401.ndjson", 1, common.ErrCodeProviderAuthFailed, true},
-		{"v1.56-provider-rate-limit-429.ndjson", 1, common.ErrCodeProviderRateLimited, true},
-		{"v1.56-provider-low-credit-400.ndjson", 1, common.ErrCodeProviderCreditExhausted, true},
+		{"v1.56-complete-stage-accepted.ndjson", 0, "", false, false},
+		{"v1.56-complete-stage-rejected.ndjson", 0, common.ErrCodeStageNotSubmitted, true, false},
+		{"v1.56-complete-stage-never-called.ndjson", 0, common.ErrCodeStageNotSubmitted, true, false},
+		{"v1.56-provider-credits-402.ndjson", 0, common.ErrCodeProviderCreditExhausted, true, false},
+		{"v1.56-provider-auth-401.ndjson", 1, common.ErrCodeProviderAuthFailed, true, false},
+		{"v1.56-provider-rate-limit-429.ndjson", 1, common.ErrCodeProviderRateLimited, true, false},
+		{"v1.56-provider-low-credit-400.ndjson", 1, common.ErrCodeProviderCreditExhausted, true, false},
+		{"v1.61-complete-stage-accepted.ndjson", 0, "", false, false},
+		{"v1.61-complete-stage-rejected.ndjson", 0, common.ErrCodeStageNotSubmitted, true, false},
+		{"v1.61-complete-stage-never-called.ndjson", 0, common.ErrCodeStageNotSubmitted, true, false},
+		{"v1.61-provider-credits-402.ndjson", 0, common.ErrCodeProviderCreditExhausted, true, false},
+		{"v1.61-provider-auth-401.ndjson", 1, common.ErrCodeProviderAuthFailed, true, false},
+		{"v1.61-provider-rate-limit-429.ndjson", 1, common.ErrCodeProviderRateLimited, true, false},
+		{"v1.61-provider-low-credit-400.ndjson", 1, common.ErrCodeProviderCreditExhausted, true, false},
+		{"v1.61-max-turns.ndjson", 1, common.ErrCodeTurnLimitExhausted, true, true},
+		{"v1.61-max-turns-after-submit.ndjson", 1, "", false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fixture, func(t *testing.T) {
@@ -446,7 +478,10 @@ func TestRunWithRecordedStreams(t *testing.T) {
 			t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 			task := common.Task{IdRun: 7, IdTask: 1, Stage: common.StageDesign, WorktreePath: t.TempDir()}
 
-			_, err := newTestAdapter().Run(context.Background(), task)
+			stats, err := newTestAdapter().Run(context.Background(), task)
+			if tt.isMissingComplete && (stats.ToolCallsCount == 0 || stats.TokensUsed != 0) {
+				t.Errorf("stats = %d tool calls, %d tokens, want tool calls > 0 and 0 tokens", stats.ToolCallsCount, stats.TokensUsed)
+			}
 			if !tt.wantErr {
 				if err != nil {
 					t.Fatalf("Run error = %v, want nil", err)
