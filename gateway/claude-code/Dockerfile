@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git curl ca-cer
 # under us. Bump deliberately after testing the new release locally, including the flags live
 # thinking depends on (--include-partial-messages, --thinking-display summarized) and the chat
 # restrictions (--tools Read,Grep,Glob,WebSearch,WebFetch, --no-session-persistence).
-RUN npm install -g @anthropic-ai/claude-code@2.1.161
+RUN npm install -g @anthropic-ai/claude-code@2.1.332
 
 COPY --from=gateway-builder /gateway /usr/local/bin/gateway
 COPY common/git-hooks/pre-push /etc/git-hooks/pre-push
