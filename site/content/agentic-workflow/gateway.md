@@ -83,6 +83,10 @@ The gateway hands it to the agent; when the tracker sends none, the gateway sets
 nothing and the model uses its own default. Any other value fails the stage with
 `effort_not_allowed` before the agent starts.
 
+An agent chat never sends an effort, so a chat turn always runs on the default.
+For Claude Code that default is `medium`. To run stages higher, set the effort
+in the agent or in the settings.
+
 At startup the gateway also tells the tracker which of its `MODELS` think, so
 the tracker offers an effort only for those. How each agent finds out is in
 [Goose models](#goose-models) and [Claude Code models](#claude-code-models).
@@ -316,7 +320,10 @@ MODEL_DEFAULT=openai/kimi-k2.7-code   # optional; the first entry otherwise
 ```
 
 Goose gets the [thinking effort](#thinking-effort) as `GOOSE_THINKING_EFFORT`
-and maps it to what the provider understands.
+and maps it to what the provider understands. Goose maps it only for some
+providers, such as OpenAI reasoning models and xAI. For other models behind the
+`openai` provider, such as glm, kimi or mistral on Ollama Cloud, the effort has
+no effect.
 
 To report which models think, Goose asks Ollama (`OLLAMA_HOST`,
 `http://localhost:11434` when unset) which of its `ollama/*` models have no
@@ -500,7 +507,13 @@ agent's behaviour under you.
 
 Each `MODELS` entry is a model name as the CLI accepts it, without a provider:
 an alias such as `sonnet`, `opus` or `haiku`, or a full model id such as
-`claude-sonnet-4-6`.
+`claude-sonnet-5-5`.
+
+An alias follows the CLI in the image, so a CLI bump can move it to a newer
+model. With CLI 2.1.332, `sonnet` is `claude-sonnet-5-5` and `opus` is
+`claude-opus-5-5`. A full model id pins the model. Agents, stages and chats
+store the name from `MODELS`, so if you swap an alias for a full id, every saved
+choice of the alias falls back to `MODEL_DEFAULT`.
 
 ```bash
 MODELS=sonnet,opus,haiku
@@ -577,7 +590,7 @@ In the [chat stage](#the-chat-stage) the agent is read-only:
 - It runs with `--tools Read,Grep,Glob,WebSearch,WebFetch`, an allow-list of
   built-in tools, so no built-in that runs commands (`Bash`, `Monitor`, ...),
   edits files or starts subagents is offered;
-  `--disallowedTools Bash,Write,Edit,MultiEdit,NotebookEdit,Task` denies the
+  `--disallowedTools Bash,Write,Edit,NotebookEdit,Task` denies the
   main ones again. MCP tools are not built-ins and stay callable.
 - The web tools are there for research: a page the agent fetches can carry
   instructions, and a fetched URL can carry data out.
