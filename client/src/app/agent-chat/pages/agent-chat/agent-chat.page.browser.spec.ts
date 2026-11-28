@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, WritableSignal, input, output, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
 import {
@@ -32,10 +32,22 @@ import {
     MessageEditorStub,
     TablerIconStub,
     UiButtonStub,
-    UiChoiceStub,
-    UiConfirmStub,
     UiTooltipStub
 } from 'src/testing/stubs';
+import { ProjectContextStore } from 'src/app/home/store/project-context.store';
+import { UiConfirmPopupComponent } from 'src/app/ui/components/confirm-popup/confirm-popup.component';
+import { UiMenuComponent } from 'src/app/ui/components/menu/menu.component';
+import { UiSidePanelComponent } from 'src/app/ui/components/side-panel/side-panel.component';
+import { UiSidePanelItemComponent } from 'src/app/ui/components/side-panel/components/side-panel-item/side-panel-item.component';
+import { UiSidePanelRowComponent } from 'src/app/ui/components/side-panel/components/side-panel-row/side-panel-row.component';
+import { UiSidePanelSectionComponent } from 'src/app/ui/components/side-panel/components/side-panel-section/side-panel-section.component';
+import { UiSidePanelShowComponent } from 'src/app/ui/components/side-panel/components/side-panel-show/side-panel-show.component';
+import { UiConfirmDirective } from 'src/app/ui/directives/confirm.directive';
+// The panel's styles are global (ui.styles.scss) and not loaded by the test setup.
+import 'src/app/ui/components/side-panel/side-panel.styles.scss';
+// The app loads Tailwind's preflight too, whose `[hidden]` rule is `display: none !important`;
+// one test applies it, as the other geometry tests here were written without it.
+import tailwind from 'src/tailwind.css?inline';
 import { AgentConversationApi } from '../../api/agent-conversation.api.service';
 import { MessageViewComponent } from 'src/app/message/components/message-view/message-view.component';
 import { ChatRowComponent } from '../../components/chat-row/chat-row.component';
@@ -152,6 +164,24 @@ function listItem(idConversation: number, title: string): AgentConversationListI
     };
 }
 
+/** The real panel, row menu and delete confirmation of the conversation list. */
+const LIST_DECLARATIONS = [
+    UiSidePanelComponent,
+    UiSidePanelSectionComponent,
+    UiSidePanelRowComponent,
+    UiSidePanelItemComponent,
+    UiSidePanelShowComponent,
+    UiMenuComponent,
+    UiConfirmDirective,
+    UiConfirmPopupComponent
+];
+
+/** The side menu's project when the URL names none. */
+const projectContext = {
+    provide: ProjectContextStore,
+    useFactory: () => ({ idProject: signal<number | null>(null) })
+};
+
 function thought(text: string): AgentThinkingEvent {
     return { kind: AgentThinkingKind.Thinking, text, at: 1 };
 }
@@ -210,28 +240,6 @@ function withSpacingTokens(): void {
     onTestFinished(() => style.remove());
 }
 
-function expectInsideBorder(host: HTMLElement): void {
-    withSpacingTokens();
-    const rows = host.querySelectorAll<HTMLElement>('.conversation-list-row');
-    expect(rows.length).toBeGreaterThan(0);
-    rows.forEach(row => {
-        const item = row.querySelector<HTMLElement>('[data-testid="chat-list-item"]')!;
-        const itemRect = item.getBoundingClientRect();
-        const border = parseFloat(getComputedStyle(item).borderTopWidth);
-        const buttons = row.querySelectorAll<HTMLElement>(
-            '.conversation-list-item-actions ui-button'
-        );
-        expect(buttons.length).toBe(2);
-        buttons.forEach(button => {
-            const rect = button.getBoundingClientRect();
-            expect(rect.left).toBeGreaterThanOrEqual(itemRect.left + border);
-            expect(rect.right).toBeLessThanOrEqual(itemRect.right - border);
-            expect(rect.top).toBeGreaterThanOrEqual(itemRect.top + border);
-            expect(rect.bottom).toBeLessThanOrEqual(itemRect.bottom - border);
-        });
-    });
-}
-
 describe('AgentChatPage (browser)', () => {
     let fixture: ComponentFixture<AgentChatPage>;
     let paramMap: BehaviorSubject<ParamMap>;
@@ -255,12 +263,11 @@ describe('AgentChatPage (browser)', () => {
         turnNotices = new Subject();
         thinkingNotices = new Subject();
         api = {
-            load$: vi.fn((idProject?: number | null) =>
-                of(
-                    idProject == null
-                        ? [listItem(4, 'In rurdesk'), listItem(5, 'Elsewhere')]
-                        : [listItem(4, 'In rurdesk')]
-                )
+            load$: vi.fn(() =>
+                of([
+                    { ...listItem(4, 'In rurdesk'), idProject: 7 },
+                    { ...listItem(5, 'Elsewhere'), idProject: 9 }
+                ])
             ),
             loadOne$: vi.fn(() => of(detail())),
             loadMessages$: vi.fn(() => of([message({})])),
@@ -282,6 +289,7 @@ describe('AgentChatPage (browser)', () => {
             declarations: [
                 AgentChatPage,
                 ConversationListComponent,
+                ...LIST_DECLARATIONS,
                 ChatRowComponent,
                 ChatThinkingPillComponent
             ],
@@ -299,8 +307,6 @@ describe('AgentChatPage (browser)', () => {
                 AvatarStub,
                 TablerIconStub,
                 UiButtonStub,
-                UiChoiceStub,
-                UiConfirmStub,
                 UiTooltipStub
             ],
             providers: [
@@ -308,6 +314,7 @@ describe('AgentChatPage (browser)', () => {
                 { provide: ActivatedRoute, useValue: { paramMap, queryParamMap } },
                 { provide: AgentConversationApi, useValue: api },
                 { provide: ProjectApi, useValue: { load$: () => of([Fixtures.project()]) } },
+                projectContext,
                 { provide: UiToastService, useValue: toast },
                 { provide: AuthStore, useValue: { getUser: () => owner } },
                 { provide: AgentConversationUnreadStore, useValue: unreadStore },
@@ -343,9 +350,25 @@ describe('AgentChatPage (browser)', () => {
     }
 
     function titles(host: HTMLElement): string[] {
-        return Array.from(host.querySelectorAll('[data-testid="chat-list-item-title"]')).map(item =>
-            item.textContent.trim()
+        return Array.from(host.querySelectorAll<HTMLElement>('[data-testid="chat-list-item"]')).map(
+            item => item.title
         );
+    }
+
+    function sectionTitles(host: HTMLElement): string[] {
+        return Array.from(host.querySelectorAll('.ui-side-panel-section-title')).map(title =>
+            title.textContent.trim()
+        );
+    }
+
+    /** Opens the row menu of the conversation at `index` and picks the item labelled `labelKey`. */
+    function pickFromRowMenu(host: HTMLElement, index: number, labelKey: string): void {
+        host.querySelectorAll<HTMLElement>('[data-testid="chat-list-item-actions"]')[index].click();
+        fixture.detectChanges();
+        Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+            .find(item => item.textContent.includes(labelKey))!
+            .click();
+        fixture.detectChanges();
     }
 
     function bodies(): string[] {
@@ -362,31 +385,26 @@ describe('AgentChatPage (browser)', () => {
         fixture.detectChanges();
     }
 
-    function choice(): UiChoiceStub {
-        return fixture.debugElement
-            .query(debug => debug.name === 'ui-choice')
-            .injector.get(UiChoiceStub);
-    }
-
-    it('lists this project by default and every conversation after switching to All', () => {
+    it("lists every conversation and puts the open project's first", () => {
         const host = render({}, { idProject: '7' });
 
-        expect(api['load$']).toHaveBeenLastCalledWith(7);
-        expect(titles(host)).toEqual(['In rurdesk']);
-
-        choice().pick('all');
-        fixture.detectChanges();
-
-        expect(api['load$']).toHaveBeenLastCalledWith(null);
+        expect(api['load$']).toHaveBeenLastCalledWith();
+        expect(sectionTitles(host)).toEqual(['rurdesk', 'AGENT_CHAT.OTHER_PROJECTS']);
         expect(titles(host)).toEqual(['In rurdesk', 'Elsewhere']);
     });
 
-    it('lists every conversation without a toggle when no project is given', () => {
+    it("puts the side menu's project first when the URL names none", () => {
+        (TestBed.inject(ProjectContextStore).idProject as WritableSignal<number | null>).set(7);
         const host = render();
 
-        expect(api['load$']).toHaveBeenLastCalledWith(null);
+        expect(sectionTitles(host)).toEqual(['rurdesk', 'AGENT_CHAT.OTHER_PROJECTS']);
+    });
+
+    it('lists the recent conversations without a project', () => {
+        const host = render();
+
+        expect(sectionTitles(host)).toEqual(['AGENT_CHAT.RECENT']);
         expect(titles(host)).toEqual(['In rurdesk', 'Elsewhere']);
-        expect(host.querySelector('ui-choice')).toBeNull();
     });
 
     it('opens the new conversation flow with the project preselected', () => {
@@ -983,21 +1001,18 @@ describe('AgentChatPage (browser)', () => {
         expect(editor().written).toBe('Hello?');
     });
 
-    it('shows each conversation cost in the list only when it is known', () => {
-        api['load$'].mockReturnValue(
-            of([
-                { ...listItem(4, 'Priced'), costUsd: 0.41 },
-                { ...listItem(5, 'Estimated'), costUsd: 0.2, costEstimated: true },
-                listItem(6, 'Unpriced')
-            ])
-        );
+    it('shows a loader instead of an empty list until the conversations arrive', () => {
+        const list = new Subject<ReturnType<typeof listItem>[]>();
+        api['load$'].mockReturnValue(list);
         const host = render();
+        expect(host.querySelector('[data-testid="side-panel-loading"]')).not.toBeNull();
+        expect(host.querySelector('[data-testid="chat-list-empty"]')).toBeNull();
 
-        const rows = Array.from(host.querySelectorAll('[data-testid="chat-list-item"]'));
-        const cost = (row: Element) =>
-            row.querySelector('[data-testid="chat-list-item-cost"]')?.textContent.trim() ?? null;
-        expect(rows.map(cost)).toEqual(['$0.41', '≈ $0.20', null]);
-        expect(rows[2].textContent).not.toContain('$');
+        list.next([listItem(4, 'Loose')]);
+        fixture.detectChanges();
+
+        expect(host.querySelector('[data-testid="side-panel-loading"]')).toBeNull();
+        expect(titles(host)).toEqual(['Loose']);
     });
 
     it('marks pinned conversations in the list only', () => {
@@ -1009,10 +1024,7 @@ describe('AgentChatPage (browser)', () => {
         );
         const host = render();
 
-        const rows = Array.from(host.querySelectorAll('[data-testid="chat-list-item"]'));
-        expect(
-            rows.map(row => !!row.querySelector('[data-testid="chat-list-item-pinned"]'))
-        ).toEqual([true, false]);
+        expect(sectionTitles(host)).toEqual(['AGENT_CHAT.PINNED', 'AGENT_CHAT.RECENT']);
         expect(titles(host)).toEqual(['Pinned', 'Loose']);
     });
 
@@ -1025,8 +1037,7 @@ describe('AgentChatPage (browser)', () => {
             ])
         );
 
-        host.querySelectorAll<HTMLElement>('[data-testid="chat-list-item-pin"]')[1].click();
-        fixture.detectChanges();
+        pickFromRowMenu(host, 1, 'AGENT_CHAT.PIN');
 
         expect(api['setPinned$']).toHaveBeenCalledWith(5, true);
         expect(titles(host)).toEqual(['Elsewhere', 'In rurdesk']);
@@ -1039,7 +1050,7 @@ describe('AgentChatPage (browser)', () => {
         );
         const host = render();
 
-        host.querySelector<HTMLElement>('[data-testid="chat-list-item-pin"]')!.click();
+        pickFromRowMenu(host, 0, 'AGENT_CHAT.UNPIN');
 
         expect(api['setPinned$']).toHaveBeenCalledWith(4, false);
     });
@@ -1090,10 +1101,10 @@ describe('AgentChatPage (browser)', () => {
         expect(api['loadOne$']).toHaveBeenCalledTimes(2);
     });
 
-    function deleteButtons(): UiConfirmStub[] {
+    function deleteButtons(): UiConfirmDirective[] {
         return fixture.debugElement
-            .queryAll(debug => debug.attributes['data-testid'] === 'chat-list-item-delete')
-            .map(debug => debug.injector.get(UiConfirmStub));
+            .queryAll(debug => debug.attributes['uiConfirm'] !== undefined)
+            .map(debug => debug.injector.get(UiConfirmDirective));
     }
 
     it('asks before deleting and changes nothing until the owner confirms', () => {
@@ -1101,9 +1112,11 @@ describe('AgentChatPage (browser)', () => {
         const host = render({ idConversation: '4' });
         const callsBefore = api['load$'].mock.calls.length;
 
-        host.querySelector<HTMLElement>('[data-testid="chat-list-item-delete"]')!.click();
+        pickFromRowMenu(host, 0, 'AGENT_CHAT.DELETE');
 
-        expect(deleteButtons()[0].confirmText()).toBe('AGENT_CHAT.DELETE_CONFIRM');
+        expect(document.querySelector('.ui-confirm-panel')!.textContent).toContain(
+            'AGENT_CHAT.DELETE_CONFIRM'
+        );
         expect(api['delete$']).not.toHaveBeenCalled();
         expect(navigate).not.toHaveBeenCalled();
         expect(api['load$'].mock.calls.length).toBe(callsBefore);
@@ -1227,13 +1240,13 @@ describe('AgentChatPage (browser)', () => {
         );
     }
 
-    it('centres the empty list message in the list pane', () => {
+    it('says there is no conversation yet', () => {
         api['load$'].mockReturnValue(of([]));
         const host = render();
 
-        const empty = host.querySelector('[data-testid="chat-list-empty"]')!;
-        expect(empty.textContent).toContain('AGENT_CHAT.EMPTY_LIST');
-        expect(isCentred(empty)).toBe(true);
+        expect(host.querySelector('[data-testid="chat-list-empty"]')!.textContent).toContain(
+            'AGENT_CHAT.EMPTY_LIST'
+        );
     });
 
     it('centres the placeholder in the content pane until a conversation is picked', () => {
@@ -1244,16 +1257,12 @@ describe('AgentChatPage (browser)', () => {
         expect(isCentred(placeholder)).toBe(true);
     });
 
-    it('offers a new conversation as a secondary icon action beside the list title', () => {
-        render();
+    it('offers a new conversation in the project as an icon action beside the list title', () => {
+        const host = render({}, { idProject: '7' });
 
-        const action = fixture.debugElement
-            .query(debug => debug.attributes['data-testid'] === 'chat-list-new')
-            .injector.get(UiButtonStub);
-        expect(action.severity()).toBe('secondary');
-        expect(action.variant()).toBe('text');
-        expect(action.isIconOnly()).toBe(true);
-        expect(action.ariaLabel()).toBe('AGENT_CHAT.NEW');
+        const action = host.querySelector<HTMLAnchorElement>('[data-testid="chat-list-new"]')!;
+        expect(action.getAttribute('aria-label')).toBe('AGENT_CHAT.NEW');
+        expect(action.getAttribute('href')).toBe('/agent-chat?new=1&idProject=7');
     });
 
     it('keeps the list pane at its width however long a title is', () => {
@@ -1261,7 +1270,7 @@ describe('AgentChatPage (browser)', () => {
         const host = render();
         const list = host.querySelector<HTMLElement>('.agent-chat-list')!;
 
-        expect(list.getBoundingClientRect().width).toBe(17 * 16);
+        expect(list.getBoundingClientRect().width).toBe(16 * 16);
     });
 
     function rowOf(element: Element): HTMLElement {
@@ -1519,6 +1528,19 @@ describe('AgentChatPage (browser)', () => {
             return element !== null && element.getBoundingClientRect().width > 0;
         }
 
+        it('keeps the list when the panel was hidden on a wide screen', () => {
+            localStorage.setItem('sidePanelHidden', '1');
+            onTestFinished(() => localStorage.removeItem('sidePanelHidden'));
+            const preflight = document.createElement('style');
+            preflight.textContent = tailwind;
+            document.head.append(preflight);
+            onTestFinished(() => preflight.remove());
+            const host = render();
+
+            expect(visible(host, '.agent-chat-list ui-side-panel')).toBe(true);
+            expect(visible(host, '[data-testid="side-panel-hide"]')).toBe(false);
+        });
+
         it('shows only the list, full width, while no conversation is open', () => {
             const host = render();
 
@@ -1569,17 +1591,7 @@ describe('AgentChatPage (browser)', () => {
             api['load$'].mockReturnValue(of([listItem(4, 'A very long title '.repeat(20))]));
             const host = render();
             expect(overflows(host)).toBe(false);
-            expect(overflows(host.querySelector<HTMLElement>('.conversation-list-items')!)).toBe(
-                false
-            );
-        });
-
-        it('keeps the list actions inside each conversation, reachable without hover', () => {
-            const host = render();
-
-            const actions = host.querySelector<HTMLElement>('.conversation-list-item-actions')!;
-            expect(getComputedStyle(actions).opacity).toBe('1');
-            expectInsideBorder(host);
+            expect(overflows(host.querySelector<HTMLElement>('.ui-side-panel-body')!)).toBe(false);
         });
     });
 
@@ -1592,20 +1604,12 @@ describe('AgentChatPage (browser)', () => {
             await page.viewport(1280, 800);
         });
 
-        it('keeps the list actions inside each conversation, clear of its border', () => {
-            const host = render({ idConversation: '4' });
-
-            expectInsideBorder(host);
-            const actions = host.querySelector<HTMLElement>('.conversation-list-item-actions')!;
-            expect(getComputedStyle(actions).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-        });
-
         it('shows the list and the conversation side by side', () => {
             const host = render({ idConversation: '4' });
 
             const list = host.querySelector<HTMLElement>('.agent-chat-list')!;
             const main = host.querySelector<HTMLElement>('.agent-chat-main')!;
-            expect(list.getBoundingClientRect().width).toBe(17 * 16);
+            expect(list.getBoundingClientRect().width).toBe(16 * 16);
             expect(main.getBoundingClientRect().left).toBe(list.getBoundingClientRect().right);
         });
     });
@@ -1657,6 +1661,7 @@ describe('AgentChatPage message rows (browser, real rows)', () => {
             declarations: [
                 AgentChatPage,
                 ConversationListComponent,
+                ...LIST_DECLARATIONS,
                 ChatRowComponent,
                 MessageViewComponent,
                 UiButtonComponent
@@ -1674,8 +1679,6 @@ describe('AgentChatPage message rows (browser, real rows)', () => {
                 TaskDraftDialogStub,
                 AvatarStub,
                 TablerIconStub,
-                UiChoiceStub,
-                UiConfirmStub,
                 UiTooltipStub
             ],
             providers: [
@@ -1689,6 +1692,7 @@ describe('AgentChatPage message rows (browser, real rows)', () => {
                 },
                 { provide: AgentConversationApi, useValue: api },
                 { provide: ProjectApi, useValue: { load$: () => of([Fixtures.project()]) } },
+                projectContext,
                 { provide: UiToastService, useValue: { show: vi.fn() } },
                 { provide: AuthStore, useValue: { getUser: () => owner } },
                 {
@@ -1876,6 +1880,7 @@ describe('AgentChatPage thinking of answers (browser, real rows)', () => {
             declarations: [
                 AgentChatPage,
                 ConversationListComponent,
+                ...LIST_DECLARATIONS,
                 ChatRowComponent,
                 ChatThinkingComponent,
                 ChatThinkingPillComponent,
@@ -1895,8 +1900,6 @@ describe('AgentChatPage thinking of answers (browser, real rows)', () => {
                 TaskDraftDialogStub,
                 AvatarStub,
                 TablerIconStub,
-                UiChoiceStub,
-                UiConfirmStub,
                 UiTooltipStub
             ],
             providers: [
@@ -1910,6 +1913,7 @@ describe('AgentChatPage thinking of answers (browser, real rows)', () => {
                 },
                 { provide: AgentConversationApi, useValue: api },
                 { provide: ProjectApi, useValue: { load$: () => of([Fixtures.project()]) } },
+                projectContext,
                 { provide: UiToastService, useValue: { show: vi.fn() } },
                 { provide: AuthStore, useValue: { getUser: () => owner } },
                 {

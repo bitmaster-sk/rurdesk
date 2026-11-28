@@ -34,7 +34,6 @@ const routes: Routes = [
             },
             {
                 path: 'wiki',
-                data: { collapsedMenu: true },
                 loadChildren: () => import('../wiki/wiki.module').then(m => m.WikiModule)
             }
         ]

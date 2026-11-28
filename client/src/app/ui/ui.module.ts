@@ -23,7 +23,10 @@ import {
     IconFlag,
     IconHome,
     IconInfoCircle,
+    IconDotsVertical,
     IconKeyboard,
+    IconLayoutSidebarLeftCollapse,
+    IconLayoutSidebarLeftExpand,
     IconLayoutBoard,
     IconLayoutColumns,
     IconLink,
@@ -86,6 +89,11 @@ import { UiInputDirective } from './directives/input.directive';
 import { UiTextareaDirective } from './directives/textarea.directive';
 import { UiToggleDirective } from './directives/toggle.directive';
 import { UiTooltipDirective } from './directives/tooltip.directive';
+import { UiSidePanelComponent } from './components/side-panel/side-panel.component';
+import { UiSidePanelItemComponent } from './components/side-panel/components/side-panel-item/side-panel-item.component';
+import { UiSidePanelRowComponent } from './components/side-panel/components/side-panel-row/side-panel-row.component';
+import { UiSidePanelSectionComponent } from './components/side-panel/components/side-panel-section/side-panel-section.component';
+import { UiSidePanelShowComponent } from './components/side-panel/components/side-panel-show/side-panel-show.component';
 
 @NgModule({
     declarations: [
@@ -127,6 +135,11 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiColorDirective,
         UiToggleDirective,
         UiDatepickerDirective,
+        UiSidePanelComponent,
+        UiSidePanelSectionComponent,
+        UiSidePanelRowComponent,
+        UiSidePanelItemComponent,
+        UiSidePanelShowComponent,
         UiTooltipDirective
     ],
     imports: [
@@ -172,6 +185,11 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
         UiColorDirective,
         UiToggleDirective,
         UiDatepickerDirective,
+        UiSidePanelComponent,
+        UiSidePanelSectionComponent,
+        UiSidePanelRowComponent,
+        UiSidePanelItemComponent,
+        UiSidePanelShowComponent,
         UiTooltipDirective
     ],
     providers: [
@@ -211,6 +229,9 @@ import { UiTooltipDirective } from './directives/tooltip.directive';
             IconLogout,
             IconHome,
             IconKeyboard,
+            IconDotsVertical,
+            IconLayoutSidebarLeftCollapse,
+            IconLayoutSidebarLeftExpand,
             IconCheck,
             IconTrash,
             IconPlayerPlay,

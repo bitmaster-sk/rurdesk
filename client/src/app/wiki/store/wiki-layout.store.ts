@@ -1,20 +1,28 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import {
+    SidePanelControl,
+    SidePanelStore
+} from 'src/app/ui/components/side-panel/side-panel.store';
 
+/**
+ * The wiki's reading width and its page tree. On a wide screen the tree is the shared secondary
+ * panel and hides with it; below 64rem it is an overlay, closed until it is opened.
+ */
 @Injectable({ providedIn: 'root' })
-export class WikiLayoutStore {
+export class WikiLayoutStore implements SidePanelControl {
     private static readonly fullWidthKey = 'wiki.fullWidth';
-    private static readonly treeHiddenKey = 'wiki.treeHidden';
     private static readonly overlayQuery = '(max-width: 64rem)';
 
+    private readonly panel = inject(SidePanelStore);
+
     private readonly fullWidthState = signal(this.readFlag(WikiLayoutStore.fullWidthKey));
-    private readonly treeHiddenState = signal(this.readFlag(WikiLayoutStore.treeHiddenKey));
     private readonly overlayTreeOpen = signal(false);
     private readonly isOverlayState = signal(false);
 
     public readonly isFullWidth = this.fullWidthState.asReadonly();
     public readonly isOverlay = this.isOverlayState.asReadonly();
-    public readonly isTreeHidden = computed(() =>
-        this.isOverlayState() ? !this.overlayTreeOpen() : this.treeHiddenState()
+    public readonly isHidden = computed(() =>
+        this.isOverlayState() ? !this.overlayTreeOpen() : this.panel.isHidden()
     );
 
     public constructor() {
@@ -37,16 +45,23 @@ export class WikiLayoutStore {
         this.writeFlag(WikiLayoutStore.fullWidthKey, isFullWidth);
     }
 
-    public toggleTree(): void {
+    public hide(): void {
         if (this.isOverlayState()) {
-            this.overlayTreeOpen.update(isOpen => !isOpen);
+            this.overlayTreeOpen.set(false);
             return;
         }
-        const isTreeHidden = !this.treeHiddenState();
-        this.treeHiddenState.set(isTreeHidden);
-        this.writeFlag(WikiLayoutStore.treeHiddenKey, isTreeHidden);
+        this.panel.hide();
     }
 
+    public show(): void {
+        if (this.isOverlayState()) {
+            this.overlayTreeOpen.set(true);
+            return;
+        }
+        this.panel.show();
+    }
+
+    /** A navigation closes the overlay tree; the wide-screen panel stays as it is. */
     public closeOverlayTree(): void {
         this.overlayTreeOpen.set(false);
     }

@@ -8,6 +8,7 @@ import { AttachmentStore } from '../../shared/attachment/store/attachment.store'
 import { NoticeService } from '../../shared/notice/notice.service';
 import { AuthApi } from '../api/auth.api.service';
 import { AuthTokenStore } from '../store/auth-token.store';
+import { LastConversationGuard } from 'src/app/message/guards/last-conversation.guard';
 import { SessionService } from './session.service';
 
 function build(logout$ = () => of(undefined)) {
@@ -116,6 +117,24 @@ describe('SessionService.end', () => {
         session.end('/login');
 
         expect(revokeAll).toHaveBeenCalled();
+    });
+
+    it('forgets the chat the user opened last so the next user does not land in it', () => {
+        const saved = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => saved.get(key) ?? null,
+            setItem: (key: string, value: string) => saved.set(key, value),
+            removeItem: (key: string) => saved.delete(key)
+        });
+        onTestFinished(() => {
+            vi.unstubAllGlobals();
+        });
+        LastConversationGuard.save('/message/12/2/view');
+        const { session } = build();
+
+        session.end('/login');
+
+        expect([...saved.values()]).not.toContain('/message/12/2/view');
     });
 
     it('drops the token even when the server rejects the logout', () => {

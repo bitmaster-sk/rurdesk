@@ -856,14 +856,36 @@ async function ensureWikiTaskLinks(page, P, bySlug, log) {
 async function openWikiPage(page, P, path) {
     await L.gotoApp(page, `${L.BASE}/project/${P}/wiki`);
     await page.evaluate(() => {
-        localStorage.removeItem("wiki.treeHidden");
+        localStorage.removeItem("sidePanelHidden");
         localStorage.removeItem("wiki.fullWidth");
     });
     await L.gotoApp(page, `${L.BASE}/project/${P}/wiki/${path}`);
     await L.settle(page);
 }
 
+// Folds the left menu into the icon rail for one shot, so the wiki gets the width.
+// The store reads the flag on load; the next gotoApp picks it up.
+async function withRail(page, shoot) {
+    await page.evaluate(() => localStorage.setItem("sideMenuCollapsed", "1"));
+    try {
+        await shoot();
+    } finally {
+        await page.evaluate(() =>
+            localStorage.setItem("sideMenuCollapsed", "0"),
+        );
+    }
+}
+
 const WIKI_TASK = 5;
+
+// Placeholder titles typed while testing the tracker, renamed by tidy-demo-tasks.
+const DEMO_TITLE_FIXES = {
+    Analysis: "Analyse bundle size regressions after the Vite upgrade",
+    Release: "Prepare the v1.0 release",
+    "Color Converter": "Color Converter tool",
+    Tools: "Developer tools catalogue",
+};
+const DEMO_JUNK_TAGS = ["blabla"];
 
 // ─────────────────────────────── agent chat seed ───────────────────────────────
 
@@ -1962,15 +1984,102 @@ const STEPS = [
     },
 
     {
+        id: "tidy-demo-tasks",
+        type: "generate",
+        title: "Rename placeholder task titles and drop the test tag, so the table reads real",
+        run: async ({ page, log }) => {
+            const P = await getProject(page);
+            const r = await L.api(
+                page,
+                "GET",
+                `/api/private/project/${P}/issue`,
+            );
+            const issues = Array.isArray(r.data)
+                ? r.data
+                : (r.data?.items ?? []);
+            for (const issue of issues) {
+                const title = DEMO_TITLE_FIXES[issue.title];
+                if (!title) continue;
+                const res = await L.api(
+                    page,
+                    "PATCH",
+                    `/api/private/project/${P}/issue/${issue.idIssuePublic}`,
+                    { title },
+                );
+                if (!res.ok)
+                    throw new Error(
+                        `renaming #${issue.idIssuePublic} failed: ${res.status}`,
+                    );
+                log(`#${issue.idIssuePublic}: ${issue.title} → ${title}`);
+            }
+            const t = await L.api(page, "GET", "/api/private/tag");
+            const tags = Array.isArray(t.data) ? t.data : (t.data?.data ?? []);
+            const junk = new Set(
+                tags
+                    .filter((tag) => String(tag.idProject) === String(P))
+                    .filter((tag) => DEMO_JUNK_TAGS.includes(tag.name))
+                    .map((tag) => tag.idTag),
+            );
+            for (const issue of issues) {
+                const ids = issue.idsTag ?? [];
+                if (!ids.some((id) => junk.has(id))) continue;
+                const res = await L.api(
+                    page,
+                    "PATCH",
+                    `/api/private/project/${P}/issue/${issue.idIssuePublic}`,
+                    { idsTag: ids.filter((id) => !junk.has(id)) },
+                );
+                if (!res.ok)
+                    throw new Error(
+                        `untagging #${issue.idIssuePublic} failed: ${res.status}`,
+                    );
+                log(
+                    `#${issue.idIssuePublic}: dropped ${DEMO_JUNK_TAGS.join(", ")}`,
+                );
+            }
+        },
+    },
+    {
         id: "view-table",
         type: "screenshot",
         file: "view-table.png",
-        title: "Issue table view",
+        title: "Issue table view, closed tasks included, oldest first",
         run: async ({ page }) => {
             const P = await getProject(page);
+            // The table hides final states and sorts newest first by default; its filter
+            // is restored from localStorage, so seed it with no state limit and id ascending.
+            const key = `issue-list-filter:${P}:table`;
             await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/table`);
-            await L.settle(page);
-            await L.shootPage(page, "view-table.png");
+            await page.evaluate(
+                ([k, idProject]) =>
+                    localStorage.setItem(
+                        k,
+                        JSON.stringify({
+                            idProject,
+                            idsState: [],
+                            stateUnset: true,
+                            idsSeverity: [],
+                            severityUnset: true,
+                            idsIssueType: [],
+                            issueTypeUnset: true,
+                            idsAssignedTo: [],
+                            assignedToUnset: true,
+                            orderColumn: "idIssue",
+                            orderDirection: "asc",
+                        }),
+                    ),
+                [key, Number(P)],
+            );
+            try {
+                await L.gotoApp(
+                    page,
+                    `${L.BASE}/project/${P}/issue/view/table`,
+                );
+                await L.settle(page);
+                await L.shootPage(page, "view-table.png");
+            } finally {
+                await page.evaluate((k) => localStorage.removeItem(k), key);
+            }
         },
     },
     {
@@ -2039,13 +2148,24 @@ const STEPS = [
         id: "hero",
         type: "screenshot",
         file: "hero.png",
-        title: "Hero (Gantt Day + Compact)",
+        title: "Hero (task detail, feed at the start of the agent run, first thinking open)",
         run: async ({ page }) => {
             const P = await getProject(page);
-            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/gantt`);
+            const I = process.env.CAPTURE_HERO_ISSUE || "12";
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/${I}`);
             await L.settle(page);
-            await L.selectGanttDayCompact(page);
-            await L.settle(page);
+            // The feed opens at its newest entry; the hero shows how the run starts,
+            // with the first thinking block open.
+            const feed = page.locator(".feed-scroll");
+            await feed.evaluate((el) => (el.scrollTop = 0));
+            await page
+                .locator('[data-testid="agent-thinking-row"]')
+                .first()
+                .locator('[data-testid="agent-thinking-toggle"]')
+                .click({ timeout: 8000 });
+            await page.waitForTimeout(1200);
+            await feed.evaluate((el) => (el.scrollTop = 0));
+            await page.waitForTimeout(400);
             await L.shootPage(page, "hero.png");
         },
     },
@@ -2195,6 +2315,48 @@ const STEPS = [
             await L.gotoApp(page, `${L.BASE}/project/${P}/view`);
             await L.settle(page);
             await L.shootPage(page, "project-overview.png");
+        },
+    },
+    {
+        id: "navigation",
+        type: "screenshot",
+        file: "navigation.png",
+        title: "Left menu expanded over the Board (project part, global part, user)",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/kanban`);
+            await L.settle(page);
+            await L.shootPage(page, "navigation.png");
+        },
+    },
+    {
+        id: "navigation-rail",
+        type: "screenshot",
+        file: "navigation-rail.png",
+        title: "Left menu folded into the icon rail, tooltip on the Board icon",
+        run: async ({ page }) => {
+            const P = await getProject(page);
+            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/kanban`);
+            await L.settle(page);
+            const toggle = page.getByTestId("side-menu-toggle");
+            await toggle.click();
+            try {
+                await page.waitForTimeout(600);
+                // The toggle keeps focus and with it its own tooltip; only Board's should show.
+                await page.evaluate(() => document.activeElement?.blur());
+                await page.getByTestId("sidebar-link-kanban").hover();
+                await page
+                    .locator(".ui-tooltip")
+                    .first()
+                    .waitFor({ state: "visible", timeout: 5000 });
+                await page.waitForTimeout(300);
+                await L.shootPage(page, "navigation-rail.png");
+            } finally {
+                // The browser remembers the rail; unfold it for the steps after this one.
+                await page.mouse.move(800, 500);
+                await toggle.click();
+                await page.waitForTimeout(400);
+            }
         },
     },
     {
@@ -2953,7 +3115,7 @@ const STEPS = [
         run: async ({ page }) => {
             await page.setViewportSize({ width: L.VW, height: 1500 });
             try {
-                await L.gotoApp(page, `${L.BASE}/admin/settings`);
+                await L.gotoApp(page, `${L.BASE}/admin/settings/agents`);
                 await L.settle(page);
                 await L.shootPage(page, "admin-settings.png");
             } finally {
@@ -3185,7 +3347,7 @@ const STEPS = [
         id: "running-timer",
         type: "screenshot",
         file: "running-timer.png",
-        title: "Header timer + details panel with the day chart — MUTATES, ASKS for issue id",
+        title: "Side-menu timer + details panel with the day chart — MUTATES, ASKS for issue id",
         run: async ({ page }) => {
             await openShotIssue(page);
             await page
@@ -3621,12 +3783,14 @@ const STEPS = [
         file: "wiki-page.png",
         title: "Wiki page with the tree, linked tasks and backlinks",
         run: async ({ page }) => {
-            const P = await getProject(page);
-            await openWikiPage(page, P, "project/json-formatter");
-            await page
-                .getByTestId("wiki-page-title")
-                .waitFor({ state: "visible", timeout: 10000 });
-            await L.shootPage(page, "wiki-page.png");
+            await withRail(page, async () => {
+                const P = await getProject(page);
+                await openWikiPage(page, P, "project/json-formatter");
+                await page
+                    .getByTestId("wiki-page-title")
+                    .waitFor({ state: "visible", timeout: 10000 });
+                await L.shootPage(page, "wiki-page.png");
+            });
         },
     },
     {
@@ -3635,14 +3799,16 @@ const STEPS = [
         file: "wiki-editor.png",
         title: "Wiki editor: toolbar, Markdown and live preview",
         run: async ({ page }) => {
-            const P = await getProject(page);
-            await openWikiPage(page, P, "project/color-converter/edit");
-            await page
-                .locator(".cm-editor")
-                .first()
-                .waitFor({ state: "visible", timeout: 10000 });
-            await page.waitForTimeout(600);
-            await L.shootPage(page, "wiki-editor.png");
+            await withRail(page, async () => {
+                const P = await getProject(page);
+                await openWikiPage(page, P, "project/color-converter/edit");
+                await page
+                    .locator(".cm-editor")
+                    .first()
+                    .waitFor({ state: "visible", timeout: 10000 });
+                await page.waitForTimeout(600);
+                await L.shootPage(page, "wiki-editor.png");
+            });
         },
     },
     {
@@ -3651,13 +3817,15 @@ const STEPS = [
         file: "wiki-history.png",
         title: "Wiki page history with the change between versions",
         run: async ({ page }) => {
-            const P = await getProject(page);
-            await openWikiPage(page, P, "project/json-formatter/history");
-            await page
-                .getByTestId("wiki-version")
-                .first()
-                .waitFor({ state: "visible", timeout: 10000 });
-            await L.shootPage(page, "wiki-history.png");
+            await withRail(page, async () => {
+                const P = await getProject(page);
+                await openWikiPage(page, P, "project/json-formatter/history");
+                await page
+                    .getByTestId("wiki-version")
+                    .first()
+                    .waitFor({ state: "visible", timeout: 10000 });
+                await L.shootPage(page, "wiki-history.png");
+            });
         },
     },
     {
@@ -3740,22 +3908,24 @@ const STEPS = [
         file: "wiki-proposals.png",
         title: "Agent proposals: the list and an open proposal with its change",
         run: async ({ page }) => {
-            const P = await getProject(page);
-            await openWikiPage(page, P, "proposals");
-            const item = page.getByTestId("wiki-proposal-item").first();
-            const found = await item
-                .waitFor({ state: "visible", timeout: 10000 })
-                .then(() => true)
-                .catch(() => false);
-            if (!found)
-                throw new Error(
-                    "no agent proposal in DevToolbox — do the wiki-proposal-run step first",
-                );
-            await page
-                .getByTestId("wiki-proposal-detail")
-                .waitFor({ state: "visible", timeout: 10000 });
-            await page.waitForTimeout(600);
-            await L.shootPage(page, "wiki-proposals.png");
+            await withRail(page, async () => {
+                const P = await getProject(page);
+                await openWikiPage(page, P, "proposals");
+                const item = page.getByTestId("wiki-proposal-item").first();
+                const found = await item
+                    .waitFor({ state: "visible", timeout: 10000 })
+                    .then(() => true)
+                    .catch(() => false);
+                if (!found)
+                    throw new Error(
+                        "no agent proposal in DevToolbox — do the wiki-proposal-run step first",
+                    );
+                await page
+                    .getByTestId("wiki-proposal-detail")
+                    .waitFor({ state: "visible", timeout: 10000 });
+                await page.waitForTimeout(600);
+                await L.shootPage(page, "wiki-proposals.png");
+            });
         },
     },
 
@@ -3770,34 +3940,6 @@ const STEPS = [
                 log(`── ${key}`);
                 await ensureChat(page, P, chat, log);
             }
-        },
-    },
-    {
-        id: "agent-chat-menu",
-        type: "screenshot",
-        file: "agent-chat-menu.png",
-        title: "Robot menu in the top bar: unread badge, pinned and project conversations",
-        run: async ({ page }) => {
-            const P = await getProject(page);
-            await L.gotoApp(page, `${L.BASE}/project/${P}/issue/view/table`);
-            await L.settle(page);
-            const hasBadge = await page
-                .locator('[data-testid="agent-chat-badge"]')
-                .waitFor({ state: "visible", timeout: 10000 })
-                .then(() => true)
-                .catch(() => false);
-            if (!hasBadge)
-                throw new Error(
-                    'no unread badge — the "general" conversation was read; send it a new message',
-                );
-            await page.getByTestId("agent-chat-menu").click();
-            await page
-                .getByRole("menuitem")
-                .first()
-                .waitFor({ state: "visible", timeout: 8000 });
-            await page.waitForTimeout(500);
-            await L.shootPage(page, "agent-chat-menu.png");
-            await page.keyboard.press("Escape");
         },
     },
     {

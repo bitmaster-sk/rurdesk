@@ -1,0 +1,261 @@
+@let rail = isCollapsed();
+<div
+    class="home-left-menu grow-0 shrink-0 flex flex-col justify-between"
+    data-testid="project-left-menu"
+    [class.home-left-menu--collapsed]="rail"
+>
+    <div class="top menu-panel">
+        <div class="menu-head">
+            <div class="brand">
+                <svg
+                    class="shrink-0"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                >
+                    <line
+                        x1="32"
+                        y1="18"
+                        x2="32"
+                        y2="11"
+                        stroke="currentColor"
+                        stroke-width="5"
+                        stroke-linecap="round"
+                    />
+                    <circle cx="32" cy="8.5" r="4" fill="#b85814" />
+                    <rect
+                        x="13"
+                        y="21"
+                        width="38"
+                        height="33"
+                        rx="10"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="5"
+                    />
+                    <rect x="20" y="35" width="9" height="5" rx="2.5" fill="currentColor" />
+                    <circle cx="41" cy="37.5" r="8.5" fill="#b85814" opacity="0.25" />
+                    <circle cx="41" cy="37.5" r="4.5" fill="#b85814" />
+                </svg>
+                <span class="brand-name">rurdesk</span>
+                <button
+                    type="button"
+                    class="brand-search"
+                    data-testid="side-menu-search"
+                    [attr.aria-label]="'HOME.SEARCH' | translate"
+                    [uiTooltipPosition]="rail ? 'right' : 'bottom'"
+                    [uiTooltip]="('HOME.SEARCH' | translate) + ' (⌘K)'"
+                    (click)="onSearch()"
+                >
+                    <tabler-icon icon="search" [size]="16" />
+                </button>
+                @let toggleLabel = (rail ? 'HOME.EXPAND_MENU' : 'HOME.COLLAPSE_MENU') | translate;
+                <button
+                    type="button"
+                    class="brand-toggle"
+                    data-testid="side-menu-toggle"
+                    [attr.aria-label]="toggleLabel"
+                    [uiTooltipPosition]="rail ? 'right' : 'bottom'"
+                    [uiTooltip]="toggleLabel + ' ([)'"
+                    (click)="onToggle()"
+                >
+                    <tabler-icon
+                        [icon]="
+                            rail ? 'layout-sidebar-left-expand' : 'layout-sidebar-left-collapse'
+                        "
+                        [size]="16"
+                    />
+                </button>
+            </div>
+            @if (idProject()) {
+                <app-project-switcher [isRail]="rail" />
+            }
+        </div>
+        @if (idProject(); as idProject) {
+            <ul class="navigation">
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.OVERVIEW' | translate) : ''"
+                        data-testid="sidebar-link-overview"
+                        [routerLink]="['/project', idProject, 'view']"
+                        [routerLinkActiveOptions]="{ exact: true }"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="device-desktop" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.OVERVIEW' | translate }}</span>
+                    </a>
+                </li>
+                @if (canUpdateProject()) {
+                    <li class="menu-item">
+                        <div class="menu-item-border"></div>
+                        <a
+                            class="link"
+                            uiTooltipPosition="right"
+                            [uiTooltip]="rail ? ('PROJECT.SETTINGS' | translate) : ''"
+                            [routerLink]="['/project', idProject, 'settings']"
+                            routerLinkActive="active"
+                        >
+                            <tabler-icon icon="settings" [size]="16" class="icon" />
+                            <span class="text">{{ 'PROJECT.SETTINGS' | translate }}</span>
+                        </a>
+                    </li>
+                }
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.WIKI' | translate) : ''"
+                        data-testid="sidebar-link-wiki"
+                        [routerLink]="['/project', idProject, 'wiki']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="book-2" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.WIKI' | translate }}</span>
+                    </a>
+                </li>
+                <li class="menu-item mb-0">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.RELEASES' | translate) : ''"
+                        data-testid="sidebar-link-release"
+                        [routerLink]="['/project', idProject, 'release']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="rocket" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.RELEASES' | translate }}</span>
+                    </a>
+                </li>
+                <li class="menu-section-title">{{ 'HOME.TASKS' | translate }}</li>
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.TABLE' | translate) : ''"
+                        data-testid="sidebar-link-table"
+                        [routerLink]="['/project', idProject, 'issue', 'view', 'table']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="table" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.TABLE' | translate }}</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.BOARD' | translate) : ''"
+                        data-testid="sidebar-link-kanban"
+                        [routerLink]="['/project', idProject, 'issue', 'view', 'kanban']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="layout-columns" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.BOARD' | translate }}</span>
+                    </a>
+                </li>
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.CALENDAR' | translate) : ''"
+                        [routerLink]="['/project', idProject, 'issue', 'view', 'calendar']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="calendar" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.CALENDAR' | translate }}</span>
+                    </a>
+                </li>
+                <li class="menu-item mb-0">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.GANTT' | translate) : ''"
+                        [routerLink]="['/project', idProject, 'issue', 'view', 'gantt']"
+                        routerLinkActive="active"
+                    >
+                        <tabler-icon icon="chart-column" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.GANTT' | translate }}</span>
+                    </a>
+                </li>
+            </ul>
+        }
+        <app-tracker-control
+            class="timer"
+            [variant]="rail ? TrackerControlVariant.Rail : TrackerControlVariant.Side"
+        />
+        <div class="bottom">
+            <!-- The notification center anchors to the whole row, so it opens beside the menu edge. -->
+            <ul class="navigation global">
+                <li class="menu-item" #notificationsRow>
+                    <div class="menu-item-border"></div>
+                    <button
+                        type="button"
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('NOTIFICATION.TITLE' | translate) : ''"
+                        data-testid="sidebar-notifications"
+                        aria-haspopup="dialog"
+                        [attr.aria-expanded]="notifications.isOpen()"
+                        (click)="notifications.toggle(notificationsRow)"
+                    >
+                        <tabler-icon icon="bell" [size]="16" class="icon" />
+                        <span class="text">{{ 'NOTIFICATION.TITLE' | translate }}</span>
+                        @if (notifications.badge(); as badge) {
+                            <span class="count">{{ badge }}</span>
+                        }
+                    </button>
+                </li>
+                <li class="menu-item">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('HOME.MESSAGES' | translate) : ''"
+                        data-testid="sidebar-messages"
+                        routerLink="/message"
+                        [class.active]="isOnMessages()"
+                        [attr.aria-current]="isOnMessages() ? 'page' : null"
+                    >
+                        <tabler-icon icon="message" [size]="16" class="icon" />
+                        <span class="text">{{ 'HOME.MESSAGES' | translate }}</span>
+                        @if (messagesBadge(); as badge) {
+                            <span class="count">{{ badge }}</span>
+                        }
+                    </a>
+                </li>
+                <li class="menu-item mb-0">
+                    <div class="menu-item-border"></div>
+                    <a
+                        class="link"
+                        uiTooltipPosition="right"
+                        [uiTooltip]="rail ? ('AGENT_CHAT.MENU_LABEL' | translate) : ''"
+                        data-testid="agent-chat-menu"
+                        routerLink="/agent-chat"
+                        [class.active]="isOnAgentChat()"
+                        [attr.aria-current]="isOnAgentChat() ? 'page' : null"
+                    >
+                        <tabler-icon icon="robot" [size]="16" class="icon" />
+                        <span class="text">{{ 'AGENT_CHAT.MENU_LABEL' | translate }}</span>
+                        @if (agentChatBadge(); as badge) {
+                            <span class="count" data-testid="agent-chat-badge">{{ badge }}</span>
+                        }
+                    </a>
+                </li>
+            </ul>
+            <app-user-menu [isRail]="rail" />
+        </div>
+    </div>
+</div>
+<app-notification-menu #notifications />

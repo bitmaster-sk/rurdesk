@@ -17,6 +17,10 @@ export class ProjectStore {
     private readonly projectApi = inject(ProjectApi);
 
     public load(idProject: number): void {
+        // Pages opened for the new project take the first project$ value; never hand them the old one.
+        if (this.project.value?.idProject !== idProject) {
+            this.project.next(null);
+        }
         // A failure here leaves project$ never emitting; the global error toast
         // tells the user why the page behind the resolver stayed empty.
         this.projectApi.loadOne$(idProject).subscribe(project => this.project.next(project));

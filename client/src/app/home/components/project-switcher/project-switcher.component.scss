@@ -1,0 +1,188 @@
+:host {
+    display: block;
+}
+
+.switcher {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    width: calc(100% - 2 * var(--ui-space));
+    margin: 0 var(--ui-space);
+    padding: var(--ui-space);
+    border: 1px solid var(--project-switcher-border, var(--ui-color-border));
+    border-radius: var(--ui-radius-md);
+    background-color: var(--project-switcher-bg, var(--ui-color-surface));
+    color: var(--ui-color-text);
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &[aria-expanded='true'] {
+        border-color: var(--ui-color-primary-accent);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--ui-color-primary);
+        outline-offset: 1px;
+    }
+}
+
+// The rail leaves room for the tile only.
+:host(.project-switcher--rail) .switcher {
+    justify-content: center;
+    padding: var(--ui-space-s) 0;
+    border-color: transparent;
+    background-color: transparent;
+
+    &:hover,
+    &[aria-expanded='true'] {
+        background-color: var(--ui-color-content-hover);
+    }
+
+    .switcher__text,
+    .switcher__chevron {
+        display: none;
+    }
+}
+
+.switcher__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.switcher__caption {
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.switcher__name {
+    overflow: hidden;
+    font-weight: bold;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.switcher__chevron {
+    flex-shrink: 0;
+    color: var(--ui-color-text-muted);
+}
+
+.tile {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--ui-radius-md);
+    background-color: var(--ui-color-primary);
+    color: var(--ui-color-primary-contrast);
+    font-size: var(--font-size-xs);
+    font-weight: bold;
+}
+
+.tile--small {
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: var(--ui-radius-sm);
+}
+
+.picker {
+    display: flex;
+    flex-direction: column;
+    width: 18rem;
+    max-height: inherit;
+}
+
+.picker__search {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    padding: 0 var(--ui-space) var(--ui-space);
+    border-bottom: 1px solid var(--ui-color-border);
+    color: var(--ui-color-text-muted);
+
+    input {
+        flex: 1;
+        min-width: 0;
+        height: 2rem;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: var(--ui-color-text);
+    }
+
+    kbd {
+        padding: 0 var(--ui-space-s);
+        border: 1px solid var(--ui-color-border);
+        border-radius: var(--ui-radius-sm);
+        font-family: var(--ui-font-mono);
+        font-size: var(--font-size-xs);
+    }
+}
+
+.picker__list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: var(--ui-space-s) 0;
+}
+
+.picker ui-divider {
+    margin-bottom: var(--ui-space-s);
+}
+
+.picker__heading {
+    padding: var(--ui-space) var(--ui-space) var(--ui-space-s);
+    color: var(--ui-color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.picker__option,
+.picker__new {
+    display: flex;
+    align-items: center;
+    gap: var(--ui-space);
+    width: 100%;
+    padding: var(--ui-space-s) var(--ui-space);
+    border: 0;
+    border-radius: var(--ui-radius-sm);
+    background: transparent;
+    color: var(--ui-color-text);
+    text-align: left;
+    cursor: pointer;
+}
+
+.picker__option--active {
+    background-color: var(--ui-color-primary-weak);
+    color: var(--ui-color-primary);
+}
+
+.picker__new:hover,
+.picker__new:focus-visible {
+    background-color: var(--ui-color-content-hover);
+}
+
+.picker__name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.picker__check {
+    color: var(--ui-color-primary);
+}
+
+.picker__empty {
+    padding: var(--ui-space-l) var(--ui-space);
+    color: var(--ui-color-text-muted);
+    text-align: center;
+}

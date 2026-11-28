@@ -1,0 +1,13 @@
+@if (control.isHidden()) {
+    <button
+        type="button"
+        class="ui-side-panel-button"
+        data-testid="side-panel-show"
+        uiTooltipPosition="bottom"
+        [attr.aria-label]="label()"
+        [uiTooltip]="label()"
+        (click)="control.show()"
+    >
+        <tabler-icon icon="layout-sidebar-left-expand" [size]="16" />
+    </button>
+}

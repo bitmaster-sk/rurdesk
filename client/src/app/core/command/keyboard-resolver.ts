@@ -38,6 +38,14 @@ export abstract class KeyboardResolver {
                 return { type: 'open', mode: 'navigation' };
             case '?':
                 return { type: 'help' };
+            case 'p':
+                return KeyboardResolver.hasModifier(event)
+                    ? { type: 'none' }
+                    : { type: 'project-picker' };
+            case '[':
+                return KeyboardResolver.hasModifier(event)
+                    ? { type: 'none' }
+                    : { type: 'toggle-rail' };
             case 'j':
             case 'ArrowDown':
                 return { type: 'list-move', delta: 1 };

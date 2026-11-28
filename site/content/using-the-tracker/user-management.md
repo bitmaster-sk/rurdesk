@@ -37,8 +37,8 @@ user; when left empty, the initials are derived from the name.
 
 ## The admin area
 
-Admins get an **Administration** page (the **Users** entry in the top menu,
-`/admin/users`) with two panels: a **Users** list of every account on the
+Admins get an **Administration** page (**Users** in the Administration group of
+the user menu at the bottom of the left menu, `/admin/users`) with two panels: a **Users** list of every account on the
 instance — humans and agents — and a **Teams** panel (see [Teams](#teams)).
 
 ![Admin user list](../../site/assets/img/admin-users.png)

@@ -1,12 +1,19 @@
-import { ConnectedPosition, Overlay, OverlayRef } from '@angular/cdk/overlay';
+import {
+    ConnectedPosition,
+    FlexibleConnectedPositionStrategy,
+    Overlay,
+    OverlayRef
+} from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import {
     ComponentRef,
     Directive,
     ElementRef,
     HostListener,
+    Injector,
     OnDestroy,
     TemplateRef,
+    afterNextRender,
     effect,
     inject,
     input
@@ -53,6 +60,7 @@ export class UiTooltipDirective implements OnDestroy {
 
     private readonly overlay = inject(Overlay);
     private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+    private readonly injector = inject(Injector);
 
     private overlayRef: OverlayRef | null = null;
     private componentRef: ComponentRef<UiTooltipComponent> | null = null;
@@ -64,6 +72,7 @@ export class UiTooltipDirective implements OnDestroy {
         // Reactive text: if the label changes while the tooltip is shown, push it.
         effect(() => {
             const text = this.uiTooltip();
+            this.uiTooltipPosition();
             if (this.componentRef) {
                 this.componentRef.setInput('text', text);
                 // The bubble lives in a detached overlay view — push CD explicitly,
@@ -73,6 +82,13 @@ export class UiTooltipDirective implements OnDestroy {
             }
             if (this.overlayRef && !text) {
                 this.hide();
+            } else if (this.overlayRef) {
+                // A new label or side often comes with a host that moved (a fold button that
+                // folds its menu): anchor the bubble again once the host is laid out.
+                afterNextRender(
+                    () => this.overlayRef?.updatePositionStrategy(this.positionStrategy()),
+                    { injector: this.injector }
+                );
             }
         });
     }
@@ -126,14 +142,8 @@ export class UiTooltipDirective implements OnDestroy {
         if (this.overlayRef || !this.uiTooltip()) {
             return;
         }
-        const positionStrategy = this.overlay
-            .position()
-            .flexibleConnectedTo(this.host)
-            .withPositions(POSITIONS[this.uiTooltipPosition()])
-            .withViewportMargin(VIEWPORT_MARGIN_PX);
-
         this.overlayRef = this.overlay.create({
-            positionStrategy,
+            positionStrategy: this.positionStrategy(),
             scrollStrategy: this.overlay.scrollStrategies.close(),
             hasBackdrop: false
         });
@@ -142,6 +152,14 @@ export class UiTooltipDirective implements OnDestroy {
         this.componentRef.setInput('tooltipId', this.tooltipId);
         this.componentRef.changeDetectorRef.detectChanges();
         this.host.nativeElement.setAttribute('aria-describedby', this.tooltipId);
+    }
+
+    private positionStrategy(): FlexibleConnectedPositionStrategy {
+        return this.overlay
+            .position()
+            .flexibleConnectedTo(this.host)
+            .withPositions(POSITIONS[this.uiTooltipPosition()])
+            .withViewportMargin(VIEWPORT_MARGIN_PX);
     }
 
     private hide(): void {

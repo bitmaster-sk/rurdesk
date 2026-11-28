@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { UiToastService } from '../../service/ui-toast.service';
 import { UiToastModule } from '../../ui-toast.module';
+// The toast placement lives in the global styles.
+import 'src/styles.scss';
 
 @Component({
     standalone: false,
@@ -66,5 +68,20 @@ describe('UiToastComponent (browser)', () => {
         fixture.detectChanges();
 
         expect(toasts()).toHaveLength(2);
+    });
+
+    it('shows at the bottom centre, clear of the page header and its actions', async () => {
+        const fixture = setup();
+        service.show({ severity: 'success', detail: 'Page created', life: LONG });
+        fixture.detectChanges();
+
+        await vi.waitFor(() => {
+            const toast = toasts()[0].getBoundingClientRect();
+            expect(toast.top).toBeGreaterThan(window.innerHeight / 2);
+            expect(toast.bottom).toBeLessThanOrEqual(window.innerHeight);
+            expect(Math.abs((toast.left + toast.right) / 2 - window.innerWidth / 2)).toBeLessThan(
+                1
+            );
+        });
     });
 });

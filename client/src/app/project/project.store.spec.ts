@@ -1,5 +1,5 @@
 import { Injector, runInInjectionContext } from '@angular/core';
-import { of } from 'rxjs';
+import { NEVER, Subject, of } from 'rxjs';
 import { Project } from './model/project.model';
 import { ProjectApi } from './api/project.api.service';
 import { ProjectStore } from './project.store';
@@ -34,6 +34,31 @@ describe('ProjectStore', () => {
         store.load(10);
 
         expect(loadOne$).toHaveBeenCalledWith(10);
+        expect(latest(store.project$)).toBe(loaded);
+    });
+
+    it('does not replay the previous project while another one is loading', () => {
+        const other: Project = { ...loaded, idProject: 11, name: 'Agent VL' };
+        const pending$ = new Subject<Project>();
+        const loadOne$ = vi.fn().mockReturnValueOnce(of(loaded)).mockReturnValueOnce(pending$);
+        const store = buildStore({ loadOne$ } as unknown as ProjectApi);
+        store.load(10);
+
+        store.load(11);
+        const seen: Project[] = [];
+        store.project$.subscribe(project => seen.push(project));
+        pending$.next(other);
+
+        expect(seen).toEqual([other]);
+    });
+
+    it('keeps the project while the same one reloads', () => {
+        const loadOne$ = vi.fn().mockReturnValueOnce(of(loaded)).mockReturnValueOnce(NEVER);
+        const store = buildStore({ loadOne$ } as unknown as ProjectApi);
+        store.load(10);
+
+        store.load(10);
+
         expect(latest(store.project$)).toBe(loaded);
     });
 

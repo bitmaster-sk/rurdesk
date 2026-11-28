@@ -1,0 +1,106 @@
+<button
+    #trigger
+    type="button"
+    class="switcher"
+    data-testid="project-switcher"
+    aria-haspopup="dialog"
+    [attr.aria-expanded]="isOpen()"
+    [attr.aria-label]="('PROJECT.SWITCHER.LABEL' | translate) + ': ' + (project()?.name ?? '')"
+    [attr.title]="isRail() ? null : ('PROJECT.SWITCHER.LABEL' | translate) + ' (P)'"
+    uiTooltipPosition="right"
+    [uiTooltip]="isRail() ? (project()?.name ?? '') + ' (P)' : ''"
+    (click)="onTriggerClick()"
+>
+    @if (project(); as project) {
+        <span
+            class="tile"
+            aria-hidden="true"
+            [style.background-color]="project.color || null"
+            [style.color]="tileColor(project) || null"
+        >
+            {{ abbreviation(project) }}
+        </span>
+        <span class="switcher__text">
+            <span class="switcher__caption">{{ 'PROJECT.SINGULAR' | translate }}</span>
+            <span class="switcher__name">{{ project.name }}</span>
+        </span>
+    } @else {
+        <span class="tile" aria-hidden="true"></span>
+        <span class="switcher__text"></span>
+    }
+    <tabler-icon icon="selector" [size]="16" class="switcher__chevron" />
+</button>
+
+<ui-popover #popover panelClass="project-switcher-panel" maxHeight="70vh" (closed)="onClosed()">
+    <div class="picker" role="dialog" [attr.aria-label]="'PROJECT.SWITCHER.LABEL' | translate">
+        <div class="picker__search">
+            <tabler-icon icon="search" [size]="16" />
+            <input
+                #search
+                type="text"
+                autocomplete="off"
+                spellcheck="false"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="true"
+                data-testid="project-switcher-search"
+                [attr.aria-controls]="baseId + '-list'"
+                [attr.aria-activedescendant]="activeOptionId()"
+                [attr.aria-label]="'PROJECT.SWITCHER.SEARCH' | translate"
+                [attr.placeholder]="'PROJECT.SWITCHER.SEARCH' | translate"
+                [value]="query()"
+                (input)="onQuery($event)"
+                (keydown)="onKeydown($event)"
+            />
+            <kbd>esc</kbd>
+        </div>
+
+        <div class="picker__list" role="listbox" [id]="baseId + '-list'">
+            @for (group of groups(); track group.headingKey) {
+                <div class="picker__heading" role="presentation">
+                    {{ group.headingKey | translate }}
+                </div>
+                @for (option of group.projects; track option.idProject) {
+                    <div
+                        class="picker__option"
+                        role="option"
+                        data-testid="project-switcher-option"
+                        [id]="optionId(option)"
+                        [class.picker__option--active]="option === activeProject()"
+                        [attr.aria-selected]="option === activeProject()"
+                        [attr.aria-current]="isCurrent(option) ? 'true' : null"
+                        (pointermove)="onPointerMove(option)"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="onPick(option)"
+                    >
+                        <span
+                            class="tile tile--small"
+                            aria-hidden="true"
+                            [style.background-color]="option.color || null"
+                            [style.color]="tileColor(option) || null"
+                        >
+                            {{ abbreviation(option) }}
+                        </span>
+                        <span class="picker__name">{{ option.name }}</span>
+                        @if (isCurrent(option)) {
+                            <tabler-icon icon="check" [size]="16" class="picker__check" />
+                        }
+                    </div>
+                }
+            } @empty {
+                <div class="picker__empty">{{ 'PROJECT.SWITCHER.NO_RESULTS' | translate }}</div>
+            }
+        </div>
+
+        <ui-divider />
+        <button
+            type="button"
+            class="picker__new"
+            data-testid="project-switcher-new"
+            (click)="onNewProject()"
+        >
+            <tabler-icon icon="plus" [size]="16" />
+            <span>{{ 'PROJECT.NEW' | translate }}</span>
+        </button>
+    </div>
+</ui-popover>

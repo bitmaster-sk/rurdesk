@@ -1,0 +1,240 @@
+ul {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+:host {
+    display: flex;
+    flex: 0 0 auto;
+}
+
+.home-left-menu {
+    flex: 0 0 12rem;
+    background-color: var(--ui-color-canvas);
+    border-right: 1px solid var(--ui-color-border);
+    overflow: hidden;
+
+    .menu-panel {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .menu-head {
+        padding: var(--ui-space-m) 0 var(--ui-space);
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: var(--ui-space);
+        padding: 0 var(--ui-space-l) var(--ui-space-m);
+        color: var(--ui-color-text);
+    }
+
+    .brand-name {
+        flex: 1;
+        font-weight: bold;
+    }
+
+    // Both buttons name their shortcut in a tooltip, so they keep one size and the row never
+    // grows past the 12rem menu.
+    .brand-search,
+    .brand-toggle {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: var(--ui-radius-md);
+        background: transparent;
+        color: var(--ui-color-text-muted);
+        cursor: pointer;
+
+        &:hover,
+        &:focus-visible {
+            border-color: var(--ui-color-border);
+            color: var(--ui-color-text);
+        }
+    }
+
+    .navigation {
+        // On a short screen the project links scroll so the global rows stay reachable.
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        // Wheel, touch and keyboard scroll it; a scrollbar would eat a third of the 3.25rem rail
+        // and push its icons sideways into a second, horizontal scrollbar.
+        scrollbar-width: none;
+
+        .menu-section-title {
+            color: var(--ui-color-text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+            padding: var(--ui-space-l) var(--ui-space) var(--ui-space-l) var(--ui-space);
+        }
+
+        .menu-item {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            text-decoration: none;
+            width: 100%;
+            margin-bottom: var(--ui-space);
+
+            &:has(.link.active) .menu-item-border,
+            &:has(.link:hover) .menu-item-border {
+                background-color: var(--ui-color-primary);
+            }
+
+            .menu-item-border {
+                width: 4px;
+                min-height: 100%;
+                height: auto;
+                border-top-right-radius: var(--ui-radius-md);
+                border-bottom-right-radius: var(--ui-radius-md);
+                background-color: transparent;
+            }
+
+            .link {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                text-decoration: none;
+                color: var(--ui-color-text-muted);
+                padding: var(--ui-space);
+                width: 100%;
+                border: 1px solid transparent;
+                border-radius: var(--ui-radius-md);
+                margin: 0 var(--ui-space);
+
+                .icon {
+                    margin-right: var(--ui-space);
+                    font-size: var(--font-size-m);
+                }
+            }
+
+            button.link {
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
+            }
+
+            .link[aria-expanded='true'] {
+                color: var(--ui-color-primary);
+                border: 1px solid var(--ui-color-border);
+            }
+
+            .count {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 1.125rem;
+                height: 1.125rem;
+                margin-left: auto;
+                padding: 0 var(--ui-space-xs);
+                border-radius: 999px;
+                background: var(--ui-red-500);
+                color: var(--ui-brand-50);
+                font-size: var(--font-size-xs);
+                font-weight: bold;
+            }
+
+            .link:hover {
+                color: var(--ui-color-primary);
+                background-color: var(--ui-color-content-hover);
+                border: 1px solid transparent;
+            }
+
+            .link.active {
+                color: var(--ui-color-primary);
+                font-weight: bold;
+                background-color: var(--ui-color-primary-weak-border);
+                border: 1px solid var(--ui-color-border);
+            }
+        }
+    }
+}
+
+// The timer sits right above the divider and pushes the global part to the bottom; while no
+// timer runs it is empty and the global part stays at the bottom alone.
+.home-left-menu .timer {
+    flex-shrink: 0;
+    margin-top: auto;
+}
+
+.home-left-menu .bottom {
+    flex-shrink: 0;
+    padding: var(--ui-space) 0;
+    border-top: 1px solid var(--ui-color-border);
+}
+
+.home-left-menu .global {
+    margin-bottom: var(--ui-space);
+}
+
+// The rail keeps every row and only hides its label, visually: each icon keeps its accessible
+// name, and the tooltip shows it to sighted users. All icons share one vertical axis.
+.home-left-menu--collapsed {
+    flex-basis: 3.25rem;
+
+    .brand {
+        flex-direction: column;
+        padding: 0 0 var(--ui-space-m);
+    }
+
+    .brand-name {
+        display: none;
+    }
+
+    .navigation {
+        .menu-section-title {
+            height: 1px;
+            margin: var(--ui-space) var(--ui-space-m) var(--ui-space-l);
+            padding: 0;
+            overflow: hidden;
+            color: transparent;
+            background-color: var(--ui-color-border);
+        }
+
+        .menu-item {
+            .menu-item-border {
+                display: none;
+            }
+
+            .link {
+                position: relative;
+                justify-content: center;
+                margin: 0 var(--ui-space-s);
+
+                .icon {
+                    margin-right: 0;
+                }
+
+                // The unread count sits on the icon's corner.
+                .count {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    min-width: 1rem;
+                    height: 1rem;
+                }
+
+                .text {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                    clip-path: inset(50%);
+                    white-space: nowrap;
+                }
+            }
+        }
+    }
+}

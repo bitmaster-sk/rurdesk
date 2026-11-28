@@ -9,9 +9,12 @@
 }
 
 .agent-chat-list {
-    flex: 0 0 17rem;
-    // A long title is cut by the list, not allowed to widen the pane.
-    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.agent-chat-placeholder-head {
+    display: flex;
+    padding: var(--ui-space) var(--ui-space-l) 0;
 }
 
 .agent-chat-main {
@@ -125,6 +128,11 @@ app-chat-thinking-pill[messageMeta] {
 @media (max-width: 40rem) {
     .agent-chat-list {
         flex: 1 1 auto;
+    }
+
+    // The list is never hidden here, so there is nothing to show again.
+    :host ::ng-deep [data-testid='side-panel-show'] {
+        display: none;
     }
 
     .agent-chat.has-pane .agent-chat-list,

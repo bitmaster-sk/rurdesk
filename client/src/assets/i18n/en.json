@@ -496,6 +496,14 @@
         "SINGULAR": "Project",
         "CHATS": "Project chats",
         "NEW": "New project",
+        "SWITCHER": {
+            "LABEL": "Switch project",
+            "SEARCH": "Search projects…",
+            "RECENT": "Recent",
+            "ALL": "All projects",
+            "RESULTS": "Projects",
+            "NO_RESULTS": "No project found"
+        },
         "SETTINGS": "Project settings",
         "GENERAL": "General",
         "SAVE_ERROR": "Failed to save project settings.",
@@ -553,7 +561,13 @@
         "CALENDAR": "Calendar",
         "GANTT": "Gantt",
         "WIKI": "Wiki",
-        "RELEASES": "Releases"
+        "RELEASES": "Releases",
+        "MESSAGES": "Messages",
+        "SEARCH": "Search",
+        "COLLAPSE_MENU": "Collapse menu",
+        "EXPAND_MENU": "Expand menu",
+        "HIDE_PANEL": "Hide panel",
+        "SHOW_PANEL": "Show panel"
     },
     "WIKI": {
         "TITLE": "Wiki",
@@ -571,9 +585,7 @@
         "TREE": {
             "ALWAYS": "Agent always reads",
             "EMPTY": "No pages yet",
-            "TOGGLE": "Expand or collapse",
-            "HIDE": "Hide page tree",
-            "SHOW": "Show page tree"
+            "TOGGLE": "Expand or collapse"
         },
         "EDIT_VIEW": {
             "WRITE": "Write",
@@ -1545,6 +1557,7 @@
         "GATEWAY_DELETE_FAILED": "Deleting the gateway failed"
     },
     "ADMIN": {
+        "TITLE": "Administration",
         "SETTINGS": "Application settings",
         "VERSION": "Version",
         "SETTINGS_NAV": {
@@ -1853,8 +1866,12 @@
         "NEW": "New conversation",
         "ALL": "All conversations",
         "TITLE": "Conversations",
-        "SCOPE_PROJECT": "This project",
-        "SCOPE_ALL": "All",
+        "PINNED": "Pinned",
+        "RECENT": "Recent",
+        "OTHER_PROJECTS": "Other projects",
+        "ACTIONS": "Conversation actions",
+        "FILTER_PLACEHOLDER": "Search conversations",
+        "FILTER_EMPTY": "No conversation matches",
         "EMPTY_LIST": "No conversations yet.",
         "SELECT": "Pick a conversation or start a new one.",
         "EMPTY_CONVERSATION": "Ask the agent about the code, tasks or wiki. It only reads and never changes anything.",
@@ -1952,7 +1969,9 @@
             "BACK": "Back"
         },
         "EDITED": "edited {{time}}",
-        "EDIT": "Edit comment"
+        "EDIT": "Edit comment",
+        "FILTER_PLACEHOLDER": "Find a chat",
+        "FILTER_EMPTY": "No chat matches"
     },
     "COMMAND": {
         "PALETTE_LABEL": "Command palette",
@@ -2013,6 +2032,8 @@
             "OPEN_PALETTE": "Open command palette",
             "OPEN_NAV": "Jump to navigation",
             "OPEN_HELP": "Show this help",
+            "OPEN_PROJECT_PICKER": "Switch project",
+            "TOGGLE_MENU": "Collapse or expand the side menu",
             "CLOSE": "Close / clear query",
             "MOVE": "Move selection",
             "RUN": "Run selected",

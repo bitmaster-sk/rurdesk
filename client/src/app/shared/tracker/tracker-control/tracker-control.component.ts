@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+    ChangeDetectionStrategy,
+    Component,
+    ElementRef,
+    computed,
+    inject,
+    input
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl } from '@angular/forms';
 import { endOfDay, startOfDay } from 'date-fns';
@@ -7,7 +14,9 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { DurationConverter } from 'src/app/shared/duration/duration.converter';
 import { DurationFormatter } from 'src/app/shared/duration/duration.formatter';
+import { UiOverlayPlacement } from 'src/app/ui/util/ui-overlay-position';
 import { TrackApi } from '../api/track.api.service';
+import { TrackerControlVariant } from '../constants/tracker-control-variant.enum';
 import { TrackerConverter } from '../converter/tracker.converter';
 import { Tracker } from '../model/tracker.model';
 import { TrackerService } from '../tracker.service';
@@ -21,9 +30,28 @@ const SPARK_BUCKETS = 10;
     templateUrl: './tracker-control.component.html',
     styleUrls: ['./tracker-control.component.scss'],
     standalone: false,
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    host: {
+        '[class.tracker-control--side]': 'isSide()',
+        '[class.tracker-control--rail]': 'isRail()'
+    }
 })
 export class TrackerControlComponent {
+    public readonly variant = input<TrackerControlVariant>(TrackerControlVariant.Bar);
+
+    /** In the side menu, folded to the rail or not. */
+    protected readonly isSide = computed(() => this.variant() !== TrackerControlVariant.Bar);
+
+    protected readonly isRail = computed(() => this.variant() === TrackerControlVariant.Rail);
+
+    /** In the side menu the details open beside the menu, elsewhere under the control. */
+    protected readonly popoverPlacement = computed<UiOverlayPlacement>(() =>
+        this.isSide() ? 'right' : 'below'
+    );
+
+    /** The details anchor to the whole control, side padding included, so they clear the menu edge. */
+    protected readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+
     private readonly trackerService = inject(TrackerService);
 
     private readonly trackApi = inject(TrackApi);
@@ -48,6 +76,11 @@ export class TrackerControlComponent {
 
     protected readonly elapsedLabel = computed(() =>
         DurationFormatter.secondsToClock(this.elapsedSeconds())
+    );
+
+    /** The rail shows only the clock icon, so its tooltip carries the time and the issue. */
+    protected readonly railTooltip = computed(() =>
+        this.isRail() ? `${this.elapsedLabel()} · #${this.tracker()?.idIssuePublic}` : ''
     );
 
     protected readonly noteControl = new FormControl<string>('');

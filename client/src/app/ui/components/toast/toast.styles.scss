@@ -2,13 +2,17 @@
 // via src/styles.scss → no styleUrl, no FOUC). Class selectors are prefixed so
 // they are safe when unscoped (ViewEncapsulation.None on UiToastComponent).
 
+// Bottom centre: the top of the page carries the page header and its actions, which a toast
+// there would cover (it pauses under the pointer, so it would not even go away).
 .ui-toast-container {
     position: fixed;
-    top: var(--ui-toast-offset);
-    right: var(--ui-toast-offset);
+    bottom: var(--ui-toast-offset);
+    left: 50%;
+    transform: translateX(-50%);
     z-index: var(--ui-toast-z);
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: var(--ui-toast-gap);
     // Let clicks pass through the empty corner; individual toasts re-enable it.
     pointer-events: none;
@@ -128,24 +132,24 @@
 @keyframes ui-toast-in {
     from {
         opacity: 0;
-        transform: translateX(1rem);
+        transform: translateY(1rem);
     }
 
     to {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
     }
 }
 
 @keyframes ui-toast-out {
     from {
         opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
     }
 
     to {
         opacity: 0;
-        transform: translateX(1rem);
+        transform: translateY(1rem);
     }
 }
 

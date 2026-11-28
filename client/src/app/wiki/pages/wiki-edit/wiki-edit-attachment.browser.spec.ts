@@ -22,9 +22,6 @@ import { WikiMermaidDirective } from '../../directives/wiki-mermaid.directive';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 import { WikiEditPage } from './wiki-edit.page';
 
-@Component({ selector: 'app-wiki-tree-show', template: '', standalone: true })
-class WikiTreeShowStub {}
-
 @Component({ selector: 'app-wiki-editor', template: '', standalone: true })
 class WikiEditorStub {
     public readonly initialValue = input('');
@@ -63,7 +60,6 @@ async function render(): Promise<ComponentFixture<WikiEditPage>> {
             FormsModule,
             UiModule,
             TablerIconStub,
-            WikiTreeShowStub,
             WikiEditorStub
         ],
         providers: [

@@ -10,7 +10,6 @@ import { SharedModule } from '../shared/shared.module';
 import { NgClickOutsideDirective } from 'ng-click-outside2';
 import { UiModule } from '../ui/ui.module';
 import { TranslateModule } from '@ngx-translate/core';
-import { MessageMenuComponent } from './components/message-menu/message-menu.component';
 import {
     TablerIconComponent,
     provideTablerIcons,
@@ -34,7 +33,7 @@ import {
 } from '@tabler/icons-angular';
 
 @NgModule({
-    declarations: [MessagePage, MessageEditorComponent, MessageViewComponent, MessageMenuComponent],
+    declarations: [MessagePage, MessageEditorComponent, MessageViewComponent],
     imports: [
         CoreModule,
         SharedModule,
@@ -66,6 +65,6 @@ import {
             IconPaperclip
         })
     ],
-    exports: [MessageEditorComponent, MessageViewComponent, MessageMenuComponent]
+    exports: [MessageEditorComponent, MessageViewComponent]
 })
 export class MessageModule {}

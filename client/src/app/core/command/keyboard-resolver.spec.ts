@@ -73,6 +73,34 @@ describe('KeyboardResolver.resolveHotkey', () => {
             )
         ).toEqual({ type: 'open', mode: 'navigation' });
     });
+    it('opens the project picker on a bare p only', () => {
+        expect(KeyboardResolver.resolveHotkey(key({ key: 'p' }), ctx())).toEqual({
+            type: 'project-picker'
+        });
+        expect(KeyboardResolver.resolveHotkey(key({ key: 'p', ctrlKey: true }), ctx())).toEqual({
+            type: 'none'
+        });
+        expect(
+            KeyboardResolver.resolveHotkey(
+                key({ key: 'p', target: target({ tagName: 'INPUT' }) }),
+                ctx()
+            )
+        ).toEqual({ type: 'none' });
+    });
+    it('folds the side menu on a bare [ only', () => {
+        expect(KeyboardResolver.resolveHotkey(key({ key: '[' }), ctx())).toEqual({
+            type: 'toggle-rail'
+        });
+        expect(KeyboardResolver.resolveHotkey(key({ key: '[', metaKey: true }), ctx())).toEqual({
+            type: 'none'
+        });
+        expect(
+            KeyboardResolver.resolveHotkey(
+                key({ key: '[', target: target({ tagName: 'TEXTAREA' }) }),
+                ctx()
+            )
+        ).toEqual({ type: 'none' });
+    });
     // Regression: arrows inside an open dropdown moved both its highlight and the
     // task row behind it.
     it('never fires bare keys from inside a CDK overlay', () => {

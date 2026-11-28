@@ -7,7 +7,7 @@ import { Subject, of } from 'rxjs';
 import { User } from 'src/app/auth/model/user.model';
 import { ProjectMemberStore } from 'src/app/project/project-member.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
-import { TablerIconStub, UiLoaderStub, UiTagStub } from 'src/testing/stubs';
+import { TablerIconStub, UiLoaderStub, UiTagStub, UiSidePanelShowStub } from 'src/testing/stubs';
 import { WikiApi } from '../../api/wiki.api.service';
 import { WikiProposalKind } from '../../constants/wiki-proposal-kind.enum';
 import { WikiProposalState } from '../../constants/wiki-proposal-state.enum';
@@ -22,9 +22,6 @@ class WikiProposalDetailStub {
     public readonly idProposal = input<number>(0);
     public readonly decided = output<WikiProposal>();
 }
-
-@Component({ selector: 'app-wiki-tree-show', template: '', standalone: true })
-class WikiTreeShowStub {}
 
 @Component({
     selector: 'ui-choice',
@@ -124,7 +121,7 @@ describe('WikiProposalsPage', () => {
                 UiTagStub,
                 UiChoiceStub,
                 WikiProposalDetailStub,
-                WikiTreeShowStub
+                UiSidePanelShowStub
             ],
             providers: [
                 provideRouter([]),

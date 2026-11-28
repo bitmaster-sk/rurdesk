@@ -29,6 +29,15 @@ class HostComponent {
 })
 class CornerHostComponent {}
 
+@Component({
+    standalone: false,
+    template: `
+        <button type="button" data-testid="other" (click)="confirm.open()"></button>
+        <span uiConfirm #confirm="uiConfirm" [confirmText]="'Delete from code?'"></span>
+    `
+})
+class CodeHostComponent {}
+
 describe('UiConfirmDirective (browser)', () => {
     function panel(): HTMLElement | null {
         return document.querySelector('.ui-confirm-panel');
@@ -40,7 +49,7 @@ describe('UiConfirmDirective (browser)', () => {
 
     beforeEach(async () => {
         await TestBed.configureTestingModule({
-            declarations: [HostComponent, CornerHostComponent],
+            declarations: [HostComponent, CornerHostComponent, CodeHostComponent],
             imports: [UiModule, TranslateModule.forRoot()],
             providers: [provideNoopAnimations()]
         }).compileComponents();
@@ -63,6 +72,16 @@ describe('UiConfirmDirective (browser)', () => {
 
         expect(panel()).not.toBeNull();
         expect(panel()!.textContent).toContain('Delete this?');
+    });
+
+    it('opens from code through its exported reference', () => {
+        const fixture = TestBed.createComponent(CodeHostComponent);
+        fixture.detectChanges();
+
+        fixture.nativeElement.querySelector('[data-testid="other"]').click();
+        TestBed.inject(ApplicationRef).tick();
+
+        expect(panel()?.textContent).toContain('Delete from code?');
     });
 
     it('emits confirmed and closes when accept is clicked', () => {

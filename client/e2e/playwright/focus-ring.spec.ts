@@ -12,9 +12,6 @@ interface FocusPaint {
     outlineOffset: string;
     boxShadow: string;
     borderColor: string;
-    borderRadius: string;
-    width: number;
-    height: number;
 }
 
 async function paintOf(target: Locator): Promise<FocusPaint> {
@@ -26,10 +23,7 @@ async function paintOf(target: Locator): Promise<FocusPaint> {
             outlineColor: s.outlineColor,
             outlineOffset: s.outlineOffset,
             boxShadow: s.boxShadow,
-            borderColor: s.borderColor,
-            borderRadius: s.borderRadius,
-            width: el.getBoundingClientRect().width,
-            height: el.getBoundingClientRect().height
+            borderColor: s.borderColor
         };
     });
 }
@@ -61,12 +55,12 @@ async function openProject(page: Page): Promise<number> {
 }
 
 // Scenario:
-// - create a dedicated user, log in and create a project so the sidebar and top menu render
+// - create a dedicated user, log in and create a project so the side menu renders
 // - resolve the brand focus colour from the design token, so the test tracks the token not a literal
 // - tab to the sidebar overview link and assert it draws a solid brand outline
 // - assert that outline is not Chrome's native blue, which is the defect being fixed
-// - tab to the avatar trigger and assert it is ringed too, since it strips all native chrome
-// - assert that ring is round and centred, matching the circular avatar it wraps
+// - tab to the user row at the bottom of the side menu and assert it is ringed too, since it
+//   strips all native chrome
 test('keyboard focus rings elements that carry no focus style of their own', async ({
     page,
     request,
@@ -96,9 +90,6 @@ test('keyboard focus rings elements that carry no focus style of their own', asy
     expect(trigger.outlineStyle).toBe('solid');
     expect(trigger.outlineColor).toBe(brand);
     expect(trigger.outlineColor).not.toBe(CHROME_NATIVE_BLUE);
-
-    expect(parseFloat(trigger.borderRadius)).toBeGreaterThanOrEqual(trigger.height / 2);
-    expect(Math.abs(trigger.width - trigger.height)).toBeLessThan(1);
 });
 
 // Scenario:

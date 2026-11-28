@@ -9,11 +9,12 @@ The **wiki** is where a team writes down what it does not want to explain twice:
 conventions, architecture, decisions, runbooks. Pages are Markdown, every save
 is kept as a version, and pages link to each other and to tasks.
 
-Open it from **Project → Wiki** in the left menu. While you are in the wiki the
-main menu shrinks to icons, so the page tree fits next to it and Board, Table and
-the other views stay one click away. Hide the tree with the button next to
-**+ Page** when you want the full width for reading; the button that brings it
-back sits at the top left of the page, and the browser remembers the choice.
+Open it from **Wiki** in the left menu. The page tree opens in the panel next to
+the menu. Hide it with **Hide panel** in its header when you want the full width
+for reading; the button that brings it back sits at the top left of the page,
+and the browser remembers the choice (see
+[Navigation](./features.md#navigation)). Folding the main menu into icons with
+<kbd>[</kbd> gives the page more room as well.
 On a tablet or phone the tree starts hidden and opens over the page instead of
 squeezing it, across the whole screen on a phone. Picking a page or tapping
 outside the tree closes it again.

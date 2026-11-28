@@ -1,5 +1,6 @@
 <form class="new-conversation" [formGroup]="form" (ngSubmit)="onStart()">
     <div class="new-conversation-head">
+        <ui-side-panel-show [label]="'HOME.SHOW_PANEL' | translate" />
         <ui-button
             class="new-conversation-back chat-touch"
             variant="text"

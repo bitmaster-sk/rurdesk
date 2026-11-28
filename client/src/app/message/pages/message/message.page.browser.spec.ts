@@ -1,10 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, onTestFinished } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { Component, input, output, signal } from '@angular/core';
-import { By } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
-import { BehaviorSubject, NEVER, of } from 'rxjs';
+import { BehaviorSubject, NEVER, Observable, Subject, of, throwError } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
@@ -20,9 +19,12 @@ import { UserApi } from 'src/app/user/api/user.api.service';
 import { AuthStore } from 'src/app/auth/store/auth.store';
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
-import { MessageEditorStub, TablerIconStub, UiBadgeStub } from 'src/testing/stubs';
+import { IconMessages, IconUser, IconUsers, provideTablerIcons } from '@tabler/icons-angular';
+import { MessageEditorStub, TablerIconStub } from 'src/testing/stubs';
+import { UiModule } from 'src/app/ui/ui.module';
 import { User } from 'src/app/auth/model/user.model';
 import { Project } from 'src/app/project/model/project.model';
+import { Team } from 'src/app/team/model/team.model';
 import { Message } from '../../model/message.model';
 import { MessageKeyConverter } from '../../converter/message-key.converter';
 import { MessageKind } from '../../constant/message-kind.enum';
@@ -76,8 +78,12 @@ describe('MessagePage mentionCandidates', () => {
     let paramMapSubject: BehaviorSubject<ReturnType<typeof makeParamMap>>;
     let unreadSubject: BehaviorSubject<Map<string, Message[]>>;
     let projects: Project[];
+    let loadMessages: (idRecipient: number, idType: number) => Observable<Message[]>;
+    let teams$: Observable<Team[]>;
 
     beforeEach(async () => {
+        loadMessages = () => of([]);
+        teams$ = of([]);
         teamUsersSubject = new BehaviorSubject<User[] | null>(null);
         projectUsersSubject = new BehaviorSubject<User[] | null>(null);
         paramMapSubject = new BehaviorSubject(makeParamMap(0, 0));
@@ -106,9 +112,10 @@ describe('MessagePage mentionCandidates', () => {
                 MessageViewStub,
                 MessageEditorStub,
                 TablerIconStub,
-                UiBadgeStub
+                UiModule
             ],
             providers: [
+                provideTablerIcons({ IconMessages, IconUsers, IconUser }),
                 {
                     provide: ActivatedRoute,
                     useValue: { paramMap: paramMapSubject.asObservable() }
@@ -116,7 +123,8 @@ describe('MessagePage mentionCandidates', () => {
                 {
                     provide: MessageApi,
                     useValue: {
-                        load$: () => of([]),
+                        load$: (idRecipient: number, idType: number) =>
+                            loadMessages(idRecipient, idType),
                         markRead$: () => of(null)
                     }
                 },
@@ -130,7 +138,7 @@ describe('MessagePage mentionCandidates', () => {
                 },
                 {
                     provide: TeamApi,
-                    useValue: { loadMy$: () => of([]) }
+                    useValue: { loadMy$: () => teams$ }
                 },
                 {
                     provide: UserApi,
@@ -224,7 +232,9 @@ describe('MessagePage mentionCandidates', () => {
         const fixture = TestBed.createComponent(MessagePage);
         fixture.detectChanges();
 
-        expect(fixture.nativeElement.querySelectorAll('ui-badge').length).toBe(0);
+        expect(
+            fixture.nativeElement.querySelectorAll('[data-testid="message-unread"]').length
+        ).toBe(0);
     });
 
     it('renders the unread count of a conversation and follows later Unread emissions', () => {
@@ -238,8 +248,8 @@ describe('MessagePage mentionCandidates', () => {
         unreadSubject.next(new Map([[key, [unreadMessage(1), unreadMessage(2)]]]));
         fixture.detectChanges();
 
-        const badge = fixture.debugElement.query(By.directive(UiBadgeStub));
-        expect(badge.componentInstance.value()).toBe('2');
+        const count = fixture.nativeElement.querySelector('[data-testid="message-unread"]');
+        expect(count.textContent.trim()).toBe('2');
     });
 
     it('renders conversation group headings via translate pipe and reacts to language changes', () => {
@@ -251,9 +261,7 @@ describe('MessagePage mentionCandidates', () => {
         const fixture = TestBed.createComponent(MessagePage);
         fixture.detectChanges();
 
-        const headings = fixture.nativeElement.querySelectorAll(
-            '.recipients > .ui-color-text-muted'
-        );
+        const headings = fixture.nativeElement.querySelectorAll('.ui-side-panel-section-title');
         expect(headings.length).toBe(3);
         expect(headings[0].textContent.trim()).toBe(translate.instant('PROJECT.CHATS'));
         expect(headings[1].textContent.trim()).toBe(translate.instant('TEAM.CHATS'));
@@ -269,9 +277,7 @@ describe('MessagePage mentionCandidates', () => {
         translate.use('sk');
         fixture.detectChanges();
 
-        const newHeadings = fixture.nativeElement.querySelectorAll(
-            '.recipients > .ui-color-text-muted'
-        );
+        const newHeadings = fixture.nativeElement.querySelectorAll('.ui-side-panel-section-title');
         expect(newHeadings[0].textContent.trim()).toBe('Projektové chaty');
         expect(newHeadings[1].textContent.trim()).toBe('Tímové chaty');
         expect(newHeadings[2].textContent.trim()).toBe('Priame správy');
@@ -301,5 +307,114 @@ describe('MessagePage mentionCandidates', () => {
 
         paramMapSubject.next(makeParamMap(9, MessageRecipientType.project));
         expect(linkScope.idProject()).toBe(9);
+    });
+
+    function renderChats(): {
+        element: HTMLElement;
+        detect: () => void;
+        filter: (text: string) => void;
+    } {
+        projects = [
+            { idProject: 7, name: 'Apollo', color: '' },
+            { idProject: 8, name: 'Gemini', color: '' }
+        ];
+        paramMapSubject.next(makeParamMap(8, MessageRecipientType.project));
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+        const detect = (): void => fixture.detectChanges();
+        return {
+            element,
+            detect,
+            filter: (text: string) => {
+                const input = element.querySelector<HTMLInputElement>(
+                    '[data-testid="message-filter"]'
+                )!;
+                input.value = text;
+                input.dispatchEvent(new Event('input'));
+                detect();
+            }
+        };
+    }
+
+    function rowNames(element: HTMLElement): string[] {
+        return Array.from(
+            element.querySelectorAll<HTMLElement>('[data-testid="message-conversation"]')
+        ).map(row => row.title);
+    }
+
+    it('filters chats by name and drops empty groups', () => {
+        const { element, filter } = renderChats();
+        expect(rowNames(element)).toEqual(['Apollo', 'Gemini', 'Alice', 'Bob', 'Carol']);
+
+        filter('BO');
+
+        expect(rowNames(element)).toEqual(['Bob']);
+        expect(element.querySelectorAll('ui-side-panel-section')).toHaveLength(1);
+        expect(element.querySelector('.ui-side-panel-section-title')?.textContent?.trim()).toBe(
+            TestBed.inject(TranslateService).instant('DIRECT.CHATS')
+        );
+    });
+
+    it('says so when no chat matches', () => {
+        const { element, filter } = renderChats();
+        expect(element.querySelector('[data-testid="message-filter-empty"]')).toBeNull();
+
+        filter('zzz');
+
+        expect(rowNames(element)).toEqual([]);
+        expect(element.querySelector('[data-testid="message-filter-empty"]')).not.toBeNull();
+    });
+
+    it('shows a loader instead of "no chat matches" until the chats arrive', () => {
+        const teams = new Subject<Team[]>();
+        teams$ = teams;
+        const { element, detect } = renderChats();
+        expect(element.querySelector('[data-testid="side-panel-loading"]')).not.toBeNull();
+        expect(element.querySelector('[data-testid="message-filter-empty"]')).toBeNull();
+
+        teams.next([]);
+        detect();
+
+        expect(element.querySelector('[data-testid="side-panel-loading"]')).toBeNull();
+        expect(rowNames(element)).toEqual(['Apollo', 'Gemini', 'Alice', 'Bob', 'Carol']);
+    });
+
+    it('keeps opening chats after one the user can no longer read', () => {
+        const message = unreadMessage(1);
+        loadMessages = idRecipient =>
+            idRecipient === 5 ? throwError(() => new Error('403')) : of([message]);
+        paramMapSubject.next(makeParamMap(5, MessageRecipientType.team));
+        const fixture = TestBed.createComponent(MessagePage);
+        fixture.detectChanges();
+        const element = fixture.nativeElement as HTMLElement;
+        expect(element.querySelectorAll('app-message-view')).toHaveLength(0);
+
+        paramMapSubject.next(makeParamMap(8, MessageRecipientType.project));
+        fixture.detectChanges();
+
+        expect(element.querySelectorAll('app-message-view')).toHaveLength(1);
+    });
+
+    it('remembers for the next visit only a chat whose messages loaded', () => {
+        const key = 'message.lastConversation';
+        onTestFinished(() => localStorage.removeItem(key));
+        localStorage.setItem(key, '/message/5/2/view');
+        loadMessages = idRecipient =>
+            idRecipient === 5 ? throwError(() => new Error('403')) : of([]);
+
+        paramMapSubject.next(makeParamMap(5, MessageRecipientType.team));
+        TestBed.createComponent(MessagePage).detectChanges();
+        expect(localStorage.getItem(key)).toBeNull();
+
+        paramMapSubject.next(makeParamMap(8, MessageRecipientType.project));
+        expect(localStorage.getItem(key)).toBe('/message/8/3/view');
+    });
+
+    it('marks the open chat as the current page', () => {
+        const { element } = renderChats();
+
+        const current = element.querySelectorAll<HTMLElement>('[aria-current="page"]');
+        expect(Array.from(current).map(row => row.title)).toEqual(['Gemini']);
     });
 });

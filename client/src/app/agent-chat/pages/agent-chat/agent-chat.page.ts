@@ -16,6 +16,7 @@ import { combineLatest, Subject } from 'rxjs';
 import { finalize, switchMap } from 'rxjs/operators';
 import { AgentThinkingEvent, AgentThinkingNotice } from 'src/app/agent/model/agent-thinking.model';
 import { AuthStore } from 'src/app/auth/store/auth.store';
+import { ProjectContextStore } from 'src/app/home/store/project-context.store';
 import { LinkScope } from 'src/app/link/service/link-scope.service';
 import { MessageEditorComponent } from 'src/app/message/components/message-editor/message-editor.component';
 import { ProjectApi } from 'src/app/project/api/project.api.service';
@@ -27,7 +28,6 @@ import { NoticeAction } from 'src/app/shared/notice/constant/notice-action.enum'
 import { NoticeService } from 'src/app/shared/notice/notice.service';
 import { AgentConversationApi } from '../../api/agent-conversation.api.service';
 import { AgentStage } from 'src/app/agent/model/agent-stage.enum';
-import { AgentChatScope } from '../../constants/agent-chat-scope.enum';
 import { AgentConversationAuthor } from '../../constants/agent-conversation-author.enum';
 import { AgentConversationMessageKind } from '../../constants/agent-conversation-message-kind.enum';
 import { AgentStatusState } from '../../constants/agent-status-state.enum';
@@ -49,8 +49,8 @@ const CONTINUATION_MS = 5 * 60 * 1000;
 
 /**
  * `/agent-chat` lists the owner's conversations, `?new=1` starts one and
- * `/agent-chat/:idConversation` opens one. `?idProject=` scopes the list to the
- * project the owner came from.
+ * `/agent-chat/:idConversation` opens one. The list holds every conversation; `?idProject=`, or
+ * else the side menu's project, picks the project of a new one and puts its conversations first.
  */
 @Component({
     selector: 'app-agent-chat',
@@ -71,6 +71,7 @@ export class AgentChatPage implements OnInit {
     private readonly toast = inject(UiToastService);
     private readonly unreadStore = inject(AgentConversationUnreadStore);
     private readonly linkScope = inject(LinkScope);
+    private readonly projectContext = inject(ProjectContextStore);
     private readonly destroyRef = inject(DestroyRef);
 
     private readonly msgList = viewChild<ElementRef<HTMLElement>>('msgList');
@@ -81,10 +82,17 @@ export class AgentChatPage implements OnInit {
     protected readonly idConversation = signal<number | null>(null);
     protected readonly AgentConversationAuthor = AgentConversationAuthor;
     protected readonly AgentConversationMessageKind = AgentConversationMessageKind;
-    protected readonly scope = signal(AgentChatScope.All);
     protected readonly conversations = signal<AgentConversationListItem[]>([]);
+    /** Only the first load: later reloads keep the list in view. */
+    protected readonly isListLoading = signal(true);
     protected readonly projects = signal<Project[]>([]);
     protected readonly detail = signal<AgentConversationDetail | null>(null);
+    protected readonly idProjectOpen = computed(
+        () => this.idProject() ?? this.projectContext.idProject()
+    );
+    protected readonly projectName = computed(
+        () => this.projects().find(p => p.idProject === this.idProjectOpen())?.name ?? null
+    );
     protected readonly sendError = signal<string | null>(null);
     protected readonly projectError = signal<string | null>(null);
     /** The task draft the owner is editing into an issue. */
@@ -161,7 +169,6 @@ export class AgentChatPage implements OnInit {
     });
 
     private readonly listRequest = new Subject<void>();
-    private idProjectQuery: number | null | undefined = undefined;
     private pendingSeq = 0;
     private isStatusReloading = false;
 
@@ -176,14 +183,17 @@ export class AgentChatPage implements OnInit {
     public ngOnInit(): void {
         this.listRequest
             .pipe(
-                switchMap(() =>
-                    this.api.load$(
-                        this.scope() === AgentChatScope.Project ? this.idProject() : null
-                    )
-                ),
+                switchMap(() => this.api.load$()),
                 takeUntilDestroyed(this.destroyRef)
             )
-            .subscribe(list => this.conversations.set(list));
+            .subscribe({
+                next: list => {
+                    this.conversations.set(list);
+                    this.isListLoading.set(false);
+                },
+                error: () => this.isListLoading.set(false)
+            });
+        this.listRequest.next();
 
         this.projectApi.load$().subscribe(projects => this.projects.set(projects));
 
@@ -212,11 +222,6 @@ export class AgentChatPage implements OnInit {
         void this.router.navigate(['/agent-chat'], {
             queryParams: { idProject: this.idProject() }
         });
-    }
-
-    protected onScopeChange(scope: AgentChatScope): void {
-        this.scope.set(scope);
-        this.listRequest.next();
     }
 
     protected onCreated(conversation: AgentConversation): void {
@@ -466,13 +471,7 @@ export class AgentChatPage implements OnInit {
     }
 
     private onRoute(params: ParamMap, query: ParamMap): void {
-        const idProject = AgentChatPage.toId(query.get('idProject'));
-        if (idProject !== this.idProjectQuery) {
-            this.idProjectQuery = idProject;
-            this.idProject.set(idProject);
-            this.scope.set(idProject === null ? AgentChatScope.All : AgentChatScope.Project);
-            this.listRequest.next();
-        }
+        this.idProject.set(AgentChatPage.toId(query.get('idProject')));
         this.isNew.set(query.get('new') === '1');
 
         const idConversation = AgentChatPage.toId(params.get('idConversation'));

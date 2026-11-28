@@ -1,4 +1,3 @@
-import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
@@ -28,9 +27,6 @@ import { WikiPageView } from '../../model/wiki-page.model';
 import { WikiTree } from '../../model/wiki-tree.model';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 import { WikiEditPage } from './wiki-edit.page';
-
-@Component({ selector: 'app-wiki-tree-show', template: '', standalone: true })
-class WikiTreeShowStub {}
 
 const projectSpace = { idSpace: 2, canEdit: true, canManage: true };
 const sharedSpace = { idSpace: 1, canEdit: true, canManage: false };
@@ -110,8 +106,7 @@ async function render(options: RenderOptions): Promise<Rendered> {
             FormsModule,
             UiModule,
             TablerIconStub,
-            AttachmentLightboxStub,
-            WikiTreeShowStub
+            AttachmentLightboxStub
         ],
         providers: [
             {

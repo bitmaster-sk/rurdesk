@@ -1,47 +1,54 @@
 <div class="h-full flex flex-row">
-    <div class="recipients">
+    <ui-side-panel
+        [title]="'HOME.MESSAGES' | translate"
+        [hideLabel]="'HOME.HIDE_PANEL' | translate"
+        [isLoading]="isLoadingChats()"
+    >
+        <label uiPanelFilter class="ui-side-panel-filter">
+            <tabler-icon icon="search" [size]="14" />
+            <input
+                data-testid="message-filter"
+                [attr.aria-label]="'MESSAGE.FILTER_PLACEHOLDER' | translate"
+                [placeholder]="'MESSAGE.FILTER_PLACEHOLDER' | translate"
+                [value]="filter()"
+                (input)="onFilterInput($event)"
+                (keydown.escape)="filter.set('')"
+            />
+        </label>
         @for (group of conversationGroups(); track group.nameKey ?? group.name) {
-        <div class="ui-color-text-muted uppercase font-bold p-2">
-            {{ (group.nameKey ?? group.name) | translate }}
-        </div>
-        @for (c of group.conversations; track c.unreadKey) {
-        <div class="recipient-item">
-            <div class="recipient-item_border"></div>
+        <ui-side-panel-section [title]="(group.nameKey ?? group.name) | translate">
+            @for (c of group.conversations; track c.unreadKey) {
             <a
-                class="link"
+                uiSidePanelRow
+                data-testid="message-conversation"
+                [icon]="group.icon"
+                [label]="c.name"
+                [isActive]="isOpen(c)"
                 [routerLink]="c.url"
-                routerLinkActive="active"
-                [routerLinkActiveOptions]="{ exact: true }"
             >
-                <tabler-icon [icon]="group.icon" [size]="14" class="shrink-0" />
-                <span
-                    class="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-                    [class.ui-color-text-muted]="c.isDisabled"
-                >
-                    {{ c.name }}
+                @if (getUnreadCount(c.unreadKey); as cnt) {
+                <span uiRowTrail class="ui-side-panel-count" data-testid="message-unread">
+                    {{ MessageFormatter.formatUnreadBadgeText(cnt) }}
                 </span>
-                @if (c.isDisabled) {
-                <span class="text-xs ui-color-text-muted shrink-0">
-                    {{ 'USER.DISABLED' | translate }}
-                </span>
-                } @if (getUnreadCount(c.unreadKey); as cnt) {
-                <ui-badge
-                    [value]="MessageFormatter.formatUnreadBadgeText(cnt)"
-                    severity="danger"
-                ></ui-badge>
+                } @else if (c.isDisabled) {
+                <span uiRowTrail class="ui-side-panel-meta">{{ 'USER.DISABLED' | translate }}</span>
                 }
             </a>
+            }
+        </ui-side-panel-section>
+        } @empty {
+        <div class="ui-side-panel-empty" data-testid="message-filter-empty">
+            {{ 'MESSAGE.FILTER_EMPTY' | translate }}
         </div>
-        } }
-    </div>
+        }
+    </ui-side-panel>
 
     <div class="flex-auto flex flex-col min-w-0 overflow-hidden p-2">
-        @if (currentConversationName()) {
         <div class="channel-header">
+            <ui-side-panel-show [label]="'HOME.SHOW_PANEL' | translate" />
             <tabler-icon icon="messages" [size]="16" class="channel-header-icon" />
             <span class="channel-header-name">{{ currentConversationName() }}</span>
         </div>
-        }
 
         <div class="flex-auto overflow-y-auto py-2" #msgList>
             @for (message of messages(); track message.idMessage; let i = $index) { @if

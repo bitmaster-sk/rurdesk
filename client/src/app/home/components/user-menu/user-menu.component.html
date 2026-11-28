@@ -1,0 +1,30 @@
+@if (user(); as user) {
+    <ui-menu #menu panelClass="user-menu" placement="right" [model]="items()" />
+    <button
+        type="button"
+        class="user-trigger"
+        data-testid="avatar-trigger"
+        aria-haspopup="menu"
+        [attr.aria-label]="user.name"
+        uiTooltipPosition="right"
+        [uiTooltip]="isRail() ? user.name : ''"
+        [attr.aria-expanded]="menu.isOpen()"
+        (click)="menu.toggle(host)"
+    >
+        <app-avatar
+            [name]="user.name"
+            [bgColor]="user.colorAvatarBg"
+            [manualInitials]="user.avatarInitials"
+            [height]="1.75"
+            [width]="1.75"
+            [radius]="0.875"
+        />
+        <span class="identity">
+            <span class="name">{{ user.name }}</span>
+            <span class="role">
+                {{ (user.isAdmin ? 'ADMIN.ADMIN' : 'ADMIN.USER') | translate }}
+            </span>
+        </span>
+        <tabler-icon class="chevron" icon="selector" [size]="16" />
+    </button>
+}

@@ -29,9 +29,6 @@ import { WikiTreeNode } from '../../model/wiki-tree.model';
 import { WikiTreeStore } from '../../store/wiki-tree.store';
 import { WikiPagePage } from './wiki-page.page';
 
-@Component({ selector: 'app-wiki-tree-show', template: '', standalone: true })
-class WikiTreeShowStub {}
-
 @Component({ selector: 'app-wiki-move-dialog', template: '', standalone: true })
 class WikiMoveDialogStub {
     public readonly visible = model(false);
@@ -101,14 +98,14 @@ describe('WikiPagePage layout', () => {
 
     beforeEach(() => {
         localStorage.removeItem('wiki.fullWidth');
-        localStorage.removeItem('wiki.treeHidden');
+        localStorage.removeItem('sidePanelHidden');
         moreIssues = new Subject<WikiPageIssueList>();
         moreBacklinks = new Subject<WikiBacklinkList>();
     });
 
     afterEach(() => {
         localStorage.removeItem('wiki.fullWidth');
-        localStorage.removeItem('wiki.treeHidden');
+        localStorage.removeItem('sidePanelHidden');
     });
 
     // The shell gives the page whatever width is left after the app menu and
@@ -169,7 +166,6 @@ describe('WikiPagePage layout', () => {
                 RouterModule,
                 UiModule,
                 TablerIconStub,
-                WikiTreeShowStub,
                 WikiMoveDialogStub
             ],
             providers: [

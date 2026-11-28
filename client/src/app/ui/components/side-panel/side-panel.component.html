@@ -1,0 +1,28 @@
+<div class="ui-side-panel-head">
+    <h2 class="ui-side-panel-title">{{ title() }}</h2>
+    <ng-content select="[uiPanelActions]" />
+    <button
+        type="button"
+        class="ui-side-panel-button"
+        data-testid="side-panel-hide"
+        uiTooltipPosition="bottom"
+        [attr.aria-label]="hideLabel()"
+        [uiTooltip]="hideLabel()"
+        (click)="control.hide()"
+    >
+        <tabler-icon icon="layout-sidebar-left-collapse" [size]="16" />
+    </button>
+</div>
+<div class="ui-side-panel-filter-slot"><ng-content select="[uiPanelFilter]" /></div>
+<div class="ui-side-panel-body" [class.ui-side-panel-body--loading]="isLoading()">
+    @if (isLoading()) {
+        <ui-loader
+            data-testid="side-panel-loading"
+            [size]="24"
+            [ariaLabel]="'UI.LOADING' | translate"
+        />
+    } @else {
+        <ng-content />
+    }
+</div>
+<div class="ui-side-panel-footer"><ng-content select="[uiPanelFooter]" /></div>
