@@ -585,9 +585,7 @@
         "TREE": {
             "ALWAYS": "Agent always reads",
             "EMPTY": "No pages yet",
-            "TOGGLE": "Expand or collapse",
-            "HIDE": "Hide page tree",
-            "SHOW": "Show page tree"
+            "TOGGLE": "Expand or collapse"
         },
         "EDIT_VIEW": {
             "WRITE": "Write",
